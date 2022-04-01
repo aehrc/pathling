@@ -1,0 +1,56 @@
+<ConceptMap xmlns="http://hl7.org/fhir">
+
+  <url value="urn:cerner:poprec:fhir:conceptmap:demographics:gender"/>
+  <version value="0.0.1"/>
+  <status value="draft"/>
+  <experimental value="true"/>
+  <date value="2017-03-01"/>
+
+  <sourceUri value="urn:cerner:poprec:valueset:demographics:gender"/>
+  <targetUri value="http://hl7.org/fhir/ValueSet/administrative-gender"/>
+  <group>
+    <source value="2.16.840.1.113883.3.26.1.1"/>
+    <target value="http://hl7.org/fhir/administrative-gender"/>
+    <element>
+      <code value="C46109"/>
+      <target>
+        <code value="male"/>
+      </target>
+    </element>
+  </group>
+
+  <group>
+    <source value="2.16.840.1.113883.5.1"/>
+    <target value="http://hl7.org/fhir/administrative-gender"/>
+    <element>
+      <code value="F"/>
+      <target>
+        <code value="female"/>
+      </target>
+    </element>
+  </group>
+
+  <group>
+    <source value="http://snomed.info/sct"/>
+    <target value="http://hl7.org/fhir/administrative-gender"/>
+    <element>
+      <code value="248152002"/>
+      <target>
+        <code value="female"/>
+      </target>
+    </element>
+    <element>
+      <code value="248153007"/>
+      <target>
+        <code value="male"/>
+      </target>
+    </element>
+    <element>
+      <code value="394743007"/>
+      <target>
+        <code value="unknown"/>
+      </target>
+    </element>
+  </group>
+
+</ConceptMap>

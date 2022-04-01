@@ -1,0 +1,221 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "6666001",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n            <p>Sophia Reynolds</p>\n          </div>"
+        },
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://hl7.org/fhir/v2/0203",
+                  "code": "MR",
+                  "display": "Medical record number"
+                }
+              ],
+              "text": "Medical record number"
+            },
+            "system": "http://hospital.smarthealthit.org",
+            "value": "6666001"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Reynolds",
+            "given": [
+              "Sophia"
+            ]
+          }
+        ],
+        "telecom": [
+          {
+            "system": "email",
+            "value": "demoally@hspc.com"
+          }
+        ],
+        "gender": "female",
+        "birthDate": "2010-12-16"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/6666001"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "353",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n            Albuterol 0.09 MG/ACTUAT [Proventil] (rxnorm: 573621)\n          </div>"
+        },
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "573621",
+              "display": "Albuterol 0.09 MG/ACTUAT [Proventil]"
+            }
+          ],
+          "text": "Albuterol 0.09 MG/ACTUAT [Proventil]"
+        },
+        "subject": {
+          "reference": "Patient/6666001"
+        },
+        "dosageInstruction": [
+          {
+            "text": "prn",
+            "asNeededBoolean": true
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationOrder/353"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "354",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n            60 ACTUAT Fluticasone propionate 0.045 MG/ACTUAT / salmeterol 0.021 MG/ACTUAT Metered\n            Dose Inhaler [Advair] (rxnorm: 896235)\n          </div>"
+        },
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "896235",
+              "display": "60 ACTUAT Fluticasone propionate 0.045 MG/ACTUAT / salmeterol 0.021 MG/ACTUAT Metered Dose Inhaler [Advair]"
+            }
+          ],
+          "text": "60 ACTUAT Fluticasone propionate 0.045 MG/ACTUAT / salmeterol 0.021 MG/ACTUAT Metered Dose Inhaler [Advair]"
+        },
+        "subject": {
+          "reference": "Patient/6666001"
+        },
+        "dosageInstruction": [
+          {
+            "text": "1 puff bid",
+            "timing": {
+              "repeat": {
+                "boundsPeriod": {
+                  "start": "2015-01-01"
+                },
+                "frequency": 2,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "doseQuantity": {
+              "value": 1,
+              "unit": "{puff}",
+              "system": "http://unitsofmeasure.org",
+              "code": "{puff}"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationOrder/354"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "355",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n            Prednisone Oral Tablet (rxnorm: 373585)\n          </div>"
+        },
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "373585",
+              "display": "Prednisone Oral Tablet"
+            }
+          ],
+          "text": "Prednisone Oral Tablet"
+        },
+        "subject": {
+          "reference": "Patient/6666001"
+        },
+        "dosageInstruction": [
+          {
+            "text": "prn",
+            "asNeededBoolean": true
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationOrder/355"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "356",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n            Singulair Pill (rxnorm: 1183694)\n          </div>"
+        },
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "1183694",
+              "display": "Singulair Pill"
+            }
+          ],
+          "text": "Singulair Pill"
+        },
+        "subject": {
+          "reference": "Patient/6666001"
+        },
+        "dosageInstruction": [
+          {
+            "text": "1 tab qd",
+            "timing": {
+              "repeat": {
+                "boundsPeriod": {
+                  "start": "2015-01-01"
+                },
+                "frequency": 1,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "doseQuantity": {
+              "value": 1,
+              "unit": "{tablet}",
+              "system": "http://unitsofmeasure.org",
+              "code": "{tablet}"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationOrder/356"
+      }
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ This is a modified version of the Bunsen library, originally published at
+  ~ https://github.com/cerner/bunsen.
+  ~
+  ~ Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+  ~ the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+  ~
+  ~ These modifications are copyright © 2018-2022, Commonwealth Scientific
+  ~ and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
+  ~ under the CSIRO Open Source Software Licence Agreement.
+  ~
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>pathling</artifactId>
+        <version>5.0.0</version>
+    </parent>
+    <artifactId>pathling-api</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Pathling API</name>
+    <description>Encoders for transforming FHIR data into Spark Datasets.</description>
+
+    <developers>
+        <developer>
+            <name>John Grimes</name>
+            <email>John.Grimes@csiro.au</email>
+            <url>https://github.com/johngrimes</url>
+        </developer>
+        <developer>
+            <name>Piotr Szul</name>
+            <email>Piotr.Szul@data61.csiro.au</email>
+            <url>https://github.com/piotrszul</url>
+        </developer>
+        <developer>
+            <name>Ryan Brush</name>
+            <email>rbrush@cerner.com</email>
+            <url>https://github.com/rbrush</url>
+        </developer>
+    </developers>
+
+    <dependencies>
+
+        <!-- Apache Spark -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
+        </dependency>
+
+        <!-- Encoders -->
+        <dependency>
+            <groupId>au.csiro.pathling</groupId>
+            <artifactId>encoders</artifactId>
+        </dependency>
+
+        <!-- HAPI FHIR -->
+        <dependency>
+            <groupId>ca.uhn.hapi.fhir</groupId>
+            <artifactId>hapi-fhir-base</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ca.uhn.hapi.fhir</groupId>
+            <artifactId>hapi-fhir-structures-r4</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

@@ -1,0 +1,19 @@
+<ValueSet xmlns="http://hl7.org/fhir">
+
+  <url value="urn:cerner:bunsen:valueset:married_maritalstatus"/>
+  <version value="0.0.1"/>
+  <status value="draft"/>
+  <date value="2018-01-10"/>
+
+  <compose>
+    <include>
+      <system value="http://hl7.org/fhir/v3/MaritalStatus"/>
+      <version value="2016-11-11"/>
+      <concept>
+        <code value="M"/>
+        <display value="married"/>
+      </concept>
+    </include>
+
+  </compose>
+</ValueSet>

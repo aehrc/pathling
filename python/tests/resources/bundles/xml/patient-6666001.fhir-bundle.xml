@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <type value="transaction"/>
+
+  <entry>
+    <resource>
+
+
+      <Patient>
+        <id value="6666001"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            <p>Sophia Reynolds</p>
+          </div>
+        </text>
+        <identifier>
+          <use value="usual"/>
+          <type>
+            <coding>
+              <system value="http://hl7.org/fhir/v2/0203"/>
+              <code value="MR"/>
+              <display value="Medical record number"/>
+            </coding>
+            <text value="Medical record number"/>
+          </type>
+          <system value="http://hospital.smarthealthit.org"/>
+          <value value="6666001"/>
+        </identifier>
+        <name>
+          <use value="official"/>
+          <family value="Reynolds"/>
+          <given value="Sophia"/>
+        </name>
+        <telecom>
+          <system value="email"/>
+          <value value="demoally@hspc.com"/>
+        </telecom>
+        <gender value="female"/>
+        <birthDate value="2010-12-16"/>
+        <active value="true"/>
+      </Patient>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Patient/6666001"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <MedicationRequest>
+        <id value="353"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            Albuterol 0.09 MG/ACTUAT [Proventil] (rxnorm: 573621)
+          </div>
+        </text>
+
+        <status value="active"/>
+        <patient>
+          <reference value="Patient/6666001"/>
+        </patient>
+
+        <medicationCodeableConcept>
+          <coding>
+            <system value="http://www.nlm.nih.gov/research/umls/rxnorm"/>
+            <code value="573621"/>
+            <display value="Albuterol 0.09 MG/ACTUAT [Proventil]"/>
+          </coding>
+          <text value="Albuterol 0.09 MG/ACTUAT [Proventil]"/>
+        </medicationCodeableConcept>
+
+        <dosageInstruction>
+          <timing>
+          </timing>
+          <asNeededBoolean value="true"/>
+
+          <text value="prn"/>
+        </dosageInstruction>
+      </MedicationRequest>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="MedicationOrder/353"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <MedicationRequest>
+        <id value="354"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            60 ACTUAT Fluticasone propionate 0.045 MG/ACTUAT / salmeterol 0.021 MG/ACTUAT Metered
+            Dose Inhaler [Advair] (rxnorm: 896235)
+          </div>
+        </text>
+
+        <status value="active"/>
+        <patient>
+          <reference value="Patient/6666001"/>
+        </patient>
+
+        <medicationCodeableConcept>
+          <coding>
+            <system value="http://www.nlm.nih.gov/research/umls/rxnorm"/>
+            <code value="896235"/>
+            <display
+              value="60 ACTUAT Fluticasone propionate 0.045 MG/ACTUAT / salmeterol 0.021 MG/ACTUAT Metered Dose Inhaler [Advair]"/>
+          </coding>
+          <text
+            value="60 ACTUAT Fluticasone propionate 0.045 MG/ACTUAT / salmeterol 0.021 MG/ACTUAT Metered Dose Inhaler [Advair]"/>
+        </medicationCodeableConcept>
+
+        <dosageInstruction>
+          <timing>
+            <repeat>
+              <boundsPeriod>
+                <start value="2015-01-01"/>
+              </boundsPeriod>
+              <frequency value="2"/>
+              <period value="1"/>
+              <periodUnit value="d"/>
+            </repeat>
+
+          </timing>
+          <doseQuantity>
+            <value value="1"/>
+            <unit value="{puff}"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="{puff}"/>
+          </doseQuantity>
+
+          <text value="1 puff bid"/>
+        </dosageInstruction>
+      </MedicationRequest>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="MedicationOrder/354"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <MedicationRequest>
+        <id value="355"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            Prednisone Oral Tablet (rxnorm: 373585)
+          </div>
+        </text>
+
+        <status value="active"/>
+        <patient>
+          <reference value="Patient/6666001"/>
+        </patient>
+
+        <medicationCodeableConcept>
+          <coding>
+            <system value="http://www.nlm.nih.gov/research/umls/rxnorm"/>
+            <code value="373585"/>
+            <display value="Prednisone Oral Tablet"/>
+          </coding>
+          <text value="Prednisone Oral Tablet"/>
+        </medicationCodeableConcept>
+
+        <dosageInstruction>
+          <timing>
+          </timing>
+          <asNeededBoolean value="true"/>
+
+          <text value="prn"/>
+        </dosageInstruction>
+      </MedicationRequest>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="MedicationOrder/355"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <MedicationRequest>
+        <id value="356"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            Singulair Pill (rxnorm: 1183694)
+          </div>
+        </text>
+
+        <status value="active"/>
+        <patient>
+          <reference value="Patient/6666001"/>
+        </patient>
+
+        <medicationCodeableConcept>
+          <coding>
+            <system value="http://www.nlm.nih.gov/research/umls/rxnorm"/>
+            <code value="1183694"/>
+            <display value="Singulair Pill"/>
+          </coding>
+          <text value="Singulair Pill"/>
+        </medicationCodeableConcept>
+
+        <dosageInstruction>
+          <timing>
+            <repeat>
+              <boundsPeriod>
+                <start value="2015-01-01"/>
+              </boundsPeriod>
+              <frequency value="1"/>
+              <period value="1"/>
+              <periodUnit value="d"/>
+            </repeat>
+
+          </timing>
+          <doseQuantity>
+            <value value="1"/>
+            <unit value="{tablet}"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="{tablet}"/>
+          </doseQuantity>
+
+          <text value="1 tab qd"/>
+        </dosageInstruction>
+      </MedicationRequest>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="MedicationOrder/356"/>
+    </request>
+  </entry>
+
+</Bundle>

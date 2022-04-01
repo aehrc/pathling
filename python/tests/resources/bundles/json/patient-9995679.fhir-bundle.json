@@ -1,0 +1,4650 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "9995679",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n            <p>Aaron Alexis</p>\n          </div>"
+        },
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://hl7.org/fhir/v2/0203",
+                  "code": "MR",
+                  "display": "Medical record number"
+                }
+              ],
+              "text": "Medical record number"
+            },
+            "system": "http://hospital.smarthealthit.org",
+            "value": "9995679"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Alexis",
+            "given": [
+              "Aaron"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1989-10-26",
+        "address": [
+          {
+            "use": "home",
+            "postalCode": "02155",
+            "country": "USA"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/9995679"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "1",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2006-12-27T15:53:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "period": {
+          "start": "2006-12-27T15:53:00",
+          "end": "2006-12-28T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/1"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "2",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-04-18T13:32:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory",
+          "_display": {
+            "fhir_comments": [
+              "    outpatient    "
+            ]
+          }
+        },
+        "period": {
+          "start": "2007-04-18T13:32:00",
+          "end": "2007-04-19T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/2"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "3",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-07-18T12:49:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory",
+          "_display": {
+            "fhir_comments": [
+              "    outpatient    "
+            ]
+          }
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "period": {
+          "start": "2007-07-18T12:49:00",
+          "end": "2007-07-19T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/3"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "4",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-01-16T13:03:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory",
+          "_display": {
+            "fhir_comments": [
+              "    outpatient    "
+            ]
+          }
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "period": {
+          "start": "2008-01-16T13:03:00",
+          "end": "2008-01-17T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/4"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "5",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25T15:45:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory",
+          "_display": {
+            "fhir_comments": [
+              "    outpatient    "
+            ]
+          }
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "period": {
+          "start": "2008-06-25T15:45:00",
+          "end": "2008-06-26T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/5"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "7",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10T12:39:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory",
+          "_display": {
+            "fhir_comments": [
+              "    outpatient    "
+            ]
+          }
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "period": {
+          "start": "2009-06-10T12:39:00",
+          "end": "2009-06-11T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/7"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "9",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23T12:54:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory",
+          "_display": {
+            "fhir_comments": [
+              "    outpatient    "
+            ]
+          }
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "period": {
+          "start": "2009-12-23T12:54:00",
+          "end": "2009-12-24T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/9"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "15",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2010-12-22T17:23:00: ambulatory encounter</div>"
+        },
+        "status": "finished",
+        "class": {
+          "system": "http://hl7.org/fhir/v3/ActCode",
+          "code": "AMB",
+          "display": "ambulatory",
+          "_display": {
+            "fhir_comments": [
+              "    outpatient    "
+            ]
+          }
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "period": {
+          "start": "2010-12-22T17:23:00",
+          "end": "2010-12-23T04:59:59"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/15"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "2-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-04-18: Blood pressure 121/62 mmHg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/2"
+        },
+        "effectiveDateTime": "2007-04-18",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 121,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 62,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/2-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "2-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-04-18: Systolic blood pressure = 121 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2007-04-18",
+        "valueQuantity": {
+          "value": 121.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/2-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "2-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-04-18: Diastolic blood pressure = 62 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2007-04-18",
+        "valueQuantity": {
+          "value": 62.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/2-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "3-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-07-18: Blood pressure 116/64 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/3"
+        },
+        "effectiveDateTime": "2007-07-18",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 116,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 64,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/3-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "3-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-07-18: Systolic blood pressure = 116 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2007-07-18",
+        "valueQuantity": {
+          "value": 116.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/3-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "3-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-07-18: Diastolic blood pressure = 64 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2007-07-18",
+        "valueQuantity": {
+          "value": 64.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/3-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-01-16: Blood pressure 120/58 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/4"
+        },
+        "effectiveDateTime": "2008-01-16",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 120,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 58,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/4-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-01-16: Systolic blood pressure = 120 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2008-01-16",
+        "valueQuantity": {
+          "value": 120.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/4-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-01-16: Diastolic blood pressure = 58 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2008-01-16",
+        "valueQuantity": {
+          "value": 58.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/4-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "5-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: Blood pressure 121/73 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "33586001",
+                  "display": "sitting"
+                }
+              ],
+              "text": "sitting"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/5"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368208006",
+              "display": "left arm"
+            }
+          ],
+          "text": "left arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 121,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 73,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/5-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "5-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: Systolic blood pressure = 121 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 121.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/5-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "5-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: Diastolic blood pressure = 73 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 73.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/5-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "6-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: Blood pressure 119/70 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "33586001",
+                  "display": "sitting"
+                }
+              ],
+              "text": "sitting"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/5"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368208006",
+              "display": "left arm"
+            }
+          ],
+          "text": "left arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 119,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 70,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/6-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "6-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: Systolic blood pressure = 119 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 119.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/6-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "6-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: Diastolic blood pressure = 70 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 70.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/6-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "7-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: Blood pressure 137/68 mmHg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/7"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 137,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 68,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/7-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "7-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: Systolic blood pressure = 137 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "valueQuantity": {
+          "value": 137.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/7-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "7-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: Diastolic blood pressure = 68 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "valueQuantity": {
+          "value": 68.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/7-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "8-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: Blood pressure 168/86 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/7"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "61396006",
+              "display": "left thigh"
+            }
+          ],
+          "text": "left thigh"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 168,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 86,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/8-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "8-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: Systolic blood pressure = 168 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "valueQuantity": {
+          "value": 168.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/8-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "8-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: Diastolic blood pressure = 86 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "valueQuantity": {
+          "value": 86.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/8-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "9-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Blood pressure 122/66 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368208006",
+              "display": "left arm"
+            }
+          ],
+          "text": "left arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 122,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 66,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/9-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "9-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Systolic blood pressure = 122 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 122.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/9-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "9-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Diastolic blood pressure = 66 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 66.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/9-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "10-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Blood pressure 121/65 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 121,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 65,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/10-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "10-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Systolic blood pressure = 121 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 121.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/10-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "10-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Diastolic blood pressure = 65 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 65.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/10-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "11-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Blood pressure 119/60 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 119,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 60,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/11-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "11-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Systolic blood pressure = 119 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 119.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/11-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "11-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Diastolic blood pressure = 60 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 60.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/11-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "12-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Blood pressure 121/57 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 121,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 57,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/12-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "12-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Systolic blood pressure = 121 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 121.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/12-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "12-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Diastolic blood pressure = 57 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 57.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/12-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "13-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Blood pressure 131/71 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 131,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 71,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/13-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "13-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Systolic blood pressure = 131 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 131.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/13-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "13-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Diastolic blood pressure = 71 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 71.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/13-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "14-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Blood pressure 123/58 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "40199007",
+                  "display": "supine"
+                }
+              ],
+              "text": "supine"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 123,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 58,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/14-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "14-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Systolic blood pressure = 123 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 123.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/14-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "14-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: Diastolic blood pressure = 58 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 58.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/14-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "15-bp",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2010-12-22: Blood pressure 123/59 mmHg</div>"
+        },
+        "extension": [
+          {
+            "url": "http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position",
+            "valueCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://snomed.info/sct",
+                  "code": "33586001",
+                  "display": "sitting"
+                }
+              ],
+              "text": "sitting"
+            }
+          }
+        ],
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "55284-4",
+              "display": "Blood pressure systolic and diastolic"
+            }
+          ],
+          "text": "Blood pressure systolic and diastolic"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/15"
+        },
+        "effectiveDateTime": "2010-12-22",
+        "bodySite": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "368209003",
+              "display": "right arm"
+            }
+          ],
+          "text": "right arm"
+        },
+        "method": {
+          "coding": [
+            {
+              "system": "http://smarthealthit.org/terms/codes/BloodPressureMethod#",
+              "code": "machine",
+              "display": "machine"
+            }
+          ],
+          "text": "machine"
+        },
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 123,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 59,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/15-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "15-systolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2010-12-22: Systolic blood pressure = 123 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8480-6",
+              "display": "Systolic blood pressure"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2010-12-22",
+        "valueQuantity": {
+          "value": 123.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/15-systolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "15-diastolic",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2010-12-22: Diastolic blood pressure = 59 mm[Hg]\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "effectiveDateTime": "2010-12-22",
+        "valueQuantity": {
+          "value": 59.0,
+          "unit": "mm[Hg]",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/15-diastolic"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "1-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2006-12-27: height = 198.0 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/1"
+        },
+        "effectiveDateTime": "2006-12-27",
+        "valueQuantity": {
+          "value": 198.0,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/1-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "1-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2006-12-27: heart_rate = 54.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/1"
+        },
+        "effectiveDateTime": "2006-12-27",
+        "valueQuantity": {
+          "value": 54.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/1-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "1-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2006-12-27: weight = 86.0 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/1"
+        },
+        "effectiveDateTime": "2006-12-27",
+        "valueQuantity": {
+          "value": 86.0,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/1-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "2-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-04-18: height = 197.5 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/2"
+        },
+        "effectiveDateTime": "2007-04-18",
+        "valueQuantity": {
+          "value": 197.5,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/2-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "2-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-04-18: heart_rate = 60.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/2"
+        },
+        "effectiveDateTime": "2007-04-18",
+        "valueQuantity": {
+          "value": 60.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/2-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "2-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-04-18: weight = 87.0 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/2"
+        },
+        "effectiveDateTime": "2007-04-18",
+        "valueQuantity": {
+          "value": 87.0,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/2-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "3-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-07-18: height = 197.0 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/3"
+        },
+        "effectiveDateTime": "2007-07-18",
+        "valueQuantity": {
+          "value": 197.0,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/3-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "3-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-07-18: heart_rate = 80.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/3"
+        },
+        "effectiveDateTime": "2007-07-18",
+        "valueQuantity": {
+          "value": 80.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/3-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "3-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2007-07-18: weight = 90.2 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/3"
+        },
+        "effectiveDateTime": "2007-07-18",
+        "valueQuantity": {
+          "value": 90.2,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/3-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-01-16: height = 197.5 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/4"
+        },
+        "effectiveDateTime": "2008-01-16",
+        "valueQuantity": {
+          "value": 197.5,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/4-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-01-16: heart_rate = 47.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/4"
+        },
+        "effectiveDateTime": "2008-01-16",
+        "valueQuantity": {
+          "value": 47.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/4-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "4-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-01-16: weight = 89.4 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/4"
+        },
+        "effectiveDateTime": "2008-01-16",
+        "valueQuantity": {
+          "value": 89.4,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/4-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "5-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: height = 197.5 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/5"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 197.5,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/5-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "5-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: heart_rate = 47.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/5"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 47.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/5-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "5-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: weight = 90.2 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/5"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 90.2,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/5-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "6-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2008-06-25: heart_rate = 50.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/5"
+        },
+        "effectiveDateTime": "2008-06-25",
+        "valueQuantity": {
+          "value": 50.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/6-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "7-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: height = 198.0 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/7"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "valueQuantity": {
+          "value": 198.0,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/7-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "7-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-06-10: weight = 94.7 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/7"
+        },
+        "effectiveDateTime": "2009-06-10",
+        "valueQuantity": {
+          "value": 94.7,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/7-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "9-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: height = 197.5 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 197.5,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/9-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "9-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: heart_rate = 50.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 50.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/9-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "9-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: weight = 92.2 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 92.2,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/9-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "10-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: heart_rate = 50.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 50.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/10-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "11-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: heart_rate = 49.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 49.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/11-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "12-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: heart_rate = 53.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 53.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/12-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "13-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: heart_rate = 48.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 48.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/13-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "14-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2009-12-23: heart_rate = 52.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/9"
+        },
+        "effectiveDateTime": "2009-12-23",
+        "valueQuantity": {
+          "value": 52.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/14-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "15-height",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2010-12-22: height = 197.0 cm</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8302-2",
+              "display": "height"
+            }
+          ],
+          "text": "height"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/15"
+        },
+        "effectiveDateTime": "2010-12-22",
+        "valueQuantity": {
+          "value": 197.0,
+          "unit": "cm",
+          "system": "http://unitsofmeasure.org",
+          "code": "cm"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/15-height"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "15-heartrate",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2010-12-22: heart_rate = 52.0 {beats}/min</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "heart_rate"
+            }
+          ],
+          "text": "heart_rate"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/15"
+        },
+        "effectiveDateTime": "2010-12-22",
+        "valueQuantity": {
+          "value": 52.0,
+          "unit": "{beats}/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "{beats}/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/15-heartrate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "15-weight",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">2010-12-22: weight = 92.3 kg</div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ],
+            "text": "Vital Signs"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "3141-9",
+              "display": "weight"
+            }
+          ],
+          "text": "weight"
+        },
+        "subject": {
+          "reference": "Patient/9995679"
+        },
+        "context": {
+          "reference": "Encounter/15"
+        },
+        "effectiveDateTime": "2010-12-22",
+        "valueQuantity": {
+          "value": 92.3,
+          "unit": "kg",
+          "system": "http://unitsofmeasure.org",
+          "code": "kg"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/15-weight"
+      }
+    }
+  ]
+}

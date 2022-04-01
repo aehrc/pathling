@@ -1,0 +1,524 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <type value="transaction"/>
+
+  <entry>
+    <resource>
+
+
+      <Patient>
+        <id value="1032702"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            <p>Amy Shaw</p>
+          </div>
+        </text>
+        <identifier>
+          <use value="usual"/>
+          <type>
+            <coding>
+              <system value="http://hl7.org/fhir/v2/0203"/>
+              <code value="MR"/>
+              <display value="Medical record number"/>
+            </coding>
+            <text value="Medical record number"/>
+          </type>
+          <system value="http://hospital.smarthealthit.org"/>
+          <value value="1032702"/>
+        </identifier>
+        <name>
+          <use value="official"/>
+          <family value="Shaw"/>
+          <given value="Amy"/>
+          <given value="V."/>
+        </name>
+        <telecom>
+          <system value="phone"/>
+          <value value="800-782-6765"/>
+          <use value="mobile"/>
+        </telecom>
+        <telecom>
+          <system value="email"/>
+          <value value="amy.shaw@example.com"/>
+        </telecom>
+        <gender value="female"/>
+        <birthDate value="2007-03-20"/>
+        <address>
+          <use value="home"/>
+          <line value="49 Meadow St"/>
+          <city value="Mounds"/>
+          <state value="OK"/>
+          <postalCode value="74047"/>
+          <country value="USA"/>
+        </address>
+        <active value="true"/>
+      </Patient>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Patient/1032702"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <MedicationRequest>
+        <id value="101"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            Nizatidine 15 MG/ML Oral Solution [Axid] (rxnorm: 582620)
+          </div>
+        </text>
+
+        <status value="active"/>
+        <patient>
+          <reference value="Patient/1032702"/>
+        </patient>
+
+        <medicationCodeableConcept>
+          <coding>
+            <system value="http://www.nlm.nih.gov/research/umls/rxnorm"/>
+            <code value="582620"/>
+            <display value="Nizatidine 15 MG/ML Oral Solution [Axid]"/>
+          </coding>
+          <text value="Nizatidine 15 MG/ML Oral Solution [Axid]"/>
+        </medicationCodeableConcept>
+
+        <dosageInstruction>
+          <timing>
+            <repeat>
+              <boundsPeriod>
+                <start value="2008-04-05"/>
+              </boundsPeriod>
+              <frequency value="2"/>
+              <period value="1"/>
+              <periodUnit value="d"/>
+            </repeat>
+
+          </timing>
+          <doseQuantity>
+            <value value="10"/>
+            <unit value="mL"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mL"/>
+          </doseQuantity>
+
+          <text value="10 mL bid"/>
+        </dosageInstruction>
+        <dispenseRequest>
+          <numberOfRepeatsAllowed value="1"/>
+
+          <quantity>
+            <value value="1"/>
+            <unit value="mL"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mL"/>
+          </quantity>
+
+          <expectedSupplyDuration>
+            <value value="30"/>
+            <unit value="days"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="d"/>
+          </expectedSupplyDuration>
+
+        </dispenseRequest>
+
+      </MedicationRequest>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="MedicationRequest/101"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Condition>
+        <id value="119"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">Single liveborn, born in hospital, delivered
+            without mention of cesarean section
+          </div>
+        </text>
+        <subject>
+          <reference value="Patient/1032702"/>
+        </subject>
+        <code>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="442311008"/>
+            <display
+              value="Single liveborn, born in hospital, delivered without mention of cesarean section"/>
+          </coding>
+          <text
+            value="Single liveborn, born in hospital, delivered without mention of cesarean section"/>
+        </code>
+        <clinicalStatus value="active"/>
+        <verificationStatus value="confirmed"/>
+        <onsetDateTime value="2007-12-14"/>
+
+      </Condition>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Condition/119"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Condition>
+        <id value="120"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">Abnormal weight loss</div>
+        </text>
+        <subject>
+          <reference value="Patient/1032702"/>
+        </subject>
+        <code>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="267024001"/>
+            <display value="Abnormal weight loss"/>
+          </coding>
+          <text value="Abnormal weight loss"/>
+        </code>
+        <clinicalStatus value="active"/>
+        <verificationStatus value="confirmed"/>
+        <onsetDateTime value="2007-12-19"/>
+
+      </Condition>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Condition/120"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Condition>
+        <id value="121"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">Follow-up encounter</div>
+        </text>
+        <subject>
+          <reference value="Patient/1032702"/>
+        </subject>
+        <code>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="310249008"/>
+            <display value="Follow-up encounter"/>
+          </coding>
+          <text value="Follow-up encounter"/>
+        </code>
+        <clinicalStatus value="active"/>
+        <verificationStatus value="confirmed"/>
+        <onsetDateTime value="2007-12-19"/>
+
+      </Condition>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Condition/121"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Condition>
+        <id value="122"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">Gastroesophageal reflux disease</div>
+        </text>
+        <subject>
+          <reference value="Patient/1032702"/>
+        </subject>
+        <code>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="235595009"/>
+            <display value="Gastroesophageal reflux disease"/>
+          </coding>
+          <text value="Gastroesophageal reflux disease"/>
+        </code>
+        <clinicalStatus value="active"/>
+        <verificationStatus value="confirmed"/>
+        <onsetDateTime value="2008-04-03"/>
+
+      </Condition>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Condition/122"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Condition>
+        <id value="123"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">Needs influenza immunization</div>
+        </text>
+        <subject>
+          <reference value="Patient/1032702"/>
+        </subject>
+        <code>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="185903001"/>
+            <display value="Needs influenza immunization"/>
+          </coding>
+          <text value="Needs influenza immunization"/>
+        </code>
+        <clinicalStatus value="active"/>
+        <verificationStatus value="confirmed"/>
+        <onsetDateTime value="2008-06-29"/>
+
+      </Condition>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Condition/123"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Immunization>
+        <id value="1"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">DTaP-hepatitis B and poliovirus vaccine</div>
+        </text>
+        <patient>
+          <reference value="Patient/1032702"/>
+        </patient>
+        <date value="2007-09-27"/>
+        <vaccineCode>
+          <coding>
+            <system value="http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx"/>
+            <code value="110"/>
+            <display value="DTaP-hepatitis B and poliovirus vaccine"/>
+          </coding>
+        </vaccineCode>
+        <reported value="false"/>
+        <wasNotGiven value="false"/>
+      </Immunization>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Immunization/1"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Immunization>
+        <id value="2"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">poliovirus vaccine, unspecified formulation
+          </div>
+        </text>
+        <patient>
+          <reference value="Patient/1032702"/>
+        </patient>
+        <date value="2011-01-27"/>
+        <vaccineCode>
+          <coding>
+            <system value="http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx"/>
+            <code value="89"/>
+            <display value="poliovirus vaccine, unspecified formulation"/>
+          </coding>
+        </vaccineCode>
+        <reported value="false"/>
+        <wasNotGiven value="false"/>
+      </Immunization>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Immunization/2"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Immunization>
+        <id value="3"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">poliovirus vaccine, unspecified formulation
+          </div>
+        </text>
+        <patient>
+          <reference value="Patient/1032702"/>
+        </patient>
+        <date value="2011-05-27"/>
+        <vaccineCode>
+          <coding>
+            <system value="http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx"/>
+            <code value="89"/>
+            <display value="poliovirus vaccine, unspecified formulation"/>
+          </coding>
+        </vaccineCode>
+        <reported value="false"/>
+        <wasNotGiven value="false"/>
+      </Immunization>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Immunization/3"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Immunization>
+        <id value="4"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">rotavirus, live, pentavalent vaccine</div>
+        </text>
+        <patient>
+          <reference value="Patient/1032702"/>
+        </patient>
+        <date value="2007-05-24"/>
+        <vaccineCode>
+          <coding>
+            <system value="http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx"/>
+            <code value="116"/>
+            <display value="rotavirus, live, pentavalent vaccine"/>
+          </coding>
+        </vaccineCode>
+        <reported value="false"/>
+        <wasNotGiven value="false"/>
+      </Immunization>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Immunization/4"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="5-smokingstatus"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">Tobacco smoking status: Current some day smoker
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="social-history"/>
+            <display value="Social History"/>
+          </coding>
+          <text value="Social History"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="72166-2"/>
+            <display value="Tobacco smoking status"/>
+          </coding>
+          <text value="Tobacco smoking status"/>
+        </code>
+        <valueCodeableConcept>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="428041000124106"/>
+            <display value="Current some day smoker"/>
+          </coding>
+          <text value="Current some day smoker"/>
+        </valueCodeableConcept>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/1032702"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/5-smokingstatus"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <List>
+        <id value="19"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">No known allergies</div>
+        </text>
+        <code>
+          <coding>
+            <system value="http://loinc.org/"/>
+            <code value="52473-6"/>
+            <display value="Allergy"/>
+          </coding>
+          <text value="Allergy"/>
+        </code>
+        <subject>
+          <reference value="Patient/1032702"/>
+        </subject>
+        <date value="2000"/>
+        <mode value="snapshot"/>
+        <emptyReason>
+          <coding>
+            <system value="http://hl7.org/fhir/list-empty-reason"/>
+            <code value="nilknown"/>
+            <display value="Nil Known"/>
+          </coding>
+          <text value="Nil Known"/>
+        </emptyReason>
+      </List>
+
+    </resource>
+
+    <request>
+      <method value="PUT"/>
+      <url value="List/19"/>
+    </request>
+  </entry>
+
+</Bundle>

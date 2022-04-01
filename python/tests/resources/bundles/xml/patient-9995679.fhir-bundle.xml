@@ -1,0 +1,4559 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <type value="transaction"/>
+
+  <entry>
+    <resource>
+
+
+      <Patient>
+        <id value="9995679"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            <p>Aaron Alexis</p>
+          </div>
+        </text>
+        <identifier>
+          <use value="usual"/>
+          <type>
+            <coding>
+              <system value="http://hl7.org/fhir/v2/0203"/>
+              <code value="MR"/>
+              <display value="Medical record number"/>
+            </coding>
+            <text value="Medical record number"/>
+          </type>
+          <system value="http://hospital.smarthealthit.org"/>
+          <value value="9995679"/>
+        </identifier>
+        <name>
+          <use value="official"/>
+          <family value="Alexis"/>
+          <given value="Aaron"/>
+        </name>
+        <gender value="male"/>
+        <birthDate value="1989-10-26"/>
+        <address>
+          <use value="home"/>
+          <postalCode value="02155"/>
+          <country value="USA"/>
+        </address>
+        <active value="true"/>
+      </Patient>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Patient/9995679"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="1"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2006-12-27T15:53:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2006-12-27T15:53:00"/>
+          <end value="2006-12-28T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/1"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="2"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-04-18T13:32:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <class>
+          <system value="http://hl7.org/fhir/v3/ActCode"/>
+          <code value="AMB"/> <!--    outpatient    -->
+          <display value="ambulatory"/>
+        </class>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2007-04-18T13:32:00"/>
+          <end value="2007-04-19T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/2"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="3"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-07-18T12:49:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <class>
+          <system value="http://hl7.org/fhir/v3/ActCode"/>
+          <code value="AMB"/> <!--    outpatient    -->
+          <display value="ambulatory"/>
+        </class>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2007-07-18T12:49:00"/>
+          <end value="2007-07-19T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/3"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="4"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-01-16T13:03:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <class>
+          <system value="http://hl7.org/fhir/v3/ActCode"/>
+          <code value="AMB"/> <!--    outpatient    -->
+          <display value="ambulatory"/>
+        </class>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2008-01-16T13:03:00"/>
+          <end value="2008-01-17T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/4"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="5"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-06-25T15:45:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <class>
+          <system value="http://hl7.org/fhir/v3/ActCode"/>
+          <code value="AMB"/> <!--    outpatient    -->
+          <display value="ambulatory"/>
+        </class>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2008-06-25T15:45:00"/>
+          <end value="2008-06-26T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/5"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="7"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-06-10T12:39:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <class>
+          <system value="http://hl7.org/fhir/v3/ActCode"/>
+          <code value="AMB"/> <!--    outpatient    -->
+          <display value="ambulatory"/>
+        </class>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2009-06-10T12:39:00"/>
+          <end value="2009-06-11T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/7"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="9"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23T12:54:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <class>
+          <system value="http://hl7.org/fhir/v3/ActCode"/>
+          <code value="AMB"/> <!--    outpatient    -->
+          <display value="ambulatory"/>
+        </class>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2009-12-23T12:54:00"/>
+          <end value="2009-12-24T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/9"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Encounter>
+        <id value="15"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2010-12-22T17:23:00: ambulatory encounter</div>
+        </text>
+        <status value="finished"/>
+        <class>
+          <system value="http://hl7.org/fhir/v3/ActCode"/>
+          <code value="AMB"/> <!--    outpatient    -->
+          <display value="ambulatory"/>
+        </class>
+        <patient>
+          <reference value="Patient/9995679"/>
+        </patient>
+        <period>
+          <start value="2010-12-22T17:23:00"/>
+          <end value="2010-12-23T04:59:59"/>
+        </period>
+      </Encounter>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Encounter/15"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="2-bp"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-04-18: Blood pressure 121/62 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2007-04-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <encounter>
+          <reference value="Encounter/2"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="121"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="62"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/2-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="2-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2007-04-18: Systolic blood pressure = 121 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="121.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-04-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/2-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="2-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2007-04-18: Diastolic blood pressure = 62 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="62.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-04-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/2-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="3-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-07-18: Blood pressure 116/64 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2007-07-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/3"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="116"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="64"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/3-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="3-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2007-07-18: Systolic blood pressure = 116 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="116.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-07-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/3-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="3-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2007-07-18: Diastolic blood pressure = 64 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="64.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-07-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/3-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="4-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-01-16: Blood pressure 120/58 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2008-01-16"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/4"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="120"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="58"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/4-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="4-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2008-01-16: Systolic blood pressure = 120 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="120.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-01-16"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/4-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="4-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2008-01-16: Diastolic blood pressure = 58 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="58.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-01-16"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/4-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="5-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="33586001"/>
+              <display value="sitting"/>
+            </coding>
+            <text value="sitting"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-06-25: Blood pressure 121/73 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368208006"/>
+            <display value="left arm"/>
+          </coding>
+          <text value="left arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/5"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="121"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="73"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/5-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="5-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2008-06-25: Systolic blood pressure = 121 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="121.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/5-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="5-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2008-06-25: Diastolic blood pressure = 73 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="73.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/5-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="6-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="33586001"/>
+              <display value="sitting"/>
+            </coding>
+            <text value="sitting"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-06-25: Blood pressure 119/70 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368208006"/>
+            <display value="left arm"/>
+          </coding>
+          <text value="left arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/5"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="119"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="70"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/6-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="6-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2008-06-25: Systolic blood pressure = 119 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="119.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/6-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="6-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2008-06-25: Diastolic blood pressure = 70 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="70.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/6-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="7-bp"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-06-10: Blood pressure 137/68 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <encounter>
+          <reference value="Encounter/7"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="137"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="68"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/7-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="7-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-06-10: Systolic blood pressure = 137 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="137.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/7-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="7-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-06-10: Diastolic blood pressure = 68 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="68.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/7-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="8-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-06-10: Blood pressure 168/86 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="61396006"/>
+            <display value="left thigh"/>
+          </coding>
+          <text value="left thigh"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/7"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="168"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="86"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/8-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="8-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-06-10: Systolic blood pressure = 168 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="168.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/8-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="8-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-06-10: Diastolic blood pressure = 86 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="86.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/8-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="9-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Blood pressure 122/66 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368208006"/>
+            <display value="left arm"/>
+          </coding>
+          <text value="left arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="122"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="66"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/9-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="9-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Systolic blood pressure = 122 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="122.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/9-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="9-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Diastolic blood pressure = 66 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="66.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/9-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="10-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Blood pressure 121/65 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="121"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="65"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/10-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="10-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Systolic blood pressure = 121 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="121.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/10-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="10-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Diastolic blood pressure = 65 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="65.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/10-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="11-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Blood pressure 119/60 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="119"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="60"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/11-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="11-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Systolic blood pressure = 119 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="119.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/11-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="11-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Diastolic blood pressure = 60 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="60.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/11-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="12-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Blood pressure 121/57 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="121"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="57"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/12-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="12-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Systolic blood pressure = 121 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="121.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/12-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="12-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Diastolic blood pressure = 57 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="57.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/12-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="13-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Blood pressure 131/71 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="131"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="71"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/13-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="13-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Systolic blood pressure = 131 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="131.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/13-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="13-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Diastolic blood pressure = 71 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="71.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/13-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="14-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="40199007"/>
+              <display value="supine"/>
+            </coding>
+            <text value="supine"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Blood pressure 123/58 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="123"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="58"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/14-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="14-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Systolic blood pressure = 123 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="123.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/14-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="14-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2009-12-23: Diastolic blood pressure = 58 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="58.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/14-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="15-bp"/>
+        <extension
+          url="http://fhir-registry.smarthealthit.org/StructureDefinition/vital-signs#position">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <code value="33586001"/>
+              <display value="sitting"/>
+            </coding>
+            <text value="sitting"/>
+          </valueCodeableConcept>
+        </extension>
+
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2010-12-22: Blood pressure 123/59 mmHg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="55284-4"/>
+            <display value="Blood pressure systolic and diastolic"/>
+          </coding>
+          <text value="Blood pressure systolic and diastolic"/>
+        </code>
+        <effectiveDateTime value="2010-12-22"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <bodySite>
+          <coding>
+            <system value="http://snomed.info/sct"/>
+            <code value="368209003"/>
+            <display value="right arm"/>
+          </coding>
+          <text value="right arm"/>
+        </bodySite>
+
+        <method>
+          <coding>
+            <system value="http://smarthealthit.org/terms/codes/BloodPressureMethod#"/>
+            <code value="machine"/>
+            <display value="machine"/>
+          </coding>
+          <text value="machine"/>
+        </method>
+
+        <encounter>
+          <reference value="Encounter/15"/>
+        </encounter>
+
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8480-6"/>
+              <display value="Systolic blood pressure"/>
+            </coding>
+            <text value="Systolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="123"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+        <component>
+          <code>
+            <coding>
+              <system value="http://loinc.org"/>
+              <code value="8462-4"/>
+              <display value="Diastolic blood pressure"/>
+            </coding>
+            <text value="Diastolic blood pressure"/>
+          </code>
+          <valueQuantity>
+            <value value="59"/>
+            <unit value="mmHg"/>
+            <system value="http://unitsofmeasure.org"/>
+            <code value="mm[Hg]"/>
+          </valueQuantity>
+        </component>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/15-bp"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="15-systolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2010-12-22: Systolic blood pressure = 123 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8480-6"/>
+            <display value="Systolic blood pressure"/>
+          </coding>
+          <text value="Systolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="123.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2010-12-22"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/15-systolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="15-diastolic"/>
+        <text>
+          <status value="generated"/>
+          <div
+            xmlns="http://www.w3.org/1999/xhtml">2010-12-22: Diastolic blood pressure = 59 mm[Hg]
+          </div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8462-4"/>
+            <display value="Diastolic blood pressure"/>
+          </coding>
+          <text value="Diastolic blood pressure"/>
+        </code>
+        <valueQuantity>
+          <value value="59.0"/>
+          <unit value="mm[Hg]"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="mm[Hg]"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2010-12-22"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/15-diastolic"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="1-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2006-12-27: height = 198.0 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="198.0"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2006-12-27"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/1"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/1-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="1-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2006-12-27: heart_rate = 54.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="54.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2006-12-27"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/1"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/1-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="1-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2006-12-27: weight = 86.0 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="86.0"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2006-12-27"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/1"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/1-weight"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="2-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-04-18: height = 197.5 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="197.5"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-04-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/2"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/2-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="2-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-04-18: heart_rate = 60.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="60.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-04-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/2"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/2-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="2-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-04-18: weight = 87.0 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="87.0"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-04-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/2"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/2-weight"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="3-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-07-18: height = 197.0 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="197.0"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-07-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/3"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/3-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="3-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-07-18: heart_rate = 80.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="80.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-07-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/3"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/3-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="3-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2007-07-18: weight = 90.2 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="90.2"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2007-07-18"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/3"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/3-weight"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="4-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-01-16: height = 197.5 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="197.5"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-01-16"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/4"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/4-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="4-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-01-16: heart_rate = 47.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="47.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-01-16"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/4"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/4-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="4-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-01-16: weight = 89.4 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="89.4"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-01-16"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/4"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/4-weight"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="5-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-06-25: height = 197.5 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="197.5"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/5"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/5-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="5-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-06-25: heart_rate = 47.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="47.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/5"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/5-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="5-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-06-25: weight = 90.2 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="90.2"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/5"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/5-weight"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="6-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2008-06-25: heart_rate = 50.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="50.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2008-06-25"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/5"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/6-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="7-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-06-10: height = 198.0 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="198.0"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/7"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/7-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="7-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-06-10: weight = 94.7 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="94.7"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-06-10"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/7"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/7-weight"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="9-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: height = 197.5 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="197.5"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/9-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="9-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: heart_rate = 50.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="50.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/9-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="9-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: weight = 92.2 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="92.2"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/9-weight"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="10-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: heart_rate = 50.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="50.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/10-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="11-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: heart_rate = 49.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="49.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/11-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="12-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: heart_rate = 53.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="53.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/12-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="13-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: heart_rate = 48.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="48.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/13-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="14-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2009-12-23: heart_rate = 52.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="52.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2009-12-23"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/9"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/14-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="15-height"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2010-12-22: height = 197.0 cm</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8302-2"/>
+            <display value="height"/>
+          </coding>
+          <text value="height"/>
+        </code>
+        <valueQuantity>
+          <value value="197.0"/>
+          <unit value="cm"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="cm"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2010-12-22"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/15"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/15-height"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="15-heartrate"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2010-12-22: heart_rate = 52.0 {beats}/min</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="8867-4"/>
+            <display value="heart_rate"/>
+          </coding>
+          <text value="heart_rate"/>
+        </code>
+        <valueQuantity>
+          <value value="52.0"/>
+          <unit value="{beats}/min"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="{beats}/min"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2010-12-22"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/15"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/15-heartrate"/>
+    </request>
+  </entry>
+  <entry>
+    <resource>
+
+
+      <Observation>
+        <id value="15-weight"/>
+        <text>
+          <status value="generated"/>
+          <div xmlns="http://www.w3.org/1999/xhtml">2010-12-22: weight = 92.3 kg</div>
+        </text>
+        <category>
+          <coding>
+            <system value="http://hl7.org/fhir/observation-category"/>
+            <code value="vital-signs"/>
+            <display value="Vital Signs"/>
+          </coding>
+          <text value="Vital Signs"/>
+        </category>
+        <code>
+          <coding>
+            <system value="http://loinc.org"/>
+            <code value="3141-9"/>
+            <display value="weight"/>
+          </coding>
+          <text value="weight"/>
+        </code>
+        <valueQuantity>
+          <value value="92.3"/>
+          <unit value="kg"/>
+          <system value="http://unitsofmeasure.org"/>
+          <code value="kg"/>
+        </valueQuantity>
+
+        <effectiveDateTime value="2010-12-22"/>
+        <status value="final"/>
+        <subject>
+          <reference value="Patient/9995679"/>
+        </subject>
+        <encounter>
+          <reference value="Encounter/15"/>
+        </encounter>
+
+      </Observation>
+
+    </resource>
+    <request>
+      <method value="PUT"/>
+      <url value="Observation/15-weight"/>
+    </request>
+  </entry>
+
+</Bundle>

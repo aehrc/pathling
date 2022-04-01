@@ -1,0 +1,484 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "1032702",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n          <p>Amy Shaw</p>\n          </div>"
+        },
+        "identifier": [
+          {
+            "use": "usual",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://hl7.org/fhir/v2/0203",
+                  "code": "MR",
+                  "display": "Medical record number"
+                }
+              ],
+              "text": "Medical record number"
+            },
+            "system": "http://hospital.smarthealthit.org",
+            "value": "1032702"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Shaw",
+            "given": [
+              "Amy",
+              "V."
+            ]
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "800-782-6765",
+            "use": "mobile"
+          },
+          {
+            "system": "email",
+            "value": "amy.shaw@example.com"
+          }
+        ],
+        "gender": "female",
+        "birthDate": "2007-03-20",
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "49 Meadow St"
+            ],
+            "city": "Mounds",
+            "state": "OK",
+            "postalCode": "74047",
+            "country": "USA"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/1032702"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "101",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">\n            Nizatidine 15 MG/ML Oral Solution [Axid] (rxnorm: 582620)\n          </div>"
+        },
+        "status": "active",
+        "medicationCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "582620",
+              "display": "Nizatidine 15 MG/ML Oral Solution [Axid]"
+            }
+          ],
+          "text": "Nizatidine 15 MG/ML Oral Solution [Axid]"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "dosageInstruction": [
+          {
+            "text": "10 mL bid",
+            "timing": {
+              "repeat": {
+                "boundsPeriod": {
+                  "start": "2008-04-05"
+                },
+                "frequency": 2,
+                "period": 1,
+                "periodUnit": "d"
+              }
+            },
+            "doseQuantity": {
+              "value": 10,
+              "unit": "mL",
+              "system": "http://unitsofmeasure.org",
+              "code": "mL"
+            }
+          }
+        ],
+        "dispenseRequest": {
+          "numberOfRepeatsAllowed": 1,
+          "quantity": {
+            "value": 1,
+            "unit": "mL",
+            "system": "http://unitsofmeasure.org",
+            "code": "mL"
+          },
+          "expectedSupplyDuration": {
+            "value": 30,
+            "unit": "days",
+            "system": "http://unitsofmeasure.org",
+            "code": "d"
+          }
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationRequest/101"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "119",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Single liveborn, born in hospital, delivered\n            without mention of cesarean section\n          </div>"
+        },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "442311008",
+              "display": "Single liveborn, born in hospital, delivered without mention of cesarean section"
+            }
+          ],
+          "text": "Single liveborn, born in hospital, delivered without mention of cesarean section"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "onsetDateTime": "2007-12-14"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/119"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "120",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Abnormal weight loss</div>"
+        },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "267024001",
+              "display": "Abnormal weight loss"
+            }
+          ],
+          "text": "Abnormal weight loss"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "onsetDateTime": "2007-12-19"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/120"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "121",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Follow-up encounter</div>"
+        },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "310249008",
+              "display": "Follow-up encounter"
+            }
+          ],
+          "text": "Follow-up encounter"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "onsetDateTime": "2007-12-19"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/121"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "122",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Gastroesophageal reflux disease</div>"
+        },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "235595009",
+              "display": "Gastroesophageal reflux disease"
+            }
+          ],
+          "text": "Gastroesophageal reflux disease"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "onsetDateTime": "2008-04-03"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/122"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "123",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Needs influenza immunization</div>"
+        },
+        "clinicalStatus": "active",
+        "verificationStatus": "confirmed",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "185903001",
+              "display": "Needs influenza immunization"
+            }
+          ],
+          "text": "Needs influenza immunization"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "onsetDateTime": "2008-06-29"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/123"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "1",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">DTaP-hepatitis B and poliovirus vaccine</div>"
+        },
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx",
+              "code": "110",
+              "display": "DTaP-hepatitis B and poliovirus vaccine"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/1032702"
+        },
+        "date": "2007-09-27"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/1"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "2",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">poliovirus vaccine, unspecified formulation\n          </div>"
+        },
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx",
+              "code": "89",
+              "display": "poliovirus vaccine, unspecified formulation"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/1032702"
+        },
+        "date": "2011-01-27"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/2"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "3",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">poliovirus vaccine, unspecified formulation\n          </div>"
+        },
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx",
+              "code": "89",
+              "display": "poliovirus vaccine, unspecified formulation"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/1032702"
+        },
+        "date": "2011-05-27"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/3"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "4",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">rotavirus, live, pentavalent vaccine</div>"
+        },
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://www2a.cdc.gov/vaccines/IIS/IISStandards/vaccines.asp?rpt=cvx",
+              "code": "116",
+              "display": "rotavirus, live, pentavalent vaccine"
+            }
+          ]
+        },
+        "patient": {
+          "reference": "Patient/1032702"
+        },
+        "date": "2007-05-24"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/4"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "5-smokingstatus",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Tobacco smoking status: Current some day smoker\n          </div>"
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/observation-category",
+                "code": "social-history",
+                "display": "Social History"
+              }
+            ],
+            "text": "Social History"
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "72166-2",
+              "display": "Tobacco smoking status"
+            }
+          ],
+          "text": "Tobacco smoking status"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "valueCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "428041000124106",
+              "display": "Current some day smoker"
+            }
+          ],
+          "text": "Current some day smoker"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/5-smokingstatus"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "List",
+        "id": "19",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">No known allergies</div>"
+        },
+        "mode": "snapshot",
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org/",
+              "code": "52473-6",
+              "display": "Allergy"
+            }
+          ],
+          "text": "Allergy"
+        },
+        "subject": {
+          "reference": "Patient/1032702"
+        },
+        "date": "2000",
+        "emptyReason": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/list-empty-reason",
+              "code": "nilknown",
+              "display": "Nil Known"
+            }
+          ],
+          "text": "Nil Known"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "List/19"
+      }
+    }
+  ]
+}

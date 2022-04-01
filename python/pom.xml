@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>bunsen-python</artifactId>
+  <packaging>jar</packaging>
+  <parent>
+    <artifactId>bunsen-parent</artifactId>
+    <groupId>com.cerner.bunsen</groupId>
+    <version>0.5.12-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <name>Bunsen Python</name>
+  <description>POM file to execute Python tests in Maven builds</description>
+
+  <build>
+
+    <sourceDirectory>${project.basedir}</sourceDirectory>
+    <resources>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <includes>
+          <include>bunsen/**/*.py</include>
+        </includes>
+      </resource>
+    </resources>
+
+
+    <plugins>
+      <!-- Run the Python tests -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <configuration>
+              <executable>make</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>test</argument>
+              </arguments>
+              <skip>${skip.python.tests}</skip>
+              <environmentVariables>
+                <PYTHONPATH>${project.basedir}</PYTHONPATH>
+                <SHADED_JAR_PATH>${project.parent.basedir}/bunsen-spark-shaded/target/bunsen-spark-shaded-${project.version}.jar</SHADED_JAR_PATH>
+              </environmentVariables>
+            </configuration>
+            <id>python-tests</id>
+            <phase>integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Package the Python files for easy inclusion in the distribution. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/**</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>
