@@ -50,11 +50,12 @@ resource. The following parameters are supported:
   the result. The context is a single resource of the subject resource type. 
   The expression must return a 
   [materializable type](./fhirpath/data-types.html#materializable-types). 
-- `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against 
-  each resource in the data set to determine whether it is included within the 
-  result. The context is an individual resource of the subject resource type. 
-  The expression must evaluate to a Boolean value. Multiple filters are combined 
+- `filter [0..*]` - (string) A FHIRPath expression that can be evaluated against
+  each resource in the data set to determine whether it is included within the
+  result. The context is an individual resource of the subject resource type.
+  The expression must evaluate to a Boolean value. Multiple filters are combined
   using AND logic.
+- `limit [0..1]` - (integer) The maximum number of rows to return.
   
 ## Response
 
