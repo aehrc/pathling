@@ -76,7 +76,7 @@
     <pathling.deltaVersion>1.1.0</pathling.deltaVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.188</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.190</pathling.awsSdkVersion>
   </properties>
 
   <modules>
