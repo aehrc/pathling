@@ -18,6 +18,7 @@ literal expressions:
 - [Date](#date)
 - [DateTime](#datetime)
 - [Time](#time)
+- [Quantity](#quantity)
 - [Coding](#coding)
 
 See also: [Literals](https://hl7.org/fhirpath/#literals) and
@@ -138,6 +139,41 @@ Example:
 @2015-02-08T13:28:17-05:00
 ```
 
+## Quantity
+
+The Quantity type represents quantities with a specified unit, where the value
+component is defined as a Decimal, and the unit element is represented as a
+String that is required to be either a valid
+[Unified Code for Units of Measure (UCUM)](https://ucum.org/ucum.html) unit or
+one of the calendar duration keywords, singular or plural.
+
+The Quantity literal is a number (integer or decimal), followed by a
+(single-quoted) string representing a valid UCUM unit or calendar duration
+keyword. If the value literal is an Integer, it will be implicitly converted to
+a Decimal in the resulting Quantity value.
+
+The calendar duration keywords that are supported are:
+
+- `year` / `years`
+- `month` / `months`
+- `week` / `weeks`
+- `day` / `days`
+- `hour` / `hours`
+- `minute` / `minutes`
+- `second` / `seconds`
+- `millisecond` / `milliseconds`
+
+Example:
+
+```
+4.5 'mg'
+100 '[degF]'
+6 months
+30 days
+```
+
+See: [Quantity](https://hl7.org/fhirpath/#quantity)
+
 ## Coding
 
 A [Coding](https://hl7.org/fhir/R4/datatypes.html#Coding) is a representation of
@@ -146,7 +182,8 @@ a defined concept using a symbol from a defined
 [Using Codes in resources](https://hl7.org/fhir/R4/terminologies.html) for more
 details.
 
-The Coding literal comprises a minimum of `system` and `code`, as well as optional `version`, `display`, `userSelected` components:
+The Coding literal comprises a minimum of `system` and `code`, as well as
+optional `version`, `display`, `userSelected` components:
 
 ```
 <system>|<code>[|<version>][|<display>[|<userSelected>]]]
@@ -172,7 +209,12 @@ http://snomed.info/sct|'397956004 |Prosthetic arthroplasty of the hip|: 36370400
 
 ## Materializable types
 
-There is a subset of all possible FHIR types that can be "materialized", i.e. used as the result of a grouping expression in the Aggregate operation, or the definition of a column within the Extract operation. These types are:
+There is a subset of all possible FHIR types that can be "materialized", i.e.
+used as the result of a grouping expression in
+the [aggregate](../operations/aggregate.html)
+operation, or the definition of a column within
+the [extract](../operations/extract.html)
+operation. These types are:
 
 - [Boolean](#boolean)
 - [String](#string)
