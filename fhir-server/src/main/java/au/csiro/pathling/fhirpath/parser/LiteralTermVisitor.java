@@ -17,9 +17,9 @@ import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
+import au.csiro.pathling.fhirpath.literal.UcumQuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CodingLiteralContext;
@@ -152,9 +152,9 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
     checkNotNull(unit);
     final String fhirPath = String.format("%s %s", number, unit);
     try {
-      return QuantityLiteralPath.fromString(fhirPath,
+      return UcumQuantityLiteralPath.fromString(fhirPath,
           context.getThisContext().orElse(context.getInputContext()), Ucum.ucumEssenceService());
-    } catch (UcumException e) {
+    } catch (final UcumException e) {
       throw new RuntimeException(e);
     }
   }

@@ -10,7 +10,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.fhirpath.literal.UcumQuantityLiteralPath;
 import au.csiro.pathling.terminology.ucum.QuantityEquality;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -30,7 +30,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class QuantityPath extends ElementPath implements Comparable {
 
   public static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
-      .of(QuantityPath.class, QuantityLiteralPath.class, NullLiteralPath.class);
+      .of(QuantityPath.class, UcumQuantityLiteralPath.class, NullLiteralPath.class);
 
   protected QuantityPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,

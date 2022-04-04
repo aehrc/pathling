@@ -9,6 +9,7 @@ package au.csiro.pathling.test.helpers;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static org.apache.spark.sql.functions.col;
 
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.util.Collections;
 import java.util.List;
@@ -21,9 +22,14 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Quantity;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
@@ -95,6 +101,18 @@ public abstract class SparkHelpers {
   }
 
   @Nonnull
+  public static StructType quantityStructType() {
+    final Metadata metadata = new MetadataBuilder().build();
+    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
+    final StructField value = new StructField("value", DataTypes.createDecimalType(
+        DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
+    final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
+    final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
+    final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
+    return new StructType(new StructField[]{id, value, unit, system, code});
+  }
+
+  @Nonnull
   public static Row rowFromCoding(@Nonnull final Coding coding) {
     return new GenericRowWithSchema(
         new Object[]{coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
@@ -131,6 +149,14 @@ public abstract class SparkHelpers {
     return new GenericRowWithSchema(
         new Object[]{codeableConcept.getId(), buffer.toList(), codeableConcept.getText()},
         codeableConceptStructType());
+  }
+
+  @Nonnull
+  public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
+    return new GenericRowWithSchema(
+        new Object[]{quantity.getId(), quantity.getValue(), quantity.getUnit(),
+            quantity.getSystem(), quantity.getCode()},
+        quantityStructType());
   }
 
   @Value

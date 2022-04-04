@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class QuantityLiteralPath extends LiteralPath implements Comparable {
+public class UcumQuantityLiteralPath extends LiteralPath implements Comparable {
 
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
   private static final Pattern CALENDAR_DURATION_PATTERN = Pattern.compile("([0-9.]+) (\\w+)");
@@ -63,7 +63,8 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable {
       .build();
 
   @SuppressWarnings("WeakerAccess")
-  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+  protected UcumQuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Quantity);
@@ -80,7 +81,7 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable {
    * @throws IllegalArgumentException if the literal is malformed
    */
   @Nonnull
-  public static QuantityLiteralPath fromString(@Nonnull final String fhirPath,
+  public static UcumQuantityLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context, final UcumService ucumService)
       throws IllegalArgumentException {
     final Matcher ucumMatcher = UCUM_PATTERN.matcher(fhirPath);
@@ -98,7 +99,7 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Nonnull
-  private static QuantityLiteralPath fromUcumString(@Nonnull final Matcher matcher,
+  private static UcumQuantityLiteralPath fromUcumString(@Nonnull final Matcher matcher,
       @Nonnull final FhirPath context, @Nonnull final UcumService ucumService) {
     final String fullPath = matcher.group(0);
     final String value = matcher.group(1);
@@ -120,7 +121,7 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Nonnull
-  private static QuantityLiteralPath fromCalendarDurationString(@Nonnull final Matcher matcher,
+  private static UcumQuantityLiteralPath fromCalendarDurationString(@Nonnull final Matcher matcher,
       @Nonnull final FhirPath context, final UcumService ucumService) {
     final String value = matcher.group(1);
     final String keyword = matcher.group(2);
@@ -147,7 +148,7 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Nonnull
-  private static QuantityLiteralPath buildLiteralPath(final BigDecimal decimalValue,
+  private static UcumQuantityLiteralPath buildLiteralPath(final BigDecimal decimalValue,
       final String unit, final String display, final @Nonnull FhirPath context) {
     final Quantity quantity = new Quantity();
     quantity.setValue(decimalValue);
@@ -155,7 +156,7 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable {
     quantity.setCode(unit);
     quantity.setUnit(display);
 
-    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
+    return new UcumQuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
   }
 
   @Nonnull
