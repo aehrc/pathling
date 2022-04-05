@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -157,6 +158,16 @@ public abstract class SparkHelpers {
         new Object[]{quantity.getId(), quantity.getValue(), quantity.getUnit(),
             quantity.getSystem(), quantity.getCode()},
         quantityStructType());
+  }
+
+  @Nonnull
+  public static Row rowForUcumQuantity(@Nonnull final Double value, @Nonnull final String unit) {
+    final Quantity quantity = new Quantity();
+    quantity.setValue(new BigDecimal(value));
+    quantity.setUnit(unit);
+    quantity.setSystem(TestHelpers.UCUM_URL);
+    quantity.setCode(unit);
+    return rowFromQuantity(quantity);
   }
 
   @Value
