@@ -23,6 +23,7 @@ public class CalendarDurationLiteralPath extends LiteralPath implements Comparab
     super(dataset, idColumn, literalValue);
   }
 
+  @Nonnull
   public static CalendarDurationLiteralPath fromString(final String s, final FhirPath left) {
     return null;
   }
