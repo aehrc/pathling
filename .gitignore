@@ -18,3 +18,8 @@ lib/js/node_modules/
 
 #Mac
 .DS_Store
+
+
+#Python
+
+*.egg-info

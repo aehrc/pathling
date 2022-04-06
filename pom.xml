@@ -144,21 +144,25 @@
                         <artifactId>log4j</artifactId>
                     </exclusion>
                 </exclusions>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
                 <version>${pathling.sparkVersion}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-catalyst_${pathling.sparkScalaVersion}</artifactId>
                 <version>${pathling.sparkVersion}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-hive_${pathling.sparkScalaVersion}</artifactId>
                 <version>${pathling.sparkVersion}</version>
+                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>io.delta</groupId>
@@ -394,6 +398,11 @@
                             <option>-Xdoclint:none</option>
                         </additionalJOptions>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.2.4</version>
                 </plugin>
             </plugins>
         </pluginManagement>

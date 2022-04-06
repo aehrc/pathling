@@ -1,3 +1,0 @@
-"""
-Bunsen Python API
-"""
