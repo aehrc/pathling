@@ -39,16 +39,6 @@
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
-
-    <!-- Apache Spark -->
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
-    </dependency>
   </dependencies>
 
   <build>

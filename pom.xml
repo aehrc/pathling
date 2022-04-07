@@ -143,25 +143,21 @@
                         <artifactId>log4j</artifactId>
                     </exclusion>
                 </exclusions>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
                 <version>${pathling.sparkVersion}</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-catalyst_${pathling.sparkScalaVersion}</artifactId>
                 <version>${pathling.sparkVersion}</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-hive_${pathling.sparkScalaVersion}</artifactId>
                 <version>${pathling.sparkVersion}</version>
-                <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>io.delta</groupId>

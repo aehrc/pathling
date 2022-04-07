@@ -77,14 +77,17 @@
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-catalyst_${pathling.sparkScalaVersion}</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <!-- Logging -->
