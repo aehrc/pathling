@@ -140,6 +140,10 @@
       <artifactId>jwks-rsa</artifactId>
       <version>0.21.1</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+    </dependency>
 
     <!-- ANTLR -->
     <dependency>
@@ -194,7 +198,15 @@
       <version>4.2.0</version>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>com.tdunning</groupId>
+      <artifactId>json</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.jodd</groupId>
+      <artifactId>jodd-core</artifactId>
+      <scope>test</scope>
+    </dependency>
     <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -206,6 +218,12 @@
       <groupId>commons-beanutils</groupId>
       <artifactId>commons-beanutils</artifactId>
       <version>1.9.4</version>
+    </dependency>
+
+    <!-- Misc -->
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
     </dependency>
   </dependencies>
 

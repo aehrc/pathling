@@ -81,7 +81,6 @@
 
     <modules>
         <module>encoders</module>
-        <module>api</module>
         <module>fhir-server</module>
         <module>lib/import</module>
         <module>lib/js</module>
@@ -255,6 +254,33 @@
                 <artifactId>lombok</artifactId>
                 <version>1.18.22</version>
                 <scope>provided</scope>
+            </dependency>
+
+            <!-- Misc -->
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>2.8.9</version>
+            </dependency>
+            <dependency>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>2.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.tdunning</groupId>
+                <artifactId>json</artifactId>
+                <version>1.8</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jodd</groupId>
+                <artifactId>jodd-core</artifactId>
+                <version>3.5.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.findbugs</groupId>
+                <artifactId>jsr305</artifactId>
+                <version>3.0.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
