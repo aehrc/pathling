@@ -87,8 +87,7 @@ public class ComparableQuantity implements UDF1<Row, Row> {
     // Create a new Quantity object with the canonicalized result.
     final Quantity result = new Quantity();
     result.setValue(new BigDecimal(canonical.getValue().asDecimal()));
-    result.setComparator(input.getComparator());
-    result.setUnit(input.getUnit());
+    result.setUnit(canonical.getCode());
     result.setSystem(Ucum.SYSTEM_URI);
     result.setCode(canonical.getCode());
 

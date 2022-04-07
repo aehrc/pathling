@@ -7,10 +7,13 @@
 package au.csiro.pathling.fhirpath.element;
 
 import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
@@ -29,7 +32,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class QuantityPath extends ElementPath implements Comparable {
+public class QuantityPath extends ElementPath implements Comparable, Numeric {
 
   public static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(QuantityPath.class, QuantityLiteralPath.class, NullLiteralPath.class);
@@ -69,6 +72,75 @@ public class QuantityPath extends ElementPath implements Comparable {
   @Override
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return COMPARABLE_TYPES.contains(type);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericValueColumn() {
+    final Column comparable = buildComparableValueColumn(this);
+    return comparable.getField("value");
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericContextColumn() {
+    return buildComparableValueColumn(this);
+  }
+
+  @Nonnull
+  public static Column buildComparableValueColumn(@Nonnull final Numeric source) {
+    return callUDF(ComparableQuantity.FUNCTION_NAME, source.getValueColumn());
+  }
+
+  @Nonnull
+  @Override
+  public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
+      @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
+    return buildMathOperation(this, operation, expression, dataset, getFhirType());
+  }
+
+  @Nonnull
+  public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,
+      @Nonnull final MathOperation operation, @Nonnull final String expression,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
+    return target -> {
+      final Column sourceQuantity = source.getValueColumn();
+      final Column sourceComparable = source.getNumericValueColumn();
+      final Column resultColumn = operation.getSparkFunction()
+          .apply(sourceComparable, target.getNumericValueColumn());
+      final Column resultStruct = struct(
+          sourceQuantity.getField("id").as("id"),
+          resultColumn.as("value"),
+          sourceQuantity.getField("value_scale").as("value_scale"),
+          sourceQuantity.getField("comparator").as("comparator"),
+          sourceQuantity.getField("unit").as("unit"),
+          sourceQuantity.getField("system").as("system"),
+          sourceQuantity.getField("code").as("code"),
+          sourceQuantity.getField("_fid").as("_fid")
+      );
+      final Column sourceCanonicalizedCode = source.getNumericContextColumn().getField("code");
+      final Column targetCanonicalizedCode = target.getNumericContextColumn().getField("code");
+      final Column resultQuantityColumn =
+          when(sourceCanonicalizedCode.equalTo(targetCanonicalizedCode), resultStruct)
+              .otherwise(null);
+
+      final Column idColumn = source.getIdColumn();
+      final Optional<Column> eidColumn = findEidColumn(source, target);
+      final Optional<Column> thisColumn = findThisColumn(source, target);
+
+      switch (operation) {
+        case ADDITION:
+        case SUBTRACTION:
+        case MULTIPLICATION:
+        case DIVISION:
+          return ElementPath
+              .build(expression, dataset, idColumn, eidColumn, resultQuantityColumn, true,
+                  Optional.empty(),
+                  thisColumn, fhirType);
+        default:
+          throw new AssertionError("Unsupported math operation encountered: " + operation);
+      }
+    };
   }
 
 }

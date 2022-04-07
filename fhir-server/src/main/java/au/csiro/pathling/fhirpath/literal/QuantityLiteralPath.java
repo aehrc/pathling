@@ -13,6 +13,8 @@ import static org.apache.spark.sql.functions.struct;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.QuantityPath;
 import au.csiro.pathling.terminology.ucum.Ucum;
 import java.math.BigDecimal;
@@ -26,6 +28,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.fhir.ucum.UcumService;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 import org.hl7.fhir.r4.model.Type;
@@ -36,7 +39,7 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class QuantityLiteralPath extends LiteralPath implements Comparable {
+public class QuantityLiteralPath extends LiteralPath implements Comparable, Numeric {
 
   public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
 
@@ -168,6 +171,33 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable {
   @Override
   public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
     return QuantityPath.COMPARABLE_TYPES.contains(type);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericValueColumn() {
+    final Column comparable = QuantityPath.buildComparableValueColumn(this);
+    return comparable.getField("value");
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericContextColumn() {
+    return QuantityPath.buildComparableValueColumn(this);
+  }
+
+  @Nonnull
+  @Override
+  public FHIRDefinedType getFhirType() {
+    return FHIRDefinedType.QUANTITY;
+  }
+
+  @Nonnull
+  @Override
+  public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
+      @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
+    return QuantityPath.buildMathOperation(this, operation, expression, dataset,
+        FHIRDefinedType.QUANTITY);
   }
 
 }

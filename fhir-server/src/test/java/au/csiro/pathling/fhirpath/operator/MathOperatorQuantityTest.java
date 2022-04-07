@@ -49,7 +49,7 @@ public class MathOperatorQuantityTest {
   @Autowired
   FhirContext fhirContext;
 
-  static final List<String> OPERATORS = List.of("+", "-", "*", "/", "mod");
+  static final List<String> OPERATORS = List.of("+", "-", "*", "/");
   static final String ID_ALIAS = "_abc123";
 
   @Value
@@ -109,7 +109,6 @@ public class MathOperatorQuantityTest {
         result = rowForUcumQuantity(225000.0, "m");
         break;
       case "/":
-      case "mod":
         result = rowForUcumQuantity(0.1, "m");
         break;
       default:
@@ -128,7 +127,7 @@ public class MathOperatorQuantityTest {
   }
 
   @Nonnull
-  FhirPath buildQuantityExpression(@Nonnull final boolean leftOperand) {
+  FhirPath buildQuantityExpression(final boolean leftOperand) {
     final Quantity nonUcumQuantity = new Quantity();
     nonUcumQuantity.setValue(15);
     nonUcumQuantity.setUnit("mSv");

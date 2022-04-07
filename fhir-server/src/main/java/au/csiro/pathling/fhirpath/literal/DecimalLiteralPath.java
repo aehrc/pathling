@@ -10,7 +10,10 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.*;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import java.math.BigDecimal;
@@ -101,7 +104,25 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
   public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
     return DecimalPath
-        .buildMathOperation(this, operation, expression, dataset, FHIRDefinedType.DECIMAL);
+        .buildMathOperation(this, operation, expression, dataset);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericValueColumn() {
+    return getValueColumn();
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericContextColumn() {
+    return getNumericValueColumn();
+  }
+
+  @Nonnull
+  @Override
+  public FHIRDefinedType getFhirType() {
+    return FHIRDefinedType.DECIMAL;
   }
 
   @Nonnull

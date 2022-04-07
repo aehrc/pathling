@@ -13,6 +13,7 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a path that represents a numeric value, and can be the subject of math operations.
@@ -47,6 +48,33 @@ public interface Numeric {
    */
   @Nonnull
   Column getValueColumn();
+
+  /**
+   * @return a {@link Column} that provides a value that can me used in math operations
+   */
+  @Nonnull
+  Column getNumericValueColumn();
+
+  /**
+   * Provides a {@link Column} that provides additional context that informs the way that math
+   * operations are carried out. This is used for Quantity math, so that the operation function has
+   * access to the canonicalized units.
+   *
+   * @return a {@link Column} that provides additional context for math operations
+   */
+  @Nonnull
+  Column getNumericContextColumn();
+
+  /**
+   * The FHIR data type of the element being represented by this expression.
+   * <p>
+   * Note that there can be multiple valid FHIR types for a given FHIRPath type, e.g. {@code uri}
+   * and {@code code} both map to the {@code String} FHIRPath type.
+   *
+   * @see <a href="https://hl7.org/fhir/fhirpath.html#types">Using FHIR types in expressions</a>
+   */
+  @Nonnull
+  FHIRDefinedType getFhirType();
 
   /**
    * Represents a type of math operator.

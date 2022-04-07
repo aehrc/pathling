@@ -9,7 +9,10 @@ package au.csiro.pathling.fhirpath.literal;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.*;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -17,6 +20,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.PrimitiveType;
@@ -87,7 +91,25 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
   public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
     return IntegerPath
-        .buildMathOperation(this, operation, expression, dataset, FHIRDefinedType.INTEGER);
+        .buildMathOperation(this, operation, expression, dataset);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericValueColumn() {
+    return getValueColumn().cast(DataTypes.LongType);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericContextColumn() {
+    return getNumericValueColumn();
+  }
+
+  @Nonnull
+  @Override
+  public FHIRDefinedType getFhirType() {
+    return FHIRDefinedType.INTEGER;
   }
 
   @Nonnull
@@ -100,5 +122,5 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof IntegerPath;
   }
- 
+
 }
