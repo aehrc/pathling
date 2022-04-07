@@ -84,6 +84,7 @@
         <module>fhir-server</module>
         <module>lib/import</module>
         <module>lib/js</module>
+        <module>lib/python</module>
         <module>site</module>
     </modules>
 

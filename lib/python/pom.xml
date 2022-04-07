@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
+    <version>5.0.0</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+  <artifactId>python</artifactId>
+  <packaging>jar</packaging>
+  <name>Pathling Python</name>
+  <description>POM file for Python modules in Maven builds</description>
+
+  <properties>
+    <skip.python.tests>false</skip.python.tests>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <sourceDirectory>${project.basedir}</sourceDirectory>
+    <resources>
+      <resource>
+        <directory>${project.basedir}</directory>
+        <includes>
+          <include>bunsen/**/*.py</include>
+        </includes>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-dependencies</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>copy-dependencies</goal>
+            </goals>
+            <configuration>
+              <classifier>all</classifier>
+              <excludeTransitive>true</excludeTransitive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <!-- Run the Python tests -->
+          <execution>
+            <configuration>
+              <executable>py.test</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-x</argument>
+                <argument>tests</argument>
+              </arguments>
+              <skip>${skip.python.tests}</skip>
+              <environmentVariables>
+                <PYTHONPATH>${project.basedir}</PYTHONPATH>
+                <SHADED_JAR_PATH>
+                  ${project.parent.basedir}/bunsen-spark-shaded/target/bunsen-spark-shaded-${project.version}.jar
+                </SHADED_JAR_PATH>
+              </environmentVariables>
+            </configuration>
+            <id>python-tests</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+
+          <!-- Build python distributions -->
+          <execution>
+            <configuration>
+              <executable>python</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>setup.py</argument>
+                <argument>sdist</argument>
+                <argument>sdist</argument>
+                <argument>--dist-dir</argument>
+                <argument>target/py-dist</argument>
+              </arguments>
+            </configuration>
+            <id>python-package</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

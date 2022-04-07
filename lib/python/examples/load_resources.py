@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 
+import os
 from tempfile import mkdtemp
 
-from pathling.r4 import bundles
 from pyspark.sql import SparkSession
+
+from pathling.r4 import bundles
+
+PROJECT_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
 
 
 def main():
-    shaded_jar = '../../api/target/pathling-api-5.0.0-all.jar'
+    shaded_jar = os.path.join(PROJECT_DIR, 'encoders/target/encoders-5.0.0-all.jar')
     warehouse_dir = mkdtemp()
     print(warehouse_dir)
 
@@ -19,12 +24,14 @@ def main():
         .config('spark.sql.warehouse.dir', warehouse_dir) \
         .getOrCreate()
 
+    json_resources_dir = os.path.join(PROJECT_DIR,
+                                      'encoders/src/test/resources/data/resources/R4/json/')
+
     resource_bundles = bundles.from_resource_json(
-        spark.read.text("../../api/src/test/resources/data/resources/R4/json/"),
+        spark.read.text(json_resources_dir),
         "value")
     conditions = bundles.extract_entry(spark, resource_bundles, 'Condition')
     conditions.show()
-
 
     patients = bundles.extract_entry(spark, resource_bundles, 'Patient')
     patients.show()
