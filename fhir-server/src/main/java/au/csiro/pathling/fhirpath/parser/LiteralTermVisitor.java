@@ -17,9 +17,9 @@ import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.fhirpath.literal.UcumQuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CodingLiteralContext;
@@ -34,6 +34,7 @@ import au.csiro.pathling.terminology.ucum.Ucum;
 import java.text.ParseException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.fhir.ucum.UcumException;
 
 /**
@@ -147,15 +148,24 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitQuantityLiteral(@Nullable final QuantityLiteralContext ctx) {
     checkNotNull(ctx);
     @Nullable final String number = ctx.quantity().NUMBER().getText();
-    @Nullable final String unit = ctx.quantity().unit().getText();
     checkNotNull(number);
-    checkNotNull(unit);
-    final String fhirPath = String.format("%s %s", number, unit);
-    try {
-      return UcumQuantityLiteralPath.fromString(fhirPath,
-          context.getThisContext().orElse(context.getInputContext()), Ucum.ucumEssenceService());
-    } catch (final UcumException e) {
-      throw new RuntimeException(e);
+
+    final FhirPath resultContext = this.context.getThisContext().orElse(context.getInputContext());
+    @Nullable final TerminalNode ucumUnit = ctx.quantity().unit().STRING();
+
+    if (ucumUnit == null) {
+      // Create a calendar duration literal.
+      final String fhirPath = String.format("%s %s", number, ctx.quantity().unit().getText());
+      return QuantityLiteralPath.fromCalendarDurationString(fhirPath, resultContext);
+    } else {
+      // Create a UCUM Quantity literal.
+      final String fhirPath = String.format("%s %s", number, ucumUnit.getText());
+      try {
+        return QuantityLiteralPath.fromUcumString(fhirPath, resultContext,
+            Ucum.ucumEssenceService());
+      } catch (final UcumException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 

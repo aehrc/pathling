@@ -13,7 +13,7 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.ucum.QuantityEquality;
+import au.csiro.pathling.terminology.ucum.ComparableQuantity;
 import au.csiro.pathling.terminology.ucum.Ucum;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -42,8 +42,8 @@ class UnitTestDependencies {
   static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkListener> sparkListener,
-      @Nonnull final QuantityEquality quantityEquality) {
-    return Spark.build(configuration, environment, sparkListener, quantityEquality);
+      @Nonnull final ComparableQuantity comparableQuantity) {
+    return Spark.build(configuration, environment, sparkListener, comparableQuantity);
   }
 
   @Bean

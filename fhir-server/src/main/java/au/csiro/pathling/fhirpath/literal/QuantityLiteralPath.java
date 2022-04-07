@@ -15,9 +15,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.QuantityPath;
 import au.csiro.pathling.terminology.ucum.Ucum;
-import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -38,34 +36,15 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class UcumQuantityLiteralPath extends LiteralPath implements Comparable {
+public class QuantityLiteralPath extends LiteralPath implements Comparable {
+
+  public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
 
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
   private static final Pattern CALENDAR_DURATION_PATTERN = Pattern.compile("([0-9.]+) (\\w+)");
 
-  private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, String>()
-      .put("year", "a")
-      .put("years", "a")
-      .put("month", "mo")
-      .put("months", "mo")
-      .put("week", "wk")
-      .put("weeks", "wk")
-      .put("day", "d")
-      .put("days", "d")
-      .put("hour", "h")
-      .put("hours", "h")
-      .put("minute", "min")
-      .put("minutes", "min")
-      .put("second", "s")
-      .put("seconds", "s")
-      .put("millisecond", "ms")
-      .put("milliseconds", "ms")
-      .build();
-
-  @SuppressWarnings("WeakerAccess")
-  protected UcumQuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
     check(literalValue instanceof Quantity);
   }
@@ -81,26 +60,12 @@ public class UcumQuantityLiteralPath extends LiteralPath implements Comparable {
    * @throws IllegalArgumentException if the literal is malformed
    */
   @Nonnull
-  public static UcumQuantityLiteralPath fromString(@Nonnull final String fhirPath,
-      @Nonnull final FhirPath context, final UcumService ucumService)
-      throws IllegalArgumentException {
-    final Matcher ucumMatcher = UCUM_PATTERN.matcher(fhirPath);
-    if (ucumMatcher.matches()) {
-      return fromUcumString(ucumMatcher, context, ucumService);
-    } else {
-      final Matcher calendarDurationMatcher = CALENDAR_DURATION_PATTERN.matcher(fhirPath);
-      if (calendarDurationMatcher.matches()) {
-        return fromCalendarDurationString(calendarDurationMatcher, context, ucumService);
-      } else {
-        throw new IllegalArgumentException("Quantity literal has invalid format: " + fhirPath);
-      }
-    }
-
-  }
-
-  @Nonnull
-  private static UcumQuantityLiteralPath fromUcumString(@Nonnull final Matcher matcher,
+  public static QuantityLiteralPath fromUcumString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context, @Nonnull final UcumService ucumService) {
+    final Matcher matcher = UCUM_PATTERN.matcher(fhirPath);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException("UCUM Quantity literal has invalid format: " + fhirPath);
+    }
     final String fullPath = matcher.group(0);
     final String value = matcher.group(1);
     final String rawUnit = matcher.group(2);
@@ -121,20 +86,22 @@ public class UcumQuantityLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Nonnull
-  private static UcumQuantityLiteralPath fromCalendarDurationString(@Nonnull final Matcher matcher,
-      @Nonnull final FhirPath context, final UcumService ucumService) {
+  public static QuantityLiteralPath fromCalendarDurationString(@Nonnull final String fhirPath,
+      @Nonnull final FhirPath context) {
+    final Matcher matcher = CALENDAR_DURATION_PATTERN.matcher(fhirPath);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException(
+          "Calendar duration literal has invalid format: " + fhirPath);
+    }
     final String value = matcher.group(1);
     final String keyword = matcher.group(2);
 
-    if (!CALENDAR_DURATION_TO_UCUM.containsKey(keyword)) {
-      throw new IllegalArgumentException("Invalid calendar duration keyword: " + keyword);
-    }
+    final Quantity quantity = new Quantity();
+    quantity.setValue(new BigDecimal(value));
+    quantity.setSystem(FHIRPATH_CALENDAR_DURATION_URI);
+    quantity.setCode(keyword);
 
-    final String unit = CALENDAR_DURATION_TO_UCUM.get(keyword);
-    final BigDecimal decimalValue = getQuantityValue(value, context);
-    final String display = ucumService.getCommonDisplay(unit);
-
-    return buildLiteralPath(decimalValue, unit, display, context);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
   }
 
   private static BigDecimal getQuantityValue(final String value, final @Nonnull FhirPath context) {
@@ -148,7 +115,7 @@ public class UcumQuantityLiteralPath extends LiteralPath implements Comparable {
   }
 
   @Nonnull
-  private static UcumQuantityLiteralPath buildLiteralPath(final BigDecimal decimalValue,
+  private static QuantityLiteralPath buildLiteralPath(final BigDecimal decimalValue,
       final String unit, final String display, final @Nonnull FhirPath context) {
     final Quantity quantity = new Quantity();
     quantity.setValue(decimalValue);
@@ -156,7 +123,7 @@ public class UcumQuantityLiteralPath extends LiteralPath implements Comparable {
     quantity.setCode(unit);
     quantity.setUnit(display);
 
-    return new UcumQuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
   }
 
   @Nonnull
@@ -184,6 +151,7 @@ public class UcumQuantityLiteralPath extends LiteralPath implements Comparable {
     return struct(
         lit(value.getId()).as("id"),
         lit(value.getValue()).as("value"),
+        lit(value.getValue().scale()).as("value_scale"),
         lit(comparator.map(QuantityComparator::toCode).orElse(null)).as("comparator"),
         lit(value.getUnit()).as("unit"),
         lit(value.getSystem()).as("system"),

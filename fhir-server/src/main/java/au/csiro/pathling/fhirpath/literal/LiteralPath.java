@@ -55,7 +55,7 @@ public abstract class LiteralPath implements FhirPath {
           .put(FHIRDefinedType.INSTANT, DateTimeLiteralPath.class)
           .put(FHIRDefinedType.TIME, TimeLiteralPath.class)
           .put(FHIRDefinedType.CODING, CodingLiteralPath.class)
-          .put(FHIRDefinedType.QUANTITY, UcumQuantityLiteralPath.class)
+          .put(FHIRDefinedType.QUANTITY, QuantityLiteralPath.class)
           .build();
 
   private static final Map<Class<? extends LiteralPath>, FHIRDefinedType> FHIRPATH_TYPE_TO_FHIR_TYPE =
@@ -68,7 +68,7 @@ public abstract class LiteralPath implements FhirPath {
           .put(DateTimeLiteralPath.class, FHIRDefinedType.DATETIME)
           .put(TimeLiteralPath.class, FHIRDefinedType.TIME)
           .put(CodingLiteralPath.class, FHIRDefinedType.CODING)
-          .put(UcumQuantityLiteralPath.class, FHIRDefinedType.QUANTITY)
+          .put(QuantityLiteralPath.class, FHIRDefinedType.QUANTITY)
           .build();
 
   @Getter

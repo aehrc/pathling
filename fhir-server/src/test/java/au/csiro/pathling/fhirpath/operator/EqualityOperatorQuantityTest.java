@@ -11,8 +11,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.literal.CalendarDurationLiteralPath;
-import au.csiro.pathling.fhirpath.literal.UcumQuantityLiteralPath;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -25,6 +24,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataTypes;
 import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Quantity;
@@ -52,12 +52,12 @@ public class EqualityOperatorQuantityTest {
   FhirPath left;
   FhirPath right;
   ParserContext parserContext;
-  UcumQuantityLiteralPath ucumQuantityLiteral1;
-  UcumQuantityLiteralPath ucumQuantityLiteral2;
-  UcumQuantityLiteralPath ucumQuantityLiteral3;
-  CalendarDurationLiteralPath calendarDurationLiteral1;
-  CalendarDurationLiteralPath calendarDurationLiteral2;
-  CalendarDurationLiteralPath calendarDurationLiteral3;
+  QuantityLiteralPath ucumQuantityLiteral1;
+  QuantityLiteralPath ucumQuantityLiteral2;
+  QuantityLiteralPath ucumQuantityLiteral3;
+  QuantityLiteralPath calendarDurationLiteral1;
+  QuantityLiteralPath calendarDurationLiteral2;
+  QuantityLiteralPath calendarDurationLiteral3;
 
   @BeforeEach
   void setUp() {
@@ -86,28 +86,28 @@ public class EqualityOperatorQuantityTest {
     quantity4.setCode("258682000");
 
     final Quantity quantity5 = new Quantity();
-    quantity1.setValue(650);
-    quantity1.setUnit("mg");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("mg");
+    quantity5.setValue(650);
+    quantity5.setUnit("mg");
+    quantity5.setSystem(TestHelpers.UCUM_URL);
+    quantity5.setCode("mg");
 
     final Quantity quantity6 = new Quantity();
-    quantity1.setValue(30);
-    quantity1.setUnit("d");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("d");
+    quantity6.setValue(30);
+    quantity6.setUnit("d");
+    quantity6.setSystem(TestHelpers.UCUM_URL);
+    quantity6.setCode("d");
 
     final Quantity quantity7 = new Quantity();
-    quantity1.setValue(60);
-    quantity1.setUnit("s");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("s");
+    quantity7.setValue(60);
+    quantity7.setUnit("s");
+    quantity7.setSystem(TestHelpers.UCUM_URL);
+    quantity7.setCode("s");
 
     final Quantity quantity8 = new Quantity();
-    quantity1.setValue(1000);
-    quantity1.setUnit("ms");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("ms");
+    quantity8.setValue(1000);
+    quantity8.setUnit("ms");
+    quantity8.setSystem(TestHelpers.UCUM_URL);
+    quantity8.setCode("ms");
 
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
@@ -149,12 +149,13 @@ public class EqualityOperatorQuantityTest {
         .idAndValueColumns()
         .build();
 
-    ucumQuantityLiteral1 = UcumQuantityLiteralPath.fromString("500 'mg'", left, ucumService);
-    ucumQuantityLiteral2 = UcumQuantityLiteralPath.fromString("0.5 'g'", left, ucumService);
-    ucumQuantityLiteral3 = UcumQuantityLiteralPath.fromString("1.8 'm'", left, ucumService);
-    calendarDurationLiteral1 = CalendarDurationLiteralPath.fromString("30 days", left);
-    calendarDurationLiteral2 = CalendarDurationLiteralPath.fromString("60 seconds", left);
-    calendarDurationLiteral3 = CalendarDurationLiteralPath.fromString("1000 milliseconds", left);
+    ucumQuantityLiteral1 = QuantityLiteralPath.fromUcumString("500 'mg'", left, ucumService);
+    ucumQuantityLiteral2 = QuantityLiteralPath.fromUcumString("0.5 'g'", left, ucumService);
+    ucumQuantityLiteral3 = QuantityLiteralPath.fromUcumString("1.8 'm'", left, ucumService);
+    calendarDurationLiteral1 = QuantityLiteralPath.fromCalendarDurationString("30 days", left);
+    calendarDurationLiteral2 = QuantityLiteralPath.fromCalendarDurationString("60 seconds", left);
+    calendarDurationLiteral3 = QuantityLiteralPath.fromCalendarDurationString("1000 milliseconds",
+        left);
 
     parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(left.getIdColumn()))
@@ -251,6 +252,8 @@ public class EqualityOperatorQuantityTest {
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allTrue = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(true,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
                 "patient-7", "patient-8", "patient-9"))
@@ -310,6 +313,8 @@ public class EqualityOperatorQuantityTest {
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allFalse = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
                 "patient-7", "patient-8", "patient-9"))
@@ -330,7 +335,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-4", null),   // 650 mg = 30 days
         RowFactory.create("patient-5", null),   // {} = 30 days
         RowFactory.create("patient-6", null),   // 500 mg = 30 days 
-        RowFactory.create("patient-7", true),   // 30 d = 30 days
+        RowFactory.create("patient-7", null),   // 30 d = 30 days
         RowFactory.create("patient-8", null),   // 60 s = 30 days
         RowFactory.create("patient-9", null)    // 1000 ms = 30 days
     );
@@ -339,36 +344,38 @@ public class EqualityOperatorQuantityTest {
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", null),   // 500 mg = 60 s
-        RowFactory.create("patient-2", null),   // 500 mg = 60 s
-        RowFactory.create("patient-3", null),   // 500 mg = 60 s
-        RowFactory.create("patient-4", null),   // 650 mg = 60 s
-        RowFactory.create("patient-5", null),   // {} = 60 s
-        RowFactory.create("patient-6", null),   // 500 mg = 60 s 
-        RowFactory.create("patient-7", null),   // 30 d = 60 s
-        RowFactory.create("patient-8", true),   // 60 s = 60 s
-        RowFactory.create("patient-9", false)   // 1000 ms = 60 s
+        RowFactory.create("patient-1", null),   // 500 mg = 60 seconds
+        RowFactory.create("patient-2", null),   // 500 mg = 60 seconds
+        RowFactory.create("patient-3", null),   // 500 mg = 60 seconds
+        RowFactory.create("patient-4", null),   // 650 mg = 60 seconds
+        RowFactory.create("patient-5", null),   // {} = 60 seconds
+        RowFactory.create("patient-6", null),   // 500 mg = 60 seconds 
+        RowFactory.create("patient-7", false),  // 30 d = 60 seconds
+        RowFactory.create("patient-8", true),   // 60 s = 60 seconds
+        RowFactory.create("patient-9", false)   // 1000 ms = 60 seconds
     );
 
     input = new OperatorInput(parserContext, left, calendarDurationLiteral3);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", null),   // 500 mg = 1000 ms
-        RowFactory.create("patient-2", null),   // 500 mg = 1000 ms
-        RowFactory.create("patient-3", null),   // 500 mg = 1000 ms
-        RowFactory.create("patient-4", null),   // 650 mg = 1000 ms
-        RowFactory.create("patient-5", null),   // {} = 1000 ms
-        RowFactory.create("patient-6", null),   // 500 mg = 1000 ms 
-        RowFactory.create("patient-7", null),   // 30 d = 1000 ms
-        RowFactory.create("patient-8", false),  // 60 s = 1000 ms
-        RowFactory.create("patient-9", true)    // 1000 ms = 1000 ms
+        RowFactory.create("patient-1", null),   // 500 mg = 1000 milliseconds
+        RowFactory.create("patient-2", null),   // 500 mg = 1000 milliseconds
+        RowFactory.create("patient-3", null),   // 500 mg = 1000 milliseconds
+        RowFactory.create("patient-4", null),   // 650 mg = 1000 milliseconds
+        RowFactory.create("patient-5", null),   // {} = 1000 milliseconds
+        RowFactory.create("patient-6", null),   // 500 mg = 1000 milliseconds 
+        RowFactory.create("patient-7", false),  // 30 d = 1000 milliseconds
+        RowFactory.create("patient-8", false),  // 60 s = 1000 milliseconds
+        RowFactory.create("patient-9", true)    // 1000 ms = 1000 milliseconds
     );
 
-    input = new OperatorInput(parserContext, calendarDurationLiteral1, calendarDurationLiteral1);
+    input = new OperatorInput(parserContext, calendarDurationLiteral2, calendarDurationLiteral2);
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allTrue = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(true,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
                 "patient-7", "patient-8", "patient-9"))
@@ -389,7 +396,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-4", null),   // 650 mg != 30 days
         RowFactory.create("patient-5", null),   // {} != 30 days
         RowFactory.create("patient-6", null),   // 500 mg != 30 days 
-        RowFactory.create("patient-7", false),  // 30 d != 30 days
+        RowFactory.create("patient-7", null),   // 30 d != 30 days
         RowFactory.create("patient-8", null),   // 60 s != 30 days
         RowFactory.create("patient-9", null)    // 1000 ms != 30 days
     );
@@ -404,7 +411,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-4", null),   // 650 mg != 60 s
         RowFactory.create("patient-5", null),   // {} != 60 s
         RowFactory.create("patient-6", null),   // 500 mg != 60 s 
-        RowFactory.create("patient-7", null),   // 30 d != 60 s
+        RowFactory.create("patient-7", true),   // 30 d != 60 s
         RowFactory.create("patient-8", false),  // 60 s != 60 s
         RowFactory.create("patient-9", true)    // 1000 ms != 60 s
     );
@@ -419,15 +426,17 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-4", null),   // 650 mg != 1000 ms
         RowFactory.create("patient-5", null),   // {} != 1000 ms
         RowFactory.create("patient-6", null),   // 500 mg != 1000 ms 
-        RowFactory.create("patient-7", null),   // 30 d != 1000 ms
+        RowFactory.create("patient-7", true),   // 30 d != 1000 ms
         RowFactory.create("patient-8", true),   // 60 s != 1000 ms
         RowFactory.create("patient-9", false)   // 1000 ms != 1000 ms
     );
 
-    input = new OperatorInput(parserContext, calendarDurationLiteral1, calendarDurationLiteral1);
+    input = new OperatorInput(parserContext, calendarDurationLiteral2, calendarDurationLiteral2);
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allFalse = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
                 "patient-7", "patient-8", "patient-9"))

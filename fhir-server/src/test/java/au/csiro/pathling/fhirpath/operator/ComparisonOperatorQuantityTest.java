@@ -11,8 +11,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.literal.CalendarDurationLiteralPath;
-import au.csiro.pathling.fhirpath.literal.UcumQuantityLiteralPath;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -51,12 +50,12 @@ public class ComparisonOperatorQuantityTest {
   FhirPath left;
   FhirPath right;
   ParserContext parserContext;
-  UcumQuantityLiteralPath ucumQuantityLiteral1;
-  UcumQuantityLiteralPath ucumQuantityLiteral2;
-  UcumQuantityLiteralPath ucumQuantityLiteral3;
-  CalendarDurationLiteralPath calendarDurationLiteral1;
-  CalendarDurationLiteralPath calendarDurationLiteral2;
-  CalendarDurationLiteralPath calendarDurationLiteral3;
+  QuantityLiteralPath ucumQuantityLiteral1;
+  QuantityLiteralPath ucumQuantityLiteral2;
+  QuantityLiteralPath ucumQuantityLiteral3;
+  QuantityLiteralPath calendarDurationLiteral1;
+  QuantityLiteralPath calendarDurationLiteral2;
+  QuantityLiteralPath calendarDurationLiteral3;
 
   @BeforeEach
   void setUp() {
@@ -156,12 +155,13 @@ public class ComparisonOperatorQuantityTest {
         .idAndValueColumns()
         .build();
 
-    ucumQuantityLiteral1 = UcumQuantityLiteralPath.fromString("500 'mg'", left, ucumService);
-    ucumQuantityLiteral2 = UcumQuantityLiteralPath.fromString("0.5 'g'", left, ucumService);
-    ucumQuantityLiteral3 = UcumQuantityLiteralPath.fromString("1.8 'm'", left, ucumService);
-    calendarDurationLiteral1 = CalendarDurationLiteralPath.fromString("30 days", left);
-    calendarDurationLiteral2 = CalendarDurationLiteralPath.fromString("60 seconds", left);
-    calendarDurationLiteral3 = CalendarDurationLiteralPath.fromString("1000 milliseconds", left);
+    ucumQuantityLiteral1 = QuantityLiteralPath.fromUcumString("500 'mg'", left, ucumService);
+    ucumQuantityLiteral2 = QuantityLiteralPath.fromUcumString("0.5 'g'", left, ucumService);
+    ucumQuantityLiteral3 = QuantityLiteralPath.fromUcumString("1.8 'm'", left, ucumService);
+    calendarDurationLiteral1 = QuantityLiteralPath.fromCalendarDurationString("30 days", left);
+    calendarDurationLiteral2 = QuantityLiteralPath.fromCalendarDurationString("60 seconds", left);
+    calendarDurationLiteral3 = QuantityLiteralPath.fromCalendarDurationString("1000 milliseconds",
+        left);
 
     parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(left.getIdColumn()))

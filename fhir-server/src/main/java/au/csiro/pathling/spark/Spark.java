@@ -9,9 +9,10 @@ package au.csiro.pathling.spark;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Storage.Aws;
 import au.csiro.pathling.async.SparkListener;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.PathlingStrategy;
 import au.csiro.pathling.terminology.CodingToLiteral;
-import au.csiro.pathling.terminology.ucum.QuantityEquality;
+import au.csiro.pathling.terminology.ucum.ComparableQuantity;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
@@ -52,7 +53,7 @@ public class Spark {
   public static SparkSession build(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkListener> sparkListener,
-      @Nonnull final QuantityEquality quantityEquality) {
+      @Nonnull final ComparableQuantity comparableQuantity) {
     log.debug("Creating Spark session");
     resolveSparkConfiguration(environment);
 
@@ -65,7 +66,9 @@ public class Spark {
     PathlingStrategy.setup(spark);
     spark.udf()
         .register(CodingToLiteral.FUNCTION_NAME, new CodingToLiteral(), DataTypes.StringType);
-    spark.udf().register(QuantityEquality.FUNCTION_NAME, quantityEquality, DataTypes.BooleanType);
+    spark.udf()
+        .register(ComparableQuantity.FUNCTION_NAME, comparableQuantity,
+            QuantityEncoding.dataType());
 
     // Configure AWS driver and credentials.
     configureAwsDriver(configuration, spark);

@@ -31,6 +31,7 @@ import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
@@ -39,6 +40,8 @@ import scala.collection.mutable.Buffer;
  */
 @SuppressWarnings("WeakerAccess")
 public abstract class SparkHelpers {
+
+  public static final int DECIMAL_SCALE = 2;
 
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
@@ -107,10 +110,17 @@ public abstract class SparkHelpers {
     final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
     final StructField value = new StructField("value", DataTypes.createDecimalType(
         DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
+    final StructField valueScale = new StructField("value_scale", DataTypes.IntegerType, true,
+        metadata);
+    final StructField comparator = new StructField("comparator", DataTypes.StringType, true,
+        metadata);
     final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
     final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
     final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
-    return new StructType(new StructField[]{id, value, unit, system, code});
+    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
+        metadata);
+    return new StructType(
+        new StructField[]{id, value, valueScale, comparator, unit, system, code, fid});
   }
 
   @Nonnull
@@ -154,9 +164,11 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
+    final String comparator = Optional.ofNullable(quantity.getComparator())
+        .map(QuantityComparator::toCode).orElse(null);
     return new GenericRowWithSchema(
-        new Object[]{quantity.getId(), quantity.getValue(), quantity.getUnit(),
-            quantity.getSystem(), quantity.getCode()},
+        new Object[]{quantity.getId(), quantity.getValue(), DECIMAL_SCALE, comparator,
+            quantity.getUnit(), quantity.getSystem(), quantity.getCode(), null /* _fid */},
         quantityStructType());
   }
 

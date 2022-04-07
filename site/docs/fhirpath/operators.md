@@ -58,7 +58,8 @@ All comparison operators return a [Boolean](./data-types.html#boolean) value.
 <sup>*</sup> Not all Quantity, Date and DateTime values are comparable, it
 depends upon the comparability of the units within the Quantity values. See the
 [FHIRPath specification](https://hl7.org/fhirpath/#comparison) for details on
-how Quantity values are compared.
+how Quantity values are compared. Quantities with a `comparator` are treated as
+not comparable by this implementation.
 
 See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 
@@ -78,7 +79,8 @@ an empty collection.
 Not all Quantity, Date and DateTime values can be compared for equality, it
 depends upon the comparability of the units within the Quantity values. See the
 [FHIRPath specification](https://hl7.org/fhirpath/#quantity-equality) for
-details on how equality works with Quantity values.
+details on how equality works with Quantity values. Quantities with a
+`comparator` are treated as not comparable by this implementation.
 
 See also: [Equality](https://hl7.org/fhirpath/#equality)
 

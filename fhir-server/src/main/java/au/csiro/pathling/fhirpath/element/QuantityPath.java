@@ -6,12 +6,15 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.when;
+
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.literal.UcumQuantityLiteralPath;
-import au.csiro.pathling.terminology.ucum.QuantityEquality;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.terminology.ucum.ComparableQuantity;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.function.Function;
@@ -19,7 +22,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -30,7 +32,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class QuantityPath extends ElementPath implements Comparable {
 
   public static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
-      .of(QuantityPath.class, UcumQuantityLiteralPath.class, NullLiteralPath.class);
+      .of(QuantityPath.class, QuantityLiteralPath.class, NullLiteralPath.class);
 
   protected QuantityPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
@@ -47,15 +49,21 @@ public class QuantityPath extends ElementPath implements Comparable {
     return buildComparison(this, operation);
   }
 
-  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      final @Nonnull ComparisonOperation operation) {
-    if (operation == ComparisonOperation.EQUALS) {
-      return Comparable.buildComparison(source,
-          (l, r) -> functions.callUDF(QuantityEquality.FUNCTION_NAME, l, r));
-    } else {
-      throw new InvalidUserInputError(
-          "Quantity type does not support comparison operator: " + operation);
-    }
+  @Nonnull
+  public static Function<Comparable, Column> buildComparison(@Nonnull final FhirPath source,
+      @Nonnull final ComparisonOperation operation) {
+    return target -> {
+      final Column comparableSource = callUDF(ComparableQuantity.FUNCTION_NAME,
+          source.getValueColumn());
+      final Column comparableTarget = callUDF(ComparableQuantity.FUNCTION_NAME,
+          target.getValueColumn());
+      final Column sourceCode = comparableSource.getField("code");
+      final Column targetCode = comparableTarget.getField("code");
+      final Column sourceValue = comparableSource.getField("value");
+      final Column targetValue = comparableTarget.getField("value");
+      final Column compareValues = operation.getSparkFunction().apply(sourceValue, targetValue);
+      return when(sourceCode.equalTo(targetCode), compareValues).otherwise(null);
+    };
   }
 
   @Override
