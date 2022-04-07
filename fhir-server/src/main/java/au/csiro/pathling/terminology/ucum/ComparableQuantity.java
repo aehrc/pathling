@@ -72,6 +72,7 @@ public class ComparableQuantity implements UDF1<Row, Row> {
       resolvedCode = input.getCode();
     } else if (input.getSystem().equals(QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI) &&
         CALENDAR_DURATION_TO_UCUM.containsKey(input.getCode())) {
+      // If it is a comparable calendar duration, convert it to UCUM.
       resolvedCode = CALENDAR_DURATION_TO_UCUM.get(input.getCode());
     } else {
       // If the Quantity is not UCUM or a comparable calendar duration, it is not comparable.

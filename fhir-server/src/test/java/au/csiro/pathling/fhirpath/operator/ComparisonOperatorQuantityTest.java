@@ -84,47 +84,47 @@ public class ComparisonOperatorQuantityTest {
     quantity4.setCode("258682000");
 
     final Quantity quantity5 = new Quantity();
-    quantity1.setValue(650);
-    quantity1.setUnit("mg");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("mg");
+    quantity5.setValue(650);
+    quantity5.setUnit("mg");
+    quantity5.setSystem(TestHelpers.UCUM_URL);
+    quantity5.setCode("mg");
 
     final Quantity quantity6 = new Quantity();
-    quantity1.setValue(30);
-    quantity1.setUnit("d");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("d");
+    quantity6.setValue(30);
+    quantity6.setUnit("d");
+    quantity6.setSystem(TestHelpers.UCUM_URL);
+    quantity6.setCode("d");
 
     final Quantity quantity7 = new Quantity();
-    quantity1.setValue(60);
-    quantity1.setUnit("s");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("s");
+    quantity7.setValue(60);
+    quantity7.setUnit("s");
+    quantity7.setSystem(TestHelpers.UCUM_URL);
+    quantity7.setCode("s");
 
     final Quantity quantity8 = new Quantity();
-    quantity1.setValue(1000);
-    quantity1.setUnit("ms");
-    quantity1.setSystem(TestHelpers.UCUM_URL);
-    quantity1.setCode("ms");
+    quantity8.setValue(1000);
+    quantity8.setUnit("ms");
+    quantity8.setSystem(TestHelpers.UCUM_URL);
+    quantity8.setCode("ms");
 
     final Quantity quantity9 = new Quantity();
-    quantity2.setValue(0.2);
-    quantity2.setUnit("g");
-    quantity2.setSystem(TestHelpers.UCUM_URL);
-    quantity2.setCode("g");
+    quantity9.setValue(0.2);
+    quantity9.setUnit("g");
+    quantity9.setSystem(TestHelpers.UCUM_URL);
+    quantity9.setCode("g");
 
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(quantityStructType())
-        .withRow("patient-1", rowFromQuantity(quantity1))  // 500 mg
-        .withRow("patient-2", rowFromQuantity(quantity1))  // 500 mg
-        .withRow("patient-3", rowFromQuantity(quantity1))  // 500 mg
-        .withRow("patient-4", rowFromQuantity(quantity5))  // 650 mg
-        .withRow("patient-5", null)
-        .withRow("patient-6", rowFromQuantity(quantity1))  // 500 mg
-        .withRow("patient-7", rowFromQuantity(quantity6))  // 30 d
-        .withRow("patient-8", rowFromQuantity(quantity7))  // 60 s
-        .withRow("patient-9", rowFromQuantity(quantity8))  // 1000 ms
+        .withRow("patient-01", rowFromQuantity(quantity1))  // 500 mg
+        .withRow("patient-02", rowFromQuantity(quantity1))  // 500 mg
+        .withRow("patient-03", rowFromQuantity(quantity1))  // 500 mg
+        .withRow("patient-04", rowFromQuantity(quantity5))  // 650 mg
+        .withRow("patient-05", null)
+        .withRow("patient-06", rowFromQuantity(quantity1))  // 500 mg
+        .withRow("patient-07", rowFromQuantity(quantity6))  // 30 d
+        .withRow("patient-08", rowFromQuantity(quantity7))  // 60 s
+        .withRow("patient-09", rowFromQuantity(quantity8))  // 1000 ms
         .withRow("patient-10", rowFromQuantity(quantity9)) // 0.2 g
         .buildWithStructValue();
     left = new ElementPathBuilder(spark)
@@ -137,15 +137,15 @@ public class ComparisonOperatorQuantityTest {
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(quantityStructType())
-        .withRow("patient-1", rowFromQuantity(quantity1))  // 500 mg
-        .withRow("patient-2", rowFromQuantity(quantity2))  // 0.5 g
-        .withRow("patient-3", rowFromQuantity(quantity3))  // 1.8 m
-        .withRow("patient-4", rowFromQuantity(quantity1))  // 500 mg
-        .withRow("patient-5", rowFromQuantity(quantity1))  // 500 mg
-        .withRow("patient-6", null)
-        .withRow("patient-7", rowFromQuantity(quantity6))  // 30 d
-        .withRow("patient-8", rowFromQuantity(quantity7))  // 60 s
-        .withRow("patient-9", rowFromQuantity(quantity8))  // 1000 ms
+        .withRow("patient-01", rowFromQuantity(quantity1))  // 500 mg
+        .withRow("patient-02", rowFromQuantity(quantity2))  // 0.5 g
+        .withRow("patient-03", rowFromQuantity(quantity3))  // 1.8 m
+        .withRow("patient-04", rowFromQuantity(quantity1))  // 500 mg
+        .withRow("patient-05", rowFromQuantity(quantity1))  // 500 mg
+        .withRow("patient-06", null)
+        .withRow("patient-07", rowFromQuantity(quantity6))  // 30 d
+        .withRow("patient-08", rowFromQuantity(quantity7))  // 60 s
+        .withRow("patient-09", rowFromQuantity(quantity8))  // 1000 ms
         .withRow("patient-10", rowFromQuantity(quantity1)) // 500 mg
         .buildWithStructValue();
     right = new ElementPathBuilder(spark)
@@ -175,15 +175,15 @@ public class ComparisonOperatorQuantityTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", false),  // 500 mg < 500 mg
-        RowFactory.create("patient-2", false),  // 500 mg < 0.5 g
-        RowFactory.create("patient-3", null),  // 500 mg < 1.8 m
-        RowFactory.create("patient-4", false), // 650 mg < 500 mg
-        RowFactory.create("patient-5", null),  // {} < 500 mg
-        RowFactory.create("patient-6", null),  // 500 mg < {}
-        RowFactory.create("patient-7", false),  // 30 d < 30 d
-        RowFactory.create("patient-8", false),  // 60 s < 60 s
-        RowFactory.create("patient-9", false),  // 1000 ms < 1000 ms
+        RowFactory.create("patient-01", false),  // 500 mg < 500 mg
+        RowFactory.create("patient-02", false),  // 500 mg < 0.5 g
+        RowFactory.create("patient-03", null),  // 500 mg < 1.8 m
+        RowFactory.create("patient-04", false), // 650 mg < 500 mg
+        RowFactory.create("patient-05", null),  // {} < 500 mg
+        RowFactory.create("patient-06", null),  // 500 mg < {}
+        RowFactory.create("patient-07", false),  // 30 d < 30 d
+        RowFactory.create("patient-08", false),  // 60 s < 60 s
+        RowFactory.create("patient-09", false),  // 1000 ms < 1000 ms
         RowFactory.create("patient-10", true)  // 0.2 g < 500 mg
     );
   }
@@ -195,15 +195,15 @@ public class ComparisonOperatorQuantityTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", true),  // 500 mg <= 500 mg
-        RowFactory.create("patient-2", true),  // 500 mg <= 0.5 g
-        RowFactory.create("patient-3", null),  // 500 mg <= 1.8 m
-        RowFactory.create("patient-4", false), // 650 mg <= 500 mg
-        RowFactory.create("patient-5", null),  // {} <= 500 mg
-        RowFactory.create("patient-6", null),  // 500 mg <= {}
-        RowFactory.create("patient-7", true),  // 30 d <= 30 d
-        RowFactory.create("patient-8", true),  // 60 s <= 60 s
-        RowFactory.create("patient-9", true),  // 1000 ms <= 1000 ms
+        RowFactory.create("patient-01", true),  // 500 mg <= 500 mg
+        RowFactory.create("patient-02", true),  // 500 mg <= 0.5 g
+        RowFactory.create("patient-03", null),  // 500 mg <= 1.8 m
+        RowFactory.create("patient-04", false), // 650 mg <= 500 mg
+        RowFactory.create("patient-05", null),  // {} <= 500 mg
+        RowFactory.create("patient-06", null),  // 500 mg <= {}
+        RowFactory.create("patient-07", true),  // 30 d <= 30 d
+        RowFactory.create("patient-08", true),  // 60 s <= 60 s
+        RowFactory.create("patient-09", true),  // 1000 ms <= 1000 ms
         RowFactory.create("patient-10", true)  // 0.2 g <= 500 mg
     );
   }
@@ -215,15 +215,15 @@ public class ComparisonOperatorQuantityTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", true),   // 500 mg >= 500 mg
-        RowFactory.create("patient-2", true),   // 500 mg >= 0.5 g
-        RowFactory.create("patient-3", null),   // 500 mg >= 1.8 m
-        RowFactory.create("patient-4", true),   // 650 mg >= 500 mg
-        RowFactory.create("patient-5", null),   // {} >= 500 mg
-        RowFactory.create("patient-6", null),   // 500 mg >= {}
-        RowFactory.create("patient-7", true),   // 30 d >= 30 d
-        RowFactory.create("patient-8", true),   // 60 s >= 60 s
-        RowFactory.create("patient-9", true),   // 1000 ms >= 1000 ms
+        RowFactory.create("patient-01", true),   // 500 mg >= 500 mg
+        RowFactory.create("patient-02", true),   // 500 mg >= 0.5 g
+        RowFactory.create("patient-03", null),   // 500 mg >= 1.8 m
+        RowFactory.create("patient-04", true),   // 650 mg >= 500 mg
+        RowFactory.create("patient-05", null),   // {} >= 500 mg
+        RowFactory.create("patient-06", null),   // 500 mg >= {}
+        RowFactory.create("patient-07", true),   // 30 d >= 30 d
+        RowFactory.create("patient-08", true),   // 60 s >= 60 s
+        RowFactory.create("patient-09", true),   // 1000 ms >= 1000 ms
         RowFactory.create("patient-10", false)  // 0.2 g >= 500 mg
     );
   }
@@ -235,15 +235,15 @@ public class ComparisonOperatorQuantityTest {
     final FhirPath result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", false),  // 500 mg > 500 mg
-        RowFactory.create("patient-2", false),  // 500 mg > 0.5 g
-        RowFactory.create("patient-3", null),   // 500 mg > 1.8 m
-        RowFactory.create("patient-4", true),   // 650 mg > 500 mg
-        RowFactory.create("patient-5", null),   // {} > 500 mg
-        RowFactory.create("patient-6", null),   // 500 mg > {}
-        RowFactory.create("patient-7", false),  // 30 d > 30 d
-        RowFactory.create("patient-8", false),  // 60 s > 60 s
-        RowFactory.create("patient-9", false),  // 1000 ms > 1000 ms
+        RowFactory.create("patient-01", false),  // 500 mg > 500 mg
+        RowFactory.create("patient-02", false),  // 500 mg > 0.5 g
+        RowFactory.create("patient-03", null),   // 500 mg > 1.8 m
+        RowFactory.create("patient-04", true),   // 650 mg > 500 mg
+        RowFactory.create("patient-05", null),   // {} > 500 mg
+        RowFactory.create("patient-06", null),   // 500 mg > {}
+        RowFactory.create("patient-07", false),  // 30 d > 30 d
+        RowFactory.create("patient-08", false),  // 60 s > 60 s
+        RowFactory.create("patient-09", false),  // 1000 ms > 1000 ms
         RowFactory.create("patient-10", false)  // 0.2 g > 500 mg
     );
   }
