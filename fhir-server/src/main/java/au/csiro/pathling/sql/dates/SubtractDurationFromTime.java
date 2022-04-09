@@ -6,18 +6,15 @@
 
 package au.csiro.pathling.sql.dates;
 
-import au.csiro.pathling.sql.udf.SqlFunction2;
 import java.time.LocalTime;
 import java.util.function.BiFunction;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Quantity;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
 @Profile("core")
-public class SubtractDurationFromTime extends TimeArithmeticFunction implements
-    SqlFunction2<String, Row, String> {
+public class SubtractDurationFromTime extends TimeArithmeticFunction {
 
   private static final long serialVersionUID = 1909732257090337898L;
 
