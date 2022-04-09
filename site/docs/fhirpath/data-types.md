@@ -112,17 +112,13 @@ The Time literal uses a subset of
 [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601):
 
 - A time begins with a `@T`
-- It uses the `Thh:mm:ss.ffff±hh:mm` format, though minute, second, millisecond
-  parts are optional
-- Timezone is optional, but if present the notation `±hh:mm` is used (so must
-  include both minutes and hours)
-- `Z` is allowed as a synonym for the zero (+00:00) UTC offset.
+- It uses the `Thh:mm:ss` format, though minute and second are optional
+- Milliseconds are not supported
 
 Examples:
 
 ```
-@T07:30:14.559-07:00
-@T14:30:14.559Z
+@T07:30:14
 @T14:30
 @T14
 ```
@@ -131,7 +127,7 @@ Examples:
 
 The DateTime literal combines the [Date](#date) and [Time](#time) literals and
 is a subset of [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the
-`YYYY-MM-DDThh:mm:ss.ffff±hh:mm` format.
+`YYYY-MM-DDThh:mm:ss±hh:mm` format. Milliseconds are not supported.
 
 Example:
 
@@ -161,7 +157,6 @@ The calendar duration keywords that are supported are:
 - `hour` / `hours`
 - `minute` / `minutes`
 - `second` / `seconds`
-- `millisecond` / `milliseconds`
 
 Example:
 

@@ -44,8 +44,6 @@ public abstract class TemporalArithmeticFunction<IntermediateType extends Tempor
       .put("minutes", ChronoUnit.MINUTES)
       .put("second", ChronoUnit.SECONDS)
       .put("seconds", ChronoUnit.SECONDS)
-      .put("millisecond", ChronoUnit.MILLIS)
-      .put("milliseconds", ChronoUnit.MILLIS)
       .build();
 
   @Nonnull

@@ -80,11 +80,11 @@ unit
         ;
 
 dateTimePrecision
-        : 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second' | 'millisecond'
+        : 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'
         ;
 
 pluralDateTimePrecision
-        : 'years' | 'months' | 'weeks' | 'days' | 'hours' | 'minutes' | 'seconds' | 'milliseconds'
+        : 'years' | 'months' | 'weeks' | 'days' | 'hours' | 'minutes' | 'seconds'
         ;
 
 typeSpecifier

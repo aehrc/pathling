@@ -46,16 +46,12 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
     Comparable, Temporal {
 
   private static final TimeZone TIME_ZONE = TimeZone.getTimeZone("GMT");
-  private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
   private static final ThreadLocal<SimpleDateFormat> SECONDS_DATE_FORMAT =
       dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ssXXX");
   private static final ThreadLocal<SimpleDateFormat> MINUTES_DATE_FORMAT =
       dateFormatThreadLocal("yyyy-MM-dd'T'HH:mmXXX");
   private static final ThreadLocal<SimpleDateFormat> HOURS_DATE_FORMAT =
       dateFormatThreadLocal("yyyy-MM-dd'T'HHXXX");
-  private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT_NO_TZ =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
   private static final ThreadLocal<SimpleDateFormat> SECONDS_DATE_FORMAT_NO_TZ =
       dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ssXXX");
   private static final ThreadLocal<SimpleDateFormat> MINUTES_DATE_FORMAT_NO_TZ =
@@ -127,13 +123,13 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   }
 
   public static SimpleDateFormat getDefaultDateFormat() {
-    return FULL_DATE_FORMAT.get();
+    return SECONDS_DATE_FORMAT.get();
   }
 
   public static List<SimpleDateFormat> getAllDateFormats() {
-    return List.of(FULL_DATE_FORMAT.get(), SECONDS_DATE_FORMAT.get(), MINUTES_DATE_FORMAT.get(),
-        HOURS_DATE_FORMAT.get(), FULL_DATE_FORMAT_NO_TZ.get(), SECONDS_DATE_FORMAT_NO_TZ.get(),
-        MINUTES_DATE_FORMAT_NO_TZ.get(), HOURS_DATE_FORMAT_NO_TZ.get());
+    return List.of(SECONDS_DATE_FORMAT.get(), MINUTES_DATE_FORMAT.get(), HOURS_DATE_FORMAT.get(),
+        SECONDS_DATE_FORMAT_NO_TZ.get(), MINUTES_DATE_FORMAT_NO_TZ.get(),
+        HOURS_DATE_FORMAT_NO_TZ.get());
   }
 
   public static TimeZone getTimeZone() {

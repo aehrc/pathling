@@ -112,18 +112,20 @@ See also: [Math](https://hl7.org/fhirpath/#math)
 
 The following operators are supported for date arithmetic:
 
-- `+` - Add a duration to a [Date](./data-types.html#date)
-  or [DateTime](./data-types.html#datetime)
-- `-` - Subtract a duration from a [Date](./data-types.html#date)
-  or [DateTime](./data-types.html#datetime)
+- `+` - Add a duration to a [Date](./data-types.html#date),
+  [DateTime](./data-types.html#datetime) or [Time](./data-types.html#time)
+- `-` - Subtract a duration from a [Date](./data-types.html#date),
+  [DateTime](./data-types.html#datetime) or [Time](./data-types.html#time)
 
-The duration operand is a [Quantity](./data-types.html#quantity) literal, and
-must be a [calendar duration](https://hl7.org/fhirpath/#time-valued-quantities)
-as defined in the FHIRPath specification. The use of UCUM units is not supported
-with these operators.
+The duration operand is a
+[calendar duration literal](./data-types.html#quantity). The use of UCUM units
+is not supported with these operators.
 
-The Date or DateTime operand must be singular. If it is an empty collection, the
-operator will return an empty collection.
+The `Date` or `DateTime` operand must be singular. If it is an empty collection,
+the operator will return an empty collection.
+
+The `Date` type does not support arithmetic with durations below `day/days`. The
+`Time` type does not support arithmetic with durations above `hour/hours`.
 
 See also: [Date/Time Arithmetic](https://hl7.org/fhirpath/#datetime-arithmetic)
 
