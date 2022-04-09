@@ -18,13 +18,14 @@ import au.csiro.pathling.sql.dates.AddDurationToTime;
 import au.csiro.pathling.sql.dates.SubtractDurationFromDate;
 import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
 import au.csiro.pathling.sql.dates.SubtractDurationFromTime;
+import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.ucum.ComparableQuantity;
 import au.csiro.pathling.terminology.ucum.Ucum;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -49,12 +50,13 @@ class UnitTestDependencies {
   @Nonnull
   static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
-      @Nonnull final Optional<SparkListener> sparkListener) {
-    final List<SqlFunction2> sqlFunction2 = List.of(
-        new AddDurationToDateTime(), new SubtractDurationFromDateTime(), new AddDurationToDate(),
-        new SubtractDurationFromDate(), new AddDurationToTime(), new SubtractDurationFromTime());
-    return Spark.build(configuration, environment, sparkListener, Collections.emptyList(),
-        sqlFunction2);
+      @Nonnull final Optional<SparkListener> sparkListener,
+      @Nonnull final UcumService ucumService) {
+    final List<SqlFunction1> sqlFunction1 = List.of(new ComparableQuantity(ucumService));
+    final List<SqlFunction2> sqlFunction2 = List.of(new AddDurationToDateTime(),
+        new SubtractDurationFromDateTime(), new AddDurationToDate(), new SubtractDurationFromDate(),
+        new AddDurationToTime(), new SubtractDurationFromTime());
+    return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2);
   }
 
   @Bean
