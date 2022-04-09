@@ -9,6 +9,7 @@ package au.csiro.pathling.terminology.ucum;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.sql.udf.SqlFunction1;
 import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -16,17 +17,19 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.api.java.UDF1;
+import org.apache.spark.sql.types.DataType;
 import org.fhir.ucum.Decimal;
 import org.fhir.ucum.Pair;
 import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("core")
 @Slf4j
-public class ComparableQuantity implements UDF1<Row, Row> {
+public class ComparableQuantity implements SqlFunction1<Row, Row> {
 
   @Nonnull
   private final UcumService ucumService;
@@ -46,6 +49,16 @@ public class ComparableQuantity implements UDF1<Row, Row> {
 
   public ComparableQuantity(@Nonnull final UcumService ucumService) {
     this.ucumService = ucumService;
+  }
+
+  @Override
+  public String getName() {
+    return FUNCTION_NAME;
+  }
+
+  @Override
+  public DataType getReturnType() {
+    return QuantityEncoding.dataType();
   }
 
   @Nullable

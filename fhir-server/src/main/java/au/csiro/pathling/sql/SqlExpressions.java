@@ -12,7 +12,7 @@ import org.apache.spark.sql.Column;
 /**
  * Pathling specific SQL functions.
  */
-public interface PathlingFunctions {
+public interface SqlExpressions {
 
   /**
    * A function that removes all fields starting with '_' (underscore) from struct values. Other

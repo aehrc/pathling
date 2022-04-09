@@ -6,13 +6,19 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.sql.dates.AddDurationToDate;
+import au.csiro.pathling.sql.dates.SubtractDurationFromDate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -33,7 +39,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Slf4j
-public class DatePath extends ElementPath implements Materializable<DateType>, Comparable {
+public class DatePath extends ElementPath implements Materializable<DateType>, Comparable,
+    Temporal {
 
   private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT = ThreadLocal
       .withInitial(() -> {
@@ -134,4 +141,14 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DateLiteralPath;
   }
+
+  @Nonnull
+  @Override
+  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
+      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String expression) {
+    return buildDateArithmeticOperation(this, operation, dataset, expression,
+        AddDurationToDate.FUNCTION_NAME, SubtractDurationFromDate.FUNCTION_NAME);
+  }
+
 }

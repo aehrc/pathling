@@ -9,17 +9,16 @@ package au.csiro.pathling.spark;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.Configuration.Storage.Aws;
 import au.csiro.pathling.async.SparkListener;
-import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.sql.PathlingStrategy;
-import au.csiro.pathling.terminology.CodingToLiteral;
-import au.csiro.pathling.terminology.ucum.ComparableQuantity;
+import au.csiro.pathling.sql.SqlStrategy;
+import au.csiro.pathling.sql.udf.SqlFunction1;
+import au.csiro.pathling.sql.udf.SqlFunction2;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -53,7 +52,8 @@ public class Spark {
   public static SparkSession build(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkListener> sparkListener,
-      @Nonnull final ComparableQuantity comparableQuantity) {
+      @Nonnull final List<SqlFunction1> sqlFunction1,
+      @Nonnull final List<SqlFunction2> sqlFunction2) {
     log.debug("Creating Spark session");
     resolveSparkConfiguration(environment);
 
@@ -62,13 +62,14 @@ public class Spark {
         .getOrCreate();
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 
-    // Configure user defined functions.
-    PathlingStrategy.setup(spark);
-    spark.udf()
-        .register(CodingToLiteral.FUNCTION_NAME, new CodingToLiteral(), DataTypes.StringType);
-    spark.udf()
-        .register(ComparableQuantity.FUNCTION_NAME, comparableQuantity,
-            QuantityEncoding.dataType());
+    // Configure user defined strategy and functions.
+    SqlStrategy.setup(spark);
+    for (final SqlFunction1 function : sqlFunction1) {
+      spark.udf().register(function.getName(), function, function.getReturnType());
+    }
+    for (final SqlFunction2 function : sqlFunction2) {
+      spark.udf().register(function.getName(), function, function.getReturnType());
+    }
 
     // Configure AWS driver and credentials.
     configureAwsDriver(configuration, spark);

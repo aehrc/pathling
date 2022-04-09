@@ -16,7 +16,7 @@ import org.apache.spark.sql.types.StructField;
 /**
  * Custom dataset operations.
  */
-public interface SqlExtensions {
+public interface SqlOperations {
 
   /**
    * Creates a new {@link Dataset} with the additional column as specified in {@code resultField}

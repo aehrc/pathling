@@ -29,7 +29,7 @@ import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.MapperWithPreview;
-import au.csiro.pathling.sql.SqlExtensions;
+import au.csiro.pathling.sql.SqlOperations;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.utilities.Strings;
 import java.util.List;
@@ -168,7 +168,7 @@ public class TranslateFunction implements NamedFunction {
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
-    final Dataset<Row> translatedDataset = SqlExtensions
+    final Dataset<Row> translatedDataset = SqlOperations
         .mapWithPartitionPreview(dataset, codingArrayCol,
             SimpleCodingsDecoders::decodeList,
             mapper,

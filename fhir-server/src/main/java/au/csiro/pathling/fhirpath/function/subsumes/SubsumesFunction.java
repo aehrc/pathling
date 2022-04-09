@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.sql.SqlExtensions;
+import au.csiro.pathling.sql.SqlOperations;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -111,7 +111,7 @@ public class SubsumesFunction implements NamedFunction {
             input.getContext().getTerminologyServiceFactory().get(),
             inverted);
 
-    final Dataset<Row> resultDataset = SqlExtensions
+    final Dataset<Row> resultDataset = SqlOperations
         .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
             SimpleCodingsDecoders::decodeListPair,
             mapper, StructField.apply("result", DataTypes.BooleanType, true, Metadata.empty()));

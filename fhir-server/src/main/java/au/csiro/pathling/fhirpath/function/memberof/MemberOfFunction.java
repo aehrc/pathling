@@ -23,7 +23,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.MapperWithPreview;
-import au.csiro.pathling.sql.SqlExtensions;
+import au.csiro.pathling.sql.SqlOperations;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -91,7 +91,7 @@ public class MemberOfFunction implements NamedFunction {
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
-    final Dataset<Row> resultDataset = SqlExtensions
+    final Dataset<Row> resultDataset = SqlOperations
         .mapWithPartitionPreview(dataset, codingArrayCol,
             SimpleCodingsDecoders::decodeList,
             mapper,

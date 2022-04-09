@@ -12,7 +12,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
@@ -27,7 +26,7 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#math">Math</a>
  */
-public class MathOperator implements Operator {
+public class DateArithmeticOperator implements Operator {
 
   @Nonnull
   private final MathOperation type;
@@ -35,7 +34,7 @@ public class MathOperator implements Operator {
   /**
    * @param type The type of math operation
    */
-  public MathOperator(@Nonnull final MathOperation type) {
+  public DateArithmeticOperator(@Nonnull final MathOperation type) {
     this.type = type;
   }
 
@@ -44,27 +43,25 @@ public class MathOperator implements Operator {
   public FhirPath invoke(@Nonnull final OperatorInput input) {
     final FhirPath left = input.getLeft();
     final FhirPath right = input.getRight();
-
-    // Check whether this needs to be delegated off to the DateArithmeticOperator.
-    if (left instanceof Temporal && right instanceof QuantityLiteralPath) {
-      return new DateArithmeticOperator(type).invoke(input);
-    }
-
-    checkUserInput(left instanceof Numeric,
+    checkUserInput(left instanceof Temporal,
         type + " operator does not support left operand: " + left.getExpression());
-    checkUserInput(right instanceof Numeric,
+    checkUserInput(right instanceof QuantityLiteralPath,
         type + " operator does not support right operand: " + right.getExpression());
+    final QuantityLiteralPath calendarDuration = (QuantityLiteralPath) right;
+    checkUserInput(calendarDuration.getJavaValue().getSystem()
+            .equals(QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI),
+        "Right operand of " + type + " operator must be a calendar duration");
     checkUserInput(left.isSingular(),
         "Left operand to " + type + " operator must be singular: " + left.getExpression());
     checkUserInput(right.isSingular(),
         "Right operand to " + type + " operator must be singular: " + right.getExpression());
 
+    final Temporal temporal = (Temporal) left;
     final String expression = buildExpression(input, type.toString());
     final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
-    final Numeric leftNumeric = (Numeric) left;
-    final Numeric rightNumeric = (Numeric) right;
-    return leftNumeric.getMathOperation(type, expression, dataset).apply(rightNumeric);
+    return temporal.getDateArithmeticOperation(type, dataset, expression)
+        .apply(calendarDuration);
   }
 
 }

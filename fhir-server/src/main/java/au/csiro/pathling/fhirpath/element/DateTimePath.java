@@ -6,17 +6,24 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.sql.dates.AddDurationToDateTime;
+import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
 import com.google.common.collect.ImmutableSet;
 import java.text.SimpleDateFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.function.BiFunction;
@@ -36,15 +43,25 @@ import org.hl7.fhir.r4.model.InstantType;
  * @author John Grimes
  */
 public class DateTimePath extends ElementPath implements Materializable<BaseDateTimeType>,
-    Comparable {
+    Comparable, Temporal {
 
   private static final TimeZone TIME_ZONE = TimeZone.getTimeZone("GMT");
-  private static final ThreadLocal<SimpleDateFormat> DATE_FORMAT = ThreadLocal
-      .withInitial(() -> {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
-        format.setTimeZone(TIME_ZONE);
-        return format;
-      });
+  private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+  private static final ThreadLocal<SimpleDateFormat> SECONDS_DATE_FORMAT =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ssXXX");
+  private static final ThreadLocal<SimpleDateFormat> MINUTES_DATE_FORMAT =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mmXXX");
+  private static final ThreadLocal<SimpleDateFormat> HOURS_DATE_FORMAT =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HHXXX");
+  private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT_NO_TZ =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+  private static final ThreadLocal<SimpleDateFormat> SECONDS_DATE_FORMAT_NO_TZ =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ssXXX");
+  private static final ThreadLocal<SimpleDateFormat> MINUTES_DATE_FORMAT_NO_TZ =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mmXXX");
+  private static final ThreadLocal<SimpleDateFormat> HOURS_DATE_FORMAT_NO_TZ =
+      dateFormatThreadLocal("yyyy-MM-dd'T'HHXXX");
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DatePath.class, DateTimePath.class, DateLiteralPath.class, DateTimeLiteralPath.class,
@@ -109,8 +126,14 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
         .apply(to_timestamp(source.getValueColumn()), to_timestamp(target.getValueColumn()));
   }
 
-  public static SimpleDateFormat getDateFormat() {
-    return DATE_FORMAT.get();
+  public static SimpleDateFormat getDefaultDateFormat() {
+    return FULL_DATE_FORMAT.get();
+  }
+
+  public static List<SimpleDateFormat> getAllDateFormats() {
+    return List.of(FULL_DATE_FORMAT.get(), SECONDS_DATE_FORMAT.get(), MINUTES_DATE_FORMAT.get(),
+        HOURS_DATE_FORMAT.get(), FULL_DATE_FORMAT_NO_TZ.get(), SECONDS_DATE_FORMAT_NO_TZ.get(),
+        MINUTES_DATE_FORMAT_NO_TZ.get(), HOURS_DATE_FORMAT_NO_TZ.get());
   }
 
   public static TimeZone getTimeZone() {
@@ -137,4 +160,24 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DateTimeLiteralPath;
   }
+
+  @Nonnull
+  private static ThreadLocal<SimpleDateFormat> dateFormatThreadLocal(final String pattern) {
+    return ThreadLocal
+        .withInitial(() -> {
+          final SimpleDateFormat format = new SimpleDateFormat(pattern);
+          format.setTimeZone(TIME_ZONE);
+          return format;
+        });
+  }
+
+  @Nonnull
+  @Override
+  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
+      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String expression) {
+    return buildDateArithmeticOperation(this, operation, dataset, expression,
+        AddDurationToDateTime.FUNCTION_NAME, SubtractDurationFromDateTime.FUNCTION_NAME);
+  }
+
 }

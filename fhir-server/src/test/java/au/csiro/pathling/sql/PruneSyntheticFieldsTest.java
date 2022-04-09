@@ -54,7 +54,7 @@ public class PruneSyntheticFieldsTest {
 
     // Prune all columns.
     final Dataset<Row> prunedDataset = dataset.select(
-        Stream.of(dataset.columns()).map(dataset::col).map(PathlingFunctions::pruneSyntheticFields)
+        Stream.of(dataset.columns()).map(dataset::col).map(SqlExpressions::pruneSyntheticFields)
             .toArray(Column[]::new));
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
@@ -89,7 +89,7 @@ public class PruneSyntheticFieldsTest {
 
     final Column valueColumn = dataset.col(dataset.columns()[dataset.columns().length - 1]);
     final Dataset<Row> groupedResult = dataset.groupBy(
-            PathlingFunctions.pruneSyntheticFields(valueColumn))
+            SqlExpressions.pruneSyntheticFields(valueColumn))
         .agg(functions.count(dataset.col("gender")));
 
     DatasetAssert.of(groupedResult)
