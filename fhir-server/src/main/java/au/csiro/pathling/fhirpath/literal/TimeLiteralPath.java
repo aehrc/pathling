@@ -6,12 +6,17 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
+import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.element.TimePath;
+import au.csiro.pathling.sql.dates.AddDurationToTime;
+import au.csiro.pathling.sql.dates.SubtractDurationFromTime;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -26,7 +31,8 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable {
+public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable,
+    Temporal {
 
   @SuppressWarnings("WeakerAccess")
   protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -90,4 +96,12 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
     return super.canBeCombinedWith(target) || target instanceof TimePath;
   }
 
+  @Nonnull
+  @Override
+  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
+      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String expression) {
+    return buildDateArithmeticOperation(this, operation, dataset, expression,
+        AddDurationToTime.FUNCTION_NAME, SubtractDurationFromTime.FUNCTION_NAME);
+  }
 }

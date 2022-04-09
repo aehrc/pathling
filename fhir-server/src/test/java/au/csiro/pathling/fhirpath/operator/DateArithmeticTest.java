@@ -13,6 +13,7 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -112,9 +113,24 @@ public class DateArithmeticTest {
         .singular(true)
         .build();
 
+    final Dataset<Row> timeDataset = new DatasetBuilder(spark)
+        .withIdColumn(ID_ALIAS)
+        .withColumn(DataTypes.StringType)
+        .withRow("patient-1", "13:28:17")
+        .withRow("patient-2", "08:00")
+        .withRow("patient-3", "00")
+        .build();
+    final ElementPath timePath = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.TIME)
+        .dataset(timeDataset)
+        .idAndValueColumns()
+        .singular(true)
+        .build();
+
     final DateTimeLiteralPath dateTimeLiteral = DateTimeLiteralPath.fromString(
         "@2015-02-07T18:28:17+00:00", dateTimePath);
     final DateLiteralPath dateLiteral = DateLiteralPath.fromString("@2015-02-07", datePath);
+    final TimeLiteralPath timeLiteral = TimeLiteralPath.fromString("@T08:00", timePath);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(dateTimePath.getIdColumn()))
@@ -124,10 +140,14 @@ public class DateArithmeticTest {
     parameters.addAll(dateTimeSubtraction(dateTimePath, context));
     parameters.addAll(dateAddition(datePath, context));
     parameters.addAll(dateSubtraction(datePath, context));
+    parameters.addAll(timeAddition(timePath, context));
+    parameters.addAll(timeSubtraction(timePath, context));
     parameters.addAll(dateTimeLiteralAddition(dateTimeLiteral, context));
     parameters.addAll(dateTimeLiteralSubtraction(dateTimeLiteral, context));
     parameters.addAll(dateLiteralAddition(dateLiteral, context));
     parameters.addAll(dateLiteralSubtraction(dateLiteral, context));
+    parameters.addAll(timeLiteralAddition(timeLiteral, context));
+    parameters.addAll(timeLiteralSubtraction(timeLiteral, context));
 
     return parameters.stream();
   }
@@ -625,6 +645,134 @@ public class DateArithmeticTest {
             .build())
     );
 
+    return parameters;
+  }
+
+  Collection<TestParameters> timeAddition(final FhirPath timePath,
+      final ParserContext context) {
+    final List<TestParameters> parameters = new ArrayList<>();
+    parameters.add(new TestParameters("Time + 6 hours", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("6 hours", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "19:28:17")
+            .withRow("patient-2", "14:00")
+            .withRow("patient-3", "06:00")
+            .build()));
+
+    parameters.add(new TestParameters("Time + 45 minutes", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("45 minutes", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "14:13:17")
+            .withRow("patient-2", "08:45")
+            .withRow("patient-3", "00:45")
+            .build()));
+
+    parameters.add(new TestParameters("Time + 15 seconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("15 seconds", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "13:28:32")
+            .withRow("patient-2", "08:00:15")
+            .withRow("patient-3", "00:00:15")
+            .build()));
+    return parameters;
+  }
+
+  Collection<TestParameters> timeSubtraction(final FhirPath timePath,
+      final ParserContext context) {
+    final List<TestParameters> parameters = new ArrayList<>();
+    parameters.add(new TestParameters("Time - 6 hours", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("6 hours", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "07:28:17")
+            .withRow("patient-2", "02:00")
+            .withRow("patient-3", "18:00")
+            .build()));
+
+    parameters.add(new TestParameters("Time - 45 minutes", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("45 minutes", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "12:43:17")
+            .withRow("patient-2", "07:15")
+            .withRow("patient-3", "23:15")
+            .build()));
+
+    parameters.add(new TestParameters("Time - 15 seconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("15 seconds", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "13:28:02")
+            .withRow("patient-2", "07:59:45")
+            .withRow("patient-3", "23:59:45")
+            .build()));
+    return parameters;
+  }
+
+  Collection<TestParameters> timeLiteralAddition(final FhirPath timePath,
+      final ParserContext context) {
+    final List<TestParameters> parameters = new ArrayList<>();
+    parameters.add(new TestParameters("@T08:00 + 6 hours", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("6 hours", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "14:00")
+            .withRow("patient-2", "14:00")
+            .withRow("patient-3", "14:00")
+            .build()));
+
+    parameters.add(new TestParameters("@T08:00 + 45 minutes", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("45 minutes", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "08:45")
+            .withRow("patient-2", "08:45")
+            .withRow("patient-3", "08:45")
+            .build()));
+
+    parameters.add(new TestParameters("@T08:00 + 15 seconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("15 seconds", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "08:00:15")
+            .withRow("patient-2", "08:00:15")
+            .withRow("patient-3", "08:00:15")
+            .build()));
+    return parameters;
+  }
+
+  Collection<TestParameters> timeLiteralSubtraction(final FhirPath timePath,
+      final ParserContext context) {
+    final List<TestParameters> parameters = new ArrayList<>();
+    parameters.add(new TestParameters("@T08:00 - 6 hours", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("6 hours", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "02:00")
+            .withRow("patient-2", "02:00")
+            .withRow("patient-3", "02:00")
+            .build()));
+
+    parameters.add(new TestParameters("@T08:00 - 45 minutes", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("45 minutes", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "07:15")
+            .withRow("patient-2", "07:15")
+            .withRow("patient-3", "07:15")
+            .build()));
+
+    parameters.add(new TestParameters("@T08:00 - 15 seconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("15 seconds", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "07:59:45")
+            .withRow("patient-2", "07:59:45")
+            .withRow("patient-3", "07:59:45")
+            .build()));
     return parameters;
   }
 
