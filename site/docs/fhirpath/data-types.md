@@ -58,7 +58,7 @@ Examples:
 ```
 'test string'
 'urn:oid:3.4.5.6.7.8'
-'M\u00fcller'
+'M\u00fcller'           // Includes a Unicode character, evaluates to Müller
 ```
 
 ## Integer
@@ -99,9 +99,9 @@ format, though month and day parts are optional.
 Examples:
 
 ```
-@2014-01-25
-@2014-01
-@2014
+@2014-01-25    // Year, month and day
+@2014-01       // Year and month only
+@2014          // Year only
 ```
 
 ## Time
@@ -118,21 +118,28 @@ The Time literal uses a subset of
 Examples:
 
 ```
-@T07:30:14
-@T14:30
-@T14
+@T07:30:14    // Seconds precision
+@T14:30:14    // Minutes precision
+@T14          // Hours precision
 ```
 
 ## DateTime
 
 The DateTime literal combines the [Date](#date) and [Time](#time) literals and
 is a subset of [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the
-`YYYY-MM-DDThh:mm:ss±hh:mm` format. Milliseconds are not supported.
+`YYYY-MM-DDThh:mm:ss.ffff±hh:mm` format. `Z` is allowed as a synonym for the
+zero (`+00:00`) UTC offset.
+
+Time zone is optional. Seconds and milliseconds precision are supported. Hours
+precision and partial DateTime values (ending with `T`) are not supported.
 
 Example:
 
 ```
-@2015-02-08T13:28:17-05:00
+@2014-01-25T14:30:14            // Seconds precision
+@2014-01-25T14:30:14+10:00      // Seconds precision with UTC+10 timezone offset
+@2014-01-25T14:30:14.559        // Milliseconds precision
+@2014-01-25T14:30:14.559Z       // Milliseconds precision with UTC timezone offset
 ```
 
 ## Quantity
@@ -157,14 +164,15 @@ The calendar duration keywords that are supported are:
 - `hour` / `hours`
 - `minute` / `minutes`
 - `second` / `seconds`
+- `millisecond` / `milliseconds`
 
 Example:
 
 ```
-4.5 'mg'
-100 '[degF]'
-6 months
-30 days
+4.5 'mg'      // UCUM Quantity of 4.5 mg
+100 '[degF]'  // UCUM Quantity of 100 degrees Fahrenheit
+6 months      // Calendar duration of 6 months
+30 days       // Calendar duration of 30 days
 ```
 
 See: [Quantity](https://hl7.org/fhirpath/#quantity)

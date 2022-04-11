@@ -80,7 +80,7 @@ public class MemberOfFunction implements NamedFunction {
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final TerminologyServiceFactory terminologyServiceFactory = inputContext
         .getTerminologyServiceFactory().get();
-    final String valueSetUri = argument.getJavaValue();
+    final String valueSetUri = argument.getValue().getValueAsString();
     final Dataset<Row> dataset = inputPath.getDataset();
 
     // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,

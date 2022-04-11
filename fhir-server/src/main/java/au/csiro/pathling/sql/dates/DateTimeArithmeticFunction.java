@@ -7,9 +7,11 @@
 package au.csiro.pathling.sql.dates;
 
 import au.csiro.pathling.fhirpath.element.DateTimePath;
+import ca.uhn.fhir.model.api.TemporalPrecisionEnum;
 import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.function.Function;
+import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.DateTimeType;
 
 public abstract class DateTimeArithmeticFunction extends TemporalArithmeticFunction<ZonedDateTime> {
@@ -23,9 +25,12 @@ public abstract class DateTimeArithmeticFunction extends TemporalArithmeticFunct
 
   @Override
   Function<ZonedDateTime, String> encodeResult() {
-    return (resultDateTime) -> new DateTimeType(new Date(resultDateTime.toEpochSecond() * 1000))
-        .setTimeZone(DateTimePath.getTimeZone())
-        .getValueAsString();
+    return (resultDateTime) -> {
+      final BaseDateTimeType dateTime = new DateTimeType(Date.from(resultDateTime.toInstant()))
+          .setTimeZone(DateTimePath.getDefaultTimeZone());
+      dateTime.setPrecision(TemporalPrecisionEnum.MILLI);
+      return dateTime.getValueAsString();
+    };
   }
 
 }

@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.sql.dates;
 
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.sql.udf.SqlFunction2;
@@ -44,6 +46,8 @@ public abstract class TemporalArithmeticFunction<IntermediateType extends Tempor
       .put("minutes", ChronoUnit.MINUTES)
       .put("second", ChronoUnit.SECONDS)
       .put("seconds", ChronoUnit.SECONDS)
+      .put("millisecond", ChronoUnit.MILLIS)
+      .put("milliseconds", ChronoUnit.MILLIS)
       .build();
 
   @Nonnull
@@ -58,6 +62,7 @@ public abstract class TemporalArithmeticFunction<IntermediateType extends Tempor
         .longValue();
     final TemporalUnit temporalUnit = TemporalArithmeticFunction.CALENDAR_DURATION_TO_UCUM.get(
         calendarDuration.getCode());
+    checkNotNull(temporalUnit);
 
     //noinspection unchecked
     return (IntermediateType) temporal.plus(amountToAdd, temporalUnit);

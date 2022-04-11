@@ -6,8 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -23,7 +23,6 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.PrimitiveType;
 import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath string literal.
@@ -31,13 +30,12 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class StringLiteralPath extends LiteralPath implements Materializable<PrimitiveType>,
-    Comparable {
+public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
+    Materializable<PrimitiveType>, Comparable {
 
   protected StringLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final PrimitiveType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof PrimitiveType);
   }
 
   /**
@@ -74,13 +72,13 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
   @Nonnull
   @Override
   public String getExpression() {
-    return "'" + escapeFhirPathString(getLiteralValue().getValueAsString()) + "'";
+    return "'" + escapeFhirPathString(getValue().getValueAsString()) + "'";
   }
 
   @Nonnull
   @Override
-  public PrimitiveType getLiteralValue() {
-    return (PrimitiveType) literalValue;
+  public Column buildValueColumn() {
+    return lit(getValue().getValueAsString());
   }
 
   /**
@@ -100,12 +98,6 @@ public class StringLiteralPath extends LiteralPath implements Materializable<Pri
     value = value.replaceAll("\\\\`", "`");
     value = value.replaceAll("\\\\'", "'");
     return value.replaceAll("\\\\\\\\", "\\\\");
-  }
-
-  @Nonnull
-  @Override
-  public String getJavaValue() {
-    return getLiteralValue().getValueAsString();
   }
 
   @Override

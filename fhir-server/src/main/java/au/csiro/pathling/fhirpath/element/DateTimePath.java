@@ -22,8 +22,6 @@ import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.sql.dates.AddDurationToDateTime;
 import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
 import com.google.common.collect.ImmutableSet;
-import java.text.SimpleDateFormat;
-import java.util.List;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.function.BiFunction;
@@ -45,19 +43,7 @@ import org.hl7.fhir.r4.model.InstantType;
 public class DateTimePath extends ElementPath implements Materializable<BaseDateTimeType>,
     Comparable, Temporal {
 
-  private static final TimeZone TIME_ZONE = TimeZone.getTimeZone("GMT");
-  private static final ThreadLocal<SimpleDateFormat> SECONDS_DATE_FORMAT =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ssXXX");
-  private static final ThreadLocal<SimpleDateFormat> MINUTES_DATE_FORMAT =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mmXXX");
-  private static final ThreadLocal<SimpleDateFormat> HOURS_DATE_FORMAT =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HHXXX");
-  private static final ThreadLocal<SimpleDateFormat> SECONDS_DATE_FORMAT_NO_TZ =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mm:ssXXX");
-  private static final ThreadLocal<SimpleDateFormat> MINUTES_DATE_FORMAT_NO_TZ =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HH:mmXXX");
-  private static final ThreadLocal<SimpleDateFormat> HOURS_DATE_FORMAT_NO_TZ =
-      dateFormatThreadLocal("yyyy-MM-dd'T'HHXXX");
+  private static final TimeZone DEFAULT_TIME_ZONE = TimeZone.getTimeZone("GMT");
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DatePath.class, DateTimePath.class, DateLiteralPath.class, DateTimeLiteralPath.class,
@@ -96,11 +82,11 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
 
     if (fhirType == FHIRDefinedType.INSTANT) {
       final InstantType value = new InstantType(row.getTimestamp(columnNumber));
-      value.setTimeZone(TIME_ZONE);
+      value.setTimeZone(DEFAULT_TIME_ZONE);
       return Optional.of(value);
     } else {
       final DateTimeType value = new DateTimeType(row.getString(columnNumber));
-      value.setTimeZone(TIME_ZONE);
+      value.setTimeZone(DEFAULT_TIME_ZONE);
       return Optional.of(value);
     }
   }
@@ -122,18 +108,8 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
         .apply(to_timestamp(source.getValueColumn()), to_timestamp(target.getValueColumn()));
   }
 
-  public static SimpleDateFormat getDefaultDateFormat() {
-    return SECONDS_DATE_FORMAT.get();
-  }
-
-  public static List<SimpleDateFormat> getAllDateFormats() {
-    return List.of(SECONDS_DATE_FORMAT.get(), MINUTES_DATE_FORMAT.get(), HOURS_DATE_FORMAT.get(),
-        SECONDS_DATE_FORMAT_NO_TZ.get(), MINUTES_DATE_FORMAT_NO_TZ.get(),
-        HOURS_DATE_FORMAT_NO_TZ.get());
-  }
-
-  public static TimeZone getTimeZone() {
-    return TIME_ZONE;
+  public static TimeZone getDefaultTimeZone() {
+    return DEFAULT_TIME_ZONE;
   }
 
   @Nonnull
@@ -155,16 +131,6 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DateTimeLiteralPath;
-  }
-
-  @Nonnull
-  private static ThreadLocal<SimpleDateFormat> dateFormatThreadLocal(final String pattern) {
-    return ThreadLocal
-        .withInitial(() -> {
-          final SimpleDateFormat format = new SimpleDateFormat(pattern);
-          format.setTimeZone(TIME_ZONE);
-          return format;
-        });
   }
 
   @Nonnull

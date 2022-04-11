@@ -88,7 +88,7 @@ public class DateArithmeticTest {
     final Dataset<Row> dateTimeDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
-        .withRow("patient-1", "2015-02-07T13:28:17-05:00")
+        .withRow("patient-1", "2015-02-07T13:28:17.000-05:00")
         .withRow("patient-2", "2017-01-01T00:00:00+00:00")
         .withRow("patient-3", "2025-06-21T00:15:00+10:00")
         .build();
@@ -159,9 +159,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("10 years", dateTimePath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2025-02-07T18:28:17+00:00")
-            .withRow("patient-2", "2027-01-01T00:00:00+00:00")
-            .withRow("patient-3", "2035-06-20T14:15:00+00:00")
+            .withRow("patient-1", "2025-02-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2027-01-01T00:00:00.000+00:00")
+            .withRow("patient-3", "2035-06-20T14:15:00.000+00:00")
             .build())
     );
 
@@ -169,9 +169,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("9 months", dateTimePath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-11-07T18:28:17+00:00")
-            .withRow("patient-2", "2017-10-01T00:00:00+00:00")
-            .withRow("patient-3", "2026-03-20T14:15:00+00:00")
+            .withRow("patient-1", "2015-11-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2017-10-01T00:00:00.000+00:00")
+            .withRow("patient-3", "2026-03-20T14:15:00.000+00:00")
             .build())
     );
 
@@ -179,9 +179,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("2 weeks", dateTimePath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-21T18:28:17+00:00")
-            .withRow("patient-2", "2017-01-15T00:00:00+00:00")
-            .withRow("patient-3", "2025-07-04T14:15:00+00:00")
+            .withRow("patient-1", "2015-02-21T18:28:17.000+00:00")
+            .withRow("patient-2", "2017-01-15T00:00:00.000+00:00")
+            .withRow("patient-3", "2025-07-04T14:15:00.000+00:00")
             .build())
     );
 
@@ -189,9 +189,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("30 days", dateTimePath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-03-09T18:28:17+00:00")
-            .withRow("patient-2", "2017-01-31T00:00:00+00:00")
-            .withRow("patient-3", "2025-07-20T14:15:00+00:00")
+            .withRow("patient-1", "2015-03-09T18:28:17.000+00:00")
+            .withRow("patient-2", "2017-01-31T00:00:00.000+00:00")
+            .withRow("patient-3", "2025-07-20T14:15:00.000+00:00")
             .build())
     );
 
@@ -199,9 +199,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("12 hours", dateTimePath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-08T06:28:17+00:00")
-            .withRow("patient-2", "2017-01-01T12:00:00+00:00")
-            .withRow("patient-3", "2025-06-21T02:15:00+00:00")
+            .withRow("patient-1", "2015-02-08T06:28:17.000+00:00")
+            .withRow("patient-2", "2017-01-01T12:00:00.000+00:00")
+            .withRow("patient-3", "2025-06-21T02:15:00.000+00:00")
             .build())
     );
 
@@ -209,9 +209,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("30 minutes", dateTimePath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-07T18:58:17+00:00")
-            .withRow("patient-2", "2017-01-01T00:30:00+00:00")
-            .withRow("patient-3", "2025-06-20T14:45:00+00:00")
+            .withRow("patient-1", "2015-02-07T18:58:17.000+00:00")
+            .withRow("patient-2", "2017-01-01T00:30:00.000+00:00")
+            .withRow("patient-3", "2025-06-20T14:45:00.000+00:00")
             .build())
     );
 
@@ -219,12 +219,21 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("10 seconds", dateTimePath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-07T18:28:27+00:00")
-            .withRow("patient-2", "2017-01-01T00:00:10+00:00")
-            .withRow("patient-3", "2025-06-20T14:15:10+00:00")
+            .withRow("patient-1", "2015-02-07T18:28:27.000+00:00")
+            .withRow("patient-2", "2017-01-01T00:00:10.000+00:00")
+            .withRow("patient-3", "2025-06-20T14:15:10.000+00:00")
             .build())
     );
 
+    parameters.add(new TestParameters("DateTime + 300 milliseconds", dateTimePath,
+        QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", dateTimePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2015-02-07T18:28:17.300+00:00")
+            .withRow("patient-2", "2017-01-01T00:00:00.300+00:00")
+            .withRow("patient-3", "2025-06-20T14:15:00.300+00:00")
+            .build())
+    );
     return parameters;
   }
 
@@ -235,9 +244,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("10 years", dateTimePath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2005-02-07T18:28:17+00:00")
-            .withRow("patient-2", "2007-01-01T00:00:00+00:00")
-            .withRow("patient-3", "2015-06-20T14:15:00+00:00")
+            .withRow("patient-1", "2005-02-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2007-01-01T00:00:00.000+00:00")
+            .withRow("patient-3", "2015-06-20T14:15:00.000+00:00")
             .build())
     );
 
@@ -245,9 +254,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("9 months", dateTimePath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2014-05-07T18:28:17+00:00")
-            .withRow("patient-2", "2016-04-01T00:00:00+00:00")
-            .withRow("patient-3", "2024-09-20T14:15:00+00:00")
+            .withRow("patient-1", "2014-05-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2016-04-01T00:00:00.000+00:00")
+            .withRow("patient-3", "2024-09-20T14:15:00.000+00:00")
             .build())
     );
 
@@ -255,9 +264,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("2 weeks", dateTimePath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-01-24T18:28:17+00:00")
-            .withRow("patient-2", "2016-12-18T00:00:00+00:00")
-            .withRow("patient-3", "2025-06-06T14:15:00+00:00")
+            .withRow("patient-1", "2015-01-24T18:28:17.000+00:00")
+            .withRow("patient-2", "2016-12-18T00:00:00.000+00:00")
+            .withRow("patient-3", "2025-06-06T14:15:00.000+00:00")
             .build())
     );
 
@@ -265,9 +274,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("30 days", dateTimePath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-01-08T18:28:17+00:00")
-            .withRow("patient-2", "2016-12-02T00:00:00+00:00")
-            .withRow("patient-3", "2025-05-21T14:15:00+00:00")
+            .withRow("patient-1", "2015-01-08T18:28:17.000+00:00")
+            .withRow("patient-2", "2016-12-02T00:00:00.000+00:00")
+            .withRow("patient-3", "2025-05-21T14:15:00.000+00:00")
             .build())
     );
 
@@ -275,9 +284,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("12 hours", dateTimePath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-07T06:28:17+00:00")
-            .withRow("patient-2", "2016-12-31T12:00:00+00:00")
-            .withRow("patient-3", "2025-06-20T02:15:00+00:00")
+            .withRow("patient-1", "2015-02-07T06:28:17.000+00:00")
+            .withRow("patient-2", "2016-12-31T12:00:00.000+00:00")
+            .withRow("patient-3", "2025-06-20T02:15:00.000+00:00")
             .build())
     );
 
@@ -285,9 +294,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("30 minutes", dateTimePath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-07T17:58:17+00:00")
-            .withRow("patient-2", "2016-12-31T23:30:00+00:00")
-            .withRow("patient-3", "2025-06-20T13:45:00+00:00")
+            .withRow("patient-1", "2015-02-07T17:58:17.000+00:00")
+            .withRow("patient-2", "2016-12-31T23:30:00.000+00:00")
+            .withRow("patient-3", "2025-06-20T13:45:00.000+00:00")
             .build())
     );
 
@@ -295,12 +304,21 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("10 seconds", dateTimePath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-07T18:28:07+00:00")
-            .withRow("patient-2", "2016-12-31T23:59:50+00:00")
-            .withRow("patient-3", "2025-06-20T14:14:50+00:00")
+            .withRow("patient-1", "2015-02-07T18:28:07.000+00:00")
+            .withRow("patient-2", "2016-12-31T23:59:50.000+00:00")
+            .withRow("patient-3", "2025-06-20T14:14:50.000+00:00")
             .build())
     );
 
+    parameters.add(new TestParameters("DateTime - 300 milliseconds", dateTimePath,
+        QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", dateTimePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2015-02-07T18:28:16.700+00:00")
+            .withRow("patient-2", "2016-12-31T23:59:59.700+00:00")
+            .withRow("patient-3", "2025-06-20T14:14:59.700+00:00")
+            .build())
+    );
     return parameters;
   }
 
@@ -403,9 +421,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("10 years", dateTimeLiteralPath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2025-02-07T18:28:17+00:00")
-            .withRow("patient-2", "2025-02-07T18:28:17+00:00")
-            .withRow("patient-3", "2025-02-07T18:28:17+00:00")
+            .withRow("patient-1", "2025-02-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2025-02-07T18:28:17.000+00:00")
+            .withRow("patient-3", "2025-02-07T18:28:17.000+00:00")
             .build())
     );
 
@@ -413,9 +431,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("9 months", dateTimeLiteralPath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-11-07T18:28:17+00:00")
-            .withRow("patient-2", "2015-11-07T18:28:17+00:00")
-            .withRow("patient-3", "2015-11-07T18:28:17+00:00")
+            .withRow("patient-1", "2015-11-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2015-11-07T18:28:17.000+00:00")
+            .withRow("patient-3", "2015-11-07T18:28:17.000+00:00")
             .build())
     );
 
@@ -423,9 +441,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("2 weeks", dateTimeLiteralPath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-21T18:28:17+00:00")
-            .withRow("patient-2", "2015-02-21T18:28:17+00:00")
-            .withRow("patient-3", "2015-02-21T18:28:17+00:00")
+            .withRow("patient-1", "2015-02-21T18:28:17.000+00:00")
+            .withRow("patient-2", "2015-02-21T18:28:17.000+00:00")
+            .withRow("patient-3", "2015-02-21T18:28:17.000+00:00")
             .build())
     );
 
@@ -433,9 +451,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("30 days", dateTimeLiteralPath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-03-09T18:28:17+00:00")
-            .withRow("patient-2", "2015-03-09T18:28:17+00:00")
-            .withRow("patient-3", "2015-03-09T18:28:17+00:00")
+            .withRow("patient-1", "2015-03-09T18:28:17.000+00:00")
+            .withRow("patient-2", "2015-03-09T18:28:17.000+00:00")
+            .withRow("patient-3", "2015-03-09T18:28:17.000+00:00")
             .build())
     );
 
@@ -443,9 +461,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("12 hours", dateTimeLiteralPath), context,
         Operator.getInstance("+"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-08T06:28:17+00:00")
-            .withRow("patient-2", "2015-02-08T06:28:17+00:00")
-            .withRow("patient-3", "2015-02-08T06:28:17+00:00")
+            .withRow("patient-1", "2015-02-08T06:28:17.000+00:00")
+            .withRow("patient-2", "2015-02-08T06:28:17.000+00:00")
+            .withRow("patient-3", "2015-02-08T06:28:17.000+00:00")
             .build())
     );
 
@@ -455,9 +473,9 @@ public class DateArithmeticTest {
             context,
             Operator.getInstance("+"),
             new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-                .withRow("patient-1", "2015-02-07T18:58:17+00:00")
-                .withRow("patient-2", "2015-02-07T18:58:17+00:00")
-                .withRow("patient-3", "2015-02-07T18:58:17+00:00")
+                .withRow("patient-1", "2015-02-07T18:58:17.000+00:00")
+                .withRow("patient-2", "2015-02-07T18:58:17.000+00:00")
+                .withRow("patient-3", "2015-02-07T18:58:17.000+00:00")
                 .build())
     );
 
@@ -467,9 +485,21 @@ public class DateArithmeticTest {
             context,
             Operator.getInstance("+"),
             new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-                .withRow("patient-1", "2015-02-07T18:28:27+00:00")
-                .withRow("patient-2", "2015-02-07T18:28:27+00:00")
-                .withRow("patient-3", "2015-02-07T18:28:27+00:00")
+                .withRow("patient-1", "2015-02-07T18:28:27.000+00:00")
+                .withRow("patient-2", "2015-02-07T18:28:27.000+00:00")
+                .withRow("patient-3", "2015-02-07T18:28:27.000+00:00")
+                .build())
+    );
+
+    parameters.add(
+        new TestParameters("@2015-02-07T18:28:17+00:00 + 300 milliseconds", dateTimeLiteralPath,
+            QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", dateTimeLiteralPath),
+            context,
+            Operator.getInstance("+"),
+            new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+                .withRow("patient-1", "2015-02-07T18:28:17.300+00:00")
+                .withRow("patient-2", "2015-02-07T18:28:17.300+00:00")
+                .withRow("patient-3", "2015-02-07T18:28:17.300+00:00")
                 .build())
     );
 
@@ -483,9 +513,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("10 years", dateTimeLiteralPath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2005-02-07T18:28:17+00:00")
-            .withRow("patient-2", "2005-02-07T18:28:17+00:00")
-            .withRow("patient-3", "2005-02-07T18:28:17+00:00")
+            .withRow("patient-1", "2005-02-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2005-02-07T18:28:17.000+00:00")
+            .withRow("patient-3", "2005-02-07T18:28:17.000+00:00")
             .build())
     );
 
@@ -493,9 +523,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("9 months", dateTimeLiteralPath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2014-05-07T18:28:17+00:00")
-            .withRow("patient-2", "2014-05-07T18:28:17+00:00")
-            .withRow("patient-3", "2014-05-07T18:28:17+00:00")
+            .withRow("patient-1", "2014-05-07T18:28:17.000+00:00")
+            .withRow("patient-2", "2014-05-07T18:28:17.000+00:00")
+            .withRow("patient-3", "2014-05-07T18:28:17.000+00:00")
             .build())
     );
 
@@ -503,9 +533,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("2 weeks", dateTimeLiteralPath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-01-24T18:28:17+00:00")
-            .withRow("patient-2", "2015-01-24T18:28:17+00:00")
-            .withRow("patient-3", "2015-01-24T18:28:17+00:00")
+            .withRow("patient-1", "2015-01-24T18:28:17.000+00:00")
+            .withRow("patient-2", "2015-01-24T18:28:17.000+00:00")
+            .withRow("patient-3", "2015-01-24T18:28:17.000+00:00")
             .build())
     );
 
@@ -513,9 +543,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("30 days", dateTimeLiteralPath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-01-08T18:28:17+00:00")
-            .withRow("patient-2", "2015-01-08T18:28:17+00:00")
-            .withRow("patient-3", "2015-01-08T18:28:17+00:00")
+            .withRow("patient-1", "2015-01-08T18:28:17.000+00:00")
+            .withRow("patient-2", "2015-01-08T18:28:17.000+00:00")
+            .withRow("patient-3", "2015-01-08T18:28:17.000+00:00")
             .build())
     );
 
@@ -523,9 +553,9 @@ public class DateArithmeticTest {
         QuantityLiteralPath.fromCalendarDurationString("12 hours", dateTimeLiteralPath), context,
         Operator.getInstance("-"),
         new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-            .withRow("patient-1", "2015-02-07T06:28:17+00:00")
-            .withRow("patient-2", "2015-02-07T06:28:17+00:00")
-            .withRow("patient-3", "2015-02-07T06:28:17+00:00")
+            .withRow("patient-1", "2015-02-07T06:28:17.000+00:00")
+            .withRow("patient-2", "2015-02-07T06:28:17.000+00:00")
+            .withRow("patient-3", "2015-02-07T06:28:17.000+00:00")
             .build())
     );
 
@@ -535,9 +565,9 @@ public class DateArithmeticTest {
             context,
             Operator.getInstance("-"),
             new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-                .withRow("patient-1", "2015-02-07T17:58:17+00:00")
-                .withRow("patient-2", "2015-02-07T17:58:17+00:00")
-                .withRow("patient-3", "2015-02-07T17:58:17+00:00")
+                .withRow("patient-1", "2015-02-07T17:58:17.000+00:00")
+                .withRow("patient-2", "2015-02-07T17:58:17.000+00:00")
+                .withRow("patient-3", "2015-02-07T17:58:17.000+00:00")
                 .build())
     );
 
@@ -547,9 +577,21 @@ public class DateArithmeticTest {
             context,
             Operator.getInstance("-"),
             new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
-                .withRow("patient-1", "2015-02-07T18:28:07+00:00")
-                .withRow("patient-2", "2015-02-07T18:28:07+00:00")
-                .withRow("patient-3", "2015-02-07T18:28:07+00:00")
+                .withRow("patient-1", "2015-02-07T18:28:07.000+00:00")
+                .withRow("patient-2", "2015-02-07T18:28:07.000+00:00")
+                .withRow("patient-3", "2015-02-07T18:28:07.000+00:00")
+                .build())
+    );
+
+    parameters.add(
+        new TestParameters("@2015-02-07T18:28:17+00:00 - 300 milliseconds", dateTimeLiteralPath,
+            QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", dateTimeLiteralPath),
+            context,
+            Operator.getInstance("-"),
+            new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+                .withRow("patient-1", "2015-02-07T18:28:16.700+00:00")
+                .withRow("patient-2", "2015-02-07T18:28:16.700+00:00")
+                .withRow("patient-3", "2015-02-07T18:28:16.700+00:00")
                 .build())
     );
 
@@ -677,6 +719,15 @@ public class DateArithmeticTest {
             .withRow("patient-2", "08:00:15")
             .withRow("patient-3", "00:00:15")
             .build()));
+
+    parameters.add(new TestParameters("Time + 300 milliseconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "13:28:17.300")
+            .withRow("patient-2", "08:00:00.300")
+            .withRow("patient-3", "00:00:00.300")
+            .build()));
     return parameters;
   }
 
@@ -708,6 +759,15 @@ public class DateArithmeticTest {
             .withRow("patient-1", "13:28:02")
             .withRow("patient-2", "07:59:45")
             .withRow("patient-3", "23:59:45")
+            .build()));
+
+    parameters.add(new TestParameters("Time - 300 milliseconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "13:28:16.700")
+            .withRow("patient-2", "07:59:59.700")
+            .withRow("patient-3", "23:59:59.700")
             .build()));
     return parameters;
   }
@@ -741,6 +801,15 @@ public class DateArithmeticTest {
             .withRow("patient-2", "08:00:15")
             .withRow("patient-3", "08:00:15")
             .build()));
+
+    parameters.add(new TestParameters("@T08:00 + 70 milliseconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("70 milliseconds", timePath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "08:00:00.070")
+            .withRow("patient-2", "08:00:00.070")
+            .withRow("patient-3", "08:00:00.070")
+            .build()));
     return parameters;
   }
 
@@ -772,6 +841,15 @@ public class DateArithmeticTest {
             .withRow("patient-1", "07:59:45")
             .withRow("patient-2", "07:59:45")
             .withRow("patient-3", "07:59:45")
+            .build()));
+
+    parameters.add(new TestParameters("@T08:00 - 70 milliseconds", timePath,
+        QuantityLiteralPath.fromCalendarDurationString("70 milliseconds", timePath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "07:59:59.930")
+            .withRow("patient-2", "07:59:59.930")
+            .withRow("patient-3", "07:59:59.930")
             .build()));
     return parameters;
   }

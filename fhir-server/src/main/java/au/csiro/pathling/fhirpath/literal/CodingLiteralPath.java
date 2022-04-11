@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
@@ -22,7 +21,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath Coding literal.
@@ -30,13 +28,17 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class CodingLiteralPath extends LiteralPath implements Materializable<Coding>, Comparable {
+public class CodingLiteralPath extends LiteralPath<Coding> implements Materializable<Coding>,
+    Comparable {
 
-  @SuppressWarnings("WeakerAccess")
   protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final Coding literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof Coding);
+  }
+
+  protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Coding literalValue, @Nonnull final String expression) {
+    super(dataset, idColumn, literalValue, expression);
   }
 
   /**
@@ -49,34 +51,23 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
    * @throws IllegalArgumentException if the literal is malformed
    */
   @Nonnull
-  public static CodingLiteralPath fromString(@Nonnull final CharSequence fhirPath,
+  public static CodingLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
     return new CodingLiteralPath(context.getDataset(), context.getIdColumn(),
-        CodingLiteral.fromString(fhirPath));
+        CodingLiteral.fromString(fhirPath), fhirPath);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return CodingLiteral.toLiteral(getLiteralValue());
+    return expression.orElse(CodingLiteral.toLiteral(getValue()));
 
-  }
-
-  @Override
-  public Coding getLiteralValue() {
-    return (Coding) literalValue;
-  }
-
-  @Nonnull
-  @Override
-  public Coding getJavaValue() {
-    return getLiteralValue();
   }
 
   @Nonnull
   @Override
   public Column buildValueColumn() {
-    final Coding value = getJavaValue();
+    final Coding value = getValue();
     return struct(
         lit(value.getId()).as("id"),
         lit(value.getSystem()).as("system"),
@@ -114,7 +105,7 @@ public class CodingLiteralPath extends LiteralPath implements Materializable<Cod
   @Nonnull
   @Override
   public Column getExtractableColumn() {
-    return lit(CodingLiteral.toLiteral(getLiteralValue()));
+    return lit(CodingLiteral.toLiteral(getValue()));
   }
 
 }

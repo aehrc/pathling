@@ -7,8 +7,6 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
@@ -20,8 +18,6 @@ import au.csiro.pathling.fhirpath.element.DateTimePath;
 import au.csiro.pathling.sql.dates.AddDurationToDateTime;
 import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -31,21 +27,23 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath date literal.
  *
  * @author John Grimes
  */
-public class DateTimeLiteralPath extends LiteralPath implements Materializable<BaseDateTimeType>,
-    Comparable, Temporal {
+public class DateTimeLiteralPath extends LiteralPath<DateTimeType> implements
+    Materializable<BaseDateTimeType>, Comparable, Temporal {
 
-  @SuppressWarnings("WeakerAccess")
   protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final DateTimeType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof DateTimeType);
+  }
+
+  protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final DateTimeType literalValue, @Nonnull final String expression) {
+    super(dataset, idColumn, literalValue, expression);
   }
 
   /**
@@ -57,51 +55,25 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
    * @return A new instance of {@link LiteralPath}
    * @throws ParseException if the literal is malformed
    */
+  @Nonnull
   public static DateTimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
     final String dateTimeString = fhirPath.replaceFirst("^@", "");
-    final java.util.Date date = parseDateTimeString(dateTimeString);
-    final DateTimeType literalValue = new DateTimeType(date);
-    literalValue.setTimeZone(DateTimePath.getTimeZone());
-    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn(), literalValue);
-  }
-
-  @Nonnull
-  private static Date parseDateTimeString(@Nonnull final String dateTimeString)
-      throws ParseException {
-    ParseException parseException = null;
-    for (final SimpleDateFormat format : DateTimePath.getAllDateFormats()) {
-      try {
-        return format.parse(dateTimeString);
-      } catch (final ParseException e) {
-        parseException = e;
-      }
-    }
-    checkNotNull(parseException);
-    throw parseException;
+    final DateTimeType dateTimeType = new DateTimeType(dateTimeString);
+    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn(), dateTimeType,
+        fhirPath);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return "@" + DateTimePath.getDefaultDateFormat().format(getLiteralValue().getValue());
-  }
-
-  @Override
-  public DateTimeType getLiteralValue() {
-    return (DateTimeType) literalValue;
-  }
-
-  @Nonnull
-  @Override
-  public Date getJavaValue() {
-    return getLiteralValue().getValue();
+    return expression.orElse("@" + getValue().getValueAsString());
   }
 
   @Nonnull
   @Override
   public Column buildValueColumn() {
-    return lit(getLiteralValue().asStringValue());
+    return lit(getValue().asStringValue());
   }
 
   @Override
@@ -135,4 +107,5 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
     return buildDateArithmeticOperation(this, operation, dataset, expression,
         AddDurationToDateTime.FUNCTION_NAME, SubtractDurationFromDateTime.FUNCTION_NAME);
   }
+
 }

@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
@@ -31,7 +30,6 @@ import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath Quantity literal.
@@ -39,17 +37,21 @@ import org.hl7.fhir.r4.model.Type;
  * @author John Grimes
  */
 @Getter
-public class QuantityLiteralPath extends LiteralPath implements Comparable, Numeric {
+public class QuantityLiteralPath extends LiteralPath<Quantity> implements Comparable, Numeric {
 
   public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
 
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
   private static final Pattern CALENDAR_DURATION_PATTERN = Pattern.compile("([0-9.]+) (\\w+)");
 
-  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
+  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Quantity literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof Quantity);
+  }
+
+  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final Quantity literalValue, @Nonnull final String expression) {
+    super(dataset, idColumn, literalValue, expression);
   }
 
   /**
@@ -72,7 +74,7 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable, Nume
     final String fullPath = matcher.group(0);
     final String value = matcher.group(1);
     final String rawUnit = matcher.group(2);
-    final String unit = StringLiteralPath.fromString(rawUnit, context).getLiteralValue()
+    final String unit = StringLiteralPath.fromString(rawUnit, context).getValue()
         .getValueAsString();
 
     final String validationResult = ucumService.validate(unit);
@@ -85,7 +87,7 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable, Nume
     final BigDecimal decimalValue = getQuantityValue(value, context);
     final String display = ucumService.getCommonDisplay(unit);
 
-    return buildLiteralPath(decimalValue, unit, display, context);
+    return buildLiteralPath(decimalValue, unit, display, context, fhirPath);
   }
 
   @Nonnull
@@ -104,13 +106,13 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable, Nume
     quantity.setSystem(FHIRPATH_CALENDAR_DURATION_URI);
     quantity.setCode(keyword);
 
-    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity, fhirPath);
   }
 
   private static BigDecimal getQuantityValue(final String value, final @Nonnull FhirPath context) {
     final BigDecimal decimalValue;
     try {
-      decimalValue = DecimalLiteralPath.fromString(value, context).getLiteralValue().getValue();
+      decimalValue = DecimalLiteralPath.fromString(value, context).getValue().getValue();
     } catch (final NumberFormatException e) {
       throw new IllegalArgumentException("Quantity literal has invalid value: " + value);
     }
@@ -119,37 +121,28 @@ public class QuantityLiteralPath extends LiteralPath implements Comparable, Nume
 
   @Nonnull
   private static QuantityLiteralPath buildLiteralPath(final BigDecimal decimalValue,
-      final String unit, final String display, final @Nonnull FhirPath context) {
+      final String unit, final String display, final @Nonnull FhirPath context,
+      final String fhirPath) {
     final Quantity quantity = new Quantity();
     quantity.setValue(decimalValue);
     quantity.setSystem(Ucum.SYSTEM_URI);
     quantity.setCode(unit);
     quantity.setUnit(display);
 
-    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity, fhirPath);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return getLiteralValue().getValue().toPlainString() + " '" + getLiteralValue().getUnit() + "'";
-  }
-
-  @Override
-  public Quantity getLiteralValue() {
-    return (Quantity) literalValue;
-  }
-
-  @Nonnull
-  @Override
-  public Quantity getJavaValue() {
-    return getLiteralValue();
+    return expression.orElse(
+        getValue().getValue().toPlainString() + " '" + getValue().getUnit() + "'");
   }
 
   @Nonnull
   @Override
   public Column buildValueColumn() {
-    final Quantity value = getJavaValue();
+    final Quantity value = getValue();
     final Optional<QuantityComparator> comparator = Optional.ofNullable(value.getComparator());
     return struct(
         lit(value.getId()).as("id"),

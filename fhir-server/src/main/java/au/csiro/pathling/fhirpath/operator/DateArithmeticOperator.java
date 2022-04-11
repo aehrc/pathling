@@ -48,7 +48,7 @@ public class DateArithmeticOperator implements Operator {
     checkUserInput(right instanceof QuantityLiteralPath,
         type + " operator does not support right operand: " + right.getExpression());
     final QuantityLiteralPath calendarDuration = (QuantityLiteralPath) right;
-    checkUserInput(calendarDuration.getJavaValue().getSystem()
+    checkUserInput(calendarDuration.getValue().getSystem()
             .equals(QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI),
         "Right operand of " + type + " operator must be a calendar duration");
     checkUserInput(left.isSingular(),

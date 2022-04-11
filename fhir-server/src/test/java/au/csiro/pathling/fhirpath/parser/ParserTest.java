@@ -47,7 +47,6 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
-import java.sql.Date;
 import java.util.Collections;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
@@ -126,32 +125,80 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testDateTimeLiterals() {
-    // Full DateTime.
-    assertThatResultOf("@2015-02-04T14:34:28Z")
+    // Milliseconds precision.
+    assertThatResultOf("@2015-02-04T14:34:28.350Z")
         .isLiteralPath(DateTimeLiteralPath.class)
-        .hasExpression("@2015-02-04T14:34:28Z")
-        .hasJavaValue(new Date(1423060468000L));
+        .hasExpression("@2015-02-04T14:34:28.350Z")
+        .has("2015-02-04T14:34:28.350Z",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString());
 
-    // Date with no time component.
+    // Milliseconds precision, no timezone.
+    assertThatResultOf("@2015-02-04T14:34:28.350")
+        .isLiteralPath(DateTimeLiteralPath.class)
+        .hasExpression("@2015-02-04T14:34:28.350")
+        .has("2015-02-04T14:34:28.350",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString())
+        .has(null, dateTime -> dateTime.getValue().dateTimeValue().getTimeZone());
+
+    // Seconds precision.
+    assertThatResultOf("@2015-02-04T14:34:28-05:00")
+        .isLiteralPath(DateTimeLiteralPath.class)
+        .hasExpression("@2015-02-04T14:34:28-05:00")
+        .has("2015-02-04T14:34:28-05:00",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString());
+
+    // Seconds precision, no timezone.
+    assertThatResultOf("@2015-02-04T14:34:28")
+        .isLiteralPath(DateTimeLiteralPath.class)
+        .hasExpression("@2015-02-04T14:34:28")
+        .has("2015-02-04T14:34:28",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString())
+        .has(null, dateTime -> dateTime.getValue().dateTimeValue().getTimeZone());
+  }
+
+  @Test
+  void testDateLiterals() {
+    // Year, month and day.
     assertThatResultOf("@2015-02-04")
         .isLiteralPath(DateLiteralPath.class)
         .hasExpression("@2015-02-04")
-        .hasJavaValue(new Date(1423008000000L));
+        .has("2015-02-04", date -> date.getValue().castToDate(date.getValue()).getValueAsString())
+        .has(null, date -> date.getValue().castToDate(date.getValue()).getTimeZone());
+
+    // Year and month.
+    assertThatResultOf("@2015-02")
+        .isLiteralPath(DateLiteralPath.class)
+        .hasExpression("@2015-02")
+        .has("2015-02", date -> date.getValue().castToDate(date.getValue()).getValueAsString())
+        .has(null, date -> date.getValue().castToDate(date.getValue()).getTimeZone());
+
+    // Year only.
+    assertThatResultOf("@2015")
+        .isLiteralPath(DateLiteralPath.class)
+        .hasExpression("@2015")
+        .has("2015", date -> date.getValue().castToDate(date.getValue()).getValueAsString())
+        .has(null, date -> date.getValue().castToDate(date.getValue()).getTimeZone());
   }
 
   @Test
   void testTimeLiterals() {
-    // Full Time.
+    // Hours, minutes and seconds.
     assertThatResultOf("@T14:34:28")
         .isLiteralPath(TimeLiteralPath.class)
         .hasExpression("@T14:34:28")
-        .hasJavaValue("14:34:28");
+        .has("14:34:28", time -> time.getValue().castToTime(time.getValue()).getValueAsString());
+
+    // Hours and minutes.
+    assertThatResultOf("@T14:34")
+        .isLiteralPath(TimeLiteralPath.class)
+        .hasExpression("@T14:34")
+        .has("14:34", time -> time.getValue().castToTime(time.getValue()).getValueAsString());
 
     // Hour only.
     assertThatResultOf("@T14")
         .isLiteralPath(TimeLiteralPath.class)
         .hasExpression("@T14")
-        .hasJavaValue("14");
+        .has("14", time -> time.getValue().castToTime(time.getValue()).getValueAsString());
   }
 
   @Test

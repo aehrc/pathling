@@ -42,8 +42,8 @@ combinations.
 | String   | false   | true   | false   | false   | false | false    | false | false            |
 | Integer  | false   | false  | true    | true    | false | false    | false | false            |
 | Decimal  | false   | false  | true    | true    | false | false    | false | false            |
-| Date     | false   | false  | false   | false   | true  | true     | false | true<sup>*</sup> |
-| DateTime | false   | false  | false   | false   | true  | true     | false | true<sup>*</sup> |
+| Date     | false   | false  | false   | false   | true  | true     | false | false            |
+| DateTime | false   | false  | false   | false   | true  | true     | false | false            |
 | Time     | false   | false  | false   | false   | false | false    | true  | false            |
 | Quantity | false   | false  | false   | false   | false | false    | false | true<sup>*</sup> |
 
@@ -55,8 +55,8 @@ individual characters.
 
 All comparison operators return a [Boolean](./data-types.html#boolean) value.
 
-<sup>*</sup> Not all Quantity, Date and DateTime values are comparable, it
-depends upon the comparability of the units within the Quantity values. See the
+<sup>*</sup> Not all Quantity values are comparable, it depends upon the
+comparability of the units. See the
 [FHIRPath specification](https://hl7.org/fhirpath/#comparison) for details on
 how Quantity values are compared. Quantities with a `comparator` are treated as
 not comparable by this implementation.
@@ -117,7 +117,8 @@ The following operators are supported for date arithmetic:
 - `-` - Subtract a duration from a [Date](./data-types.html#date),
   [DateTime](./data-types.html#datetime) or [Time](./data-types.html#time)
 
-The duration operand is a
+Date arithmetic always has a `DateTime`, `Date` or `Time` on the left-hand side,
+and a duration on the right-hand side. The duration operand is a
 [calendar duration literal](./data-types.html#quantity). The use of UCUM units
 is not supported with these operators.
 

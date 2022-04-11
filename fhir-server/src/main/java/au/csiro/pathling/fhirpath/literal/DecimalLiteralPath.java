@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
@@ -25,21 +25,18 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath decimal literal.
  *
  * @author John Grimes
  */
-public class DecimalLiteralPath extends LiteralPath implements Materializable<DecimalType>,
-    Comparable, Numeric {
+public class DecimalLiteralPath extends LiteralPath<DecimalType> implements
+    Materializable<DecimalType>, Comparable, Numeric {
 
-  @SuppressWarnings("WeakerAccess")
   protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final DecimalType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof DecimalType);
   }
 
   /**
@@ -73,19 +70,13 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
   @Nonnull
   @Override
   public String getExpression() {
-    return getLiteralValue().getValue().toPlainString();
-  }
-
-  @Override
-  @Nonnull
-  public DecimalType getLiteralValue() {
-    return (DecimalType) literalValue;
+    return getValue().getValue().toPlainString();
   }
 
   @Nonnull
   @Override
-  public BigDecimal getJavaValue() {
-    return getLiteralValue().getValue();
+  public Column buildValueColumn() {
+    return lit(getValue().getValue());
   }
 
   @Override

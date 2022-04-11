@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.sql.dates;
 
-import au.csiro.pathling.fhirpath.element.DateTimePath;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
@@ -27,7 +26,6 @@ public abstract class DateArithmeticFunction extends TemporalArithmeticFunction<
   Function<LocalDate, String> encodeResult() {
     return (resultDate) -> new DateType(
         new Date(resultDate.toEpochSecond(LocalTime.MIN, ZoneOffset.UTC) * 1000))
-        .setTimeZone(DateTimePath.getTimeZone())
         .getValueAsString();
   }
 

@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -19,21 +19,19 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath boolean literal.
  *
  * @author John Grimes
  */
-public class BooleanLiteralPath extends LiteralPath implements Materializable<BooleanType>,
-    Comparable {
+public class BooleanLiteralPath extends LiteralPath<BooleanType> implements
+    Materializable<BooleanType>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final BooleanType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof BooleanType);
   }
 
   /**
@@ -55,18 +53,13 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   @Nonnull
   @Override
   public String getExpression() {
-    return getLiteralValue().asStringValue();
-  }
-
-  @Override
-  public BooleanType getLiteralValue() {
-    return (BooleanType) literalValue;
+    return getValue().asStringValue();
   }
 
   @Nonnull
   @Override
-  public Boolean getJavaValue() {
-    return getLiteralValue().booleanValue();
+  public Column buildValueColumn() {
+    return lit(getValue().booleanValue());
   }
 
   @Override

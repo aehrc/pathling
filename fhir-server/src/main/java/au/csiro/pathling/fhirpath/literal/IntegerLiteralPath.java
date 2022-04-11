@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -24,21 +24,19 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.PrimitiveType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath integer literal.
  *
  * @author John Grimes
  */
-public class IntegerLiteralPath extends LiteralPath implements Materializable<PrimitiveType>,
-    Comparable, Numeric {
+public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
+    Materializable<PrimitiveType>, Comparable, Numeric {
 
   @SuppressWarnings("WeakerAccess")
   protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final PrimitiveType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof IntegerType);
   }
 
   /**
@@ -60,19 +58,13 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
   @Nonnull
   @Override
   public String getExpression() {
-    return getLiteralValue().getValueAsString();
-  }
-
-  @Override
-  @Nonnull
-  public IntegerType getLiteralValue() {
-    return (IntegerType) literalValue;
+    return getValue().getValueAsString();
   }
 
   @Nonnull
   @Override
-  public Integer getJavaValue() {
-    return getLiteralValue().getValue();
+  public Column buildValueColumn() {
+    return lit(getValue().getValue());
   }
 
   @Override

@@ -38,6 +38,8 @@ public class ComparableQuantity implements SqlFunction1<Row, Row> {
   private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, String>()
       .put("second", "s")
       .put("seconds", "s")
+      .put("millisecond", "ms")
+      .put("milliseconds", "ms")
       .build();
 
   /**

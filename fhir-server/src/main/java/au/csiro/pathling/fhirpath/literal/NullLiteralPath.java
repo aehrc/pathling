@@ -14,7 +14,6 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -25,11 +24,10 @@ import org.hl7.fhir.r4.model.StringType;
  *
  * @author John Grimes
  */
-public class NullLiteralPath extends LiteralPath implements Comparable {
+public class NullLiteralPath extends LiteralPath<StringType> implements Comparable {
 
   private static final String EXPRESSION = "{}";
 
-  @SuppressWarnings("WeakerAccess")
   protected NullLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn) {
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
@@ -57,10 +55,10 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
     return EXPRESSION;
   }
 
-  @Nullable
+  @Nonnull
   @Override
-  public Object getJavaValue() {
-    return null;
+  public Column buildValueColumn() {
+    return lit(null);
   }
 
   @Override

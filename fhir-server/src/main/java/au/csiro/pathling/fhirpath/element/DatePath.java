@@ -45,19 +45,19 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT = ThreadLocal
       .withInitial(() -> {
         final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-        format.setTimeZone(DateTimePath.getTimeZone());
+        format.setTimeZone(DateTimePath.getDefaultTimeZone());
         return format;
       });
   private static final ThreadLocal<SimpleDateFormat> YEAR_MONTH_DATE_FORMAT = ThreadLocal
       .withInitial(() -> {
         final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM");
-        format.setTimeZone(DateTimePath.getTimeZone());
+        format.setTimeZone(DateTimePath.getDefaultTimeZone());
         return format;
       });
   private static final ThreadLocal<SimpleDateFormat> YEAR_ONLY_DATE_FORMAT = ThreadLocal
       .withInitial(() -> {
         final SimpleDateFormat format = new SimpleDateFormat("yyyy");
-        format.setTimeZone(DateTimePath.getTimeZone());
+        format.setTimeZone(DateTimePath.getDefaultTimeZone());
         return format;
       });
 

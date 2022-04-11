@@ -20,6 +20,7 @@ import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
 import au.csiro.pathling.sql.dates.SubtractDurationFromTime;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
+import au.csiro.pathling.terminology.CodingToLiteral;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.ucum.ComparableQuantity;
 import au.csiro.pathling.terminology.ucum.Ucum;
@@ -52,7 +53,8 @@ class UnitTestDependencies {
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkListener> sparkListener,
       @Nonnull final UcumService ucumService) {
-    final List<SqlFunction1> sqlFunction1 = List.of(new ComparableQuantity(ucumService));
+    final List<SqlFunction1> sqlFunction1 = List.of(new CodingToLiteral(),
+        new ComparableQuantity(ucumService));
     final List<SqlFunction2> sqlFunction2 = List.of(new AddDurationToDateTime(),
         new SubtractDurationFromDateTime(), new AddDurationToDate(), new SubtractDurationFromDate(),
         new AddDurationToTime(), new SubtractDurationFromTime());
