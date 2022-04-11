@@ -7,12 +7,7 @@
 package au.csiro.pathling.sql.udf;
 
 import org.apache.spark.sql.api.java.UDF2;
-import org.apache.spark.sql.types.DataType;
 
-public interface SqlFunction2<T1, T2, R> extends UDF2<T1, T2, R> {
-
-  String getName();
-
-  DataType getReturnType();
+public interface SqlFunction2<T1, T2, R> extends SqlFunction, UDF2<T1, T2, R> {
 
 }
