@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -25,6 +26,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -55,6 +57,8 @@ class ComparisonOperatorDateTimeTest {
         .getChildOfResource(fhirContext, "MedicationRequest", "authoredOn");
     assertTrue(optionalLeftDefinition.isPresent());
     final ElementDefinition leftDefinition = optionalLeftDefinition.get();
+    assertTrue(leftDefinition.getFhirType().isPresent());
+    assertEquals(FHIRDefinedType.DATETIME, leftDefinition.getFhirType().get());
 
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
@@ -78,6 +82,8 @@ class ComparisonOperatorDateTimeTest {
         .getChildOfResource(fhirContext, "Condition", "onsetDateTime");
     assertTrue(optionalRightDefinition.isPresent());
     final ElementDefinition rightDefinition = optionalRightDefinition.get();
+    assertTrue(rightDefinition.getFhirType().isPresent());
+    assertEquals(FHIRDefinedType.DATETIME, rightDefinition.getFhirType().get());
 
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
@@ -112,7 +118,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", true),  // Equal, exact
         RowFactory.create("patient-2", true),  // Equal, different time zones
         RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", true),  // Equal, different precisions
+        RowFactory.create("patient-4", null),  // Equal, different precisions
         RowFactory.create("patient-5", false), // Less than
         RowFactory.create("patient-6", false)  // Greater than
     );
@@ -128,7 +134,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", false),  // Equal, exact
         RowFactory.create("patient-2", false),  // Equal, different time zones
         RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", false),  // Equal, different precisions
+        RowFactory.create("patient-4", null),   // Equal, different precisions
         RowFactory.create("patient-5", true),   // Less than
         RowFactory.create("patient-6", true)    // Greater than
     );
@@ -144,7 +150,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", false),  // Equal, exact
         RowFactory.create("patient-2", false),  // Equal, different time zones
         RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", false),  // Equal, different precisions
+        RowFactory.create("patient-4", null),   // Equal, different precisions
         RowFactory.create("patient-5", true),   // Less than
         RowFactory.create("patient-6", false)   // Greater than
     );
@@ -160,9 +166,9 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", true),  // Equal, exact
         RowFactory.create("patient-2", true),  // Equal, different time zones
         RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", true),  // Equal, different precisions
-        RowFactory.create("patient-5", true),   // Less than
-        RowFactory.create("patient-6", false)   // Greater than
+        RowFactory.create("patient-4", null),  // Equal, different precisions
+        RowFactory.create("patient-5", true),  // Less than
+        RowFactory.create("patient-6", false)  // Greater than
     );
   }
 
@@ -176,7 +182,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", false),  // Equal, exact
         RowFactory.create("patient-2", false),  // Equal, different time zones
         RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", false),  // Equal, different precisions
+        RowFactory.create("patient-4", null),   // Equal, different precisions
         RowFactory.create("patient-5", false),  // Less than
         RowFactory.create("patient-6", true)    // Greater than
     );
@@ -192,9 +198,9 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", true),  // Equal, exact
         RowFactory.create("patient-2", true),  // Equal, different time zones
         RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", true),  // Equal, different precisions
-        RowFactory.create("patient-5", false),  // Less than
-        RowFactory.create("patient-6", true)    // Greater than
+        RowFactory.create("patient-4", null),  // Equal, different precisions
+        RowFactory.create("patient-5", false), // Less than
+        RowFactory.create("patient-6", true)   // Greater than
     );
   }
 
