@@ -140,6 +140,11 @@ public abstract class QueryHelpers {
     checkArgument(leftColumns.size() == rightColumns.size(),
         "Left columns should be same size as right columns");
 
+    // If there are no join columns and no additional condition, there is no need to join.
+    if (leftColumns.isEmpty() && additionalCondition.isEmpty()) {
+      return left;
+    }
+
     Dataset<Row> aliasedLeft = left;
     final Collection<Column> joinConditions = new ArrayList<>();
     for (int i = 0; i < leftColumns.size(); i++) {
