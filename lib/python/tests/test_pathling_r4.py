@@ -45,25 +45,30 @@ def json_bundles_dir():
     return os.path.join(PROJECT_DIR,
                         'encoders/src/test/resources/data/bundles/R4/json/')
 
+@fixture(scope="module")
+def json_resources_dir():
+    return os.path.join(PROJECT_DIR,
+                        'encoders/src/test/resources/data/resources/R4/json/')
 
 @fixture(scope="module")
 def bundles(spark_session, json_bundles_dir):
     return bdls.load_from_directory(spark_session, json_bundles_dir)
 
-
 def test_load_from_directory(bundles):
     assert bundles.count() == 5
-
-
-# def test_json_bundles_from_df(spark_session, json_bundles_dir):
-#    spark_session.read.text
-#    json_bundles = spark_session.sparkContext.wholeTextFiles('tests/resources/bundles/json').toDF()
-#
-#    bundles = from_json(json_bundles, '_2')#
-#
-#    assert extract_entry(spark_session, bundles, 'Condition').count() == 5
-
 
 def test_extract_entry(spark_session, bundles):
     assert bdls.extract_entry(spark_session, bundles, 'Patient').count() == 5
     assert bdls.extract_entry(spark_session, bundles, 'Condition').count() == 107
+
+def test_json_bundles_from_df(spark_session, json_bundles_dir):
+    json_bundles_df = spark_session.read.text(json_bundles_dir, wholetext=True)
+    bundles = bdls.from_json(json_bundles_df, 'value')
+    assert bundles.count() == 5
+    assert bdls.extract_entry(spark_session, bundles, 'Patient').count() == 5
+
+def test_json_resources_from_df(spark_session, json_resources_dir):
+    json_resources_df = spark_session.read.text(json_resources_dir)
+    resource_bundles = bdls.from_resource_json(json_resources_df, 'value')
+    assert resource_bundles.count() == 1583
+    assert bdls.extract_entry(spark_session, resource_bundles, 'Patient').count() == 9
