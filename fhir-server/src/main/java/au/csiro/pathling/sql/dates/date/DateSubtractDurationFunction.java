@@ -6,8 +6,8 @@
 
 package au.csiro.pathling.sql.dates.date;
 
-import java.time.LocalDate;
 import java.util.function.BiFunction;
+import org.hl7.fhir.r4.model.DateType;
 import org.hl7.fhir.r4.model.Quantity;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -21,7 +21,7 @@ public class DateSubtractDurationFunction extends DateArithmeticFunction {
   public static final String FUNCTION_NAME = "date_subtract_duration";
 
   @Override
-  protected BiFunction<LocalDate, Quantity, LocalDate> getOperationFunction() {
+  protected BiFunction<DateType, Quantity, DateType> getOperationFunction() {
     return this::performSubtraction;
   }
 

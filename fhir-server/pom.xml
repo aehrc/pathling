@@ -343,7 +343,7 @@
               <environment>
                 <PATHLING_VERSION>${project.version}</PATHLING_VERSION>
                 <JAVA_TOOL_OPTIONS>
-                  -Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m
+                  -Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m -Duser.timezone=UTC
                 </JAVA_TOOL_OPTIONS>
               </environment>
               <labels>

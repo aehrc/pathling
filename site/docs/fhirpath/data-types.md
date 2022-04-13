@@ -15,8 +15,8 @@ literal expressions:
 - [String](#string)
 - [Integer](#integer)
 - [Decimal](#decimal)
-- [Date](#date)
 - [DateTime](#datetime)
+- [Date](#date)
 - [Time](#time)
 - [Quantity](#quantity)
 - [Coding](#coding)
@@ -88,6 +88,27 @@ Examples:
     a scale of 6.
 </div>
 
+## DateTime
+
+The DateTime literal combines the [Date](#date) and [Time](#time) literals and
+is a subset of [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the
+`YYYY-MM-DDThh:mm:ss.ffff±hh:mm` format. `Z` is allowed as a synonym for the
+zero (`+00:00`) UTC offset.
+
+Time zone is optional - if it is omitted, the system-configured time zone will
+be assumed. Seconds and milliseconds precision are supported. Hours precision,
+minutes precision and partial DateTime values (ending with `T`) are not
+supported.
+
+Example:
+
+```
+@2014-01-25T14:30:14         // Seconds precision
+@2014-01-25T14:30:14+10:00   // Seconds precision with UTC+10 timezone offset
+@2014-01-25T14:30:14.559     // Milliseconds precision
+@2014-01-25T14:30:14.559Z    // Milliseconds precision with UTC timezone offset
+```
+
 ## Date
 
 The Date type represents date and partial date values, without a time component.
@@ -95,6 +116,10 @@ The Date type represents date and partial date values, without a time component.
 The Date literal is a subset of
 [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the `YYYY-MM-DD`
 format, though month and day parts are optional.
+
+Some operations implicitly convert Date values to DateTime values, such as
+comparison and arithmetic. Note that the Date will be assumed to be in the
+system-configured time zone in these instances.
 
 Examples:
 
@@ -112,34 +137,16 @@ The Time literal uses a subset of
 [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601):
 
 - A time begins with a `@T`
-- It uses the `Thh:mm:ss` format, though minute and second are optional
-- Milliseconds are not supported
+- It uses the `Thh:mm:ss.fff` format, minutes, seconds and milliseconds are
+  optional
 
 Examples:
 
 ```
-@T07:30:14    // Seconds precision
-@T14:30:14    // Minutes precision
-@T14          // Hours precision
-```
-
-## DateTime
-
-The DateTime literal combines the [Date](#date) and [Time](#time) literals and
-is a subset of [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). It uses the
-`YYYY-MM-DDThh:mm:ss.ffff±hh:mm` format. `Z` is allowed as a synonym for the
-zero (`+00:00`) UTC offset.
-
-Time zone is optional. Seconds and milliseconds precision are supported. Hours
-precision and partial DateTime values (ending with `T`) are not supported.
-
-Example:
-
-```
-@2014-01-25T14:30:14            // Seconds precision
-@2014-01-25T14:30:14+10:00      // Seconds precision with UTC+10 timezone offset
-@2014-01-25T14:30:14.559        // Milliseconds precision
-@2014-01-25T14:30:14.559Z       // Milliseconds precision with UTC timezone offset
+@T07:30:14.350    // Milliseconds precision
+@T07:30:14        // Seconds precision
+@T14:30:14        // Minutes precision
+@T14              // Hours precision
 ```
 
 ## Quantity

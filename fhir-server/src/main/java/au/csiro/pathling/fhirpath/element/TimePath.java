@@ -6,19 +6,12 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
-
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.sql.dates.time.TimeAddDurationFunction;
-import au.csiro.pathling.sql.dates.time.TimeSubtractDurationFunction;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.function.Function;
@@ -34,8 +27,7 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimePath extends ElementPath implements Materializable<TimeType>, Comparable,
-    Temporal {
+public class TimePath extends ElementPath implements Materializable<TimeType>, Comparable {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(TimePath.class, TimeLiteralPath.class, NullLiteralPath.class);
@@ -91,12 +83,4 @@ public class TimePath extends ElementPath implements Materializable<TimeType>, C
     return super.canBeCombinedWith(target) || target instanceof TimeLiteralPath;
   }
 
-  @Nonnull
-  @Override
-  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
-      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String expression) {
-    return buildDateArithmeticOperation(this, operation, dataset, expression,
-        TimeAddDurationFunction.FUNCTION_NAME, TimeSubtractDurationFunction.FUNCTION_NAME);
-  }
 }

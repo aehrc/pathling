@@ -29,7 +29,6 @@ import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanOrEqualToFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
-import java.util.TimeZone;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javolution.testing.AssertionException;
@@ -48,8 +47,6 @@ import org.hl7.fhir.r4.model.InstantType;
  */
 public class DateTimePath extends ElementPath implements Materializable<BaseDateTimeType>,
     Comparable, Temporal {
-
-  private static final TimeZone DEFAULT_TIME_ZONE = TimeZone.getTimeZone("GMT");
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DatePath.class, DateTimePath.class, DateLiteralPath.class, DateTimeLiteralPath.class,
@@ -85,14 +82,11 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-
     if (fhirType == FHIRDefinedType.INSTANT) {
       final InstantType value = new InstantType(row.getTimestamp(columnNumber));
-      value.setTimeZone(DEFAULT_TIME_ZONE);
       return Optional.of(value);
     } else {
       final DateTimeType value = new DateTimeType(row.getString(columnNumber));
-      value.setTimeZone(DEFAULT_TIME_ZONE);
       return Optional.of(value);
     }
   }
@@ -135,10 +129,6 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
       }
       return callUDF(functionName, source.getValueColumn(), target.getValueColumn());
     };
-  }
-
-  public static TimeZone getDefaultTimeZone() {
-    return DEFAULT_TIME_ZONE;
   }
 
   @Nonnull

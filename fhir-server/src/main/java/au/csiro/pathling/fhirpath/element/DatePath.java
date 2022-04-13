@@ -19,9 +19,6 @@ import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
 import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -41,25 +38,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 @Slf4j
 public class DatePath extends ElementPath implements Materializable<DateType>, Comparable,
     Temporal {
-
-  private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT = ThreadLocal
-      .withInitial(() -> {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-        format.setTimeZone(DateTimePath.getDefaultTimeZone());
-        return format;
-      });
-  private static final ThreadLocal<SimpleDateFormat> YEAR_MONTH_DATE_FORMAT = ThreadLocal
-      .withInitial(() -> {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM");
-        format.setTimeZone(DateTimePath.getDefaultTimeZone());
-        return format;
-      });
-  private static final ThreadLocal<SimpleDateFormat> YEAR_ONLY_DATE_FORMAT = ThreadLocal
-      .withInitial(() -> {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyy");
-        format.setTimeZone(DateTimePath.getDefaultTimeZone());
-        return format;
-      });
 
   protected DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
@@ -86,18 +64,6 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
             to_timestamp(target.getValueColumn()));
   }
 
-  public static SimpleDateFormat getFullDateFormat() {
-    return FULL_DATE_FORMAT.get();
-  }
-
-  public static SimpleDateFormat getYearMonthDateFormat() {
-    return YEAR_MONTH_DATE_FORMAT.get();
-  }
-
-  public static SimpleDateFormat getYearOnlyDateFormat() {
-    return YEAR_ONLY_DATE_FORMAT.get();
-  }
-
   @Nonnull
   @Override
   public Optional<DateType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
@@ -116,14 +82,8 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    final Date date;
-    try {
-      date = getFullDateFormat().parse(row.getString(columnNumber));
-    } catch (final ParseException e) {
-      log.warn("Error parsing date extracted from row", e);
-      return Optional.empty();
-    }
-    return Optional.of(new DateType(date));
+    final String dateString = row.getString(columnNumber);
+    return Optional.of(new DateType(dateString));
   }
 
   @Override

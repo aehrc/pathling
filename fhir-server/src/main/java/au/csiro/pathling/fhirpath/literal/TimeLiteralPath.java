@@ -6,17 +6,12 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.Numeric.MathOperation;
-import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.element.TimePath;
-import au.csiro.pathling.sql.dates.time.TimeAddDurationFunction;
-import au.csiro.pathling.sql.dates.time.TimeSubtractDurationFunction;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -31,7 +26,7 @@ import org.hl7.fhir.r4.model.TimeType;
  * @author John Grimes
  */
 public class TimeLiteralPath extends LiteralPath<TimeType> implements Materializable<TimeType>,
-    Comparable, Temporal {
+    Comparable {
 
   protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final TimeType literalValue) {
@@ -93,12 +88,4 @@ public class TimeLiteralPath extends LiteralPath<TimeType> implements Materializ
     return super.canBeCombinedWith(target) || target instanceof TimePath;
   }
 
-  @Nonnull
-  @Override
-  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
-      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String expression) {
-    return buildDateArithmeticOperation(this, operation, dataset, expression,
-        TimeAddDurationFunction.FUNCTION_NAME, TimeSubtractDurationFunction.FUNCTION_NAME);
-  }
 }

@@ -6,16 +6,14 @@
 
 package au.csiro.pathling.sql.dates;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import com.google.common.collect.ImmutableMap;
 import java.math.RoundingMode;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.Temporal;
-import java.time.temporal.TemporalUnit;
+import java.util.Calendar;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -24,65 +22,64 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.Quantity;
 
-public abstract class TemporalArithmeticFunction<IntermediateType extends Temporal> implements
+public abstract class TemporalArithmeticFunction<IntermediateType extends BaseDateTimeType> implements
     SqlFunction2<String, Row, String> {
 
   private static final long serialVersionUID = -5016153440496309996L;
 
-  static final Map<String, TemporalUnit> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, TemporalUnit>()
-      .put("year", ChronoUnit.YEARS)
-      .put("years", ChronoUnit.YEARS)
-      .put("month", ChronoUnit.MONTHS)
-      .put("months", ChronoUnit.MONTHS)
-      .put("week", ChronoUnit.WEEKS)
-      .put("weeks", ChronoUnit.WEEKS)
-      .put("day", ChronoUnit.DAYS)
-      .put("days", ChronoUnit.DAYS)
-      .put("hour", ChronoUnit.HOURS)
-      .put("hours", ChronoUnit.HOURS)
-      .put("minute", ChronoUnit.MINUTES)
-      .put("minutes", ChronoUnit.MINUTES)
-      .put("second", ChronoUnit.SECONDS)
-      .put("seconds", ChronoUnit.SECONDS)
-      .put("millisecond", ChronoUnit.MILLIS)
-      .put("milliseconds", ChronoUnit.MILLIS)
+  static final Map<String, Integer> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, Integer>()
+      .put("year", Calendar.YEAR)
+      .put("years", Calendar.YEAR)
+      .put("month", Calendar.MONTH)
+      .put("months", Calendar.MONTH)
+      .put("day", Calendar.DATE)
+      .put("days", Calendar.DATE)
+      .put("hour", Calendar.HOUR)
+      .put("hours", Calendar.HOUR)
+      .put("minute", Calendar.MINUTE)
+      .put("minutes", Calendar.MINUTE)
+      .put("second", Calendar.SECOND)
+      .put("seconds", Calendar.SECOND)
+      .put("millisecond", Calendar.MILLISECOND)
+      .put("milliseconds", Calendar.MILLISECOND)
       .build();
 
   @Nonnull
   protected IntermediateType performAddition(@Nonnull final IntermediateType temporal,
       @Nonnull final Quantity calendarDuration) {
-    if (!calendarDuration.getSystem().equals(QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI)) {
-      throw new IllegalArgumentException("Calendar duration must have a system of "
-          + QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI);
-    }
-    final long amountToAdd = calendarDuration.getValue()
-        .setScale(0, RoundingMode.HALF_UP)
-        .longValue();
-    final TemporalUnit temporalUnit = TemporalArithmeticFunction.CALENDAR_DURATION_TO_UCUM.get(
-        calendarDuration.getCode());
-    checkNotNull(temporalUnit);
-
-    //noinspection unchecked
-    return (IntermediateType) temporal.plus(amountToAdd, temporalUnit);
+    return performArithmetic(temporal, calendarDuration, false);
   }
 
   @Nonnull
   protected IntermediateType performSubtraction(@Nonnull final IntermediateType temporal,
       @Nonnull final Quantity calendarDuration) {
+    return performArithmetic(temporal, calendarDuration, true);
+  }
+
+  @Nonnull
+  private IntermediateType performArithmetic(final @Nonnull IntermediateType temporal,
+      final @Nonnull Quantity calendarDuration, final boolean subtract) {
     if (!calendarDuration.getSystem().equals(QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI)) {
       throw new IllegalArgumentException("Calendar duration must have a system of "
           + QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI);
     }
-    final long amountToAdd = calendarDuration.getValue()
+    final int amountToAdd = calendarDuration.getValue()
         .setScale(0, RoundingMode.HALF_UP)
-        .longValue();
-    final TemporalUnit temporalUnit = TemporalArithmeticFunction.CALENDAR_DURATION_TO_UCUM.get(
+        .intValue();
+    final Integer temporalUnit = TemporalArithmeticFunction.CALENDAR_DURATION_TO_UCUM.get(
         calendarDuration.getCode());
+    checkUserInput(temporalUnit != null,
+        "Unsupported calendar duration unit: " + calendarDuration.getCode());
 
-    //noinspection unchecked
-    return (IntermediateType) temporal.minus(amountToAdd, temporalUnit);
+    @SuppressWarnings("unchecked")
+    final IntermediateType result = (IntermediateType) temporal.copy();
+    result.add(temporalUnit, subtract
+                             ? amountToAdd * -1
+                             : amountToAdd);
+    return result;
   }
 
   protected abstract Function<String, IntermediateType> parseEncodedValue();

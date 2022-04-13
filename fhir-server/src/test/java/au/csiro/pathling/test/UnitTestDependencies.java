@@ -21,13 +21,11 @@ import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanOrEqualToFunction
 import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanOrEqualToFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
-import au.csiro.pathling.sql.dates.time.TimeAddDurationFunction;
 import au.csiro.pathling.sql.dates.time.TimeEqualsFunction;
 import au.csiro.pathling.sql.dates.time.TimeGreaterThanFunction;
 import au.csiro.pathling.sql.dates.time.TimeGreaterThanOrEqualToFunction;
 import au.csiro.pathling.sql.dates.time.TimeLessThanFunction;
 import au.csiro.pathling.sql.dates.time.TimeLessThanOrEqualToFunction;
-import au.csiro.pathling.sql.dates.time.TimeSubtractDurationFunction;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import au.csiro.pathling.terminology.CodingToLiteral;
@@ -68,7 +66,6 @@ class UnitTestDependencies {
     final List<SqlFunction2> sqlFunction2 = List.of(new DateTimeAddDurationFunction(),
         new DateTimeSubtractDurationFunction(), new DateAddDurationFunction(),
         new DateSubtractDurationFunction(),
-        new TimeAddDurationFunction(), new TimeSubtractDurationFunction(),
         new DateTimeEqualsFunction(), new DateTimeGreaterThanFunction(),
         new DateTimeGreaterThanOrEqualToFunction(), new DateTimeLessThanFunction(),
         new DateTimeLessThanOrEqualToFunction(), new TimeEqualsFunction(),
