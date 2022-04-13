@@ -15,8 +15,8 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.element.DateTimePath;
-import au.csiro.pathling.sql.dates.AddDurationToDateTime;
-import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
+import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
 import java.text.ParseException;
 import java.util.Optional;
 import java.util.function.Function;
@@ -79,7 +79,7 @@ public class DateTimeLiteralPath extends LiteralPath<DateTimeType> implements
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return DateTimePath.buildComparison(this, operation.getSparkFunction());
+    return DateTimePath.buildComparison(this, operation);
   }
 
   @Override
@@ -105,7 +105,7 @@ public class DateTimeLiteralPath extends LiteralPath<DateTimeType> implements
       @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String expression) {
     return buildDateArithmeticOperation(this, operation, dataset, expression,
-        AddDurationToDateTime.FUNCTION_NAME, SubtractDurationFromDateTime.FUNCTION_NAME);
+        DateTimeAddDurationFunction.FUNCTION_NAME, DateTimeSubtractDurationFunction.FUNCTION_NAME);
   }
 
 }

@@ -85,11 +85,11 @@ public abstract class TemporalArithmeticFunction<IntermediateType extends Tempor
     return (IntermediateType) temporal.minus(amountToAdd, temporalUnit);
   }
 
-  abstract Function<String, IntermediateType> parseEncodedValue();
+  protected abstract Function<String, IntermediateType> parseEncodedValue();
 
-  abstract BiFunction<IntermediateType, Quantity, IntermediateType> getOperationFunction();
+  protected abstract BiFunction<IntermediateType, Quantity, IntermediateType> getOperationFunction();
 
-  abstract Function<IntermediateType, String> encodeResult();
+  protected abstract Function<IntermediateType, String> encodeResult();
 
   @Override
   public DataType getReturnType() {

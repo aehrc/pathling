@@ -7,7 +7,8 @@
 package au.csiro.pathling.fhirpath.element;
 
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
-import static org.apache.spark.sql.functions.to_timestamp;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.not;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -19,14 +20,19 @@ import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
-import au.csiro.pathling.sql.dates.AddDurationToDateTime;
-import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
+import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeEqualsFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.TimeZone;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javolution.testing.AssertionException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -94,18 +100,41 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   /**
    * Builds a comparison function for date and date/time like paths.
    *
-   * @param source The path to build the comparison function for
-   * @param sparkFunction The Spark column function to use
-   * @return A new {@link Function}
+   * @param source the path to build the comparison function for
+   * @param operation the {@link ComparisonOperation} that should be built
+   * @return a new {@link Function}
    */
   @Nonnull
   public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
-    // The value columns are converted to native Spark timestamps before comparison. The reason that
-    // we don't use an explicit format string here is that we require flexibility to accommodate the
-    // optionality of the milliseconds component of the FHIR date time format.
-    return target -> sparkFunction
-        .apply(to_timestamp(source.getValueColumn()), to_timestamp(target.getValueColumn()));
+      @Nonnull final ComparisonOperation operation) {
+    return (target) -> {
+      final String functionName;
+      switch (operation) {
+        case EQUALS:
+        case NOT_EQUALS:
+          functionName = DateTimeEqualsFunction.FUNCTION_NAME;
+          final Column equals = callUDF(functionName,
+              source.getValueColumn(), target.getValueColumn());
+          return operation == ComparisonOperation.EQUALS
+                 ? equals
+                 : not(equals);
+        case LESS_THAN:
+          functionName = DateTimeLessThanFunction.FUNCTION_NAME;
+          break;
+        case LESS_THAN_OR_EQUAL_TO:
+          functionName = DateTimeLessThanOrEqualToFunction.FUNCTION_NAME;
+          break;
+        case GREATER_THAN:
+          functionName = DateTimeGreaterThanFunction.FUNCTION_NAME;
+          break;
+        case GREATER_THAN_OR_EQUAL_TO:
+          functionName = DateTimeGreaterThanOrEqualToFunction.FUNCTION_NAME;
+          break;
+        default:
+          throw new AssertionException("Unsupported operation: " + operation);
+      }
+      return callUDF(functionName, source.getValueColumn(), target.getValueColumn());
+    };
   }
 
   public static TimeZone getDefaultTimeZone() {
@@ -120,7 +149,7 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return buildComparison(this, operation.getSparkFunction());
+    return buildComparison(this, operation);
   }
 
   @Override
@@ -139,7 +168,7 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
       @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String expression) {
     return buildDateArithmeticOperation(this, operation, dataset, expression,
-        AddDurationToDateTime.FUNCTION_NAME, SubtractDurationFromDateTime.FUNCTION_NAME);
+        DateTimeAddDurationFunction.FUNCTION_NAME, DateTimeSubtractDurationFunction.FUNCTION_NAME);
   }
 
 }

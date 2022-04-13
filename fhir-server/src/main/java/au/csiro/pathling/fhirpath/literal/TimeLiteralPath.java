@@ -15,8 +15,8 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.element.TimePath;
-import au.csiro.pathling.sql.dates.AddDurationToTime;
-import au.csiro.pathling.sql.dates.SubtractDurationFromTime;
+import au.csiro.pathling.sql.dates.time.TimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.time.TimeSubtractDurationFunction;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -99,6 +99,6 @@ public class TimeLiteralPath extends LiteralPath<TimeType> implements Materializ
       @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String expression) {
     return buildDateArithmeticOperation(this, operation, dataset, expression,
-        AddDurationToTime.FUNCTION_NAME, SubtractDurationFromTime.FUNCTION_NAME);
+        TimeAddDurationFunction.FUNCTION_NAME, TimeSubtractDurationFunction.FUNCTION_NAME);
   }
 }

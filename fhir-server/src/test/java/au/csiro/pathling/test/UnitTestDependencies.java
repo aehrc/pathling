@@ -12,12 +12,22 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
-import au.csiro.pathling.sql.dates.AddDurationToDate;
-import au.csiro.pathling.sql.dates.AddDurationToDateTime;
-import au.csiro.pathling.sql.dates.AddDurationToTime;
-import au.csiro.pathling.sql.dates.SubtractDurationFromDate;
-import au.csiro.pathling.sql.dates.SubtractDurationFromDateTime;
-import au.csiro.pathling.sql.dates.SubtractDurationFromTime;
+import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
+import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeEqualsFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
+import au.csiro.pathling.sql.dates.time.TimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.time.TimeEqualsFunction;
+import au.csiro.pathling.sql.dates.time.TimeGreaterThanFunction;
+import au.csiro.pathling.sql.dates.time.TimeGreaterThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.time.TimeLessThanFunction;
+import au.csiro.pathling.sql.dates.time.TimeLessThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.time.TimeSubtractDurationFunction;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import au.csiro.pathling.terminology.CodingToLiteral;
@@ -55,9 +65,15 @@ class UnitTestDependencies {
       @Nonnull final UcumService ucumService) {
     final List<SqlFunction1> sqlFunction1 = List.of(new CodingToLiteral(),
         new ComparableQuantity(ucumService));
-    final List<SqlFunction2> sqlFunction2 = List.of(new AddDurationToDateTime(),
-        new SubtractDurationFromDateTime(), new AddDurationToDate(), new SubtractDurationFromDate(),
-        new AddDurationToTime(), new SubtractDurationFromTime());
+    final List<SqlFunction2> sqlFunction2 = List.of(new DateTimeAddDurationFunction(),
+        new DateTimeSubtractDurationFunction(), new DateAddDurationFunction(),
+        new DateSubtractDurationFunction(),
+        new TimeAddDurationFunction(), new TimeSubtractDurationFunction(),
+        new DateTimeEqualsFunction(), new DateTimeGreaterThanFunction(),
+        new DateTimeGreaterThanOrEqualToFunction(), new DateTimeLessThanFunction(),
+        new DateTimeLessThanOrEqualToFunction(), new TimeEqualsFunction(),
+        new TimeGreaterThanFunction(), new TimeGreaterThanOrEqualToFunction(),
+        new TimeLessThanFunction(), new TimeLessThanOrEqualToFunction());
     return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2);
   }
 

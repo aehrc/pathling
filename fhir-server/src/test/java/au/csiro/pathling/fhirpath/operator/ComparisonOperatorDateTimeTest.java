@@ -118,7 +118,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", true),  // Equal, exact
         RowFactory.create("patient-2", true),  // Equal, different time zones
         RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", null),  // Equal, different precisions
+        RowFactory.create("patient-4", true),  // Equal, different precisions
         RowFactory.create("patient-5", false), // Less than
         RowFactory.create("patient-6", false)  // Greater than
     );
@@ -134,7 +134,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", false),  // Equal, exact
         RowFactory.create("patient-2", false),  // Equal, different time zones
         RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", null),   // Equal, different precisions
+        RowFactory.create("patient-4", false),  // Equal, different precisions
         RowFactory.create("patient-5", true),   // Less than
         RowFactory.create("patient-6", true)    // Greater than
     );
@@ -150,7 +150,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", false),  // Equal, exact
         RowFactory.create("patient-2", false),  // Equal, different time zones
         RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", null),   // Equal, different precisions
+        RowFactory.create("patient-4", false),  // Equal, different precisions
         RowFactory.create("patient-5", true),   // Less than
         RowFactory.create("patient-6", false)   // Greater than
     );
@@ -166,7 +166,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", true),  // Equal, exact
         RowFactory.create("patient-2", true),  // Equal, different time zones
         RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", null),  // Equal, different precisions
+        RowFactory.create("patient-4", true),  // Equal, different precisions
         RowFactory.create("patient-5", true),  // Less than
         RowFactory.create("patient-6", false)  // Greater than
     );
@@ -182,7 +182,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", false),  // Equal, exact
         RowFactory.create("patient-2", false),  // Equal, different time zones
         RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", null),   // Equal, different precisions
+        RowFactory.create("patient-4", false),  // Equal, different precisions
         RowFactory.create("patient-5", false),  // Less than
         RowFactory.create("patient-6", true)    // Greater than
     );
@@ -198,7 +198,7 @@ class ComparisonOperatorDateTimeTest {
         RowFactory.create("patient-1", true),  // Equal, exact
         RowFactory.create("patient-2", true),  // Equal, different time zones
         RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", null),  // Equal, different precisions
+        RowFactory.create("patient-4", true),  // Equal, different precisions
         RowFactory.create("patient-5", false), // Less than
         RowFactory.create("patient-6", true)   // Greater than
     );

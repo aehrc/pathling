@@ -116,16 +116,16 @@ class ComparisonOperatorTimeTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-01", true),  // Equal, hours, minutes and seconds
-        RowFactory.create("patient-02", true),  // Equal, hours and minutes
-        RowFactory.create("patient-03", true),  // Equal, hours
-        RowFactory.create("patient-04", null),  // Different precisions
-        RowFactory.create("patient-05", false), // Less than, hours, minutes and seconds
-        RowFactory.create("patient-06", false), // Less than, hours and minutes
-        RowFactory.create("patient-07", false), // Less than, hours
-        RowFactory.create("patient-08", false), // Greater than, hours, minutes and seconds
-        RowFactory.create("patient-09", false), // Greater than, hours and minutes
-        RowFactory.create("patient-10", false)  // Greater than, hours
+        RowFactory.create("patient-01", true),   // Equal, hours, minutes and seconds
+        RowFactory.create("patient-02", true),   // Equal, hours and minutes
+        RowFactory.create("patient-03", true),   // Equal, hours
+        RowFactory.create("patient-04", false),  // Different precisions
+        RowFactory.create("patient-05", false),  // Less than, hours, minutes and seconds
+        RowFactory.create("patient-06", false),  // Less than, hours and minutes
+        RowFactory.create("patient-07", false),  // Less than, hours
+        RowFactory.create("patient-08", false),  // Greater than, hours, minutes and seconds
+        RowFactory.create("patient-09", false),  // Greater than, hours and minutes
+        RowFactory.create("patient-10", false)   // Greater than, hours
     );
   }
 
@@ -139,7 +139,7 @@ class ComparisonOperatorTimeTest {
         RowFactory.create("patient-01", false),  // Equal, hours, minutes and seconds
         RowFactory.create("patient-02", false),  // Equal, hours and minutes
         RowFactory.create("patient-03", false),  // Equal, hours
-        RowFactory.create("patient-04", null),   // Different precisions
+        RowFactory.create("patient-04", true),   // Different precisions
         RowFactory.create("patient-05", true),   // Less than, hours, minutes and seconds
         RowFactory.create("patient-06", true),   // Less than, hours and minutes
         RowFactory.create("patient-07", true),   // Less than, hours
@@ -159,7 +159,7 @@ class ComparisonOperatorTimeTest {
         RowFactory.create("patient-01", false),  // Equal, hours, minutes and seconds
         RowFactory.create("patient-02", false),  // Equal, hours and minutes
         RowFactory.create("patient-03", false),  // Equal, hours
-        RowFactory.create("patient-04", null),   // Different precisions
+        RowFactory.create("patient-04", false),  // Different precisions
         RowFactory.create("patient-05", true),   // Less than, hours, minutes and seconds
         RowFactory.create("patient-06", true),   // Less than, hours and minutes
         RowFactory.create("patient-07", true),   // Less than, hours
@@ -179,7 +179,7 @@ class ComparisonOperatorTimeTest {
         RowFactory.create("patient-01", true),   // Equal, hours, minutes and seconds
         RowFactory.create("patient-02", true),   // Equal, hours and minutes
         RowFactory.create("patient-03", true),   // Equal, hours
-        RowFactory.create("patient-04", null),   // Different precisions
+        RowFactory.create("patient-04", false),  // Different precisions
         RowFactory.create("patient-05", true),   // Less than, hours, minutes and seconds
         RowFactory.create("patient-06", true),   // Less than, hours and minutes
         RowFactory.create("patient-07", true),   // Less than, hours
@@ -199,7 +199,7 @@ class ComparisonOperatorTimeTest {
         RowFactory.create("patient-01", false),  // Equal, hours, minutes and seconds
         RowFactory.create("patient-02", false),  // Equal, hours and minutes
         RowFactory.create("patient-03", false),  // Equal, hours
-        RowFactory.create("patient-04", null),   // Different precisions
+        RowFactory.create("patient-04", true),   // Different precisions
         RowFactory.create("patient-05", false),  // Less than, hours, minutes and seconds
         RowFactory.create("patient-06", false),  // Less than, hours and minutes
         RowFactory.create("patient-07", false),  // Less than, hours
@@ -219,7 +219,7 @@ class ComparisonOperatorTimeTest {
         RowFactory.create("patient-01", true),   // Equal, hours, minutes and seconds
         RowFactory.create("patient-02", true),   // Equal, hours and minutes
         RowFactory.create("patient-03", true),   // Equal, hours
-        RowFactory.create("patient-04", null),   // Different precisions
+        RowFactory.create("patient-04", true),   // Different precisions
         RowFactory.create("patient-05", false),  // Less than, hours, minutes and seconds
         RowFactory.create("patient-06", false),  // Less than, hours and minutes
         RowFactory.create("patient-07", false),  // Less than, hours

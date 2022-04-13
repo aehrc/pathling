@@ -17,8 +17,8 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
-import au.csiro.pathling.sql.dates.AddDurationToDate;
-import au.csiro.pathling.sql.dates.SubtractDurationFromDate;
+import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
+import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -129,7 +129,7 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return DateTimePath.buildComparison(this, operation.getSparkFunction());
+    return DateTimePath.buildComparison(this, operation);
   }
 
   @Override
@@ -148,7 +148,7 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
       @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String expression) {
     return buildDateArithmeticOperation(this, operation, dataset, expression,
-        AddDurationToDate.FUNCTION_NAME, SubtractDurationFromDate.FUNCTION_NAME);
+        DateAddDurationFunction.FUNCTION_NAME, DateSubtractDurationFunction.FUNCTION_NAME);
   }
 
 }

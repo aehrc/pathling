@@ -4,8 +4,9 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.sql.dates;
+package au.csiro.pathling.sql.dates.date;
 
+import au.csiro.pathling.sql.dates.TemporalArithmeticFunction;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
@@ -18,12 +19,12 @@ public abstract class DateArithmeticFunction extends TemporalArithmeticFunction<
   private static final long serialVersionUID = 6759548804191034570L;
 
   @Override
-  Function<String, LocalDate> parseEncodedValue() {
+  protected Function<String, LocalDate> parseEncodedValue() {
     return LocalDate::parse;
   }
 
   @Override
-  Function<LocalDate, String> encodeResult() {
+  protected Function<LocalDate, String> encodeResult() {
     return (resultDate) -> new DateType(
         new Date(resultDate.toEpochSecond(LocalTime.MIN, ZoneOffset.UTC) * 1000))
         .getValueAsString();

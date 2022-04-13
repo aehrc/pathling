@@ -4,9 +4,10 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.sql.dates;
+package au.csiro.pathling.sql.dates.datetime;
 
 import au.csiro.pathling.fhirpath.element.DateTimePath;
+import au.csiro.pathling.sql.dates.TemporalArithmeticFunction;
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum;
 import java.time.ZonedDateTime;
 import java.util.Date;
@@ -19,12 +20,12 @@ public abstract class DateTimeArithmeticFunction extends TemporalArithmeticFunct
   private static final long serialVersionUID = -6669722492626320119L;
 
   @Override
-  Function<String, ZonedDateTime> parseEncodedValue() {
+  protected Function<String, ZonedDateTime> parseEncodedValue() {
     return ZonedDateTime::parse;
   }
 
   @Override
-  Function<ZonedDateTime, String> encodeResult() {
+  protected Function<ZonedDateTime, String> encodeResult() {
     return (resultDateTime) -> {
       final BaseDateTimeType dateTime = new DateTimeType(Date.from(resultDateTime.toInstant()))
           .setTimeZone(DateTimePath.getDefaultTimeZone());

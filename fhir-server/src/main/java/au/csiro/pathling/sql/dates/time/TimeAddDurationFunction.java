@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.sql.dates;
+package au.csiro.pathling.sql.dates.time;
 
 import java.time.LocalTime;
 import java.util.function.BiFunction;
@@ -14,20 +14,20 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Profile("core")
-public class AddDurationToTime extends TimeArithmeticFunction {
+public class TimeAddDurationFunction extends TimeArithmeticFunction {
 
   private static final long serialVersionUID = 5839806160423512490L;
 
-  public static final String FUNCTION_NAME = "add_duration_to_time";
+  public static final String FUNCTION_NAME = "time_add_duration";
+
+  @Override
+  protected BiFunction<LocalTime, Quantity, LocalTime> getOperationFunction() {
+    return this::performAddition;
+  }
 
   @Override
   public String getName() {
     return FUNCTION_NAME;
-  }
-
-  @Override
-  BiFunction<LocalTime, Quantity, LocalTime> getOperationFunction() {
-    return this::performAddition;
   }
 
 }

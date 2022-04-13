@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.sql.dates;
+package au.csiro.pathling.sql.dates.date;
 
 import java.time.LocalDate;
 import java.util.function.BiFunction;
@@ -14,20 +14,20 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Profile("core")
-public class SubtractDurationFromDate extends DateArithmeticFunction {
+public class DateAddDurationFunction extends DateArithmeticFunction {
 
-  private static final long serialVersionUID = 5201879133976866457L;
+  private static final long serialVersionUID = -5029179160644275584L;
 
-  public static final String FUNCTION_NAME = "subtract_duration_from_date";
+  public static final String FUNCTION_NAME = "date_add_duration";
+
+  @Override
+  protected BiFunction<LocalDate, Quantity, LocalDate> getOperationFunction() {
+    return this::performAddition;
+  }
 
   @Override
   public String getName() {
     return FUNCTION_NAME;
-  }
-
-  @Override
-  BiFunction<LocalDate, Quantity, LocalDate> getOperationFunction() {
-    return this::performSubtraction;
   }
 
 }

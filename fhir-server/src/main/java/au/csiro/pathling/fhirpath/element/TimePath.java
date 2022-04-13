@@ -17,8 +17,8 @@ import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.sql.dates.AddDurationToTime;
-import au.csiro.pathling.sql.dates.SubtractDurationFromTime;
+import au.csiro.pathling.sql.dates.time.TimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.time.TimeSubtractDurationFunction;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.function.Function;
@@ -97,6 +97,6 @@ public class TimePath extends ElementPath implements Materializable<TimeType>, C
       @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String expression) {
     return buildDateArithmeticOperation(this, operation, dataset, expression,
-        AddDurationToTime.FUNCTION_NAME, SubtractDurationFromTime.FUNCTION_NAME);
+        TimeAddDurationFunction.FUNCTION_NAME, TimeSubtractDurationFunction.FUNCTION_NAME);
   }
 }

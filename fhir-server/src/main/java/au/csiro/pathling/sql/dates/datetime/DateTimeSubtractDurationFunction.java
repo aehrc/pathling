@@ -4,7 +4,7 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.sql.dates;
+package au.csiro.pathling.sql.dates.datetime;
 
 import java.time.ZonedDateTime;
 import java.util.function.BiFunction;
@@ -14,20 +14,21 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Profile("core")
-public class SubtractDurationFromDateTime extends DateTimeArithmeticFunction {
+public class DateTimeSubtractDurationFunction extends DateTimeArithmeticFunction {
 
   private static final long serialVersionUID = -5922228168177608861L;
 
-  public static final String FUNCTION_NAME = "subtract_duration_from_datetime";
+  public static final String FUNCTION_NAME = "datetime_subtract_duration";
+
+  @Override
+  protected BiFunction<ZonedDateTime, Quantity, ZonedDateTime> getOperationFunction() {
+    return this::performSubtraction;
+  }
 
   @Override
   public String getName() {
     return FUNCTION_NAME;
   }
 
-  @Override
-  BiFunction<ZonedDateTime, Quantity, ZonedDateTime> getOperationFunction() {
-    return this::performSubtraction;
-  }
 
 }
