@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.sql.dates.datetime;
 
-import java.time.ZonedDateTime;
+import java.time.temporal.Temporal;
 import java.util.function.BiFunction;
 import org.hl7.fhir.r4.model.Quantity;
 import org.springframework.context.annotation.Profile;
@@ -21,7 +21,7 @@ public class DateTimeSubtractDurationFunction extends DateTimeArithmeticFunction
   public static final String FUNCTION_NAME = "datetime_subtract_duration";
 
   @Override
-  protected BiFunction<ZonedDateTime, Quantity, ZonedDateTime> getOperationFunction() {
+  protected BiFunction<Temporal, Quantity, Temporal> getOperationFunction() {
     return this::performSubtraction;
   }
 
