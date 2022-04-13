@@ -73,7 +73,7 @@
     <pathling.hapiFhirVersion>5.7.1</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.2.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.deltaVersion>1.1.0</pathling.deltaVersion>
+    <pathling.deltaVersion>1.2.0</pathling.deltaVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
     <pathling.awsSdkVersion>1.12.188</pathling.awsSdkVersion>
