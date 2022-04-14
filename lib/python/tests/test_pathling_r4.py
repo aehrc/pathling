@@ -6,6 +6,7 @@ from pyspark.sql import SparkSession
 from pytest import fixture
 
 from pathling.r4 import bundles as bdls
+from pathling.etc import find_jar as find_pathling_jar
 
 PROJECT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
@@ -22,14 +23,10 @@ def spark_session(request):
     gateway_log.setLevel(logging.ERROR)
 
     # Get the shaded JAR for testing purposes.
-    # TODO: Decide what is the best way to handle this
-    # shaded_jar =  os.environ['SHADED_JAR_PATH']
-    shaded_jar = os.path.join(PROJECT_DIR, 'encoders/target/encoders-5.0.0-all.jar')
-
     spark = SparkSession.builder \
         .appName('pathling-test') \
         .master('local[2]') \
-        .config('spark.jars', shaded_jar) \
+        .config('spark.jars', find_pathling_jar()) \
         .config('hive.exec.dynamic.partition.mode', 'nonstrict') \
         .config('spark.sql.warehouse.dir', mkdtemp()) \
         .getOrCreate()

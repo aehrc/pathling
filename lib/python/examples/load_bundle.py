@@ -6,6 +6,7 @@ from tempfile import mkdtemp
 from pyspark.sql import SparkSession
 
 from pathling.r4 import bundles
+from pathling.etc import find_jar
 
 PROJECT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
@@ -14,14 +15,13 @@ PROJECT_DIR = os.path.abspath(
 def main():
     print(PROJECT_DIR)
 
-    shaded_jar = os.path.join(PROJECT_DIR, 'encoders/target/encoders-5.0.0-all.jar')
     warehouse_dir = mkdtemp()
     print(warehouse_dir)
 
     spark = SparkSession.builder \
         .appName('pathling-test') \
         .master('local[2]') \
-        .config('spark.jars', shaded_jar) \
+        .config('spark.jars', find_jar()) \
         .config('hive.exec.dynamic.partition.mode', 'nonstrict') \
         .config('spark.sql.warehouse.dir', warehouse_dir) \
         .getOrCreate()

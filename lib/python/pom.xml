@@ -104,6 +104,36 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>ru.yaal.maven</groupId>
+        <artifactId>write-text-files-maven-plugin</artifactId>
+        <version>1.1</version>
+        <configuration>
+          <charset>UTF-8</charset>
+          <files>
+            <file>
+              <path>pathling/_version.py</path>
+              <lines>
+                <line>#</line>
+                <line># Auto generated from POM project version.</line>
+                <line># Please do not modify.</line>
+                <line>#</line>
+                <line>__version__="${project.version}"</line>
+              </lines>
+            </file>
+          </files>
+        </configuration>
+        <executions>
+          <execution>
+            <id>write-text-files</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>write-text-files</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 </project>
