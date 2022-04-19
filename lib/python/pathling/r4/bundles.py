@@ -77,7 +77,8 @@ def from_xml(df, column):
     return bundles.fromXml(df._jdf, column)
 
 
-def extract_entry(sparkSession, javaRDD, resourceName):
+def extract_entry(sparkSession, javaRDD, resourceName, maxNestingLevel=None, enableExtensions=None,
+                  enabledOpenTypes=None):
     """
     Returns a dataset for the given entry type from the bundles.
 
@@ -86,10 +87,14 @@ def extract_entry(sparkSession, javaRDD, resourceName):
         in this package
     :param resourceName: the name of the FHIR resource to extract
         (condition, observation, etc)
+    :param maxNestingLevel: the maximum nesting level for recursive data types. Zero (0) indicates
+        that all direct or indirect fields of type T in element of type T should be skipped
+    :param enableExtensions: switches on/off the support for FHIR extensions
+    :param enabledOpenTypes: list of types that are encoded within open types, such as extensions
     :return: a DataFrame containing the given resource encoded into Spark columns
     """
 
     bundles = _bundles(sparkSession._jvm)
     return DataFrame(
-        bundles.extractEntry(sparkSession._jsparkSession, javaRDD, resourceName),
-        sparkSession._wrapped)
+        bundles.extractEntry(sparkSession._jsparkSession, javaRDD, resourceName, maxNestingLevel,
+                             enableExtensions, enabledOpenTypes), sparkSession._wrapped)

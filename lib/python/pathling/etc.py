@@ -24,5 +24,5 @@ def find_jar(verbose=False):
     jar_file = glob.glob(os.path.join(jars_dir, "encoders-*-all.jar"))
     verbose and print("Found jar file(s): %s" % jar_file)
     if not jar_file:
-        raise RuntimeError("Pathling jar nor present at: %s" % jars_dir)
+        raise RuntimeError("Pathling jar not present at: %s" % jars_dir)
     return jar_file[0]

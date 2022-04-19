@@ -13,8 +13,11 @@
 
 package au.csiro.pathling.api;
 
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.api.definitions.FhirConversionSupport;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.FhirEncoders.Builder;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.parser.IParser;
@@ -22,6 +25,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.Function;
@@ -109,6 +115,7 @@ public class Bundles {
     this.fhirVersion = fhirVersion;
   }
 
+  @Nonnull
   public static Bundles forR4() {
     return new Bundles(FhirVersionEnum.R4);
   }
@@ -121,9 +128,10 @@ public class Bundles {
    * @param minPartitions a suggested value for the minimal number of partitions
    * @return an RDD of FHIR Bundles
    */
-  public JavaRDD<BundleContainer> loadFromDirectory(SparkSession spark,
-      String path,
-      int minPartitions) {
+  @Nonnull
+  public JavaRDD<BundleContainer> loadFromDirectory(@Nonnull final SparkSession spark,
+      @Nonnull final String path,
+      final int minPartitions) {
 
     return spark.sparkContext()
         .wholeTextFiles(path, minPartitions)
@@ -139,7 +147,9 @@ public class Bundles {
    * @param column the column in which the JSON bundle is stored
    * @return an RDD of FHIR Bundles
    */
-  public JavaRDD<BundleContainer> fromJson(Dataset<Row> jsonBundles, String column) {
+  @Nonnull
+  public JavaRDD<BundleContainer> fromJson(@Nonnull final Dataset<Row> jsonBundles,
+      @Nonnull final String column) {
 
     return fromJson(jsonBundles.select(column).as(Encoders.STRING()));
   }
@@ -150,7 +160,8 @@ public class Bundles {
    * @param jsonBundles a dataset of JSON-encoded bundles
    * @return an RDD of FHIR Bundles
    */
-  public JavaRDD<BundleContainer> fromJson(Dataset<String> jsonBundles) {
+  @Nonnull
+  public JavaRDD<BundleContainer> fromJson(@Nonnull final Dataset<String> jsonBundles) {
 
     return jsonBundles.toJavaRDD().map(new StringToBundle(false, fhirVersion));
   }
@@ -163,7 +174,9 @@ public class Bundles {
    * @param column the column in which the JSON bundle is stored
    * @return an RDD of FHIR Bundles
    */
-  public JavaRDD<BundleContainer> fromResourceJson(Dataset<Row> jsonBundles, String column) {
+  @Nonnull
+  public JavaRDD<BundleContainer> fromResourceJson(@Nonnull final Dataset<Row> jsonBundles,
+      @Nonnull final String column) {
 
     return fromResourceJson(jsonBundles.select(column).as(Encoders.STRING()));
   }
@@ -175,7 +188,8 @@ public class Bundles {
    * @param jsonBundles a dataset of JSON-encoded resources
    * @return an RDD of FHIR Bundles
    */
-  public JavaRDD<BundleContainer> fromResourceJson(Dataset<String> jsonBundles) {
+  @Nonnull
+  public JavaRDD<BundleContainer> fromResourceJson(@Nonnull final Dataset<String> jsonBundles) {
 
     return jsonBundles.toJavaRDD().map(new ResourceStringToBundle(false, fhirVersion));
   }
@@ -188,7 +202,9 @@ public class Bundles {
    * @param column the column in which the XML bundle is stored
    * @return an RDD of FHIR Bundles
    */
-  public JavaRDD<BundleContainer> fromXml(Dataset<Row> xmlBundles, String column) {
+  @Nonnull
+  public JavaRDD<BundleContainer> fromXml(@Nonnull final Dataset<Row> xmlBundles,
+      @Nonnull final String column) {
 
     return fromXml(xmlBundles.select(column).as(Encoders.STRING()));
   }
@@ -199,7 +215,8 @@ public class Bundles {
    * @param xmlBundles a dataset of XML-encoded bundles
    * @return an RDD of FHIR Bundles
    */
-  public JavaRDD<BundleContainer> fromXml(Dataset<String> xmlBundles) {
+  @Nonnull
+  public JavaRDD<BundleContainer> fromXml(@Nonnull final Dataset<String> xmlBundles) {
 
     return xmlBundles.toJavaRDD().map(new StringToBundle(true, fhirVersion));
   }
@@ -213,10 +230,10 @@ public class Bundles {
    * @param resourceClass the type of resource to extract.
    * @return a dataset of the given resource
    */
-  public Dataset<Row> extractEntry(SparkSession spark,
-      JavaRDD<BundleContainer> bundles,
-      Class<? extends IBaseResource> resourceClass) {
-
+  @Nonnull
+  public Dataset<Row> extractEntry(@Nonnull final SparkSession spark,
+      @Nonnull final JavaRDD<BundleContainer> bundles,
+      @Nonnull final Class<? extends IBaseResource> resourceClass) {
     RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
         .getResourceDefinition(resourceClass);
 
@@ -232,14 +249,48 @@ public class Bundles {
    * @param resourceName the URL identifying the FHIR resource type or profile.
    * @return a dataset of the given resource
    */
-  public Dataset<Row> extractEntry(SparkSession spark,
-      JavaRDD<BundleContainer> bundles,
-      String resourceName) {
+  @Nonnull
+  public Dataset<Row> extractEntry(@Nonnull final SparkSession spark,
+      @Nonnull final JavaRDD<BundleContainer> bundles,
+      @Nonnull final String resourceName) {
+    return extractEntry(spark, bundles, resourceName, null, null, null);
+  }
+
+  /**
+   * Extracts the given resource type from the RDD of bundles and returns it as a Dataset of that
+   * type.
+   *
+   * @param spark the spark session
+   * @param bundles an RDD of FHIR Bundles
+   * @param resourceName the URL identifying the FHIR resource type or profile.
+   * @param maxNestingLevel the maximum nesting level for recursive data types. Zero (0) indicates
+   * that all direct or indirect fields of type T in element of type T should be skipped.
+   * @param enableExtensions switches on/off the support for FHIR extensions.
+   * @param enabledOpenTypes list of types that are encoded within open types, such as extensions.
+   * @return a dataset of the given resource
+   */
+  @Nonnull
+  public Dataset<Row> extractEntry(@Nonnull final SparkSession spark,
+      @Nonnull final JavaRDD<BundleContainer> bundles,
+      @Nonnull final String resourceName,
+      @Nullable final Integer maxNestingLevel, @Nullable final Boolean enableExtensions,
+      @Nullable final List<String> enabledOpenTypes) {
 
     final ToResources bundleToResources = new ToResources(resourceName,
         fhirVersion);
 
-    final ExpressionEncoder<IBaseResource> fhirEncoder = FhirEncoders.forR4().getOrCreate()
+    Builder encoderBuilder = FhirEncoders.forR4();
+    if (nonNull(maxNestingLevel)) {
+      encoderBuilder = encoderBuilder.withMaxNestingLevel(maxNestingLevel);
+    }
+    if (nonNull(enableExtensions)) {
+      encoderBuilder = encoderBuilder.withExtensionsEnabled(enableExtensions);
+    }
+    if (nonNull(enabledOpenTypes)) {
+      encoderBuilder = encoderBuilder
+          .withOpenTypes(enabledOpenTypes.stream().collect(Collectors.toUnmodifiableSet()));
+    }
+    final ExpressionEncoder<IBaseResource> fhirEncoder = encoderBuilder.getOrCreate()
         .of(resourceName);
 
     final JavaRDD<IBaseResource> resourceRdd = bundles.flatMap(bundleToResources);
