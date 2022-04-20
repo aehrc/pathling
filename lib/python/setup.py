@@ -23,18 +23,20 @@ setup(
     author='Piotr Szul',
     author_email='piotr.szul@csiro.au',
     url='https://github.com/aehrc/pathling',
-    keywords=['testing', 'logging', 'example'],  # arbitrary keywords
-    classifiers=[],
-    license="CSIRO Open Source Software Licence Agreement",
+    keywords=['fhir', 'encoding', 'analytics'],  # arbitrary keywords
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'License :: Other/Proprietary License',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+    ],
+    license="CSIRO Open Source Software Licence Agreement (variation of the BSD / MIT License)",
     python_requires=">=3.7",
-    #  install_requires=[
-    #    'typedecorator==0.0.5'
-    #  ],
-    extras_require={
-        'spark': [
-            'pyspark>=3.2.1',
-        ]
-    },
+    install_requires=[
+        'pyspark>=3.1.0'
+    ],
     include_package_data=True,
     package_dir={
         'pathling.jars': 'target/dependency',
