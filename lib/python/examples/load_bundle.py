@@ -22,7 +22,6 @@ def main():
         .appName('pathling-test') \
         .master('local[2]') \
         .config('spark.jars', find_jar()) \
-        .config('hive.exec.dynamic.partition.mode', 'nonstrict') \
         .config('spark.sql.warehouse.dir', warehouse_dir) \
         .getOrCreate()
 
