@@ -13,8 +13,145 @@ on:
 # the integration test (which requires a secret), and also the test reporting actions (which require
 # a GitHub token).
 jobs:
-  encoders:
-    name: Build and test encoders
+#  encoders:
+#    name: Build and test encoders
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#      - name: Set up JDK
+#        uses: actions/setup-java@v2
+#        with:
+#          java-version: 11
+#          distribution: 'zulu'
+#      - name: Cache local Maven repository
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/.m2/repository
+#          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+#          restore-keys: |
+#            ${{ runner.os }}-maven-
+#      - name: Run the verify goal with Maven
+#        if: ${{ github.actor == 'dependabot[bot]' }}
+#        run: |
+#          mvn --batch-mode verify \
+#          -pl encoders -am
+#        timeout-minutes: 30
+#      - name: Run the verify goal with Maven
+#        if: ${{ github.actor != 'dependabot[bot]' }}
+#        run: |
+#          mvn --batch-mode verify \
+#          -pl encoders -am \
+#          -Dmaven.test.failure.ignore=true
+#        timeout-minutes: 30
+#      - name: Upload encoders test reports
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: encoders-surefire-reports
+#          path: encoders/target/surefire-reports
+#      - name: Publish test results
+#        if: ${{ github.actor != 'dependabot[bot]' }}
+#        uses: scacap/action-surefire-report@v1
+#        with:
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+#          check_name: Encoders test report
+#          fail_on_test_failures: true
+#      - name: Upload coverage to Codecov
+#        if: ${{ github.actor != 'dependabot[bot]' }}
+#        uses: codecov/codecov-action@v1
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          files: encoders/target/site/jacoco/jacoco.xml
+#  fhir-server:
+#    name: Build and test FHIR server
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#      - name: Set up JDK
+#        uses: actions/setup-java@v2
+#        with:
+#          java-version: 11
+#          distribution: 'zulu'
+#      - name: Cache local Maven repository
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/.m2/repository
+#          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+#          restore-keys: |
+#            ${{ runner.os }}-maven-
+#      - name: Run the verify goal with Maven
+#        if: ${{ github.actor == 'dependabot[bot]' }}
+#        run: |
+#          mvn --batch-mode verify \
+#          -pl fhir-server -am \
+#          -Pdocker,skip-encoders-tests \
+#          -DskipITs
+#        timeout-minutes: 45
+#      - name: Run the verify goal with Maven
+#        if: ${{ github.actor != 'dependabot[bot]' }}
+#        run: |
+#          mvn --batch-mode verify \
+#          -pl fhir-server -am \
+#          -Pdocker,skip-encoders-tests \
+#          -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
+#          -Dmaven.test.failure.ignore=true
+#        timeout-minutes: 45
+#      - name: Upload fhir-server test reports
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: fhir-server-surefire-reports
+#          path: fhir-server/target/surefire-reports
+#      - name: Upload timing log
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: fhir-server-timing-log
+#          path: fhir-server/target/timing.log
+#      - name: Publish test results
+#        if: ${{ github.actor != 'dependabot[bot]' }}
+#        uses: scacap/action-surefire-report@v1
+#        with:
+#          github_token: ${{ secrets.GITHUB_TOKEN }}
+#          check_name: FHIR server test report
+#          fail_on_test_failures: true
+#      - name: Upload coverage to Codecov
+#        if: ${{ github.actor != 'dependabot[bot]' }}
+#        uses: codecov/codecov-action@v1
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          files: fhir-server/target/site/jacoco/jacoco.xml
+#  import:
+#    name: Build import lambda
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#      - name: Set up JDK
+#        uses: actions/setup-java@v1
+#        with:
+#          java-version: 11
+#      - uses: actions/setup-node@v2
+#        with:
+#          node-version: '14'
+#      - name: Cache local Maven repository
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/.m2/repository
+#          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+#          restore-keys: |
+#            ${{ runner.os }}-maven-
+#      - name: Run the package goal with Maven
+#        run: |
+#          mvn --batch-mode package \
+#          -pl lib/import -am
+#        timeout-minutes: 5
+#      - name: Upload import lambda
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: import-lambda
+#          path: lib/import/target/pathling-import-lambda.zip
+  python-api:
+    name: Build and test Python API
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -31,149 +168,52 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Run the verify goal with Maven
-        if: ${{ github.actor == 'dependabot[bot]' }}
-        run: |
-          mvn --batch-mode verify \
-          -pl encoders -am
-        timeout-minutes: 30
-      - name: Run the verify goal with Maven
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        run: |
-          mvn --batch-mode verify \
-          -pl encoders -am \
-          -Dmaven.test.failure.ignore=true
-        timeout-minutes: 30
-      - name: Upload encoders test reports
-        uses: actions/upload-artifact@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
         with:
-          name: encoders-surefire-reports
-          path: encoders/target/surefire-reports
-      - name: Publish test results
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: Encoders test report
-          fail_on_test_failures: true
-      - name: Upload coverage to Codecov
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders/target/site/jacoco/jacoco.xml
-  fhir-server:
-    name: Build and test FHIR server
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set up JDK
-        uses: actions/setup-java@v2
-        with:
-          java-version: 11
-          distribution: 'zulu'
-      - name: Cache local Maven repository
+          python-version: 3.8
+      - name: Cache Python packages
         uses: actions/cache@v2
+        id: pythoncache
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Run the verify goal with Maven
-        if: ${{ github.actor == 'dependabot[bot]' }}
+          path: /home/runner/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('dev/dev-requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip
+      - name: Install Python dependencies
         run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -Pdocker,skip-encoders-tests \
-          -DskipITs
-        timeout-minutes: 45
-      - name: Run the verify goal with Maven
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -Pdocker,skip-encoders-tests \
-          -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
-          -Dmaven.test.failure.ignore=true
-        timeout-minutes: 45
-      - name: Upload fhir-server test reports
-        uses: actions/upload-artifact@v2
-        with:
-          name: fhir-server-surefire-reports
-          path: fhir-server/target/surefire-reports
-      - name: Upload timing log
-        uses: actions/upload-artifact@v2
-        with:
-          name: fhir-server-timing-log
-          path: fhir-server/target/timing.log
-      - name: Publish test results
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: FHIR server test report
-          fail_on_test_failures: true
-      - name: Upload coverage to Codecov
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: fhir-server/target/site/jacoco/jacoco.xml
-  import:
-    name: Build import lambda
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set up JDK
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Run the package goal with Maven
-        run: |
-          mvn --batch-mode package \
-          -pl lib/import -am
-        timeout-minutes: 5
-      - name: Upload import lambda
-        uses: actions/upload-artifact@v2
-        with:
-          name: import-lambda
-          path: lib/import/target/pathling-import-lambda.zip
-  site:
-    name: Build site
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Set up JDK
-        uses: actions/setup-java@v1
-        with:
-          java-version: 11
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 2.6.3
-      - name: Cache local Maven repository
-        uses: actions/cache@v2
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          python -m pip install --upgrade pip
+          pip cache dir
+          if [ -f dev/dev-requirements.txt ]; then pip install -r dev/dev-requirements.txt; fi
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
-          -pl site -am \
-          -DskipTests
-        timeout-minutes: 30
+          -pl lib/python -am \
+          -Pskip-encoders-tests
+        timeout-minutes: 15
+#  site:
+#    name: Build site
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v2
+#      - name: Set up JDK
+#        uses: actions/setup-java@v1
+#        with:
+#          java-version: 11
+#      - name: Set up Ruby
+#        uses: ruby/setup-ruby@v1
+#        with:
+#          ruby-version: 2.6.3
+#      - name: Cache local Maven repository
+#        uses: actions/cache@v2
+#        with:
+#          path: ~/.m2/repository
+#          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+#          restore-keys: |
+#            ${{ runner.os }}-maven-
+#      - name: Run the verify goal with Maven
+#        run: |
+#          mvn --batch-mode verify \
+#          -pl site -am \
+#          -DskipTests
+#        timeout-minutes: 30
