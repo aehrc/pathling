@@ -40,7 +40,7 @@ public class UntypedResourcePath extends NonLiteralPath implements Referrer {
   @Getter
   private final Column typeColumn;
 
-  private UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+  public UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final Column typeColumn) {

@@ -10,6 +10,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkState;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Orderable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,6 +61,12 @@ public class DatasetBuilder {
   @Nonnull
   private final List<StructField> structColumns = new ArrayList<>();
 
+  @Nullable
+  private StructField idColumn;
+
+  @Nullable
+  private FhirPath context;
+
   public DatasetBuilder(@Nonnull final SparkSession spark) {
     this.spark = spark;
     final Metadata metadata = new MetadataBuilder().build();
@@ -68,8 +75,45 @@ public class DatasetBuilder {
   }
 
   @Nonnull
+  public static List<Integer> makeEid(final Integer... levels) {
+    return Arrays.asList(levels);
+  }
+
+  @Nonnull
+  public DatasetBuilder withContext(@Nonnull final FhirPath context) {
+    this.context = context;
+    return this;
+  }
+
+  @Nonnull
   public DatasetBuilder withColumn(@Nonnull final DataType dataType) {
     return withColumn(randomAlias(), dataType);
+  }
+
+  @Nonnull
+  public DatasetBuilder withColumn(final String columnName, @Nonnull final DataType dataType) {
+    return withColumn(columnName, dataType, false);
+  }
+
+  @Nonnull
+  public DatasetBuilder withColumn(@Nonnull final String columnName,
+      @Nonnull final DataType dataType, final boolean isId) {
+    final StructField column = new StructField(columnName, dataType, true, metadata);
+    datasetColumns.add(column);
+    if (isId) {
+      idColumn = column;
+    }
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder withIdColumn() {
+    return withColumn(randomAlias(), DataTypes.StringType, true);
+  }
+
+  @Nonnull
+  public DatasetBuilder withIdColumn(@Nonnull final String alias) {
+    return withColumn(alias, DataTypes.StringType, true);
   }
 
   @Nonnull
@@ -78,26 +122,8 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withColumn(@Nonnull final String columnName,
-      @Nonnull final DataType dataType) {
-    final StructField column = new StructField(columnName, dataType, true, metadata);
-    datasetColumns.add(column);
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withIdColumn() {
-    return withColumn(DataTypes.StringType);
-  }
-
-  @Nonnull
-  public DatasetBuilder withIdColumn(@Nonnull final String alias) {
-    return withColumn(alias, DataTypes.StringType);
-  }
-
-  @Nonnull
   public DatasetBuilder withTypeColumn() {
-    return withColumn(DataTypes.StringType);
+    return withColumn(randomAlias(), DataTypes.StringType);
   }
 
   @Nonnull
@@ -108,7 +134,36 @@ public class DatasetBuilder {
   @Nonnull
   public DatasetBuilder withExtensionColumn() {
     return withColumn("_extension", DataTypes
-        .createMapType(DataTypes.IntegerType, DataTypes.createArrayType(SIMPLE_EXTENSION_TYPE)));
+        .createMapType(DataTypes.IntegerType, DataTypes.createArrayType(SIMPLE_EXTENSION_TYPE))
+    );
+  }
+
+  @Nonnull
+  public DatasetBuilder withStructColumn(@Nonnull final String name,
+      @Nonnull final DataType dataType) {
+    final StructField column = new StructField(name, dataType, true, metadata);
+    structColumns.add(column);
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder withStructTypeColumns(@Nonnull final StructType structType) {
+    final StructField[] fields = structType.fields();
+    checkNotNull(fields);
+
+    structColumns.addAll(Arrays.asList(fields));
+    return this;
+  }
+
+  @Nonnull
+  public DatasetBuilder withStructValueColumn() {
+    datasetColumns.add(new StructField(
+        randomAlias(),
+        DataTypes.createStructType(structColumns),
+        true,
+        metadata));
+    structColumns.clear();
+    return this;
   }
 
   @Nonnull
@@ -174,28 +229,15 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withStructColumn(@Nonnull final String name,
-      @Nonnull final DataType dataType) {
-    final StructField column = new StructField(name, dataType, true, metadata);
-    structColumns.add(column);
-    return this;
-  }
-
-  @Nonnull
-  public DatasetBuilder withStructTypeColumns(@Nonnull final StructType structType) {
-    final StructField[] fields = structType.fields();
-    checkNotNull(fields);
-
-    structColumns.addAll(Arrays.asList(fields));
-    return this;
-  }
-
-  @Nonnull
   public Dataset<Row> build() {
     if (!structColumns.isEmpty()) {
-      throw new RuntimeException(
-          "Called build() on a DatasetBuilder with struct columns, did you mean to use "
-              + "buildWithStructValue()?");
+      final List<StructField> columns = new ArrayList<>(datasetColumns);
+      columns.add(new StructField(
+          randomAlias(),
+          DataTypes.createStructType(structColumns),
+          true,
+          metadata));
+      return getDataset(columns);
     } else if (datasetColumns.isEmpty()) {
       throw new RuntimeException("Called build() on a DatasetBuilder with no columns");
     }
@@ -203,25 +245,8 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public Dataset<Row> buildWithStructValue() {
-    final List<StructField> columns = new ArrayList<>(datasetColumns);
-    columns.add(new StructField(
-        randomAlias(),
-        DataTypes.createStructType(structColumns),
-        true,
-        metadata));
-    return getDataset(columns);
-  }
-
-  @Nonnull
-  public DatasetBuilder withStructValueColumn() {
-    datasetColumns.add(new StructField(
-        randomAlias(),
-        DataTypes.createStructType(structColumns),
-        true,
-        metadata));
-    structColumns.clear();
-    return this;
+  public StructType getStructType() {
+    return new StructType(datasetColumns.toArray(new StructField[]{}));
   }
 
   @Nonnull
@@ -236,17 +261,12 @@ public class DatasetBuilder {
     checkState(dataFrame.rdd().getNumPartitions() <= 1,
         "at most one partition expected in test datasets constructed from rows, but got: "
             + dataFrame.rdd().getNumPartitions());
+
+    if (context != null && idColumn != null) {
+      dataFrame = dataFrame.withColumnRenamed(idColumn.name(), context.getIdColumn().toString());
+    }
+
     return dataFrame;
-  }
-
-  @Nonnull
-  public StructType getStructType() {
-    return new StructType(datasetColumns.toArray(new StructField[]{}));
-  }
-
-  @Nonnull
-  public static List<Integer> makeEid(final Integer... levels) {
-    return Arrays.asList(levels);
   }
 
 }

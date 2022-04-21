@@ -323,13 +323,13 @@ public abstract class QueryHelpers {
     final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
     final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
         .collect(Collectors.toSet());
-    if (columnList.containsAll(groupingColumnNames)) {
+    if (!groupingColumnNames.isEmpty() && columnList.containsAll(groupingColumnNames)) {
       return groupingColumns;
     } else {
       final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
       fallbackGroupingColumnNames.retainAll(columnList);
       fallbackGroupingColumnNames.add(fallback.toString());
-      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
+      return fallbackGroupingColumnNames.stream().map(functions::col).collect(Collectors.toList());
     }
   }
 

@@ -188,7 +188,7 @@ class CombineOperatorTest {
         .withStructTypeColumns(codingStructType())
         .withRow("observation-1", makeEid(0),
             rowFromCoding(new Coding("http://snomed.info/sct", "18001011000036104", null)))
-        .buildWithStructValue();
+        .build();
     final ElementPath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(leftDataset)
@@ -213,7 +213,7 @@ class CombineOperatorTest {
             rowFromCoding(new Coding("http://snomed.info/sct", "373882004", null)))
         .withRow("observation-3",
             rowFromCoding(new Coding("http://snomed.info/sct", "373882004", null)))
-        .buildWithStructValue();
+        .build();
     assertThat(result)
         .hasExpression("valueCoding combine http://snomed.info/sct|373882004")
         .isNotSingular()

@@ -143,7 +143,7 @@ class PathTraversalOperatorTest {
         .build();
     assertThat(result)
         .isElementPath(ElementPath.class)
-        .hasExpression("Patient.name")
+        .hasExpression("name")
         .hasFhirType(FHIRDefinedType.HUMANNAME)
         .isNotSingular()
         .selectOrderedResultWithEid()
@@ -164,7 +164,7 @@ class PathTraversalOperatorTest {
         .withRow("patient-2", makeEid(0), null)
         // no name in the first place
         .withRow("patient-5", null, null)
-        .buildWithStructValue();
+        .build();
 
     final Optional<ElementDefinition> definition = FhirHelpers
         .getChildOfResource(fhirContext, "Patient", "name");
@@ -218,7 +218,7 @@ class PathTraversalOperatorTest {
         .withRow("patient-2", makeEid(0), RowFactory.create((String) null))
         // patient with empty list of given names
         .withRow("patient-5", null, null)
-        .buildWithStructValue();
+        .build();
 
     final Optional<ElementDefinition> definition = FhirHelpers
         .getChildOfResource(fhirContext, "Patient", "name");
@@ -282,7 +282,7 @@ class PathTraversalOperatorTest {
     final FhirPath result = new PathTraversalOperator().invoke(input);
 
     assertThat(result)
-        .hasExpression("Patient.extension")
+        .hasExpression("extension")
         .isNotSingular()
         .isElementPath(ElementPath.class)
         .hasFhirType(FHIRDefinedType.EXTENSION)
@@ -369,7 +369,7 @@ class PathTraversalOperatorTest {
         .withRow("observation-3", makeEid(0, 0), null)
         .withRow("observation-4", makeEid(0, 0), null)
         .withRow("observation-5", makeEid(0, 0), null)
-        .buildWithStructValue();
+        .build();
 
     assertThat(result)
         .hasExpression("code.extension")

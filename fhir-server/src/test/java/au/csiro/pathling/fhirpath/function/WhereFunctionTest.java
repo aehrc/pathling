@@ -62,7 +62,7 @@ class WhereFunctionTest {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
-        .withIdColumn()
+        .withIdColumn(randomAlias())
         .withColumn(statusColumn, DataTypes.StringType)
         .withRow("patient-1", makeEid(1), "encounter-1", "in-progress")
         .withRow("patient-1", makeEid(0), "encounter-2", "finished")

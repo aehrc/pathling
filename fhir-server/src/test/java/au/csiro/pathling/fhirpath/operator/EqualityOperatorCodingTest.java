@@ -93,7 +93,7 @@ class EqualityOperatorCodingTest {
         .withRow("patient-5", rowFromCoding(coding5))
         .withRow("patient-6", rowFromCoding(coding6))
         .withRow("patient-7", null)
-        .buildWithStructValue();
+        .build();
     left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .singular(true)
@@ -110,7 +110,7 @@ class EqualityOperatorCodingTest {
         .withRow("patient-5", rowFromCoding(coding6))
         .withRow("patient-6", null)
         .withRow("patient-7", null)
-        .buildWithStructValue();
+        .build();
     right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .singular(true)

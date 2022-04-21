@@ -109,7 +109,7 @@ class MemberOfFunctionTest {
         .withRow("encounter-4", makeEid(0), rowFromCoding(coding4))
         .withRow("encounter-5", makeEid(0), rowFromCoding(coding5))
         .withRow("encounter-6", null, null)
-        .buildWithStructValue();
+        .build();
 
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
         .dataset(inputDataset)
@@ -128,7 +128,6 @@ class MemberOfFunctionTest {
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .idColumn(inputExpression.getIdColumn())
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
@@ -180,7 +179,7 @@ class MemberOfFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
-        .buildWithStructValue();
+        .build();
 
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
         .dataset(inputDataset)
@@ -195,7 +194,6 @@ class MemberOfFunctionTest {
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .idColumn(inputExpression.getIdColumn())
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
@@ -259,7 +257,7 @@ class MemberOfFunctionTest {
         .withRow("diagnosticreport-5", rowFromCodeableConcept(codeableConcept5))
         .withRow("diagnosticreport-6", rowFromCodeableConcept(codeableConcept6))
         .withRow("diagnosticreport-7", null)
-        .buildWithStructValue();
+        .build();
 
     final ElementPath inputExpression = new ElementPathBuilder(spark)
         .dataset(inputDataset)

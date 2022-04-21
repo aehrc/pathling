@@ -46,7 +46,7 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   private final Map<String, Column> elementsToColumns;
 
-  protected ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
+  public ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
       @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final ResourceDefinition definition,

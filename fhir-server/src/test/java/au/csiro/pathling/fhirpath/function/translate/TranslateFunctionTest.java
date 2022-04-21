@@ -145,7 +145,7 @@ class TranslateFunctionTest {
         .withRow("encounter-4", makeEid(0), null)
         // TC-5
         .withRow("encounter-5", null, null)
-        .buildWithStructValue();
+        .build();
 
     final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
         .dataset(inputDataset)
@@ -167,7 +167,6 @@ class TranslateFunctionTest {
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .idColumn(inputExpression.getIdColumn())
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
@@ -197,7 +196,7 @@ class TranslateFunctionTest {
         .withRow("encounter-4", makeEid(0, 0), null)
         // TC-5
         .withRow("encounter-5", null, null)
-        .buildWithStructValue();
+        .build();
 
     // Check the result.
     assertThat(result)
@@ -272,7 +271,7 @@ class TranslateFunctionTest {
         // TC-5
         .withRow("encounter-5", makeEid(0), null)
         .withRow("encounter-6", null, null)
-        .buildWithStructValue();
+        .build();
 
     final ElementPath inputExpression = new ElementPathBuilder(spark)
         .dataset(inputDataset)
@@ -295,7 +294,6 @@ class TranslateFunctionTest {
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .idColumn(inputExpression.getIdColumn())
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
@@ -333,7 +331,7 @@ class TranslateFunctionTest {
         // TC-5
         .withRow("encounter-5", makeEid(0, 0), null)
         .withRow("encounter-6", null, null)
-        .buildWithStructValue();
+        .build();
 
     // Check the result.
     assertThat(result)
