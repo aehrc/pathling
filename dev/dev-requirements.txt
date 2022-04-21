@@ -1,0 +1,4 @@
+pyspark==3.2.1
+Sphinx==4.5.0
+pytest==6.2.2
+ipython==8.2.0

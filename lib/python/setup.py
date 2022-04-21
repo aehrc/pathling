@@ -23,7 +23,12 @@ setup(
     author='Piotr Szul',
     author_email='piotr.szul@csiro.au',
     url='https://github.com/aehrc/pathling',
-    keywords=['fhir', 'encoding', 'analytics'],  # arbitrary keywords
+    keywords=["pathling",
+              "fhir",
+              "analytics",
+              "spark",
+              "standards",
+              "terminology"],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'License :: Other/Proprietary License',

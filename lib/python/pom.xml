@@ -102,6 +102,26 @@
               <goal>exec</goal>
             </goals>
           </execution>
+
+
+          <!-- Build python documentation -->
+          <execution>
+            <configuration>
+              <executable>sh</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-c</argument>
+                <argument>sphinx-apidoc --force --full -o target/docs pathling -t docs/templates/ &amp;&amp;
+                  make -C target/docs clean html
+                </argument>
+              </arguments>
+            </configuration>
+            <id>python-docs</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
 
@@ -127,7 +147,7 @@
         <executions>
           <execution>
             <id>write-text-files</id>
-            <phase>process-resources</phase>
+            <phase>generate-sources</phase>
             <goals>
               <goal>write-text-files</goal>
             </goals>
