@@ -74,6 +74,7 @@ class CountFunctionTest {
         .build(fhirContext, database, ResourceType.PATIENT, "Patient", false);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputPath.getIdColumn())
         .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
         .inputExpression("Patient")
         .build();
@@ -118,7 +119,6 @@ class CountFunctionTest {
     final Column groupingColumn = inputPath.getElementColumn("gender");
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(inputPath)
         .groupingColumns(Collections.singletonList(groupingColumn))
         .inputExpression("Patient")
         .build();
@@ -161,6 +161,7 @@ class CountFunctionTest {
         .build();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputPath.getIdColumn())
         .groupingColumns(Collections.emptyList())
         .build();
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,

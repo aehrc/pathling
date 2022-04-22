@@ -84,7 +84,7 @@ class OfTypeFunctionTest {
         .withRow("encounter-5", makeEid(0), "Group",
             RowFactory.create(null, "Group/group-1", null))
         .withRow("encounter-6", null, null, null)
-        .build();
+        .buildWithStructValue();
     final UntypedResourcePath inputPath = new UntypedResourcePathBuilder(spark)
         .expression("subject.resolve()")
         .dataset(inputDataset)
@@ -109,6 +109,7 @@ class OfTypeFunctionTest {
         .build();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputPath.getIdColumn())
         .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));

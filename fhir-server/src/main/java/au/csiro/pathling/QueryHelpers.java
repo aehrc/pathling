@@ -140,11 +140,6 @@ public abstract class QueryHelpers {
     checkArgument(leftColumns.size() == rightColumns.size(),
         "Left columns should be same size as right columns");
 
-    // If there are no join columns and no additional condition, there is no need to join.
-    if (leftColumns.isEmpty() && additionalCondition.isEmpty()) {
-      return left;
-    }
-
     Dataset<Row> aliasedLeft = left;
     final Collection<Column> joinConditions = new ArrayList<>();
     for (int i = 0; i < leftColumns.size(); i++) {
@@ -323,13 +318,13 @@ public abstract class QueryHelpers {
     final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
     final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
         .collect(Collectors.toSet());
-    if (!groupingColumnNames.isEmpty() && columnList.containsAll(groupingColumnNames)) {
+    if (columnList.containsAll(groupingColumnNames)) {
       return groupingColumns;
     } else {
       final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
       fallbackGroupingColumnNames.retainAll(columnList);
       fallbackGroupingColumnNames.add(fallback.toString());
-      return fallbackGroupingColumnNames.stream().map(functions::col).collect(Collectors.toList());
+      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
     }
   }
 

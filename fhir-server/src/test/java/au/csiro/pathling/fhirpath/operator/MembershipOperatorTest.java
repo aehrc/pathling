@@ -217,7 +217,7 @@ class MembershipOperatorTest {
         .withRow(StringPrimitiveRowFixture.ROW_ID_3, rowFromCoding(loincCodingWithVersion))
         .withRow(StringPrimitiveRowFixture.ROW_ID_4, null)
         .withRow(StringPrimitiveRowFixture.ROW_ID_4, null)
-        .build();
+        .buildWithStructValue();
 
     final ElementPath collection = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)

@@ -6,20 +6,16 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
-import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -34,10 +30,10 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
+import au.csiro.pathling.test.builders.UntypedResourcePathBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -63,22 +59,14 @@ class IifFunctionTest {
   @Autowired
   FhirContext fhirContext;
 
+  static final String ID_ALIAS = "_abc123";
+
   ParserContext parserContext;
   Database database;
-  Dataset<Row> dataset;
 
   @BeforeEach
   void setUp() {
-    dataset = new DatasetBuilder(spark)
-        .withIdColumn("id")
-        .withColumn(DataTypes.StringType)
-        .build();
-    final ResourcePath inputContext = new ResourcePathBuilder(spark)
-        .dataset(dataset)
-        .build();
-    parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(inputContext)
-        .build();
+    parserContext = new ParserContextBuilder(spark, fhirContext).build();
     database = mock(Database.class);
   }
 
@@ -100,7 +88,7 @@ class IifFunctionTest {
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("observation-1", makeEid(0), true)
@@ -130,7 +118,7 @@ class IifFunctionTest {
     final FhirPath result = NamedFunction.getInstance("iif").invoke(iifInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.StringType)
         .withRow("observation-1", makeEid(0), "foo")
@@ -152,7 +140,7 @@ class IifFunctionTest {
   @Test
   void returnsCorrectResultsForTwoNonLiterals() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("observation-1", makeEid(0), false)
@@ -176,8 +164,7 @@ class IifFunctionTest {
     final NonLiteralPath condition = inputPath.toThisPath();
 
     final Dataset<Row> ifTrueDataset = new DatasetBuilder(spark)
-        .withContext(inputPath)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 1)
@@ -195,8 +182,7 @@ class IifFunctionTest {
         .build();
 
     final Dataset<Row> otherwiseDataset = new DatasetBuilder(spark)
-        .withContext(inputPath)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 11)
@@ -219,7 +205,7 @@ class IifFunctionTest {
     final FhirPath result = NamedFunction.getInstance("iif").invoke(iifInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 11)
@@ -241,15 +227,15 @@ class IifFunctionTest {
 
   @Test
   void returnsCorrectResultsForLiteralAndNonLiteral() {
-    final Dataset<Row> contextDataset = new ResourceDatasetBuilder(spark)
-        .withIdColumn("id")
+    final Dataset<Row> inputContextDataset = new ResourceDatasetBuilder(spark)
+        .withIdColumn()
         .withRow("observation-1")
         .withRow("observation-2")
         .withRow("observation-3")
         .withRow("observation-4")
         .withRow("observation-5")
         .build();
-    when(database.read(ResourceType.OBSERVATION)).thenReturn(contextDataset);
+    when(database.read(ResourceType.OBSERVATION)).thenReturn(inputContextDataset);
     final ResourcePath inputContext = new ResourcePathBuilder(spark)
         .expression("Observation")
         .resourceType(ResourceType.OBSERVATION)
@@ -257,8 +243,7 @@ class IifFunctionTest {
         .singular(true)
         .build();
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withContext(inputContext)
-        .withIdColumn("inputId")
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.BooleanType)
         .withRow("observation-1", makeEid(0), false)
@@ -282,8 +267,7 @@ class IifFunctionTest {
     final NonLiteralPath condition = inputPath.toThisPath();
 
     final Dataset<Row> ifTrueDataset = new DatasetBuilder(spark)
-        .withContext(inputContext)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 1)
@@ -307,7 +291,7 @@ class IifFunctionTest {
     final FhirPath result1 = NamedFunction.getInstance("iif").invoke(iifInput1);
 
     final Dataset<Row> expectedDataset1 = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 99)
@@ -330,7 +314,7 @@ class IifFunctionTest {
     final FhirPath result2 = NamedFunction.getInstance("iif").invoke(iifInput2);
 
     final Dataset<Row> expectedDataset2 = new DatasetBuilder(spark)
-        .withIdColumn()
+        .withIdColumn(ID_ALIAS)
         .withEidColumn()
         .withColumn(DataTypes.IntegerType)
         .withRow("observation-1", makeEid(0), 1)
@@ -441,22 +425,16 @@ class IifFunctionTest {
   @Test
   void throwsErrorIfResultArgumentsAreBackboneElements() {
     final NonLiteralPath condition = new ElementPathBuilder(spark)
-        .dataset(parserContext.getInputContext().getDataset())
-        .idAndValueColumns()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .expression("valueBoolean")
         .singular(true)
         .build()
         .toThisPath();
     final ElementPath ifTrue = new ElementPathBuilder(spark)
-        .dataset(parserContext.getInputContext().getDataset())
-        .idAndValueColumns()
         .fhirType(FHIRDefinedType.BACKBONEELEMENT)
         .expression("someBackboneElement")
         .build();
     final ElementPath otherwise = new ElementPathBuilder(spark)
-        .dataset(parserContext.getInputContext().getDataset())
-        .idAndValueColumns()
         .fhirType(FHIRDefinedType.BACKBONEELEMENT)
         .expression("anotherBackboneElement")
         .build();
@@ -475,91 +453,74 @@ class IifFunctionTest {
 
   @Test
   void throwsErrorWithIncompatibleResourceResults() {
-    final ResourcePath inputContext = (ResourcePath) parserContext.getInputContext();
     final NonLiteralPath condition = new ElementPathBuilder(spark)
-        .dataset(inputContext.getDataset())
-        .idAndValueColumns()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .expression("valueBoolean")
         .singular(true)
         .build()
         .toThisPath();
-    final Dataset<Row> resourceDataset = new DatasetBuilder(spark)
-        .withContext(inputContext)
-        .withIdColumn("id")
-        .withColumn("value", DataTypes.StringType)
+    final ResourcePath ifTrue = new ResourcePathBuilder(spark)
+        .expression("someResource")
+        .resourceType(ResourceType.PATIENT)
         .build();
-    final ResourcePath otherwise = new ResourcePath("anotherResource", resourceDataset,
-        inputContext.getIdColumn(), inputContext.getEidColumn(), inputContext.getValueColumn(),
-        inputContext.isSingular(), inputContext.getThisColumn(),
-        new ResourceDefinition(ResourceType.CONDITION,
-            fhirContext.getResourceDefinition("Condition")), Collections.emptyMap());
+    final ResourcePath otherwise = new ResourcePathBuilder(spark)
+        .expression("anotherResource")
+        .resourceType(ResourceType.CONDITION)
+        .build();
 
     final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
-        Arrays.asList(condition, inputContext, otherwise));
+        Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> notFunction.invoke(iifInput));
     assertEquals(
-        "Paths cannot be merged into a collection together: Patient, anotherResource",
+        "Paths cannot be merged into a collection together: someResource, anotherResource",
         error.getMessage());
   }
 
   @Test
   void throwsErrorWithResourceAndLiteralResults() {
-    final ResourcePath inputContext = (ResourcePath) parserContext.getInputContext();
     final NonLiteralPath condition = new ElementPathBuilder(spark)
-        .dataset(inputContext.getDataset())
-        .idAndValueColumns()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .expression("valueBoolean")
         .singular(true)
         .build()
         .toThisPath();
+    final ResourcePath ifTrue = new ResourcePathBuilder(spark)
+        .expression("someResource")
+        .resourceType(ResourceType.PATIENT)
+        .build();
     final StringLiteralPath otherwise = StringLiteralPath.fromString("foo", condition);
 
     final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
-        Arrays.asList(condition, inputContext, otherwise));
+        Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> notFunction.invoke(iifInput));
     assertEquals(
-        "Paths cannot be merged into a collection together: Patient, 'foo'",
+        "Paths cannot be merged into a collection together: someResource, 'foo'",
         error.getMessage());
   }
 
   @Test
   void throwsErrorWithUntypedResourceAndLiteralResults() {
-    final NonLiteralPath inputContext = new ElementPathBuilder(spark)
-        .dataset(parserContext.getInputContext().getDataset())
-        .idAndValueColumns()
+    final NonLiteralPath condition = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .expression("valueBoolean")
         .singular(true)
         .build()
         .toThisPath();
-
-    final Dataset<Row> dataset = join(parserContext.getInputContext().getDataset(),
-        parserContext.getInputContext().getIdColumn(), new DatasetBuilder(spark)
-            .withIdColumn("id")
-            .withColumn("value", DataTypes.StringType)
-            .withColumn("type", DataTypes.StringType)
-            .build(), col("id"), JoinType.LEFT_OUTER);
-
-    final UntypedResourcePath ifTrue = new UntypedResourcePath("someUntypedResource", dataset,
-        col("id"), Optional.empty(), col("value"), true, Optional.empty(), col("value"));
-    final StringLiteralPath otherwise = StringLiteralPath.fromString("foo", inputContext);
-
-    parserContext = new ParserContextBuilder(spark, fhirContext)
-        .inputContext(inputContext)
+    final UntypedResourcePath ifTrue = new UntypedResourcePathBuilder(spark)
+        .expression("someUntypedResource")
         .build();
+    final StringLiteralPath otherwise = StringLiteralPath.fromString("foo", condition);
 
-    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, inputContext,
-        Arrays.asList(inputContext, ifTrue, otherwise));
+    final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
+        Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
@@ -572,31 +533,30 @@ class IifFunctionTest {
 
   @Test
   void throwsErrorWithElementAndResourceResults() {
-    final FhirPath inputContext = parserContext.getInputContext();
     final NonLiteralPath condition = new ElementPathBuilder(spark)
-        .dataset(inputContext.getDataset())
-        .idAndValueColumns()
         .fhirType(FHIRDefinedType.BOOLEAN)
         .expression("valueBoolean")
         .singular(true)
         .build()
         .toThisPath();
     final ElementPath ifTrue = new ElementPathBuilder(spark)
-        .dataset(inputContext.getDataset())
-        .idAndValueColumns()
         .fhirType(FHIRDefinedType.STRING)
         .expression("someString")
         .build();
+    final ResourcePath otherwise = new ResourcePathBuilder(spark)
+        .expression("someResource")
+        .resourceType(ResourceType.CONDITION)
+        .build();
 
     final NamedFunctionInput iifInput = new NamedFunctionInput(parserContext, condition,
-        Arrays.asList(condition, ifTrue, inputContext));
+        Arrays.asList(condition, ifTrue, otherwise));
 
     final NamedFunction notFunction = NamedFunction.getInstance("iif");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> notFunction.invoke(iifInput));
     assertEquals(
-        "Paths cannot be merged into a collection together: someString, Patient",
+        "Paths cannot be merged into a collection together: someString, someResource",
         error.getMessage());
   }
 

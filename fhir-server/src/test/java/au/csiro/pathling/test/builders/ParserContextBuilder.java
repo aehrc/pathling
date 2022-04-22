@@ -6,6 +6,10 @@
 
 package au.csiro.pathling.test.builders;
 
+import static org.apache.spark.sql.functions.lit;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -20,10 +24,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
 import org.mockito.Mockito;
 
 /**
@@ -31,11 +32,8 @@ import org.mockito.Mockito;
  */
 public class ParserContextBuilder {
 
-  @Nullable
+  @Nonnull
   private FhirPath inputContext;
-
-  @Nullable
-  private String inputExpression;
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -59,7 +57,9 @@ public class ParserContextBuilder {
       @Nonnull final FhirContext fhirContext) {
     this.fhirContext = fhirContext;
     this.spark = spark;
-    inputContext = null;
+    inputContext = mock(FhirPath.class);
+    when(inputContext.getIdColumn()).thenReturn(lit(null));
+    when(inputContext.getDataset()).thenReturn(spark.emptyDataFrame());
     database = Mockito.mock(Database.class, new DefaultAnswer());
     groupingColumns = Collections.emptyList();
     nodeIdColumns = new HashMap<>();
@@ -73,7 +73,13 @@ public class ParserContextBuilder {
 
   @Nonnull
   public ParserContextBuilder inputExpression(@Nonnull final String inputExpression) {
-    this.inputExpression = inputExpression;
+    when(inputContext.getExpression()).thenReturn(inputExpression);
+    return this;
+  }
+
+  @Nonnull
+  public ParserContextBuilder idColumn(@Nonnull final Column idColumn) {
+    when(inputContext.getIdColumn()).thenReturn(idColumn);
     return this;
   }
 
@@ -98,18 +104,6 @@ public class ParserContextBuilder {
 
   @Nonnull
   public ParserContext build() {
-    if (inputContext == null) {
-      final Dataset<Row> dataset = new DatasetBuilder(spark)
-          .withIdColumn("id")
-          .withColumn(DataTypes.StringType)
-          .build();
-      final ResourcePathBuilder resourcePathBuilder = new ResourcePathBuilder(spark)
-          .dataset(dataset);
-      if (inputExpression != null) {
-        resourcePathBuilder.expression(inputExpression);
-      }
-      inputContext = resourcePathBuilder.build();
-    }
     return new ParserContext(inputContext, fhirContext, spark, database,
         Optional.ofNullable(terminologyServiceFactory), groupingColumns, nodeIdColumns);
   }

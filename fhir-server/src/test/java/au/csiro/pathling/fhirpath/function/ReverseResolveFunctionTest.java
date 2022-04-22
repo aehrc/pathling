@@ -112,7 +112,7 @@ class ReverseResolveFunctionTest {
         .withRow("encounter-3", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-4", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-5", RowFactory.create(null, "Group/group-1", null))
-        .build();
+        .buildWithStructValue();
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(argumentDatasetPreJoin);
     final Column idColumn = idAndValueColumns.getId();
     final Column valueColumn = idAndValueColumns.getValues().get(0);
@@ -130,6 +130,7 @@ class ReverseResolveFunctionTest {
         .buildDefined();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputPath.getIdColumn())
         .database(database)
         .inputExpression("Patient")
         .build();

@@ -104,7 +104,7 @@ class ExtensionFunctionTest {
     final FhirPath result = extension.invoke(extensionInput);
 
     assertThat(result)
-        .hasExpression("extension('uuid:myExtension')")
+        .hasExpression("Patient.extension('uuid:myExtension')")
         .isNotSingular()
         .isElementPath(ElementPath.class)
         .hasFhirType(FHIRDefinedType.EXTENSION)
@@ -204,7 +204,7 @@ class ExtensionFunctionTest {
         .withRow("observation-4", makeEid(1, 0), null)
         .withRow("observation-5", makeEid(0, 0), null)
         .withRow("observation-5", makeEid(1, 0), null)
-        .build();
+        .buildWithStructValue();
 
     assertThat(result)
         .hasExpression("code.extension('uuid:myExtension')")

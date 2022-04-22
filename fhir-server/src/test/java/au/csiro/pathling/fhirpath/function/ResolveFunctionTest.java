@@ -90,7 +90,7 @@ class ResolveFunctionTest {
             RowFactory.create(null, "EpisodeOfCare/episodeofcare-2", null))
         .withRow("encounter-4", makeEid(0),
             RowFactory.create(null, "EpisodeOfCare/episodeofcare-2", null))
-        .build();
+        .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder(spark)
         .expression("Encounter.episodeOfCare")
         .dataset(referenceDataset)
@@ -145,7 +145,7 @@ class ResolveFunctionTest {
         .withRow("encounter-3", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-4", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-5", RowFactory.create(null, "Group/group-1", null))
-        .build();
+        .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder(spark)
         .expression("Encounter.subject")
         .dataset(referenceDataset)
@@ -191,7 +191,7 @@ class ResolveFunctionTest {
         .withRow("encounter-3", "Patient", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-4", "Patient", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-5", "Group", RowFactory.create(null, "Group/group-1", null))
-        .build();
+        .buildWithStructValue();
     assertThat((UntypedResourcePath) result)
         .selectUntypedResourceResult()
         .hasRows(expectedDataset);
@@ -214,7 +214,7 @@ class ResolveFunctionTest {
             RowFactory.create(null, "Observation/observation-1", null))
         .withRow("condition-2", makeEid(0),
             RowFactory.create(null, "ClinicalImpression/clinicalimpression-1", null))
-        .build();
+        .buildWithStructValue();
     final ElementPath referencePath = new ElementPathBuilder(spark)
         .expression("Condition.evidence.detail")
         .dataset(referenceDataset)
@@ -255,7 +255,7 @@ class ResolveFunctionTest {
             RowFactory.create(null, "Observation/observation-1", null))
         .withRow("condition-2", "ClinicalImpression",
             RowFactory.create(null, "ClinicalImpression/clinicalimpression-1", null))
-        .build();
+        .buildWithStructValue();
     assertThat((UntypedResourcePath) result)
         .selectUntypedResourceResult()
         .hasRows(expectedDataset);
@@ -302,6 +302,7 @@ class ResolveFunctionTest {
   @Nonnull
   NamedFunctionInput buildFunctionInput(@Nonnull final NonLiteralPath inputPath) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputPath.getIdColumn())
         .database(database)
         .build();
     return new NamedFunctionInput(parserContext, inputPath, Collections.emptyList());

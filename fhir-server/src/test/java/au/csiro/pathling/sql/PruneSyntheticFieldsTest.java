@@ -50,7 +50,7 @@ public class PruneSyntheticFieldsTest {
         .withRow("patient-2", false, new String[]{"array_value-01-00", "array_value-01-01"},
             RowFactory.create(2, "Test-2", "fid_value_01"))
         .withRow("patient-3", null, null, null)
-        .build().repartition(1);
+        .buildWithStructValue().repartition(1);
 
     // Prune all columns.
     final Dataset<Row> prunedDataset = dataset.select(
@@ -68,7 +68,7 @@ public class PruneSyntheticFieldsTest {
         .withRow("patient-2", false, new String[]{"array_value-01-00", "array_value-01-01"},
             RowFactory.create(2, "Test-2"))
         .withRow("patient-3", null, null, null)
-        .build().repartition(1);
+        .buildWithStructValue().repartition(1);
 
     DatasetAssert.of(prunedDataset).hasRows(expectedResult);
   }
@@ -85,7 +85,7 @@ public class PruneSyntheticFieldsTest {
         .withRow("patient-3", "male", true, null)
         .withRow("patient-4", null, true, null)
         .withRow("patient-5", "female", false, RowFactory.create(2, "Test-2", "fid-02"))
-        .build().repartition(1);
+        .buildWithStructValue().repartition(1);
 
     final Column valueColumn = dataset.col(dataset.columns()[dataset.columns().length - 1]);
     final Dataset<Row> groupedResult = dataset.groupBy(

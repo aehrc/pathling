@@ -131,7 +131,7 @@ class SubsumesFunctionTest {
         .withRow(RES_ID2, makeEid(0), rowFromCoding(CODING_OTHER2))
         .withRow(RES_ID3, makeEid(0), rowFromCoding(CODING_OTHER2))
         .withRow(RES_ID4, makeEid(0), rowFromCoding(CODING_OTHER2))
-        .build();
+        .buildWithStructValue();
     final ElementPath inputExpression = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
@@ -151,7 +151,7 @@ class SubsumesFunctionTest {
         .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
         .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
         .withRow(RES_ID5, null /* NULL coding value */)
-        .build();
+        .buildWithStructValue();
     final ElementPath inputExpression = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
@@ -177,7 +177,7 @@ class SubsumesFunctionTest {
         .withRow(RES_ID2, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
         .withRow(RES_ID3, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
         .withRow(RES_ID4, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
-        .build();
+        .buildWithStructValue();
 
     return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
@@ -208,7 +208,7 @@ class SubsumesFunctionTest {
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_MEDIUM))
         .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_OTHER3))
-        .build();
+        .buildWithStructValue();
     final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
@@ -226,7 +226,7 @@ class SubsumesFunctionTest {
             id -> codeableConceptRowFromCoding(CODING_MEDIUM, CODING_OTHER5))
         .withIdValueRows(ALL_RES_IDS,
             id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
-        .build();
+        .buildWithStructValue();
 
     return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
@@ -240,7 +240,7 @@ class SubsumesFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
-        .build();
+        .buildWithStructValue();
 
     final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
@@ -257,7 +257,7 @@ class SubsumesFunctionTest {
         .withEidColumn()
         .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
         .withStructTypeColumns(codingStructType())
-        .build();
+        .buildWithStructValue();
 
     final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
@@ -273,7 +273,7 @@ class SubsumesFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codeableConceptStructType())
-        .build();
+        .buildWithStructValue();
 
     return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
@@ -288,7 +288,7 @@ class SubsumesFunctionTest {
         .withEidColumn()
         .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
         .withStructTypeColumns(codeableConceptStructType())
-        .build();
+        .buildWithStructValue();
 
     return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
@@ -302,7 +302,7 @@ class SubsumesFunctionTest {
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> null)
-        .build();
+        .buildWithStructValue();
 
     final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)

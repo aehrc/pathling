@@ -88,7 +88,7 @@ class FirstFunctionTest {
 
     assertTrue(result instanceof ResourcePath);
     assertThat((ResourcePath) result)
-        .hasExpression("first()")
+        .hasExpression("Patient.first()")
         .isSingular()
         .hasResourceType(ResourceType.PATIENT);
 
