@@ -78,4 +78,9 @@ setup(
     package_data={
         'pathling.jars': ['*-all.jar'],
     },
+    data_files=[
+        ('share/pathling/examples', glob.glob('examples/*.py')),
+        ('share/pathling/examples/data/resources', glob.glob('examples/data/resources/*.ndjson')),
+        ('share/pathling/examples/data/bundles', glob.glob('examples/data/bundles/*.json')),
+    ],
 )
