@@ -1,39 +1,34 @@
 #!/usr/bin/env python
 
 import os
-from tempfile import mkdtemp
 
 from pyspark.sql import SparkSession
 
 from pathling.etc import find_jar
 from pathling.r4 import bundles
 
-PROJECT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
+HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 def main():
-    warehouse_dir = mkdtemp()
-    print(warehouse_dir)
-
+    # Configure spark session to include pathling jar
     spark = SparkSession.builder \
         .appName('pathling-test') \
         .master('local[2]') \
         .config('spark.jars', find_jar()) \
-        .config('spark.sql.warehouse.dir', warehouse_dir) \
         .getOrCreate()
 
-    json_resources_dir = os.path.join(PROJECT_DIR,
-                                      'encoders/src/test/resources/data/resources/R4/json/')
+    json_resources_dir = os.path.join(HERE,
+                                      'data/resources/')
 
-    resource_bundles = bundles.from_resource_json(
+    # Load resource files in the ndjson format to the RDD of bundles
+    resource_bundles_rdd = bundles.from_resource_json(
         spark.read.text(json_resources_dir),
         "value")
-    conditions = bundles.extract_entry(spark, resource_bundles, 'Condition')
-    conditions.show()
 
-    patients = bundles.extract_entry(spark, resource_bundles, 'Patient')
-    patients.show()
+    # Extract 'Condition' resources from the RDD of bundles to a dataframe
+    patients_df = bundles.extract_entry(spark, resource_bundles_rdd, 'Patient')
+    patients_df.show()
 
 
 if __name__ == "__main__":
