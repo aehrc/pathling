@@ -16,6 +16,8 @@
 
   <properties>
     <skip.python.tests>false</skip.python.tests>
+    <pathling.pyapi.version.qualifier/>
+    <pathling.pyapi.version>${project.version}${pathling.pyapi.version.qualifier}</pathling.pyapi.version>
   </properties>
 
   <dependencies>
@@ -111,8 +113,7 @@
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
                 <argument>-c</argument>
-                <argument>sphinx-apidoc --force --full -o target/docs pathling -t docs/templates/ &amp;&amp;
-                  make -C target/docs clean html
+                <argument>sphinx-apidoc --force --full -o target/docs pathling -t docs/templates/ &amp;&amp; make -C target/docs clean html
                 </argument>
               </arguments>
             </configuration>
@@ -139,7 +140,7 @@
                 <line># Auto generated from POM project version.</line>
                 <line># Please do not modify.</line>
                 <line>#</line>
-                <line>__version__="${project.version}"</line>
+                <line>__version__="${pathling.pyapi.version}"</line>
               </lines>
             </file>
           </files>
