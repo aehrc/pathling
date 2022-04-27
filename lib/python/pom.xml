@@ -23,7 +23,7 @@
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders</artifactId>
+      <artifactId>fhir-server</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>

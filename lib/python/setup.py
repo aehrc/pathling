@@ -23,7 +23,7 @@ if not __version__:
 # Check for existence of uber-jar for packaging
 #
 JARS_DIR = os.path.join(HERE, 'target', 'dependency')
-UBER_JAR_GLOB = os.path.join(JARS_DIR, 'encoders-*-all.jar')
+UBER_JAR_GLOB = os.path.join(JARS_DIR, 'fhir-server-*-all.jar')
 jar_files = glob.glob(UBER_JAR_GLOB)
 if not jar_files:
     print(
