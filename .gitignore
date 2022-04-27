@@ -24,3 +24,4 @@ lib/js/node_modules/
 __pycache__/
 *.egg-info
 _version.py
+.ipynb_checkpoints/
