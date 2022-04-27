@@ -44,9 +44,12 @@ Create an isolated python environment with `miniconda3`, e.g:
 
 To configure the environment for pathling development use:
 
+    mvn -f ../../encoders/ -DskipTests=true clean install
+    mvn clean compile
     pip install -r ../../dev/dev-requirements.txt
     pip install -e .
     
 To run the test and build the distribution package use:
 
     mvn clean package
+    

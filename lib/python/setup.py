@@ -12,8 +12,9 @@ VERSION_FILE = os.path.join(HERE, 'pathling', '_version.py')
 # Read __version__ from file
 #
 __version__ = None
-with open(VERSION_FILE) as vf:
-    exec(vf.read())
+if os.path.isfile(VERSION_FILE):
+    with open(VERSION_FILE) as vf:
+        exec(vf.read())
 if not __version__:
     print("ERROR: Cannot read __version__ from file '%s'." % VERSION_FILE, file=sys.stderr)
     exit(1)
