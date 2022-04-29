@@ -142,7 +142,7 @@ DELIMITEDIDENTIFIER
         ;
 
 STRING
-        : '\'' (ESC | .)*? '\''
+        : '\'' (ESC | ~['])*? '\''
         ;
 
 CODING
