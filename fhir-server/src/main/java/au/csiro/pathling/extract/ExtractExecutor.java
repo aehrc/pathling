@@ -9,6 +9,8 @@ package au.csiro.pathling.extract;
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static org.apache.spark.sql.functions.coalesce;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
@@ -135,12 +137,14 @@ public class ExtractExecutor extends QueryExecutor {
 
     // Join all the column expressions together.
     final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
+    final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
+    final Dataset<Row> trimmedDataset = trimTrailingNulls(parserContext, inputContext.getIdColumn(),
+        columns, columnJoinResultDataset);
 
     // Apply the filters.
     final List<String> filters = query.getFilters();
-    final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
-    final Dataset<Row> filteredDataset = filterDataset(
-        inputContext, filters, columnJoinResultDataset, Column::and);
+    final Dataset<Row> filteredDataset = filterDataset(inputContext, filters, trimmedDataset,
+        Column::and);
 
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
@@ -168,7 +172,6 @@ public class ExtractExecutor extends QueryExecutor {
     FhirPathContextAndResult result = null;
     check(sortedColumnsAndContexts.size() > 0);
     for (final FhirPathAndContext current : sortedColumnsAndContexts) {
-      final FhirPath inputContext = current.getContext().getInputContext();
       if (result != null) {
         // Get the set of unique prefixes from the two parser contexts, and sort them in descending
         // order of prefix length.
@@ -188,8 +191,6 @@ public class ExtractExecutor extends QueryExecutor {
                 current.getFhirPath().getExpression().startsWith(p))
             .findFirst();
 
-        final Dataset<Row> currentDataset = trimTrailingNulls(inputContext,
-            inputContext.getIdColumn(), current.getFhirPath());
         if (commonPrefix.isPresent() &&
             resultNodeIds.containsKey(commonPrefix.get()) &&
             currentNodeIds.containsKey(commonPrefix.get())) {
@@ -203,25 +204,56 @@ public class ExtractExecutor extends QueryExecutor {
               .get(commonPrefix.get());
           final List<Column> currentJoinColumns = Arrays.asList(current.getFhirPath().getIdColumn(),
               currentNodeId);
-          final Dataset<Row> dataset = join(result.getResult(), previousJoinColumns, currentDataset,
+          final Dataset<Row> dataset = join(result.getResult(), previousJoinColumns,
+              current.getFhirPath().getDataset(),
               currentJoinColumns, JoinType.LEFT_OUTER);
           result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
               dataset);
         } else {
           // If there is no common prefix, we join using only the resource ID.
           final Dataset<Row> dataset = join(result.getResult(), result.getFhirPath().getIdColumn(),
-              currentDataset, current.getFhirPath().getIdColumn(), JoinType.LEFT_OUTER);
+              current.getFhirPath().getDataset(), current.getFhirPath().getIdColumn(),
+              JoinType.LEFT_OUTER);
           result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
               dataset);
         }
       } else {
-        final Dataset<Row> dataset = trimTrailingNulls(inputContext, inputContext.getIdColumn(),
-            current.getFhirPath());
-        result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(), dataset);
+        result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
+            current.getFhirPath().getDataset());
       }
     }
 
     return result;
+  }
+
+  @Nonnull
+  private Dataset<Row> trimTrailingNulls(@Nonnull final ParserContext parserContext,
+      final @Nonnull Column idColumn, @Nonnull final List<FhirPath> expressions,
+      @Nonnull final Dataset<Row> dataset) {
+    checkArgument(!expressions.isEmpty(), "At least one expression is required");
+
+    final Column[] nonSingularColumns = expressions.stream()
+        .filter(fhirPath -> !fhirPath.isSingular())
+        .map(FhirPath::getValueColumn)
+        .toArray(Column[]::new);
+
+    if (nonSingularColumns.length == 0) {
+      return dataset;
+    } else {
+      final Column additionalCondition = coalesce(nonSingularColumns).isNotNull();
+      final List<Column> filteringColumns = new ArrayList<>();
+      filteringColumns.add(idColumn);
+      final List<Column> singularColumns = expressions.stream()
+          .filter(FhirPath::isSingular)
+          .map(FhirPath::getValueColumn)
+          .collect(Collectors.toList());
+      filteringColumns.addAll(singularColumns);
+      final Dataset<Row> filteringDataset = dataset
+          .select(filteringColumns.toArray(new Column[0]))
+          .distinct();
+      return join(dataset, filteringColumns, filteringDataset, filteringColumns,
+          additionalCondition, JoinType.RIGHT_OUTER);
+    }
   }
 
   @Value

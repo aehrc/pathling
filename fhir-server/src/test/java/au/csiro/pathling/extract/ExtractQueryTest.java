@@ -265,6 +265,22 @@ class ExtractQueryTest {
   }
 
   @Test
+  void whereInMultipleColumns() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("identifier.where(system = 'https://github.com/synthetichealth/synthea').value")
+        .withColumn("identifier.where(system = 'http://hl7.org/fhir/sid/us-ssn').value")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
+  }
+
+  @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.PATIENT);
