@@ -1,37 +1,42 @@
 Python API for Pathling
 =======================
 
-This is the Python API for [Pathling](https://pathling.csiro.au/) FHIR based analytics servers. 
-It currently supporta encoding of JSON bundles and resources into Apache Spark dataframes. 
+This is the Python API for [Pathling](https://pathling.csiro.au). It currently 
+supports encoding of JSON bundles and resources into Apache Spark dataframes. 
 
 ## Installation
 
 Prerequisites: 
+
 - Python 3.8+ with pip 
 - PySpark 3.1+
  
-Installation:
+To install, run this command:
  
-    pip install pathling  
+```bash
+pip install pathling  
+```
     
-## Code Usage
+## Usage
 
-The code below shows an example of using Pathling API to encode Patient resources from JSON bundles:
+The code below shows an example of using the Pathling API to encode Patient 
+resources from FHIR JSON bundles:
 
-    from pyspark.sql import SparkSession
-    
-    from pathling.r4 import bundles
-    from pathling.etc import find_jar
+```python
+from pyspark.sql import SparkSession
+from pathling.r4 import bundles
+from pathling.etc import find_jar
 
-    spark = SparkSession.builder \
-        .appName('pathling-test') \
-        .master('local[2]') \
-        .config('spark.jars', find_jar()) \
-        .getOrCreate()
-                
-    json_bundles = bundles.load_from_directory(spark, 'examples/data/bundles/R4/json/')
-    patients = bundles.extract_entry(spark, json_bundles, 'Patient')
-    patients.show()
+spark = SparkSession.builder \
+    .appName('pathling-test') \
+    .master('local[*]') \
+    .config('spark.jars', find_jar()) \
+    .getOrCreate()
+        
+json_bundles = bundles.load_from_directory(spark, 'examples/data/bundles/R4/json/')
+patients = bundles.extract_entry(spark, json_bundles, 'Patient')
+patients.show()
+```
     
 More usage examples can be found in the `examples` directory.
 
@@ -39,17 +44,27 @@ More usage examples can be found in the `examples` directory.
 
 Create an isolated python environment with `miniconda3`, e.g:
 
-    conda create -n pathling-dev python=3.8
-    conda activate   pathling-dev
+```bash
+conda create -n pathling-dev python=3.8
+conda activate pathling-dev
+```
 
-To configure the environment for pathling development use:
+To configure the environment for development, run these commands:
 
-    mvn -f ../../encoders/ -DskipTests=true clean install
-    mvn clean compile
-    pip install -r ../../dev/dev-requirements.txt
-    pip install -e .
+```bash
+mvn -f ../../encoders/ -DskipTests=true clean install
+mvn clean compile
+pip install -r ../../dev/dev-requirements.txt
+pip install -e .
+```
     
-To run the test and build the distribution package use:
+To run the tests and build the distribution package, run this command:
 
-    mvn clean package
-    
+```bash
+mvn clean package
+```
+
+Pathling is copyright © 2018-2022, Commonwealth Scientific and Industrial
+Research Organisation
+(CSIRO) ABN 41 687 119 230. Licensed under
+the [CSIRO Open Source Software Licence Agreement](./LICENSE.md).
