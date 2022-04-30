@@ -4,6 +4,7 @@
   <img src="https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/>
 </picture>
 </a>
+<br/>
 
 [![Deploy](https://github.com/aehrc/pathling/workflows/Deploy/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3ADeploy) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/main/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
 
