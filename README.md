@@ -16,7 +16,7 @@ You can learn more about how to use Pathling by reading the
 [documentation](https://pathling.csiro.au/docs).
 
 **Pathling is experimental software, use it at your own risk!** Take a look at the
-full description of the current set of [known issues](https://github.com/aehrc/pathling/issues).
+full description of the current set of [known issues](https://github.com/aehrc/pathling/issues?q=is%3Aissue+is%3Aopen+label%3Abug).
 
 This repository is automatically built
 via [GitHub Actions](https://github.com/aehrc/pathling/actions), and Docker
