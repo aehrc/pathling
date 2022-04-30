@@ -1,7 +1,7 @@
 <a href="https://pathling.csiro.au">
 <picture>
-  <source srcset="./media/logo-colour-tight-dark.svg" media="(prefers-color-scheme: dark)"/>
-  <img src="./media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/>
+  <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-colour-tight-dark.svg" media="(prefers-color-scheme: dark)"/>
+  <img src="https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-colour-detail-tight.svg" alt="Pathling logo" width="300"/>
 </picture>
 </a>
 
