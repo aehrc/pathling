@@ -14,5 +14,7 @@ spark:
   sql:
     shuffle:
       partitions: 1
+  network:
+    timeout: 600s
   ui:
     enabled: false
