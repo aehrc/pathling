@@ -143,10 +143,10 @@ public class AggregateExecutor extends QueryExecutor {
     final List<Column> aggregationColumns = aggregations.stream()
         .map(FhirPath::getValueColumn)
         .collect(Collectors.toList());
-    final List<Column> joinColumns = groupingColumns.isEmpty()
-                                     ? List.of(idColumn)
-                                     : groupingColumns;
-    final Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations, joinColumns);
+    Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations, groupingColumns);
+    if (groupingColumns.isEmpty()) {
+      joinedAggregations = joinedAggregations.limit(1);
+    }
 
     // The final column selection will be the grouping columns, followed by the aggregation
     // columns.
