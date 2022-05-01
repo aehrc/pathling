@@ -36,6 +36,12 @@
       <classifier>sources</classifier>
     </dependency>
     <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>python</artifactId>
+      <version>${project.version}</version>
+      <classifier>docs</classifier>
+    </dependency>
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
@@ -55,7 +61,27 @@
             </goals>
             <configuration>
               <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <excludeArtifactIds>python</excludeArtifactIds>
               <excludeTransitive>true</excludeTransitive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack-python-docs</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <includeArtifactIds>python</includeArtifactIds>
+              <excludeTransitive>true</excludeTransitive>
+              <outputDirectory>${project.build.directory}/site/docs/python</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -84,7 +110,7 @@
         <executions>
           <execution>
             <id>javadoc</id>
-            <phase>process-resources</phase>
+            <phase>process-classes</phase>
             <goals>
               <goal>javadoc</goal>
             </goals>
@@ -96,7 +122,7 @@
           <sourceFileExcludes>
             <exclude>au/csiro/pathling/spark/Spark.java</exclude>
           </sourceFileExcludes>
-          <reportOutputDirectory>${project.basedir}/docs</reportOutputDirectory>
+          <reportOutputDirectory>${project.build.directory}/site/docs</reportOutputDirectory>
           <destDir>java</destDir>
         </configuration>
       </plugin>
@@ -146,17 +172,6 @@
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
           <classesDirectory>${project.build.directory}/site</classesDirectory>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-clean-plugin</artifactId>
-        <configuration>
-          <filesets>
-            <fileset>
-              <directory>${project.basedir}/docs/java</directory>
-            </fileset>
-          </filesets>
         </configuration>
       </plugin>
     </plugins>

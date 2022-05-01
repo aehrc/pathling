@@ -14,12 +14,11 @@ def main():
     # Configure spark session to include pathling jar
     spark = SparkSession.builder \
         .appName('pathling-test') \
-        .master('local[2]') \
+        .master('local[*]') \
         .config('spark.jars', find_jar()) \
         .getOrCreate()
 
-    json_bundles_dir = os.path.join(HERE,
-                                    'data/bundles/')
+    json_bundles_dir = os.path.join(HERE, 'data/bundles/')
 
     # Load R4 json bundles from a directory the RDD of bundles
     json_bundles_rdd = bundles.load_from_directory(spark, json_bundles_dir)

@@ -6,4 +6,5 @@ _site
 .jekyll-metadata
 vendor
 docs/java
+docs/python
 target/generated-sources/delombok

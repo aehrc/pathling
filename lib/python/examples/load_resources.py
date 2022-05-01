@@ -14,17 +14,16 @@ def main():
     # Configure spark session to include pathling jar
     spark = SparkSession.builder \
         .appName('pathling-test') \
-        .master('local[2]') \
+        .master('local[*]') \
         .config('spark.jars', find_jar()) \
         .getOrCreate()
 
-    json_resources_dir = os.path.join(HERE,
-                                      'data/resources/')
+    json_resources_dir = os.path.join(HERE, 'data/resources/')
 
     # Load resource files in the ndjson format to the RDD of bundles
     resource_bundles_rdd = bundles.from_resource_json(
-        spark.read.text(json_resources_dir),
-        "value")
+            spark.read.text(json_resources_dir),
+            "value")
 
     # Extract 'Condition' resources from the RDD of bundles to a dataframe
     patients_df = bundles.extract_entry(spark, resource_bundles_rdd, 'Patient')

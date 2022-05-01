@@ -11,13 +11,13 @@
   </parent>
   <artifactId>python</artifactId>
   <packaging>jar</packaging>
-  <name>Pathling Python</name>
-  <description>POM file for Python modules in Maven builds</description>
+  
+  <name>Pathling Python API</name>
+  <description>A library for using Pathling with Python.</description>
 
   <properties>
-    <skip.python.tests>false</skip.python.tests>
-    <pathling.pyapi.version.qualifier/>
     <pathling.pyapi.version>${project.version}${pathling.pyapi.version.qualifier}</pathling.pyapi.version>
+    <pathling.pyapi.version.qualifier/>
   </properties>
 
   <dependencies>
@@ -42,6 +42,18 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>${project.basedir}/.pytest_cache</directory>
+              <directory>${project.basedir}/.pathling.egg_info</directory>
+            </fileset>
+          </filesets>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
@@ -61,69 +73,123 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
-          <!-- Run the Python tests -->
+          <!-- Install dependencies -->
           <execution>
-            <configuration>
-              <executable>py.test</executable>
-              <workingDirectory>${project.basedir}</workingDirectory>
-              <arguments>
-                <argument>-x</argument>
-                <argument>tests</argument>
-              </arguments>
-              <skip>${skip.python.tests}</skip>
-              <environmentVariables>
-                <PYTHONPATH>${project.basedir}</PYTHONPATH>
-                <SHADED_JAR_PATH>
-                  ${project.parent.basedir}/bunsen-spark-shaded/target/bunsen-spark-shaded-${project.version}.jar
-                </SHADED_JAR_PATH>
-              </environmentVariables>
-            </configuration>
-            <id>python-tests</id>
-            <phase>test</phase>
+            <id>install-dependencies</id>
+            <phase>initialize</phase>
             <goals>
               <goal>exec</goal>
             </goals>
-          </execution>
-
-          <!-- Build python distributions -->
-          <execution>
             <configuration>
-              <executable>python</executable>
-              <workingDirectory>${project.basedir}</workingDirectory>
+              <executable>pip</executable>
               <arguments>
-                <argument>setup.py</argument>
-                <argument>sdist</argument>
-                <argument>sdist</argument>
-                <argument>--dist-dir</argument>
-                <argument>target/py-dist</argument>
+                <argument>install</argument>
+                <argument>-r</argument>
+                <argument>requirements.txt</argument>
               </arguments>
             </configuration>
+          </execution>
+
+          <!-- Build Python distributions -->
+          <execution>
             <id>python-package</id>
             <phase>package</phase>
             <goals>
               <goal>exec</goal>
             </goals>
+            <configuration>
+              <executable>python</executable>
+              <arguments>
+                <argument>setup.py</argument>
+                <argument>sdist</argument>
+                <argument>sdist</argument>
+                <argument>--dist-dir</argument>
+                <argument>${project.build.directory}/py-dist</argument>
+              </arguments>
+            </configuration>
           </execution>
 
+          <!-- Build Python wheel -->
+          <execution>
+            <id>python-wheel</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>pip</executable>
+              <arguments>
+                <argument>wheel</argument>
+                <argument>.</argument>
+                <argument>--wheel-dir</argument>
+                <argument>${project.build.directory}/py-whl</argument>
+              </arguments>
+            </configuration>
+          </execution>
+
+          <!-- Install package -->
+          <execution>
+            <id>install</id>
+            <phase>install</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>pip</executable>
+              <arguments>
+                <argument>install</argument>
+                <argument>.</argument>
+              </arguments>
+            </configuration>
+          </execution>
 
           <!-- Build python documentation -->
           <execution>
-            <configuration>
-              <executable>sh</executable>
-              <workingDirectory>${project.basedir}</workingDirectory>
-              <arguments>
-                <argument>-c</argument>
-                <argument>sphinx-apidoc --force --full -o target/docs pathling -t docs/templates/ &amp;&amp; make -C target/docs clean html
-                </argument>
-              </arguments>
-            </configuration>
-            <id>python-docs</id>
+            <id>python-generate-docs</id>
             <phase>process-resources</phase>
             <goals>
               <goal>exec</goal>
             </goals>
+            <configuration>
+              <executable>sphinx-apidoc</executable>
+              <arguments>
+                <argument>--force</argument>
+                <argument>--full</argument>
+                <argument>-o</argument>
+                <argument>${project.build.directory}/docs</argument>
+                <argument>pathling</argument>
+                <argument>-t</argument>
+                <argument>docs/templates/</argument>
+                pathling -t docs/templates/ &amp;&amp; make -C target/docs clean html
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>python-compile-docs</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>make</executable>
+              <arguments>
+                <argument>-C</argument>
+                <argument>${project.build.directory}/docs</argument>
+                <argument>clean</argument>
+                <argument>html</argument>
+              </arguments>
+            </configuration>
           </execution>
         </executions>
+      </plugin>
+      
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <classesDirectory>${project.build.directory}/docs/_build/html</classesDirectory>
+          <classifier>docs</classifier>
+        </configuration>
       </plugin>
 
       <plugin>
@@ -157,4 +223,44 @@
       </plugin>
     </plugins>
   </build>
+  
+  <profiles>
+    <profile>
+      <id>python-tests</id>
+      <activation>
+        <property>
+          <name>!skipTests</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <!-- Run the Python tests -->
+          <execution>
+            <configuration>
+              <executable>py.test</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-x</argument>
+                <argument>tests</argument>
+              </arguments>
+              <environmentVariables>
+                <PYTHONPATH>${project.basedir}</PYTHONPATH>
+              </environmentVariables>
+            </configuration>
+            <id>python-tests</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

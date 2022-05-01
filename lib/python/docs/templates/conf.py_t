@@ -27,8 +27,7 @@ sys.path.insert(0, {{ module_path | repr }})
 # -- Project information -----------------------------------------------------
 
 project = {{ project | repr }}
-copyright = {{ copyright | repr }}
-author = {{ author | repr }}
+copyright = '2018-2022 CSIRO, dedicated to the public domain via CC0 1.0'
 
 {%- if version %}
 
@@ -89,7 +88,7 @@ exclude_patterns = [{{ exclude_patterns }}]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'traditional'
+html_theme = 'classic'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

@@ -2,7 +2,7 @@ Python API for Pathling
 =======================
 
 This is the Python API for [Pathling](https://pathling.csiro.au). It currently 
-supports encoding of JSON bundles and resources into Apache Spark dataframes. 
+supports encoding of [FHIR JSON bundles](https://hl7.org/fhir/R4/bundle.html) and NDJSON into Apache Spark dataframes. 
 
 ## Installation
 
@@ -42,26 +42,19 @@ More usage examples can be found in the `examples` directory.
 
 ## Development setup
 
-Create an isolated python environment with `miniconda3`, e.g:
+Create an isolated python environment with 
+[Miniconda](https://docs.conda.io/en/latest/miniconda.html), e.g:
 
 ```bash
 conda create -n pathling-dev python=3.8
 conda activate pathling-dev
 ```
 
-To configure the environment for development, run these commands:
+To run the tests and install the package, run this command from the project 
+root:
 
 ```bash
-mvn -f ../../encoders/ -DskipTests=true clean install
-mvn clean compile
-pip install -r ../../dev/dev-requirements.txt
-pip install -e .
-```
-    
-To run the tests and build the distribution package, run this command:
-
-```bash
-mvn clean package
+mvn install -pl lib/python -am
 ```
 
 Pathling is copyright © 2018-2022, Commonwealth Scientific and Industrial
