@@ -101,6 +101,61 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: encoders/target/site/jacoco/jacoco.xml,fhir-server/target/site/jacoco/jacoco.xml
+  js-client:
+    name: Build JavaScript client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-js-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-js-
+      - name: Run the verify goal with Maven
+        run: |
+          mvn --batch-mode verify \
+          -pl lib/import -am
+        timeout-minutes: 5
+  import:
+    name: Build import lambda
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-import-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-import-
+      - name: Run the verify goal with Maven
+        run: |
+          mvn --batch-mode verify \
+          -pl lib/import -am
+        timeout-minutes: 5
+      - name: Upload import lambda
+        uses: actions/upload-artifact@v2
+        with:
+          name: import-lambda
+          path: lib/import/target/pathling-import-lambda.zip
   python-api:
     name: Build and test Python API
     runs-on: ubuntu-latest
