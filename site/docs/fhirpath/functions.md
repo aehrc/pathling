@@ -323,7 +323,7 @@ collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse =
 
 When invoked on a [Coding](https://pathling.csiro.au/docs/fhirpath/data-types.html#coding)-valued element, returns any matching concepts using the ConceptMap specified using `conceptMapUrl`.
 
-The `reverse` parameter controls the direction to traverse the map - `true` results in "source to target" mappings while `false` results in "target to source".
+The `reverse` parameter controls the direction to traverse the map - `false` results in "source to target" mappings, while `true` results in "target to source".
 
 The `equivalence` parameter is a comma-delimited set of values from the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html) ValueSet, and is used to filter the mappings returned to only those that have an equivalence value in this list.
 

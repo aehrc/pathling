@@ -21,7 +21,11 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.sql.PathlingFunctions;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -139,8 +143,10 @@ public class AggregateExecutor extends QueryExecutor {
     final List<Column> aggregationColumns = aggregations.stream()
         .map(FhirPath::getValueColumn)
         .collect(Collectors.toList());
-    final Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations,
-        groupingColumns);
+    Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations, groupingColumns);
+    if (groupingColumns.isEmpty()) {
+      joinedAggregations = joinedAggregations.limit(1);
+    }
 
     // The final column selection will be the grouping columns, followed by the aggregation
     // columns.

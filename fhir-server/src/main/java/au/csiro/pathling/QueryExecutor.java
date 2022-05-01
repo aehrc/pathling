@@ -25,7 +25,11 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -134,23 +138,6 @@ public abstract class QueryExecutor {
             ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
   }
 
-
-  /**
-   * We need to remove any trailing null values from non-empty collections, so that aggregations do
-   * not count non-empty collections in the empty collection grouping. We do this by joining the
-   * distinct set of resource IDs to the dataset using an outer join, where the value is not null.
-   */
-  @Nonnull
-  protected Dataset<Row> trimTrailingNulls(@Nonnull final FhirPath inputContext,
-      final @Nonnull Column idColumn, @Nonnull final FhirPath expression) {
-    if (expression.isSingular()) {
-      // It is not necessary to perform a join to remove trailing nulls for a singular expression.
-      return expression.getDataset();
-    } else {
-      return join(expression.getDataset(), idColumn, inputContext.getDataset(),
-          idColumn, expression.getValueColumn().isNotNull(), JoinType.RIGHT_OUTER);
-    }
-  }
 
   /**
    * Joins the datasets in a list together the provided set of shared columns.
