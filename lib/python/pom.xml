@@ -247,6 +247,7 @@
               <arguments>
                 <argument>-x</argument>
                 <argument>tests</argument>
+                <argument>-v</argument>
               </arguments>
               <environmentVariables>
                 <PYTHONPATH>${project.basedir}</PYTHONPATH>
