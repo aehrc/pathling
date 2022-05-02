@@ -13,7 +13,7 @@ import javax.annotation.Nullable;
 
 /**
  * Captures a contract for a mapping operation that is allowed to preview all of its input objects
- * and create a state object, that is then subsequently passed to the to actual mapping operation.
+ * and create a state object, that is then subsequently passed to the actual mapping operation.
  *
  * @param <I> input type of the mapper
  * @param <R> result type of the mapper
@@ -22,17 +22,16 @@ import javax.annotation.Nullable;
 public interface MapperWithPreview<I, R, S> extends Serializable {
 
   /**
-   * The preview operation that gives access to all of input object that will be later passed to the
+   * The preview operation that gives access to all input objects that will be later passed to the
    * mapping function and can use them to create a state object, which is also passed to the mapping
    * function.
    *
    * @param inputIterator the iterator over all objects to be mapped.
    * @return the state object that should be passed to the mapping function together with each input
    * object.
-   * @throws Exception when an error occurs during processing
    */
   @Nonnull
-  S preview(@Nonnull Iterator<I> inputIterator) throws Exception;
+  S preview(@Nonnull Iterator<I> inputIterator);
 
   /**
    * The mapping operations.
@@ -40,9 +39,9 @@ public interface MapperWithPreview<I, R, S> extends Serializable {
    * @param input the object to map
    * @param state the state created by `preview` operation
    * @return the result of mapping the input with the state
-   * @throws Exception when an error occurs during processing
    */
   @Nullable
-  R call(@Nullable I input, @Nonnull S state) throws Exception;
+  R call(@Nullable I input, @Nonnull S state);
+
 }
 

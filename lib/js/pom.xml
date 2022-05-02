@@ -5,13 +5,15 @@
   ~ Software Licence Agreement.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.0.0</version>
+    <version>5.0.1</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>js</artifactId>
@@ -39,19 +41,6 @@
               </arguments>
             </configuration>
           </execution>
-          <execution>
-            <id>publish</id>
-            <phase>deploy</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>npm</executable>
-              <arguments>
-                <argument>publish</argument>
-              </arguments>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -70,5 +59,34 @@
       </plugin>
     </plugins>
   </build>
+  
+  <profiles>
+    <profile>
+      <id>npmPublish</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>publish</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>npm</executable>
+                  <arguments>
+                    <argument>publish</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
 </project>

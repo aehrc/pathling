@@ -145,7 +145,7 @@ public class SubsumesFunction implements NamedFunction {
   }
 
   /**
-   * Creates a {@link Dataset} with a new column, which is an array of all of the codings within the
+   * Creates a {@link Dataset} with a new column, which is an array of all the codings within the
    * values. Each CodeableConcept is converted to an array that includes all its codings. Each
    * Coding is converted to an array that only includes that coding.
    * <p>
@@ -171,8 +171,8 @@ public class SubsumesFunction implements NamedFunction {
   }
 
   /**
-   * Converts the the argument {@link FhirPath} to a Dataset with the schema: STRING id,
-   * ARRAY(struct CODING) codingSet.
+   * Converts the argument {@link FhirPath} to a Dataset with the schema: STRING id, ARRAY(struct
+   * CODING) codingSet.
    * <p>
    * All codings are collected in a single `array` per resource.
    * <p>

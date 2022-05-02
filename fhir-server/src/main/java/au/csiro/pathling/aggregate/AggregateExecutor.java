@@ -104,11 +104,8 @@ public class AggregateExecutor extends QueryExecutor {
 
     // Join all filter and grouping expressions together.
     final Column idColumn = inputContext.getIdColumn();
-    Dataset<Row> groupingsAndFilters = filters.size() + groupings.size() > 0
-                                       ? joinExpressionsAndFilters(inputContext, groupings, filters,
-        idColumn)
-                                       : inputContext.getDataset();
-
+    Dataset<Row> groupingsAndFilters = joinExpressionsAndFilters(inputContext, groupings, filters,
+        idColumn);
     // Apply filters.
     groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
 
@@ -146,8 +143,10 @@ public class AggregateExecutor extends QueryExecutor {
     final List<Column> aggregationColumns = aggregations.stream()
         .map(FhirPath::getValueColumn)
         .collect(Collectors.toList());
-    final Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations,
-        groupingColumns);
+    Dataset<Row> joinedAggregations = joinExpressionsByColumns(aggregations, groupingColumns);
+    if (groupingColumns.isEmpty()) {
+      joinedAggregations = joinedAggregations.limit(1);
+    }
 
     // The final column selection will be the grouping columns, followed by the aggregation
     // columns.

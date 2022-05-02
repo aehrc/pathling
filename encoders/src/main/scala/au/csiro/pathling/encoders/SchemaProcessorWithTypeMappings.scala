@@ -67,6 +67,10 @@ abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[D
    */
   def buildSimpleValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DT = {
     childDefinition match {
+      // Enumerations require special processing because the information necessary to determine
+      // the actual EnumFactory type required to construct a complete Enumeration instance
+      // is available  in RuntimeChildPrimitiveEnumerationDatatypeDefinition,
+      // but not in RuntimePrimitiveDatatypeDefinition.
       case enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition =>
         buildEnumPrimitive(elementDefinition.asInstanceOf[RuntimePrimitiveDatatypeDefinition],
           enumChildDefinition)

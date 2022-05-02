@@ -75,7 +75,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
     final int value;
     if (row.schema().fields()[columnNumber].dataType() instanceof LongType) {
       try {
-        // Currently some functions such as count currently return an Integer type, even though
+        // Currently, some functions such as count currently return an Integer type, even though
         // their return values can theoretically exceed the maximum value permitted for an integer.
         // This guard allows us to handle this situation in a safe way. In the future, we will
         // implement the "as" operator to allow the user to explicitly use a Decimal where large

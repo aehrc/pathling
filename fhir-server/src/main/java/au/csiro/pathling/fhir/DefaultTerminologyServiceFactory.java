@@ -18,7 +18,7 @@ import org.slf4j.Logger;
 
 /**
  * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService}
- * implemented using {@link TerminologyClient} with with given configuration.
+ * implemented using {@link TerminologyClient} with given configuration.
  *
  * @author John Grimes
  * @author Piotr Szul

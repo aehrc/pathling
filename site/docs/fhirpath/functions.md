@@ -31,6 +31,7 @@ The following functions are currently supported:
 - [resolve](#resolve)
 - [reverseResolve](#reverseresolve)
 - [ofType](#oftype)
+- [extension](#extension)
 
 The notation used to describe the type signature of each function is as follows:
 
@@ -322,7 +323,7 @@ collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse =
 
 When invoked on a [Coding](https://pathling.csiro.au/docs/fhirpath/data-types.html#coding)-valued element, returns any matching concepts using the ConceptMap specified using `conceptMapUrl`.
 
-The `reverse` parameter controls the direction to traverse the map - `true` results in "source to target" mappings while `false` results in "target to source".
+The `reverse` parameter controls the direction to traverse the map - `false` results in "source to target" mappings, while `true` results in "target to source".
 
 The `equivalence` parameter is a comma-delimited set of values from the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html) ValueSet, and is used to filter the mappings returned to only those that have an equivalence value in this list.
 
@@ -422,5 +423,26 @@ Condition.subject.resolve().ofType(Patient).gender
 
 See also:
 [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
+
+## extension
+
+```
+[any] -> extension(url: string) : collection
+```
+
+Will filter the input collection for items named `extension` with the given url.
+This is a syntactical shortcut for `.extension.where(url = string)`, but is
+simpler to write. Will return an empty collection if the input collection is
+empty or the url is empty.
+
+<div class="callout warning">
+    Your extension content will only be encoded upon import if your encoding 
+    configuration has specified that it should be. Data types and maximum depth 
+    of encoding are both configurable. See <a href="https://pathling.csiro.au/docs/configuration.html#encoding">Configuration</a>
+    for more information. 
+</div>
+
+See
+also: [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
 
 Next: [Configuration](../configuration.html)

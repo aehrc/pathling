@@ -45,7 +45,7 @@ public class CodingLiteral {
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
-   * @param fhirPath The FHIRPath representation of the literal literal
+   * @param fhirPath The FHIRPath representation of the literal
    * @return A new instance of {@link LiteralPath}
    * @throws IllegalArgumentException if the literal is malformed
    */

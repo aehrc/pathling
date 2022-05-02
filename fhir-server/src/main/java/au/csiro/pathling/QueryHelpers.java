@@ -82,8 +82,8 @@ public abstract class QueryHelpers {
    * Replaces all unaliased columns within a {@link Dataset} with new aliased columns.
    *
    * @param dataset the Dataset on which to perform the operation
-   * @return a new Dataset, with a mapping from the old columns to the new as a {@link
-   * DatasetWithColumnMap}
+   * @return a new Dataset, with a mapping from the old columns to the new as a
+   * {@link DatasetWithColumnMap}
    */
   @Nonnull
   public static DatasetWithColumnMap aliasAllColumns(@Nonnull final Dataset<Row> dataset) {
@@ -225,6 +225,25 @@ public abstract class QueryHelpers {
       @Nonnull final JoinType joinType) {
     return join(left, Collections.singletonList(leftColumn), right,
         Collections.singletonList(rightColumn), Optional.of(additionalCondition), joinType);
+  }
+
+  /**
+   * Joins a {@link Dataset} to another Dataset, using the equality of two columns.
+   *
+   * @param left a {@link Dataset}
+   * @param leftColumns the columns for the first Dataset
+   * @param right another Dataset
+   * @param rightColumns the columns for the second Dataset
+   * @param additionalCondition an additional Column to be added to the join condition, using AND
+   * @param joinType a {@link JoinType}
+   * @return a new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
+      @Nonnull final List<Column> rightColumns, @Nonnull final Column additionalCondition,
+      @Nonnull final JoinType joinType) {
+    return join(left, leftColumns, right, rightColumns, Optional.of(additionalCondition), joinType);
   }
 
   /**

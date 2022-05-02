@@ -40,7 +40,7 @@ import org.springframework.test.context.TestPropertySource;
 @Slf4j
 class AsyncTest extends IntegrationTest {
 
-  static final int TIMEOUT = 10000;
+  static final int TIMEOUT = 20000;
   static final int POLL_FREQUENCY = 1000;
 
   @Autowired

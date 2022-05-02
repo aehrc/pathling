@@ -47,7 +47,7 @@ public class PathlingAuthority {
   }
 
   /**
-   * Checks if provided authority encompasses the this one, i.e. is sufficient to allow the access
+   * Checks if provided authority encompasses this one, i.e. is sufficient to allow the access
    * provided by this authority.
    *
    * @param other the authority to check.

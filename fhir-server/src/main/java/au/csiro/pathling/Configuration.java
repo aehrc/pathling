@@ -26,7 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 /**
- * Defines all of the configuration options for the Pathling server.
+ * Defines all the configuration options for the Pathling server.
  * <p>
  * See {@code application.yml} for default values.
  *

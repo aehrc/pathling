@@ -16,7 +16,7 @@ import org.mockito.stubbing.Answer;
 /**
  * @author John Grimes
  */
-public class DefaultAnswer implements Answer {
+public class DefaultAnswer implements Answer<Object> {
 
   @Override
   public Object answer(@Nullable final InvocationOnMock invocation) {

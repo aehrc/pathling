@@ -69,7 +69,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
     } else {
       log.debug("Enforcing scope {} on {} resources", filters, subjectResource.toCode());
 
-      // Build a new expression parser, and parse all of the column expressions within the query.
+      // Build a new expression parser, and parse all the column expressions within the query.
       final ResourcePath inputContext = ResourcePath
           .build(getFhirContext(), getDatabase(), subjectResource,
               subjectResource.toCode(), true);

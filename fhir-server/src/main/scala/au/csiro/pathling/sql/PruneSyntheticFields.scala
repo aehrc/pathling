@@ -16,7 +16,7 @@ import org.apache.spark.sql.types.{DataType, StructType}
  * An expression that removes all fields starting with '_' underscores from struct values.
  * Other types are not affected.
  *
- * @param child the child expresion.
+ * @param child the child expression
  */
 case class PruneSyntheticFields(child: Expression) extends UnaryExpression with CodegenFallback with NullIntolerant {
   override def nullable: Boolean = true

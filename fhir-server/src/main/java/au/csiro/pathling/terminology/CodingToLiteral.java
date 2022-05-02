@@ -45,7 +45,7 @@ public class CodingToLiteral implements SqlFunction1<Row, String> {
 
   @Override
   @Nullable
-  public String call(@Nullable final Row row) throws Exception {
+  public String call(@Nullable final Row row) {
     if (row == null) {
       return null;
     }

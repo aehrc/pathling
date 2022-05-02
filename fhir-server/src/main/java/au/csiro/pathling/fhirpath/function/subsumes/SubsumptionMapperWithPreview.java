@@ -14,7 +14,11 @@ import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.utilities.Streams;
-import java.util.*;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -67,7 +71,7 @@ public class SubsumptionMapperWithPreview implements
     // Collect all distinct tokens used on both in inputs and arguments in this partition
     // Rows in which either input or argument are NULL are excluded as they do not need
     // to be included in closure request.
-    // Also we only include codings with both system and code defined as only they can
+    // Also, we only include codings with both system and code defined as only they can
     // be expected to be meaningfully represented to the terminology server
 
     final Set<SimpleCoding> codings = Streams.streamOf(input)

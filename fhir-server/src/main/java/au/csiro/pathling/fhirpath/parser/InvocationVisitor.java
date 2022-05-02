@@ -49,7 +49,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   /**
    * This constructor is used when there is no explicit invoker, i.e. an invocation is made without
-   * an expression on the left hand side of the dot notation. In this case, the invoker is taken to
+   * an expression on the left-hand side of the dot notation. In this case, the invoker is taken to
    * be either the root node, or the `$this` node in the context of functions that support it.
    *
    * @param context The {@link ParserContext} to use when parsing the invocation
@@ -60,7 +60,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   }
 
   /**
-   * This constructor is used when there is an explicit invoker on the left hand side of the dot
+   * This constructor is used when there is an explicit invoker on the left-hand side of the dot
    * notation.
    *
    * @param context The {@link ParserContext} to use when parsing the invocation
@@ -168,8 +168,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
     final List<FhirPath> arguments = new ArrayList<>();
     if (paramList != null) {
-      // The `$this` path will be the same as the input, but with a different expression and it will
-      // be singular as it represents a single item.
+      // The `$this` path will be the same as the input, but with a different expression, and it 
+      // will be singular as it represents a single item.
       // NOTE: This works because for $this the context for aggregation grouping on elements
       // includes `id` and `this` columns.
 

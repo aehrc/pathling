@@ -25,7 +25,7 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  */
 @SuppressWarnings("unused")
-public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion> {
+public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> {
 
   @Nonnull
   private final FhirPath fhirPath;

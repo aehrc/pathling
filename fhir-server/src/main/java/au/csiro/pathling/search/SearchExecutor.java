@@ -51,7 +51,7 @@ import org.hl7.fhir.r4.model.InstantType;
 
 /**
  * Encapsulates the execution of a search query, implemented as an IBundleProvider for integration
- * into HAPI's mechanism for returning paged search results.
+ * into the HAPI mechanism for returning paged search results.
  *
  * @author John Grimes
  */

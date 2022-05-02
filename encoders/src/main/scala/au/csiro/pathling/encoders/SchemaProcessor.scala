@@ -70,7 +70,6 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] with EncoderSettings
   }
 
   override def visitComposite(compositeCtx: CompositeCtx[DT, SF]): DT = {
-    // TODO: Not sure if should be here on in the traversal itself
     EncodingContext.withDefinition(compositeCtx.compositeDefinition) {
       aggregateComposite(compositeCtx, proceedCompositeChildren(compositeCtx))
     }

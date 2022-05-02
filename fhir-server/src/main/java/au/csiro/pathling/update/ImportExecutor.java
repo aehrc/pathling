@@ -137,8 +137,8 @@ public class ImportExecutor {
         throw new InvalidUserInputError("Unsupported resource type: " + resourceCode);
       }
 
-      // Check that the user is authorized to execute the operation.
-      final Dataset<String> jsonStrings = checkAuthorization(urlParam);
+      // Read the resources from the source URL into a dataset of strings.
+      final Dataset<String> jsonStrings = readStringsFromUrl(urlParam);
 
       // Parse each line into a HAPI FHIR object, then encode to a Spark dataset.
       final Dataset<IBaseResource> resources = jsonStrings.map(jsonToResourceConverter(),
@@ -166,12 +166,13 @@ public class ImportExecutor {
   }
 
   @Nonnull
-  private Dataset<String> checkAuthorization(@Nonnull final ParametersParameterComponent urlParam) {
+  private Dataset<String> readStringsFromUrl(@Nonnull final ParametersParameterComponent urlParam) {
     final String url = ((UrlType) urlParam.getValue()).getValueAsString();
     final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
     final String convertedUrl = PersistenceScheme.convertS3ToS3aUrl(decodedUrl);
     final Dataset<String> jsonStrings;
     try {
+      // Check that the user is authorized to execute the operation.
       accessRules.ifPresent(ar -> ar.checkCanImportFrom(convertedUrl));
       final FilterFunction<String> nonBlanks = s -> !s.isBlank();
       jsonStrings = spark.read().textFile(convertedUrl).filter(nonBlanks);

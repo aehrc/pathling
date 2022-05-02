@@ -69,6 +69,22 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void multipleAggregations() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource, ResourceType.CONDITION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("reverseResolve(Condition.subject).count()")
+        .withAggregation("count()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse(
+        "AggregateQueryTest/multipleAggregations.Parameters.json",
+        response);
+  }
+
+  @Test
   void queryWithIntegerGroupings() {
     subjectResource = ResourceType.CLAIM;
     mockResource(subjectResource);
@@ -482,7 +498,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
 
   @Test
-  void queryWithNonsingularBooleanGrouping() {
+  void queryWithNonSingularBooleanGrouping() {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.CONDITION, subjectResource);
     // Not a real subsumption - just works for this use case.
@@ -498,7 +514,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
         .build();
 
     response = executor.execute(request);
-    assertResponse("AggregateQueryTest/queryWithNonsingularBooleanGrouping.Parameters.json",
+    assertResponse("AggregateQueryTest/queryWithNonSingularBooleanGrouping.Parameters.json",
         response);
   }
 
@@ -571,6 +587,21 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     response = executor.execute(request);
     assertResponse("AggregateQueryTest/queryWithCombineResultInSecondFilter.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithMultipleTrivialAggregations() {
+    subjectResource = ResourceType.OBSERVATION;
+    mockResource(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("true")
+        .withAggregation("true")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithMultipleTrivialAggregations.Parameters.json",
         response);
   }
 

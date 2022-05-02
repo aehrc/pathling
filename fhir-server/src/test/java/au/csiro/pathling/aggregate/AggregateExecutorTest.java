@@ -79,7 +79,7 @@ abstract class AggregateExecutorTest {
   }
 
   /**
-   * Test that the drill down expression from the first grouping from each aggregate result can be
+   * Test that the drill-down expression from the first grouping from each aggregate result can be
    * successfully executed using the FHIRPath search.
    */
   @AfterEach

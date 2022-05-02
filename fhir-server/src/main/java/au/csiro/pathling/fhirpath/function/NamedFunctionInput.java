@@ -24,7 +24,7 @@ import lombok.Getter;
 public class NamedFunctionInput extends FunctionInput {
 
   /**
-   * An expression representing the input to the function, i.e. the expression on the left hand side
+   * An expression representing the input to the function, i.e. the expression on the left-hand side
    * of the dot preceding the function invocation.
    */
   @Nonnull
@@ -45,7 +45,7 @@ public class NamedFunctionInput extends FunctionInput {
 
   /**
    * @param context The {@link ParserContext} that the function should be executed within
-   * @param input The {@link NonLiteralPath} representing the expression on the left hand side of
+   * @param input The {@link NonLiteralPath} representing the expression on the left-hand side of
    * the function invocation
    * @param arguments A list of {@link FhirPath} objects representing the arguments passed to the
    * function within the parentheses
@@ -62,7 +62,7 @@ public class NamedFunctionInput extends FunctionInput {
 
   /**
    * @param context The {@link ParserContext} that the function should be executed within
-   * @param input The {@link NonLiteralPath} representing the expression on the left hand side of
+   * @param input The {@link NonLiteralPath} representing the expression on the left-hand side of
    * the function invocation
    * @param arguments A list of {@link FhirPath} objects representing the arguments passed to the
    * function within the parentheses
