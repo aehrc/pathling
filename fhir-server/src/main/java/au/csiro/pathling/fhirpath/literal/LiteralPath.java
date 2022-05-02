@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import javolution.testing.AssertionException;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -132,7 +131,7 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
           .filter(c -> c.getParameterTypes()[1] == Column.class)
           .filter(c -> Type.class.isAssignableFrom(c.getParameterTypes()[2]))
           .findFirst()
-          .orElseThrow(() -> new AssertionException(
+          .orElseThrow(() -> new AssertionError(
               "No suitable constructor found for " + literalPathClass));
       final LiteralPath literalPath = constructor.newInstance(dataset, idColumn, literalValue);
       return literalPath.getExpression();

@@ -31,7 +31,6 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import javolution.testing.AssertionException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -125,7 +124,7 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
           functionName = DateTimeGreaterThanOrEqualToFunction.FUNCTION_NAME;
           break;
         default:
-          throw new AssertionException("Unsupported operation: " + operation);
+          throw new AssertionError("Unsupported operation: " + operation);
       }
       return callUDF(functionName, source.getValueColumn(), target.getValueColumn());
     };
