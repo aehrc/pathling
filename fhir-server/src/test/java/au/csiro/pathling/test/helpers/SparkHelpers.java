@@ -12,6 +12,7 @@ import static org.apache.spark.sql.functions.col;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -40,8 +41,6 @@ import scala.collection.mutable.Buffer;
  */
 @SuppressWarnings("WeakerAccess")
 public abstract class SparkHelpers {
-
-  public static final int DECIMAL_SCALE = 2;
 
   @Nonnull
   public static IdAndValueColumns getIdAndValueColumns(@Nonnull final Dataset<Row> dataset) {
@@ -167,15 +166,23 @@ public abstract class SparkHelpers {
     final String comparator = Optional.ofNullable(quantity.getComparator())
         .map(QuantityComparator::toCode).orElse(null);
     return new GenericRowWithSchema(
-        new Object[]{quantity.getId(), quantity.getValue(), DECIMAL_SCALE, comparator,
+        new Object[]{quantity.getId(), quantity.getValue(), quantity.getValue().scale(), comparator,
             quantity.getUnit(), quantity.getSystem(), quantity.getCode(), null /* _fid */},
         quantityStructType());
   }
 
   @Nonnull
-  public static Row rowForUcumQuantity(@Nonnull final Double value, @Nonnull final String unit) {
+  public static Row rowForUcumQuantity(@Nonnull final BigDecimal value,
+      @Nonnull final String unit) {
     final Quantity quantity = new Quantity();
-    quantity.setValue(new BigDecimal(value));
+    quantity.setValue(value);
+    if (quantity.getValue().scale() > DecimalCustomCoder.scale()) {
+      quantity.setValue(
+          quantity.getValue().setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
+    }
+    if (quantity.getValue().precision() > DecimalCustomCoder.precision()) {
+      throw new AssertionError("Attempt to encode a value with greater than supported precision");
+    }
     quantity.setUnit(unit);
     quantity.setSystem(TestHelpers.UCUM_URL);
     quantity.setCode(unit);

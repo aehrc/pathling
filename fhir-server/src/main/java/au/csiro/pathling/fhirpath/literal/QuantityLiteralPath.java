@@ -22,6 +22,7 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -77,7 +78,7 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
     final String unit = StringLiteralPath.fromString(rawUnit, context).getValue()
         .getValueAsString();
 
-    final String validationResult = ucumService.validate(unit);
+    @Nullable final String validationResult = ucumService.validate(unit);
     if (validationResult != null) {
       throw new InvalidUserInputError(
           "Invalid UCUM unit provided within Quantity literal (" + fullPath + "): "
@@ -85,9 +86,9 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
     }
 
     final BigDecimal decimalValue = getQuantityValue(value, context);
-    final String display = ucumService.getCommonDisplay(unit);
+    @Nullable final String display = ucumService.getCommonDisplay(unit);
 
-    return buildLiteralPath(decimalValue, unit, display, context, fhirPath);
+    return buildLiteralPath(decimalValue, unit, Optional.ofNullable(display), context, fhirPath);
   }
 
   @Nonnull
@@ -120,14 +121,14 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   }
 
   @Nonnull
-  private static QuantityLiteralPath buildLiteralPath(final BigDecimal decimalValue,
-      final String unit, final String display, final @Nonnull FhirPath context,
-      final String fhirPath) {
+  private static QuantityLiteralPath buildLiteralPath(@Nonnull final BigDecimal decimalValue,
+      @Nonnull final String unit, @Nonnull final Optional<String> display,
+      final @Nonnull FhirPath context, @Nonnull final String fhirPath) {
     final Quantity quantity = new Quantity();
     quantity.setValue(decimalValue);
     quantity.setSystem(Ucum.SYSTEM_URI);
     quantity.setCode(unit);
-    quantity.setUnit(display);
+    display.ifPresent(quantity::setUnit);
 
     return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity, fhirPath);
   }

@@ -6,12 +6,14 @@
 
 package au.csiro.pathling.terminology.ucum;
 
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -95,11 +97,24 @@ public class ComparableQuantity implements SqlFunction1<Row, Row> {
     // Use the UCUM library to get the canonical form of the Quantity.
     final int maxPrecision = DecimalPath.getDecimalType().precision();
     final Decimal value = new Decimal(input.getValue().toPlainString(), maxPrecision);
-    final Pair canonical = ucumService.getCanonicalForm(new Pair(value, resolvedCode));
+    @Nullable final Pair canonical = ucumService.getCanonicalForm(new Pair(value, resolvedCode));
+
+    // If the canonical form is not complete, we can't compare the quantities.
+    if (canonical == null || canonical.getCode() == null || canonical.getValue() == null) {
+      return null;
+    }
+
+    BigDecimal canonicalizedValue = new BigDecimal(canonical.getValue().asDecimal());
+    if (canonicalizedValue.precision() > DecimalCustomCoder.precision()) {
+      return null;
+    } else if (canonicalizedValue.scale() > DecimalCustomCoder.scale()) {
+      canonicalizedValue = canonicalizedValue.setScale(DecimalCustomCoder.scale(),
+          RoundingMode.HALF_UP);
+    }
 
     // Create a new Quantity object with the canonicalized result.
     final Quantity result = new Quantity();
-    result.setValue(new BigDecimal(canonical.getValue().asDecimal()));
+    result.setValue(canonicalizedValue);
     result.setUnit(canonical.getCode());
     result.setSystem(Ucum.SYSTEM_URI);
     result.setCode(canonical.getCode());

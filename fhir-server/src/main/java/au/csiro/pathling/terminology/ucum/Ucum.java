@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
 @Profile({"core", "fhir"})
 public class Ucum {
 
-  public static final String SYSTEM_URI = "http://unitsofmeasure.org/";
+  public static final String SYSTEM_URI = "http://unitsofmeasure.org";
 
   @Bean
   @Nonnull

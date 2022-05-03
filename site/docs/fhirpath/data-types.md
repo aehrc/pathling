@@ -84,7 +84,7 @@ Examples:
 ```
 
 <div class="callout info">
-    The implementation of Decimal within Pathling supports a precision of 26 and 
+    The implementation of Decimal within Pathling supports a precision of 32 and 
     a scale of 6.
 </div>
 

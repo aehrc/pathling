@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.encoding;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
-import au.csiro.pathling.fhirpath.element.DecimalPath;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
@@ -32,9 +31,12 @@ public class QuantityEncoding {
     }
     final String comparator = Optional.ofNullable(quantity.getComparator())
         .map(QuantityComparator::toCode).orElse(null);
-    return RowFactory.create(quantity.getId(), quantity.getValue(),
-        DecimalPath.getDecimalType().scale(), comparator, quantity.getUnit(), quantity.getSystem(),
-        quantity.getCode(), null /* _fid */);
+    if (quantity.getValue().scale() > DecimalCustomCoder.scale()) {
+      quantity.setValue(
+          quantity.getValue().setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
+    }
+    return RowFactory.create(quantity.getId(), quantity.getValue(), quantity.getValue().scale(),
+        comparator, quantity.getUnit(), quantity.getSystem(), quantity.getCode(), null /* _fid */);
   }
 
   @Nonnull
@@ -47,7 +49,9 @@ public class QuantityEncoding {
     // alongside it.
     final int scale = row.getInt(2);
     final BigDecimal value = Optional.ofNullable(row.getDecimal(1))
-        .map(bd -> bd.setScale(scale, RoundingMode.HALF_UP))
+        .map(bd -> bd.scale() > DecimalCustomCoder.scale()
+                   ? bd.setScale(scale, RoundingMode.HALF_UP)
+                   : bd)
         .orElse(null);
     quantity.setValue(value);
 

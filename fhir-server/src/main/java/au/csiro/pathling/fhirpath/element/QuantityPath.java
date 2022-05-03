@@ -106,17 +106,18 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
     return target -> {
       final Column sourceQuantity = source.getValueColumn();
       final Column sourceComparable = source.getNumericValueColumn();
+      final Column sourceContext = source.getNumericContextColumn();
       final Column resultColumn = operation.getSparkFunction()
           .apply(sourceComparable, target.getNumericValueColumn());
       final Column resultStruct = struct(
-          sourceQuantity.getField("id").as("id"),
+          sourceContext.getField("id").as("id"),
           resultColumn.as("value"),
-          sourceQuantity.getField("value_scale").as("value_scale"),
-          sourceQuantity.getField("comparator").as("comparator"),
-          sourceQuantity.getField("unit").as("unit"),
-          sourceQuantity.getField("system").as("system"),
-          sourceQuantity.getField("code").as("code"),
-          sourceQuantity.getField("_fid").as("_fid")
+          sourceContext.getField("value_scale").as("value_scale"),
+          sourceContext.getField("comparator").as("comparator"),
+          sourceContext.getField("unit").as("unit"),
+          sourceContext.getField("system").as("system"),
+          sourceContext.getField("code").as("code"),
+          sourceContext.getField("_fid").as("_fid")
       );
       final Column sourceCanonicalizedCode = source.getNumericContextColumn().getField("code");
       final Column targetCanonicalizedCode = target.getNumericContextColumn().getField("code");
