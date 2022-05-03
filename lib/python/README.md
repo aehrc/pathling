@@ -50,6 +50,12 @@ conda create -n pathling-dev python=3.8
 conda activate pathling-dev
 ```
 
+Prerequisites:
+
+- maven (Ubuntu 20.04: `apt install maven`)
+- java (Ubuntu 20.04: `apt install default-jdk`)
+- make (Ubuntu 20.04: `apt install make`)
+
 To run the tests and install the package, run this command from the project 
 root:
 
