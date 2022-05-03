@@ -33,7 +33,7 @@ spark = SparkSession.builder \
     .config('spark.jars', find_jar()) \
     .getOrCreate()
         
-json_bundles = bundles.load_from_directory(spark, 'examples/data/bundles/R4/json/')
+json_bundles = bundles.load_from_directory(spark, 'examples/data/bundles/')
 patients = bundles.extract_entry(spark, json_bundles, 'Patient')
 patients.show()
 ```
