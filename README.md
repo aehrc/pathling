@@ -28,5 +28,5 @@ Research Organisation
 (CSIRO) ABN 41 687 119 230. Licensed under
 the [CSIRO Open Source Software Licence Agreement](./LICENSE.md).
 
-If you use this software in your research, please consider citing it using the "
-Cite this repository" link on the right.
+If you use this software in your research, please consider citing it using the 
+"Cite this repository" link on the right.
