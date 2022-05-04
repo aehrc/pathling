@@ -22,6 +22,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.fhir.ucum.Decimal;
 import org.fhir.ucum.Pair;
+import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
@@ -97,7 +98,13 @@ public class ComparableQuantity implements SqlFunction1<Row, Row> {
     // Use the UCUM library to get the canonical form of the Quantity.
     final int maxPrecision = DecimalPath.getDecimalType().precision();
     final Decimal value = new Decimal(input.getValue().toPlainString(), maxPrecision);
-    @Nullable final Pair canonical = ucumService.getCanonicalForm(new Pair(value, resolvedCode));
+    @Nullable final Pair canonical;
+    try {
+      canonical = ucumService.getCanonicalForm(new Pair(value, resolvedCode));
+    } catch (final UcumException e) {
+      // If there is a problem parsing the UCUM expression, the Quantity is not comparable.
+      return null;
+    }
 
     // If the canonical form is not complete, we can't compare the quantities.
     if (canonical == null || canonical.getCode() == null || canonical.getValue() == null) {
