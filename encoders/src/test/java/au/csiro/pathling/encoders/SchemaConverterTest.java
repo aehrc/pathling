@@ -25,12 +25,22 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.BooleanType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.IntegerType;
+import org.apache.spark.sql.types.MapType;
 import org.apache.spark.sql.types.StringType;
-import org.apache.spark.sql.types.*;
-import org.hl7.fhir.r4.model.*;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.TimestampType;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.junit.Before;
 import org.junit.Test;
 import scala.collection.JavaConverters;
@@ -381,5 +391,33 @@ public class SchemaConverterTest {
     Set<String> actualOpenTypeFieldNames = Stream.of(extensionStruct.fieldNames())
         .filter(fn -> fn.startsWith("value")).collect(Collectors.toUnmodifiableSet());
     assertEquals(Set.of("valueBoolean", "valueInteger", "valueCoding"), actualOpenTypeFieldNames);
+  }
+
+  @Test
+  public void testQuantity() {
+    final DataType quantityType = getField(observationSchema, true, "valueQuantity");
+
+    assertTrue(getField(quantityType, true, "value") instanceof DecimalType);
+    assertTrue(getField(quantityType, true, "value_scale") instanceof IntegerType);
+    assertTrue(getField(quantityType, true, "comparator") instanceof StringType);
+    assertTrue(getField(quantityType, true, "unit") instanceof StringType);
+    assertTrue(getField(quantityType, true, "system") instanceof StringType);
+    assertTrue(getField(quantityType, true, "code") instanceof StringType);
+    assertTrue(getField(quantityType, true, "value_canonicalized") instanceof DecimalType);
+    assertTrue(getField(quantityType, true, "code_canonicalized") instanceof StringType);
+  }
+
+  @Test
+  public void testSimpleQuantity() {
+    final DataType quantityType = getField(medRequestSchema, true, "dispenseRequest", "quantity");
+
+    assertTrue(getField(quantityType, true, "value") instanceof DecimalType);
+    assertTrue(getField(quantityType, true, "value_scale") instanceof IntegerType);
+    assertTrue(getField(quantityType, true, "comparator") instanceof StringType);
+    assertTrue(getField(quantityType, true, "unit") instanceof StringType);
+    assertTrue(getField(quantityType, true, "system") instanceof StringType);
+    assertTrue(getField(quantityType, true, "code") instanceof StringType);
+    assertTrue(getField(quantityType, true, "value_canonicalized") instanceof DecimalType);
+    assertTrue(getField(quantityType, true, "code_canonicalized") instanceof StringType);
   }
 }

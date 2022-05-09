@@ -30,8 +30,13 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.BaseResource;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.MolecularSequence;
 import org.hl7.fhir.r4.model.MolecularSequence.MolecularSequenceQualityRocComponent;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.json4s.jackson.JsonMethods;
 import org.junit.Test;
@@ -201,4 +206,28 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     assertNotNull(stageTypeExtensions);
     assertStringExtension("uuid:ext12", "ext12", (Row) stageTypeExtensions.apply(0));
   }
+
+  @Test
+  public void testQuantityCanonicalization() {
+    final ExpressionEncoder<Observation> encoder = fhirEncoders.of(Observation.class);
+    final Observation observation = TestData.newUcumObservation();
+
+    final ExpressionEncoder<Observation> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
+        encoder);
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(observation);
+
+    final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
+        RowEncoder.apply(encoder.schema()));
+    final Row observationRow = rowEncoder.createDeserializer().apply(serializedRow);
+
+    final Row quantityRow = observationRow.getStruct(observationRow.fieldIndex("valueQuantity"));
+    final BigDecimal canonicalizedValue = quantityRow.getDecimal(
+        quantityRow.fieldIndex("canonicalized_value"));
+    final String canonicalizedCode = quantityRow.getString(
+        quantityRow.fieldIndex("canonicalized_code"));
+
+    assertEquals(new BigDecimal("1.0"), canonicalizedValue);
+    assertEquals("kg", canonicalizedCode);
+  }
+
 }

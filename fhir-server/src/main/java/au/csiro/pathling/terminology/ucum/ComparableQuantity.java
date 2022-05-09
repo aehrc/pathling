@@ -7,6 +7,7 @@
 package au.csiro.pathling.terminology.ucum;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;

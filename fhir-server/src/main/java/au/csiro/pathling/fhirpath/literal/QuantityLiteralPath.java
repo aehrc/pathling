@@ -9,13 +9,13 @@ package au.csiro.pathling.fhirpath.literal;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.QuantityPath;
-import au.csiro.pathling.terminology.ucum.Ucum;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;

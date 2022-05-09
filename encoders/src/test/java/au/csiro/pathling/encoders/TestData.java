@@ -162,6 +162,19 @@ public class TestData {
     return observation;
   }
 
+  public static Observation newUcumObservation() {
+    final Observation observation = new Observation();
+    observation.setId("blood-pressure-ucum");
+
+    final Quantity quantity = new Quantity();
+    quantity.setValue(109);
+    quantity.setUnit("mmHg");
+    quantity.setSystem("http://unitsofmeasure.org");
+    quantity.setCode("mm[Hg]");
+
+    return observation;
+  }
+
   /**
    * Returns a FHIR Patient for testing purposes.
    */

@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
@@ -30,7 +31,6 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.NumberLiteralC
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.QuantityLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.StringLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralContext;
-import au.csiro.pathling.terminology.ucum.Ucum;
 import java.text.ParseException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
