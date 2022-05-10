@@ -26,7 +26,7 @@ import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStr
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseResource}
-import org.hl7.fhir.r4.model.{Base, Extension, Quantity, SimpleQuantity}
+import org.hl7.fhir.r4.model.{Base, Extension, Quantity}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -100,7 +100,33 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression, overr
   }
 
   override def proceedCompositeChildren(value: CompositeCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    dataTypeMappings.overrideCompositeExpression(expression, value.compositeDefinition).getOrElse(super.proceedCompositeChildren(value))
+
+    value.compositeDefinition.getImplementingClass match {
+      case cls if classOf[Quantity].isAssignableFrom(cls) => {
+        val valueExp = Invoke(expression, "getValue", ObjectType(classOf[java.math.BigDecimal]))
+        val codeExp = Invoke(expression, "getCode", ObjectType(classOf[java.lang.String]))
+        // TODO: Manbe create specialized UCAM functions retuning spark.Decimal and UTF8String
+        // TODO: Or Maybe use the custom encoder here directly - but do we need to encode scale here as well?
+        // TODO: Also will this work for arrays ???
+        // TODO: Also maybe start the fields with '_' so that they are removed from results (marking and synthetic fields)
+        // TODO: Maybe move to overrideCompositeExpression() providing it with a callback to generate default fields on request (a lazy call to super)
+        val canonicalizedValue = StaticInvoke(classOf[Decimal],
+          DecimalCustomCoder.decimalType,
+          "apply",
+          StaticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]), "getCanonicalValue", Seq(valueExp, codeExp)) :: Nil)
+        val canonicalizedCode =
+          StaticInvoke(
+            classOf[UTF8String],
+            DataTypes.StringType,
+            "fromString",
+            StaticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode", Seq(valueExp, codeExp)) :: Nil)
+        super.proceedCompositeChildren(value) ++ Seq(
+          ("value_canonicalized", canonicalizedValue),
+          ("code_canonicalized", canonicalizedCode)
+        )
+      }
+      case _ => dataTypeMappings.overrideCompositeExpression(expression, value.compositeDefinition).getOrElse(super.proceedCompositeChildren(value))
+    }
   }
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
@@ -110,22 +136,7 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression, overr
     } else {
       fields
     }
-
-    val updatedFields: Seq[(String, Expression)] = definition.getImplementingClass match {
-      case _: Class[Quantity] | _: Class[SimpleQuantity] => {
-        val value = Invoke(expression, "getValue", ObjectType(classOf[BigDecimal]))
-        val code = Invoke(expression, "getCode", ObjectType(classOf[String]))
-        val canonicalizedValue = StaticInvoke(classOf[Ucum], DecimalCustomCoder.decimalType, "getCanonicalValue", Seq(value, code))
-        val canonicalizedCode = StaticInvoke(classOf[Ucum], DataTypes.StringType, "getCanonicalCode", Seq(value, code))
-        allFields ++ Seq(
-          ("value_canonicalized", canonicalizedValue),
-          ("code_canonicalized", canonicalizedCode)
-        )
-      }
-      case _ => allFields
-    }
-
-    val struct = CreateNamedStruct(updatedFields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
+    val struct = CreateNamedStruct(allFields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
   }
 

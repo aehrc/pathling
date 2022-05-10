@@ -164,13 +164,15 @@ public class TestData {
 
   public static Observation newUcumObservation() {
     final Observation observation = new Observation();
-    observation.setId("blood-pressure-ucum");
+    observation.setId("weight");
 
     final Quantity quantity = new Quantity();
-    quantity.setValue(109);
-    quantity.setUnit("mmHg");
+    quantity.setValue(76);
+    quantity.setUnit("kg");
     quantity.setSystem("http://unitsofmeasure.org");
-    quantity.setCode("mm[Hg]");
+    quantity.setCode("kg");
+
+    observation.setValue(quantity);
 
     return observation;
   }

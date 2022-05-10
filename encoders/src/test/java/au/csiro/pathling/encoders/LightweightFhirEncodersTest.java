@@ -20,6 +20,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.math.BigDecimal;
@@ -222,12 +223,12 @@ public class LightweightFhirEncodersTest implements JsonMethods {
 
     final Row quantityRow = observationRow.getStruct(observationRow.fieldIndex("valueQuantity"));
     final BigDecimal canonicalizedValue = quantityRow.getDecimal(
-        quantityRow.fieldIndex("canonicalized_value"));
+        quantityRow.fieldIndex("value_canonicalized"));
     final String canonicalizedCode = quantityRow.getString(
-        quantityRow.fieldIndex("canonicalized_code"));
+        quantityRow.fieldIndex("code_canonicalized"));
 
-    assertEquals(new BigDecimal("1.0"), canonicalizedValue);
-    assertEquals("kg", canonicalizedCode);
+    assertEquals(new BigDecimal("76000.000000"), canonicalizedValue);
+    assertEquals("g", canonicalizedCode);
   }
 
 }
