@@ -15,17 +15,18 @@ package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
 import au.csiro.pathling.encoders.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
-import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
+import au.csiro.pathling.encoders.terminology.ucum.Ucum
 import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import au.csiro.pathling.schema._
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.objects.{ExternalMapToCatalyst, Invoke, MapObjects, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStruct, Expression, If, IsNull, Literal}
-import org.apache.spark.sql.types.{DataType, DataTypes, IntegerType, ObjectType}
+import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseResource}
-import org.hl7.fhir.r4.model.{Base, Extension}
+import org.hl7.fhir.r4.model.{Base, Extension, Quantity, SimpleQuantity}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
 import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
@@ -104,13 +105,27 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression, overr
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
 
-    val allFields = if (supportsExtensions) {
+    val allFields: Seq[(String, Expression)] = if (supportsExtensions) {
       fields ++ createExtensionsFields(definition)
     } else {
       fields
     }
 
-    val struct = CreateNamedStruct(allFields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
+    val updatedFields: Seq[(String, Expression)] = definition.getImplementingClass match {
+      case _: Class[Quantity] | _: Class[SimpleQuantity] => {
+        val value = Invoke(expression, "getValue", ObjectType(classOf[BigDecimal]))
+        val code = Invoke(expression, "getCode", ObjectType(classOf[String]))
+        val canonicalizedValue = StaticInvoke(classOf[Ucum], DecimalCustomCoder.decimalType, "getCanonicalValue", Seq(value, code))
+        val canonicalizedCode = StaticInvoke(classOf[Ucum], DataTypes.StringType, "getCanonicalCode", Seq(value, code))
+        allFields ++ Seq(
+          ("value_canonicalized", canonicalizedValue),
+          ("code_canonicalized", canonicalizedCode)
+        )
+      }
+      case _ => allFields
+    }
+
+    val struct = CreateNamedStruct(updatedFields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
     If(IsNull(expression), Literal.create(null, struct.dataType), struct)
   }
 
@@ -263,6 +278,7 @@ private[encoders] object SerializerBuilderProcessor {
         case _ => childrenExts
       }
     }
+
     flattenBase(composite).toMap
   }
 
