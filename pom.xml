@@ -8,7 +8,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+    <modelVersion>4.0.0</modelVersion>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -17,10 +17,10 @@
         <relativePath/>
     </parent>
 
-  <groupId>au.csiro.pathling</groupId>
-  <artifactId>pathling</artifactId>
-  <version>5.0.2</version>
-  <packaging>pom</packaging>
+    <groupId>au.csiro.pathling</groupId>
+    <artifactId>pathling</artifactId>
+    <version>5.0.2</version>
+    <packaging>pom</packaging>
 
     <name>Pathling</name>
     <description>
@@ -70,14 +70,14 @@
         <project.majorVersion>5</project.majorVersion>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.hapiFhirVersion>5.7.2</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.2.1</pathling.sparkVersion>
-    <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
-    <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.210</pathling.awsSdkVersion>
-  </properties>
+        <pathling.hapiFhirVersion>5.7.2</pathling.hapiFhirVersion>
+        <pathling.sparkVersion>3.2.1</pathling.sparkVersion>
+        <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
+        <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
+        <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
+        <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
+        <pathling.awsSdkVersion>1.12.210</pathling.awsSdkVersion>
+    </properties>
 
     <modules>
         <module>encoders</module>
