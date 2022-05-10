@@ -19,6 +19,8 @@ spark:
   sql:
     shuffle:
       partitions: 1
+    debug:
+      maxToStringFields: 100
   network:
     timeout: 600s
   ui:
