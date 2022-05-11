@@ -162,7 +162,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
       final String fhirPath = String.format("%s %s", number, ucumUnit.getText());
       try {
         return QuantityLiteralPath.fromUcumString(fhirPath, resultContext,
-            Ucum.ucumEssenceService());
+            Ucum.service());
       } catch (final UcumException e) {
         throw new RuntimeException(e);
       }

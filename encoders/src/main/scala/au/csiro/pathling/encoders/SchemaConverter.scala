@@ -20,7 +20,7 @@ import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
-import org.hl7.fhir.r4.model.{Quantity, SimpleQuantity}
+import org.hl7.fhir.r4.model.Quantity
 
 /**
  * The schema processor for converting FHIR schemas to SQL schemas.
@@ -55,7 +55,7 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[StructField]): DataType = {
     val updatedFields = definition.getImplementingClass match {
-      case _: Class[Quantity] | _: Class[SimpleQuantity] => fields ++ Seq(
+      case cls if classOf[Quantity].isAssignableFrom(cls) => fields ++ Seq(
         StructField("value_canonicalized", DecimalCustomCoder.decimalType),
         StructField("code_canonicalized", DataTypes.StringType)
       )

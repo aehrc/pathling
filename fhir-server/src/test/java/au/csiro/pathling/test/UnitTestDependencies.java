@@ -120,7 +120,7 @@ class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static UcumService ucumService() throws UcumException {
-    return Ucum.ucumEssenceService();
+    return Ucum.service();
   }
 
 }
