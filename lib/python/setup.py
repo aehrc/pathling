@@ -69,9 +69,7 @@ setup(
     ],
     license="CSIRO Open Source Software Licence Agreement (variation of the BSD / MIT License)",
     python_requires=">=3.7",
-    install_requires=[
-        'pyspark>=3.1.0'
-    ],
+    extras_require={'spark': ['pyspark>=3.1.0']},
     include_package_data=True,
     package_dir={
         'pathling.jars': 'target/dependency',

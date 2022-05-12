@@ -3,3 +3,4 @@ Sphinx==4.5.0
 pytest==6.2.2
 ipython==8.2.0
 wheel==0.37.1
+twine==4.0.0

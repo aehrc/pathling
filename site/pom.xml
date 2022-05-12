@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.0.2</version>
+    <version>5.0.3-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>site</artifactId>
@@ -124,6 +124,23 @@
           </sourceFileExcludes>
           <reportOutputDirectory>${project.build.directory}/site/docs</reportOutputDirectory>
           <destDir>java</destDir>
+          <links>
+              <link>https://spark.apache.org/docs/latest/api/java/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
+          </links>
+          <detectLinks/>
+          <doctitle>Pathling ${project.version} API</doctitle>
+          <windowtitle>Pathling ${project.version} API</windowtitle>
+          <bottom>
+              <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
+          </bottom>
+          <additionalJOptions>
+              <option>--no-module-directories</option>
+              <option>-Xdoclint:none</option>
+          </additionalJOptions>
         </configuration>
       </plugin>
       <plugin>

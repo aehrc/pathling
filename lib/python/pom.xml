@@ -7,7 +7,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.0.2</version>
+    <version>5.0.3-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
@@ -19,6 +19,7 @@
   <properties>
     <pathling.pyapi.version>${project.version}${pathling.pyapi.version.qualifier}</pathling.pyapi.version>
     <pathling.pyapi.version.qualifier/>
+    <pathling.pypi.repository>pypi</pathling.pypi.repository>
   </properties>
 
   <dependencies>
@@ -101,29 +102,10 @@
             <configuration>
               <executable>python</executable>
               <arguments>
-                <argument>setup.py</argument>
-                <argument>sdist</argument>
-                <argument>sdist</argument>
-                <argument>--dist-dir</argument>
+                <argument>-m</argument>
+                <argument>build</argument>
+                <argument>--outdir</argument>
                 <argument>${project.build.directory}/py-dist</argument>
-              </arguments>
-            </configuration>
-          </execution>
-
-          <!-- Build Python wheel -->
-          <execution>
-            <id>python-wheel</id>
-            <phase>package</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>pip</executable>
-              <arguments>
-                <argument>wheel</argument>
-                <argument>.</argument>
-                <argument>--wheel-dir</argument>
-                <argument>${project.build.directory}/py-whl</argument>
               </arguments>
             </configuration>
           </execution>
@@ -140,6 +122,27 @@
               <arguments>
                 <argument>install</argument>
                 <argument>.</argument>
+              </arguments>
+            </configuration>
+          </execution>
+
+          <!-- Deploy package -->
+          <execution>
+            <id>deploy</id>
+            <phase>deploy</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>python</executable>
+              <arguments>
+                <argument>-m</argument>
+                <argument>twine</argument>
+                <argument>upload</argument>
+                <argument>--verbose</argument>
+                <argument>--repository</argument>
+                <argument>${pathling.pypi.repository}</argument>
+                <argument>${project.build.directory}/py-dist/*</argument>
               </arguments>
             </configuration>
           </execution>
