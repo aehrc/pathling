@@ -37,6 +37,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.types.TimestampType;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Questionnaire;
@@ -79,6 +80,8 @@ public class SchemaConverterTest {
   private StructType medRequestSchema;
   private StructType questionnaireSchema;
   private StructType questionnaireResponseSchema;
+
+  private StructType deviceSchema;
 
 
   /**
@@ -163,6 +166,7 @@ public class SchemaConverterTest {
     medRequestSchema = converter_L0.resourceSchema(MedicationRequest.class);
     questionnaireSchema = converter_L0.resourceSchema(Questionnaire.class);
     questionnaireResponseSchema = converter_L0.resourceSchema(QuestionnaireResponse.class);
+    deviceSchema = converter_L0.resourceSchema(Device.class);
   }
 
   @Test
@@ -396,21 +400,22 @@ public class SchemaConverterTest {
   @Test
   public void testQuantity() {
     final DataType quantityType = getField(observationSchema, true, "valueQuantity");
-
-    assertTrue(getField(quantityType, true, "value") instanceof DecimalType);
-    assertTrue(getField(quantityType, true, "value_scale") instanceof IntegerType);
-    assertTrue(getField(quantityType, true, "comparator") instanceof StringType);
-    assertTrue(getField(quantityType, true, "unit") instanceof StringType);
-    assertTrue(getField(quantityType, true, "system") instanceof StringType);
-    assertTrue(getField(quantityType, true, "code") instanceof StringType);
-    assertTrue(getField(quantityType, true, "value_canonicalized") instanceof DecimalType);
-    assertTrue(getField(quantityType, true, "code_canonicalized") instanceof StringType);
+    assertQuantityType(quantityType);
   }
 
   @Test
   public void testSimpleQuantity() {
     final DataType quantityType = getField(medRequestSchema, true, "dispenseRequest", "quantity");
+    assertQuantityType(quantityType);
+  }
 
+  @Test
+  public void testQuantityArray() {
+    final DataType quantityType = getField(deviceSchema, true, "property", "valueQuantity");
+    assertQuantityType(quantityType);
+  }
+
+  private void assertQuantityType(final DataType quantityType) {
     assertTrue(getField(quantityType, true, "value") instanceof DecimalType);
     assertTrue(getField(quantityType, true, "value_scale") instanceof IntegerType);
     assertTrue(getField(quantityType, true, "comparator") instanceof StringType);
