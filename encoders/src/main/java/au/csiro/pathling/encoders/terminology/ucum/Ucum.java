@@ -68,7 +68,7 @@ public class Ucum {
       }
       return new BigDecimal(stringValue);
     } catch (final UcumException e) {
-      throw new RuntimeException(e);
+      return null;
     }
   }
 
@@ -82,7 +82,7 @@ public class Ucum {
       }
       return result.getCode();
     } catch (final UcumException e) {
-      throw new RuntimeException(e);
+      return null;
     }
   }
 
