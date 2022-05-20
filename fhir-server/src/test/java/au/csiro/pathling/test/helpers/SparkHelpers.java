@@ -10,6 +10,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -116,10 +117,16 @@ public abstract class SparkHelpers {
     final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
     final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
     final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
+    final StructField canonicalizedCode = new StructField("_code_canonicalized",
+        DataTypes.StringType, true, metadata);
+    final StructField canonicalizedValue = new StructField("_value_canonicalized",
+        DataTypes.createDecimalType(
+            DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
     final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
         metadata);
     return new StructType(
-        new StructField[]{id, value, valueScale, comparator, unit, system, code, fid});
+        new StructField[]{id, value, valueScale, comparator, unit, system, code, canonicalizedValue,
+            canonicalizedCode, fid});
   }
 
   @Nonnull
@@ -163,11 +170,23 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
+    final BigDecimal value = quantity.getValue();
+    final String code = quantity.getCode();
+    final BigDecimal canonicalizedValue;
+    final String canonicalizedCode;
+    if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
+      canonicalizedValue = Ucum.getCanonicalValue(value, code);
+      canonicalizedCode = Ucum.getCanonicalCode(value, code);
+    } else {
+      canonicalizedValue = null;
+      canonicalizedCode = null;
+    }
     final String comparator = Optional.ofNullable(quantity.getComparator())
         .map(QuantityComparator::toCode).orElse(null);
     return new GenericRowWithSchema(
-        new Object[]{quantity.getId(), quantity.getValue(), quantity.getValue().scale(), comparator,
-            quantity.getUnit(), quantity.getSystem(), quantity.getCode(), null /* _fid */},
+        new Object[]{quantity.getId(), quantity.getValue(), null /* scale */, comparator,
+            quantity.getUnit(), quantity.getSystem(), quantity.getCode(), canonicalizedValue,
+            canonicalizedCode, null /* _fid */},
         quantityStructType());
   }
 

@@ -24,6 +24,9 @@ import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 
 public class QuantityEncoding {
 
+  public static final String CANONICALIZED_VALUE_COLUMN = "_value_canonicalized";
+  public static final String CANONICALIZED_CODE_COLUMN = "_code_canonicalized";
+
   @Nullable
   public static Row encode(@Nullable final Quantity quantity) {
     if (quantity == null) {
@@ -80,10 +83,16 @@ public class QuantityEncoding {
     final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
     final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
     final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
+    final StructField canonicalizedValue = new StructField(CANONICALIZED_VALUE_COLUMN,
+        DataTypes.createDecimalType(
+            DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
+    final StructField canonicalizedCode = new StructField(CANONICALIZED_CODE_COLUMN,
+        DataTypes.StringType, true, metadata);
     final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
         metadata);
     return new StructType(
-        new StructField[]{id, value, valueScale, comparator, unit, system, code, fid});
+        new StructField[]{id, value, valueScale, comparator, unit, system, code, canonicalizedValue,
+            canonicalizedCode, fid});
   }
 
 }

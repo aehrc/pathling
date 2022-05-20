@@ -54,11 +54,19 @@ public class Ucum {
   public static BigDecimal getCanonicalValue(@Nonnull final BigDecimal value,
       @Nonnull final String code) {
     try {
-      final Pair result = getCanonicalForm(value, code);
+      @Nullable final Pair result = getCanonicalForm(value, code);
       if (result == null) {
         return null;
       }
-      return new BigDecimal(result.getValue().asDecimal());
+      @Nullable final Decimal decimalValue = result.getValue();
+      if (decimalValue == null) {
+        return null;
+      }
+      @Nullable final String stringValue = decimalValue.asDecimal();
+      if (stringValue == null) {
+        return null;
+      }
+      return new BigDecimal(stringValue);
     } catch (final UcumException e) {
       throw new RuntimeException(e);
     }
@@ -68,7 +76,7 @@ public class Ucum {
   public static String getCanonicalCode(@Nonnull final BigDecimal value,
       @Nonnull final String code) {
     try {
-      final Pair result = getCanonicalForm(value, code);
+      @Nullable final Pair result = getCanonicalForm(value, code);
       if (result == null) {
         return null;
       }

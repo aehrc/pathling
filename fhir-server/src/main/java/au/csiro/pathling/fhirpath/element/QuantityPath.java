@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
@@ -15,9 +15,9 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
-import au.csiro.pathling.terminology.ucum.ComparableQuantity;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.function.Function;
@@ -56,14 +56,16 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
   public static Function<Comparable, Column> buildComparison(@Nonnull final FhirPath source,
       @Nonnull final ComparisonOperation operation) {
     return target -> {
-      final Column comparableSource = callUDF(ComparableQuantity.FUNCTION_NAME,
-          source.getValueColumn());
-      final Column comparableTarget = callUDF(ComparableQuantity.FUNCTION_NAME,
-          target.getValueColumn());
-      final Column sourceCode = comparableSource.getField("code");
-      final Column targetCode = comparableTarget.getField("code");
-      final Column sourceValue = comparableSource.getField("value");
-      final Column targetValue = comparableTarget.getField("value");
+      final Column comparableSource = source.getValueColumn();
+      final Column comparableTarget = target.getValueColumn();
+      final Column sourceCode = comparableSource.getField(
+          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
+      final Column targetCode = comparableTarget.getField(
+          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
+      final Column sourceValue = comparableSource.getField(
+          QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
+      final Column targetValue = comparableTarget.getField(
+          QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
       final Column compareValues = operation.getSparkFunction().apply(sourceValue, targetValue);
       return when(sourceCode.equalTo(targetCode), compareValues).otherwise(null);
     };
@@ -77,19 +79,13 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
   @Nonnull
   @Override
   public Column getNumericValueColumn() {
-    final Column comparable = buildComparableValueColumn(this);
-    return comparable.getField("value");
+    return getValueColumn().getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
   }
 
   @Nonnull
   @Override
   public Column getNumericContextColumn() {
-    return buildComparableValueColumn(this);
-  }
-
-  @Nonnull
-  public static Column buildComparableValueColumn(@Nonnull final Numeric source) {
-    return callUDF(ComparableQuantity.FUNCTION_NAME, source.getValueColumn());
+    return getValueColumn();
   }
 
   @Nonnull
@@ -104,23 +100,27 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
       @Nonnull final MathOperation operation, @Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
     return target -> {
-      final Column sourceQuantity = source.getValueColumn();
       final Column sourceComparable = source.getNumericValueColumn();
       final Column sourceContext = source.getNumericContextColumn();
+      final Column targetContext = target.getNumericContextColumn();
       final Column resultColumn = operation.getSparkFunction()
           .apply(sourceComparable, target.getNumericValueColumn());
+      final Column sourceCanonicalizedCode = sourceContext.getField(
+          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
+      final Column targetCanonicalizedCode = targetContext.getField(
+          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
       final Column resultStruct = struct(
           sourceContext.getField("id").as("id"),
           resultColumn.as("value"),
-          sourceContext.getField("value_scale").as("value_scale"),
+          lit(null).as("value_scale"),
           sourceContext.getField("comparator").as("comparator"),
-          sourceContext.getField("unit").as("unit"),
+          sourceCanonicalizedCode.as("unit"),
           sourceContext.getField("system").as("system"),
-          sourceContext.getField("code").as("code"),
+          sourceCanonicalizedCode.as("code"),
+          resultColumn.as(QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
+          sourceCanonicalizedCode.as(QuantityEncoding.CANONICALIZED_CODE_COLUMN),
           sourceContext.getField("_fid").as("_fid")
       );
-      final Column sourceCanonicalizedCode = source.getNumericContextColumn().getField("code");
-      final Column targetCanonicalizedCode = target.getNumericContextColumn().getField("code");
       final Column resultQuantityColumn =
           when(sourceCanonicalizedCode.equalTo(targetCanonicalizedCode), resultStruct)
               .otherwise(null);

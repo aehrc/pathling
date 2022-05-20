@@ -16,7 +16,10 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.QuantityPath;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -44,6 +47,13 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
 
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
   private static final Pattern CALENDAR_DURATION_PATTERN = Pattern.compile("([0-9.]+) (\\w+)");
+
+  private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, String>()
+      .put("second", "s")
+      .put("seconds", "s")
+      .put("millisecond", "ms")
+      .put("milliseconds", "ms")
+      .build();
 
   protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Quantity literalValue) {
@@ -143,16 +153,40 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   @Nonnull
   @Override
   public Column buildValueColumn() {
-    final Quantity value = getValue();
-    final Optional<QuantityComparator> comparator = Optional.ofNullable(value.getComparator());
+    final Quantity quantity = getValue();
+    final Optional<QuantityComparator> comparator = Optional.ofNullable(quantity.getComparator());
+    final BigDecimal value = quantity.getValue();
+
+    final BigDecimal canonicalizedValue;
+    final String canonicalizedCode;
+    if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
+      // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
+      canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
+      canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
+    } else if (quantity.getSystem().equals(QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI) &&
+        CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
+      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the 
+      // UCUM library to canonicalize the value and code.
+      final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
+      canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
+      canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
+    } else {
+      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized 
+      // form available.
+      canonicalizedValue = null;
+      canonicalizedCode = null;
+    }
+
     return struct(
-        lit(value.getId()).as("id"),
-        lit(value.getValue()).as("value"),
-        lit(value.getValue().scale()).as("value_scale"),
+        lit(quantity.getId()).as("id"),
+        lit(value).as("value"),
+        lit(value.scale()).as("value_scale"),
         lit(comparator.map(QuantityComparator::toCode).orElse(null)).as("comparator"),
-        lit(value.getUnit()).as("unit"),
-        lit(value.getSystem()).as("system"),
-        lit(value.getCode()).as("code"),
+        lit(quantity.getUnit()).as("unit"),
+        lit(quantity.getSystem()).as("system"),
+        lit(quantity.getCode()).as("code"),
+        lit(canonicalizedValue).as(QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
+        lit(canonicalizedCode).as(QuantityEncoding.CANONICALIZED_CODE_COLUMN),
         lit(null).as("_fid"));
   }
 
@@ -170,14 +204,13 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   @Nonnull
   @Override
   public Column getNumericValueColumn() {
-    final Column comparable = QuantityPath.buildComparableValueColumn(this);
-    return comparable.getField("value");
+    return getValueColumn().getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
   }
 
   @Nonnull
   @Override
   public Column getNumericContextColumn() {
-    return QuantityPath.buildComparableValueColumn(this);
+    return getValueColumn();
   }
 
   @Nonnull

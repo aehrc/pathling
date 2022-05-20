@@ -9,7 +9,6 @@ package au.csiro.pathling.test;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
@@ -27,20 +26,16 @@ import au.csiro.pathling.sql.dates.time.TimeGreaterThanFunction;
 import au.csiro.pathling.sql.dates.time.TimeGreaterThanOrEqualToFunction;
 import au.csiro.pathling.sql.dates.time.TimeLessThanFunction;
 import au.csiro.pathling.sql.dates.time.TimeLessThanOrEqualToFunction;
-import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
-import au.csiro.pathling.terminology.CodingToLiteral;
 import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.ucum.ComparableQuantity;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
-import org.fhir.ucum.UcumException;
-import org.fhir.ucum.UcumService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
@@ -59,10 +54,7 @@ class UnitTestDependencies {
   @Nonnull
   static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
-      @Nonnull final Optional<SparkListener> sparkListener,
-      @Nonnull final UcumService ucumService) {
-    final List<SqlFunction1> sqlFunction1 = List.of(new CodingToLiteral(),
-        new ComparableQuantity(ucumService));
+      @Nonnull final Optional<SparkListener> sparkListener) {
     final List<SqlFunction2> sqlFunction2 = List.of(new DateTimeAddDurationFunction(),
         new DateTimeSubtractDurationFunction(), new DateAddDurationFunction(),
         new DateSubtractDurationFunction(),
@@ -71,7 +63,8 @@ class UnitTestDependencies {
         new DateTimeLessThanOrEqualToFunction(), new TimeEqualsFunction(),
         new TimeGreaterThanFunction(), new TimeGreaterThanOrEqualToFunction(),
         new TimeLessThanFunction(), new TimeLessThanOrEqualToFunction());
-    return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2);
+    return Spark.build(configuration, environment, sparkListener, Collections.emptyList(),
+        sqlFunction2);
   }
 
   @Bean
@@ -114,13 +107,6 @@ class UnitTestDependencies {
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory() {
     return new TestTerminologyServiceFactory();
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
-  @Nonnull
-  static UcumService ucumService() throws UcumException {
-    return Ucum.service();
   }
 
 }
