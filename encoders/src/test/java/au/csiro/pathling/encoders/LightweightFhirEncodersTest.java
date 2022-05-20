@@ -20,11 +20,11 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.apache.spark.sql.Row;
@@ -33,6 +33,7 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.hl7.fhir.r4.model.BaseResource;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.MolecularSequence;
 import org.hl7.fhir.r4.model.MolecularSequence.MolecularSequenceQualityRocComponent;
@@ -222,13 +223,40 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final Row observationRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     final Row quantityRow = observationRow.getStruct(observationRow.fieldIndex("valueQuantity"));
-    final BigDecimal canonicalizedValue = quantityRow.getDecimal(
-        quantityRow.fieldIndex("value_canonicalized"));
-    final String canonicalizedCode = quantityRow.getString(
-        quantityRow.fieldIndex("code_canonicalized"));
-
-    assertEquals(new BigDecimal("76000.000000"), canonicalizedValue);
-    assertEquals("g", canonicalizedCode);
+    assertQuantity(quantityRow, "76000.000000", "g");
   }
 
+  @Test
+  public void testQuantityArray() {
+    final ExpressionEncoder<Device> encoder = fhirEncoders.of(Device.class);
+    final Device device = TestData.newDevice();
+
+    final ExpressionEncoder<Device> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
+        encoder);
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(device);
+
+    final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
+        RowEncoder.apply(encoder.schema()));
+    final Row deviceRow = rowEncoder.createDeserializer().apply(serializedRow);
+
+    final List<Row> properties = deviceRow.getList(deviceRow.fieldIndex("property"));
+    final Row propertyRow = properties.get(0);
+    final List<Row> quantityArray = propertyRow.getList(propertyRow.fieldIndex("valueQuantity"));
+
+    final Row quantity1 = quantityArray.get(0);
+    assertQuantity(quantity1, "0.001000", "m");
+
+    final Row quantity2 = quantityArray.get(1);
+    assertQuantity(quantity2, "0.002000", "m");
+  }
+
+  private void assertQuantity(final Row quantity2, final String value, final String unit) {
+    final BigDecimal canonicalizedValue2 = quantity2.getDecimal(
+        quantity2.fieldIndex("value_canonicalized"));
+    final String canonicalizedCode2 = quantity2.getString(
+        quantity2.fieldIndex("code_canonicalized"));
+
+    assertEquals(new BigDecimal(value), canonicalizedValue2);
+    assertEquals(unit, canonicalizedCode2);
+  }
 }
