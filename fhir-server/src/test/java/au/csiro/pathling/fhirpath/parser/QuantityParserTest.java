@@ -50,9 +50,7 @@ public class QuantityParserTest extends ParserTest {
     assertThatResultOf("valueQuantity > (valueQuantity - 2 'g/dL')")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .saveAllRowsToCsv(spark,
-            "/Users/gri306/Code/pathling/fhir-server/src/test/resources/responses/ParserTest",
-            "lengthObservationSubtraction");
+        .hasRows(spark, "responses/ParserTest/lengthObservationSubtraction.csv");
   }
 
 }
