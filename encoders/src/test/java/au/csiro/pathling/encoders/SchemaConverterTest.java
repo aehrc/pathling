@@ -422,7 +422,7 @@ public class SchemaConverterTest {
     assertTrue(getField(quantityType, true, "unit") instanceof StringType);
     assertTrue(getField(quantityType, true, "system") instanceof StringType);
     assertTrue(getField(quantityType, true, "code") instanceof StringType);
-    assertTrue(getField(quantityType, true, "value_canonicalized") instanceof DecimalType);
-    assertTrue(getField(quantityType, true, "code_canonicalized") instanceof StringType);
+    assertTrue(getField(quantityType, true, "_value_canonicalized") instanceof DecimalType);
+    assertTrue(getField(quantityType, true, "_code_canonicalized") instanceof StringType);
   }
 }

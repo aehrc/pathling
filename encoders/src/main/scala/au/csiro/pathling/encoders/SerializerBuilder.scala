@@ -107,7 +107,6 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression, overr
         val codeExp = Invoke(expression, "getCode", ObjectType(classOf[java.lang.String]))
         // TODO: Manbe create specialized UCAM functions retuning spark.Decimal and UTF8String
         // TODO: Or Maybe use the custom encoder here directly - but do we need to encode scale here as well?
-        // TODO: Also will this work for arrays ???
         // TODO: Also maybe start the fields with '_' so that they are removed from results (marking and synthetic fields)
         // TODO: Maybe move to overrideCompositeExpression() providing it with a callback to generate default fields on request (a lazy call to super)
         val canonicalizedValue = StaticInvoke(classOf[Decimal],
@@ -121,8 +120,8 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression, overr
             "fromString",
             StaticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode", Seq(valueExp, codeExp)) :: Nil)
         super.proceedCompositeChildren(value) ++ Seq(
-          ("value_canonicalized", canonicalizedValue),
-          ("code_canonicalized", canonicalizedCode)
+          ("_value_canonicalized", canonicalizedValue),
+          ("_code_canonicalized", canonicalizedCode)
         )
       }
       case _ => dataTypeMappings.overrideCompositeExpression(expression, value.compositeDefinition).getOrElse(super.proceedCompositeChildren(value))

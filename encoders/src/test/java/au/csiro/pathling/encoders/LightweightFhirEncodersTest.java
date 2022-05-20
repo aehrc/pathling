@@ -252,9 +252,9 @@ public class LightweightFhirEncodersTest implements JsonMethods {
 
   private void assertQuantity(final Row quantity2, final String value, final String unit) {
     final BigDecimal canonicalizedValue2 = quantity2.getDecimal(
-        quantity2.fieldIndex("value_canonicalized"));
+        quantity2.fieldIndex("_value_canonicalized"));
     final String canonicalizedCode2 = quantity2.getString(
-        quantity2.fieldIndex("code_canonicalized"));
+        quantity2.fieldIndex("_code_canonicalized"));
 
     assertEquals(new BigDecimal(value), canonicalizedValue2);
     assertEquals(unit, canonicalizedCode2);

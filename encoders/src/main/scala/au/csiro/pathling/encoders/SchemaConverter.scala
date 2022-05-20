@@ -56,8 +56,8 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[StructField]): DataType = {
     val updatedFields = definition.getImplementingClass match {
       case cls if classOf[Quantity].isAssignableFrom(cls) => fields ++ Seq(
-        StructField("value_canonicalized", DecimalCustomCoder.decimalType),
-        StructField("code_canonicalized", DataTypes.StringType)
+        StructField("_value_canonicalized", DecimalCustomCoder.decimalType),
+        StructField("_code_canonicalized", DataTypes.StringType)
       )
       case _ => fields
     }
