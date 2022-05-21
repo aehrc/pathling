@@ -12,6 +12,7 @@ import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.sql.SqlStrategy;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
+import au.csiro.pathling.sql.udf.SqlFunction3;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -53,7 +54,8 @@ public class Spark {
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkListener> sparkListener,
       @Nonnull final List<SqlFunction1> sqlFunction1,
-      @Nonnull final List<SqlFunction2> sqlFunction2) {
+      @Nonnull final List<SqlFunction2> sqlFunction2,
+      @Nonnull final List<SqlFunction3> sqlFunction3) {
     log.debug("Creating Spark session");
     resolveSparkConfiguration(environment);
 
@@ -68,6 +70,9 @@ public class Spark {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
     for (final SqlFunction2 function : sqlFunction2) {
+      spark.udf().register(function.getName(), function, function.getReturnType());
+    }
+    for (final SqlFunction3 function : sqlFunction3) {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
 
