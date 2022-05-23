@@ -1,0 +1,63 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCoding": {
+            "system": "http://loinc.org",
+            "code": "72166-2",
+            "display": "Tobacco smoking status NHIS"
+          }
+        },
+        {
+          "name": "label",
+          "valueCoding": {
+            "system": "http://snomed.info/sct",
+            "code": "8517006",
+            "display": "Former smoker"
+          }
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 3
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((reverseResolve(Observation.subject).code.coding) contains http://loinc.org|72166-2||'Tobacco smoking status NHIS') and ((reverseResolve(Observation.subject).valueCodeableConcept.coding) contains http://snomed.info/sct|8517006||'Former smoker')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueCoding": {
+            "system": "http://loinc.org",
+            "code": "72166-2",
+            "display": "Tobacco smoking status NHIS"
+          }
+        },
+        {
+          "name": "label",
+          "valueCoding": {
+            "system": "http://snomed.info/sct",
+            "code": "266919005",
+            "display": "Never smoker"
+          }
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 6
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((reverseResolve(Observation.subject).code.coding) contains http://loinc.org|72166-2||'Tobacco smoking status NHIS') and ((reverseResolve(Observation.subject).valueCodeableConcept.coding) contains http://snomed.info/sct|266919005||'Never smoker')"
+        }
+      ]
+    }
+  ]
+}

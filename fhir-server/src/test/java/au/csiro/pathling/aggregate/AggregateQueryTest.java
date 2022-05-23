@@ -608,6 +608,23 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithMultipleCardinalityGroupingsAtResourceLevel() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("reverseResolve(Observation.subject).code.coding")
+        .withGrouping("reverseResolve(Observation.subject).valueCodeableConcept.coding")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse(
+        "AggregateQueryTest/queryWithMultipleCardinalityGroupingsAtResourceLevel.Parameters.json",
+        response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 
