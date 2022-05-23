@@ -172,7 +172,8 @@ public class DatasetAssert {
       log.error("Problem cleaning up", e);
     }
 
-    return this;
+    throw new AssertionError(
+        "Rows saved to CSV, check that the file is correct and replace this line with an assertion");
   }
 
   private static class DeleteDirectoryVisitor extends SimplePathVisitor {

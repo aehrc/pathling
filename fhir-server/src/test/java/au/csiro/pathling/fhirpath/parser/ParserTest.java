@@ -734,9 +734,7 @@ public class ParserTest extends AbstractParserTest {
         "subject.resolve().ofType(Patient).birthDate.until(%resource.period.start, 'years')")
         .isElementPath(IntegerPath.class)
         .selectResult()
-        .saveAllRowsToCsv(spark,
-            "/Users/gri306/Code/pathling/fhir-server/src/test/resources/responses/ParserTest",
-            "testUntilFunction");
+        .hasRows(spark, "responses/ParserTest/testUntilFunction.csv");
   }
 
   @SuppressWarnings("SameParameterValue")
