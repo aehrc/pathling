@@ -13,6 +13,7 @@ import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
+import au.csiro.pathling.sql.dates.TemporalDifferenceFunction;
 import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
 import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
@@ -29,6 +30,7 @@ import au.csiro.pathling.sql.dates.time.TimeLessThanFunction;
 import au.csiro.pathling.sql.dates.time.TimeLessThanOrEqualToFunction;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
+import au.csiro.pathling.sql.udf.SqlFunction3;
 import au.csiro.pathling.terminology.CodingToLiteral;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
@@ -68,7 +70,9 @@ class UnitTestDependencies {
         new DateTimeLessThanOrEqualToFunction(), new TimeEqualsFunction(),
         new TimeGreaterThanFunction(), new TimeGreaterThanOrEqualToFunction(),
         new TimeLessThanFunction(), new TimeLessThanOrEqualToFunction());
-    return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2);
+    final List<SqlFunction3> sqlFunction3 = List.of(new TemporalDifferenceFunction());
+    return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2,
+        sqlFunction3);
   }
 
   @Bean

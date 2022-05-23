@@ -48,6 +48,7 @@ import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import java.util.Collections;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -694,18 +695,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testReverseResolveFollowingMonomorphicResolve() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
-
+    setSubjectResource(ResourceType.ENCOUNTER);
     assertThatResultOf(
         "serviceProvider.resolve().reverseResolve(Encounter.serviceProvider).id")
         .isElementPath(StringPath.class)
@@ -715,17 +705,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testReverseResolveFollowingPolymorphicResolve() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
+    setSubjectResource(ResourceType.ENCOUNTER);
 
     mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
 
@@ -744,6 +724,34 @@ public class ParserTest extends AbstractParserTest {
         .isElementPath(StringPath.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingReverseResolve.csv");
+  }
+
+  @Test
+  void testUntilFunction() {
+    setSubjectResource(ResourceType.ENCOUNTER);
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
+    assertThatResultOf(
+        "subject.resolve().ofType(Patient).birthDate.until(%resource.period.start, 'years')")
+        .isElementPath(IntegerPath.class)
+        .selectResult()
+        .saveAllRowsToCsv(spark,
+            "/Users/gri306/Code/pathling/fhir-server/src/test/resources/responses/ParserTest",
+            "testUntilFunction");
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private void setSubjectResource(@Nonnull final ResourceType resourceType) {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, database, resourceType, resourceType.toCode(),
+            true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyServiceFactory)
+        .database(database)
+        .inputContext(subjectResource)
+        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
+        .build();
+    parser = new Parser(parserContext);
   }
 
 }
