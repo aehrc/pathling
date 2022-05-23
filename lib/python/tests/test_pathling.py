@@ -57,7 +57,7 @@ def xml_bundles_dir():
 
 @fixture(scope="module")
 def def_pathling(spark_session):
-    return PathlingContext.of(spark_session)
+    return PathlingContext.create(spark_session)
 
 
 @fixture(scope="module")
@@ -91,9 +91,9 @@ def test_encode_xml_bundles(def_pathling, xml_bundles_df):
 
 
 def test_element_nesting(spark_session, json_resources_df):
-    ptl_def = PathlingContext.of(spark_session)
-    ptl_0 = PathlingContext.of(spark_session, maxNestingLevel=0)
-    ptl_1 = PathlingContext.of(spark_session, maxNestingLevel=1)
+    ptl_def = PathlingContext.create(spark_session)
+    ptl_0 = PathlingContext.create(spark_session, maxNestingLevel=0)
+    ptl_1 = PathlingContext.create(spark_session, maxNestingLevel=1)
 
     # default nesting level is 0
     quest_def = ptl_def.encode(json_resources_df, 'Questionnaire').head()
@@ -112,9 +112,9 @@ def test_element_nesting(spark_session, json_resources_df):
 def test_extension_support(spark_session, json_resources_df):
     # by default extension are off
 
-    ptl_def = PathlingContext.of(spark_session)
-    ptl_ext_off = PathlingContext.of(spark_session, enableExtensions=False)
-    ptl_ext_on = PathlingContext.of(spark_session, enableExtensions=True)
+    ptl_def = PathlingContext.create(spark_session)
+    ptl_ext_off = PathlingContext.create(spark_session, enableExtensions=False)
+    ptl_ext_on = PathlingContext.create(spark_session, enableExtensions=True)
 
     patient_def = ptl_def.encode(json_resources_df, 'Patient').head()
     assert not '_extension' in patient_def
@@ -137,10 +137,10 @@ def _get_extension_value_keys(row):
 
 
 def test_open_types(spark_session, json_resources_df):
-    ptl_def = PathlingContext.of(spark_session, enableExtensions=True)
-    ptl_none = PathlingContext.of(spark_session, enableExtensions=True, enabledOpenTypes=[])
-    ptl_some = PathlingContext.of(spark_session, enableExtensions=True,
-                                  enabledOpenTypes=['boolean', 'integer', 'string',
+    ptl_def = PathlingContext.create(spark_session, enableExtensions=True)
+    ptl_none = PathlingContext.create(spark_session, enableExtensions=True, enabledOpenTypes=[])
+    ptl_some = PathlingContext.create(spark_session, enableExtensions=True,
+                                      enabledOpenTypes=['boolean', 'integer', 'string',
                                                     'Address'])
 
     # by default no open types

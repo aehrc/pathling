@@ -21,7 +21,7 @@ def main():
 
     json_bundles_dir = os.path.join(HERE, 'data/bundles/')
 
-    plc = PathlingContext.of(spark, fhirVersion=Version.R4)
+    plc = PathlingContext.create(spark, fhirVersion=Version.R4)
 
     json_bundles_df = spark.read.text(json_bundles_dir, wholetext=True)
     json_bundles_df.show()

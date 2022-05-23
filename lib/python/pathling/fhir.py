@@ -1,8 +1,14 @@
 class MimeType:
-    FHIR_JSON = 'application/fhir+json'
-    FHIR_XML = 'application/fhir+xml'
-    FHIR_RDF = 'application/fhir+turtle'
+    """
+    Constants for FHIR encoding mime types.
+    """
+    FHIR_JSON: str = 'application/fhir+json'
+    FHIR_XML: str = 'application/fhir+xml'
+    FHIR_RDF: str = 'application/fhir+turtle'
 
 
 class Version:
-    R4 = "R4"
+    """
+    Constants for FHIR versions.
+    """
+    R4: str = "R4"

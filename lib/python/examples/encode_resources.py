@@ -21,7 +21,7 @@ def main():
     json_resources_dir = os.path.join(HERE, 'data/resources/')
     spark.read.text(json_resources_dir).show()
 
-    plc = PathlingContext.of(spark)
+    plc = PathlingContext.create(spark)
     patients_df = plc.encode(spark.read.text(json_resources_dir), 'Patient')
     patients_df.show()
 
