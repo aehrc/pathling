@@ -34,7 +34,7 @@ public class UntilFunction implements NamedFunction {
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkUserInput(input.getArguments().size() == 2,
-        "until function must have two argument");
+        "until function must have two arguments");
     final NonLiteralPath fromArgument = input.getInput();
     final FhirPath toArgument = input.getArguments().get(0);
     final FhirPath calendarDurationArgument = input.getArguments().get(1);
@@ -46,6 +46,10 @@ public class UntilFunction implements NamedFunction {
         "until function must have a DateTime or Date as the first argument");
     checkUserInput(calendarDurationArgument instanceof StringLiteralPath,
         "until function must have a String as the second argument");
+    final String literalValue = ((StringLiteralPath) calendarDurationArgument).getValue()
+        .asStringValue();
+    checkUserInput(TemporalDifferenceFunction.isValidCalendarDuration(literalValue),
+        "Invalid calendar duration: " + literalValue);
 
     final Dataset<Row> dataset = join(input.getContext(), fromArgument, toArgument,
         JoinType.LEFT_OUTER);

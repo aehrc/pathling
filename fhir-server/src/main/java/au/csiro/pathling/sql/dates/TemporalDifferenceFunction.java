@@ -87,4 +87,8 @@ public class TemporalDifferenceFunction implements SqlFunction3<String, String, 
     }
   }
 
+  public static boolean isValidCalendarDuration(final String literalValue) {
+    return CALENDAR_DURATION_TO_TEMPORAL.containsKey(literalValue);
+  }
+
 }
