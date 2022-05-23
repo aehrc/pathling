@@ -13,58 +13,66 @@
 
 package au.csiro.pathling.api.definitions;
 
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
-import org.hl7.fhir.r4.model.Property;
 import org.hl7.fhir.r4.model.Resource;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class R4FhirConversionSupport extends FhirConversionSupport {
 
-  private static final long serialVersionUID = -367070946615790595L;
+    private static final long serialVersionUID = -367070946615790595L;
 
-  @Override
-  public String fhirType(IBase base) {
+    @Override
+    public String fhirType(IBase base) {
 
-    return base.fhirType();
-  }
+        return base.fhirType();
+    }
 
-  @Override
-  public List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle, String resourceName) {
+    @Override
+    public List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle, String resourceName) {
 
-    Bundle r4Bundle = (Bundle) bundle;
+        Bundle r4Bundle = (Bundle) bundle;
 
-    return r4Bundle.getEntry().stream()
-        .map(BundleEntryComponent::getResource)
-        .filter(resource ->
-            resource != null
-                && resourceName.equalsIgnoreCase(resource.getResourceType().name()))
-        .collect(Collectors.toList());
-  }
+        return r4Bundle.getEntry().stream()
+                .map(BundleEntryComponent::getResource)
+                .filter(resource ->
+                        resource != null
+                                && resourceName.equalsIgnoreCase(resource.getResourceType().name()))
+                .collect(Collectors.toList());
+    }
 
-  @Override
-  public IBaseBundle wrapInBundle(IBaseResource... resources) {
-    final Bundle bundle = new Bundle();
-    bundle.setType(BundleType.TRANSACTION);
-    Stream.of(resources).forEach(baseResource -> {
-      final Resource resource = (Resource) baseResource;
-      final BundleEntryComponent bundleEntry = bundle.addEntry();
-      bundleEntry.setResource(resource);
-      final BundleEntryRequestComponent request = bundleEntry.getRequest();
-      request.setMethod(HTTPVerb.POST);
-      request.setUrl(this.fhirType(baseResource));
-    });
-    return bundle;
-  }
+    @Override
+    public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle, Class<T> resourceClass) {
+        Bundle r4Bundle = (Bundle) bundle;
+
+        return r4Bundle.getEntry().stream()
+                .map(BundleEntryComponent::getResource)
+                .filter(resourceClass::isInstance)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public IBaseBundle wrapInBundle(IBaseResource... resources) {
+        final Bundle bundle = new Bundle();
+        bundle.setType(BundleType.TRANSACTION);
+        Stream.of(resources).forEach(baseResource -> {
+            final Resource resource = (Resource) baseResource;
+            final BundleEntryComponent bundleEntry = bundle.addEntry();
+            bundleEntry.setResource(resource);
+            final BundleEntryRequestComponent request = bundleEntry.getRequest();
+            request.setMethod(HTTPVerb.POST);
+            request.setUrl(this.fhirType(baseResource));
+        });
+        return bundle;
+    }
 }
 

@@ -14,13 +14,14 @@
 package au.csiro.pathling.api.definitions;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
+import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.instance.model.api.IBaseBundle;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.hl7.fhir.instance.model.api.IBase;
-import org.hl7.fhir.instance.model.api.IBaseBundle;
-import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
  * Helper functions to allow code to convert FHIR resources independently of the FHIR version.
@@ -28,97 +29,102 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  */
 public abstract class FhirConversionSupport implements Serializable {
 
-  private static final long serialVersionUID = -108611742759595166L;
+    private static final long serialVersionUID = -108611742759595166L;
 
-  private static final String R4_SUPPORT_CLASS =
-      "au.csiro.pathling.api.definitions.R4FhirConversionSupport";
-
-
-  /**
-   * Returns the type of a given FHIR object, such as "Condition" or "Observation".
-   *
-   * @param base a FHIR object
-   * @return the FHIR type
-   */
-  public abstract String fhirType(IBase base);
-
-  /**
-   * Extracts resources of the given type from a FHIR bundle.
-   *
-   * @param bundle the bundle
-   * @param resourceType the resource type name, such as "Condition" or "Observation"
-   * @return the resources of the specified type.
-   */
-  public abstract List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
-      String resourceType);
-
-  public abstract IBaseBundle wrapInBundle(IBaseResource... resources);
-
-  /**
-   * Cache of FHIR contexts.
-   */
-  private static final Map<FhirVersionEnum, FhirConversionSupport> FHIR_SUPPORT = new HashMap<>();
+    private static final String R4_SUPPORT_CLASS =
+            "au.csiro.pathling.api.definitions.R4FhirConversionSupport";
 
 
-  private static FhirConversionSupport newInstance(FhirVersionEnum fhirVersion) {
+    /**
+     * Returns the type of a given FHIR object, such as "Condition" or "Observation".
+     *
+     * @param base a FHIR object
+     * @return the FHIR type
+     */
+    public abstract String fhirType(IBase base);
 
-    Class<? extends FhirConversionSupport> fhirSupportClass;
+    /**
+     * Extracts resources of the given type from a FHIR bundle.
+     *
+     * @param bundle       the bundle
+     * @param resourceType the resource type name, such as "Condition" or "Observation"
+     * @return the resources of the specified type.
+     */
+    public abstract List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
+                                                               String resourceType);
 
-    if (FhirVersionEnum.R4.equals(fhirVersion)) {
 
-      try {
-        //noinspection unchecked
-        fhirSupportClass = (Class<? extends FhirConversionSupport>) Class.forName(R4_SUPPORT_CLASS);
+    public abstract <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
+                                                                                         Class<T> resourceClass);
 
-      } catch (ClassNotFoundException exception) {
-        throw new IllegalStateException(exception);
 
-      }
-    } else {
-      throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
+    public abstract IBaseBundle wrapInBundle(IBaseResource... resources);
+
+    /**
+     * Cache of FHIR contexts.
+     */
+    private static final Map<FhirVersionEnum, FhirConversionSupport> FHIR_SUPPORT = new HashMap<>();
+
+
+    private static FhirConversionSupport newInstance(FhirVersionEnum fhirVersion) {
+
+        Class<? extends FhirConversionSupport> fhirSupportClass;
+
+        if (FhirVersionEnum.R4.equals(fhirVersion)) {
+
+            try {
+                //noinspection unchecked
+                fhirSupportClass = (Class<? extends FhirConversionSupport>) Class.forName(R4_SUPPORT_CLASS);
+
+            } catch (ClassNotFoundException exception) {
+                throw new IllegalStateException(exception);
+
+            }
+        } else {
+            throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
+        }
+
+        try {
+
+            return fhirSupportClass.getDeclaredConstructor().newInstance();
+
+        } catch (Exception exception) {
+
+            throw new IllegalStateException("Unable to create FHIR support class", exception);
+        }
     }
 
-    try {
+    /**
+     * Returns the FHIR context for the given version. This is effectively a cache so consuming code
+     * does not need to recreate the context repeatedly.
+     *
+     * @param fhirVersion the version of FHIR to use
+     * @return the FhirContext
+     */
+    public static FhirConversionSupport supportFor(FhirVersionEnum fhirVersion) {
 
-      return fhirSupportClass.getDeclaredConstructor().newInstance();
+        synchronized (FHIR_SUPPORT) {
 
-    } catch (Exception exception) {
+            FhirConversionSupport support = FHIR_SUPPORT.get(fhirVersion);
 
-      throw new IllegalStateException("Unable to create FHIR support class", exception);
+            if (support == null) {
+
+                support = newInstance(fhirVersion);
+
+                FHIR_SUPPORT.put(fhirVersion, support);
+            }
+
+            return support;
+        }
     }
-  }
 
-  /**
-   * Returns the FHIR context for the given version. This is effectively a cache so consuming code
-   * does not need to recreate the context repeatedly.
-   *
-   * @param fhirVersion the version of FHIR to use
-   * @return the FhirContext
-   */
-  public static FhirConversionSupport supportFor(FhirVersionEnum fhirVersion) {
+    /**
+     * Convenience function to load support for FHIR STU3.
+     *
+     * @return the conversion support instance.
+     */
+    public static FhirConversionSupport forStu3() {
 
-    synchronized (FHIR_SUPPORT) {
-
-      FhirConversionSupport support = FHIR_SUPPORT.get(fhirVersion);
-
-      if (support == null) {
-
-        support = newInstance(fhirVersion);
-
-        FHIR_SUPPORT.put(fhirVersion, support);
-      }
-
-      return support;
+        return supportFor(FhirVersionEnum.DSTU3);
     }
-  }
-
-  /**
-   * Convenience function to load support for FHIR STU3.
-   *
-   * @return the conversion support instance.
-   */
-  public static FhirConversionSupport forStu3() {
-
-    return supportFor(FhirVersionEnum.DSTU3);
-  }
 }

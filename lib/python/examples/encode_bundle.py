@@ -4,8 +4,9 @@ import os
 
 from pyspark.sql import SparkSession
 
+from pathling import PathlingContext
 from pathling.etc import find_jar
-from pathling.r4 import bundles
+from pathling.fhir import Version, MimeType
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -20,18 +21,15 @@ def main():
 
     json_bundles_dir = os.path.join(HERE, 'data/bundles/')
 
-    # Load R4 json bundles from a directory the RDD of bundles
-    json_bundles_rdd = bundles.load_from_directory(spark, json_bundles_dir)
+    plc = PathlingContext.of(spark, fhirVersion=Version.R4)
 
-    # Extract 'Condition' resources from the RDD of bundls to a dataframe
-    conditions_df = bundles.extract_entry(spark, json_bundles_rdd, 'Condition')
-    conditions_df.show()
+    json_bundles_df = spark.read.text(json_bundles_dir, wholetext=True)
+    json_bundles_df.show()
 
     # Extract 'Patient' resources from the RDD of bundls to a dataframe
     # with FHIR extension support on.
-    patients_df = bundles.extract_entry(spark, json_bundles_rdd, 'Patient', enableExtensions=True)
-    patients_df.show()
-
+    condititions_df = plc.encodeBundle(json_bundles_df, 'Patient', inputType=MimeType.FHIR_JSON)
+    condititions_df.show()
 
 if __name__ == "__main__":
     main()
