@@ -7,6 +7,7 @@ from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
 
+
 class PathlingContext:
     """
     Main entry point for Pathling API functionality.
@@ -66,9 +67,9 @@ class PathlingContext:
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark columns
         """
 
-        return self._wrapDF(self._jpc.pyEncode(df._jdf, resourceName,
-                                               inputType or MimeType.FHIR_JSON,
-                                               column))
+        return self._wrapDF(self._jpc.encode(df._jdf, resourceName,
+                                             inputType or MimeType.FHIR_JSON,
+                                             column))
 
     def encodeBundle(self, df: DataFrame, resourceName: str,
                      inputType: Optional[str] = None, column: Optional[str] = None) -> DataFrame:
@@ -85,6 +86,6 @@ class PathlingContext:
             the input dataframe is assumed to have one column of type string.
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark columns
         """
-        return self._wrapDF(self._jpc.pyEncodeBundle(df._jdf, resourceName,
-                                                     inputType or MimeType.FHIR_JSON,
-                                                     column))
+        return self._wrapDF(self._jpc.encodeBundle(df._jdf, resourceName,
+                                                   inputType or MimeType.FHIR_JSON,
+                                                   column))

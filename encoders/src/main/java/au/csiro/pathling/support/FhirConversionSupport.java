@@ -11,7 +11,7 @@
  *
  */
 
-package au.csiro.pathling.api.definitions;
+package au.csiro.pathling.support;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
 import org.hl7.fhir.instance.model.api.IBase;
@@ -32,8 +32,7 @@ public abstract class FhirConversionSupport implements Serializable {
     private static final long serialVersionUID = -108611742759595166L;
 
     private static final String R4_SUPPORT_CLASS =
-            "au.csiro.pathling.api.definitions.R4FhirConversionSupport";
-
+            "au.csiro.pathling.support.r4.R4FhirConversionSupport";
 
     /**
      * Returns the type of a given FHIR object, such as "Condition" or "Observation".
@@ -46,19 +45,13 @@ public abstract class FhirConversionSupport implements Serializable {
     /**
      * Extracts resources of the given type from a FHIR bundle.
      *
-     * @param bundle       the bundle
-     * @param resourceType the resource type name, such as "Condition" or "Observation"
-     * @return the resources of the specified type.
+     * @param bundle        the bundle
+     * @param resourceClass the class of the resources to extract
+     * @param <T>           the type of the resources to extract
+     * @return the list of the resources of the specified type
      */
-    public abstract List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
-                                                               String resourceType);
-
-
     public abstract <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
                                                                                          Class<T> resourceClass);
-
-
-    public abstract IBaseBundle wrapInBundle(IBaseResource... resources);
 
     /**
      * Cache of FHIR contexts.
@@ -69,27 +62,19 @@ public abstract class FhirConversionSupport implements Serializable {
     private static FhirConversionSupport newInstance(FhirVersionEnum fhirVersion) {
 
         Class<? extends FhirConversionSupport> fhirSupportClass;
-
         if (FhirVersionEnum.R4.equals(fhirVersion)) {
-
             try {
                 //noinspection unchecked
                 fhirSupportClass = (Class<? extends FhirConversionSupport>) Class.forName(R4_SUPPORT_CLASS);
-
             } catch (ClassNotFoundException exception) {
                 throw new IllegalStateException(exception);
-
             }
         } else {
             throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
         }
-
         try {
-
             return fhirSupportClass.getDeclaredConstructor().newInstance();
-
         } catch (Exception exception) {
-
             throw new IllegalStateException("Unable to create FHIR support class", exception);
         }
     }
@@ -102,29 +87,8 @@ public abstract class FhirConversionSupport implements Serializable {
      * @return the FhirContext
      */
     public static FhirConversionSupport supportFor(FhirVersionEnum fhirVersion) {
-
         synchronized (FHIR_SUPPORT) {
-
-            FhirConversionSupport support = FHIR_SUPPORT.get(fhirVersion);
-
-            if (support == null) {
-
-                support = newInstance(fhirVersion);
-
-                FHIR_SUPPORT.put(fhirVersion, support);
-            }
-
-            return support;
+            return FHIR_SUPPORT.computeIfAbsent(fhirVersion, FhirConversionSupport::newInstance);
         }
-    }
-
-    /**
-     * Convenience function to load support for FHIR STU3.
-     *
-     * @return the conversion support instance.
-     */
-    public static FhirConversionSupport forStu3() {
-
-        return supportFor(FhirVersionEnum.DSTU3);
     }
 }
