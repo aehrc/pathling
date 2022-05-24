@@ -322,13 +322,6 @@
                                 <goal>testCompile</goal>
                             </goals>
                         </execution>
-                        <execution>
-                            <id>attach-scaladocs</id>
-                            <phase>prepare-package</phase>
-                            <goals>
-                                <goal>doc-jar</goal>
-                            </goals>
-                        </execution>
                     </executions>
                     <configuration>
                         <source>11</source>
