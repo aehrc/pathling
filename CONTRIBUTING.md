@@ -28,14 +28,18 @@ Your branch should be named `issue/[GitHub issue #]`.
 
 ## Versioning and branching
 
-All components of Pathling are versioned as one, according to 
-[Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+All components of Pathling are versioned together, except for the JavaScript
+client library and the JavaScript import library, which are each versioned
+independently. All versioning
+follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
 The "public API" of Pathling is defined as:
 
 1. the FHIR API;
-2. the Parquet schema, and;
-3. the configuration schema (see 
+2. the public API of the encoders module;
+3. the public API of the Python library;
+4. the Parquet schema, and;
+5. the configuration schema (see
    [Configuration](https://pathling.csiro.au/docs/configuration.html)).
 
 The branching strategy is very simple and is based on
@@ -49,12 +53,12 @@ aggregate more than one PR into a new version.
 Maven POM versions on `main` are always release versions. Builds are always
 verified to be green within CI before merging to main. Merging to main
 automatically triggers publishing of artifacts and deployment of the software to
-production environments such as the Pathling web site and sandbox instance.
+production environments such as the Pathling website and sandbox instance.
 
 ### Coding conventions
 
-This repository uses the 
-[Google Java Style Guide](https://google.github.io/styleguide/javaguide.html).
+This repository uses [EditorConfig](https://editorconfig.org/), please use it to
+reformat your code before pushing.
 
 ## Code of conduct
 
