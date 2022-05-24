@@ -3,7 +3,8 @@ import os
 
 import pkg_resources
 
-def find_jar(verbose=False):
+
+def find_jar(verbose: bool = False) -> str:
     """Gets the path to the pathling encoders jar bundled with the
     python distribution
     """
