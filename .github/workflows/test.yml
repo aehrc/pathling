@@ -7,7 +7,6 @@ name: Test
 
 on:
   push:
-    branches-ignore: [ main ]
 
 # If the actor is Dependabot, we need to avoid anything that requires privileged access - so we skip
 # the integration test (which requires a secret), and also the test reporting actions (which require
