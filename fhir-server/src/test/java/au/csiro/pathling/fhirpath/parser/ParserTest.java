@@ -727,6 +727,14 @@ public class ParserTest extends AbstractParserTest {
   }
 
   @Test
+  void testIifWithNullLiteral() {
+    assertThatResultOf("iif(gender='male', birthDate, {})")
+        .isElementPath(DatePath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.csv");
+  }
+
+  @Test
   void testUntilFunction() {
     setSubjectResource(ResourceType.ENCOUNTER);
     mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);

@@ -8,8 +8,6 @@ package au.csiro.pathling.fhirpath.literal;
 
 import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.QueryHelpers;
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import java.util.function.Function;
@@ -32,10 +30,9 @@ public class NullLiteralPath extends LiteralPath<StringType> implements Comparab
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
     super(dataset, idColumn, new StringType(EXPRESSION));
-    this.idColumn = idColumn;
-    final DatasetWithColumn datasetWithColumn = QueryHelpers.createColumn(dataset, lit(null));
-    this.dataset = datasetWithColumn.getDataset();
-    this.valueColumn = datasetWithColumn.getColumn();
+    // But then we also need to override the value column
+    // to be a null literal rather then the placeholder value literal.
+    this.valueColumn = lit(null);
   }
 
   /**

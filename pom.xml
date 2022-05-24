@@ -6,8 +6,8 @@
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
@@ -19,7 +19,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>5.0.1</version>
+  <version>5.0.2</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -76,7 +76,7 @@
     <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.209</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.210</pathling.awsSdkVersion>
   </properties>
 
   <modules>
