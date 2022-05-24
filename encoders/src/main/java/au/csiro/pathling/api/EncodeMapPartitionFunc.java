@@ -12,7 +12,8 @@ import java.util.Iterator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static au.csiro.pathling.api.FhirMimeTypes.*;
+import static au.csiro.pathling.api.FhirMimeTypes.FHIR_JSON;
+import static au.csiro.pathling.api.FhirMimeTypes.FHIR_XML;
 
 abstract class EncodeMapPartitionsFunc<T extends IBaseResource> implements MapPartitionsFunction<String, T> {
 
@@ -58,8 +59,6 @@ abstract class EncodeMapPartitionsFunc<T extends IBaseResource> implements MapPa
                 return fhirContext.newJsonParser();
             case FHIR_XML:
                 return fhirContext.newXmlParser();
-            case FHIR_TURTLE:
-                return fhirContext.newRDFParser();
             default:
                 throw new IllegalArgumentException("Cannot create FHIR parser for mime type: " + mimeType);
         }

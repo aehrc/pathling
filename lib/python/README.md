@@ -24,7 +24,7 @@ resources from FHIR JSON bundles:
 
 ```python
 from pyspark.sql import SparkSession
-from pathling.r4 import bundles
+from pathling import PathlingContext
 from pathling.etc import find_jar
 
 spark = SparkSession.builder \
@@ -32,10 +32,13 @@ spark = SparkSession.builder \
     .master('local[*]') \
     .config('spark.jars', find_jar()) \
     .getOrCreate()
+
+ptl = PathlingContext.create(spark)
         
-json_bundles = bundles.load_from_directory(spark, 'examples/data/bundles/')
-patients = bundles.extract_entry(spark, json_bundles, 'Patient')
-patients.show()
+json_bundles = spark.read.text('examples/data/bundles/', wholetext=True)
+
+patients_df = ptl.encodeBundle(json_bundles, 'Patient')
+patients_df.show()
 ```
     
 More usage examples can be found in the `examples` directory.
