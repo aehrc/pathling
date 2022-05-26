@@ -6,14 +6,14 @@
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.0.3-SNAPSHOT</version>
+    <version>5.1.0</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>site</artifactId>
@@ -65,12 +65,6 @@
               <excludeTransitive>true</excludeTransitive>
             </configuration>
           </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
           <execution>
             <id>unpack-python-docs</id>
             <phase>process-classes</phase>
@@ -125,21 +119,21 @@
           <reportOutputDirectory>${project.build.directory}/site/docs</reportOutputDirectory>
           <destDir>java</destDir>
           <links>
-              <link>https://spark.apache.org/docs/latest/api/java/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
-              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
+            <link>https://spark.apache.org/docs/latest/api/java/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
           </links>
           <detectLinks/>
           <doctitle>Pathling ${project.version} API</doctitle>
           <windowtitle>Pathling ${project.version} API</windowtitle>
           <bottom>
-              <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
+            <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
           </bottom>
           <additionalJOptions>
-              <option>--no-module-directories</option>
-              <option>-Xdoclint:none</option>
+            <option>--no-module-directories</option>
+            <option>-Xdoclint:none</option>
           </additionalJOptions>
         </configuration>
       </plugin>
