@@ -31,6 +31,12 @@
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
       <artifactId>fhir-server</artifactId>
       <version>${project.version}</version>
       <classifier>sources</classifier>
@@ -62,6 +68,7 @@
             <configuration>
               <includeGroupIds>au.csiro.pathling</includeGroupIds>
               <excludeArtifactIds>python</excludeArtifactIds>
+              <excludeClassifiers>javadoc</excludeClassifiers>
               <excludeTransitive>true</excludeTransitive>
             </configuration>
           </execution>
@@ -76,6 +83,19 @@
               <includeArtifactIds>python</includeArtifactIds>
               <excludeTransitive>true</excludeTransitive>
               <outputDirectory>${project.build.directory}/site/docs/python</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-scala-docs</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <includeArtifactIds>encoders</includeArtifactIds>
+              <includeClassifiers>javadoc</includeClassifiers>
+              <outputDirectory>${project.build.directory}/site/docs/scala</outputDirectory>
             </configuration>
           </execution>
         </executions>

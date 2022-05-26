@@ -4,7 +4,8 @@
     {%- for node in pages_list -%}
     {%- unless node.nav_exclude -%}
     {%- if node.parent == nil -%}
-    <li class="navigation-list-item{% if page.url == node.url or page.parent == node.title or page.grand_parent == node.title %} active{% endif %}">
+    <li
+      class="navigation-list-item{% if page.url == node.url or page.parent == node.title or page.grand_parent == node.title %} active{% endif %}">
       {%- if page.parent == node.title or page.grand_parent == node.title -%}
       {%- assign first_level_url = node.url | absolute_url -%}
       {%- endif -%}
@@ -16,7 +17,8 @@
       -%}
       <ul class="navigation-list-child-list ">
         {%- for child in children_list -%}
-        <li class="navigation-list-item {% if page.url == child.url or page.parent == child.title %} active{% endif %}">
+        <li
+          class="navigation-list-item {% if page.url == child.url or page.parent == child.title %} active{% endif %}">
           {%- if page.url == child.url or page.parent == child.title -%}
           {%- assign second_level_url = child.url | absolute_url -%}
           {%- endif -%}
@@ -40,6 +42,9 @@
         {%- endfor -%}
         <li class="navigation-list-item">
           <a href="{{ site.url }}/docs/java/" class="navigation-list-link">Java API</a>
+        </li>
+        <li class="navigation-list-item">
+          <a href="{{ site.url }}/docs/scala/au/csiro/pathling/" class="navigation-list-link">Scala API</a>
         </li>
         <li class="navigation-list-item">
           <a href="{{ site.url }}/docs/python/" class="navigation-list-link">Python API</a>
