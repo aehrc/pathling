@@ -27,20 +27,24 @@ class PathlingContext:
                enableExtensions: Optional[bool] = None,
                enabledOpenTypes: Optional[Sequence[str]] = None) -> "PathlingContext":
         """
-        Creates a :class:`PathlingContext` for given :class:`SparkSession` and configuration options.
+        Creates a :class:`PathlingContext` for given :class:`SparkSession` and configuration
+        options.
 
         :param sparkSession: the :class:`SparkSession` instance.
         :param fhirVersion: the FHIR version to use.
             Must a valid FHIR version string. Defaults to R4.
         :param maxNestingLevel: the maximum nesting level for recursive data types.
-            Zero (0) indicatesthat all direct or indirect fields of type T in element of type T should be skipped
+            Zero (0) indicates that all direct or indirect fields of type T in element of type T
+            should be skipped
         :param enableExtensions: switches on/off the support for FHIR extensions
-        :param enabledOpenTypes: list of types that are encoded within open types, such as extensions
+        :param enabledOpenTypes: list of types that are encoded within open types, such as
+            extensions
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
         jvm: JavaObject = sparkSession._jvm
         jpc: JavaObject = jvm.au.csiro.pathling.api.PathlingContext.of(sparkSession._jsparkSession,
-                                                                       fhirVersion, maxNestingLevel, enableExtensions,
+                                                                       fhirVersion, maxNestingLevel,
+                                                                       enableExtensions,
                                                                        enabledOpenTypes)
         return PathlingContext(sparkSession, jpc)
 
@@ -54,8 +58,8 @@ class PathlingContext:
     def encode(self, df: DataFrame, resourceName: str,
                inputType: Optional[str] = None, column: Optional[str] = None) -> DataFrame:
         """
-        Takes a dataframe with a string representations of FHIR resources  in the given column and encodes
-        the resources of the given types as Spark dataframe.
+        Takes a dataframe with a string representations of FHIR resources  in the given column and
+        encodes the resources of the given types as Spark dataframe.
 
         :param df: a :class:`DataFrame` containing the resources to encode.
         :param resourceName: the name of the FHIR resource to extract
@@ -64,7 +68,8 @@ class PathlingContext:
             Defaults to `application/fhir+json`.
         :param column: the column in which the resources to encode are stored. If None then
             the input dataframe is assumed to have one column of type string.
-        :return: a :class:`DataFrame` containing the given type of resources encoded into Spark columns
+        :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
+            columns
         """
 
         return self._wrapDF(self._jpc.encode(df._jdf, resourceName,
@@ -74,8 +79,8 @@ class PathlingContext:
     def encodeBundle(self, df: DataFrame, resourceName: str,
                      inputType: Optional[str] = None, column: Optional[str] = None) -> DataFrame:
         """
-        Takes a dataframe with a string representations of FHIR bundles  in the given column and encodes
-        the resources of the given types as Spark dataframe.
+        Takes a dataframe with a string representations of FHIR bundles  in the given column and
+        encodes the resources of the given types as Spark dataframe.
 
         :param df: a :class:`DataFrame` containing the bundles with the resources to encode.
         :param resourceName: the name of the FHIR resource to extract
@@ -84,7 +89,8 @@ class PathlingContext:
             Defaults to `application/fhir+json`.
         :param column: the column in which the resources to encode are stored. If None then
             the input dataframe is assumed to have one column of type string.
-        :return: a :class:`DataFrame` containing the given type of resources encoded into Spark columns
+        :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
+            columns
         """
         return self._wrapDF(self._jpc.encodeBundle(df._jdf, resourceName,
                                                    inputType or MimeType.FHIR_JSON,

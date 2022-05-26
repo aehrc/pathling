@@ -1,25 +1,26 @@
 Python API for Pathling
 =======================
 
-This is the Python API for [Pathling](https://pathling.csiro.au). It currently 
-supports encoding of [FHIR JSON bundles](https://hl7.org/fhir/R4/bundle.html) and NDJSON into Apache Spark dataframes. 
+This is the Python API for [Pathling](https://pathling.csiro.au). It currently
+supports encoding of [FHIR JSON bundles](https://hl7.org/fhir/R4/bundle.html)
+and NDJSON into Apache Spark dataframes.
 
 ## Installation
 
-Prerequisites: 
+Prerequisites:
 
-- Python 3.8+ with pip 
+- Python 3.8+ with pip
 - PySpark 3.1+
- 
+
 To install, run this command:
- 
+
 ```bash
 pip install pathling  
 ```
-    
+
 ## Usage
 
-The code below shows an example of using the Pathling API to encode Patient 
+The code below shows an example of using the Pathling API to encode Patient
 resources from FHIR JSON bundles:
 
 ```python
@@ -40,12 +41,12 @@ json_bundles = spark.read.text('examples/data/bundles/', wholetext=True)
 patients_df = ptl.encodeBundle(json_bundles, 'Patient')
 patients_df.show()
 ```
-    
+
 More usage examples can be found in the `examples` directory.
 
 ## Development setup
 
-Create an isolated python environment with 
+Create an isolated python environment with
 [Miniconda](https://docs.conda.io/en/latest/miniconda.html), e.g:
 
 ```bash
@@ -59,7 +60,7 @@ Prerequisites:
 - java (Ubuntu 20.04: `apt install default-jdk`)
 - make (Ubuntu 20.04: `apt install make`)
 
-To run the tests and install the package, run this command from the project 
+To run the tests and install the package, run this command from the project
 root:
 
 ```bash

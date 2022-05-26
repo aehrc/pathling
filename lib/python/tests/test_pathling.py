@@ -10,7 +10,7 @@ from pathling.etc import find_jar as find_pathling_jar
 from pathling.fhir import MimeType
 
 PROJECT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
+        os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
 
 
 @fixture(scope="module")
@@ -82,12 +82,14 @@ def test_encode_json_bundles(def_pathling, json_bundles_df):
 
 def test_encode_json_resouces(def_pathling, json_resources_df):
     assert def_pathling.encode(json_resources_df, 'Patient').count() == 9
-    assert def_pathling.encode(json_resources_df, 'Condition', inputType=MimeType.FHIR_JSON).count() == 71
+    assert def_pathling.encode(json_resources_df, 'Condition',
+                               inputType=MimeType.FHIR_JSON).count() == 71
 
 
 def test_encode_xml_bundles(def_pathling, xml_bundles_df):
     assert def_pathling.encodeBundle(xml_bundles_df, 'Patient', MimeType.FHIR_XML).count() == 5
-    assert def_pathling.encodeBundle(xml_bundles_df, 'Condition', MimeType.FHIR_XML, "value").count() == 107
+    assert def_pathling.encodeBundle(xml_bundles_df, 'Condition', MimeType.FHIR_XML,
+                                     "value").count() == 107
 
 
 def test_element_nesting(spark_session, json_resources_df):
@@ -141,7 +143,7 @@ def test_open_types(spark_session, json_resources_df):
     ptl_none = PathlingContext.create(spark_session, enableExtensions=True, enabledOpenTypes=[])
     ptl_some = PathlingContext.create(spark_session, enableExtensions=True,
                                       enabledOpenTypes=['boolean', 'integer', 'string',
-                                                    'Address'])
+                                                        'Address'])
 
     # by default no open types
     patient_def = ptl_def.encode(json_resources_df, 'Patient').head()

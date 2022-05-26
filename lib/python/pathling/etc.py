@@ -17,7 +17,7 @@ def find_jar(verbose: bool = False) -> str:
     verbose and print("Packaged jars dir: %s" % jars_dir)
     if not os.path.isdir(jars_dir):
         verbose and print(
-            "Package resource dir '%s' does not exist. Maybe a development install?" % jars_dir)
+                "Package resource dir '%s' does not exist. Maybe a development install?" % jars_dir)
         # then it can be a development install
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         verbose and print("Project dir is: %s" % project_dir)

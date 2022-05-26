@@ -31,5 +31,6 @@ def main():
     condititions_df = plc.encodeBundle(json_bundles_df, 'Patient', inputType=MimeType.FHIR_JSON)
     condititions_df.show()
 
+
 if __name__ == "__main__":
     main()
