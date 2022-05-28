@@ -1,10 +1,9 @@
-# This workflow will build the software and documentation to ensure there are no errors, and also
-# execute the tests.
+# This workflow:
+# - Packages up the encoders, and publishes to Maven
+# - Builds the server Docker image, and pushes to Docker Hub
+# - Creates a draft release
 #
-# It will also package the server as a Docker images, and push it to the configured repository.
-#
-# This is only run on master, and is only intended for changes that have been reviewed and approved 
-# for deployment.
+# This is only run when a version tag is pushed.
 
 name: Deploy
 

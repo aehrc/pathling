@@ -1,7 +1,5 @@
 # This workflow will build the software and documentation to ensure there are no errors, and also
 # execute the tests.
-#
-# This is run on branches other than master - it does not push or deploy anything.
 
 name: Test
 
