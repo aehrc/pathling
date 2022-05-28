@@ -16,7 +16,7 @@
     "@sentry/node": "^6.16.1",
     "@types/aws-lambda": "^8.10.84",
     "@types/fhir": "^0.0.34",
-    "@types/node": "^16.11.2",
+    "@types/node": "^17.0.36",
     "@types/uuid": "^8.3.1",
     "axios": "^0.27.2",
     "case": "^1.6.3",
