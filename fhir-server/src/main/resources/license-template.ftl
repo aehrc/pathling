@@ -11,13 +11,13 @@ without modification, are permitted provided that the following conditions are
 met:
 
 * Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
+  list of conditions and the following disclaimer.
 * Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
 * Neither the name of CSIRO nor the names of its contributors may be used to
-endorse or promote products derived from this software without specific prior
-written permission of CSIRO.
+  endorse or promote products derived from this software without specific prior
+  written permission of CSIRO.
 
 EXCEPT AS EXPRESSLY STATED IN THIS AGREEMENT AND TO THE FULL EXTENT PERMITTED BY
 APPLICABLE LAW, THE SOFTWARE IS PROVIDED "AS-IS". CSIRO MAKES NO
@@ -50,11 +50,11 @@ RELEVANT CONSUMER GUARANTEE IS LIMITED (WHERE PERMITTED AT CSIRO'S OPTION) TO
 ONE OF FOLLOWING REMEDIES OR SUBSTANTIALLY EQUIVALENT REMEDIES:
 
 1. THE REPLACEMENT OF THE SOFTWARE, THE SUPPLY OF EQUIVALENT SOFTWARE, OR
-SUPPLYING RELEVANT SERVICES AGAIN;
+   SUPPLYING RELEVANT SERVICES AGAIN;
 2. THE REPAIR OF THE SOFTWARE;
 3. THE PAYMENT OF THE COST OF REPLACING THE SOFTWARE, OF ACQUIRING EQUIVALENT
-SOFTWARE, HAVING THE RELEVANT SERVICES SUPPLIED AGAIN, OR HAVING THE SOFTWARE
-REPAIRED.
+   SOFTWARE, HAVING THE RELEVANT SERVICES SUPPLIED AGAIN, OR HAVING THE SOFTWARE
+   REPAIRED.
 
 IN THIS CLAUSE, CSIRO INCLUDES ANY THIRD PARTY AUTHOR OR OWNER OF ANY PART OF
 THE SOFTWARE OR MATERIAL DISTRIBUTED WITH IT.  CSIRO MAY ENFORCE ANY RIGHTS ON
@@ -76,16 +76,16 @@ BEHALF OF THE RELEVANT THIRD PARTY.
 </#function>
 
 <#if dependencyMap?size != 0>
-  #### Third Party Components
+#### Third Party Components
 
-  The following third party components are distributed with the Software. You
-  agree to comply with the licence terms for these components as part of
-  accessing the Software. Other third party software may also be identified in
-  separate files distributed with the Software.
+The following third party components are distributed with the Software. You
+agree to comply with the licence terms for these components as part of
+accessing the Software. Other third party software may also be identified in
+separate files distributed with the Software.
 
-    <#list dependencyMap as e>
-        <#assign project = e.getKey()/>
-        <#assign licenses = e.getValue()/>
-      *${licenseFormat(licenses)} ${artifactFormat(project)}
-    </#list>
+<#list dependencyMap as e>
+<#assign project = e.getKey()/>
+<#assign licenses = e.getValue()/>
+*${licenseFormat(licenses)} ${artifactFormat(project)}
+</#list>
 </#if>

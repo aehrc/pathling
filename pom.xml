@@ -453,16 +453,10 @@
                   <fileTemplate>fhir-server/src/main/resources/license-template.ftl</fileTemplate>
                   <includeTransitiveDependencies>false</includeTransitiveDependencies>
                   <licenseMerges>
-                    <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache
-                      License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0
-                      License|Apache License 2.0|Apache-2.0|Apache 2.0|Apache Software Licenses
-                    </licenseMerge>
-                    <licenseMerge>BSD License|BSD New|The BSD License|New BSD License|BSD-3-Clause
-                    </licenseMerge>
-                    <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0
-                    </licenseMerge>
-                    <licenseMerge>MIT License|The MIT License (MIT)|The MIT License|MIT
-                    </licenseMerge>
+                    <licenseMerge>Apache License, Version 2.0|Apache Software License 2.0|The Apache License, Version 2.0|The Apache Software License, Version 2.0|Apache 2.0 License|Apache License 2.0|Apache-2.0|Apache 2.0|Apache Software Licenses|Apache 2</licenseMerge>
+                    <licenseMerge>BSD License|BSD New|The BSD License|New BSD License|BSD-3-Clause|The New BSD License</licenseMerge>
+                    <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0</licenseMerge>
+                    <licenseMerge>MIT License|The MIT License (MIT)|The MIT License|MIT</licenseMerge>
                   </licenseMerges>
                   <thirdPartyFilename>LICENSE.md</thirdPartyFilename>
                 </configuration>
