@@ -326,28 +326,6 @@ public abstract class QueryHelpers {
   }
 
   /**
-   * This is used to find a set of fallback join columns in cases where a path does not contain all
-   * grouping columns.
-   * <p>
-   * This can happen in the context of a function's arguments, when a path originates from something
-   * other than `$this`, e.g. `%resource`.
-   */
-  private static List<Column> checkColumnsAndFallback(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<Column> groupingColumns, @Nonnull final Column fallback) {
-    final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
-    final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
-        .collect(Collectors.toSet());
-    if (columnList.containsAll(groupingColumnNames)) {
-      return groupingColumns;
-    } else {
-      final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
-      fallbackGroupingColumnNames.retainAll(columnList);
-      fallbackGroupingColumnNames.add(fallback.toString());
-      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
-    }
-  }
-
-  /**
    * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
    * FhirPath and the supplied column.
    *
@@ -397,6 +375,28 @@ public abstract class QueryHelpers {
       @Nonnull final Column leftColumn, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
     return join(left, leftColumn, right.getDataset(), right.getIdColumn(), joinType);
+  }
+
+  /**
+   * This is used to find a set of fallback join columns in cases where a path does not contain all
+   * grouping columns.
+   * <p>
+   * This can happen in the context of a function's arguments, when a path originates from something
+   * other than `$this`, e.g. `%resource`.
+   */
+  private static List<Column> checkColumnsAndFallback(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final List<Column> groupingColumns, @Nonnull final Column fallback) {
+    final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
+    final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
+        .collect(Collectors.toSet());
+    if (columnList.containsAll(groupingColumnNames)) {
+      return groupingColumns;
+    } else {
+      final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
+      fallbackGroupingColumnNames.retainAll(columnList);
+      fallbackGroupingColumnNames.add(fallback.toString());
+      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
+    }
   }
 
   /**
