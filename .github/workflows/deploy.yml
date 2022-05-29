@@ -44,9 +44,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Run the deploy goal with Maven
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
         run: |
           mvn --batch-mode deploy \
-          -pl encoders,fhir-server,lib/import -am \
+          -pl encoders,fhir-server,lib/python -am \
           -Pdocker \
           -DskipTests \
           -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }}
