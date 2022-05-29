@@ -24,6 +24,7 @@
   <properties>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
+    <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
   </properties>
 
   <dependencies>
@@ -345,7 +346,7 @@
             <to>
               <image>${pathling.fhirServerDockerRepo}</image>
               <tags>
-                <tag>latest</tag>
+                <tag>${pathling.fhirServerDockerTag}</tag>
                 <tag>${project.version}</tag>
                 <tag>${project.majorVersion}</tag>
               </tags>
