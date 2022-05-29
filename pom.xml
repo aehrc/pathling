@@ -337,7 +337,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>@{argLine} -Xmx2g -ea</argLine>
+            <argLine>@{argLine} -Xmx4g -ea</argLine>
             <forkCount>1C</forkCount>
           </configuration>
         </plugin>
@@ -345,7 +345,7 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <configuration>
-            <argLine>-Xmx2g</argLine>
+            <argLine>-Xmx4g</argLine>
           </configuration>
         </plugin>
         <plugin>
