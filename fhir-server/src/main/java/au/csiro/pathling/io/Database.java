@@ -112,8 +112,8 @@ public class Database implements Cacheable {
   }
 
   /**
-   * Overwrites the resources for a particular type with the contents of the supplied {@link
-   * Dataset}.
+   * Overwrites the resources for a particular type with the contents of the supplied
+   * {@link Dataset}.
    *
    * @param resourceType the type of the resource to write
    * @param resources the {@link Dataset} containing the resource data

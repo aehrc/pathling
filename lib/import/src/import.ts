@@ -12,7 +12,7 @@ import { OperationOutcome, Parameters } from "fhir/r4";
 import {
   buildAuthenticatedClient,
   FHIR_JSON_CONTENT_TYPE,
-  getStatusUrl,
+  getStatusUrl
 } from "./common.js";
 
 export interface ImportParams {
@@ -37,7 +37,7 @@ export async function importFromParameters({
   clientId,
   clientSecret,
   scopes,
-  parameters,
+  parameters
 }: ImportParams): Promise<ImportResult> {
   if (
     parameters.parameter &&
@@ -59,8 +59,8 @@ export async function importFromParameters({
     headers: {
       Accept: FHIR_JSON_CONTENT_TYPE,
       "Content-Type": FHIR_JSON_CONTENT_TYPE,
-      Prefer: "respond-async",
-    },
+      Prefer: "respond-async"
+    }
   });
 
   if (response.status === 202) {

@@ -9,7 +9,7 @@ import { makeRequest, postFhirConfig } from "./common";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  QueryResult,
+  QueryResult
 } from "./index";
 
 /**
@@ -117,14 +117,14 @@ export class ImportClient {
         part: [
           {
             name: "resourceType",
-            valueString: s.resourceType,
+            valueString: s.resourceType
           },
           {
             name: "url",
-            valueString: s.url,
-          },
-        ],
-      })),
+            valueString: s.url
+          }
+        ]
+      }))
     };
   }
 }

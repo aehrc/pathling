@@ -6,26 +6,26 @@
 
 /* Row */
 
-	.row {
-		@include html-grid(2rem);
+.row {
+  @include html-grid(2rem);
 
-		@include breakpoint('<=xlarge') {
-			@include html-grid(2rem, 'xlarge');
-		}
+  @include breakpoint('<=xlarge') {
+    @include html-grid(2rem, 'xlarge');
+  }
 
-		@include breakpoint('<=large') {
-			@include html-grid(1.5rem, 'large');
-		}
+  @include breakpoint('<=large') {
+    @include html-grid(1.5rem, 'large');
+  }
 
-		@include breakpoint('<=medium') {
-			@include html-grid(1.5rem, 'medium');
-		}
+  @include breakpoint('<=medium') {
+    @include html-grid(1.5rem, 'medium');
+  }
 
-		@include breakpoint('<=small') {
-			@include html-grid(1.25rem, 'small');
-		}
+  @include breakpoint('<=small') {
+    @include html-grid(1.25rem, 'small');
+  }
 
-		@include breakpoint('<=xsmall') {
-			@include html-grid(1.25rem, 'xsmall');
-		}
-	}
+  @include breakpoint('<=xsmall') {
+    @include html-grid(1.25rem, 'xsmall');
+  }
+}

@@ -37,7 +37,7 @@ export async function checkExportJobStatus({
   clientId,
   clientSecret,
   scopes,
-  statusUrl,
+  statusUrl
 }: CheckExportJobStatusParams): Promise<CheckStatusResult> {
   const client = await buildAuthenticatedClient(
     endpoint,
@@ -49,7 +49,7 @@ export async function checkExportJobStatus({
   const response = await client.get<undefined, AxiosResponse<object>>(
     statusUrl,
     {
-      headers: { Accept: FHIR_JSON_CONTENT_TYPE },
+      headers: { Accept: FHIR_JSON_CONTENT_TYPE }
     }
   );
 
@@ -76,7 +76,7 @@ export async function checkImportJobStatus(
 ): Promise<object> {
   return checkExportJobStatus({
     ...params,
-    scopes: params.scopes ?? "user/*.write",
+    scopes: params.scopes ?? "user/*.write"
   });
 }
 

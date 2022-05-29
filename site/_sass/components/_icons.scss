@@ -6,34 +6,34 @@
 
 /* Icons */
 
-	ul.icons {
-		cursor: default;
-		list-style: none;
-		padding-left: 0;
+ul.icons {
+  cursor: default;
+  list-style: none;
+  padding-left: 0;
 
-		li {
-			display: inline-block;
+  li {
+    display: inline-block;
 
-			&:last-child {
-				padding-right: 0;
-			}
+    &:last-child {
+      padding-right: 0;
+    }
 
-			.icon {
-				@include vendor('transition', 'background-color #{_duration(transition)} ease-in-out');
-				width: 2.25rem;
-				height: 2.25rem;
-				text-align: center;
-				line-height: 2.25rem;
-				border-radius: 2.25rem;
-				display: inline-block;
+    .icon {
+      @include vendor('transition', 'background-color #{_duration(transition)} ease-in-out');
+      width: 2.25rem;
+      height: 2.25rem;
+      text-align: center;
+      line-height: 2.25rem;
+      border-radius: 2.25rem;
+      display: inline-block;
 
-				&:before {
-					font-size: 1.25rem;
-				}
+      &:before {
+        font-size: 1.25rem;
+      }
 
-				&:hover {
-					background-color: _palette(border-bg);
-				}
-			}
-		}
-	}
+      &:hover {
+        background-color: _palette(border-bg);
+      }
+    }
+  }
+}

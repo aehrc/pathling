@@ -31,7 +31,8 @@ import org.springframework.stereotype.Component;
  * The aspect that inserts checks relating to security.
  *
  * @author Piotr Szul
- * @see <a href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop-ataspectj-advice-params">Advice
+ * @see <a
+ * href="https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop-ataspectj-advice-params">Advice
  * Parameters</a>
  */
 @Aspect
@@ -106,5 +107,5 @@ public class SecurityAspect {
     }
     return Optional.ofNullable(subject);
   }
-  
+
 }

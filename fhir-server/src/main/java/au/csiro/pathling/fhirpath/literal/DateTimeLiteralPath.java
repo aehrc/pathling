@@ -104,5 +104,5 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DateTimePath;
   }
- 
+
 }

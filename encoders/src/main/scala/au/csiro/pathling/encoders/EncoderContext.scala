@@ -88,7 +88,10 @@ case class EncoderConfig(override val maxNestingLevel: Int,
 }
 
 object EncoderConfig {
-  def apply(maxNestingLevel: Int, openTypes: Set[String], supportsExtensions: Boolean): EncoderConfig = EncoderConfig(maxNestingLevel, openTypes, supportsExtensions, generateFid = true)
+  def apply(maxNestingLevel: Int, openTypes: Set[String],
+            supportsExtensions: Boolean): EncoderConfig = EncoderConfig(maxNestingLevel, openTypes,
+    supportsExtensions, generateFid = true)
 
-  def apply(maxNestingLevel: Int, openTypes: Set[String]): EncoderConfig = EncoderConfig(maxNestingLevel, openTypes, supportsExtensions = true, generateFid = true)
+  def apply(maxNestingLevel: Int, openTypes: Set[String]): EncoderConfig = EncoderConfig(
+    maxNestingLevel, openTypes, supportsExtensions = true, generateFid = true)
 }

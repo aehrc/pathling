@@ -20,13 +20,36 @@ import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Annotation;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Condition.ConditionStageComponent;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Medication;
 import org.hl7.fhir.r4.model.Medication.MedicationIngredientComponent;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Meta;
+import org.hl7.fhir.r4.model.Narrative;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Patient;
+import org.hl7.fhir.r4.model.Provenance;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseItemAnswerComponent;
 import org.hl7.fhir.r4.model.QuestionnaireResponse.QuestionnaireResponseItemComponent;
+import org.hl7.fhir.r4.model.Range;
+import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConditionVerStatus;
 import org.hl7.fhir.utilities.xhtml.NodeType;
 import org.hl7.fhir.utilities.xhtml.XhtmlNode;
@@ -394,9 +417,9 @@ public class TestData {
     nestedExtension.addExtension(new Extension("uuid:nested", new StringType("nested")));
 
     conditionWithExtension.setExtension(Arrays.asList(
-        new Extension("uuid:ext1", new StringType("ext1")),
-        new Extension("uuid:ext2", new IntegerType(2)),
-        nestedExtension
+            new Extension("uuid:ext1", new StringType("ext1")),
+            new Extension("uuid:ext2", new IntegerType(2)),
+            nestedExtension
         )
     );
 
@@ -410,8 +433,8 @@ public class TestData {
     identifier.setId("uuid:identifier1");
 
     identifier.setExtension(Arrays.asList(
-        new Extension("uuid:ext10", new StringType("ext10")),
-        new Extension("uuid:ext11", new IntegerType(11))
+            new Extension("uuid:ext10", new StringType("ext10")),
+            new Extension("uuid:ext11", new IntegerType(11))
         )
     );
 

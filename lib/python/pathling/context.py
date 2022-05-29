@@ -1,7 +1,6 @@
-from typing import Optional, Sequence
-
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
+from typing import Optional, Sequence
 
 from pathling.fhir import MimeType
 

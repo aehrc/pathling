@@ -99,12 +99,8 @@
           {
             "use": "official",
             "family": "Swaniawski813",
-            "given": [
-              "Bennett146"
-            ],
-            "prefix": [
-              "Mr."
-            ]
+            "given": ["Bennett146"],
+            "prefix": ["Mr."]
           }
         ],
         "telecom": [
@@ -133,9 +129,7 @@
                 ]
               }
             ],
-            "line": [
-              "165 Klein Branch Apt 90"
-            ],
+            "line": ["165 Klein Branch Apt 90"],
             "city": "Lawrence",
             "state": "Massachusetts",
             "postalCode": "01840",
@@ -357,9 +351,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "productOrService": {
               "coding": [
                 {
@@ -550,9 +542,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "category": {
               "coding": [
                 {
@@ -800,9 +790,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "productOrService": {
               "coding": [
                 {
@@ -993,9 +981,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "category": {
               "coding": [
                 {
@@ -1347,9 +1333,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "productOrService": {
               "coding": [
                 {
@@ -1363,9 +1347,7 @@
           },
           {
             "sequence": 3,
-            "diagnosisSequence": [
-              2
-            ],
+            "diagnosisSequence": [2],
             "productOrService": {
               "coding": [
                 {
@@ -1379,9 +1361,7 @@
           },
           {
             "sequence": 4,
-            "diagnosisSequence": [
-              3
-            ],
+            "diagnosisSequence": [3],
             "productOrService": {
               "coding": [
                 {
@@ -1604,9 +1584,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "category": {
               "coding": [
                 {
@@ -1642,9 +1620,7 @@
           },
           {
             "sequence": 3,
-            "diagnosisSequence": [
-              2
-            ],
+            "diagnosisSequence": [2],
             "category": {
               "coding": [
                 {
@@ -1680,9 +1656,7 @@
           },
           {
             "sequence": 4,
-            "diagnosisSequence": [
-              3
-            ],
+            "diagnosisSequence": [3],
             "category": {
               "coding": [
                 {
@@ -1931,9 +1905,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "productOrService": {
               "coding": [
                 {
@@ -2124,9 +2096,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "category": {
               "coding": [
                 {
@@ -2427,9 +2397,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "productOrService": {
               "coding": [
                 {
@@ -2443,9 +2411,7 @@
           },
           {
             "sequence": 3,
-            "diagnosisSequence": [
-              2
-            ],
+            "diagnosisSequence": [2],
             "productOrService": {
               "coding": [
                 {
@@ -2652,9 +2618,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "category": {
               "coding": [
                 {
@@ -2690,9 +2654,7 @@
           },
           {
             "sequence": 3,
-            "diagnosisSequence": [
-              2
-            ],
+            "diagnosisSequence": [2],
             "category": {
               "coding": [
                 {

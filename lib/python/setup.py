@@ -1,9 +1,8 @@
 import glob
 import os
 import sys
-from typing import Union
-
 from setuptools import setup, find_packages
+from typing import Union
 
 HERE = os.path.dirname(__file__)
 ROOT_DIR = os.path.abspath(HERE)

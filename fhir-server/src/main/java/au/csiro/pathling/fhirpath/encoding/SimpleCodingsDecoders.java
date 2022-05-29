@@ -63,8 +63,8 @@ public interface SimpleCodingsDecoders {
 
 
   /**
-   * Decodes a pair of {@link List} of codings from a {@code struct(array(struct[Coding]),
-   * array(struct[Coding]))}
+   * Decodes a pair of {@link List} of codings from a
+   * {@code struct(array(struct[Coding]), array(struct[Coding]))}
    *
    * @param row the {@link InternalRow} to decode
    * @return the decoded pair of list of {@link SimpleCoding}

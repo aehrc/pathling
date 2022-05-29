@@ -6,19 +6,19 @@
 
 /* Box */
 
-	.box {
-		border: solid 2px _palette(border);
-		border-radius: _size(border-radius);
-		margin-bottom: _size(element-margin);
-		padding: 1.5rem;
+.box {
+  border: solid 2px _palette(border);
+  border-radius: _size(border-radius);
+  margin-bottom: _size(element-margin);
+  padding: 1.5rem;
 
-		> :last-child {
-			margin-bottom: 0;
-		}
+  > :last-child {
+    margin-bottom: 0;
+  }
 
-		&.alt {
-			border: 0;
-			border-radius: 0;
-			padding: 0;
-		}
-	}
+  &.alt {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+}

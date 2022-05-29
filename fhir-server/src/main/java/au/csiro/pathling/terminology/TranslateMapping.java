@@ -22,12 +22,16 @@ import javax.annotation.Nonnull;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryRequestComponent;
 import org.hl7.fhir.r4.model.Bundle.BundleType;
 import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.UriType;
 
 /**
  * Input/Output mapping for translate operation.
@@ -83,8 +87,8 @@ public final class TranslateMapping extends BaseMapping {
   }
 
   /**
-   * Builds ConceptTranslator from the batch response bundle for {@link
-   * TerminologyService#translate}.
+   * Builds ConceptTranslator from the batch response bundle for
+   * {@link TerminologyService#translate}.
    *
    * @param responseBundle The response from the terminology server
    * @param inputCodes The list of coding requested for translation

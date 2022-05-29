@@ -15,7 +15,7 @@ import { fhirBulkExport, FhirBulkResult } from "./export.js";
 import {
   CheckStatusHandlerOutput,
   ExportHandlerOutput,
-  ImportHandlerInput,
+  ImportHandlerInput
 } from "./handlers";
 import { importFromParameters } from "./import.js";
 import { transferExportToS3 } from "./transferToS3.js";
@@ -45,7 +45,7 @@ export const fhirExportConfigured = (config: Config) =>
     since: config.getStringValue("SINCE"),
     clientId: config.getStringValue("SOURCE_CLIENT_ID"),
     clientSecret: config.getStringValue("SOURCE_CLIENT_SECRET"),
-    scopes: config.getStringValue("SOURCE_SCOPES"),
+    scopes: config.getStringValue("SOURCE_SCOPES")
   });
 
 export const checkExportConfigured = (
@@ -57,7 +57,7 @@ export const checkExportConfigured = (
     clientId: config.getStringValue("SOURCE_CLIENT_ID"),
     clientSecret: config.getStringValue("SOURCE_CLIENT_SECRET"),
     scopes: config.getStringValue("SOURCE_SCOPES"),
-    statusUrl: event.statusUrl,
+    statusUrl: event.statusUrl
   });
 
 export const transferToS3Configured = (
@@ -70,7 +70,7 @@ export const transferToS3Configured = (
     clientSecret: config.getStringValue("SOURCE_CLIENT_SECRET"),
     scopes: config.getStringValue("SOURCE_SCOPES"),
     result: event.result as FhirBulkResult,
-    stagingUrl: config.getStringValue("STAGING_URL"),
+    stagingUrl: config.getStringValue("STAGING_URL")
   });
 
 export const pathlingImportConfigured = (
@@ -82,7 +82,7 @@ export const pathlingImportConfigured = (
     clientId: config.getStringValue("TARGET_CLIENT_ID"),
     clientSecret: config.getStringValue("TARGET_CLIENT_SECRET"),
     scopes: config.getStringValue("TARGET_SCOPES", true),
-    parameters: event.parameters,
+    parameters: event.parameters
   });
 
 export const checkImportStatusConfigured = (
@@ -94,7 +94,7 @@ export const checkImportStatusConfigured = (
     clientId: config.getStringValue("TARGET_CLIENT_ID"),
     clientSecret: config.getStringValue("TARGET_CLIENT_SECRET"),
     scopes: config.getStringValue("TARGET_SCOPES", true),
-    statusUrl: event.statusUrl,
+    statusUrl: event.statusUrl
   });
 
 export class FileConfig implements Config {
@@ -182,6 +182,6 @@ function getRetryConfig(
   return {
     times: times ? times : 24,
     wait: wait ? wait : 900,
-    backOff: backOff ? backOff : 1.0,
+    backOff: backOff ? backOff : 1.0
   };
 }

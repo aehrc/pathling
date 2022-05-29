@@ -50,11 +50,11 @@ RELEVANT CONSUMER GUARANTEE IS LIMITED (WHERE PERMITTED AT CSIRO'S OPTION) TO
 ONE OF FOLLOWING REMEDIES OR SUBSTANTIALLY EQUIVALENT REMEDIES:
 
 1. THE REPLACEMENT OF THE SOFTWARE, THE SUPPLY OF EQUIVALENT SOFTWARE, OR
-   SUPPLYING RELEVANT SERVICES AGAIN;
+SUPPLYING RELEVANT SERVICES AGAIN;
 2. THE REPAIR OF THE SOFTWARE;
 3. THE PAYMENT OF THE COST OF REPLACING THE SOFTWARE, OF ACQUIRING EQUIVALENT
-   SOFTWARE, HAVING THE RELEVANT SERVICES SUPPLIED AGAIN, OR HAVING THE SOFTWARE
-   REPAIRED.
+SOFTWARE, HAVING THE RELEVANT SERVICES SUPPLIED AGAIN, OR HAVING THE SOFTWARE
+REPAIRED.
 
 IN THIS CLAUSE, CSIRO INCLUDES ANY THIRD PARTY AUTHOR OR OWNER OF ANY PART OF
 THE SOFTWARE OR MATERIAL DISTRIBUTED WITH IT.  CSIRO MAY ENFORCE ANY RIGHTS ON
@@ -76,16 +76,16 @@ BEHALF OF THE RELEVANT THIRD PARTY.
 </#function>
 
 <#if dependencyMap?size != 0>
-#### Third Party Components
+  #### Third Party Components
 
-The following third party components are distributed with the Software. You
-agree to comply with the licence terms for these components as part of
-accessing the Software. Other third party software may also be identified in
-separate files distributed with the Software.
+  The following third party components are distributed with the Software. You
+  agree to comply with the licence terms for these components as part of
+  accessing the Software. Other third party software may also be identified in
+  separate files distributed with the Software.
 
     <#list dependencyMap as e>
         <#assign project = e.getKey()/>
         <#assign licenses = e.getValue()/>
-*${licenseFormat(licenses)} ${artifactFormat(project)}
+      *${licenseFormat(licenses)} ${artifactFormat(project)}
     </#list>
 </#if>

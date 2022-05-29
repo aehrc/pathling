@@ -103,7 +103,8 @@ trait DataTypeMappings {
    * @return a specialized custom coder
    */
 
-  def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = None
+  def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_],
+                    elementName: String): Option[CustomCoder] = None
 
 
   /**

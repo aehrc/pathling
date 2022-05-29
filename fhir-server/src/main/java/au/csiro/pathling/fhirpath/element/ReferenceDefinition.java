@@ -51,7 +51,7 @@ public class ReferenceDefinition extends ElementDefinition {
               return Enumerations.ResourceType.fromCode(resourceCode);
             }
           } catch (final InstantiationException | IllegalAccessException |
-              InvocationTargetException | NoSuchMethodException e) {
+                         InvocationTargetException | NoSuchMethodException e) {
             throw new RuntimeException("Problem accessing resource types on element", e);
           }
         })

@@ -8,7 +8,12 @@ package au.csiro.pathling.test.fixtures;
 
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 
-import org.apache.spark.sql.types.*;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * @author John Grimes

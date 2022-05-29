@@ -6,13 +6,13 @@
 
 // noinspection JSUnusedGlobalSymbols
 
+import { AxiosResponse } from "axios";
 import pRetry, { AbortError, FailedAttemptError } from "p-retry";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  RetryConfig,
+  RetryConfig
 } from "./index";
-import { AxiosResponse } from "axios";
 import { JobClient, JobInProgressError } from "./job";
 import { buildResponseError } from "./OperationOutcome";
 
@@ -53,7 +53,7 @@ export function retry(promise: () => Promise<any>, options: RetryOptions) {
             error.message
           );
         }
-      },
+      }
     }
   );
 }
@@ -94,7 +94,7 @@ export function waitForAsyncResult(
     {
       retry: clientOptions.asyncRetry,
       verboseLogging: clientOptions.verboseLogging,
-      message,
+      message
     }
   );
 }

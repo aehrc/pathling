@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-
 from pyspark.sql import SparkSession
 
 from pathling import PathlingContext

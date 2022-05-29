@@ -21,7 +21,7 @@ import {
   EnvironmentConfig,
   fhirExportConfigured,
   pathlingImportConfigured,
-  transferToS3Configured,
+  transferToS3Configured
 } from "./config.js";
 import { ExportResult } from "./export.js";
 import { ImportResult } from "./import.js";
@@ -50,45 +50,37 @@ initializeSentry(config);
  * Lambda handler for bulk FHIR export.
  */
 export const fhirExport: Handler<unknown, ExportHandlerOutput> = async () => ({
-  statusUrl: await fhirExportConfigured(config),
+  statusUrl: await fhirExportConfigured(config)
 });
 
 /**
  * Lambda handler for checking bulk FHIR export status.
  */
-export const checkExportStatus: Handler<
-  ExportHandlerOutput,
-  CheckStatusHandlerOutput
-> = async (event) => ({
-  result: await checkExportConfigured(config, event),
+export const checkExportStatus: Handler<ExportHandlerOutput,
+  CheckStatusHandlerOutput> = async (event) => ({
+  result: await checkExportConfigured(config, event)
 });
 
 /**
  * Lambda handler for transferring bulk export to S3.
  */
-export const transferToS3: Handler<
-  CheckStatusHandlerOutput,
-  ImportHandlerInput
-> = async (event) => ({
-  parameters: await transferToS3Configured(config, event),
+export const transferToS3: Handler<CheckStatusHandlerOutput,
+  ImportHandlerInput> = async (event) => ({
+  parameters: await transferToS3Configured(config, event)
 });
 
 /**
  * Lambda handler for import to Pathling.
  */
-export const pathlingImport: Handler<
-  ImportHandlerInput,
-  ImportHandlerOutput
-> = async (event) => ({
-  statusUrl: await pathlingImportConfigured(config, event),
+export const pathlingImport: Handler<ImportHandlerInput,
+  ImportHandlerOutput> = async (event) => ({
+  statusUrl: await pathlingImportConfigured(config, event)
 });
 
 /**
  * Lambda handler for checking Pathling import status.
  */
-export const checkImportStatus: Handler<
-  ExportHandlerOutput,
-  CheckStatusHandlerOutput
-> = async (event) => ({
-  result: await checkImportStatusConfigured(config, event),
+export const checkImportStatus: Handler<ExportHandlerOutput,
+  CheckStatusHandlerOutput> = async (event) => ({
+  result: await checkImportStatusConfigured(config, event)
 });

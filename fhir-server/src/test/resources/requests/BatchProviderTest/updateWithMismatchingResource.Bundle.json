@@ -11,9 +11,7 @@
         "resourceType": "Patient",
         "id": "example0",
         "meta": {
-          "profile": [
-            "http://hl7.org.au/fhir/StructureDefinition/au-patient"
-          ]
+          "profile": ["http://hl7.org.au/fhir/StructureDefinition/au-patient"]
         },
         "text": {
           "status": "generated",
@@ -97,9 +95,7 @@
         "name": [
           {
             "family": "Franklin",
-            "given": [
-              "Stella"
-            ]
+            "given": ["Stella"]
           }
         ],
         "telecom": [
@@ -114,9 +110,7 @@
         "address": [
           {
             "use": "home",
-            "line": [
-              "31 Pacquola Street"
-            ],
+            "line": ["31 Pacquola Street"],
             "city": "Blacktown",
             "state": "NSW",
             "postalCode": "2148",

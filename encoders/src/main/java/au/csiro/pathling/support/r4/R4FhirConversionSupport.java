@@ -14,33 +14,33 @@
 package au.csiro.pathling.support.r4;
 
 import au.csiro.pathling.support.FhirConversionSupport;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 public class R4FhirConversionSupport extends FhirConversionSupport {
 
-    private static final long serialVersionUID = -367070946615790595L;
+  private static final long serialVersionUID = -367070946615790595L;
 
-    @Override
-    public String fhirType(IBase base) {
+  @Override
+  public String fhirType(IBase base) {
 
-        return base.fhirType();
-    }
+    return base.fhirType();
+  }
 
-    @Override
-    public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle, Class<T> resourceClass) {
-        Bundle r4Bundle = (Bundle) bundle;
+  @Override
+  public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
+      Class<T> resourceClass) {
+    Bundle r4Bundle = (Bundle) bundle;
 
-        return r4Bundle.getEntry().stream()
-                .map(BundleEntryComponent::getResource)
-                .filter(resourceClass::isInstance)
-                .collect(Collectors.toList());
-    }
+    return r4Bundle.getEntry().stream()
+        .map(BundleEntryComponent::getResource)
+        .filter(resourceClass::isInstance)
+        .collect(Collectors.toList());
+  }
 }
 

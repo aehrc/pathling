@@ -2,20 +2,13 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2019",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "strict": true,
     "outDir": "./lib",
     "declaration": true,
     "sourceMap": true,
     "declarationMap": true
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }

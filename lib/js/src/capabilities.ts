@@ -9,7 +9,7 @@ import { getConfig, makeRequest } from "./common";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  QueryResult,
+  QueryResult
 } from "./index";
 
 export type CapabilitiesQueryOptions = QueryOptions;
