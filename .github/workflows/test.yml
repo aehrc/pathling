@@ -77,7 +77,7 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Run the verify goal with Maven
+      - name: Run the verify goal with Maven (Dependabot)
         if: ${{ github.actor == 'dependabot[bot]' }}
         run: |
           mvn --batch-mode verify \
