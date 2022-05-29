@@ -840,7 +840,7 @@ ij_javascript_space_before_if_left_brace = true
 ij_javascript_space_before_if_parentheses = true
 ij_javascript_space_before_method_call_parentheses = false
 ij_javascript_space_before_method_left_brace = true
-ij_javascript_space_before_method_parentheses = false
+ij_javascript_space_before_method_parentheses = true
 ij_javascript_space_before_property_colon = false
 ij_javascript_space_before_quest = true
 ij_javascript_space_before_switch_left_brace = true
@@ -892,39 +892,12 @@ ij_javascript_while_brace_force = always
 ij_javascript_while_on_new_line = false
 ij_javascript_wrap_comments = false
 
-[{*.gemspec,*.jbuilder,*.rake,*.rb,*.rbi,*.rbw,*.ru,*.thor,.simplecov,capfile,cucumber,gemfile,guardfile,isolate,rails,rake,rakefile,rcov,spec,spork,steepfile,vagrantfile}]
-ij_ruby_align_group_field_declarations = false
-ij_ruby_align_multiline_parameters = true
-ij_ruby_blank_lines_around_class = 1
-ij_ruby_blank_lines_around_method = 1
-ij_ruby_chain_calls_alignment = 2
-ij_ruby_convert_brace_block_by_enter = true
-ij_ruby_empty_declarations_style = 1
-ij_ruby_force_newlines_around_visibility_mods = true
-ij_ruby_indent_private_methods = false
-ij_ruby_indent_protected_methods = false
-ij_ruby_indent_public_methods = false
-ij_ruby_indent_visibility_modifiers = true
-ij_ruby_indent_when_cases = false
-ij_ruby_keep_blank_lines_in_code = 1
-ij_ruby_keep_blank_lines_in_declarations = 1
-ij_ruby_keep_line_breaks = true
-ij_ruby_parentheses_around_method_arguments = true
-ij_ruby_spaces_around_assignment_operators = true
-ij_ruby_spaces_around_hashrocket = true
-ij_ruby_spaces_around_other_operators = true
-ij_ruby_spaces_around_range_operators = false
-ij_ruby_spaces_around_relational_operators = true
-ij_ruby_spaces_within_array_initializer_braces = true
-ij_ruby_spaces_within_braces = true
-ij_ruby_spaces_within_pipes = false
-
 [{*.har,*.jsb2,*.jsb3,*.json,.babelrc,.eslintrc,.stylelintrc,bowerrc,jest.config}]
 max_line_length = 80
 ij_visual_guides = 80
 ij_json_keep_blank_lines_in_code = 0
 ij_json_keep_indents_on_empty_lines = false
-ij_json_keep_line_breaks = true
+ij_json_keep_line_breaks = false
 ij_json_space_after_colon = true
 ij_json_space_after_comma = true
 ij_json_space_before_colon = true
@@ -970,7 +943,7 @@ tab_width = 4
 ij_continuation_indent_size = 8
 ij_markdown_force_one_space_after_blockquote_symbol = true
 ij_markdown_force_one_space_after_header_symbol = true
-ij_markdown_force_one_space_after_list_bullet = true
+ij_markdown_force_one_space_after_list_bullet = false
 ij_markdown_force_one_space_between_words = true
 ij_markdown_insert_quote_arrows_on_wrap = true
 ij_markdown_keep_indents_on_empty_lines = false
@@ -1063,7 +1036,7 @@ ij_python_spaces_within_method_parentheses = false
 ij_python_use_continuation_indent_for_arguments = true
 ij_python_use_continuation_indent_for_collection_and_comprehensions = false
 ij_python_use_continuation_indent_for_parameters = true
-ij_python_wrap_long_lines = false
+ij_python_wrap_long_lines = true
 
 [{*.yaml,*.yml}]
 ij_yaml_align_values_properties = do_not_align
