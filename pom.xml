@@ -75,7 +75,7 @@
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>3.3.3</pathling.hadoopVersion>
+    <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
     <pathling.awsSdkVersion>1.12.230</pathling.awsSdkVersion>
   </properties>
 
@@ -193,6 +193,11 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
+        <version>2.13.3</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
         <version>2.13.3</version>
       </dependency>
       <dependency>
