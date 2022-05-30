@@ -75,7 +75,7 @@
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>3.3.1</pathling.hadoopVersion>
+    <pathling.hadoopVersion>3.3.3</pathling.hadoopVersion>
     <pathling.awsSdkVersion>1.12.230</pathling.awsSdkVersion>
   </properties>
 
@@ -167,6 +167,16 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-api</artifactId>
+        <version>${pathling.hadoopVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-client-runtime</artifactId>
+        <version>${pathling.hadoopVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-aws</artifactId>
         <version>${pathling.hadoopVersion}</version>
         <exclusions>
@@ -210,6 +220,11 @@
         <version>${pathling.awsSdkVersion}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-bundle</artifactId>
+        <version>${pathling.awsSdkVersion}</version>
       </dependency>
 
       <!-- Error monitoring -->
@@ -278,6 +293,34 @@
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.2</version>
+      </dependency>
+
+      <!-- CVE-2020-36518 -->
+      <dependency>
+        <groupId>org.apache.parquet</groupId>
+        <artifactId>parquet-jackson</artifactId>
+        <version>1.12.3</version>
+      </dependency>
+
+      <!-- CVE-2021-35515, CVE-2021-35516, CVE-2021-35517, CVE-2021-36090 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.21</version>
+      </dependency>
+
+      <!-- CVE-2020-25644 -->
+      <dependency>
+        <groupId>org.wildfly.openssl</groupId>
+        <artifactId>wildfly-openssl</artifactId>
+        <version>1.1.3.Final</version>
+      </dependency>
+
+      <!-- CVE-2021-22569, GHSA-wrvw-hg22-4m67 -->
+      <dependency>
+        <groupId>com.google.protobuf</groupId>
+        <artifactId>protobuf-java</artifactId>
+        <version>3.19.2</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
