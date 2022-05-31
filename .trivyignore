@@ -10,3 +10,15 @@ CVE-2021-35515
 CVE-2021-35516
 CVE-2021-35517
 CVE-2021-36090
+
+# This vulnerability makes it possible to craft a denial of service attack through crafted input to
+# the code which handles Parquet files. 
+# We have assessed this as low-risk in the context of Pathling, as files are only ever read from a
+# configured white-list of locations that are trusted by the administrators of the server.
+CVE-2020-36518
+
+# This vulnerability makes it possible for an attacker participating in a HTTP session to cause an 
+# OOM error.
+# We have assessed this as low-risk in the context of Pathling, as this only applies to the AWS 
+# client and is also mitigated by the white-list of trusted data sources.
+CVE-2020-25644
