@@ -6,13 +6,6 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
-import static org.apache.spark.sql.functions.col;
-
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
@@ -25,21 +18,23 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.BinaryOperator;
-import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.function.BinaryOperator;
+import java.util.stream.Collectors;
+
+import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.utilities.Preconditions.*;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static org.apache.spark.sql.functions.coalesce;
+import static org.apache.spark.sql.functions.col;
 
 /**
  * Contains functionality common to query executors.
@@ -228,6 +223,102 @@ public abstract class QueryExecutor {
     return new DatasetWithColumn(dataset.filter(filterColumn), col(filterIdAlias));
   }
 
+  @Nonnull
+  protected FhirPathContextAndResult joinColumns(
+      @Nonnull final Collection<FhirPathAndContext> columnsAndContexts) {
+    // Sort the columns in descending order of expression length.
+    final List<FhirPathAndContext> sortedColumnsAndContexts = columnsAndContexts.stream()
+        .sorted(Comparator.<FhirPathAndContext>comparingInt(p ->
+            p.getFhirPath().getExpression().length()).reversed())
+        .collect(Collectors.toList());
+
+    FhirPathContextAndResult result = null;
+    check(sortedColumnsAndContexts.size() > 0);
+    for (final FhirPathAndContext current : sortedColumnsAndContexts) {
+      if (result != null) {
+        // Get the set of unique prefixes from the two parser contexts, and sort them in descending
+        // order of prefix length.
+        final Set<String> prefixes = new HashSet<>();
+        final Map<String, Column> resultNodeIds = result.getContext().getNodeIdColumns();
+        final Map<String, Column> currentNodeIds = current.getContext().getNodeIdColumns();
+        prefixes.addAll(resultNodeIds.keySet());
+        prefixes.addAll(currentNodeIds.keySet());
+        final List<String> sortedCommonPrefixes = new ArrayList<>(prefixes).stream()
+            .sorted(Comparator.comparingInt(String::length).reversed())
+            .collect(Collectors.toList());
+        final FhirPathContextAndResult finalResult = result;
+
+        // Find the longest prefix that is common to the two expressions.
+        final Optional<String> commonPrefix = sortedCommonPrefixes.stream()
+            .filter(p -> finalResult.getFhirPath().getExpression().startsWith(p) &&
+                current.getFhirPath().getExpression().startsWith(p))
+            .findFirst();
+
+        if (commonPrefix.isPresent() &&
+            resultNodeIds.containsKey(commonPrefix.get()) &&
+            currentNodeIds.containsKey(commonPrefix.get())) {
+          // If there is a common prefix, we add the corresponding node identifier column to the
+          // join condition.
+          final Column previousNodeId = resultNodeIds
+              .get(commonPrefix.get());
+          final List<Column> previousJoinColumns = Arrays.asList(result.getFhirPath().getIdColumn(),
+              previousNodeId);
+          final Column currentNodeId = currentNodeIds
+              .get(commonPrefix.get());
+          final List<Column> currentJoinColumns = Arrays.asList(current.getFhirPath().getIdColumn(),
+              currentNodeId);
+          final Dataset<Row> dataset = join(result.getResult(), previousJoinColumns,
+              current.getFhirPath().getDataset(),
+              currentJoinColumns, JoinType.LEFT_OUTER);
+          result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
+              dataset);
+        } else {
+          // If there is no common prefix, we join using only the resource ID.
+          final Dataset<Row> dataset = join(result.getResult(), result.getFhirPath().getIdColumn(),
+              current.getFhirPath().getDataset(), current.getFhirPath().getIdColumn(),
+              JoinType.LEFT_OUTER);
+          result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
+              dataset);
+        }
+      } else {
+        result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
+            current.getFhirPath().getDataset());
+      }
+    }
+
+    return result;
+  }
+
+  @Nonnull
+  protected Dataset<Row> trimTrailingNulls(@Nonnull final ParserContext parserContext,
+      final @Nonnull Column idColumn, @Nonnull final List<FhirPath> expressions,
+      @Nonnull final Dataset<Row> dataset) {
+    checkArgument(!expressions.isEmpty(), "At least one expression is required");
+
+    final Column[] nonSingularColumns = expressions.stream()
+        .filter(fhirPath -> !fhirPath.isSingular())
+        .map(FhirPath::getValueColumn)
+        .toArray(Column[]::new);
+
+    if (nonSingularColumns.length == 0) {
+      return dataset;
+    } else {
+      final Column additionalCondition = coalesce(nonSingularColumns).isNotNull();
+      final List<Column> filteringColumns = new ArrayList<>();
+      filteringColumns.add(idColumn);
+      final List<Column> singularColumns = expressions.stream()
+          .filter(FhirPath::isSingular)
+          .map(FhirPath::getValueColumn)
+          .collect(Collectors.toList());
+      filteringColumns.addAll(singularColumns);
+      final Dataset<Row> filteringDataset = dataset
+          .select(filteringColumns.toArray(new Column[0]))
+          .distinct();
+      return join(dataset, filteringColumns, filteringDataset, filteringColumns,
+          additionalCondition, JoinType.RIGHT_OUTER);
+    }
+  }
+
   @Value
   protected static class FhirPathAndContext {
 
@@ -239,4 +330,16 @@ public abstract class QueryExecutor {
 
   }
 
+  @Value
+  protected static class FhirPathContextAndResult {
+
+    @Nonnull
+    FhirPath fhirPath;
+
+    @Nonnull
+    ParserContext context;
+
+    @Nonnull
+    Dataset<Row> result;
+  }
 }

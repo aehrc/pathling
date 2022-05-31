@@ -26,7 +26,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((reverseResolve(Observation.subject).code.coding) contains http://loinc.org|72166-2||'Tobacco smoking status NHIS') and ((reverseResolve(Observation.subject).valueCodeableConcept.coding) contains http://snomed.info/sct|8517006||'Former smoker')"
+          "valueString": "((reverseResolve(Observation.subject).code.coding.where($this = http://loinc.org|72166-2||'Tobacco smoking status NHIS')) contains http://loinc.org|72166-2||'Tobacco smoking status NHIS') and ((reverseResolve(Observation.subject).valueCodeableConcept.coding) contains http://snomed.info/sct|8517006||'Former smoker')"
         }
       ]
     },
@@ -55,7 +55,7 @@
         },
         {
           "name": "drillDown",
-          "valueString": "((reverseResolve(Observation.subject).code.coding) contains http://loinc.org|72166-2||'Tobacco smoking status NHIS') and ((reverseResolve(Observation.subject).valueCodeableConcept.coding) contains http://snomed.info/sct|266919005||'Never smoker')"
+          "valueString": "((reverseResolve(Observation.subject).code.coding.where($this = http://loinc.org|72166-2||'Tobacco smoking status NHIS')) contains http://loinc.org|72166-2||'Tobacco smoking status NHIS') and ((reverseResolve(Observation.subject).valueCodeableConcept.coding) contains http://snomed.info/sct|266919005||'Never smoker')"
         }
       ]
     }

@@ -6,13 +6,6 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
@@ -23,6 +16,13 @@ import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * @author John Grimes
@@ -610,11 +610,12 @@ class AggregateQueryTest extends AggregateExecutorTest {
   @Test
   void queryWithMultipleCardinalityGroupingsAtResourceLevel() {
     subjectResource = ResourceType.PATIENT;
-    mockResource(subjectResource);
+    mockResource(subjectResource, ResourceType.OBSERVATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
-        .withGrouping("reverseResolve(Observation.subject).code.coding")
+        .withGrouping(
+            "reverseResolve(Observation.subject).code.coding.where($this = http://loinc.org|72166-2||'Tobacco smoking status NHIS')")
         .withGrouping("reverseResolve(Observation.subject).valueCodeableConcept.coding")
         .build();
 
@@ -727,5 +728,4 @@ class AggregateQueryTest extends AggregateExecutorTest {
         () -> new AggregateRequestBuilder(subjectResource).build());
     assertEquals("Query must have at least one aggregation expression", error.getMessage());
   }
-
 }

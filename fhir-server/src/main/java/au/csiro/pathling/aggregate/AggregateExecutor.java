@@ -92,22 +92,35 @@ public class AggregateExecutor extends QueryExecutor {
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
-    final ParserContext groupingAndFilterContext = buildParserContext(inputContext,
+
+    final ParserContext groupingContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));
-    final Parser parser = new Parser(groupingAndFilterContext);
+    final Parser parser = new Parser(groupingContext);
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final List<FhirPathAndContext> groupingParseResult = parseMaterializableExpressions(
-        groupingAndFilterContext, query.getGroupings(), "Grouping");
-    final List<FhirPath> groupings = groupingParseResult.stream()
+    final Column idColumn = inputContext.getIdColumn();
+
+    final List<FhirPathAndContext> columnParseResult =
+        parseMaterializableExpressions(groupingContext, query.getGroupings(), "Grouping");
+    final List<FhirPath> groupings = columnParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toList());
 
-    // Join all filter and grouping expressions together.
-    final Column idColumn = inputContext.getIdColumn();
-    Dataset<Row> groupingsAndFilters = joinExpressionsAndFilters(inputContext, groupings, filters,
-        idColumn);
-    // Apply filters.
-    groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
+    final Dataset<Row> groupingDataset;
+    if (!columnParseResult.isEmpty()) {
+      // Join all the column expressions together.
+      final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
+      final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
+      groupingDataset = trimTrailingNulls(groupingContext,
+          inputContext.getIdColumn(),
+          groupings, columnJoinResultDataset);
+    } else {
+      groupingDataset = inputContext.getDataset();
+    }
+    // Apply the filters.
+    final List<String> filtersExpressions = query.getFilters();
+    Dataset<Row> groupingsAndFilters = filterDataset(inputContext, filtersExpressions,
+        groupingDataset,
+        Column::and);
 
     // Remove synthetic fields from struct values (such as _fid) before grouping.
     final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
