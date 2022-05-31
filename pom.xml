@@ -295,6 +295,13 @@
         <version>3.0.2</version>
       </dependency>
 
+      <!-- CVE-2020-36518 -->
+      <dependency>
+        <groupId>org.apache.parquet</groupId>
+        <artifactId>parquet-jackson</artifactId>
+        <version>1.12.3</version>
+      </dependency>
+
       <!-- CVE-2021-35515, CVE-2021-35516, CVE-2021-35517, CVE-2021-36090 -->
       <dependency>
         <groupId>org.apache.commons</groupId>
