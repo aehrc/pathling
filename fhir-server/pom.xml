@@ -341,7 +341,7 @@
           <version>3.2.1</version>
           <configuration>
             <from>
-              <image>aehrc/jre:openjdk-11</image>
+              <image>openjdk:11-jre-slim</image>
             </from>
             <to>
               <image>${pathling.fhirServerDockerRepo}</image>
