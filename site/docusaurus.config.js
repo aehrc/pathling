@@ -47,7 +47,8 @@ const config = {
         logo: {
           alt: "Pathling",
           src: "images/logo-colour.svg",
-          srcDark: "images/logo-colour-dark.svg"
+          srcDark: "images/logo-colour-dark.svg",
+          href: "https://pathling.csiro.au"
         },
         items: [
           {
