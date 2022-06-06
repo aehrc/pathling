@@ -4,59 +4,79 @@ sidebar_position: 10
 
 # Roadmap
 
-The roadmap for future development on Pathling is based upon the following
-themes:
+We are continually adding new features to the various different components of
+Pathling. If you are interested in specific functionality that doesn't exist
+yet, please [get into contact](https://pathling.csiro.au/#contact) with us
+or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
+understand your use case.
 
-1. [Improved FHIRPath support](#improved-fhirpath-support)
-2. [APIs for Python and R](#apis-for-python-and-r)
-3. [Subscriptions](#subscriptions)
-4. [CLI mode](#cli-mode)
-5. [Temporal query](#temporal-query)
+## Quantity support
 
----
+This change will add support for Quantity types, including literals support for
+equality and comparison operators. It also introduces calendar durations and
+support for date arithmetic.
+
+See also:
+
+- [Quantity type](https://github.com/aehrc/pathling/issues/340)
+- [Date/time arithmetic](https://github.com/aehrc/pathling/issues/341)
+
+## Terminology functions: `property` and `designation`
+
+These two functions will round out the terminology functionality of the Pathling
+operations, allowing virtually any knowledge held by the terminology server
+about concepts to be accessed within expressions.
+
+See also:
+
+- [FHIRPath function: property](https://github.com/aehrc/pathling/issues/366)
+- [FHIRPath function: designation](https://github.com/aehrc/pathling/issues/519)
+
+## Ordering
+
+The implementation of an `order` function will allow for the arbitrary
+re-ordering of resources and elements within expressions.
+
+See [FHIRPath function: order](https://github.com/aehrc/pathling/issues/448).
 
 ## Improved FHIRPath support
 
-Implementation of a number of operators, functions and syntax elements (some 
-from the FHIRPath specifications, some novel) is planned:
+Implementation of a number of functions is planned:
 
-- [exists](https://hl7.org/fhirpath/#existscriteria-expression-boolean) function
-  (see [#326](https://github.com/aehrc/pathling/issues/326))
-- `order` function (see [#448](https://github.com/aehrc/pathling/issues/448))
-- `property` function (see [#366](https://github.com/aehrc/pathling/issues/366))
-- `Quantity` data type, including support for unit-aware operations using
-  [UCUM](https://unitsofmeasure.org) (see
-  [Quantity](https://hl7.org/fhirpath/#types) and
-  [Operations](https://hl7.org/fhirpath/#operations)), and use within
-  [Date/time arithmetic](https://hl7.org/fhirpath/#datetime-arithmetic)
-- Various aggregate functions (`max`, `min`, `median`)
-- Non-reference resource joins (see
-  [#338](https://github.com/aehrc/pathling/issues/338))
+### Aggregate functions
 
----
+- `approxCountDistinct`
+- `correlation`
+- `countDistinct`
+- `covariance[Pop]`
+- `kurtosis`
+- `last`
+- `max`
+- `mean`
+- `min`
+- `percentileApprox`
+- `product`
+- `skewness`
+- `stdDev[Pop]`
+- `sumDistinct`
+- `variance[Pop]`
 
-## APIs for Python and R
+### Regular functions
 
-Language-specific APIs will be developed that will allow users of Python and R
+- `contains`
+- `startsWith`
+- `endsWith`
+
+See [Arbitrary function construction](https://github.com/aehrc/pathling/issues/510)
+.
+
+## R integration
+
+Language-specific APIs will be developed that will allow users of R
 to access the functionality within Pathling within their own language
-environment. This will make it possible to call a Pathling function such as
-[aggregate](./operations/aggregate) or [extract](./operations/extract)
-and get a [Pandas](https://pandas.pydata.org/) or R DataFrame representing the
-result of the operation.
+environment.
 
-It will be important for these libraries to be able to be installed into a local
-environment using language-native package management utilities, i.e.
-[pip](https://pypi.org/project/pip/) and [CRAN](https://cran.r-project.org/).
-Two variations of this integration could be created:
-
-1. A library that calls an external Pathling server using its REST API
-2. A library package that contains a full copy of Pathling, with no mandatory 
-   requirement for an external Pathling server
-
-See [(#194) Python integration](https://github.com/aehrc/pathling/issues/194)
-and [(#193) R integration](https://github.com/aehrc/pathling/issues/193).
-
----
+See [R integration](https://github.com/aehrc/pathling/issues/193).
 
 ## Subscriptions
 
@@ -66,37 +86,24 @@ Pathling. Push messaging relating to changes within the data (using criteria
 described using FHIRPath expressions) could be used as an engine for driving
 sophisticated alert systems within the clinical setting.
 
-See [(#164) Subscriptions](https://github.com/aehrc/pathling/issues/164).
-
----
-
-## CLI mode
-
-This change will create a new execution mode which can be used to invoke 
-Pathling operations from the command line. This will remove the need for a 
-running server to use Pathling for batch data transformation operations.
-
-See [(#349) CLI mode](https://github.com/aehrc/pathling/issues/349).
-
----
+See [Subscriptions](https://github.com/aehrc/pathling/issues/164).
 
 ## Temporal query
 
-Some types of data are captured within the FHIR model using dates and timestamps 
-to describe their temporal aspects. Others are updated in place, and 
-information about the previous value and the time of update is effectively lost 
+Some types of data are captured within the FHIR model using dates and timestamps
+to describe their temporal aspects. Others are updated in place, and
+information about the previous value and the time of update is effectively lost
 when the change is made.
 
-This change will expand upon the work done on [incremental update](#incremental-update) 
-to add the ability to query the history of FHIR resources as they were updated 
-within the Pathling data store. This will include the ability to query the state 
-of a resource at a point in time and compare it to other versions of that 
-resource. 
+This change will expand upon the work done on incremental update to add the
+ability to query the history of FHIR resources as they were updated within the
+Pathling data store. This will include the ability to query the state of a
+resource at a point in time and compare it to other versions of that resource.
 
-See [(#350) Temporal query](https://github.com/aehrc/pathling/issues/350).
+See [Temporal query](https://github.com/aehrc/pathling/issues/350).
 
----
+## Project board
 
-You can see more planned features, in greater detail, on the 
-[Pathling project board](https://github.com/aehrc/pathling/projects/1) on 
+You can see more planned features, in greater detail, on the
+[Pathling project board](https://github.com/aehrc/pathling/projects/1) on
 GitHub.
