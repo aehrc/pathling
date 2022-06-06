@@ -1,8 +1,9 @@
 import glob
 import os
 import sys
-from setuptools import setup, find_packages
 from typing import Union
+
+from setuptools import setup, find_packages
 
 HERE = os.path.dirname(__file__)
 ROOT_DIR = os.path.abspath(HERE)
@@ -69,7 +70,7 @@ setup(
             'Programming Language :: Python :: 3.9',
             'Programming Language :: Python :: 3.10',
         ],
-        license="CSIRO Open Source Software Licence Agreement (variation of the BSD / MIT License)",
+        license="CSIRO Open Source Software Licence Agreement",
         python_requires=">=3.7",
         extras_require={'spark': ['pyspark>=3.1.0']},
         include_package_data=True,
