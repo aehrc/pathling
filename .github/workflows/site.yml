@@ -34,5 +34,5 @@ jobs:
           GIT_PASS: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mvn --batch-mode deploy \
-          -pl site -am -DskipTests -Dmaven.deploy.skip
+          -pl site -am -DskipTests -Dmaven.deploy.skip -DskipPythonDeployment
         timeout-minutes: 30

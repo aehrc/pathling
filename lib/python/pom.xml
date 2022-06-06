@@ -126,27 +126,6 @@
             </configuration>
           </execution>
 
-          <!-- Deploy package -->
-          <execution>
-            <id>deploy</id>
-            <phase>deploy</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>python</executable>
-              <arguments>
-                <argument>-m</argument>
-                <argument>twine</argument>
-                <argument>upload</argument>
-                <argument>--verbose</argument>
-                <argument>--repository</argument>
-                <argument>${pathling.pypi.repository}</argument>
-                <argument>${project.build.directory}/py-dist/*</argument>
-              </arguments>
-            </configuration>
-          </execution>
-
           <!-- Build python documentation -->
           <execution>
             <id>python-generate-docs</id>
@@ -261,6 +240,44 @@
                 <goals>
                   <goal>exec</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>python-deployment</id>
+      <activation>
+        <property>
+          <name>!skipPythonDeployment</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <!-- Deploy package -->
+              <execution>
+                <id>deploy</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>python</executable>
+                  <arguments>
+                    <argument>-m</argument>
+                    <argument>twine</argument>
+                    <argument>upload</argument>
+                    <argument>--verbose</argument>
+                    <argument>--repository</argument>
+                    <argument>${pathling.pypi.repository}</argument>
+                    <argument>${project.build.directory}/py-dist/*</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
           </plugin>
