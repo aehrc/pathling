@@ -1,9 +1,4 @@
----
-sidebar_position: 1
-sidebar_label: About
----
-
-# Pathling
+# Overview
 
 Pathling is a set of tools that make it easier to
 use [FHIR&reg;](https://hl7.org/fhir) within data analytics. It is built
