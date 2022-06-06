@@ -12,3 +12,5 @@ We are currently working on adding more functionality to this library, such as
 access to the operations (`aggregate`, `search`, `extract`) and also standalone
 implementations of the terminology functions (`memberOf`, `subsumes`,
 `translate`).
+
+[View the generated API documentation &rarr;](pathname:///docs/python/)

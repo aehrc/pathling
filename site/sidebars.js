@@ -31,19 +31,10 @@ const sidebars = {
     },
     {
       type: "category",
-      label: "JavaScript",
-      collapsed: false,
-      collapsible: false,
-      items: [
-        "libraries/javascript/pathling-client",
-        "libraries/javascript/pathling-import"
-      ]
-    },
-    {
-      type: "category",
       label: "Scala",
       collapsed: false,
       collapsible: false,
+      link: { type: "doc", id: "libraries/scala" },
       items: [{
         type: "link",
         label: "API docs",
@@ -55,11 +46,22 @@ const sidebars = {
       label: "Java",
       collapsed: false,
       collapsible: false,
+      link: { type: "doc", id: "libraries/java" },
       items: [{
         type: "link",
         label: "API docs",
         href: "pathname:///docs/java/"
       }]
+    },
+    {
+      type: "category",
+      label: "JavaScript",
+      collapsed: false,
+      collapsible: false,
+      items: [
+        "libraries/javascript/pathling-client",
+        "libraries/javascript/pathling-import"
+      ]
     }
   ]
 };
