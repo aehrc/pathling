@@ -129,8 +129,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
    * @param expression The FHIRPath expression to use in the result
    * @param dataset The {@link Dataset} to use in the result
    * @param fhirType The {@link FHIRDefinedType} to use in the result
-   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a {@link
-   * NonLiteralPath}
+   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a
+   * {@link NonLiteralPath}
    */
   @Nonnull
   public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,

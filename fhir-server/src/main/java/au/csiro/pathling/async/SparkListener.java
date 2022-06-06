@@ -11,7 +11,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.scheduler.*;
+import org.apache.spark.scheduler.SparkListenerStageCompleted;
+import org.apache.spark.scheduler.SparkListenerStageSubmitted;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -25,7 +26,7 @@ import org.springframework.stereotype.Component;
 @Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
 @Slf4j
-public class SparkListener implements SparkListenerInterface {
+public class SparkListener extends org.apache.spark.scheduler.SparkListener {
 
   @Nonnull
   private final JobRegistry jobRegistry;
@@ -68,153 +69,6 @@ public class SparkListener implements SparkListenerInterface {
       stageMap.put(stageSubmitted.stageInfo().stageId(), jobGroupId);
       job.incrementTotalStages();
     }
-  }
-
-  @Override
-  public void onJobStart(@Nullable final SparkListenerJobStart jobStart) {
-  }
-
-  @Override
-  public void onTaskEnd(@Nullable final SparkListenerTaskEnd taskEnd) {
-  }
-
-  @Override
-  public void onTaskStart(final SparkListenerTaskStart taskStart) {
-  }
-
-  @Override
-  public void onTaskGettingResult(final SparkListenerTaskGettingResult taskGettingResult) {
-  }
-
-  @Override
-  public void onJobEnd(final SparkListenerJobEnd jobEnd) {
-  }
-
-  @Override
-  public void onEnvironmentUpdate(final SparkListenerEnvironmentUpdate environmentUpdate) {
-  }
-
-  @Override
-  public void onBlockManagerAdded(final SparkListenerBlockManagerAdded blockManagerAdded) {
-  }
-
-  @Override
-  public void onBlockManagerRemoved(final SparkListenerBlockManagerRemoved blockManagerRemoved) {
-  }
-
-  @Override
-  public void onUnpersistRDD(final SparkListenerUnpersistRDD unpersistRDD) {
-  }
-
-  @Override
-  public void onApplicationStart(final SparkListenerApplicationStart applicationStart) {
-  }
-
-  @Override
-  public void onApplicationEnd(final SparkListenerApplicationEnd applicationEnd) {
-  }
-
-  @Override
-  public void onExecutorMetricsUpdate(
-      final SparkListenerExecutorMetricsUpdate executorMetricsUpdate) {
-  }
-
-  @Override
-  public void onStageExecutorMetrics(final SparkListenerStageExecutorMetrics executorMetrics) {
-  }
-
-  @Override
-  public void onExecutorAdded(final SparkListenerExecutorAdded executorAdded) {
-  }
-
-  @Override
-  public void onExecutorRemoved(final SparkListenerExecutorRemoved executorRemoved) {
-  }
-
-  @SuppressWarnings("deprecation")
-  @Override
-  public void onExecutorBlacklisted(final SparkListenerExecutorBlacklisted executorBlacklisted) {
-  }
-
-  @Override
-  public void onExecutorExcluded(final SparkListenerExecutorExcluded executorExcluded) {
-  }
-
-  @SuppressWarnings("deprecation")
-  @Override
-  public void onExecutorBlacklistedForStage(
-      final SparkListenerExecutorBlacklistedForStage executorBlacklistedForStage) {
-  }
-
-  @Override
-  public void onExecutorExcludedForStage(
-      final SparkListenerExecutorExcludedForStage executorExcludedForStage) {
-  }
-
-  @SuppressWarnings("deprecation")
-  @Override
-  public void onNodeBlacklistedForStage(
-      final SparkListenerNodeBlacklistedForStage nodeBlacklistedForStage) {
-  }
-
-  @Override
-  public void onNodeExcludedForStage(final SparkListenerNodeExcludedForStage nodeExcludedForStage) {
-
-  }
-
-  @SuppressWarnings("deprecation")
-  @Override
-  public void onExecutorUnblacklisted(
-      final SparkListenerExecutorUnblacklisted executorUnblacklisted) {
-  }
-
-  @Override
-  public void onExecutorUnexcluded(final SparkListenerExecutorUnexcluded executorUnexcluded) {
-  }
-
-  @SuppressWarnings("deprecation")
-  @Override
-  public void onNodeBlacklisted(final SparkListenerNodeBlacklisted nodeBlacklisted) {
-  }
-
-  @Override
-  public void onNodeExcluded(final SparkListenerNodeExcluded nodeExcluded) {
-  }
-
-  @SuppressWarnings("deprecation")
-  @Override
-  public void onNodeUnblacklisted(final SparkListenerNodeUnblacklisted nodeUnblacklisted) {
-  }
-
-  @Override
-  public void onNodeUnexcluded(final SparkListenerNodeUnexcluded nodeUnexcluded) {
-  }
-
-  @Override
-  public void onUnschedulableTaskSetAdded(
-      final SparkListenerUnschedulableTaskSetAdded unschedulableTaskSetAdded) {
-  }
-
-  @Override
-  public void onUnschedulableTaskSetRemoved(
-      final SparkListenerUnschedulableTaskSetRemoved unschedulableTaskSetRemoved) {
-  }
-
-  @Override
-  public void onBlockUpdated(final SparkListenerBlockUpdated blockUpdated) {
-  }
-
-  @Override
-  public void onSpeculativeTaskSubmitted(
-      final SparkListenerSpeculativeTaskSubmitted speculativeTask) {
-  }
-
-  @Override
-  public void onOtherEvent(final SparkListenerEvent event) {
-  }
-
-  @Override
-  public void onResourceProfileAdded(final SparkListenerResourceProfileAdded event) {
   }
 
 }

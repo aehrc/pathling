@@ -13,7 +13,6 @@
       "name": "grouping",
       "valueString": "active"
     },
-
     {
       "name": "aggregation",
       "valueString": "reverseResolve(Condition.subject).count()"

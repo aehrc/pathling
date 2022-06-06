@@ -81,12 +81,8 @@
         "name": [
           {
             "family": "Mayo",
-            "given": [
-              "Helen"
-            ],
-            "prefix": [
-              "Dr"
-            ]
+            "given": ["Helen"],
+            "prefix": ["Dr"]
           }
         ],
         "telecom": [
@@ -99,9 +95,7 @@
         "address": [
           {
             "use": "work",
-            "line": [
-              "3 McGregor Street"
-            ],
+            "line": ["3 McGregor Street"],
             "city": "Blacktown",
             "state": "NSW",
             "postalCode": "2148",
@@ -166,9 +160,7 @@
         "address": [
           {
             "use": "work",
-            "line": [
-              "3 McGregor Street"
-            ],
+            "line": ["3 McGregor Street"],
             "city": "Blacktown",
             "state": "NSW",
             "postalCode": "2148",

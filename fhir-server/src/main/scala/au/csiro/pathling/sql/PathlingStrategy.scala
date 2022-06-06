@@ -18,7 +18,8 @@ object PathlingStrategy extends Strategy {
     plan match {
 
       case MapWithPartitionPreview(serializer, decoder, deserializer, preview, mapper, child) =>
-        MapWithPartitionPreviewExec(deserializer, decoder, serializer.value, preview, mapper, planLater(child)) :: Nil
+        MapWithPartitionPreviewExec(deserializer, decoder, serializer.value, preview, mapper,
+          planLater(child)) :: Nil
 
       case _ => Nil
     }
@@ -32,7 +33,8 @@ object PathlingStrategy extends Strategy {
    */
   def setup(session: SparkSession): Unit = {
     if (!session.experimental.extraStrategies.contains(PathlingStrategy)) {
-      session.experimental.extraStrategies = Seq(PathlingStrategy) ++ session.experimental.extraStrategies
+      session.experimental.extraStrategies = Seq(PathlingStrategy) ++ session.experimental
+        .extraStrategies
     }
   }
 }

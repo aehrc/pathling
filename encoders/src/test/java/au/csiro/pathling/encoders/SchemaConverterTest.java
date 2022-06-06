@@ -13,6 +13,7 @@
 
 package au.csiro.pathling.encoders;
 
+import static au.csiro.pathling.encoders.SchemaAsserts.assertFieldNotPresent;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -25,12 +26,22 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.spark.sql.types.ArrayType;
 import org.apache.spark.sql.types.BooleanType;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.apache.spark.sql.types.IntegerType;
+import org.apache.spark.sql.types.MapType;
 import org.apache.spark.sql.types.StringType;
-import org.apache.spark.sql.types.*;
-import org.hl7.fhir.r4.model.*;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.TimestampType;
+import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.MedicationRequest;
+import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.Questionnaire;
+import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.junit.Before;
 import org.junit.Test;
 import scala.collection.JavaConverters;
@@ -131,15 +142,6 @@ public class SchemaConverterTest {
            ?
            ((ArrayType) maybeArrayType).elementType()
            : maybeArrayType;
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  private static void assertFieldNotPresent(final String fieldName,
-      final DataType maybeStructType) {
-    assertTrue("Must be struct type.", maybeStructType instanceof StructType);
-    assertTrue("Field: '" + fieldName + "' not present in struct type.",
-        ((StructType) maybeStructType).getFieldIndex(
-            fieldName).isEmpty());
   }
 
   @Before

@@ -136,22 +136,14 @@
     {
       "use": "official",
       "family": "Bins636",
-      "given": [
-        "Cathryn51"
-      ],
-      "prefix": [
-        "Mrs."
-      ]
+      "given": ["Cathryn51"],
+      "prefix": ["Mrs."]
     },
     {
       "use": "maiden",
       "family": "Shields502",
-      "given": [
-        "Cathryn51"
-      ],
-      "prefix": [
-        "Mrs."
-      ]
+      "given": ["Cathryn51"],
+      "prefix": ["Mrs."]
     }
   ],
   "telecom": [
@@ -180,9 +172,7 @@
           ]
         }
       ],
-      "line": [
-        "859 Hagenes Well Unit 54"
-      ],
+      "line": ["859 Hagenes Well Unit 54"],
       "city": "Billerica",
       "state": "MA",
       "country": "US"

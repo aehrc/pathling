@@ -20,5 +20,5 @@ public class UnexpectedServerError extends RuntimeException {
   public UnexpectedServerError(final Throwable cause) {
     super(cause);
   }
-  
+
 }

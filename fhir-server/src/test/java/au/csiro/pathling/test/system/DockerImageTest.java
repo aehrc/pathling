@@ -227,7 +227,7 @@ class DockerImageTest {
   }
 
   @Test
-  void importDataAndQuery() throws JSONException {
+  void importDataAndQuery() throws JSONException, IOException {
     try {
       // Get the token endpoint from the CapabilityStatement.
       final CapabilityStatement capabilities = getCapabilityStatement();
@@ -353,8 +353,9 @@ class DockerImageTest {
         }
       }
 
-    } catch (final Exception e) {
+    } catch (final Throwable e) {
       captureLogs();
+      throw e;
     } finally {
       stopContainer(dockerClient, fhirServerContainerId);
       fhirServerContainerId = null;

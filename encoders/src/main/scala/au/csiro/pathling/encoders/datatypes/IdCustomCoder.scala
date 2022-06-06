@@ -36,7 +36,8 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
 
   val versionedName: String = elementName + "_versioned"
 
-  override def customDeserializer(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
+  override def customDeserializer(addToPath: String => Expression,
+                                  isCollection: Boolean): Seq[ExpressionWithName] = {
 
     // We can ignore the value in the `id` column and only deserialize from `id_versioned`
     def toVersionedId(exp: Expression): Expression = {
@@ -60,11 +61,13 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
   }
 
   override def customSerializer(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
-    val idExpression = evaluator(exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
-      List(Invoke(exp, "getIdPart", ObjectType(classOf[String])))))
+    val idExpression = evaluator(
+      exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
+        List(Invoke(exp, "getIdPart", ObjectType(classOf[String])))))
 
-    val versionedIdExpression = evaluator(exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
-      List(Invoke(exp, "getValue", ObjectType(classOf[String])))))
+    val versionedIdExpression = evaluator(
+      exp => StaticInvoke(classOf[UTF8String], DataTypes.StringType, "fromString",
+        List(Invoke(exp, "getValue", ObjectType(classOf[String])))))
     Seq((elementName, idExpression), (versionedName, versionedIdExpression))
   }
 
@@ -73,7 +76,8 @@ case class IdCustomCoder(elementName: String) extends CustomCoder {
       arrayEncoder.map(_ (v)).getOrElse(v)
     }
 
-    Seq(StructField(elementName, encode(DataTypes.StringType)), StructField(versionedName, encode(DataTypes.StringType)))
+    Seq(StructField(elementName, encode(DataTypes.StringType)),
+      StructField(versionedName, encode(DataTypes.StringType)))
   }
 }
 

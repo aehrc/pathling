@@ -28,7 +28,8 @@
 
   <logger level="INFO" name="au.csiro"/>
   <!-- enable to debug expression code generation -->
-  <logger level="DEBUG" name="org.apache.spark.sql.catalyst.expressions.codegen.CodeGenerator" additivity="false">
+  <logger level="DEBUG" name="org.apache.spark.sql.catalyst.expressions.codegen.CodeGenerator"
+    additivity="false">
     <appender-ref ref="CODEGEN"/>
   </logger>
   <root level="WARN">

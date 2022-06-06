@@ -38,7 +38,8 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
     definition match {
       case _: RuntimeResourceDefinition if supportsExtensions =>
         val extensionSchema = buildExtensionValue()
-        StructField(EXTENSIONS_FIELD_NAME, MapType(IntegerType, extensionSchema, valueContainsNull = false)) :: Nil
+        StructField(EXTENSIONS_FIELD_NAME,
+          MapType(IntegerType, extensionSchema, valueContainsNull = false)) :: Nil
       case _ => Nil
     }
   }
@@ -52,15 +53,19 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
     }
   }
 
-  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[StructField]): DataType = {
+  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_],
+                              fields: Seq[StructField]): DataType = {
     StructType(fields ++ createFidField() ++ createExtensionField(definition))
   }
 
-  override def buildElement(elementName: String, elementValue: DataType, elementDefinition: BaseRuntimeElementDefinition[_]): StructField = {
+  override def buildElement(elementName: String, elementValue: DataType,
+                            elementDefinition: BaseRuntimeElementDefinition[_]): StructField = {
     StructField(elementName, elementValue)
   }
 
-  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DataType = {
+  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition,
+                               elementDefinition: BaseRuntimeElementDefinition[_],
+                               elementName: String): DataType = {
     ArrayType(buildSimpleValue(childDefinition, elementDefinition, elementName))
   }
 
@@ -68,9 +73,12 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
     dataTypeMappings.primitiveToDataType(primitive)
   }
 
-  override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DataType = DataTypes.StringType
+  override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): DataType = DataTypes
+    .StringType
 
-  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[StructField] = {
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition,
+                          elementDefinition: BaseRuntimeElementDefinition[_],
+                          elementName: String): Seq[StructField] = {
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     customEncoder.map(_.schema(if (isCollection(childDefinition)) Some(ArrayType(_)) else None))
       .getOrElse(super.buildValue(childDefinition, elementDefinition, elementName))
@@ -84,10 +92,12 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
  * @param dataTypeMappings the data type mappings to use.
  * @param config           encoder configuration to use.
  */
-class SchemaConverter(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings, val config: EncoderConfig) extends EncoderContext {
+class SchemaConverter(val fhirContext: FhirContext, val dataTypeMappings: DataTypeMappings,
+                      val config: EncoderConfig) extends EncoderContext {
 
   private[encoders] def compositeSchema(compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_ <: IBase]): DataType = {
-    SchemaVisitor.traverseComposite(compositeElementDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, config))
+    SchemaVisitor.traverseComposite(compositeElementDefinition,
+      new SchemaConverterProcessor(fhirContext, dataTypeMappings, config))
   }
 
   /**
@@ -97,7 +107,8 @@ class SchemaConverter(val fhirContext: FhirContext, val dataTypeMappings: DataTy
    * @return the schema as a Spark StructType
    */
   def resourceSchema(resourceDefinition: RuntimeResourceDefinition): StructType = {
-    SchemaVisitor.traverseResource(resourceDefinition, new SchemaConverterProcessor(fhirContext, dataTypeMappings, config)).asInstanceOf[StructType]
+    SchemaVisitor.traverseResource(resourceDefinition,
+      new SchemaConverterProcessor(fhirContext, dataTypeMappings, config)).asInstanceOf[StructType]
   }
 
   /**

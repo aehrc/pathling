@@ -1,0 +1,2 @@
+global-exclude *.py[cod] __pycache__ .DS_Store
+recursive-include target/dependency *-all.jar

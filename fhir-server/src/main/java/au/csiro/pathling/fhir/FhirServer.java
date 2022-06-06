@@ -310,7 +310,7 @@ public class FhirServer extends RestfulServer {
       final IBaseResource instance = constructor.newInstance();
       return Enumerations.ResourceType.fromCode(instance.fhirType());
     } catch (final NoSuchMethodException | IllegalAccessException | InstantiationException
-        | InvocationTargetException e) {
+                   | InvocationTargetException e) {
       throw new RuntimeException("Problem determining FHIR type from resource class", e);
     }
   }

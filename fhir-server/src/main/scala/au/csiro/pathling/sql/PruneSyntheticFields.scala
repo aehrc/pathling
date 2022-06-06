@@ -18,7 +18,8 @@ import org.apache.spark.sql.types.{DataType, StructType}
  *
  * @param child the child expression
  */
-case class PruneSyntheticFields(child: Expression) extends UnaryExpression with CodegenFallback with NullIntolerant {
+case class PruneSyntheticFields(child: Expression)
+  extends UnaryExpression with CodegenFallback with NullIntolerant {
   override def nullable: Boolean = true
 
   @transient
@@ -31,7 +32,8 @@ case class PruneSyntheticFields(child: Expression) extends UnaryExpression with 
     }
   }
 
-  override protected def withNewChildInternal(newChild: Expression): Expression = PruneSyntheticFields(newChild)
+  override protected def withNewChildInternal(newChild: Expression): Expression = PruneSyntheticFields(
+    newChild)
 
   override def nullSafeEval(value: Any): Any = {
     inputSchema match {

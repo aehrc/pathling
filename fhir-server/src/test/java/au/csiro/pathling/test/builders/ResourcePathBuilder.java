@@ -176,7 +176,8 @@ public class ResourcePathBuilder {
           .newInstance(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
               datasetWithColumn.getColumn(), singular, Optional.ofNullable(thisColumn), definition,
               elementsToColumns);
-    } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException | InstantiationException e) {
+    } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException |
+                   InstantiationException e) {
       throw new RuntimeException("Problem building ResourcePath", e);
     }
   }

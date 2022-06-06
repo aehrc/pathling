@@ -4,8 +4,8 @@
  * Software Licence Agreement.
  */
 
-import { Config } from "./config.js";
 import * as Sentry from "@sentry/node";
+import { Config } from "./config.js";
 
 export function initializeSentry(config: Config): void {
   const dsn = config.getStringValue("sentryDsn", true),
@@ -15,7 +15,7 @@ export function initializeSentry(config: Config): void {
     Sentry.init({
       dsn,
       environment: environment ?? undefined,
-      release: release ?? undefined,
+      release: release ?? undefined
     });
   }
 }

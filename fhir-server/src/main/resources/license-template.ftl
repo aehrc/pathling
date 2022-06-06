@@ -11,13 +11,13 @@ without modification, are permitted provided that the following conditions are
 met:
 
 * Redistributions of source code must retain the above copyright notice, this
-list of conditions and the following disclaimer.
+  list of conditions and the following disclaimer.
 * Redistributions in binary form must reproduce the above copyright notice, this
-list of conditions and the following disclaimer in the documentation and/or
-other materials provided with the distribution.
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
 * Neither the name of CSIRO nor the names of its contributors may be used to
-endorse or promote products derived from this software without specific prior
-written permission of CSIRO.
+  endorse or promote products derived from this software without specific prior
+  written permission of CSIRO.
 
 EXCEPT AS EXPRESSLY STATED IN THIS AGREEMENT AND TO THE FULL EXTENT PERMITTED BY
 APPLICABLE LAW, THE SOFTWARE IS PROVIDED "AS-IS". CSIRO MAKES NO
@@ -83,9 +83,9 @@ agree to comply with the licence terms for these components as part of
 accessing the Software. Other third party software may also be identified in
 separate files distributed with the Software.
 
-    <#list dependencyMap as e>
-        <#assign project = e.getKey()/>
-        <#assign licenses = e.getValue()/>
+<#list dependencyMap as e>
+<#assign project = e.getKey()/>
+<#assign licenses = e.getValue()/>
 *${licenseFormat(licenses)} ${artifactFormat(project)}
-    </#list>
+</#list>
 </#if>

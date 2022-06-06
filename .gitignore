@@ -18,3 +18,9 @@ lib/js/node_modules/
 
 #Mac
 .DS_Store
+
+
+#Python
+__pycache__/
+*.egg-info
+_version.py

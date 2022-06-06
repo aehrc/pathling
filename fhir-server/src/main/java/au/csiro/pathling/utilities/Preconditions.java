@@ -103,7 +103,9 @@ public class Preconditions {
     try {
       return object.orElseThrow();
     } catch (final NoSuchElementException e) {
-      throw new AssertionError(message == null ? e.getMessage() : message);
+      throw new AssertionError(message == null
+                               ? e.getMessage()
+                               : message);
     }
   }
 
@@ -150,8 +152,8 @@ public class Preconditions {
 
 
   /**
-   * Converts a function which throws a {@link FHIRException} to a function that throws an {@link
-   * InvalidUserInputError} in the same situation.
+   * Converts a function which throws a {@link FHIRException} to a function that throws an
+   * {@link InvalidUserInputError} in the same situation.
    *
    * @param func the function throwing {@link FHIRException}
    * @param <T> the type of the function argument.

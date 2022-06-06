@@ -1,13 +1,10 @@
 # This workflow will build the software and documentation to ensure there are no errors, and also
 # execute the tests.
-#
-# This is run on branches other than master - it does not push or deploy anything.
 
 name: Test
 
 on:
   push:
-    branches-ignore: [ main ]
 
 # If the actor is Dependabot, we need to avoid anything that requires privileged access - so we skip
 # the integration test (which requires a secret), and also the test reporting actions (which require
@@ -80,12 +77,13 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Run the verify goal with Maven
+      - name: Run the verify goal with Maven (Dependabot)
         if: ${{ github.actor == 'dependabot[bot]' }}
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
           -Pdocker,skip-encoders-tests \
+          -Dpathling.fhirServerDockerTag=${{ github.sha }} \
           -DskipITs
         timeout-minutes: 45
       - name: Run the verify goal with Maven
@@ -94,9 +92,17 @@ jobs:
           mvn --batch-mode verify \
           -pl fhir-server -am \
           -Pdocker,skip-encoders-tests \
+          -Dpathling.fhirServerDockerTag=${{ github.sha }} \
           -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
           -Dmaven.test.failure.ignore=true
         timeout-minutes: 45
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'aehrc/pathling:${{ github.sha }}'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
@@ -139,7 +145,7 @@ jobs:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-js-
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
@@ -164,7 +170,7 @@ jobs:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-
+            ${{ runner.os }}-import-
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
@@ -175,6 +181,41 @@ jobs:
         with:
           name: import-lambda
           path: lib/import/target/pathling-import-lambda.zip
+  python-api:
+    name: Build and test Python API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Cache Python packages
+        uses: actions/cache@v2
+        id: pythoncache
+        with:
+          path: /home/runner/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip
+      - name: Run the verify goal with Maven
+        run: |
+          mvn --batch-mode verify \
+          -pl lib/python -am \
+          -Pskip-encoders-tests
+        timeout-minutes: 15
   site:
     name: Build site
     runs-on: ubuntu-latest

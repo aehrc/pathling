@@ -9,7 +9,7 @@ import { getConfig, makeRequest, postFormConfig } from "./common";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  QueryResult,
+  QueryResult
 } from "./index";
 
 /**
