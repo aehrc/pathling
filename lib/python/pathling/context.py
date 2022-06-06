@@ -1,6 +1,7 @@
+from typing import Optional, Sequence
+
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
-from typing import Optional, Sequence
 
 from pathling.fhir import MimeType
 
@@ -41,10 +42,9 @@ class PathlingContext:
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
         jvm: JavaObject = sparkSession._jvm
-        jpc: JavaObject = jvm.au.csiro.pathling.api.PathlingContext.of(sparkSession._jsparkSession,
-                                                                       fhirVersion, maxNestingLevel,
-                                                                       enableExtensions,
-                                                                       enabledOpenTypes)
+        jpc: JavaObject = jvm.au.csiro.pathling.api.PathlingContext.create(
+                sparkSession._jsparkSession, fhirVersion, maxNestingLevel, enableExtensions,
+                enabledOpenTypes)
         return PathlingContext(sparkSession, jpc)
 
     def __init__(self, sparkSession: SparkSession, jpc: JavaObject) -> None:

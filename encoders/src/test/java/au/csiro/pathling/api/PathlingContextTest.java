@@ -63,7 +63,7 @@ public class PathlingContextTest {
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
         .textFile("src/test/resources/data/bundles/R4/json");
 
-    final PathlingContext pathling = PathlingContext.of(spark);
+    final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> patientsDataframe = pathling.encodeBundle(bundlesDF.toDF(),
         "Patient", FhirMimeTypes.FHIR_JSON);
@@ -81,7 +81,7 @@ public class PathlingContextTest {
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
         .textFile("src/test/resources/data/bundles/R4/xml");
 
-    final PathlingContext pathling = PathlingContext.of(spark);
+    final PathlingContext pathling = PathlingContext.create(spark);
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
         FhirMimeTypes.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
@@ -93,7 +93,7 @@ public class PathlingContextTest {
     final Dataset<String> jsonResources = spark.read()
         .textFile("src/test/resources/data/resources/R4/json");
 
-    final PathlingContext pathling = PathlingContext.of(spark);
+    final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> patientsDataframe = pathling.encode(jsonResources.toDF(), "Patient",
         FhirMimeTypes.FHIR_JSON);
@@ -110,7 +110,7 @@ public class PathlingContextTest {
         .text("src/test/resources/data/resources/R4/json");
 
     // Test the defaults
-    final Row defaultRow = PathlingContext.of(spark).encode(jsonResourcesDF, "Questionnaire")
+    final Row defaultRow = PathlingContext.create(spark).encode(jsonResourcesDF, "Questionnaire")
         .head();
     assertFieldNotPresent("_extension", defaultRow.schema());
     final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).get(0);
@@ -119,7 +119,7 @@ public class PathlingContextTest {
     // Test explicit options
     // Nested items
     final Row rowWithNesting = PathlingContext
-        .of(spark, null, 1, null, null)
+        .create(spark, null, 1, null, null)
         .encode(jsonResourcesDF, "Questionnaire").head();
     assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
@@ -133,7 +133,7 @@ public class PathlingContextTest {
     // Test explicit options
     // Extensions and open types
     final Row rowWithExtensions = PathlingContext
-        .of(spark, null, null, true,
+        .create(spark, null, null, true,
             Arrays.asList("boolean", "string", "Address"))
         .encode(jsonResourcesDF, "Patient").head();
     assertFieldPresent("_extension", rowWithExtensions.schema());
@@ -152,7 +152,7 @@ public class PathlingContextTest {
 
   @Test
   public void testEncodeResourceStream() throws Exception {
-    final PathlingContext pathling = PathlingContext.of(spark);
+    final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> jsonResources = spark.readStream()
         .text("src/test/resources/data/resources/R4/json");

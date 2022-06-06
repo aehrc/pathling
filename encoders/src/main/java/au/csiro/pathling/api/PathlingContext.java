@@ -37,6 +37,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 public class PathlingContext {
 
   @Nonnull
+  @SuppressWarnings({"FieldCanBeLocal", "unused"})
   private final SparkSession sparkSession;
 
   @Nonnull
@@ -59,7 +60,7 @@ public class PathlingContext {
    * @param fhirEncoders the FhirEncoders to use.
    * @return then new instance of PathlingContext.
    */
-  public static PathlingContext of(@Nonnull final SparkSession sparkSession,
+  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
       @Nonnull final FhirEncoders fhirEncoders) {
     return new PathlingContext(sparkSession, fhirEncoders);
   }
@@ -71,7 +72,7 @@ public class PathlingContext {
    * @param sparkSession the SparkSession to use.
    * @return then new instance of PathlingContext.
    */
-  public static PathlingContext of(@Nonnull final SparkSession sparkSession) {
+  public static PathlingContext create(@Nonnull final SparkSession sparkSession) {
     return new PathlingContext(sparkSession, FhirEncoders.forR4().getOrCreate());
   }
 
@@ -88,7 +89,7 @@ public class PathlingContext {
    * @param enabledOpenTypes list of types that are encoded within open types, such as extensions.
    * @return then new instance of PathlingContext.
    */
-  public static PathlingContext of(@Nonnull final SparkSession sparkSession,
+  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
       @Nullable final String versionString,
       @Nullable final Integer maxNestingLevel, @Nullable final Boolean enableExtensions,
       @Nullable final List<String> enabledOpenTypes) {
@@ -109,7 +110,7 @@ public class PathlingContext {
       encoderBuilder = encoderBuilder
           .withOpenTypes(enabledOpenTypes.stream().collect(Collectors.toUnmodifiableSet()));
     }
-    return of(sparkSession, encoderBuilder.getOrCreate());
+    return create(sparkSession, encoderBuilder.getOrCreate());
   }
 
   static class EncodeResourceMapPartitionsFunc<T extends IBaseResource> extends
@@ -117,14 +118,15 @@ public class PathlingContext {
 
     private static final long serialVersionUID = 6405663463302424287L;
 
-    EncodeResourceMapPartitionsFunc(FhirVersionEnum fhirVersion, final String inputMimeType,
-        Class<T> resourceClass) {
+    EncodeResourceMapPartitionsFunc(final FhirVersionEnum fhirVersion, final String inputMimeType,
+        final Class<T> resourceClass) {
       super(fhirVersion, inputMimeType, resourceClass);
     }
 
     @Nonnull
     @Override
-    protected Stream<IBaseResource> processResources(@Nonnull Stream<IBaseResource> resources) {
+    protected Stream<IBaseResource> processResources(
+        @Nonnull final Stream<IBaseResource> resources) {
       return resources.filter(resourceClass::isInstance);
     }
   }
@@ -172,7 +174,7 @@ public class PathlingContext {
                                              stringResourcesDF.select(maybeColumnName)
                                              : stringResourcesDF).as(Encoders.STRING());
 
-    RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
+    final RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
         .getResourceDefinition(resourceName);
     return encode(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
   }
@@ -216,14 +218,15 @@ public class PathlingContext {
 
     private static final long serialVersionUID = -4264073360143318480L;
 
-    EncodeBundleMapPartitionsFunc(FhirVersionEnum fhirVersion, String inputMimeType,
-        Class<T> resourceClass) {
+    EncodeBundleMapPartitionsFunc(final FhirVersionEnum fhirVersion, final String inputMimeType,
+        final Class<T> resourceClass) {
       super(fhirVersion, inputMimeType, resourceClass);
     }
 
     @Nonnull
     @Override
-    protected Stream<IBaseResource> processResources(@Nonnull Stream<IBaseResource> resources) {
+    protected Stream<IBaseResource> processResources(
+        @Nonnull final Stream<IBaseResource> resources) {
       final FhirConversionSupport conversionSupport = FhirConversionSupport.supportFor(fhirVersion);
       return resources.flatMap(
           maybeBundle -> conversionSupport.extractEntryFromBundle((IBaseBundle) maybeBundle,
@@ -274,7 +277,7 @@ public class PathlingContext {
                                              stringBundlesDF.select(maybeColumnName)
                                              : stringBundlesDF).as(Encoders.STRING());
 
-    RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
+    final RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
         .getResourceDefinition(resourceName);
     return encodeBundle(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
   }
