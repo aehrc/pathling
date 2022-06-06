@@ -1,0 +1,37 @@
+pathling package
+================
+
+Submodules
+----------
+
+pathling.context module
+-----------------------
+
+.. automodule:: pathling.context
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.etc module
+-------------------
+
+.. automodule:: pathling.etc
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.fhir module
+--------------------
+
+.. automodule:: pathling.fhir
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: pathling
+   :members:
+   :undoc-members:
+   :show-inheritance:
