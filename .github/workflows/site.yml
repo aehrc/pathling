@@ -28,11 +28,14 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Run the deploy goal with Maven
-        env:
-          GIT_USER: ${{ secrets.GIT_USER }}
-          GIT_PASS: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run the verify goal with Maven
         run: |
-          mvn --batch-mode deploy \
-          -pl site -am -DskipTests -Dmaven.deploy.skip -DskipPythonDeployment
+          mvn --batch-mode verify \
+          -pl site -am -DskipTests
         timeout-minutes: 30
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site/target/site
+
