@@ -16,6 +16,7 @@ const config = {
 
   organizationName: "aehrc",
   projectName: "pathling",
+  trailingSlash: false,
 
   i18n: {
     defaultLocale: "en",
