@@ -287,7 +287,7 @@
       <dependency>
         <groupId>org.jodd</groupId>
         <artifactId>jodd-core</artifactId>
-        <version>3.5.2</version>
+        <version>5.3.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
