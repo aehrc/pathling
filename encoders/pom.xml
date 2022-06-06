@@ -210,6 +210,11 @@
   <profiles>
     <profile>
       <id>skip-encoders-tests</id>
+      <activation>
+        <property>
+          <name>!skipEncodersTests</name>
+        </property>
+      </activation>
       <build>
         <plugins>
           <plugin>

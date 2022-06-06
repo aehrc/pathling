@@ -82,19 +82,19 @@ jobs:
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Pdocker,skip-encoders-tests \
+          -Pdocker \
           -Dpathling.fhirServerDockerTag=${{ github.sha }} \
-          -DskipITs
+          -DskipITs -DskipEncodersTests
         timeout-minutes: 45
       - name: Run the verify goal with Maven
         if: ${{ github.actor != 'dependabot[bot]' }}
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Pdocker,skip-encoders-tests \
+          -Pdocker \
           -Dpathling.fhirServerDockerTag=${{ github.sha }} \
           -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
-          -Dmaven.test.failure.ignore=true
+          -Dmaven.test.failure.ignore -DskipEncodersTests
         timeout-minutes: 45
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@master
@@ -214,7 +214,7 @@ jobs:
         run: |
           mvn --batch-mode verify \
           -pl lib/python -am \
-          -Pskip-encoders-tests
+          -DskipEncodersTests
         timeout-minutes: 15
   site:
     name: Build site
