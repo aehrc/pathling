@@ -26,6 +26,23 @@ situations where people are working at cross-purposes.
 
 Your branch should be named `issue/[GitHub issue #]`.
 
+## Development dependencies
+
+You will need the following software to build the solution:
+
+* Java 11
+* Maven 3+
+* Node.js 16.x
+* Python 3.7+
+
+To build and install locally, run:
+
+```
+mvn clean install
+```
+
+To build the Docker image, activate the `docker` profile.
+
 ## Versioning and branching
 
 All components of Pathling are versioned together, except for the JavaScript
