@@ -65,5 +65,5 @@ If you use this software in your research, please consider citing it using the
 "Cite this repository" link on the right.
 
 **Pathling is experimental software, use it at your own risk!** You can get a
-full description of the current set of known issues over on our
-[GitHub page](https://github.com/aehrc/pathling/issues).
+full description of the current set of known issues 
+[here](https://github.com/aehrc/pathling/issues).
