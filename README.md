@@ -13,6 +13,8 @@ use [FHIR&reg;](https://hl7.org/fhir) within data analytics. It is built
 on [Apache Spark](https://spark.apache.org), and includes both language
 libraries and a server implementation.
 
+[**Read the documentation &rarr;**](https://pathling.csiro.au/docs)
+
 It is primarily aimed at the following use cases:
 
 1. **Exploratory data analysis** – Exploration of hypotheses, assessment of
