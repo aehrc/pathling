@@ -209,7 +209,7 @@
 
   <profiles>
     <profile>
-      <id>skip-encoders-tests</id>
+      <id>skipEncodersTests</id>
       <activation>
         <property>
           <name>!skipEncodersTests</name>
@@ -228,7 +228,7 @@
       </build>
     </profile>
     <profile>
-      <id>maven-deploy</id>
+      <id>mavenRelease</id>
       <build>
         <plugins>
           <plugin>
@@ -248,6 +248,17 @@
             <artifactId>nexus-staging-maven-plugin</artifactId>
           </plugin>
         </plugins>
+        <pluginManagement>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-deploy-plugin</artifactId>
+              <configuration>
+                <skip>false</skip>
+              </configuration>
+            </plugin>
+          </plugins>
+        </pluginManagement>
       </build>
     </profile>
   </profiles>

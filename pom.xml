@@ -427,6 +427,13 @@
             <nexusUrl>https://oss.sonatype.org/</nexusUrl>
             <autoReleaseAfterClose>true</autoReleaseAfterClose>
           </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>com.sun.jersey</groupId>
+              <artifactId>jersey-core</artifactId>
+              <version>1.19.4</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

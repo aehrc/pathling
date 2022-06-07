@@ -209,7 +209,7 @@
 
   <profiles>
     <profile>
-      <id>python-tests</id>
+      <id>pythonTests</id>
       <activation>
         <property>
           <name>!skipTests</name>
@@ -223,6 +223,11 @@
             <executions>
               <!-- Run the Python tests -->
               <execution>
+                <id>python-tests</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
                 <configuration>
                   <executable>py.test</executable>
                   <workingDirectory>${project.basedir}</workingDirectory>
@@ -235,35 +240,14 @@
                     <PYTHONPATH>${project.basedir}</PYTHONPATH>
                   </environmentVariables>
                 </configuration>
-                <id>python-tests</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
               </execution>
             </executions>
           </plugin>
         </plugins>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-deploy-plugin</artifactId>
-              <configuration>
-                <skip>true</skip>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
       </build>
     </profile>
     <profile>
-      <id>python-deployment</id>
-      <activation>
-        <property>
-          <name>!skipPythonDeployment</name>
-        </property>
-      </activation>
+      <id>pythonRelease</id>
       <build>
         <plugins>
           <plugin>

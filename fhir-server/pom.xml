@@ -369,20 +369,13 @@
             </container>
           </configuration>
         </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-deploy-plugin</artifactId>
-          <configuration>
-            <skip>true</skip>
-          </configuration>
-        </plugin>
       </plugins>
     </pluginManagement>
   </build>
 
   <profiles>
     <profile>
-      <id>import-test-data</id>
+      <id>importTestData</id>
       <activation>
         <property>
           <name>!skipTests</name>
