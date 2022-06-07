@@ -209,7 +209,7 @@
       <id>skipEncodersTests</id>
       <activation>
         <property>
-          <name>!skipEncodersTests</name>
+          <name>skipEncodersTests</name>
         </property>
       </activation>
       <build>
