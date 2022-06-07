@@ -59,7 +59,7 @@ jobs:
         run: |
           mvn --batch-mode deploy \
           -pl encoders,fhir-server,lib/python -am \
-          -Pdocker \
+          -Prelease,docker \
           -DskipTests \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         timeout-minutes: 45
