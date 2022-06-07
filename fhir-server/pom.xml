@@ -24,6 +24,7 @@
   <properties>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
+    <jmh.version>1.21</jmh.version>
   </properties>
 
   <dependencies>
@@ -218,6 +219,21 @@
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
     </dependency>
+
+    <!-- JMH libs for benchmarking-->
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>${jmh.version}</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
