@@ -203,11 +203,6 @@
       <groupId>com.tdunning</groupId>
       <artifactId>json</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.jodd</groupId>
-      <artifactId>jodd-core</artifactId>
-      <scope>test</scope>
-    </dependency>
     <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
