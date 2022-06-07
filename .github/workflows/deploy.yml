@@ -118,7 +118,7 @@ jobs:
           mvn --batch-mode deploy \
           -pl fhir-server -am \
           -Pdocker \
-          -DskipTests
+          -DskipTests -DskipScalaDocs
         timeout-minutes: 30
   create-release:
     name: Create a new draft GitHub release

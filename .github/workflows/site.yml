@@ -31,7 +31,8 @@ jobs:
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
-          -pl site -am -DskipTests
+          -pl site -am \
+          -DskipTests
         timeout-minutes: 30
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

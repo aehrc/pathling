@@ -125,56 +125,8 @@
               </arguments>
             </configuration>
           </execution>
-
-          <!-- Build python documentation -->
-          <execution>
-            <id>python-generate-docs</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>sphinx-apidoc</executable>
-              <arguments>
-                <argument>--force</argument>
-                <argument>--full</argument>
-                <argument>-o</argument>
-                <argument>${project.build.directory}/docs</argument>
-                <argument>pathling</argument>
-                <argument>-t</argument>
-                <argument>docs/templates/</argument>
-                pathling -t docs/templates/ &amp;&amp; make -C target/docs clean html
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
-            <id>python-compile-docs</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>make</executable>
-              <arguments>
-                <argument>-C</argument>
-                <argument>${project.build.directory}/docs</argument>
-                <argument>clean</argument>
-                <argument>html</argument>
-              </arguments>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
-
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <classesDirectory>${project.build.directory}/docs/_build/html</classesDirectory>
-          <classifier>docs</classifier>
-        </configuration>
-      </plugin>
-
       <plugin>
         <groupId>ru.yaal.maven</groupId>
         <artifactId>write-text-files-maven-plugin</artifactId>
@@ -247,6 +199,71 @@
       </build>
     </profile>
     <profile>
+      <id>pythonDocs</id>
+      <activation>
+        <property>
+          <name>!skipPythonDocs</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <!-- Build Python documentation -->
+              <execution>
+                <id>python-generate-docs</id>
+                <phase>process-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>sphinx-apidoc</executable>
+                  <arguments>
+                    <argument>--force</argument>
+                    <argument>--full</argument>
+                    <argument>-o</argument>
+                    <argument>${project.build.directory}/docs</argument>
+                    <argument>pathling</argument>
+                    <argument>-t</argument>
+                    <argument>docs/templates/</argument>
+                    pathling -t docs/templates/ &amp;&amp; make -C target/docs clean html
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>python-compile-docs</id>
+                <phase>compile</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>make</executable>
+                  <arguments>
+                    <argument>-C</argument>
+                    <argument>${project.build.directory}/docs</argument>
+                    <argument>clean</argument>
+                    <argument>html</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <!-- Create a JAR containing the Python docs -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <configuration>
+              <classesDirectory>${project.build.directory}/docs/_build/html</classesDirectory>
+              <classifier>docs</classifier>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <id>pythonRelease</id>
       <build>
         <plugins>
@@ -254,7 +271,7 @@
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
-              <!-- Deploy package -->
+              <!-- Deploy package to PyPI -->
               <execution>
                 <id>deploy</id>
                 <phase>deploy</phase>
