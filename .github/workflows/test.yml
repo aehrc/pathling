@@ -49,6 +49,13 @@ jobs:
         with:
           name: encoders-surefire-reports
           path: encoders/target/surefire-reports
+      - name: Upload dump files
+        uses: actions/upload-artifact@v2
+        with:
+          name: encoders-dump-files
+          path: |
+            **/*.dump
+            **/*.dumpstream
       - name: Publish test results
         if: ${{ github.actor != 'dependabot[bot]' }}
         uses: scacap/action-surefire-report@v1
@@ -116,6 +123,13 @@ jobs:
         with:
           name: fhir-server-timing-log
           path: fhir-server/target/timing.log
+      - name: Upload dump files
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-dump-files
+          path: |
+            **/*.dump
+            **/*.dumpstream
       - name: Publish test results
         if: ${{ github.actor != 'dependabot[bot]' }}
         uses: scacap/action-surefire-report@v1
