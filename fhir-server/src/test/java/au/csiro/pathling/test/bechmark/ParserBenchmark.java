@@ -103,12 +103,7 @@ public class ParserBenchmark {
       return parser.parse(expression);
     }
   }
-
-  public ParserBenchmark() {
-    System.out.println("FhirParserBenchmark.FhirParserBenchmark()");
-  }
-
-
+  
   @Benchmark
   public void queryWithWhere(final Blackhole bh, final ParserState parser) {
     bh.consume(parser.parse("where($this.name.given.first() = 'Karina848').gender"));
