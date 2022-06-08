@@ -1,5 +1,7 @@
 package au.csiro.pathling.test.bechmark;
 
+import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -13,28 +15,36 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
 import org.mockito.Mockito;
-import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
-import java.util.Collections;
-import java.util.concurrent.TimeUnit;
-
-import static org.mockito.Mockito.when;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Tag("UnitTest")
 @Fork(0)
-@Warmup(iterations = 1, time = 1)
-@Measurement(iterations = 3, time = 1)
+@Warmup(iterations = 1)
+@Measurement(iterations = 3)
 public class ParserBenchmark {
 
   @State(Scope.Benchmark)
@@ -55,15 +65,13 @@ public class ParserBenchmark {
     @MockBean
     protected Database database;
 
-    protected Parser parser;
-
     void mockResource(final ResourceType... resourceTypes) {
       for (final ResourceType resourceType : resourceTypes) {
         final Dataset<Row> dataset = TestHelpers.getDatasetForResourceType(spark, resourceType);
         when(database.read(resourceType)).thenReturn(dataset);
       }
     }
-    
+
     @Setup(Level.Trial)
     public void setUp() throws Exception {
       database = Mockito.mock(Database.class);
@@ -72,9 +80,18 @@ public class ParserBenchmark {
           ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
           ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
           ResourceType.CAREPLAN);
+    }
 
+    public FhirPath parse(final String expression) {
+      return parse(expression, ResourceType.PATIENT);
+    }
+
+    public FhirPath parse(final String expression, final ResourceType subjectResourceType) {
+
+      // TODO: Do we need to pre-create and cash all required parsers
+      // For all resources ???
       final ResourcePath subjectResource = ResourcePath
-          .build(fhirContext, database, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
+          .build(fhirContext, database, subjectResourceType, subjectResourceType.toCode(), true);
 
       final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
           .terminologyClientFactory(terminologyServiceFactory)
@@ -82,10 +99,7 @@ public class ParserBenchmark {
           .inputContext(subjectResource)
           .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
           .build();
-      parser = new Parser(parserContext);
-    }
-
-    public FhirPath parse(String expression) {
+      final Parser parser = new Parser(parserContext);
       return parser.parse(expression);
     }
   }

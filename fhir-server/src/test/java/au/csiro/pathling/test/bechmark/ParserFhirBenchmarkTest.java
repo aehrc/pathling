@@ -42,7 +42,7 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("unit-test")
 @Fork(0)
 @Warmup(iterations = 1)
-public class ParserBenchmarkTest extends AbstractJmhSpringBootTest {
+public class ParserFhirBenchmarkTest extends AbstractJmhSpringBootTest {
 
   @Autowired
   protected SparkSession spark;
@@ -60,7 +60,7 @@ public class ParserBenchmarkTest extends AbstractJmhSpringBootTest {
 
   protected Parser parser;
 
-  public ParserBenchmarkTest() {
+  public ParserFhirBenchmarkTest() {
     System.out.println("FhirParserBenchmark.FhirParserBenchmark()");
   }
 
