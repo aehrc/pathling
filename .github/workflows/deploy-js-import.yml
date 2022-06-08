@@ -2,7 +2,7 @@
 #
 # This is only run when a version tag is pushed.
 
-name: Deploy
+name: Publish pathling-import
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   deploy:
-    name: Build and deploy to NPM
+    name: Build and publish to NPM
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
