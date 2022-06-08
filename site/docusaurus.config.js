@@ -12,7 +12,7 @@ const config = {
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
-  favicon: "img/favicon.ico",
+  favicon: "favicon.ico",
 
   organizationName: "aehrc",
   projectName: "pathling",
@@ -47,8 +47,8 @@ const config = {
         title: null,
         logo: {
           alt: "Pathling",
-          src: "images/logo-colour.svg",
-          srcDark: "images/logo-colour-dark.svg",
+          src: "assets/images/logo-colour.svg",
+          srcDark: "assets/images/logo-colour-dark.svg",
           href: "https://pathling.csiro.au"
         },
         items: [

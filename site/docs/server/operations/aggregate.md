@@ -27,8 +27,8 @@ GET [FHIR endpoint]/[resource type]/$aggregate?[parameters...]
 POST [FHIR endpoint]/[resource type]/$aggregate
 ```
 
-![Aggregate](/images/aggregate.svg#light-mode-only "Aggregate")
-![Aggregate](/images/aggregate-dark.svg#dark-mode-only "Aggregate")
+![Aggregate](../../../src/images/aggregate.svg#light-mode-only "Aggregate")
+![Aggregate](../../../src/images/aggregate-dark.svg#dark-mode-only "Aggregate")
 
 ## Request
 

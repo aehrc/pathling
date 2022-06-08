@@ -37,8 +37,8 @@ There are three main components that are provided as part of Pathling:
    analytics applications.
    
 <picture>
-  <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/static/images/components-dark.svg" media="(prefers-color-scheme: dark)"/>
-  <img src="https://raw.githubusercontent.com/aehrc/pathling/main/site/static/images/components.svg" alt="Components" width="300"/>
+  <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components-dark.svg" media="(prefers-color-scheme: dark)"/>
+  <img src="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components.svg" alt="Components" width="300"/>
 </picture>
 
 ## FHIRPath

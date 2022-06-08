@@ -32,8 +32,8 @@ Pathling supports a set of authorities that control access to resources and
 operations. Authorities must be provided within the `authorities` claim within
 the JWT bearer token provided with each request.
 
-![Authorities](/images/authorities.svg#light-mode-only "Authorities")
-![Authorities](/images/authorities-dark.svg#dark-mode-only "Authorities")
+![Authorities](../../src/images/authorities.svg#light-mode-only "Authorities")
+![Authorities](../../src/images/authorities-dark.svg#dark-mode-only "Authorities")
 
 | Authority                        | Description                                                                     |
 |----------------------------------|---------------------------------------------------------------------------------|

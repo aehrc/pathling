@@ -38,8 +38,8 @@ using a status endpoint.
 POST [FHIR endpoint]/$import
 ```
 
-![Import](/images/import.svg#light-mode-only "Import")
-![Import](/images/import-dark.svg#dark-mode-only "Import")
+![Import](../../../src/images/import.svg#light-mode-only "Import")
+![Import](../../../src/images/import-dark.svg#dark-mode-only "Import")
 
 ## Request
 
