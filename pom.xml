@@ -75,6 +75,7 @@
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.sparkScalaFullVersion>2.12.15</pathling.sparkScalaFullVersion>
     <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
+    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.3</pathling.hadoopVersion>
     <pathling.awsSdkVersion>1.12.234</pathling.awsSdkVersion>
@@ -212,6 +213,18 @@
         <groupId>au.csiro.pathling</groupId>
         <artifactId>encoders</artifactId>
         <version>${project.version}</version>
+      </dependency>
+
+      <!-- ANTLR -->
+      <dependency>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4</artifactId>
+        <version>${pathling.antlrVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.antlr</groupId>
+        <artifactId>antlr4-runtime</artifactId>
+        <version>${pathling.antlrVersion}</version>
       </dependency>
 
       <!-- AWS SDK -->
