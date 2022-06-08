@@ -36,8 +36,8 @@ GET [FHIR endpoint]/[resource type]/$extract?[parameters...]
 POST [FHIR endpoint]/[resource type]/$extract
 ```
 
-![Extract](/images/extract.svg#light-mode-only "Extract")
-![Extract](/images/extract-dark.svg#dark-mode-only "Extract")
+![Extract](../../../src/images/extract.svg#light-mode-only "Extract")
+![Extract](../../../src/images/extract-dark.svg#dark-mode-only "Extract")
 
 ## Request
 

@@ -10,8 +10,8 @@ Pathling provides a server based on the
 functionality designed to ease the delivery of apps and augment tasks related to
 health data analytics.
 
-![Operations](/images/operations.svg#light-mode-only "Operations")
-![Operations](/images/operations-dark.svg#dark-mode-only "Operations")
+![Operations](../../src/images/operations.svg#light-mode-only "Operations")
+![Operations](../../src/images/operations-dark.svg#dark-mode-only "Operations")
 
 The operations available within Pathling are:
 

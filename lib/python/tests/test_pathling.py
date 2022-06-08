@@ -1,8 +1,9 @@
 import logging
 import os
+from tempfile import mkdtemp
+
 from pyspark.sql import SparkSession
 from pytest import fixture
-from tempfile import mkdtemp
 
 from pathling import PathlingContext
 from pathling.etc import find_jar as find_pathling_jar

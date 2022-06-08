@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.1.0</version>
+    <version>5.1.1</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -22,7 +22,6 @@
   <description>A server that exposes Pathling functionality through a FHIR API.</description>
 
   <properties>
-    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
   </properties>
@@ -150,7 +149,6 @@
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4</artifactId>
-      <version>${pathling.antlrVersion}</version>
     </dependency>
 
     <!-- AWS SDK -->
@@ -199,32 +197,26 @@
       <version>4.2.0</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>com.tdunning</groupId>
-      <artifactId>json</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.jodd</groupId>
-      <artifactId>jodd-core</artifactId>
-      <scope>test</scope>
-    </dependency>
+
     <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
     </dependency>
 
-    <!-- Apache Commons BeanUtils -->
+    <!-- Misc -->
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
     <dependency>
       <groupId>commons-beanutils</groupId>
       <artifactId>commons-beanutils</artifactId>
       <version>1.9.4</version>
     </dependency>
-
-    <!-- Misc -->
     <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
     </dependency>
   </dependencies>
 
