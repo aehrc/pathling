@@ -68,45 +68,101 @@ agree to comply with the licence terms for these components as part of
 accessing the Software. Other third party software may also be identified in
 separate files distributed with the Software.
 
-* (Apache License, Version 2.0) HAPI FHIR - Core Library (ca.uhn.hapi.fhir:hapi-fhir-base:6.0.1 - http://jamesagnew.github.io/hapi-fhir/)
-* (Apache License, Version 2.0) HAPI FHIR - Client Framework (ca.uhn.hapi.fhir:hapi-fhir-client:6.0.1 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-client)
-* (Apache License, Version 2.0) HAPI FHIR - Server Framework (ca.uhn.hapi.fhir:hapi-fhir-server:6.0.1 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-server)
-* (Apache License, Version 2.0) HAPI FHIR Structures - FHIR R4 (ca.uhn.hapi.fhir:hapi-fhir-structures-r4:6.0.1 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-structures-r4)
-* (Apache License, Version 2.0) HAPI FHIR - Validation Resources (FHIR R4) (ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4:6.0.1 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-validation-resources-r4)
-* (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback Classic Module (ch.qos.logback:logback-classic:1.2.11 - http://logback.qos.ch/logback-classic)
-* (Apache License, Version 2.0) AWS Java SDK for Amazon S3 (com.amazonaws:aws-java-sdk-s3:1.12.230 - https://aws.amazon.com/sdkforjava)
-* (MIT License) java jwt (com.auth0:java-jwt:3.19.2 - https://github.com/auth0/java-jwt)
-* (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.21.1 - https://github.com/auth0/jwks-rsa-java)
-* (Apache License, Version 2.0) Jackson-core (com.fasterxml.jackson.core:jackson-core:2.13.3 - https://github.com/FasterXML/jackson-core)
-* (Apache License, Version 2.0) Woodstox (com.fasterxml.woodstox:woodstox-core:6.2.8 - https://github.com/FasterXML/woodstox)
-* (Apache License, Version 2.0) docker-java (com.github.docker-java:docker-java:3.2.13 - https://github.com/docker-java/docker-java)
-* (Apache License, Version 2.0) docker-java-transport-okhttp (com.github.docker-java:docker-java-transport-okhttp:3.2.13 - https://github.com/docker-java/docker-java)
-* (Apache License, Version 2.0) WireMock (com.github.tomakehurst:wiremock-jre8:2.33.2 - http://wiremock.org)
-* (Apache License, Version 2.0) FindBugs-jsr305 (com.google.code.findbugs:jsr305:3.0.2 - http://findbugs.sourceforge.net/)
-* (Apache License, Version 2.0) Gson (com.google.code.gson:gson:2.8.9 - https://github.com/google/gson/gson)
-* (Apache License, Version 2.0) Open JSON (com.tdunning:json:1.8 - https://github.com/tdunning/open-json)
-* (Apache License, Version 2.0) Apache Commons BeanUtils (commons-beanutils:commons-beanutils:1.9.4 - https://commons.apache.org/proper/commons-beanutils/)
-* (Apache License, Version 2.0) delta-core (io.delta:delta-core_2.12:1.2.1 - https://delta.io/)
-* (MIT License) Sentry SDK (io.sentry:sentry:5.7.4 - https://github.com/getsentry/sentry-java)
-* (Apache License, Version 2.0) Joda-Time (joda-time:joda-time:2.8.1 - http://www.joda.org/joda-time/)
+* (Apache License, Version 2.0) HAPI FHIR - Core Library (ca.uhn.hapi.fhir:
+  hapi-fhir-base:6.0.1 - http://jamesagnew.github.io/hapi-fhir/)
+* (Apache License, Version 2.0) HAPI FHIR - Client Framework (ca.uhn.hapi.fhir:
+  hapi-fhir-client:6.0.1
+  - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-client)
+* (Apache License, Version 2.0) HAPI FHIR - Server Framework (ca.uhn.hapi.fhir:
+  hapi-fhir-server:6.0.1
+  - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-server)
+* (Apache License, Version 2.0) HAPI FHIR Structures - FHIR R4 (
+  ca.uhn.hapi.fhir:hapi-fhir-structures-r4:6.0.1
+  - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-structures-r4)
+* (Apache License, Version 2.0) HAPI FHIR - Validation Resources (FHIR R4) (
+  ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4:6.0.1
+  - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-validation-resources-r4)
+* (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback
+  Classic Module (ch.qos.logback:logback-classic:1.2.11
+    - http://logback.qos.ch/logback-classic)
+* (Apache License, Version 2.0) AWS Java SDK for Amazon S3 (com.amazonaws:
+  aws-java-sdk-s3:1.12.234 - https://aws.amazon.com/sdkforjava)
+* (MIT License) java jwt (com.auth0:java-jwt:3.19.2
+    - https://github.com/auth0/java-jwt)
+* (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.21.1
+  - https://github.com/auth0/jwks-rsa-java)
+* (Apache License, Version 2.0) Jackson-core (com.fasterxml.jackson.core:
+  jackson-core:2.13.3 - https://github.com/FasterXML/jackson-core)
+* (Apache License, Version 2.0) Woodstox (com.fasterxml.woodstox:woodstox-core:
+  6.2.8 - https://github.com/FasterXML/woodstox)
+* (Apache License, Version 2.0) docker-java (com.github.docker-java:docker-java:
+  3.2.13 - https://github.com/docker-java/docker-java)
+* (Apache License, Version 2.0) docker-java-transport-okhttp (
+  com.github.docker-java:docker-java-transport-okhttp:3.2.13
+  - https://github.com/docker-java/docker-java)
+* (Apache License, Version 2.0) WireMock (com.github.tomakehurst:wiremock-jre8:
+  2.33.2 - http://wiremock.org)
+* (Apache License, Version 2.0) FindBugs-jsr305 (com.google.code.findbugs:
+  jsr305:3.0.2 - http://findbugs.sourceforge.net/)
+* (Apache License, Version 2.0) Gson (com.google.code.gson:gson:2.9.0
+    - https://github.com/google/gson/gson)
+* (Apache License, Version 2.0) Apache Commons BeanUtils (commons-beanutils:
+  commons-beanutils:1.9.4
+    - https://commons.apache.org/proper/commons-beanutils/)
+* (Apache License, Version 2.0) delta-core (io.delta:delta-core_2.12:1.2.1
+  - https://delta.io/)
+* (MIT License) Sentry SDK (io.sentry:sentry:5.7.4
+    - https://github.com/getsentry/sentry-java)
+* (Apache License, Version 2.0) Joda-Time (joda-time:joda-time:2.10.14
+    - https://www.joda.org/joda-time/)
 * (Eclipse Public License 1.0) JUnit (junit:junit:4.13.2 - http://junit.org)
 * (BSD License) ANTLR 4 Tool (org.antlr:antlr4:4.9.3 - http://www.antlr.org)
-* (Apache License, Version 2.0) Apache Hadoop Amazon Web Services support (org.apache.hadoop:hadoop-aws:3.3.1 - no url defined)
-* (Apache License, Version 2.0) Spark Project Catalyst (org.apache.spark:spark-catalyst_2.12:3.2.1 - http://spark.apache.org/)
-* (Apache License, Version 2.0) Spark Project Core (org.apache.spark:spark-core_2.12:3.2.1 - http://spark.apache.org/)
-* (Apache License, Version 2.0) Spark Project SQL (org.apache.spark:spark-sql_2.12:3.2.1 - http://spark.apache.org/)
-* (Apache License, Version 2.0) Awaitility (org.awaitility:awaitility:4.2.0 - http://awaitility.org)
-* (Apache License, Version 2.0) Hibernate Validator Engine (org.hibernate.validator:hibernate-validator:6.2.3.Final - http://hibernate.org/validator/hibernate-validator)
-* (BSD License) Jodd Core (org.jodd:jodd-core:3.5.2 - http://jodd.org)
-* (MIT License) Project Lombok (org.projectlombok:lombok:1.18.24 - https://projectlombok.org)
-* (Apache License, Version 2.0) JSONassert (org.skyscreamer:jsonassert:1.5.0 - https://github.com/skyscreamer/JSONassert)
-* (Apache License, Version 2.0) Log4j Implemented Over SLF4J (org.slf4j:log4j-over-slf4j:1.7.36 - http://www.slf4j.org)
-* (MIT License) SLF4J API Module (org.slf4j:slf4j-api:1.7.36 - http://www.slf4j.org)
-* (Apache License, Version 2.0) spring-boot-configuration-processor (org.springframework.boot:spring-boot-configuration-processor:2.7.0 - https://spring.io/projects/spring-boot)
-* (Apache License, Version 2.0) spring-boot-starter-aop (org.springframework.boot:spring-boot-starter-aop:2.7.0 - https://spring.io/projects/spring-boot)
-* (Apache License, Version 2.0) spring-boot-starter-security (org.springframework.boot:spring-boot-starter-security:2.7.0 - https://spring.io/projects/spring-boot)
-* (Apache License, Version 2.0) spring-boot-starter-test (org.springframework.boot:spring-boot-starter-test:2.7.0 - https://spring.io/projects/spring-boot)
-* (Apache License, Version 2.0) spring-boot-starter-web (org.springframework.boot:spring-boot-starter-web:2.7.0 - https://spring.io/projects/spring-boot)
-* (Apache License, Version 2.0) spring-security-oauth2-jose (org.springframework.security:spring-security-oauth2-jose:5.7.1 - https://spring.io/projects/spring-security)
-* (Apache License, Version 2.0) spring-security-oauth2-resource-server (org.springframework.security:spring-security-oauth2-resource-server:5.7.1 - https://spring.io/projects/spring-security)
-* (Apache License, Version 2.0) spring-security-test (org.springframework.security:spring-security-test:5.7.1 - https://spring.io/projects/spring-security)
+* (Apache License, Version 2.0) Apache Hadoop Amazon Web Services support (
+  org.apache.hadoop:hadoop-aws:3.3.3 - no url defined)
+* (Apache License, Version 2.0) Spark Project Catalyst (org.apache.spark:
+  spark-catalyst_2.12:3.2.1 - http://spark.apache.org/)
+* (Apache License, Version 2.0) Spark Project Core (org.apache.spark:
+  spark-core_2.12:3.2.1 - http://spark.apache.org/)
+* (Apache License, Version 2.0) Spark Project SQL (org.apache.spark:
+  spark-sql_2.12:3.2.1 - http://spark.apache.org/)
+* (Apache License, Version 2.0) Awaitility (org.awaitility:awaitility:4.2.0
+  - http://awaitility.org)
+* (Apache License, Version 2.0) Hibernate Validator Engine (
+  org.hibernate.validator:hibernate-validator:6.2.3.Final
+    - http://hibernate.org/validator/hibernate-validator)
+* (MIT License) JSON in Java (org.json:json:20220320
+    - https://github.com/douglascrockford/JSON-java)
+* (MIT License) Project Lombok (org.projectlombok:lombok:1.18.24
+    - https://projectlombok.org)
+* (Apache License, Version 2.0) Scala Library (org.scala-lang:scala-library:
+  2.12.15 - https://www.scala-lang.org/)
+* (Apache License, Version 2.0) JSONassert (org.skyscreamer:jsonassert:1.5.0
+    - https://github.com/skyscreamer/JSONassert)
+* (Apache License, Version 2.0) Log4j Implemented Over SLF4J (org.slf4j:
+  log4j-over-slf4j:1.7.36 - http://www.slf4j.org)
+* (MIT License) SLF4J API Module (org.slf4j:slf4j-api:1.7.36
+  - http://www.slf4j.org)
+* (Apache License, Version 2.0) spring-boot-configuration-processor (
+  org.springframework.boot:spring-boot-configuration-processor:2.7.0
+  - https://spring.io/projects/spring-boot)
+* (Apache License, Version 2.0) spring-boot-starter-aop (
+  org.springframework.boot:spring-boot-starter-aop:2.7.0
+  - https://spring.io/projects/spring-boot)
+* (Apache License, Version 2.0) spring-boot-starter-security (
+  org.springframework.boot:spring-boot-starter-security:2.7.0
+  - https://spring.io/projects/spring-boot)
+* (Apache License, Version 2.0) spring-boot-starter-test (
+  org.springframework.boot:spring-boot-starter-test:2.7.0
+  - https://spring.io/projects/spring-boot)
+* (Apache License, Version 2.0) spring-boot-starter-web (
+  org.springframework.boot:spring-boot-starter-web:2.7.0
+  - https://spring.io/projects/spring-boot)
+* (Apache License, Version 2.0) spring-security-oauth2-jose (
+  org.springframework.security:spring-security-oauth2-jose:5.7.1
+  - https://spring.io/projects/spring-security)
+* (Apache License, Version 2.0) spring-security-oauth2-resource-server (
+  org.springframework.security:spring-security-oauth2-resource-server:5.7.1
+  - https://spring.io/projects/spring-security)
+* (Apache License, Version 2.0) spring-security-test (
+  org.springframework.security:spring-security-test:5.7.1
+  - https://spring.io/projects/spring-security)
