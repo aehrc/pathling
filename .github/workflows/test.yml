@@ -94,9 +94,8 @@ jobs:
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Import test data
         if: steps.cache-test-data.outputs.cache-hit != 'true'
-        run: |
-          mvn --batch-mode compile test-compile exec:java@import-test-data
-          -pl fhir-server -am
+        working-directory: fhir-server
+        run: mvn --batch-mode compile test-compile exec:java@import-test-data
         timeout-minutes: 10
       - name: Run the verify goal with Maven (Dependabot)
         if: github.actor == 'dependabot[bot]'
@@ -162,15 +161,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Cache test data
+        id: cache-test-data
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Import test data
         if: steps.cache-test-data.outputs.cache-hit != 'true'
-        run: |
-          mvn --batch-mode compile test-compile exec:java@import-test-data
-          -pl fhir-server -am
+        working-directory: fhir-server
+        run: mvn --batch-mode compile test-compile exec:java@import-test-data
         timeout-minutes: 10
       - name: Run the verify goal with Maven (Dependabot)
         if: github.actor == 'dependabot[bot]'
@@ -246,15 +245,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Cache test data
+        id: cache-test-data
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Import test data
         if: steps.cache-test-data.outputs.cache-hit != 'true'
-        run: |
-          mvn --batch-mode compile test-compile exec:java@import-test-data
-          -pl fhir-server -am
+        working-directory: fhir-server
+        run: mvn --batch-mode compile test-compile exec:java@import-test-data
         timeout-minutes: 10
       - name: Run the verify goal with Maven (Dependabot)
         if: github.actor == 'dependabot[bot]'
