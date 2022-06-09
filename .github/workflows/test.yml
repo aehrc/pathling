@@ -68,8 +68,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Encoders test report
           fail_on_test_failures: true
-  fhir-server:
-    name: Build and test FHIR server
+  fhir-server-1:
+    name: Build and test FHIR server (tranche 1)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -91,7 +91,70 @@ jobs:
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Pdocker \
+          -Ptest-tranche-1 \
+          -DskipITs -DskipEncodersTests -DskipScalaDocs
+        timeout-minutes: 45
+      - name: Run the verify goal with Maven
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        run: |
+          mvn --batch-mode verify \
+          -pl fhir-server -am \
+          -Ptest-tranche-1 \
+          -Dmaven.test.failure.ignore -DskipEncodersTests
+        timeout-minutes: 45
+      - name: Upload fhir-server test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-1-surefire-reports
+          path: fhir-server/target/surefire-reports
+      - name: Upload test coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-1-coverage
+          path: fhir-server/target/site/jacoco/jacoco.xml
+      - name: Upload timing log
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-1-timing-log
+          path: fhir-server/target/timing.log
+      - name: Upload dump files
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-1-dump-files
+          path: |
+            **/*.dump
+            **/*.dumpstream
+      - name: Publish test results
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: FHIR server test report 1
+          fail_on_test_failures: true
+  fhir-server-2:
+    name: Build and test FHIR server (tranche 2)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Run the verify goal with Maven (Dependabot)
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        run: |
+          mvn --batch-mode verify \
+          -pl fhir-server -am \
+          -Ptest-tranche-2,docker \
           -Dpathling.fhirServerDockerTag=${{ github.sha }} \
           -DskipITs -DskipEncodersTests -DskipScalaDocs
         timeout-minutes: 45
@@ -100,7 +163,7 @@ jobs:
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Pdocker \
+          -Ptest-tranche-2,docker \
           -Dpathling.fhirServerDockerTag=${{ github.sha }} \
           -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
           -Dmaven.test.failure.ignore -DskipEncodersTests
@@ -115,22 +178,22 @@ jobs:
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
-          name: fhir-server-surefire-reports
+          name: fhir-server-2-surefire-reports
           path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
         uses: actions/upload-artifact@v2
         with:
-          name: fhir-server-coverage
+          name: fhir-server-2-coverage
           path: fhir-server/target/site/jacoco/jacoco.xml
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
-          name: fhir-server-timing-log
+          name: fhir-server-2-timing-log
           path: fhir-server/target/timing.log
       - name: Upload dump files
         uses: actions/upload-artifact@v2
         with:
-          name: fhir-server-dump-files
+          name: fhir-server-2-dump-files
           path: |
             **/*.dump
             **/*.dumpstream
@@ -139,7 +202,70 @@ jobs:
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: FHIR server test report
+          check_name: FHIR server test report 2
+          fail_on_test_failures: true
+  fhir-server-3:
+    name: Build and test FHIR server (tranche 3)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Run the verify goal with Maven (Dependabot)
+        if: ${{ github.actor == 'dependabot[bot]' }}
+        run: |
+          mvn --batch-mode verify \
+          -pl fhir-server -am \
+          -Ptest-tranche-3 \
+          -DskipITs -DskipEncodersTests -DskipScalaDocs
+        timeout-minutes: 45
+      - name: Run the verify goal with Maven
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        run: |
+          mvn --batch-mode verify \
+          -pl fhir-server -am \
+          -Ptest-tranche-3 \
+          -Dmaven.test.failure.ignore -DskipEncodersTests
+        timeout-minutes: 45
+      - name: Upload fhir-server test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-3-surefire-reports
+          path: fhir-server/target/surefire-reports
+      - name: Upload test coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-3-coverage
+          path: fhir-server/target/site/jacoco/jacoco.xml
+      - name: Upload timing log
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-3-timing-log
+          path: fhir-server/target/timing.log
+      - name: Upload dump files
+        uses: actions/upload-artifact@v2
+        with:
+          name: fhir-server-3-dump-files
+          path: |
+            **/*.dump
+            **/*.dumpstream
+      - name: Publish test results
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: FHIR server test report 3
           fail_on_test_failures: true
   js-client:
     name: Build JavaScript client
