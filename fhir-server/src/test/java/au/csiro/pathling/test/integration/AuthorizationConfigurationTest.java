@@ -24,6 +24,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,6 +52,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.cors.allowedOrigins=http://foo.bar,http://boo.bar",
     "pathling.cors.allowedHeaders=X-Mine,X-Other"
 })
+@Tag("Tranche2")
 @Slf4j
 class AuthorizationConfigurationTest extends IntegrationTest {
 

@@ -28,6 +28,7 @@ import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -42,6 +43,7 @@ import org.springframework.util.FileSystemUtils;
 
 @TestPropertySource(
     properties = {"pathling.storage.databaseName=default"})
+@Tag("Tranche1")
 @Slf4j
 abstract class ModificationTest extends IntegrationTest {
 

@@ -13,6 +13,7 @@ import au.csiro.pathling.extract.ResultRegistry;
 import au.csiro.pathling.io.ResultReader;
 import java.net.URI;
 import java.net.URISyntaxException;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.sparkproject.jetty.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 /**
  * @author John Grimes
  */
+@Tag("Tranche2")
 class ExtractSecurityTest extends IntegrationTest {
 
   @MockBean

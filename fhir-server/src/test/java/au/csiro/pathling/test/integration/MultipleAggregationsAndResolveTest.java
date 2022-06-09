@@ -18,6 +18,7 @@ import java.net.URISyntaxException;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +32,7 @@ import org.springframework.http.ResponseEntity;
 /**
  * @author John Grimes
  */
+@Tag("Tranche2")
 class MultipleAggregationsAndResolveTest extends IntegrationTest {
 
   @Autowired
