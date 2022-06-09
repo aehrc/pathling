@@ -47,6 +47,7 @@ import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +61,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.test.recording.terminologyServerUrl=https://r4.ontoserver.csiro.au/",
     "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
 })
+@Tag("Tranche2")
 @Slf4j
 class TerminologyServiceIntegrationTest extends WireMockTest {
 

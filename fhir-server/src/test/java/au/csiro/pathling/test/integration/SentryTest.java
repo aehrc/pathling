@@ -20,6 +20,7 @@ import au.csiro.pathling.aggregate.AggregateExecutor;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -35,6 +36,7 @@ import org.springframework.test.context.TestPropertySource;
  * @author John Grimes
  */
 @TestPropertySource(locations = {"classpath:/configuration/sentry.properties"})
+@Tag("Tranche2")
 class SentryTest extends WireMockTest {
 
   @LocalServerPort

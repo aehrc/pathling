@@ -20,6 +20,7 @@ import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  */
 @Slf4j
 @ExtendWith(TimingExtension.class)
+@Tag("Tranche1")
 class AggregateQueryTest extends AggregateExecutorTest {
 
   AggregateQueryTest() {
