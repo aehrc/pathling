@@ -502,7 +502,7 @@
       </build>
     </profile>
     <profile>
-      <id>test-tranche-1</id>
+      <id>testTranche1</id>
       <build>
         <plugins>
           <plugin>
@@ -545,7 +545,7 @@
       </build>
     </profile>
     <profile>
-      <id>test-tranche-2</id>
+      <id>testTranche2</id>
       <build>
         <plugins>
           <plugin>
@@ -588,7 +588,7 @@
       </build>
     </profile>
     <profile>
-      <id>test-tranche-3</id>
+      <id>testTranche3</id>
       <build>
         <plugins>
           <plugin>

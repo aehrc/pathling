@@ -31,14 +31,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
-        if: ${{ github.actor == 'dependabot[bot]' }}
+        if: github.actor == 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl encoders -am \
           -DskipScalaDocs
         timeout-minutes: 30
       - name: Run the verify goal with Maven
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl encoders -am \
@@ -62,7 +62,7 @@ jobs:
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -87,24 +87,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Cache test data
+        id: cache-test-data
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
+      - name: Import test data
+        if: steps.cache-test-data.outputs.cache-hit != 'true'
+        run: |
+          mvn --batch-mode compile test-compile exec:java@import-test-data
+          -pl fhir-server -am
+        timeout-minutes: 10
       - name: Run the verify goal with Maven (Dependabot)
-        if: ${{ github.actor == 'dependabot[bot]' }}
+        if: github.actor == 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Ptest-tranche-1 \
+          -PtestTranche1,!importTestData \
           -DskipITs -DskipEncodersTests -DskipScalaDocs
         timeout-minutes: 45
       - name: Run the verify goal with Maven
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Ptest-tranche-1 \
+          -PtestTranche1,!importTestData \
           -Dmaven.test.failure.ignore -DskipEncodersTests
         timeout-minutes: 45
       - name: Upload fhir-server test reports
@@ -130,7 +137,7 @@ jobs:
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -160,20 +167,20 @@ jobs:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven (Dependabot)
-        if: ${{ github.actor == 'dependabot[bot]' }}
+        if: github.actor == 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Ptest-tranche-2,docker \
+          -PtestTranche2,!importTestData,docker \
           -Dpathling.fhirServerDockerTag=${{ github.sha }} \
           -DskipITs -DskipEncodersTests -DskipScalaDocs
         timeout-minutes: 45
       - name: Run the verify goal with Maven
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Ptest-tranche-2,docker \
+          -PtestTranche2,!importTestData,docker \
           -Dpathling.fhirServerDockerTag=${{ github.sha }} \
           -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
           -Dmaven.test.failure.ignore -DskipEncodersTests
@@ -208,7 +215,7 @@ jobs:
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -238,19 +245,19 @@ jobs:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven (Dependabot)
-        if: ${{ github.actor == 'dependabot[bot]' }}
+        if: github.actor == 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Ptest-tranche-3 \
+          -PtestTranche3,!importTestData \
           -DskipITs -DskipEncodersTests -DskipScalaDocs
         timeout-minutes: 45
       - name: Run the verify goal with Maven
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         run: |
           mvn --batch-mode verify \
           -pl fhir-server -am \
-          -Ptest-tranche-3 \
+          -PtestTranche3,!importTestData \
           -Dmaven.test.failure.ignore -DskipEncodersTests
         timeout-minutes: 45
       - name: Upload fhir-server test reports
@@ -276,7 +283,7 @@ jobs:
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -402,7 +409,7 @@ jobs:
     name: Upload coverage to Codecov
     runs-on: ubuntu-latest
     needs: [ encoders,fhir-server-1,fhir-server-2,fhir-server-3 ]
-    if: ${{ github.actor != 'dependabot[bot]' }}
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
