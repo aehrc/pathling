@@ -13,6 +13,7 @@ import au.csiro.pathling.async.JobRegistry;
 import java.net.URI;
 import java.net.URISyntaxException;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.sparkproject.jetty.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ import org.springframework.test.context.TestPropertySource;
  * @author John Grimes
  */
 @TestPropertySource(properties = {"pathling.async.enabled=true"})
+@Tag("Tranche2")
 @Slf4j
 class AsyncSecurityTest extends IntegrationTest {
 

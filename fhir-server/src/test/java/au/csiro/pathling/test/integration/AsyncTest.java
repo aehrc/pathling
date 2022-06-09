@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.sparkproject.jetty.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,7 @@ import org.springframework.test.context.TestPropertySource;
  * @author John Grimes
  */
 @TestPropertySource(properties = {"pathling.async.enabled=true"})
+@Tag("Tranche2")
 @Slf4j
 class AsyncTest extends IntegrationTest {
 

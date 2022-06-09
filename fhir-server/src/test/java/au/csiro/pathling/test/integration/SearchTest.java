@@ -14,6 +14,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -26,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 /**
  * @author John Grimes
  */
+@Tag("Tranche2")
 class SearchTest extends IntegrationTest {
 
   @Autowired
