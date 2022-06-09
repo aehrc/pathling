@@ -90,9 +90,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson,encoders/src/main/**/*.java,encoders/src/main/**/*.scala') }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
           restore-keys: |
-            ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson,encoders/src/main/**/*.java,encoders/src/main/**/*.scala') }}
+            ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven (Dependabot)
         if: ${{ github.actor == 'dependabot[bot]' }}
         run: |
@@ -160,9 +160,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson,encoders/src/main/**/*.java,encoders/src/main/**/*.scala') }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
           restore-keys: |
-            ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson,encoders/src/main/**/*.java,encoders/src/main/**/*.scala') }}
+            ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven (Dependabot)
         if: ${{ github.actor == 'dependabot[bot]' }}
         run: |
@@ -240,9 +240,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson,encoders/src/main/**/*.java,encoders/src/main/**/*.scala') }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
           restore-keys: |
-            ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson,encoders/src/main/**/*.java,encoders/src/main/**/*.scala') }}
+            ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven (Dependabot)
         if: ${{ github.actor == 'dependabot[bot]' }}
         run: |
