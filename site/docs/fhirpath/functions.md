@@ -350,7 +350,7 @@ The following types of references are not currently supported:
 - Logical references (via <code>identifier</code>)
 - References to contained resources
 - Absolute literal references
-  :::
+:::
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
