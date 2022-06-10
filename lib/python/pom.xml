@@ -226,7 +226,7 @@
                     <argument>-o</argument>
                     <argument>${project.build.directory}/docs</argument>
                     <argument>-t</argument>
-                    <argument>${project.build.directory}/docs/templates/</argument>
+                    <argument>${project.basedir}/docs/templates/</argument>
                     <argument>pathling</argument>
                   </arguments>
                 </configuration>
