@@ -225,10 +225,9 @@
                     <argument>--full</argument>
                     <argument>-o</argument>
                     <argument>${project.build.directory}/docs</argument>
-                    <argument>pathling</argument>
                     <argument>-t</argument>
-                    <argument>docs/templates/</argument>
-                    pathling -t docs/templates/ &amp;&amp; make -C target/docs clean html
+                    <argument>${project.build.directory}/docs/templates/</argument>
+                    <argument>pathling</argument>
                   </arguments>
                 </configuration>
               </execution>
