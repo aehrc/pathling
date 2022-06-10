@@ -50,7 +50,7 @@ const sidebars = {
       items: [{
         type: "link",
         label: "API docs",
-        href: "pathname:///docs/java/"
+        href: "pathname:///docs/java/index.html"
       }]
     },
     {
