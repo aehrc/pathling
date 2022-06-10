@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="817 1700 533 350" width="533"
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="817 1700 533 350" width="533"
     height="350">
   <defs/>
-  <g id="Pathling_features_(no_text)_(dark)" stroke="none" stroke-dasharray="none" fill-opacity="1"
-      fill="none" stroke-opacity="1">
+  <g id="Pathling_features_(no_text)_(dark)" fill-opacity="1" stroke="none" stroke-opacity="1"
+      stroke-dasharray="none" fill="none">
     <title>Pathling features (no text) (dark)</title>
     <g id="Pathling_features_(no_text)_(dark)_Features">
       <title>Features</title>
@@ -50,8 +50,9 @@
         <path
             d="M 1189.5883 1862.1307 L 1260.5017 1862.1307 C 1263.8154 1862.1307 1266.5017 1864.817 1266.5017 1868.1307 L 1266.5017 1904.3197 C 1266.5017 1907.6334 1263.8154 1910.3197 1260.5017 1910.3197 L 1189.5883 1910.3197 C 1186.2746 1910.3197 1183.5883 1907.6334 1183.5883 1904.3197 L 1183.5883 1868.1307 C 1183.5883 1864.817 1186.2746 1862.1307 1189.5883 1862.1307 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(1188.5883 1875.2252)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="11.202785" y="17">import
+        <text transform="translate(1188.5883 1876.7252)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="12.93716"
+              y="15">import
           </tspan>
         </text>
       </g>
@@ -62,8 +63,9 @@
         <path
             d="M 973.4466 1860.9654 L 1038.6907 1860.9654 C 1042.0044 1860.9654 1044.6907 1863.6517 1044.6907 1866.9654 L 1044.6907 1903.1543 C 1044.6907 1906.468 1042.0044 1909.1543 1038.6907 1909.1543 L 973.4466 1909.1543 C 970.1329 1909.1543 967.4466 1906.468 967.4466 1903.1543 L 967.4466 1866.9654 C 967.4466 1863.6517 970.1329 1860.9654 973.4466 1860.9654 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(972.4466 1874.0599)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="8.864235" y="17">search
+        <text transform="translate(972.4466 1875.5599)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="9.680641"
+              y="15">search
           </tspan>
         </text>
       </g>
@@ -74,9 +76,9 @@
         <path
             d="M 1189.5883 1924.493 L 1282.4702 1924.493 C 1285.784 1924.493 1288.4702 1927.1792 1288.4702 1930.493 L 1288.4702 1966.682 C 1288.4702 1969.9956 1285.784 1972.682 1282.4702 1972.682 L 1189.5883 1972.682 C 1186.2746 1972.682 1183.5883 1969.9956 1183.5883 1966.682 L 1183.5883 1930.493 C 1183.5883 1927.1792 1186.2746 1924.493 1189.5883 1924.493 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(1188.5883 1937.5874)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="10.413601"
-              y="17">aggregate
+        <text transform="translate(1188.5883 1939.0874)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="11.55032"
+              y="15">aggregate
           </tspan>
         </text>
       </g>
@@ -87,9 +89,9 @@
         <path
             d="M 894.6614 1791.2441 L 1018.7244 1791.2441 C 1022.0381 1791.2441 1024.7244 1793.9304 1024.7244 1797.2441 L 1024.7244 1833.433 C 1024.7244 1836.7468 1022.0381 1839.433 1018.7244 1839.433 L 894.6614 1839.433 C 891.3477 1839.433 888.6614 1836.7468 888.6614 1833.433 L 888.6614 1797.2441 C 888.6614 1793.9304 891.3477 1791.2441 894.6614 1791.2441 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(893.6614 1804.3386)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="11.394779"
-              y="17">FHIR REST API
+        <text transform="translate(893.6614 1805.8386)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="10.566654"
+              y="15">FHIR REST API
           </tspan>
         </text>
       </g>
@@ -100,8 +102,9 @@
         <path
             d="M 1190.297 1986.8551 L 1255.5411 1986.8551 C 1258.8548 1986.8551 1261.5411 1989.5414 1261.5411 1992.8551 L 1261.5411 2029.044 C 1261.5411 2032.3578 1258.8548 2035.044 1255.5411 2035.044 L 1190.297 2035.044 C 1186.9833 2035.044 1184.297 2032.3578 1184.297 2029.044 L 1184.297 1992.8551 C 1184.297 1989.5414 1186.9833 1986.8551 1190.297 1986.8551 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(1189.297 1999.9496)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="7.69236" y="17">extract
+        <text transform="translate(1189.297 2001.4496)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="9.102516"
+              y="15">extract
           </tspan>
         </text>
       </g>
@@ -112,8 +115,9 @@
         <path
             d="M 974.1553 1923.3276 L 1044.36 1923.3276 C 1047.6737 1923.3276 1050.36 1926.0139 1050.36 1929.3276 L 1050.36 1965.5166 C 1050.36 1968.8303 1047.6737 1971.5166 1044.36 1971.5166 L 974.1553 1971.5166 C 970.8416 1971.5166 968.1553 1968.8303 968.1553 1965.5166 L 968.1553 1929.3276 C 968.1553 1926.0139 970.8416 1923.3276 974.1553 1923.3276 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(973.1553 1936.422)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="9.617989" y="17">update
+        <text transform="translate(973.1553 1937.922)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="11.489082"
+              y="15">update
           </tspan>
         </text>
       </g>
@@ -124,8 +128,9 @@
         <path
             d="M 973.4466 1985.6898 L 1033.7301 1985.6898 C 1037.0438 1985.6898 1039.7301 1988.376 1039.7301 1991.6898 L 1039.7301 2027.8788 C 1039.7301 2031.1925 1037.0438 2033.8788 1033.7301 2033.8788 L 973.4466 2033.8788 C 970.1329 2033.8788 967.4466 2031.1925 967.4466 2027.8788 L 967.4466 1991.6898 C 967.4466 1988.376 970.1329 1985.6898 973.4466 1985.6898 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(972.4466 1998.7843)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="10.212046" y="17">batch
+        <text transform="translate(972.4466 2000.2843)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="11.094858"
+              y="15">batch
           </tspan>
         </text>
       </g>
@@ -136,9 +141,9 @@
         <path
             d="M 1110.0945 1791.2441 L 1329.1181 1791.2441 C 1332.4318 1791.2441 1335.1181 1793.9304 1335.1181 1797.2441 L 1335.1181 1833.433 C 1335.1181 1836.7468 1332.4318 1839.433 1329.1181 1839.433 L 1110.0945 1839.433 C 1106.7808 1839.433 1104.0945 1836.7468 1104.0945 1833.433 L 1104.0945 1797.2441 C 1104.0945 1793.9304 1106.7808 1791.2441 1110.0945 1791.2441 Z"
             stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
-        <text transform="translate(1109.0945 1804.3386)" fill="white">
-          <tspan font-family="Open Sans" font-size="16" fill="white" x="13.628998"
-              y="17">FHIR extended operations
+        <text transform="translate(1109.0945 1805.8386)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="18.746185"
+              y="15">FHIR extended operations
           </tspan>
         </text>
       </g>
