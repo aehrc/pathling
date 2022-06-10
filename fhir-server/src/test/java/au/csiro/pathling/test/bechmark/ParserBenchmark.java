@@ -43,8 +43,8 @@ import org.springframework.test.context.ActiveProfiles;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Tag("UnitTest")
 @Fork(0)
-@Warmup(iterations = 1)
-@Measurement(iterations = 3)
+@Warmup(iterations = 2)
+@Measurement(iterations = 5)
 public class ParserBenchmark {
 
   @State(Scope.Benchmark)
@@ -73,7 +73,7 @@ public class ParserBenchmark {
     }
 
     @Setup(Level.Trial)
-    public void setUp() throws Exception {
+    public void setUp() {
       database = Mockito.mock(Database.class);
       SharedMocks.resetAll();
       mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
@@ -103,14 +103,14 @@ public class ParserBenchmark {
       return parser.parse(expression);
     }
   }
-  
+
   @Benchmark
   public void queryWithWhere(final Blackhole bh, final ParserState parser) {
     bh.consume(parser.parse("where($this.name.given.first() = 'Karina848').gender"));
   }
 
   @Benchmark
-  public void queryWithWhereOther(final Blackhole bh, final ParserState parser) {
+  public void queryWithWhereAndMembership(final Blackhole bh, final ParserState parser) {
     bh.consume(parser.parse("where(name.where(use = 'official').first().given.first() in "
         + "name.where(use = 'maiden').first().given).gender"));
   }

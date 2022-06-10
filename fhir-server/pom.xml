@@ -24,7 +24,7 @@
   <properties>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
-    <jmh.version>1.21</jmh.version>
+    <jmh.version>1.35</jmh.version>
   </properties>
 
   <dependencies>
