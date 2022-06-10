@@ -26,7 +26,7 @@ const sidebars = {
       items: [{
         type: "link",
         label: "API docs",
-        href: "pathname:///docs/python/"
+        href: "pathname:///docs/python/pathling.html"
       }]
     },
     {
