@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pathling.etc &#8212; pathling  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/classic.css" />
+    
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pathling  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pathling.etc</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pathling.etc</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+
+
+<div class="viewcode-block" id="find_jar"><a class="viewcode-back" href="../../pathling.html#pathling.etc.find_jar">[docs]</a><span class="k">def</span> <span class="nf">find_jar</span><span class="p">(</span><span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Gets the path to the pathling encoders jar bundled with the</span>
+<span class="sd">    python distribution</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># try to find the distribution jars first</span>
+    <span class="n">verbose</span> <span class="ow">and</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Package name is: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="vm">__name__</span><span class="p">)</span>
+    <span class="n">verbose</span> <span class="ow">and</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Filename name is: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="vm">__file__</span><span class="p">)</span>
+
+    <span class="n">jars_dir</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="s2">&quot;jars&quot;</span><span class="p">)</span>
+
+    <span class="n">verbose</span> <span class="ow">and</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Packaged jars dir: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">jars_dir</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">jars_dir</span><span class="p">):</span>
+        <span class="n">verbose</span> <span class="ow">and</span> <span class="nb">print</span><span class="p">(</span>
+                <span class="s2">&quot;Package resource dir &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist. Maybe a development install?&quot;</span> <span class="o">%</span> <span class="n">jars_dir</span><span class="p">)</span>
+        <span class="c1"># then it can be a development install</span>
+        <span class="n">project_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">pardir</span><span class="p">))</span>
+        <span class="n">verbose</span> <span class="ow">and</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Project dir is: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">project_dir</span><span class="p">)</span>
+        <span class="n">jars_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">project_dir</span><span class="p">,</span> <span class="s2">&quot;target&quot;</span><span class="p">,</span> <span class="s2">&quot;dependency&quot;</span><span class="p">)</span>
+    <span class="n">jar_file</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">jars_dir</span><span class="p">,</span> <span class="s2">&quot;encoders-*-all.jar&quot;</span><span class="p">))</span>
+    <span class="n">verbose</span> <span class="ow">and</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Found jar file(s): </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">jar_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">jar_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Pathling jar not present at: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">jars_dir</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jar_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">pathling  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">pathling.etc</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.0.1.
+    </div>
+  </body>
+</html>

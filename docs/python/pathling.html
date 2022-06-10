@@ -27,6 +27,9 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
           <a href="index.html" title="Welcome to pathling’s documentation!"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">pathling  documentation</a> &#187;</li>
@@ -44,17 +47,234 @@
 <section id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading">¶</a></h2>
 </section>
-<section id="pathling-context-module">
-<h2>pathling.context module<a class="headerlink" href="#pathling-context-module" title="Permalink to this heading">¶</a></h2>
+<section id="module-pathling.context">
+<span id="pathling-context-module"></span><h2>pathling.context module<a class="headerlink" href="#module-pathling.context" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.context.</span></span><span class="sig-name descname"><span class="pre">PathlingContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sparkSession</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SparkSession</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jpc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">JavaObject</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Main entry point for Pathling API functionality.
+Should be instantiated with the <a class="reference internal" href="#pathling.context.PathlingContext.create" title="pathling.context.PathlingContext.create"><code class="xref py py-func docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a> class method.</p>
+<p>Example use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ptl</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+<span class="n">patient_df</span> <span class="o">=</span> <span class="n">ptl</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;ndjson_resources&#39;</span><span class="p">),</span> <span class="s1">&#39;Patient&#39;</span><span class="p">)</span>
+<span class="n">patient_df</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.create">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sparkSession</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SparkSession</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirVersion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxNestingLevel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enableExtensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabledOpenTypes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><span class="pre">PathlingContext</span></a></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code></a> for given <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> and configuration
+options.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sparkSession</strong> – the <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> instance.</p></li>
+<li><p><strong>fhirVersion</strong> – the FHIR version to use.
+Must a valid FHIR version string. Defaults to R4.</p></li>
+<li><p><strong>maxNestingLevel</strong> – the maximum nesting level for recursive data types.
+Zero (0) indicates that all direct or indirect fields of type T in element of type T
+should be skipped</p></li>
+<li><p><strong>enableExtensions</strong> – switches on/off the support for FHIR extensions</p></li>
+<li><p><strong>enabledOpenTypes</strong> – list of types that are encoded within open types, such as
+extensions</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a DataFrame containing the given resource encoded into Spark columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a string representations of FHIR resources  in the given column and
+encodes the resources of the given types as Spark dataframe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the resources to encode.</p></li>
+<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+(Condition, Observation, etc).</p></li>
+<li><p><strong>inputType</strong> – the mime type of input string encoding.
+Defaults to <cite>application/fhir+json</cite>.</p></li>
+<li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
+the input dataframe is assumed to have one column of type string.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the given type of resources encoded into Spark
+columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.encodeBundle">
+<span class="sig-name descname"><span class="pre">encodeBundle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encodeBundle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.encodeBundle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a string representations of FHIR bundles  in the given column and
+encodes the resources of the given types as Spark dataframe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the bundles with the resources to encode.</p></li>
+<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+(condition, observation, etc).</p></li>
+<li><p><strong>inputType</strong> – the mime type of input string encoding.
+Defaults to <cite>application/fhir+json</cite>.</p></li>
+<li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
+the input dataframe is assumed to have one column of type string.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the given type of resources encoded into Spark
+columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
-<section id="pathling-etc-module">
-<h2>pathling.etc module<a class="headerlink" href="#pathling-etc-module" title="Permalink to this heading">¶</a></h2>
+<section id="module-pathling.etc">
+<span id="pathling-etc-module"></span><h2>pathling.etc module<a class="headerlink" href="#module-pathling.etc" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.etc.find_jar">
+<span class="sig-prename descclassname"><span class="pre">pathling.etc.</span></span><span class="sig-name descname"><span class="pre">find_jar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/etc.html#find_jar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.etc.find_jar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the path to the pathling encoders jar bundled with the
+python distribution</p>
+</dd></dl>
+
 </section>
-<section id="pathling-fhir-module">
-<h2>pathling.fhir module<a class="headerlink" href="#pathling-fhir-module" title="Permalink to this heading">¶</a></h2>
+<section id="module-pathling.fhir">
+<span id="pathling-fhir-module"></span><h2>pathling.fhir module<a class="headerlink" href="#module-pathling.fhir" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.fhir.MimeType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.fhir.</span></span><span class="sig-name descname"><span class="pre">MimeType</span></span><a class="reference internal" href="_modules/pathling/fhir.html#MimeType"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.fhir.MimeType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Constants for FHIR encoding mime types.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.fhir.MimeType.FHIR_JSON">
+<span class="sig-name descname"><span class="pre">FHIR_JSON</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'application/fhir+json'</span></em><a class="headerlink" href="#pathling.fhir.MimeType.FHIR_JSON" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.fhir.MimeType.FHIR_XML">
+<span class="sig-name descname"><span class="pre">FHIR_XML</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'application/fhir+xml'</span></em><a class="headerlink" href="#pathling.fhir.MimeType.FHIR_XML" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.fhir.Version">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.fhir.</span></span><span class="sig-name descname"><span class="pre">Version</span></span><a class="reference internal" href="_modules/pathling/fhir.html#Version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.fhir.Version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Constants for FHIR versions.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.fhir.Version.R4">
+<span class="sig-name descname"><span class="pre">R4</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'R4'</span></em><a class="headerlink" href="#pathling.fhir.Version.R4" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </section>
-<section id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this heading">¶</a></h2>
+<section id="module-pathling">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pathling" title="Permalink to this heading">¶</a></h2>
+<dl class="simple">
+<dt>Important classes of Pathling Python API:</dt><dd><ul class="simple">
+<li><p><a class="reference internal" href="#pathling.PathlingContext" title="pathling.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">pathling.PathlingContext</span></code></a>
+Main entry point for Pathling API functionality.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.PathlingContext">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.</span></span><span class="sig-name descname"><span class="pre">PathlingContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sparkSession</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SparkSession</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jpc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">JavaObject</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Main entry point for Pathling API functionality.
+Should be instantiated with the <a class="reference internal" href="#pathling.PathlingContext.create" title="pathling.PathlingContext.create"><code class="xref py py-func docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a> class method.</p>
+<p>Example use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ptl</span> <span class="o">=</span> <span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">spark</span><span class="p">)</span>
+<span class="n">patient_df</span> <span class="o">=</span> <span class="n">ptl</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">spark</span><span class="o">.</span><span class="n">read</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s1">&#39;ndjson_resources&#39;</span><span class="p">),</span> <span class="s1">&#39;Patient&#39;</span><span class="p">)</span>
+<span class="n">patient_df</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.create">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sparkSession</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SparkSession</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirVersion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxNestingLevel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enableExtensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabledOpenTypes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><span class="pre">PathlingContext</span></a></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#pathling.PathlingContext" title="pathling.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code></a> for given <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> and configuration
+options.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sparkSession</strong> – the <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> instance.</p></li>
+<li><p><strong>fhirVersion</strong> – the FHIR version to use.
+Must a valid FHIR version string. Defaults to R4.</p></li>
+<li><p><strong>maxNestingLevel</strong> – the maximum nesting level for recursive data types.
+Zero (0) indicates that all direct or indirect fields of type T in element of type T
+should be skipped</p></li>
+<li><p><strong>enableExtensions</strong> – switches on/off the support for FHIR extensions</p></li>
+<li><p><strong>enabledOpenTypes</strong> – list of types that are encoded within open types, such as
+extensions</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a DataFrame containing the given resource encoded into Spark columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.encode">
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.encode" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a string representations of FHIR resources  in the given column and
+encodes the resources of the given types as Spark dataframe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the resources to encode.</p></li>
+<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+(Condition, Observation, etc).</p></li>
+<li><p><strong>inputType</strong> – the mime type of input string encoding.
+Defaults to <cite>application/fhir+json</cite>.</p></li>
+<li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
+the input dataframe is assumed to have one column of type string.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the given type of resources encoded into Spark
+columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.encodeBundle">
+<span class="sig-name descname"><span class="pre">encodeBundle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encodeBundle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.encodeBundle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a string representations of FHIR bundles  in the given column and
+encodes the resources of the given types as Spark dataframe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the bundles with the resources to encode.</p></li>
+<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+(condition, observation, etc).</p></li>
+<li><p><strong>inputType</strong> – the mime type of input string encoding.
+Defaults to <cite>application/fhir+json</cite>.</p></li>
+<li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
+the input dataframe is assumed to have one column of type string.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the given type of resources encoded into Spark
+columns</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 </section>
 
@@ -70,10 +290,10 @@
     <ul>
 <li><a class="reference internal" href="#">pathling package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#pathling-context-module">pathling.context module</a></li>
-<li><a class="reference internal" href="#pathling-etc-module">pathling.etc module</a></li>
-<li><a class="reference internal" href="#pathling-fhir-module">pathling.fhir module</a></li>
-<li><a class="reference internal" href="#module-contents">Module contents</a></li>
+<li><a class="reference internal" href="#module-pathling.context">pathling.context module</a></li>
+<li><a class="reference internal" href="#module-pathling.etc">pathling.etc module</a></li>
+<li><a class="reference internal" href="#module-pathling.fhir">pathling.fhir module</a></li>
+<li><a class="reference internal" href="#module-pathling">Module contents</a></li>
 </ul>
 </li>
 </ul>
@@ -111,6 +331,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
         <li class="right" >
           <a href="index.html" title="Welcome to pathling’s documentation!"
              >previous</a> |</li>
