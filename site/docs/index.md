@@ -26,8 +26,8 @@ There are three main components that are provided as part of Pathling:
 4. **Server** - a FHIR server implementation that can provide query services for
    analytics applications.
 
-![Components](../src/images/components.svg#light-mode-only "Architecture")
-![Components](../src/images/components-dark.svg#dark-mode-only "Architecture")
+![Components](../src/images/components.svg#light-mode-only "Components")
+![Components](../src/images/components-dark.svg#dark-mode-only "Components")
 
 ## FHIRPath
 
