@@ -27,7 +27,7 @@ export async function getToken(
     clientId: clientId,
     clientSecret: clientSecret,
     accessTokenUri: tokenUrl,
-    scopes: scopes ? scopes.split(" ") : [],
+    scopes: scopes ? scopes.split(" ") : []
   });
   const token = await exportAuth.credentials.getToken();
   // noinspection JSUnresolvedVariable
@@ -50,20 +50,18 @@ export async function buildAuthenticatedClient(
   instance.defaults.baseURL = endpoint;
   instance.defaults.headers.common[
     "Authorization"
-  ] = `Bearer ${token.accessToken}`;
+    ] = `Bearer ${token.accessToken}`;
   return instance;
 }
 
 export async function autodiscoverTokenUrl(
   endpoint: string
 ): Promise<string | undefined> {
-  const response = await axios.get<
-    undefined,
-    AxiosResponse<SmartConfiguration>
-  >(`${endpoint}/.well-known/smart-configuration`, {
+  const response = await axios.get<undefined,
+    AxiosResponse<SmartConfiguration>>(`${endpoint}/.well-known/smart-configuration`, {
     headers: {
-      Accept: JSON_CONTENT_TYPE,
-    },
+      Accept: JSON_CONTENT_TYPE
+    }
   });
   return response.data["token_endpoint"];
 }

@@ -1,6 +1,7 @@
 import glob
 import os
 import sys
+from typing import Union
 
 from setuptools import setup, find_packages
 
@@ -11,7 +12,7 @@ VERSION_FILE = os.path.join(HERE, 'pathling', '_version.py')
 #
 # Read __version__ from file
 #
-__version__ = None
+__version__: Union[str, None] = None
 if os.path.isfile(VERSION_FILE):
     with open(VERSION_FILE) as vf:
         exec(vf.read())
@@ -27,12 +28,14 @@ UBER_JAR_GLOB = os.path.join(JARS_DIR, 'fhir-server-*-all.jar')
 jar_files = glob.glob(UBER_JAR_GLOB)
 if not jar_files:
     print(
-            "ERROR: Cannot find encoders uber-jar in: '%s'.\nMaybe try to run 'mvn package' ..." % JARS_DIR,
+            "ERROR: Cannot find encoders uber-jar in: '%s'.\nMaybe try to run 'mvn package' ..." %
+            JARS_DIR,
             file=sys.stderr)
     exit(1)
 if len(jar_files) > 1:
     print(
-            "ERROR: Multiple encoders uber-jars found in: '%s'.\nMaybe try to run 'mvn clean' ..." % JARS_DIR,
+            "ERROR: Multiple encoders uber-jars found in: '%s'.\nMaybe try to run 'mvn clean' ..." %
+            JARS_DIR,
             file=sys.stderr)
     exit(1)
 #
@@ -67,11 +70,9 @@ setup(
             'Programming Language :: Python :: 3.9',
             'Programming Language :: Python :: 3.10',
         ],
-        license="CSIRO Open Source Software Licence Agreement (variation of the BSD / MIT License)",
+        license="CSIRO Open Source Software Licence Agreement",
         python_requires=">=3.7",
-        install_requires=[
-            'pyspark>=3.1.0'
-        ],
+        extras_require={'spark': ['pyspark>=3.1.0']},
         include_package_data=True,
         package_dir={
             'pathling.jars': 'target/dependency',

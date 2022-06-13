@@ -82,8 +82,8 @@ public abstract class QueryHelpers {
    * Replaces all unaliased columns within a {@link Dataset} with new aliased columns.
    *
    * @param dataset the Dataset on which to perform the operation
-   * @return a new Dataset, with a mapping from the old columns to the new as a {@link
-   * DatasetWithColumnMap}
+   * @return a new Dataset, with a mapping from the old columns to the new as a
+   * {@link DatasetWithColumnMap}
    */
   @Nonnull
   public static DatasetWithColumnMap aliasAllColumns(@Nonnull final Dataset<Row> dataset) {
@@ -228,6 +228,25 @@ public abstract class QueryHelpers {
   }
 
   /**
+   * Joins a {@link Dataset} to another Dataset, using the equality of two columns.
+   *
+   * @param left a {@link Dataset}
+   * @param leftColumns the columns for the first Dataset
+   * @param right another Dataset
+   * @param rightColumns the columns for the second Dataset
+   * @param additionalCondition an additional Column to be added to the join condition, using AND
+   * @param joinType a {@link JoinType}
+   * @return a new {@link Dataset}
+   */
+  @Nonnull
+  public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
+      @Nonnull final List<Column> leftColumns, @Nonnull final Dataset<Row> right,
+      @Nonnull final List<Column> rightColumns, @Nonnull final Column additionalCondition,
+      @Nonnull final JoinType joinType) {
+    return join(left, leftColumns, right, rightColumns, Optional.of(additionalCondition), joinType);
+  }
+
+  /**
    * Joins a {@link Dataset} to another Dataset, using a custom join condition.
    *
    * @param left a {@link Dataset}
@@ -307,28 +326,6 @@ public abstract class QueryHelpers {
   }
 
   /**
-   * This is used to find a set of fallback join columns in cases where a path does not contain all
-   * grouping columns.
-   * <p>
-   * This can happen in the context of a function's arguments, when a path originates from something
-   * other than `$this`, e.g. `%resource`.
-   */
-  private static List<Column> checkColumnsAndFallback(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<Column> groupingColumns, @Nonnull final Column fallback) {
-    final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
-    final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
-        .collect(Collectors.toSet());
-    if (columnList.containsAll(groupingColumnNames)) {
-      return groupingColumns;
-    } else {
-      final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
-      fallbackGroupingColumnNames.retainAll(columnList);
-      fallbackGroupingColumnNames.add(fallback.toString());
-      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
-    }
-  }
-
-  /**
    * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
    * FhirPath and the supplied column.
    *
@@ -378,6 +375,28 @@ public abstract class QueryHelpers {
       @Nonnull final Column leftColumn, @Nonnull final FhirPath right,
       @Nonnull final JoinType joinType) {
     return join(left, leftColumn, right.getDataset(), right.getIdColumn(), joinType);
+  }
+
+  /**
+   * This is used to find a set of fallback join columns in cases where a path does not contain all
+   * grouping columns.
+   * <p>
+   * This can happen in the context of a function's arguments, when a path originates from something
+   * other than `$this`, e.g. `%resource`.
+   */
+  private static List<Column> checkColumnsAndFallback(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final List<Column> groupingColumns, @Nonnull final Column fallback) {
+    final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
+    final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
+        .collect(Collectors.toSet());
+    if (columnList.containsAll(groupingColumnNames)) {
+      return groupingColumns;
+    } else {
+      final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
+      fallbackGroupingColumnNames.retainAll(columnList);
+      fallbackGroupingColumnNames.add(fallback.toString());
+      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
+    }
   }
 
   /**

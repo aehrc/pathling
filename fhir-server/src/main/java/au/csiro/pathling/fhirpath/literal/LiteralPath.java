@@ -116,7 +116,7 @@ public abstract class LiteralPath implements FhirPath {
       final LiteralPath literalPath = constructor.newInstance(dataset, idColumn, literalValue);
       return literalPath.getExpression();
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
-        InvocationTargetException e) {
+                   InvocationTargetException e) {
       throw new RuntimeException("Problem building a LiteralPath class", e);
     }
   }

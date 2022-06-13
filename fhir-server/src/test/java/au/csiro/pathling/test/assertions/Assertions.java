@@ -64,13 +64,6 @@ public abstract class Assertions {
     assertJson(expectedPath, actualJson, JSONCompareMode.NON_EXTENSIBLE);
   }
 
-  public static void assertMatches(@Nonnull final String expectedRegex,
-      @Nonnull final String actualString) {
-    if (!Pattern.matches(expectedRegex, actualString)) {
-      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex));
-    }
-  }
-
   public static void assertJson(@Nonnull final String expectedPath,
       @Nonnull final String actualJson, @Nonnull final JSONCompareMode compareMode) {
     final String expectedJson;
@@ -88,6 +81,13 @@ public abstract class Assertions {
       }
     } catch (final JSONException e) {
       throw new RuntimeException("Problem checking JSON against test resource", e);
+    }
+  }
+
+  public static void assertMatches(@Nonnull final String expectedRegex,
+      @Nonnull final String actualString) {
+    if (!Pattern.matches(expectedRegex, actualString)) {
+      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex));
     }
   }
 

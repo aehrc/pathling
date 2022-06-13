@@ -47,8 +47,8 @@ public class SubsumptionMapperWithPreview implements
 
   /**
    * @param requestId an identifier used alongside any logging that the mapper outputs
-   * @param terminologyServiceFactory the factory to use to create the {@link
-   * au.csiro.pathling.fhir.TerminologyClient}
+   * @param terminologyServiceFactory the factory to use to create the
+   * {@link au.csiro.pathling.fhir.TerminologyClient}
    * @param inverted if true checks for `subsumedBy` relation, otherwise for `subsumes`
    */
   public SubsumptionMapperWithPreview(@Nonnull final String requestId,

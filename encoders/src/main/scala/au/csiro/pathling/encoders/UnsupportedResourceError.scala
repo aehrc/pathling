@@ -18,4 +18,4 @@ package au.csiro.pathling.encoders
  *
  * @param message a descriptive message to give back to the user
  */
-class UnsupportedResourceError(message: String) extends RuntimeException(message) {}
+class UnsupportedResourceError(message: String) extends RuntimeException(message)

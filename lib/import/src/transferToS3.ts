@@ -16,7 +16,7 @@ import {
   HeadObjectCommand,
   HeadObjectCommandOutput,
   S3Client,
-  UploadPartCommand,
+  UploadPartCommand
 } from "@aws-sdk/client-s3";
 import { AxiosInstance, AxiosResponse } from "axios";
 import { createHash } from "crypto";
@@ -29,7 +29,7 @@ import { URL } from "url";
 import { v4 as uuidv4 } from "uuid";
 import {
   buildAuthenticatedClient,
-  FHIR_NDJSON_CONTENT_TYPE,
+  FHIR_NDJSON_CONTENT_TYPE
 } from "./common.js";
 import { FhirBulkOutput } from "./export.js";
 import ReadableStream = NodeJS.ReadableStream;
@@ -73,7 +73,7 @@ export async function transferExportToS3({
   clientSecret,
   scopes,
   result,
-  stagingUrl,
+  stagingUrl
 }: TransferParams): Promise<TransferResult> {
   const client = await buildAuthenticatedClient(
     endpoint,
@@ -93,9 +93,9 @@ export async function transferExportToS3({
         // This assumes that the download URL provided by the source FHIR server is unique based
         // upon the contents of the file.
         const hash = createHash("sha256")
-          .update(output.url)
-          .digest("hex")
-          .slice(0, 7);
+        .update(output.url)
+        .digest("hex")
+        .slice(0, 7);
         const key = `${stagingPath}/${output.type}-${hash}.ndjson`;
 
         // Build up a map of resource types to the set of URLs which need to be downloaded and
@@ -147,7 +147,7 @@ async function conditionallyTransferToS3(
     return {
       resourceType,
       url: stagingUrl,
-      changed: false,
+      changed: false
     };
   } catch (e) {
     // If the file does not exist, download all the source URLs and put their concatenated content
@@ -185,7 +185,7 @@ async function transferToS3(
   // and ended using API requests.
   const createMultipartUpload = new CreateMultipartUploadCommand({
     Bucket: bucket,
-    Key: key,
+    Key: key
   });
   const createResult = await s3Client.send(createMultipartUpload);
   const uploadId = createResult.UploadId;
@@ -220,8 +220,8 @@ async function transferToS3(
       Key: key,
       UploadId: uploadId,
       MultipartUpload: {
-        Parts: uploadedParts,
-      },
+        Parts: uploadedParts
+      }
     });
     await s3Client.send(completeMultipartUpload);
   } catch (e) {
@@ -233,7 +233,7 @@ async function transferToS3(
     const abortMultipartUpload = new AbortMultipartUploadCommand({
       Bucket: bucket,
       Key: key,
-      UploadId: uploadId,
+      UploadId: uploadId
     });
     await s3Client.send(abortMultipartUpload);
     throw e;
@@ -242,7 +242,7 @@ async function transferToS3(
   return {
     resourceType,
     url: stagingUrl,
-    changed: true,
+    changed: true
   };
 }
 
@@ -254,7 +254,7 @@ async function checkFileExistsInS3(
   // We use a head command to check for the existence of the file on S3.
   const head = new HeadObjectCommand({
     Bucket: bucket,
-    Key: key,
+    Key: key
   });
   return s3Client.send(head);
 }
@@ -281,14 +281,12 @@ async function* downloadFiles(
       // source files from the FHIR server.
       const writeStream = createWriteStream(currentFile, { flags: "a" });
       console.info("[%s] Downloading %s => %s", resourceType, url, currentFile);
-      const response = await client.get<
-        undefined,
-        AxiosResponse<ReadableStream>
-      >(url, {
+      const response = await client.get<undefined,
+        AxiosResponse<ReadableStream>>(url, {
         headers: {
-          Accept: FHIR_NDJSON_CONTENT_TYPE,
+          Accept: FHIR_NDJSON_CONTENT_TYPE
         },
-        responseType: "stream",
+        responseType: "stream"
       });
       response.data.pipe(writeStream);
 
@@ -357,7 +355,7 @@ async function uploadFile(
       Key: key,
       PartNumber: partNumber,
       UploadId: uploadId,
-      Body: readStream,
+      Body: readStream
     });
 
     const uploadResponse = await s3Client.send(uploadPart);
@@ -388,14 +386,14 @@ function s3ResultLocationsToParameters(
   return {
     resourceType: "Parameters",
     parameter: locations
-      .filter((location) => location.changed)
-      .map((location) => ({
-        name: "source",
-        part: [
-          { name: "resourceType", valueCode: location.resourceType },
-          { name: "url", valueUrl: location.url },
-        ],
-      })),
+    .filter((location) => location.changed)
+    .map((location) => ({
+      name: "source",
+      part: [
+        { name: "resourceType", valueCode: location.resourceType },
+        { name: "url", valueUrl: location.url }
+      ]
+    }))
   };
 }
 

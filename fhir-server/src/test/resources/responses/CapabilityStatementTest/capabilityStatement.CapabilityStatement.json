@@ -15,10 +15,7 @@
     "description": "Yet Another Pathling Server"
   },
   "fhirVersion": "4.0.1",
-  "format": [
-    "json",
-    "xml"
-  ],
+  "format": ["json", "xml"],
   "rest": [
     {
       "mode": "server",

@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.0.0</version>
+    <version>5.1.1</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>import</artifactId>
@@ -78,7 +78,7 @@
       </plugin>
     </plugins>
   </build>
-  
+
   <profiles>
     <profile>
       <id>npmPublish</id>

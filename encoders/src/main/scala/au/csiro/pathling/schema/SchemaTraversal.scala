@@ -132,13 +132,15 @@ trait SchemaVisitor[DT, SF] {
 }
 
 object SchemaVisitor {
-  def traverseResource[DT, SF](resourceDefinition: RuntimeResourceDefinition, visitor: SchemaVisitor[DT, SF]): DT = {
+  def traverseResource[DT, SF](resourceDefinition: RuntimeResourceDefinition,
+                               visitor: SchemaVisitor[DT, SF]): DT = {
     EncodingContext.runWithContext {
       ResourceCtx(resourceDefinition).accept(visitor)
     }
   }
 
-  def traverseComposite[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_], visitor: SchemaVisitor[DT, SF]): DT = {
+  def traverseComposite[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_],
+                                visitor: SchemaVisitor[DT, SF]): DT = {
     CompositeCtx(compositeDefinition).accept(visitor)
   }
 
@@ -212,7 +214,8 @@ trait FieldVisitorCtxCtx[DT, SF] extends VisitorCtx[DT, SF] {
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
-case class ResourceCtx[DT, SF](resourceDefinition: RuntimeResourceDefinition) extends TypeVisitorCtx[DT, SF] {
+case class ResourceCtx[DT, SF](resourceDefinition: RuntimeResourceDefinition)
+  extends TypeVisitorCtx[DT, SF] {
   override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
     visitor.visitResource(this)
   }
@@ -233,7 +236,8 @@ case class ResourceCtx[DT, SF](resourceDefinition: RuntimeResourceDefinition) ex
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
-case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends TypeVisitorCtx[DT, SF] {
+case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementCompositeDefinition[_])
+  extends TypeVisitorCtx[DT, SF] {
   override def accept(visitor: SchemaVisitor[DT, SF]): DT = {
     visitor.visitComposite(this)
   }
@@ -257,7 +261,9 @@ case class CompositeCtx[DT, SF](compositeDefinition: BaseRuntimeElementComposite
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
-case class ChildCtx[DT, SF](childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+case class ChildCtx[DT, SF](childDefinition: BaseRuntimeChildDefinition,
+                            compositeDefinition: BaseRuntimeElementCompositeDefinition[_])
+  extends FieldVisitorCtxCtx[DT, SF] {
   override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitChild(this)
   }
@@ -285,7 +291,9 @@ case class ChildCtx[DT, SF](childDefinition: BaseRuntimeChildDefinition, composi
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
-case class ElementChildCtx[DT, SF](elementChildDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+case class ElementChildCtx[DT, SF](elementChildDefinition: BaseRuntimeChildDefinition,
+                                   compositeDefinition: BaseRuntimeElementCompositeDefinition[_])
+  extends FieldVisitorCtxCtx[DT, SF] {
 
   override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitElementChild(this)
@@ -305,7 +313,9 @@ case class ElementChildCtx[DT, SF](elementChildDefinition: BaseRuntimeChildDefin
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
-case class ChoiceChildCtx[DT, SF](choiceChildDefinition: RuntimeChildChoiceDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+case class ChoiceChildCtx[DT, SF](choiceChildDefinition: RuntimeChildChoiceDefinition,
+                                  compositeDefinition: BaseRuntimeElementCompositeDefinition[_])
+  extends FieldVisitorCtxCtx[DT, SF] {
   def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitChoiceChild(this)
   }
@@ -314,7 +324,8 @@ case class ChoiceChildCtx[DT, SF](choiceChildDefinition: RuntimeChildChoiceDefin
 
     assert(isSingular(choiceChildDefinition), "Collections of choice elements are not supported")
     visitor.getOrderedListOfChoiceChildNames(choiceChildDefinition)
-      .map(childName => ElementCtx(childName, choiceChildDefinition, compositeDefinition).accept(visitor))
+      .map(childName => ElementCtx(childName, choiceChildDefinition, compositeDefinition)
+        .accept(visitor))
   }
 }
 
@@ -327,12 +338,15 @@ case class ChoiceChildCtx[DT, SF](choiceChildDefinition: RuntimeChildChoiceDefin
  * @tparam DT @see [[SchemaVisitor]]
  * @tparam SF @see [[SchemaVisitor]]
  */
-case class ElementCtx[DT, SF](elementName: String, childDefinition: BaseRuntimeChildDefinition, compositeDefinition: BaseRuntimeElementCompositeDefinition[_]) extends FieldVisitorCtxCtx[DT, SF] {
+case class ElementCtx[DT, SF](elementName: String, childDefinition: BaseRuntimeChildDefinition,
+                              compositeDefinition: BaseRuntimeElementCompositeDefinition[_])
+  extends FieldVisitorCtxCtx[DT, SF] {
 
   /**
    * The definition of the element.
    */
-  lazy val elementDefinition: BaseRuntimeElementDefinition[_] = childDefinition.getChildByName(elementName)
+  lazy val elementDefinition: BaseRuntimeElementDefinition[_] = childDefinition
+    .getChildByName(elementName)
 
   override def accept(visitor: SchemaVisitor[DT, SF]): Seq[SF] = {
     visitor.visitElement(this)
@@ -355,7 +369,8 @@ object ElementCtx {
     // Extract Extension definition from Patient resource.
     val baseResourceDefinition = fhirContext.getResourceDefinition(classOf[Patient])
     val extensionChildDefinition = baseResourceDefinition.getChildByName(EXTENSION_ELEMENT_NAME)
-    val extensionDefinition = extensionChildDefinition.getChildByName(EXTENSION_ELEMENT_NAME).asInstanceOf[BaseRuntimeElementCompositeDefinition[_]]
+    val extensionDefinition = extensionChildDefinition.getChildByName(EXTENSION_ELEMENT_NAME)
+      .asInstanceOf[BaseRuntimeElementCompositeDefinition[_]]
     ElementCtx(EXTENSION_ELEMENT_NAME, extensionChildDefinition, extensionDefinition)
   }
 }

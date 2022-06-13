@@ -5,3 +5,18 @@ updates:
     schedule:
       interval: daily
     open-pull-requests-limit: 50
+  - package-ecosystem: npm
+    directory: "/lib/js"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 50
+  - package-ecosystem: npm
+    directory: "/lib/import"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 50
+  - package-ecosystem: pip
+    directory: "/lib/python"
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 50

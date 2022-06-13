@@ -13,9 +13,7 @@
             "code": "codeA"
           }
         ],
-        "valueSet": [
-          "https://csiro.au/fhir/ValueSet/my-value-set"
-        ]
+        "valueSet": ["https://csiro.au/fhir/ValueSet/my-value-set"]
       },
       {
         "system": "uuid:system2",
@@ -27,9 +25,7 @@
             "code": "codeB"
           }
         ],
-        "valueSet": [
-          "https://csiro.au/fhir/ValueSet/my-value-set"
-        ]
+        "valueSet": ["https://csiro.au/fhir/ValueSet/my-value-set"]
       },
       {
         "system": "uuid:system2",
@@ -42,9 +38,7 @@
             "code": "codeB"
           }
         ],
-        "valueSet": [
-          "https://csiro.au/fhir/ValueSet/my-value-set"
-        ]
+        "valueSet": ["https://csiro.au/fhir/ValueSet/my-value-set"]
       },
       {
         "system": "uuid:system1",
@@ -56,9 +50,7 @@
             "code": "codeA"
           }
         ],
-        "valueSet": [
-          "https://csiro.au/fhir/ValueSet/my-value-set"
-        ]
+        "valueSet": ["https://csiro.au/fhir/ValueSet/my-value-set"]
       }
     ]
   }

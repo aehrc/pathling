@@ -29,8 +29,8 @@ export function requestConfig(
     headers: {
       Accept: FHIR_CONTENT_TYPE,
       ...(options?.token ? auth : {}),
-      ...(options?.preferAsync ? preferAsync : {}),
-    },
+      ...(options?.preferAsync ? preferAsync : {})
+    }
   };
 }
 
@@ -45,7 +45,7 @@ export function getConfig(
   return {
     ...requestConfig(url, options),
     method: "GET",
-    params,
+    params
   };
 }
 
@@ -62,7 +62,7 @@ export function postFhirConfig<T>(
     ...baseConfig,
     method: "POST",
     data,
-    headers: { ...baseConfig.headers, "Content-Type": FHIR_CONTENT_TYPE },
+    headers: { ...baseConfig.headers, "Content-Type": FHIR_CONTENT_TYPE }
   };
 }
 
@@ -79,7 +79,7 @@ export function postFormConfig(
   return {
     ...baseConfig,
     method: "POST",
-    params,
+    params
   };
 }
 
@@ -102,11 +102,11 @@ export function makeRequest<I, O>(
     const response = await axios.request<O>(config);
     return response.status === 202
       ? waitForAsyncResult(
-          getStatusUrl(response),
-          message,
-          clientOptions,
-          requestOptions
-        )
+        getStatusUrl(response),
+        message,
+        clientOptions,
+        requestOptions
+      )
       : response.data;
   }).catch((e) => {
     throw buildResponseError(e);
@@ -126,6 +126,6 @@ export async function addExecutionTime<T = object>(
     response: T = await executor();
   return {
     response,
-    executionTime: performance.now() - startTime,
+    executionTime: performance.now() - startTime
   };
 }

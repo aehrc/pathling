@@ -99,12 +99,8 @@
           {
             "use": "official",
             "family": "Parisian75",
-            "given": [
-              "Dino214"
-            ],
-            "prefix": [
-              "Mr."
-            ]
+            "given": ["Dino214"],
+            "prefix": ["Mr."]
           }
         ],
         "telecom": [
@@ -133,9 +129,7 @@
                 ]
               }
             ],
-            "line": [
-              "362 Weimann Forge"
-            ],
+            "line": ["362 Weimann Forge"],
             "city": "Springfield",
             "state": "Massachusetts",
             "postalCode": "01128",
@@ -759,9 +753,7 @@
           ]
         },
         "type": "allergy",
-        "category": [
-          "medication"
-        ],
+        "category": ["medication"],
         "criticality": "low",
         "code": {
           "coding": [
@@ -805,9 +797,7 @@
           ]
         },
         "type": "allergy",
-        "category": [
-          "food"
-        ],
+        "category": ["food"],
         "criticality": "low",
         "code": {
           "coding": [
@@ -1172,9 +1162,7 @@
           },
           {
             "sequence": 2,
-            "informationSequence": [
-              1
-            ],
+            "informationSequence": [1],
             "productOrService": {
               "coding": [
                 {
@@ -1192,9 +1180,7 @@
           },
           {
             "sequence": 3,
-            "informationSequence": [
-              2
-            ],
+            "informationSequence": [2],
             "productOrService": {
               "coding": [
                 {
@@ -1371,9 +1357,7 @@
           },
           {
             "sequence": 2,
-            "informationSequence": [
-              1
-            ],
+            "informationSequence": [1],
             "category": {
               "coding": [
                 {
@@ -1501,9 +1485,7 @@
           },
           {
             "sequence": 3,
-            "informationSequence": [
-              2
-            ],
+            "informationSequence": [2],
             "category": {
               "coding": [
                 {
@@ -1843,9 +1825,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "productOrService": {
               "coding": [
                 {
@@ -2036,9 +2016,7 @@
           },
           {
             "sequence": 2,
-            "diagnosisSequence": [
-              1
-            ],
+            "diagnosisSequence": [1],
             "category": {
               "coding": [
                 {

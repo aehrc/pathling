@@ -173,5 +173,5 @@ case class MapWithPartitionPreviewExec(deserializer: Expression,
     MapWithPartitionPreviewExec(deserializer, expressionDecoder, serializer, preview, mapper,
       newChild)
   }
-  
+
 }

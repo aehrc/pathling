@@ -699,4 +699,12 @@ public class ParserTest extends AbstractParserTest {
         .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingReverseResolve.csv");
   }
 
+  @Test
+  void testIifWithNullLiteral() {
+    assertThatResultOf("iif(gender='male', birthDate, {})")
+        .isElementPath(DatePath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.csv");
+  }
+
 }

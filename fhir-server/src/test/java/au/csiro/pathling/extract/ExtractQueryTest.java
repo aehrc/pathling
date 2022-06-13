@@ -42,6 +42,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
+@Tag("Tranche1")
 @ExtendWith(TimingExtension.class)
 class ExtractQueryTest {
 
@@ -262,6 +263,22 @@ class ExtractQueryTest {
     final Dataset<Row> result = executor.buildQuery(request);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.csv");
+  }
+
+  @Test
+  void whereInMultipleColumns() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("identifier.where(system = 'https://github.com/synthetichealth/synthea').value")
+        .withColumn("identifier.where(system = 'http://hl7.org/fhir/sid/us-ssn').value")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
   }
 
   @Test

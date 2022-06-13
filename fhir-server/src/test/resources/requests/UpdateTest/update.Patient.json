@@ -131,15 +131,9 @@
     {
       "use": "official",
       "family": "Krajcik437",
-      "given": [
-        "Seymour882"
-      ],
-      "prefix": [
-        "Mr."
-      ],
-      "suffix": [
-        "MD"
-      ]
+      "given": ["Seymour882"],
+      "prefix": ["Mr."],
+      "suffix": ["MD"]
     }
   ],
   "telecom": [
@@ -168,9 +162,7 @@
           ]
         }
       ],
-      "line": [
-        "855 Senger Union Suite 12"
-      ],
+      "line": ["855 Senger Union Suite 12"],
       "city": "Quincy",
       "state": "Massachusetts",
       "postalCode": "02169",

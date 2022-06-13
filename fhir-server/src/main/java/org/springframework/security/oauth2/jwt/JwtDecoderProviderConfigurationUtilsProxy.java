@@ -10,8 +10,8 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 /**
- * Provides access to functionality within the package-private {@link
- * JwtDecoderProviderConfigurationUtils} class.
+ * Provides access to functionality within the package-private
+ * {@link JwtDecoderProviderConfigurationUtils} class.
  *
  * @author John Grimes
  */

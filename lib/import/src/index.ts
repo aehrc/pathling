@@ -19,7 +19,7 @@ import {
   FileConfig,
   pathlingImportConfigured,
   RetryConfigType,
-  transferToS3Configured,
+  transferToS3Configured
 } from "./config.js";
 import { initializeSentry } from "./sentry.js";
 
@@ -61,7 +61,7 @@ async function run() {
             error.attemptNumber,
             error.retriesLeft,
             error.message
-          ),
+          )
       }
     );
   }
@@ -78,7 +78,7 @@ async function run() {
     () => transferToS3Configured(config, { result: exportStatusResult })
   );
   const importResult = await pathlingImportConfigured(config, {
-    parameters: transferToS3Result,
+    parameters: transferToS3Result
   });
   if (!importResult) {
     // This means that there was nothing to import, and we can skip the import status checking.

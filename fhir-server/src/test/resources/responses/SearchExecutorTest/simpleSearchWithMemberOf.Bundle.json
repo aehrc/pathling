@@ -77,12 +77,8 @@
           {
             "use": "official",
             "family": "Gleichner915",
-            "given": [
-              "Ophelia894"
-            ],
-            "prefix": [
-              "Ms."
-            ]
+            "given": ["Ophelia894"],
+            "prefix": ["Ms."]
           }
         ],
         "telecom": [
@@ -97,9 +93,7 @@
         "deceasedDateTime": "2018-02-17T09:11:55+00:00",
         "address": [
           {
-            "line": [
-              "256 Rohan Frontage road Suite 89"
-            ],
+            "line": ["256 Rohan Frontage road Suite 89"],
             "city": "Boston",
             "state": "Massachusetts",
             "postalCode": "02108",
@@ -207,12 +201,8 @@
           {
             "use": "official",
             "family": "Heller342",
-            "given": [
-              "Cherryl901"
-            ],
-            "prefix": [
-              "Ms."
-            ]
+            "given": ["Cherryl901"],
+            "prefix": ["Ms."]
           }
         ],
         "telecom": [
@@ -226,9 +216,7 @@
         "birthDate": "1959-09-27",
         "address": [
           {
-            "line": [
-              "128 Langworth Hollow Unit 50"
-            ],
+            "line": ["128 Langworth Hollow Unit 50"],
             "city": "Boston",
             "state": "Massachusetts",
             "postalCode": "02108",
@@ -336,12 +324,8 @@
           {
             "use": "official",
             "family": "Ebert178",
-            "given": [
-              "Su690"
-            ],
-            "prefix": [
-              "Ms."
-            ]
+            "given": ["Su690"],
+            "prefix": ["Ms."]
           }
         ],
         "telecom": [
@@ -356,9 +340,7 @@
         "deceasedDateTime": "2009-09-27T09:11:55+00:00",
         "address": [
           {
-            "line": [
-              "460 Douglas Camp"
-            ],
+            "line": ["460 Douglas Camp"],
             "city": "Boston",
             "state": "Massachusetts",
             "postalCode": "02108",
@@ -466,12 +448,8 @@
           {
             "use": "official",
             "family": "Botsford977",
-            "given": [
-              "Shirley182"
-            ],
-            "prefix": [
-              "Mr."
-            ]
+            "given": ["Shirley182"],
+            "prefix": ["Mr."]
           }
         ],
         "telecom": [
@@ -485,9 +463,7 @@
         "birthDate": "1957-06-06",
         "address": [
           {
-            "line": [
-              "329 Prosacco Highlands Suite 8"
-            ],
+            "line": ["329 Prosacco Highlands Suite 8"],
             "city": "Malden",
             "state": "Massachusetts",
             "postalCode": "02148",

@@ -20,6 +20,7 @@ import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
  */
 @Slf4j
 @ExtendWith(TimingExtension.class)
+@Tag("Tranche1")
 class AggregateQueryTest extends AggregateExecutorTest {
 
   AggregateQueryTest() {
@@ -65,6 +67,22 @@ class AggregateQueryTest extends AggregateExecutorTest {
     response = executor.execute(request);
     assertResponse(
         "AggregateQueryTest/multipleGroupingsAndAggregations.Parameters.json",
+        response);
+  }
+
+  @Test
+  void multipleAggregations() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource, ResourceType.CONDITION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("reverseResolve(Condition.subject).count()")
+        .withAggregation("count()")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse(
+        "AggregateQueryTest/multipleAggregations.Parameters.json",
         response);
   }
 
@@ -571,6 +589,21 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     response = executor.execute(request);
     assertResponse("AggregateQueryTest/queryWithCombineResultInSecondFilter.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithMultipleTrivialAggregations() {
+    subjectResource = ResourceType.OBSERVATION;
+    mockResource(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("true")
+        .withAggregation("true")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse("AggregateQueryTest/queryWithMultipleTrivialAggregations.Parameters.json",
         response);
   }
 

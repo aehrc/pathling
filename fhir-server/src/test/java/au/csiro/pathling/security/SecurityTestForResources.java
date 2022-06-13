@@ -23,9 +23,11 @@ import org.springframework.test.context.DynamicPropertySource;
 
 
 /**
- * @see <a href="https://docs.spring.io/spring-security/site/docs/5.2.x/reference/html/test.html">Spring
+ * @see <a
+ * href="https://docs.spring.io/spring-security/site/docs/5.2.x/reference/html/test.html">Spring
  * Security - Testing</a>
- * @see <a href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
+ * @see <a
+ * href="https://stackoverflow.com/questions/58289509/in-spring-boot-test-how-do-i-map-a-temporary-folder-to-a-configuration-property">In
  * Spring Boot Test, how do I map a temporary folder to a configuration property?</a>
  */
 @ActiveProfiles({"core", "unit-test"})

@@ -9,7 +9,10 @@ package au.csiro.pathling.fhirpath.literal;
 import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.*;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -100,5 +103,5 @@ public class IntegerLiteralPath extends LiteralPath implements Materializable<Pr
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof IntegerPath;
   }
- 
+
 }

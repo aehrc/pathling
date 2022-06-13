@@ -96,7 +96,9 @@ public class ExtractProvider implements IResourceProvider {
     checkNotNull(requestDetails);
 
     final String requestId = requestDetails.getRequestId();
-    final String resultId = requestId != null ? requestId : UUID.randomUUID().toString();
+    final String resultId = requestId != null
+                            ? requestId
+                            : UUID.randomUUID().toString();
 
     final ExtractRequest query = new ExtractRequest(resourceType, Optional.ofNullable(column),
         Optional.ofNullable(filter), Optional.ofNullable(limit).map(IntegerType::getValue),

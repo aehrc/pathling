@@ -12,7 +12,7 @@ import {
   buildAuthenticatedClient,
   FHIR_JSON_CONTENT_TYPE,
   FHIR_NDJSON_CONTENT_TYPE,
-  getStatusUrl,
+  getStatusUrl
 } from "./common.js";
 
 export interface ExportParams {
@@ -47,7 +47,7 @@ export async function fhirBulkExport({
   since,
   clientId,
   clientSecret,
-  scopes,
+  scopes
 }: ExportParams): Promise<ExportResult> {
   const client = await buildAuthenticatedClient(
     endpoint,
@@ -59,15 +59,15 @@ export async function fhirBulkExport({
   let params = {
     _outputFormat: FHIR_NDJSON_CONTENT_TYPE,
     _since: since,
-    _type: resourceTypes,
+    _type: resourceTypes
   };
   console.info("Initiating export request: %j", params);
   const response = await client.get<FhirBulkResult>("/$export", {
     headers: {
       Accept: FHIR_JSON_CONTENT_TYPE,
-      Prefer: "respond-async",
+      Prefer: "respond-async"
     },
-    params: params,
+    params: params
   });
 
   if (response.status !== 202) {
