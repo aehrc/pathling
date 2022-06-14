@@ -11,7 +11,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
-import org.springframework.test.context.TestContextManager;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -83,7 +82,7 @@ public abstract class AbstractJmhSpringBootTest {
 
   @Setup(Level.Trial)
   public void wireUp() throws Exception {
-    SpringBootJmhContext.prepareStateInstance(this);
+    SpringBootJmhContext.autowireWithTestContext(this);
   }
 
 }
