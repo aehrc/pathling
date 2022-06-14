@@ -300,6 +300,47 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 3
           fail_on_test_failures: true
+  benchmark:
+    name: Build and run benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Cache test data
+        id: cache-test-data
+        uses: actions/cache@v2
+        with:
+          path: fhir-server/src/test/resources/test-data/parquet
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
+      - name: Import test data
+        if: steps.cache-test-data.outputs.cache-hit != 'true'
+        working-directory: fhir-server
+        run: mvn --batch-mode compile test-compile exec:java@import-test-data
+        timeout-minutes: 10
+      - name: Run benchmark
+        if: github.actor != 'dependabot[bot]'
+        working-directory: fhir-server
+        run: mvn --batch-mode -PrunBenchmark,!importTestData exec:java@run-benchmark
+        timeout-minutes: 20
+      - name: Upload benchmark results
+        if: github.actor != 'dependabot[bot]'
+        uses: actions/upload-artifact@v2
+        with:
+          name: benchmark-results
+          path: |
+            **/jmh-*.json
   js-client:
     name: Build JavaScript client
     runs-on: ubuntu-latest
