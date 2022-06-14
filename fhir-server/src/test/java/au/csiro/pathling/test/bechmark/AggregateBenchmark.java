@@ -31,7 +31,7 @@ import static org.mockito.Mockito.mock;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Tag("UnitTest")
 @Fork(0)
-@Warmup(iterations = 2)
+@Warmup(iterations = 1)
 @Measurement(iterations = 5)
 public class AggregateBenchmark {
 
@@ -105,6 +105,7 @@ public class AggregateBenchmark {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.ENCOUNTER)
         .withAggregation("count()")
+        .withGrouping("class.code")
         .build();
     bh.consume(executor.execute(request));
   }

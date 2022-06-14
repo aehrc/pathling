@@ -1,5 +1,6 @@
 package au.csiro.pathling.test.bechmark;
 
+import lombok.extern.slf4j.Slf4j;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
@@ -12,25 +13,40 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 
+import static au.csiro.pathling.jmh.JmhUtils.buildResultsFileName;
+
+/**
+ * Pre-configured bulk benchmark runner.
+ */
+@Slf4j
 public class PathlingBenchmarkRunner {
 
-  public static void main(String... argc) throws Exception {
+  public static void main(final String... argc) throws Exception {
 
+    // Optional argument with the path to the output directory
     final String outputDir = (argc.length > 0)
                              ? argc[0]
                              : "target";
 
-    Properties properties = PropertiesLoaderUtils.loadAllProperties("benchmark.properties");
+    final Properties properties = PropertiesLoaderUtils.loadAllProperties("benchmark.properties");
 
-    int warmup = Integer.parseInt(properties.getProperty("benchmark.warmup.iterations", "1"));
-    int iterations = Integer.parseInt(properties.getProperty("benchmark.test.iterations", "3"));
-    int threads = Integer.parseInt(properties.getProperty("benchmark.test.threads", "1"));
-    String resultFilePrefix = properties.getProperty("benchmark.global.resultfileprefix", "jmh-");
+    final int warmup = Integer
+        .parseInt(properties.getProperty("benchmark.warmup.iterations", "1"));
+    final int iterations = Integer
+        .parseInt(properties.getProperty("benchmark.test.iterations", "5"));
+    final int threads = Integer
+        .parseInt(properties.getProperty("benchmark.test.threads", "1"));
+    final String resultFilePrefix = properties
+        .getProperty("benchmark.global.resultfileprefix", "jmh-");
 
-    ResultFormatType resultsFileOutputType = ResultFormatType.JSON;
+    final ResultFormatType resultsFileOutputType = ResultFormatType.JSON;
+    final String resultFile = buildResultsFileName(outputDir, resultFilePrefix,
+        resultsFileOutputType);
+
+    log.info("Writing benchmark results to: {}", resultFile);
 
     Options opt = new OptionsBuilder()
-        .include("\\." + "[^.]+Benchmark" + "\\.")
+        .include("\\.[^.]+Benchmark\\.[^.]+$")
         .warmupIterations(warmup)
         .measurementIterations(iterations)
         // single shot for each iteration:
@@ -42,38 +58,11 @@ public class PathlingBenchmarkRunner {
         .shouldDoGC(true)
         .shouldFailOnError(true)
         .resultFormat(resultsFileOutputType)
-        .result(buildResultsFileName(outputDir, resultFilePrefix, resultsFileOutputType))
+        .result(resultFile)
         .shouldFailOnError(true)
         .jvmArgs("-server")
         .build();
-
     new Runner(opt).run();
   }
 
-  private static String buildResultsFileName(final String outputDir,
-      String resultFilePrefix, ResultFormatType resultType) {
-    LocalDateTime date = LocalDateTime.now();
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy-hh-mm-ss");
-
-    String suffix;
-    switch (resultType) {
-      case CSV:
-        suffix = ".csv";
-        break;
-      case SCSV:
-        // Semi-colon separated values
-        suffix = ".scsv";
-        break;
-      case LATEX:
-        suffix = ".tex";
-        break;
-      case JSON:
-      default:
-        suffix = ".json";
-        break;
-
-    }
-    return new File(new File(outputDir),
-        String.format("%s%s%s", resultFilePrefix, date.format(formatter), suffix)).getPath();
-  }
 }
