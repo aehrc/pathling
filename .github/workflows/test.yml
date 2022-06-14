@@ -332,7 +332,7 @@ jobs:
       - name: Run benchmark
         if: github.actor != 'dependabot[bot]'
         working-directory: fhir-server
-        run: mvn --batch-mode -PrunBenchmark,!importTestData exec:java@run-benchmark
+        run: mvn --batch-mode -PrunBenchmark,!importTestData compile test-compile exec:java@run-benchmark
         timeout-minutes: 20
       - name: Upload benchmark results
         if: github.actor != 'dependabot[bot]'
