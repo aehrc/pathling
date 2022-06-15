@@ -135,7 +135,7 @@ pc = PathlingContext.create()
 
 # Read each Bundle into a row within a Spark data set.
 bundles_dir = '/some/path/bundles/'
-bundles = pc.spark.read.text(bundles_dir)
+bundles = pc.spark.read.text(bundles_dir, wholetext=True)
 
 # Convert the data set of strings into a structured FHIR data set.
 patients = pc.encodeBundle(bundles, 'Patient')
@@ -160,7 +160,7 @@ val spark = SparkSession.builder.getOrCreate()
 
 // Read each line from the NDJSON into a row within a Spark data set.
 val bundlesDir = "/some/path/bundles/"
-val bundles = spark.read.text(bundlesDir)
+val bundles = spark.read.option("wholetext", value = true).text(bundlesDir)
 
 // Convert the data set of strings into a structured FHIR data set.
 val pc = PathlingContext.create(spark)
@@ -190,7 +190,9 @@ class MyApp {
 
         // Read each line from the NDJSON into a row within a Spark data set.
         String bundlesDir = "/some/path/bundles/";
-        Dataset<Row> bundles = spark.read().text(bundlesDir);
+        Dataset<Row> bundles = spark.read()
+                .option("wholetext", true)
+                .text(bundlesDir);
 
         // Convert the data set of strings into a structured FHIR data set.
         PathlingContext pc = PathlingContext.create(spark);
