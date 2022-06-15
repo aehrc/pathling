@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
+from pathling.etc import find_jar
 from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
@@ -20,17 +21,24 @@ class PathlingContext:
         patient_df.show()
     """
 
+    @property
+    def spark(self) -> SparkSession:
+        """
+        Returns the SparkSession associated with this context.
+        """
+        return self._spark
+
     @classmethod
-    def create(cls, sparkSession: SparkSession,
+    def create(cls, spark: SparkSession = None,
                fhirVersion: Optional[str] = None,
                maxNestingLevel: Optional[int] = None,
                enableExtensions: Optional[bool] = None,
                enabledOpenTypes: Optional[Sequence[str]] = None) -> "PathlingContext":
         """
-        Creates a :class:`PathlingContext` for given :class:`SparkSession` and configuration
+        Creates a :class:`PathlingContext` using an existing :class:`SparkSession` and configuration
         options.
 
-        :param sparkSession: the :class:`SparkSession` instance.
+        :param spark: the :class:`SparkSession` instance.
         :param fhirVersion: the FHIR version to use.
             Must a valid FHIR version string. Defaults to R4.
         :param maxNestingLevel: the maximum nesting level for recursive data types.
@@ -41,18 +49,19 @@ class PathlingContext:
             extensions
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
-        jvm: JavaObject = sparkSession._jvm
+        spark = spark or SparkSession.builder.config('spark.jars', find_jar()).getOrCreate()
+        jvm: JavaObject = spark._jvm
         jpc: JavaObject = jvm.au.csiro.pathling.api.PathlingContext.create(
-                sparkSession._jsparkSession, fhirVersion, maxNestingLevel, enableExtensions,
+                spark._jsparkSession, fhirVersion, maxNestingLevel, enableExtensions,
                 enabledOpenTypes)
-        return PathlingContext(sparkSession, jpc)
+        return PathlingContext(spark, jpc)
 
-    def __init__(self, sparkSession: SparkSession, jpc: JavaObject) -> None:
-        self._sparkSession: SparkSession = sparkSession
+    def __init__(self, spark: SparkSession, jpc: JavaObject) -> None:
+        self._spark: SparkSession = spark
         self._jpc: JavaObject = jpc
 
     def _wrapDF(self, jdf: JavaObject) -> DataFrame:
-        return DataFrame(jdf, self._sparkSession._wrapped)
+        return DataFrame(jdf, self._spark)
 
     def encode(self, df: DataFrame, resourceName: str,
                inputType: Optional[str] = None, column: Optional[str] = None) -> DataFrame:

@@ -140,7 +140,8 @@ def _get_extension_value_keys(row):
 
 def test_open_types(spark_session, json_resources_df):
     ptl_def = PathlingContext.create(spark_session, enableExtensions=True)
-    ptl_none = PathlingContext.create(spark_session, enableExtensions=True, enabledOpenTypes=[])
+    ptl_none = PathlingContext.create(spark_session, enableExtensions=True,
+                                      enabledOpenTypes=[])
     ptl_some = PathlingContext.create(spark_session, enableExtensions=True,
                                       enabledOpenTypes=['boolean', 'integer', 'string',
                                                         'Address'])

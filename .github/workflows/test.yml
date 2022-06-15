@@ -329,6 +329,9 @@ jobs:
         working-directory: fhir-server
         run: mvn --batch-mode compile test-compile exec:java@import-test-data
         timeout-minutes: 10
+      - name: Build encoders
+        run: mvn --batch-mode -pl encoders -am install -DskipTests
+        timeout-minutes: 20
       - name: Run benchmark
         working-directory: fhir-server
         run: mvn --batch-mode -PrunBenchmark,!importTestData compile test-compile exec:java@run-benchmark
