@@ -26,7 +26,7 @@ class PathlingContext:
         """
         Returns the SparkSession associated with this context.
         """
-        return self._sparkSession
+        return self._spark
 
     @classmethod
     def create(cls, spark: SparkSession = None,
@@ -56,12 +56,12 @@ class PathlingContext:
                 enabledOpenTypes)
         return PathlingContext(spark, jpc)
 
-    def __init__(self, sparkSession: SparkSession, jpc: JavaObject) -> None:
-        self._sparkSession: SparkSession = sparkSession
+    def __init__(self, spark: SparkSession, jpc: JavaObject) -> None:
+        self._spark: SparkSession = spark
         self._jpc: JavaObject = jpc
 
     def _wrapDF(self, jdf: JavaObject) -> DataFrame:
-        return DataFrame(jdf, self._sparkSession._wrapped)
+        return DataFrame(jdf, self._spark)
 
     def encode(self, df: DataFrame, resourceName: str,
                inputType: Optional[str] = None, column: Optional[str] = None) -> DataFrame:
