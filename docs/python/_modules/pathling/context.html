@@ -44,6 +44,7 @@
 <span class="kn">from</span> <span class="nn">py4j.java_gateway</span> <span class="k">import</span> <span class="n">JavaObject</span>
 <span class="kn">from</span> <span class="nn">pyspark.sql</span> <span class="k">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span>
 
+<span class="kn">from</span> <span class="nn">pathling.etc</span> <span class="k">import</span> <span class="n">find_jar</span>
 <span class="kn">from</span> <span class="nn">pathling.fhir</span> <span class="k">import</span> <span class="n">MimeType</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PathlingContext&quot;</span><span class="p">]</span>
@@ -61,17 +62,24 @@
 <span class="sd">        patient_df.show()</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">spark</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SparkSession</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the SparkSession associated with this context.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span>
+
 <div class="viewcode-block" id="PathlingContext.create"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.create">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">sparkSession</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">fhirVersion</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">maxNestingLevel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">enableExtensions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">enabledOpenTypes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PathlingContext&quot;</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Creates a :class:`PathlingContext` for given :class:`SparkSession` and configuration</span>
+<span class="sd">        Creates a :class:`PathlingContext` using an existing :class:`SparkSession` and configuration</span>
 <span class="sd">        options.</span>
 
-<span class="sd">        :param sparkSession: the :class:`SparkSession` instance.</span>
+<span class="sd">        :param spark: the :class:`SparkSession` instance.</span>
 <span class="sd">        :param fhirVersion: the FHIR version to use.</span>
 <span class="sd">            Must a valid FHIR version string. Defaults to R4.</span>
 <span class="sd">        :param maxNestingLevel: the maximum nesting level for recursive data types.</span>
@@ -82,18 +90,19 @@
 <span class="sd">            extensions</span>
 <span class="sd">        :return: a DataFrame containing the given resource encoded into Spark columns</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">jvm</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">sparkSession</span><span class="o">.</span><span class="n">_jvm</span>
+        <span class="n">spark</span> <span class="o">=</span> <span class="n">spark</span> <span class="ow">or</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s1">&#39;spark.jars&#39;</span><span class="p">,</span> <span class="n">find_jar</span><span class="p">())</span><span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+        <span class="n">jvm</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span>
         <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-                <span class="n">sparkSession</span><span class="o">.</span><span class="n">_jsparkSession</span><span class="p">,</span> <span class="n">fhirVersion</span><span class="p">,</span> <span class="n">maxNestingLevel</span><span class="p">,</span> <span class="n">enableExtensions</span><span class="p">,</span>
+                <span class="n">spark</span><span class="o">.</span><span class="n">_jsparkSession</span><span class="p">,</span> <span class="n">fhirVersion</span><span class="p">,</span> <span class="n">maxNestingLevel</span><span class="p">,</span> <span class="n">enableExtensions</span><span class="p">,</span>
                 <span class="n">enabledOpenTypes</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">PathlingContext</span><span class="p">(</span><span class="n">sparkSession</span><span class="p">,</span> <span class="n">jpc</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">PathlingContext</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">jpc</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sparkSession</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_sparkSession</span><span class="p">:</span> <span class="n">SparkSession</span> <span class="o">=</span> <span class="n">sparkSession</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">:</span> <span class="n">SparkSession</span> <span class="o">=</span> <span class="n">spark</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">jpc</span>
 
     <span class="k">def</span> <span class="nf">_wrapDF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">jdf</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">jdf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sparkSession</span><span class="o">.</span><span class="n">_wrapped</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">jdf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">)</span>
 
 <div class="viewcode-block" id="PathlingContext.encode"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.encode">[docs]</a>    <span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">resourceName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                <span class="n">inputType</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
