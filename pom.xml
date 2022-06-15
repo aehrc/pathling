@@ -71,7 +71,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.hapiFhirVersion>6.0.1</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.2.1</pathling.sparkVersion>
+    <pathling.sparkVersion>3.3.0</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.sparkScalaFullVersion>2.12.15</pathling.sparkScalaFullVersion>
     <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
@@ -138,12 +138,8 @@
         <version>${pathling.sparkVersion}</version>
         <exclusions>
           <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -182,10 +178,6 @@
         <artifactId>hadoop-aws</artifactId>
         <version>${pathling.hadoopVersion}</version>
         <exclusions>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
