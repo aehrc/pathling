@@ -21,36 +21,19 @@ class PathlingContext:
         patient_df.show()
     """
 
+    @property
+    def spark(self) -> SparkSession:
+        """
+        Returns the SparkSession associated with this context.
+        """
+        return self._sparkSession
+
     @classmethod
-    def create(cls,
+    def create(cls, spark: SparkSession = None,
                fhirVersion: Optional[str] = None,
                maxNestingLevel: Optional[int] = None,
                enableExtensions: Optional[bool] = None,
                enabledOpenTypes: Optional[Sequence[str]] = None) -> "PathlingContext":
-        """
-        Creates a :class:`PathlingContext`. Use this when there is no existing SparkSession that
-        you want to reuse.
-
-        :param fhirVersion: the FHIR version to use.
-            Must a valid FHIR version string. Defaults to R4.
-        :param maxNestingLevel: the maximum nesting level for recursive data types.
-            Zero (0) indicates that all direct or indirect fields of type T in element of type T
-            should be skipped
-        :param enableExtensions: switches on/off the support for FHIR extensions
-        :param enabledOpenTypes: list of types that are encoded within open types, such as
-            extensions
-        :return: a DataFrame containing the given resource encoded into Spark columns
-        """
-        sparkSession = SparkSession.builder.config('spark.jars', find_jar()).getOrCreate()
-        return cls.createWithSpark(sparkSession, fhirVersion, maxNestingLevel, enableExtensions,
-                                   enabledOpenTypes)
-
-    @classmethod
-    def createWithSpark(cls, spark: SparkSession,
-                        fhirVersion: Optional[str] = None,
-                        maxNestingLevel: Optional[int] = None,
-                        enableExtensions: Optional[bool] = None,
-                        enabledOpenTypes: Optional[Sequence[str]] = None) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` using an existing :class:`SparkSession` and configuration
         options.
@@ -66,7 +49,7 @@ class PathlingContext:
             extensions
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
-        cls.spark = spark
+        spark = spark or SparkSession.builder.config('spark.jars', find_jar()).getOrCreate()
         jvm: JavaObject = spark._jvm
         jpc: JavaObject = jvm.au.csiro.pathling.api.PathlingContext.create(
                 spark._jsparkSession, fhirVersion, maxNestingLevel, enableExtensions,
