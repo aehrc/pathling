@@ -237,7 +237,7 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>5.7.4</version>
+        <version>6.1.0</version>
       </dependency>
 
       <!-- Testing -->
