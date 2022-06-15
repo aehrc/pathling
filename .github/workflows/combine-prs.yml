@@ -147,6 +147,6 @@ jobs:
             await github.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: pull['number'],
+              issue_number: pull.data.number,
               labels: ['dependencies', 'combined']
             });
