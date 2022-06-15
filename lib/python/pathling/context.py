@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
+from pathling.etc import find_jar
 from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
@@ -21,16 +22,15 @@ class PathlingContext:
     """
 
     @classmethod
-    def create(cls, sparkSession: SparkSession,
+    def create(cls,
                fhirVersion: Optional[str] = None,
                maxNestingLevel: Optional[int] = None,
                enableExtensions: Optional[bool] = None,
                enabledOpenTypes: Optional[Sequence[str]] = None) -> "PathlingContext":
         """
-        Creates a :class:`PathlingContext` for given :class:`SparkSession` and configuration
-        options.
+        Creates a :class:`PathlingContext`. Use this when there is no existing SparkSession that
+        you want to reuse.
 
-        :param sparkSession: the :class:`SparkSession` instance.
         :param fhirVersion: the FHIR version to use.
             Must a valid FHIR version string. Defaults to R4.
         :param maxNestingLevel: the maximum nesting level for recursive data types.
@@ -41,11 +41,37 @@ class PathlingContext:
             extensions
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
-        jvm: JavaObject = sparkSession._jvm
+        sparkSession = SparkSession.builder.config('spark.jars', find_jar()).getOrCreate()
+        return cls.createWithSpark(sparkSession, fhirVersion, maxNestingLevel, enableExtensions,
+                                   enabledOpenTypes)
+
+    @classmethod
+    def createWithSpark(cls, spark: SparkSession,
+                        fhirVersion: Optional[str] = None,
+                        maxNestingLevel: Optional[int] = None,
+                        enableExtensions: Optional[bool] = None,
+                        enabledOpenTypes: Optional[Sequence[str]] = None) -> "PathlingContext":
+        """
+        Creates a :class:`PathlingContext` using an existing :class:`SparkSession` and configuration
+        options.
+
+        :param spark: the :class:`SparkSession` instance.
+        :param fhirVersion: the FHIR version to use.
+            Must a valid FHIR version string. Defaults to R4.
+        :param maxNestingLevel: the maximum nesting level for recursive data types.
+            Zero (0) indicates that all direct or indirect fields of type T in element of type T
+            should be skipped
+        :param enableExtensions: switches on/off the support for FHIR extensions
+        :param enabledOpenTypes: list of types that are encoded within open types, such as
+            extensions
+        :return: a DataFrame containing the given resource encoded into Spark columns
+        """
+        cls.spark = spark
+        jvm: JavaObject = spark._jvm
         jpc: JavaObject = jvm.au.csiro.pathling.api.PathlingContext.create(
-                sparkSession._jsparkSession, fhirVersion, maxNestingLevel, enableExtensions,
+                spark._jsparkSession, fhirVersion, maxNestingLevel, enableExtensions,
                 enabledOpenTypes)
-        return PathlingContext(sparkSession, jpc)
+        return PathlingContext(spark, jpc)
 
     def __init__(self, sparkSession: SparkSession, jpc: JavaObject) -> None:
         self._sparkSession: SparkSession = sparkSession
