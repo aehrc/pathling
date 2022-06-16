@@ -6,14 +6,14 @@
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.0.2</version>
+    <version>5.2.0</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>site</artifactId>
@@ -31,9 +31,21 @@
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
       <artifactId>fhir-server</artifactId>
       <version>${project.version}</version>
       <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>python</artifactId>
+      <version>${project.version}</version>
+      <classifier>docs</classifier>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -55,7 +67,35 @@
             </goals>
             <configuration>
               <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <excludeArtifactIds>python</excludeArtifactIds>
+              <excludeClassifiers>javadoc</excludeClassifiers>
               <excludeTransitive>true</excludeTransitive>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-python-docs</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <includeArtifactIds>python</includeArtifactIds>
+              <excludeTransitive>true</excludeTransitive>
+              <outputDirectory>${project.build.directory}/site/docs/python</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>unpack-scala-docs</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <includeGroupIds>au.csiro.pathling</includeGroupIds>
+              <includeArtifactIds>encoders</includeArtifactIds>
+              <includeClassifiers>javadoc</includeClassifiers>
+              <outputDirectory>${project.build.directory}/site/docs/scala</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -84,7 +124,7 @@
         <executions>
           <execution>
             <id>javadoc</id>
-            <phase>process-resources</phase>
+            <phase>process-classes</phase>
             <goals>
               <goal>javadoc</goal>
             </goals>
@@ -96,8 +136,25 @@
           <sourceFileExcludes>
             <exclude>au/csiro/pathling/spark/Spark.java</exclude>
           </sourceFileExcludes>
-          <reportOutputDirectory>${project.basedir}/docs</reportOutputDirectory>
+          <reportOutputDirectory>${project.build.directory}/site/docs</reportOutputDirectory>
           <destDir>java</destDir>
+          <links>
+            <link>https://spark.apache.org/docs/latest/api/java/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
+            <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
+          </links>
+          <detectLinks/>
+          <doctitle>Pathling ${project.version} API</doctitle>
+          <windowtitle>Pathling ${project.version} API</windowtitle>
+          <bottom>
+            <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
+          </bottom>
+          <additionalJOptions>
+            <option>--no-module-directories</option>
+            <option>-Xdoclint:none</option>
+          </additionalJOptions>
         </configuration>
       </plugin>
       <plugin>
@@ -121,7 +178,10 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>bundle</executable>
+              <executable>npm</executable>
+              <arguments>
+                <argument>install</argument>
+              </arguments>
             </configuration>
           </execution>
           <execution>
@@ -131,10 +191,9 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>bundle</executable>
+              <executable>npm</executable>
               <arguments>
-                <argument>exec</argument>
-                <argument>jekyll</argument>
+                <argument>run</argument>
                 <argument>build</argument>
               </arguments>
             </configuration>
@@ -146,17 +205,6 @@
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
           <classesDirectory>${project.build.directory}/site</classesDirectory>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-clean-plugin</artifactId>
-        <configuration>
-          <filesets>
-            <fileset>
-              <directory>${project.basedir}/docs/java</directory>
-            </fileset>
-          </filesets>
         </configuration>
       </plugin>
     </plugins>

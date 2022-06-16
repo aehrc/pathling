@@ -9,7 +9,7 @@ import { getConfig, makeRequest, postFhirConfig } from "./common";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  QueryResult,
+  QueryResult
 } from "./index";
 
 /**
@@ -110,7 +110,7 @@ export class ExtractClient {
     }
     return {
       ...result,
-      url: resultUrl.valueUrl,
+      url: resultUrl.valueUrl
     };
   }
 
@@ -144,23 +144,23 @@ export class ExtractClient {
       parameter: [
         ...query.columns.map((c: string) => ({
           name: "column",
-          valueString: c,
+          valueString: c
         })),
         ...(query.filters
           ? query.filters.map((f: string) => ({
-              name: "filter",
-              valueString: f,
-            }))
+            name: "filter",
+            valueString: f
+          }))
           : []),
         ...(query.limit
           ? [
-              {
-                name: "limit",
-                valueInteger: query.limit,
-              },
-            ]
-          : []),
-      ],
+            {
+              name: "limit",
+              valueInteger: query.limit
+            }
+          ]
+          : [])
+      ]
     };
   }
 }

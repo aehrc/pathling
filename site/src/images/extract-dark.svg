@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="802 1689 595 389" width="595"
+    height="389">
+  <defs/>
+  <g id="Canvas_extract_Operation_(no_text)_(dark)" stroke-opacity="1" stroke-dasharray="none"
+      fill-opacity="1" fill="none" stroke="none">
+    <title>$extract Operation (no text) (dark)</title>
+    <g id="Canvas_extract_Operation_(no_text)_(dark)_Layer_1">
+      <title>Layer 1</title>
+      <g id="Line_21">
+        <path d="M 859.6063 1765.9843 L 859.6063 1809.9213 L 890.5092 1809.9213" stroke="white"
+            stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_2">
+        <path
+            d="M 836.5512 1717.7953 L 940.7717 1717.7953 C 944.0854 1717.7953 946.7717 1720.4816 946.7717 1723.7953 L 946.7717 1759.9843 C 946.7717 1763.298 944.0854 1765.9843 940.7717 1765.9843 L 836.5512 1765.9843 C 833.2375 1765.9843 830.5512 1763.298 830.5512 1759.9843 L 830.5512 1723.7953 C 830.5512 1720.4816 833.2375 1717.7953 836.5512 1717.7953 Z"
+            fill="#b58900" fill-opacity=".2"/>
+        <path
+            d="M 836.5512 1717.7953 L 940.7717 1717.7953 C 944.0854 1717.7953 946.7717 1720.4816 946.7717 1723.7953 L 946.7717 1759.9843 C 946.7717 1763.298 944.0854 1765.9843 940.7717 1765.9843 L 836.5512 1765.9843 C 833.2375 1765.9843 830.5512 1763.298 830.5512 1759.9843 L 830.5512 1723.7953 C 830.5512 1720.4816 833.2375 1717.7953 836.5512 1717.7953 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(835.5512 1732.3898)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="24.01258"
+              y="15">Request
+          </tspan>
+        </text>
+      </g>
+      <g id="Graphic_20">
+        <path
+            d="M 896.5092 1785.8268 L 1013.4856 1785.8268 C 1016.7993 1785.8268 1019.4856 1788.513 1019.4856 1791.8268 L 1019.4856 1828.0158 C 1019.4856 1831.3295 1016.7993 1834.0158 1013.4856 1834.0158 L 896.5092 1834.0158 C 893.1955 1834.0158 890.5092 1831.3295 890.5092 1828.0158 L 890.5092 1791.8268 C 890.5092 1788.513 893.1955 1785.8268 896.5092 1785.8268 Z"
+            fill="white" fill-opacity=".2"/>
+        <path
+            d="M 896.5092 1785.8268 L 1013.4856 1785.8268 C 1016.7993 1785.8268 1019.4856 1788.513 1019.4856 1791.8268 L 1019.4856 1828.0158 C 1019.4856 1831.3295 1016.7993 1834.0158 1013.4856 1834.0158 L 896.5092 1834.0158 C 893.1955 1834.0158 890.5092 1831.3295 890.5092 1828.0158 L 890.5092 1791.8268 C 890.5092 1788.513 893.1955 1785.8268 896.5092 1785.8268 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(895.5092 1800.4213)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="18.296783"
+              y="15">Parameters
+          </tspan>
+        </text>
+      </g>
+      <g id="Graphic_32">
+        <path
+            d="M 1178.126 1717.7953 L 1282.3465 1717.7953 C 1285.6602 1717.7953 1288.3465 1720.4816 1288.3465 1723.7953 L 1288.3465 1759.9843 C 1288.3465 1763.298 1285.6602 1765.9843 1282.3465 1765.9843 L 1178.126 1765.9843 C 1174.8123 1765.9843 1172.126 1763.298 1172.126 1759.9843 L 1172.126 1723.7953 C 1172.126 1720.4816 1174.8123 1717.7953 1178.126 1717.7953 Z"
+            fill="#859901" fill-opacity=".2"/>
+        <path
+            d="M 1178.126 1717.7953 L 1282.3465 1717.7953 C 1285.6602 1717.7953 1288.3465 1720.4816 1288.3465 1723.7953 L 1288.3465 1759.9843 C 1288.3465 1763.298 1285.6602 1765.9843 1282.3465 1765.9843 L 1178.126 1765.9843 C 1174.8123 1765.9843 1172.126 1763.298 1172.126 1759.9843 L 1172.126 1723.7953 C 1172.126 1720.4816 1174.8123 1717.7953 1178.126 1717.7953 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(1177.126 1732.3898)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="17.99305"
+              y="15">Response
+          </tspan>
+        </text>
+      </g>
+      <g id="Graphic_33">
+        <path
+            d="M 1237.6536 1785.8268 L 1347.1129 1785.8268 C 1350.4266 1785.8268 1353.1129 1788.513 1353.1129 1791.8268 L 1353.1129 1828.0158 C 1353.1129 1831.3295 1350.4266 1834.0158 1347.1129 1834.0158 L 1237.6536 1834.0158 C 1234.3398 1834.0158 1231.6536 1831.3295 1231.6536 1828.0158 L 1231.6536 1791.8268 C 1231.6536 1788.513 1234.3398 1785.8268 1237.6536 1785.8268 Z"
+            fill="white" fill-opacity=".2"/>
+        <path
+            d="M 1237.6536 1785.8268 L 1347.1129 1785.8268 C 1350.4266 1785.8268 1353.1129 1788.513 1353.1129 1791.8268 L 1353.1129 1828.0158 C 1353.1129 1831.3295 1350.4266 1834.0158 1347.1129 1834.0158 L 1237.6536 1834.0158 C 1234.3398 1834.0158 1231.6536 1831.3295 1231.6536 1828.0158 L 1231.6536 1791.8268 C 1231.6536 1788.513 1234.3398 1785.8268 1237.6536 1785.8268 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(1236.6536 1800.4213)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="14.538261"
+              y="15">Parameters
+          </tspan>
+        </text>
+      </g>
+      <g id="Line_34">
+        <path d="M 1201.1811 1765.9843 L 1201.1811 1809.9213 L 1231.6536 1809.9213" stroke="white"
+            stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_36">
+        <path d="M 922.7533 1834.0158 L 922.7533 1883.622 L 963.7795 1883.622" stroke="white"
+            stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_44">
+        <text transform="translate(876.7709 1786.5748)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="12" fill="white" x="0" y="11">1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_46">
+        <text transform="translate(939.5569 1858.8583)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="12" fill="white" x="0" y="11">1..*
+          </tspan>
+        </text>
+      </g>
+      <g id="Graphic_48">
+        <text transform="translate(1218.2284 1786.5748)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="12" fill="white" x="0" y="11">1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_35">
+        <path
+            d="M 969.7795 1859.5276 L 1048.4882 1859.5276 C 1051.8019 1859.5276 1054.4882 1862.2139 1054.4882 1865.5276 L 1054.4882 1901.7166 C 1054.4882 1905.0303 1051.8019 1907.7166 1048.4882 1907.7166 L 969.7795 1907.7166 C 966.4658 1907.7166 963.7795 1905.0303 963.7795 1901.7166 L 963.7795 1865.5276 C 963.7795 1862.2139 966.4658 1859.5276 969.7795 1859.5276 Z"
+            fill="#cb4b16" fill-opacity=".2"/>
+        <path
+            d="M 969.7795 1859.5276 L 1048.4882 1859.5276 C 1051.8019 1859.5276 1054.4882 1862.2139 1054.4882 1865.5276 L 1054.4882 1901.7166 C 1054.4882 1905.0303 1051.8019 1907.7166 1048.4882 1907.7166 L 969.7795 1907.7166 C 966.4658 1907.7166 963.7795 1905.0303 963.7795 1901.7166 L 963.7795 1865.5276 C 963.7795 1862.2139 966.4658 1859.5276 969.7795 1859.5276 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(968.7795 1874.122)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="13.826988"
+              y="15">column
+          </tspan>
+        </text>
+      </g>
+      <g id="Line_103">
+        <path d="M 1262.0184 1834.0158 L 1262.0184 1883.622 L 1304.7905 1883.622" stroke="white"
+            stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_102">
+        <text transform="translate(1292.0522 1858.8583)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="12" fill="white" x="0" y="11">1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_101">
+        <path
+            d="M 1310.7905 1859.5276 L 1361.8376 1859.5276 C 1365.1513 1859.5276 1367.8376 1862.2139 1367.8376 1865.5276 L 1367.8376 1901.7166 C 1367.8376 1905.0303 1365.1513 1907.7166 1361.8376 1907.7166 L 1310.7905 1907.7166 C 1307.4768 1907.7166 1304.7905 1905.0303 1304.7905 1901.7166 L 1304.7905 1865.5276 C 1304.7905 1862.2139 1307.4768 1859.5276 1310.7905 1859.5276 Z"
+            fill="#2aa198" fill-opacity=".2"/>
+        <path
+            d="M 1310.7905 1859.5276 L 1361.8376 1859.5276 C 1365.1513 1859.5276 1367.8376 1862.2139 1367.8376 1865.5276 L 1367.8376 1901.7166 C 1367.8376 1905.0303 1365.1513 1907.7166 1361.8376 1907.7166 L 1310.7905 1907.7166 C 1307.4768 1907.7166 1304.7905 1905.0303 1304.7905 1901.7166 L 1304.7905 1865.5276 C 1304.7905 1862.2139 1307.4768 1859.5276 1310.7905 1859.5276 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(1309.7905 1874.122)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="17.464945"
+              y="15">url
+          </tspan>
+        </text>
+      </g>
+      <g id="Line_108">
+        <path d="M 922.7533 1834.0158 L 922.7533 1953.071 L 953.9233 1953.2795 L 963.9233 1953.2795"
+            stroke="white" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_105">
+        <text transform="translate(939.0158 1928.5158)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="12" fill="white" x="0" y="11">0..*
+          </tspan>
+        </text>
+      </g>
+      <g id="Graphic_104">
+        <path
+            d="M 969.9233 1929.185 L 1037.2934 1929.185 C 1040.6071 1929.185 1043.2934 1931.8713 1043.2934 1935.185 L 1043.2934 1971.374 C 1043.2934 1974.6877 1040.6071 1977.374 1037.2934 1977.374 L 969.9233 1977.374 C 966.6096 1977.374 963.9233 1974.6877 963.9233 1971.374 L 963.9233 1935.185 C 963.9233 1931.8713 966.6096 1929.185 969.9233 1929.185 Z"
+            fill="#cb4b16" fill-opacity=".2"/>
+        <path
+            d="M 969.9233 1929.185 L 1037.2934 1929.185 C 1040.6071 1929.185 1043.2934 1931.8713 1043.2934 1935.185 L 1043.2934 1971.374 C 1043.2934 1974.6877 1040.6071 1977.374 1037.2934 1977.374 L 969.9233 1977.374 C 966.6096 1977.374 963.9233 1974.6877 963.9233 1971.374 L 963.9233 1935.185 C 963.9233 1931.8713 966.6096 1929.185 969.9233 1929.185 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(968.9233 1943.7795)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="18.755352"
+              y="15">filter
+          </tspan>
+        </text>
+      </g>
+      <g id="Graphic_110">
+        <text transform="translate(937.5984 1998.1732)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="12" fill="white" x="0" y="11">0..1
+          </tspan>
+        </text>
+      </g>
+      <g id="Graphic_109">
+        <path
+            d="M 970.0763 2000.4173 L 1037.4464 2000.4173 C 1040.76 2000.4173 1043.4464 2003.1036 1043.4464 2006.4173 L 1043.4464 2042.6063 C 1043.4464 2045.92 1040.76 2048.6063 1037.4464 2048.6063 L 970.0763 2048.6063 C 966.7626 2048.6063 964.0763 2045.92 964.0763 2042.6063 L 964.0763 2006.4173 C 964.0763 2003.1036 966.7626 2000.4173 970.0763 2000.4173 Z"
+            fill="#cb4b16" fill-opacity=".2"/>
+        <path
+            d="M 970.0763 2000.4173 L 1037.4464 2000.4173 C 1040.76 2000.4173 1043.4464 2003.1036 1043.4464 2006.4173 L 1043.4464 2042.6063 C 1043.4464 2045.92 1040.76 2048.6063 1037.4464 2048.6063 L 970.0763 2048.6063 C 966.7626 2048.6063 964.0763 2045.92 964.0763 2042.6063 L 964.0763 2006.4173 C 964.0763 2003.1036 966.7626 2000.4173 970.0763 2000.4173 Z"
+            stroke="#012b36" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(969.0763 2015.0118)" fill="white">
+          <tspan font-family="Roboto, sans-serif" font-size="16" fill="white" x="19.23582"
+              y="15">limit
+          </tspan>
+        </text>
+      </g>
+      <g id="Line_113">
+        <path d="M 922.7533 1834.0158 L 922.7533 2024.5118 L 964.0763 2024.5118" stroke="white"
+            stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

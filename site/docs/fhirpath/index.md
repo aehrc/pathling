@@ -1,9 +1,6 @@
 ---
-layout: page 
-title: FHIRPath 
-nav_order: 2 
-parent: Documentation 
-has_children: true
+sidebar_position: 1
+sidebar_label: Introduction
 ---
 
 # FHIRPath

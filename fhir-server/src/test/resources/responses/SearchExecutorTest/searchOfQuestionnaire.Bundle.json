@@ -14,9 +14,7 @@
         "url": "http://hl7.org/fhir/Questionnaire/3141",
         "title": "Cancer Quality Forum Questionnaire 2012",
         "status": "draft",
-        "subjectType": [
-          "Patient"
-        ],
+        "subjectType": ["Patient"],
         "date": "2012-01",
         "item": [
           {

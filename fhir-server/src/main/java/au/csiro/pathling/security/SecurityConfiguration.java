@@ -23,9 +23,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 /**
  * Web security configuration for Pathling.
  *
- * @see <a href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
+ * @see <a
+ * href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
  * Security 5 Java API: Authorization</a>
- * @see <a href="https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555">Spring
+ * @see <a
+ * href="https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555">Spring
  * security antMatchers not being applied on POST requests and only works with GET</a>
  */
 @EnableWebSecurity

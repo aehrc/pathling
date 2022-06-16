@@ -5,8 +5,8 @@
  */
 
 import axios from "axios";
-import { QueryOptions } from "./index";
 import { FHIR_CONTENT_TYPE } from "./common";
+import { QueryOptions } from "./index";
 
 /**
  * A class that can be used to check the progress of an asynchronous job.
@@ -25,8 +25,8 @@ export class JobClient {
         url,
         headers: {
           Accept: FHIR_CONTENT_TYPE,
-          ...(options?.token ? auth : {}),
-        },
+          ...(options?.token ? auth : {})
+        }
       },
       response = await axios.request<any>(config);
 

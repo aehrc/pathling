@@ -1,28 +1,11 @@
 ---
-layout: page
-title: Operators
-nav_order: 1
-parent: FHIRPath
-grand_parent: Documentation
+sidebar_position: 3
 ---
 
 # Operators
 
 Operators are special symbols or keywords that take a left and right operand,
 returning some sort of result.
-
-The following operators are supported by the FHIRPath implementation within
-Pathling:
-
-- [Comparison](#comparison) (`<=`, `<`, `>` and `>=`)
-- [Equality](#equality) (`=` and `!=`)
-- [Math](#math) (`+`, `-`, `*`, `/` and `mod`)
-- [Date/time arithmetic](#datetime-arithmetic) (`+` and `-`)
-- [Boolean logic](#boolean-logic) (`and`, `or`, `xor` and `implies`)
-- [Membership](#membership) (`in` and `contains`)
-- [combine](#combine)
-
-See also: [Operations](https://hl7.org/fhirpath/#operations)
 
 ## Comparison
 
@@ -53,7 +36,7 @@ an empty collection.
 String ordering is strictly lexical and is based on the Unicode value of the
 individual characters.
 
-All comparison operators return a [Boolean](./data-types.html#boolean) value.
+All comparison operators return a [Boolean](/docs/fhirpath/data-types#boolean) value.
 
 <sup>*</sup> Not all Quantity values are comparable, it depends upon the
 comparability of the units. See the
@@ -68,10 +51,10 @@ See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 The `=` operator returns `true` if the left operand is equal to the right
 operand, and a `false` otherwise. The `!=` is the inverse of the `=` operator.
 
-Both operands must be singular. The valid types and their combinations is the
-same as for the [Comparison operators](#comparison). In addition to this,
-[Coding](./data-types.html#coding) types can be compared using the equality
-operators.
+Both operands must be singular. The valid types and their combinations is the 
+same as for the [Comparison operators](#comparison). In addition to this, 
+[Coding](/docs/fhirpath/data-types#coding) types can 
+be compared using the equality operators.
 
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
@@ -94,12 +77,12 @@ The following math operators are supported:
 - `/` - Division
 - `mod` - Modulus
 
-Math operators support only [Integer](./data-types.html#integer) and
-[Decimal](./data-types.html#decimal) operands.
+Math operators support only [Integer](/docs/fhirpath/data-types#integer) and
+[Decimal](/docs/fhirpath/data-types#decimal) operands.
 
 The type of the two operands can be mixed. `+`, `-` and `*` return the same type
-as the left operand, `/` returns [Decimal](./data-types.html#decimal) and `mod`
-returns [Integer](./data-types.html#integer).
+as the left operand, `/` returns [Decimal](/docs/fhirpath/data-types#decimal) and `mod`
+returns [Integer](/docs/fhirpath/data-types#integer).
 
 Both operands must be singular.
 
@@ -112,20 +95,20 @@ See also: [Math](https://hl7.org/fhirpath/#math)
 
 The following operators are supported for date arithmetic:
 
-- `+` - Add a duration to a [Date](./data-types.html#date) or
-  [DateTime](./data-types.html#datetime)
-- `-` - Subtract a duration from a [Date](./data-types.html#date) or
-  [DateTime](./data-types.html#datetime)
+- `+` - Add a duration to a [Date](/docs/fhirpath/data-types#date) or
+  [DateTime](/docs/fhirpath/data-types#datetime)
+- `-` - Subtract a duration from a [Date](/docs/fhirpath/data-types#date) or
+  [DateTime](/docs/fhirpath/data-types#datetime)
 
 Date arithmetic always has a `DateTime` or `Date` on the left-hand side, and a
 duration on the right-hand side. The duration operand is a
-[calendar duration literal](./data-types.html#quantity). The use of UCUM units
+[calendar duration literal](/docs/fhirpath/data-types#quantity). The use of UCUM units
 is not supported with these operators.
 
 The `Date` or `DateTime` operand must be singular. If it is an empty collection,
 the operator will return an empty collection.
 
-The use of arithmetic with the [Time](./data-types.html#time) type is not
+The use of arithmetic with the [Time](/docs/fhirpath/data-types#time) type is not
 supported.
 
 See also: [Date/Time Arithmetic](https://hl7.org/fhirpath/#datetime-arithmetic)
@@ -140,9 +123,9 @@ The following Boolean operations are supported:
 - `implies` - Material implication
 
 Both operands to a Boolean operator must be singular
-[Boolean](./data-types.html#boolean) values.
+[Boolean](/docs/fhirpath/data-types#boolean) values.
 
-All Boolean operators return a [Boolean](./data-types.html#boolean) value.
+All Boolean operators return a [Boolean](/docs/fhirpath/data-types#boolean) value.
 
 See also:
 [Boolean logic](https://hl7.org/fhirpath/#boolean-logic)
@@ -174,5 +157,3 @@ The two operands provided to the `combine` operator must share the same type.
 This implementation has the same semantics as
 the [combine function](https://hl7.org/fhirpath/#combineother-collection-collection)
 within the FHIRPath specification, but is implemented as an operator.
-
-Next: [Functions](./functions.html)

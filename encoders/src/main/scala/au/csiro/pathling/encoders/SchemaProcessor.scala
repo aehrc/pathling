@@ -32,7 +32,8 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] with EncoderSettings
    * @param elementName       the element name.
    * @return the representation of of the named child element.
    */
-  def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[SF]
+  def buildValue(childDefinition: BaseRuntimeChildDefinition,
+                 elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[SF]
 
   /**
    * Determines if the representation of a child should be included in the representation of its composite.
@@ -41,7 +42,8 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] with EncoderSettings
    * @param childDefinition the HAPI definition of the composite child.
    * @return true if the child representation should be included.
    */
-  def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean
+  def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_],
+                        childDefinition: BaseRuntimeChildDefinition): Boolean
 
   /**
    * Combines the representations of the choice options to the representation of the choice.
@@ -50,7 +52,8 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] with EncoderSettings
    * @param optionValues     the list of representations of choice options.
    * @return the representation of the choice element.
    */
-  def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[SF]]): Seq[SF] = optionValues.flatten
+  def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition,
+                           optionValues: Seq[Seq[SF]]): Seq[SF] = optionValues.flatten
 
   /**
    * Builds the representation of the composite from the representations of its elements.

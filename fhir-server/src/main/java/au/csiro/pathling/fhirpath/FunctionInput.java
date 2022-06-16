@@ -27,5 +27,5 @@ public abstract class FunctionInput {
   protected FunctionInput(@Nonnull final ParserContext context) {
     this.context = context;
   }
- 
+
 }

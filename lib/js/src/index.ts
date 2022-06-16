@@ -113,7 +113,7 @@ export default class PathlingClient {
     this.options = {
       asyncRetry: options.asyncRetry || { times: 60, wait: 1, backOff: 1.0 },
       maxGetQueryLength: 1500,
-      ...options,
+      ...options
     };
     this.capabilities = new CapabilitiesClient(this.options);
     this.smartConfiguration = new SmartConfigurationClient(this.options);

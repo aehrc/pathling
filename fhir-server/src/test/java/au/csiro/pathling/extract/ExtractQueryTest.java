@@ -42,6 +42,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  */
 @SpringBootTest
 @Tag("UnitTest")
+@Tag("Tranche1")
 @ExtendWith(TimingExtension.class)
 class ExtractQueryTest {
 

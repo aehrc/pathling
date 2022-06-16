@@ -30,8 +30,8 @@ public interface Numeric {
    * @param operation The {@link MathOperation} type to retrieve a result for
    * @param expression The FHIRPath expression to use within the result
    * @param dataset The {@link Dataset} to use within the result
-   * @return A {@link Function} that takes a Numeric as its parameter, and returns a {@link
-   * NonLiteralPath}.
+   * @return A {@link Function} that takes a Numeric as its parameter, and returns a
+   * {@link NonLiteralPath}.
    */
   @Nonnull
   Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull MathOperation operation,

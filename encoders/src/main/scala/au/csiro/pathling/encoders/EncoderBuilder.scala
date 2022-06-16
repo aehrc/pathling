@@ -47,7 +47,8 @@ object EncoderBuilder {
          enableExtensions: Boolean): ExpressionEncoder[_] = {
 
     if (UNSUPPORTED_RESOURCES.contains(resourceDefinition.getName)) {
-      throw new UnsupportedResourceError(s"Encoding is not supported for resource: ${resourceDefinition.getName}")
+      throw new UnsupportedResourceError(
+        s"Encoding is not supported for resource: ${resourceDefinition.getName}")
     }
 
     val fhirClass = resourceDefinition

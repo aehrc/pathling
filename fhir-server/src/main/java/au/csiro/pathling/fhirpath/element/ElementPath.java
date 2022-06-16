@@ -58,8 +58,8 @@ public class ElementPath extends NonLiteralPath {
   }
 
   /**
-   * Builds the appropriate subtype of ElementPath based upon the supplied {@link
-   * ElementDefinition}.
+   * Builds the appropriate subtype of ElementPath based upon the supplied
+   * {@link ElementDefinition}.
    * <p>
    * Use this builder when the path is the child of another path, and will need to be traversable.
    *
@@ -146,7 +146,7 @@ public class ElementPath extends NonLiteralPath {
               datasetWithColumns.getColumn(valueColumn), singular, currentResource, thisColumn,
               fhirType);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
-        InvocationTargetException e) {
+                   InvocationTargetException e) {
       throw new RuntimeException("Problem building an ElementPath class", e);
     }
   }

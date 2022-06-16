@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -36,6 +37,7 @@ import org.springframework.test.context.TestPropertySource;
 @TestPropertySource(properties = {
     "pathling.auth.ga4ghPassports.patientIdSystem=https://github.com/synthetichealth/synthea",
     "pathling.storage.databaseName=parquet"})
+@Tag("Tranche2")
 @Slf4j
 class ManifestConverterTest extends AbstractParserTest {
 

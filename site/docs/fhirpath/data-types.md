@@ -1,25 +1,11 @@
 ---
-layout: page
-title: Data types
-nav_order: 0
-parent: FHIRPath
-grand_parent: Documentation
+sidebar_position: 2
 ---
 
 # Data types
 
 The FHIRPath implementation within Pathling supports the following types of
 literal expressions:
-
-- [Boolean](#boolean)
-- [String](#string)
-- [Integer](#integer)
-- [Decimal](#decimal)
-- [DateTime](#datetime)
-- [Date](#date)
-- [Time](#time)
-- [Quantity](#quantity)
-- [Coding](#coding)
 
 See also: [Literals](https://hl7.org/fhirpath/#literals) and
 [Using FHIR types in expressions](https://hl7.org/fhir/R4/fhirpath.html#types)
@@ -83,10 +69,10 @@ Examples:
 -3.333
 ```
 
-<div class="callout info">
-    The implementation of Decimal within Pathling supports a precision of 32 and 
-    a scale of 6.
-</div>
+:::note
+The implementation of Decimal within Pathling supports a precision of 32 and a
+scale of 6.
+:::
 
 ## DateTime
 
@@ -215,15 +201,18 @@ http://terminology.hl7.org/CodeSystem/condition-category|problem-list-item|4.0.1
 http://snomed.info/sct|'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = ( 24136001 |Hip joint structure|: 272741003 |Laterality| =  7771000 |Left| )'
 ```
 
-<div class="callout warning">The <code>Coding</code> literal is not within the FHIRPath specification, and is currently unique to the Pathling implementation.</div>
+:::note
+The Coding literal is not within the FHIRPath specification, and is currently
+unique to the Pathling implementation.
+:::
 
 ## Materializable types
 
 There is a subset of all possible FHIR types that can be "materialized", i.e.
 used as the result of a grouping expression in
-the [aggregate](../operations/aggregate.html)
+the [aggregate](/docs/server/operations/aggregate)
 operation, or the definition of a column within
-the [extract](../operations/extract.html)
+the [extract](/docs/server/operations/extract)
 operation. These types are:
 
 - [Boolean](#boolean)
@@ -234,5 +223,3 @@ operation. These types are:
 - [DateTime](#datetime)
 - [Time](#time)
 - [Coding](#coding)
-
-Next: [Operators](./operators.html)

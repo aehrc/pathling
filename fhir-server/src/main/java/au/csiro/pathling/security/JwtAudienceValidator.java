@@ -14,7 +14,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 /**
  * Audience validator for JWTs.
  *
- * @see <a href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
+ * @see <a
+ * href="https://auth0.com/docs/quickstart/backend/java-spring-security5/01-authorization">Spring
  * Security 5 Java API: Authorization</a>
  */
 public class JwtAudienceValidator implements OAuth2TokenValidator<Jwt> {

@@ -26,7 +26,8 @@ import org.hl7.fhir.instance.model.api.IBase
  * @tparam DT the type which represents the final result of traversing a resource (or composite), e.g: for a schema converter this can be [[org.apache.spark.sql.types.DataType]].
  * @tparam SF the type which represents the result of traversing an element of a composite, e.g: for a schema converter this can be [[org.apache.spark.sql.types.StructField]].
  */
-abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[DT, SF] with EncoderContext {
+abstract class SchemaProcessorWithTypeMappings[DT, SF]
+  extends SchemaProcessor[DT, SF] with EncoderContext {
 
 
   private def isAllowedOpenElementType(cls: Class[_ <: IBase]): Boolean = {
@@ -36,19 +37,23 @@ abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[D
   override def getValidChoiceTypes(choice: RuntimeChildChoiceDefinition): Seq[Class[_ <: IBase]] = {
     // delegate to type mappings and filter additionally restrict with config for RuntimeChildAny
     choice match {
-      case _: RuntimeChildAny => dataTypeMappings.getValidChoiceTypes(choice).filter(isAllowedOpenElementType)
+      case _: RuntimeChildAny => dataTypeMappings.getValidChoiceTypes(choice)
+        .filter(isAllowedOpenElementType)
       case _ => dataTypeMappings.getValidChoiceTypes(choice)
     }
   }
 
-  override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_], childDefinition: BaseRuntimeChildDefinition): Boolean = {
+  override def shouldExpandChild(definition: BaseRuntimeElementCompositeDefinition[_],
+                                 childDefinition: BaseRuntimeChildDefinition): Boolean = {
 
     // Do not expand extensions, as they require custom handling.
     val expandExtension = !childDefinition.isInstanceOf[RuntimeChildExtension]
     expandExtension && !dataTypeMappings.skipField(definition, childDefinition)
   }
 
-  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[SF] = {
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition,
+                          elementDefinition: BaseRuntimeElementDefinition[_],
+                          elementName: String): Seq[SF] = {
     val value = if (isCollection(childDefinition)) {
       buildArrayValue(childDefinition, elementDefinition, elementName)
     } else {
@@ -65,7 +70,9 @@ abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[D
    * @param elementName       the element name.
    * @return the representation of the singular element.
    */
-  def buildSimpleValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DT = {
+  def buildSimpleValue(childDefinition: BaseRuntimeChildDefinition,
+                       elementDefinition: BaseRuntimeElementDefinition[_],
+                       elementName: String): DT = {
     childDefinition match {
       // Enumerations require special processing because the information necessary to determine
       // the actual EnumFactory type required to construct a complete Enumeration instance
@@ -78,8 +85,10 @@ abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[D
         elementDefinition match {
           case composite: BaseRuntimeElementCompositeDefinition[_] => compositeBuilder(composite)
           case primitive: RuntimePrimitiveDatatypeDefinition => buildPrimitiveDatatype(primitive)
-          case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org)
-          case _ => throw new IllegalArgumentException("Cannot process element: " + elementName + " with definition: " + elementDefinition)
+          case xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition => buildPrimitiveDatatypeXhtmlHl7Org(
+            xhtmlHl7Org)
+          case _ => throw new IllegalArgumentException(
+            "Cannot process element: " + elementName + " with definition: " + elementDefinition)
         }
     }
   }
@@ -92,7 +101,8 @@ abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[D
    * @param elementName       the element name.
    * @return the representation of a collection element.
    */
-  def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DT
+  def buildArrayValue(childDefinition: BaseRuntimeChildDefinition,
+                      elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): DT
 
   /**
    * Builds the representation of a named element.
@@ -102,7 +112,8 @@ abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[D
    * @param definition   the element definition.
    * @return the representation of the named element.
    */
-  def buildElement(elementName: String, elementValue: DT, definition: BaseRuntimeElementDefinition[_]): SF
+  def buildElement(elementName: String, elementValue: DT,
+                   definition: BaseRuntimeElementDefinition[_]): SF
 
   /**
    * Builds the representation of a primitive data type.
@@ -140,6 +151,7 @@ abstract class SchemaProcessorWithTypeMappings[DT, SF] extends SchemaProcessor[D
    */
   def buildExtensionValue(): DT = {
     val extensionNode = ElementCtx.forExtension(fhirContext)
-    buildArrayValue(extensionNode.childDefinition, extensionNode.elementDefinition, extensionNode.elementName)
+    buildArrayValue(extensionNode.childDefinition, extensionNode.elementDefinition,
+      extensionNode.elementName)
   }
 }

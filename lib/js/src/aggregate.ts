@@ -9,7 +9,7 @@ import { getConfig, makeRequest, postFhirConfig } from "./common";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  QueryResult,
+  QueryResult
 } from "./index";
 
 /**
@@ -101,10 +101,10 @@ export class AggregateClient {
       url = `${this.options.endpoint}/${query.subjectResource}/$aggregate`,
       config = usePostRequest
         ? postFhirConfig(
-            url,
-            AggregateClient.parametersFromQuery(query),
-            options
-          )
+          url,
+          AggregateClient.parametersFromQuery(query),
+          options
+        )
         : getConfig(url, params, options);
 
     return makeRequest(
@@ -145,21 +145,21 @@ export class AggregateClient {
       parameter: [
         ...query.aggregations.map((a: string) => ({
           name: "aggregation",
-          valueString: a,
+          valueString: a
         })),
         ...(query.groupings
           ? query.groupings.map((g: string) => ({
-              name: "grouping",
-              valueString: g,
-            }))
+            name: "grouping",
+            valueString: g
+          }))
           : []),
         ...(query.filters
           ? query.filters.map((f: string) => ({
-              name: "filter",
-              valueString: f,
-            }))
-          : []),
-      ],
+            name: "filter",
+            valueString: f
+          }))
+          : [])
+      ]
     };
   }
 }

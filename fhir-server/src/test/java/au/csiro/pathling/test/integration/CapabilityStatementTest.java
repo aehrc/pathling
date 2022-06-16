@@ -9,6 +9,7 @@ package au.csiro.pathling.test.integration;
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 
 import org.json.JSONException;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 /**
  * @author John Grimes
  */
+@Tag("Tranche2")
 class CapabilityStatementTest extends IntegrationTest {
 
   @LocalServerPort

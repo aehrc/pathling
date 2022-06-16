@@ -213,7 +213,8 @@ case class RegisterFid(targetObject: Expression,
     val obj = targetObject.genCode(ctx)
     val fid = fidValue.genCode(ctx)
 
-    ctx.addImmutableStateIfNotExists("java.util.HashMap", "_fid_mapping", vn => s"$vn = new java.util.HashMap();")
+    ctx.addImmutableStateIfNotExists("java.util.HashMap", "_fid_mapping",
+      vn => s"$vn = new java.util.HashMap();")
 
     ev.copy(code =
       code"""
@@ -261,7 +262,8 @@ case class AttachExtensions(targetObject: Expression,
     val obj = targetObject.genCode(ctx)
     val extensionMap = extensionMapObject.genCode(ctx)
 
-    ctx.addImmutableStateIfNotExists("java.util.HashMap", "_fid_mapping", vn => s"$vn = new java.util.HashMap();")
+    ctx.addImmutableStateIfNotExists("java.util.HashMap", "_fid_mapping",
+      vn => s"$vn = new java.util.HashMap();")
 
     // essentially
 
@@ -274,7 +276,9 @@ case class AttachExtensions(targetObject: Expression,
             |if (${obj.value} != null) {
             |// for each of the object in extension maps find the
             |// corresponding object and set the extension
-            | for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${extensionMap.value}).entrySet()) {
+            | for(java.util.Map.Entry e: scala.collection.JavaConverters.mapAsJavaMap(${
+        extensionMap.value
+      }).entrySet()) {
             |   org.hl7.fhir.instance.model.api.IBaseHasExtensions extHolder = (org.hl7.fhir.instance.model.api.IBaseHasExtensions)_fid_mapping.get(e.getKey());
             |   if (extHolder != null) {
             |     ((java.util.List)extHolder.getExtension()).addAll((java.util.List)e.getValue());

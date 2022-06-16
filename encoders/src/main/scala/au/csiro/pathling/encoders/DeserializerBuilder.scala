@@ -36,7 +36,8 @@ import scala.collection.convert.ImplicitConversions.`collection AsScalaIterable`
  * @param schemaConverter the schema converter to use.
  * @param parent          the processor for the parent composite.
  */
-private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Expression], schemaConverter: SchemaConverter,
+private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Expression],
+                                                            schemaConverter: SchemaConverter,
                                                             parent: Option[DeserializerBuilderProcessor] = None)
   extends SchemaProcessorWithTypeMappings[Expression, ExpressionWithName] with Deserializer {
 
@@ -46,7 +47,8 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
 
   override def config: EncoderSettings = schemaConverter.config
 
-  override def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition, optionValues: Seq[Seq[ExpressionWithName]]): Seq[ExpressionWithName] = {
+  override def combineChoiceOptions(choiceDefinition: RuntimeChildChoiceDefinition,
+                                    optionValues: Seq[Seq[ExpressionWithName]]): Seq[ExpressionWithName] = {
     // so how do we aggregate children of a choice
     // we need to fold all the child expression ignoring the name and then
     // create decoder for this choice
@@ -72,7 +74,8 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
     Seq((choiceDefinition.getElementName, choiceDeserializer))
   }
 
-  override def buildEnumPrimitive(enumDefinition: RuntimePrimitiveDatatypeDefinition, enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Expression = {
+  override def buildEnumPrimitive(enumDefinition: RuntimePrimitiveDatatypeDefinition,
+                                  enumChildDefinition: RuntimeChildPrimitiveEnumerationDatatypeDefinition): Expression = {
     // Only apply the special case for non list
     if (enumChildDefinition.getMax == 1) {
       enumerationToDeserializer(enumChildDefinition, path)
@@ -81,7 +84,9 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
     }
   }
 
-  override def buildValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Seq[ExpressionWithName] = {
+  override def buildValue(childDefinition: BaseRuntimeChildDefinition,
+                          elementDefinition: BaseRuntimeElementDefinition[_],
+                          elementName: String): Seq[ExpressionWithName] = {
     val customEncoder = dataTypeMappings.customEncoder(elementDefinition, elementName)
     // NOTE: We need to pass the parent's addToPath to custom encoder, so that it can
     // access multiple elements of the parent composite
@@ -99,7 +104,8 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
   override def visitElement(elementCtx: ElementCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
     elementCtx.childDefinition match {
       case _: RuntimeChildExtension => super.visitElement(elementCtx)
-      case _: RuntimeChildChoiceDefinition => expandWithName(elementCtx.elementName).proceedElement(elementCtx)
+      case _: RuntimeChildChoiceDefinition => expandWithName(elementCtx.elementName)
+        .proceedElement(elementCtx)
       case _ => super.visitElement(elementCtx)
     }
   }
@@ -109,10 +115,13 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
   }
 
   override def visitElementChild(elementChildCtx: ElementChildCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-    expandWithName(elementChildCtx.elementChildDefinition.getElementName).proceedElementChild(elementChildCtx)
+    expandWithName(elementChildCtx.elementChildDefinition.getElementName)
+      .proceedElementChild(elementChildCtx)
   }
 
-  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition, elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Expression = {
+  override def buildArrayValue(childDefinition: BaseRuntimeChildDefinition,
+                               elementDefinition: BaseRuntimeElementDefinition[_],
+                               elementName: String): Expression = {
 
     def elementMapper(expression: Expression): Expression = {
       withPath(Some(expression)).buildSimpleValue(childDefinition, elementDefinition, elementName)
@@ -129,7 +138,8 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
     arrayExpression(array)
   }
 
-  override def buildElement(elementName: String, elementValue: Expression, definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
+  override def buildElement(elementName: String, elementValue: Expression,
+                            definition: BaseRuntimeElementDefinition[_]): ExpressionWithName = {
     (elementName, elementValue)
   }
 
@@ -140,7 +150,8 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
   override def buildPrimitiveDatatypeXhtmlHl7Org(xhtmlHl7Org: RuntimePrimitiveDatatypeXhtmlHl7OrgDefinition): Expression = {
 
     //noinspection DuplicatedCode
-    def getPath: Expression = path.getOrElse(GetColumnByOrdinal(0, ObjectType(xhtmlHl7Org.getImplementingClass)))
+    def getPath: Expression = path
+      .getOrElse(GetColumnByOrdinal(0, ObjectType(xhtmlHl7Org.getImplementingClass)))
 
     val newInstance = NewInstance(xhtmlHl7Org.getImplementingClass,
       Nil,
@@ -155,7 +166,8 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
         stringValue)))
   }
 
-  private def deserializeExtensions(definition: BaseRuntimeElementCompositeDefinition[_], beanExpression: Expression): Expression = {
+  private def deserializeExtensions(definition: BaseRuntimeElementCompositeDefinition[_],
+                                    beanExpression: Expression): Expression = {
     val beanWithFid = RegisterFid(beanExpression, addToPath(ExtensionSupport.FID_FIELD_NAME))
     definition match {
       case _: RuntimeResourceDefinition =>
@@ -179,7 +191,8 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
     }
   }
 
-  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_], fields: Seq[(String, Expression)]): Expression = {
+  override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_],
+                              fields: Seq[(String, Expression)]): Expression = {
     //noinspection DuplicatedCode
     val compositeInstance = NewInstance(definition.getImplementingClass,
       Nil,
@@ -211,8 +224,10 @@ private[encoders] sealed class DeserializerBuilderProcessor(val path: Option[Exp
 
   def getSqlDatatypeFor(elementDefinition: BaseRuntimeElementDefinition[_]): DataType = {
     elementDefinition match {
-      case compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_] => schemaConverter.compositeSchema(compositeElementDefinition) // convert schema
-      case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings.primitiveToDataType(primitive)
+      case compositeElementDefinition: BaseRuntimeElementCompositeDefinition[_] => schemaConverter
+        .compositeSchema(compositeElementDefinition) // convert schema
+      case primitive: RuntimePrimitiveDatatypeDefinition => dataTypeMappings
+        .primitiveToDataType(primitive)
     }
   }
 
@@ -280,7 +295,8 @@ class DeserializerBuilder(schemaConverter: SchemaConverter) {
    * @return the deserializer expression.
    */
   def buildDeserializer(resourceDefinition: RuntimeResourceDefinition): Expression = {
-    SchemaVisitor.traverseResource(resourceDefinition, new DeserializerBuilderProcessor(None, schemaConverter))
+    SchemaVisitor
+      .traverseResource(resourceDefinition, new DeserializerBuilderProcessor(None, schemaConverter))
   }
 }
 

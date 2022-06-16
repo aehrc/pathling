@@ -73,7 +73,7 @@ public abstract class Strings {
    */
   @Nonnull
   public static <T> List<T> parseCsvList(@Nonnull final String csvList, final @Nonnull
-      Function<String, T> converter) {
+  Function<String, T> converter) {
     return Stream.of(csvList.split(",")).map(String::trim).filter(not(String::isEmpty))
         .map(converter).collect(
             Collectors.toList());

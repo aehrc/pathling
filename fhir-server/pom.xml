@@ -6,14 +6,14 @@
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.0.2</version>
+    <version>5.2.0</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -22,8 +22,9 @@
   <description>A server that exposes Pathling functionality through a FHIR API.</description>
 
   <properties>
-    <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
+    <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
+    <jmh.version>1.35</jmh.version>
   </properties>
 
   <dependencies>
@@ -124,28 +125,27 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>log4j-over-slf4j</artifactId>
-    </dependency>
 
     <!-- Authorization -->
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>3.19.1</version>
+      <version>3.19.2</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
       <version>0.21.1</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+    </dependency>
 
     <!-- ANTLR -->
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4</artifactId>
-      <version>${pathling.antlrVersion}</version>
     </dependency>
 
     <!-- AWS SDK -->
@@ -201,12 +201,35 @@
       <artifactId>lombok</artifactId>
     </dependency>
 
-    <!-- Apache Commons BeanUtils -->
+    <!-- Misc -->
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
     <dependency>
       <groupId>commons-beanutils</groupId>
       <artifactId>commons-beanutils</artifactId>
       <version>1.9.4</version>
     </dependency>
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+    </dependency>
+
+    <!-- JMH libs for benchmarking-->
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-generator-annprocess</artifactId>
+      <version>${jmh.version}</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -327,7 +350,7 @@
             <to>
               <image>${pathling.fhirServerDockerRepo}</image>
               <tags>
-                <tag>latest</tag>
+                <tag>${pathling.fhirServerDockerTag}</tag>
                 <tag>${project.version}</tag>
                 <tag>${project.majorVersion}</tag>
               </tags>
@@ -354,7 +377,35 @@
 
   <profiles>
     <profile>
-      <id>import-test-data</id>
+      <id>runBenchmark</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>run-benchmark</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <mainClass>au.csiro.pathling.test.bechmark.PathlingBenchmarkRunner</mainClass>
+              <classpathScope>test</classpathScope>
+              <cleanupDaemonThreads>false</cleanupDaemonThreads>
+              <arguments>
+                <argument>${project.basedir}/target</argument>
+              </arguments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>importTestData</id>
       <activation>
         <property>
           <name>!skipTests</name>
@@ -481,6 +532,135 @@
                       </platform>
                     </platforms>
                   </from>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>testTranche1</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <groups>UnitTest &amp; Tranche1</groups>
+                  <systemPropertyVariables>
+                    <spring.profiles.active>unit-test</spring.profiles.active>
+                    <spark.logConf>true</spark.logConf>
+                  </systemPropertyVariables>
+                </configuration>
+              </execution>
+              <execution>
+                <id>integration-test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <groups>IntegrationTest &amp; Tranche1</groups>
+                  <forkCount>1</forkCount>
+                  <systemPropertyVariables>
+                    <spring.profiles.active>core,server,integration-test</spring.profiles.active>
+                    <pathling.storage.warehouseUrl>
+                      file://${project.basedir}/src/test/resources/test-data
+                    </pathling.storage.warehouseUrl>
+                    <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                  </systemPropertyVariables>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>testTranche2</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <groups>UnitTest &amp; Tranche2</groups>
+                  <systemPropertyVariables>
+                    <spring.profiles.active>unit-test</spring.profiles.active>
+                    <spark.logConf>true</spark.logConf>
+                  </systemPropertyVariables>
+                </configuration>
+              </execution>
+              <execution>
+                <id>integration-test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <groups>IntegrationTest &amp; Tranche2</groups>
+                  <forkCount>1</forkCount>
+                  <systemPropertyVariables>
+                    <spring.profiles.active>core,server,integration-test</spring.profiles.active>
+                    <pathling.storage.warehouseUrl>
+                      file://${project.basedir}/src/test/resources/test-data
+                    </pathling.storage.warehouseUrl>
+                    <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                  </systemPropertyVariables>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>testTranche3</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>default-test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <groups>UnitTest &amp; !Tranche1 &amp; !Tranche2</groups>
+                  <systemPropertyVariables>
+                    <spring.profiles.active>unit-test</spring.profiles.active>
+                    <spark.logConf>true</spark.logConf>
+                  </systemPropertyVariables>
+                </configuration>
+              </execution>
+              <execution>
+                <id>integration-test</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <groups>IntegrationTest &amp; !Tranche1 &amp; !Tranche2</groups>
+                  <forkCount>1</forkCount>
+                  <systemPropertyVariables>
+                    <spring.profiles.active>core,server,integration-test</spring.profiles.active>
+                    <pathling.storage.warehouseUrl>
+                      file://${project.basedir}/src/test/resources/test-data
+                    </pathling.storage.warehouseUrl>
+                    <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                  </systemPropertyVariables>
                 </configuration>
               </execution>
             </executions>

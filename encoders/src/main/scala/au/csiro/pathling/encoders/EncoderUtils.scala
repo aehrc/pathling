@@ -13,12 +13,12 @@
 
 package au.csiro.pathling.encoders
 
-import java.util
-
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.StaticInvoke
 import org.apache.spark.sql.types.ObjectType
+
+import java.util
 
 object EncoderUtils {
 

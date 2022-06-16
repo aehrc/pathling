@@ -65,5 +65,5 @@ public class StringPrimitiveRowFixture extends PrimitiveRowFixture {
   public static Dataset<Row> createEmptyDataset(final SparkSession spark) {
     return spark.createDataFrame(NO_ROWS, STRING_SCHEMA);
   }
- 
+
 }

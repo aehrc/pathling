@@ -22,6 +22,7 @@ trait CustomCoder {
 
   def customSerializer(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName]
 
-  def customDeserializer(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName]
+  def customDeserializer(addToPath: String => Expression,
+                         isCollection: Boolean): Seq[ExpressionWithName]
 
 }

@@ -185,8 +185,8 @@ public abstract class NonLiteralPath implements FhirPath {
   }
 
   /**
-   * Creates a copy of this NonLiteralPath with an updated {@link Dataset}, ID and value {@link
-   * Column}s.
+   * Creates a copy of this NonLiteralPath with an updated {@link Dataset}, ID and value
+   * {@link Column}s.
    *
    * @param expression an updated expression to describe the new NonLiteralPath
    * @param dataset the new Dataset that can be used to evaluate this NonLiteralPath against data

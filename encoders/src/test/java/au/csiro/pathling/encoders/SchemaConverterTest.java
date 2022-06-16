@@ -13,6 +13,7 @@
 
 package au.csiro.pathling.encoders;
 
+import static au.csiro.pathling.encoders.SchemaAsserts.assertFieldNotPresent;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -144,15 +145,6 @@ public class SchemaConverterTest {
            ?
            ((ArrayType) maybeArrayType).elementType()
            : maybeArrayType;
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  private static void assertFieldNotPresent(final String fieldName,
-      final DataType maybeStructType) {
-    assertTrue("Must be struct type.", maybeStructType instanceof StructType);
-    assertTrue("Field: '" + fieldName + "' not present in struct type.",
-        ((StructType) maybeStructType).getFieldIndex(
-            fieldName).isEmpty());
   }
 
   @Before

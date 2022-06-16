@@ -13,10 +13,8 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import java.util.TimeZone
-
-import au.csiro.pathling.encoders.{ExpressionWithName, StaticField}
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
+import au.csiro.pathling.encoders.{ExpressionWithName, StaticField}
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
@@ -26,6 +24,7 @@ import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
 
+import java.util.TimeZone
 import scala.collection.convert.ImplicitConversions.`iterable AsScalaIterable`
 
 /**
@@ -38,7 +37,8 @@ class R4DataTypeMappings extends DataTypeMappings {
     fhirPrimitiveToSparkTypes.get(definition.getImplementingClass) match {
 
       case Some(dataType) => dataType
-      case None => throw new IllegalArgumentException("Unknown primitive type: " + definition.getImplementingClass.getName)
+      case None => throw new IllegalArgumentException(
+        "Unknown primitive type: " + definition.getImplementingClass.getName)
     }
   }
 
@@ -75,7 +75,8 @@ class R4DataTypeMappings extends DataTypeMappings {
         child.getElementName == "display")
 
     // Contains elements are currently not encoded in our Spark dataset.
-    val skipContains = definition.getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
+    val skipContains = definition
+      .getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
       child.getElementName == "contains"
 
     // TODO: This is due to a bug in HAPI RuntimeChildExtension.getChildByName() implementation,
@@ -120,7 +121,8 @@ class R4DataTypeMappings extends DataTypeMappings {
         Invoke(inputObject, "getValue", DataTypes.IntegerType)
 
       case unknown =>
-        throw new IllegalArgumentException("Cannot serialize unknown primitive type: " + unknown.getName)
+        throw new IllegalArgumentException(
+          "Cannot serialize unknown primitive type: " + unknown.getName)
     }
   }
 
@@ -173,11 +175,13 @@ class R4DataTypeMappings extends DataTypeMappings {
             UTCZone),
           ObjectType(primitiveClass))
 
-      case unknown => throw new IllegalArgumentException("Cannot deserialize unknown primitive type: " + unknown.getName)
+      case unknown => throw new IllegalArgumentException(
+        "Cannot deserialize unknown primitive type: " + unknown.getName)
     }
   }
 
-  override def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_], elementName: String): Option[CustomCoder] = {
+  override def customEncoder(elementDefinition: BaseRuntimeElementDefinition[_],
+                             elementName: String): Option[CustomCoder] = {
     elementDefinition match {
       case primitive: RuntimePrimitiveDatatypeDefinition
         if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass =>

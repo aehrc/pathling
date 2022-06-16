@@ -75,7 +75,8 @@ public class ErrorHandlingInterceptor {
     try {
       throw error;
 
-    } catch (final SparkException | UncheckedExecutionException | InternalErrorException | InvocationTargetException | UndeclaredThrowableException e) {
+    } catch (final SparkException | UncheckedExecutionException | InternalErrorException |
+                   InvocationTargetException | UndeclaredThrowableException e) {
       // A number of exceptions are being used to wrap the actual cause. In this case we unwrap
       // its cause and pass it back to this same method to be re-evaluated.
       //

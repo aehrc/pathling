@@ -34,7 +34,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * referring element is supplied as an argument.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#reverseresolve">reverseResolve</a>
+ * @see <a
+ * href="https://pathling.csiro.au/docs/fhirpath/functions.html#reverseresolve">reverseResolve</a>
  */
 public class ReverseResolveFunction implements NamedFunction {
 

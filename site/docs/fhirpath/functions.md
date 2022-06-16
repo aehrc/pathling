@@ -1,9 +1,5 @@
 ---
-layout: page
-title: Functions
-nav_order: 2
-parent: FHIRPath
-grand_parent: Documentation
+sidebar_position: 4
 ---
 
 # Functions
@@ -11,35 +7,11 @@ grand_parent: Documentation
 FHIRPath supports the notion of functions, which all take a collection of values
 as input and produce another collection as output and may take parameters.
 
-The following functions are currently supported:
-
-- [count](#count)
-- [sum](#sum)
-- [first](#first)
-- [empty](#empty)
-- [not](#not)
-- [anyTrue](#anytrue)
-- [anyFalse](#anyfalse)
-- [allTrue](#alltrue)
-- [allFalse](#allfalse)
-- [where](#where)
-- [iif](#iif)
-- [memberOf](#memberof)
-- [subsumes](#subsumes)
-- [subsumedBy](#subsumedby)
-- [translate](#translate)
-- [resolve](#resolve)
-- [reverseResolve](#reverseresolve)
-- [ofType](#oftype)
-- [extension](#extension)
-
 The notation used to describe the type signature of each function is as follows:
 
 ```
 [input type] -> [function name]([argument name]: [argument type], ...): [return type]
 ```
-
-See also: [Functions](https://hl7.org/fhirpath/#functions-2)
 
 ## count
 
@@ -47,7 +19,7 @@ See also: [Functions](https://hl7.org/fhirpath/#functions-2)
 collection -> count() : Integer
 ```
 
-Returns the [Integer](./data-types.html#integer) count of the number of items in
+Returns the [Integer](./data-types#integer) count of the number of items in
 the input collection.
 
 Example:
@@ -64,8 +36,8 @@ See also: [count](https://hl7.org/fhirpath/#count-integer)
 collection -> sum() : Integer|Decimal
 ```
 
-Returns the sum of the numeric values ([Integer](./data-types.html#integer) or 
-[Decimal](./data-types.html#decimal)) in the input collection.
+Returns the sum of the numeric values ([Integer](./data-types#integer) or
+[Decimal](./data-types#decimal)) in the input collection.
 
 Example:
 
@@ -73,10 +45,10 @@ Example:
 Observation.valueDecimal.sum()
 ```
 
-<div class="callout warning">
-    The <code>sum</code> function is not within the FHIRPath specification, and 
-    is currently unique to the Pathling implementation.
-</div>
+:::note
+The `sum` function is not within the FHIRPath specification, and is currently
+unique to the Pathling implementation.
+:::
 
 ## first
 
@@ -246,18 +218,19 @@ collection<Coding|CodeableConcept> -> memberOf() : collection<Boolean>
 ```
 
 The `memberOf` function can be invoked on a collection of
-[Coding](./data-types.html#coding) or
+[Coding](./data-types#coding) or
 [CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
-values, returning a collection of [Boolean](./data-types.html#boolean) values
+values, returning a collection of [Boolean](./data-types#boolean) values
 based on whether each concept is a member of the
 [ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified
 [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
 
-<div class="callout info">
-    The <code>memberOf</code> function is a <em>terminology function</em>, which means that it requires a configured
-    <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration</a> for details.
-</div>
+:::note
+The `memberOf` function is a terminology function, which means that it requires
+a configured
+[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
+[Configuration](/docs/server/configuration#terminology-service) for details.
+:::
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
@@ -268,11 +241,11 @@ See also:
 collection<Coding|CodeableConcept> -> subsumes(code: Coding|CodeableConcept) : collection<Boolean>
 ```
 
-This function takes a collection of [Coding](./data-types.html#coding) or 
-[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept) 
-elements as input, and another collection as the argument. The result is a 
-collection with a Boolean value for each source concept, each value being true 
-if the concept subsumes any of the concepts within the argument collection, and 
+This function takes a collection of [Coding](./data-types#coding) or
+[CodeableConcept](https://hl7.org/fhir/R4/datatypes.html#CodeableConcept)
+elements as input, and another collection as the argument. The result is a
+collection with a Boolean value for each source concept, each value being true
+if the concept subsumes any of the concepts within the argument collection, and
 false otherwise.
 
 Example:
@@ -281,11 +254,12 @@ Example:
 Patient.reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|770581008)
 ```
 
-<div class="callout info">
-    The <code>subsumes</code> function is a <em>terminology function</em>, which means that it requires a configured
-    <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration</a> for details.
-</div>
+:::note
+The `subsumes` function is a terminology function, which means that it requires
+a configured
+[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
+[Configuration](/docs/server/configuration#terminology-service) for details.
+:::
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
@@ -306,11 +280,12 @@ Example:
 Patient.reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|73211009)
 ```
 
-<div class="callout info">
-    The <code>subsumedBy</code> function is a <em>terminology function</em>, which means that it requires a configured
-    <a href="https://hl7.org/fhir/R4/terminology-service.html">terminology service</a>. See 
-    <a href="../configuration.html#terminology-service">Configuration</a> for details.
-</div>
+:::note
+The `subsumedBy` function is a terminology function, which means that it
+requires a configured
+[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
+[Configuration](/docs/server/configuration#terminology-service) for details.
+:::
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
@@ -321,11 +296,17 @@ See also:
 collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false, equivalence = 'equivalent') : collection<Coding>
 ```
 
-When invoked on a [Coding](https://pathling.csiro.au/docs/fhirpath/data-types.html#coding)-valued element, returns any matching concepts using the ConceptMap specified using `conceptMapUrl`.
+When invoked on a [Coding](./data-types#coding)-valued element, returns any
+matching concepts using the ConceptMap specified using `conceptMapUrl`.
 
-The `reverse` parameter controls the direction to traverse the map - `false` results in "source to target" mappings, while `true` results in "target to source".
+The `reverse` parameter controls the direction to traverse the map - `false`
+results in "source to target" mappings, while `true` results in "target to
+source".
 
-The `equivalence` parameter is a comma-delimited set of values from the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html) ValueSet, and is used to filter the mappings returned to only those that have an equivalence value in this list.
+The `equivalence` parameter is a comma-delimited set of values from
+the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html)
+ValueSet, and is used to filter the mappings returned to only those that have an
+equivalence value in this list.
 
 Example:
 
@@ -333,10 +314,17 @@ Example:
 Condition.code.coding.translate('https://csiro.au/fhir/ConceptMap/some-map', true, 'equivalent,wider').display
 ```
 
-<div class="callout warning">
-    The <code>translate</code> function is not within the FHIRPath 
-    specification, and is currently unique to the Pathling implementation.
-</div>
+:::note
+The `translate` function is a terminology function, which means that it requires
+a configured
+[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
+[Configuration](/docs/server/configuration#terminology-service) for details.
+:::
+
+:::note
+The `translate` function is not within the FHIRPath specification, and is
+currently unique to the Pathling implementation.
+:::
 
 ## resolve
 
@@ -355,15 +343,14 @@ Example:
 AllergyIntolerance.patient.resolve().gender
 ```
 
-<div class="callout warning">
-    The following types of references are not currently supported:
-    <ol>
-      <li>References to individual technical versions of a resource</li>
-      <li>Logical references (via <code>identifier</code>)</li>
-      <li>References to contained resources</li>
-      <li>Absolute literal references</li>
-    </ol>
-</div>
+:::caution
+The following types of references are not currently supported:
+
+- References to individual technical versions of a resource
+- Logical references (via <code>identifier</code>)
+- References to contained resources
+- Absolute literal references
+:::
 
 See also:
 [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
@@ -388,15 +375,15 @@ Example:
 Patient.reverseResolve(Encounter.subject).reasonCode
 ```
 
-<div class="callout warning">
-    The <code>reverseResolve</code> function is not within the FHIRPath 
-    specification, and is currently unique to the Pathling implementation.
-</div>
+:::note
+The `reverseResolve` function is not within the FHIRPath specification, and is
+currently unique to the Pathling implementation.
+:::
 
-<div class="callout warning">
-    The same caveats apply with regards to types of references supported as 
-    described in the <a href="#resolve">resolve</a> function.
-</div>
+:::caution
+The same caveats apply with regards to types of references supported as
+described in the [resolve](#resolve) function.
+:::
 
 ## ofType
 
@@ -415,14 +402,12 @@ Example:
 Condition.subject.resolve().ofType(Patient).gender
 ```
 
-<div class="callout warning">
-    This function is currently only supported for use with the 
-    <a href="#resolve">resolve</a> function for the purpose of disambiguating 
-    polymorphic resource references.
-</div>
+:::caution
+This function is currently only supported for use with the [resolve](#resolve)
+function, for the purpose of disambiguating polymorphic resource references.
+:::
 
-See also:
-[ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
+See also: [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 
 ## extension
 
@@ -435,14 +420,12 @@ This is a syntactical shortcut for `.extension.where(url = string)`, but is
 simpler to write. Will return an empty collection if the input collection is
 empty or the url is empty.
 
-<div class="callout warning">
-    Your extension content will only be encoded upon import if your encoding 
-    configuration has specified that it should be. Data types and maximum depth 
-    of encoding are both configurable. See <a href="https://pathling.csiro.au/docs/configuration.html#encoding">Configuration</a>
-    for more information. 
-</div>
+:::tip
+Your extension content will only be encoded upon import if your encoding
+configuration has specified that it should be. Data types and maximum depth of
+encoding are both configurable.
+See [Configuration](/docs/server/configuration#encoding) for more information.
+:::
 
 See
 also: [Additional functions](https://hl7.org/fhir/R4/fhirpath.html#functions)
-
-Next: [Configuration](../configuration.html)

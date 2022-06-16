@@ -2,10 +2,7 @@
   "compilerOptions": {
     "module": "es2020",
     "target": "es2019",
-    "lib": [
-      "es2020",
-      "dom"
-    ],
+    "lib": ["es2020", "dom"],
     "strict": true,
     "outDir": "./lib",
     "declaration": true,
@@ -14,10 +11,6 @@
     "moduleResolution": "node",
     "esModuleInterop": true
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }

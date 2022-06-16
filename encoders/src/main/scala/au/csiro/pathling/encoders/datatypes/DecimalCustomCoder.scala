@@ -37,7 +37,8 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   val scaleFieldName: String = elementName + "_scale"
 
-  override def customDeserializer(addToPath: String => Expression, isCollection: Boolean): Seq[ExpressionWithName] = {
+  override def customDeserializer(addToPath: String => Expression,
+                                  isCollection: Boolean): Seq[ExpressionWithName] = {
 
     val deserializer = if (!isCollection) {
       decimalExpression(addToPath)
@@ -68,13 +69,15 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
       arrayEncoder.map(_ (v)).getOrElse(v)
     }
 
-    Seq(StructField(elementName, encode(decimalType)), StructField(scaleFieldName, encode(IntegerType)))
+    Seq(StructField(elementName, encode(decimalType)),
+      StructField(scaleFieldName, encode(IntegerType)))
   }
 
   private def decimalExpression(addToPath: String => Expression) = {
     NewInstance(primitiveClass,
       Invoke(
-        Invoke(addToPath(elementName), "toJavaBigDecimal", ObjectType(classOf[java.math.BigDecimal])),
+        Invoke(addToPath(elementName), "toJavaBigDecimal",
+          ObjectType(classOf[java.math.BigDecimal])),
         "setScale", ObjectType(classOf[java.math.BigDecimal]), addToPath(scaleFieldName) :: Nil
       ) :: Nil,
       ObjectType(primitiveClass)
@@ -125,9 +128,11 @@ object DecimalCustomCoder {
    * Need a way to zip two arrays so that they can be decoded to an arrays of DecimalTYpe
    */
   def zipToDecimal(values: ArrayData, scales: ArrayData): Array[DecimalType] = {
-    assert(values.numElements() == scales.numElements(), "Values and scales must have the same length")
+    assert(values.numElements() == scales.numElements(),
+      "Values and scales must have the same length")
     Array.tabulate(values.numElements()) { i =>
-      new DecimalType(values.getDecimal(i, precision, scale).toJavaBigDecimal.setScale(scales.getInt(i)))
+      new DecimalType(
+        values.getDecimal(i, precision, scale).toJavaBigDecimal.setScale(scales.getInt(i)))
     }
   }
 }
