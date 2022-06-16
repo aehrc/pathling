@@ -19,7 +19,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>5.1.1</version>
+  <version>5.2.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -71,14 +71,14 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.hapiFhirVersion>6.0.1</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.2.1</pathling.sparkVersion>
+    <pathling.sparkVersion>3.3.0</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.sparkScalaFullVersion>2.12.15</pathling.sparkScalaFullVersion>
+    <pathling.sparkScalaFullVersion>2.12.16</pathling.sparkScalaFullVersion>
     <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.3</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.234</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.240</pathling.awsSdkVersion>
   </properties>
 
   <modules>
@@ -138,12 +138,8 @@
         <version>${pathling.sparkVersion}</version>
         <exclusions>
           <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -182,10 +178,6 @@
         <artifactId>hadoop-aws</artifactId>
         <version>${pathling.hadoopVersion}</version>
         <exclusions>
-          <exclusion>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-          </exclusion>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
@@ -245,7 +237,7 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>5.7.4</version>
+        <version>6.1.0</version>
       </dependency>
 
       <!-- Testing -->
