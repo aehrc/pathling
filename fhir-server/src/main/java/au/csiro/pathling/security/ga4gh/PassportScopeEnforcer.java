@@ -12,15 +12,16 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Collection;
-import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+
+import javax.annotation.Nonnull;
+import java.util.Collection;
+import java.util.Optional;
 
 /**
  * A component that can filter a dataset of resources based on the passport scope of the current
@@ -74,7 +75,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
           .build(getFhirContext(), getDatabase(), subjectResource,
               subjectResource.toCode(), true);
 
-      return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);
+      return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or, null);
     }
   }
 

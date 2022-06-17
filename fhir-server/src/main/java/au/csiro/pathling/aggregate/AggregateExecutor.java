@@ -23,7 +23,6 @@ import au.csiro.pathling.sql.PathlingFunctions;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -78,6 +77,7 @@ public class AggregateExecutor extends QueryExecutor {
     return buildResponse(resultWithExpressions);
   }
 
+
   /**
    * @param query an {@link AggregateRequest}
    * @return a {@link ResultWithExpressions}, which includes the uncollected {@link Dataset}
@@ -87,47 +87,23 @@ public class AggregateExecutor extends QueryExecutor {
   public ResultWithExpressions buildQuery(@Nonnull final AggregateRequest query) {
     log.info("Executing request: {}", query);
 
-    // Build a new expression parser, and parse all of the filter and grouping expressions within
-    // the query.
+    // Build new input context
+
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
 
-    final ParserContext groupingContext = buildParserContext(inputContext,
-        Collections.singletonList(inputContext.getIdColumn()));
-    final Parser parser = new Parser(groupingContext);
-    final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final Column idColumn = inputContext.getIdColumn();
-
-    final List<FhirPathAndContext> columnParseResult =
-        parseMaterializableExpressions(groupingContext, query.getGroupings(), "Grouping");
-    final List<FhirPath> groupings = columnParseResult.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toList());
-
-    final Dataset<Row> groupingDataset;
-    if (!columnParseResult.isEmpty()) {
-      // Join all the column expressions together.
-      final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
-      final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
-      groupingDataset = trimTrailingNulls(groupingContext,
-          inputContext.getIdColumn(),
-          groupings, columnJoinResultDataset);
-    } else {
-      groupingDataset = inputContext.getDataset();
-    }
-    // Apply the filters.
-    final List<String> filtersExpressions = query.getFilters();
-    Dataset<Row> groupingsAndFilters = filterDataset(inputContext, filtersExpressions,
-        groupingDataset,
-        Column::and);
+    // Parse columns and filter together
+    final List<FhirPath> groupings = new ArrayList<>(query.getGroupings().size());
+    final List<FhirPath> filters = new ArrayList<>(query.getFilters().size());
+    final Dataset<Row> groupingsAndFilters = parseFilteredValueColumns(inputContext,
+        query.getGroupings(), "Grouping",
+        query.getFilters(), groupings, filters);
 
     // Remove synthetic fields from struct values (such as _fid) before grouping.
     final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
         groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
             .map(PathlingFunctions::pruneSyntheticFields).toArray(Column[]::new));
-
-    groupingsAndFilters = datasetWithNormalizedGroupings.getDataset();
 
     final List<Column> groupingColumns = new ArrayList<>(
         datasetWithNormalizedGroupings.getColumnMap().values());
@@ -138,9 +114,7 @@ public class AggregateExecutor extends QueryExecutor {
     // during the parse can use these columns for grouping, rather than the identity of each
     // resource.
     final ResourcePath aggregationContext = inputContext
-        .copy(inputContext.getExpression(), groupingsAndFilters, idColumn,
-            inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-            Optional.empty());
+        .adoptDataset(datasetWithNormalizedGroupings.getDataset());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
         groupingColumns);
     final Parser aggregationParser = new Parser(aggregationParserContext);

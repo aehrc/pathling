@@ -14,14 +14,12 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -109,29 +107,15 @@ public class ExtractExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
-    // Build a new expression parser, and parse all the column expressions within the query.
+    // Build new input context
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
-    // The context of evaluation is a single resource.
-    final ParserContext parserContext = buildParserContext(inputContext,
-        Collections.singletonList(inputContext.getIdColumn()));
-    final List<FhirPathAndContext> columnParseResult =
-        parseMaterializableExpressions(parserContext, query.getColumns(), "Column");
-    final List<FhirPath> columns = columnParseResult.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toList());
 
-    // Join all the column expressions together.
-    final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
-    final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
-    final Dataset<Row> trimmedDataset = trimTrailingNulls(parserContext, inputContext.getIdColumn(),
-        columns, columnJoinResultDataset);
-
-    // Apply the filters.
-    final List<String> filters = query.getFilters();
-    final Dataset<Row> filteredDataset = filterDataset(inputContext, filters, trimmedDataset,
-        Column::and);
+    // Parse columns and filters together
+    final List<FhirPath> columns = new ArrayList<>(query.getColumns().size());
+    final Dataset<Row> filteredDataset = parseFilteredValueColumns(inputContext, query.getColumns(),
+        "Column", query.getFilters(), columns, null);
 
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
