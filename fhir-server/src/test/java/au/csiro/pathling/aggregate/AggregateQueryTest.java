@@ -642,6 +642,49 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithProductOfMulitpleCardinalityGroupings() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("name.given")
+        .withGrouping("name.family")
+        .withGrouping("identifier.type.text")
+        .withGrouping("identifier.type.coding.display")
+        .withGrouping("identifier.type.coding.code")
+        .withFilter("name.family contains 'Wuckert783'")
+        .build();
+
+    response = executor.execute(request);
+
+    assertResponse(
+        "AggregateQueryTest/queryWithProductOfMulitpleCardinalityGroupings.Parameters.json",
+        response);
+  }
+
+  @Test
+  void querySharedElementGroupingsAtMultipleLevels() {
+    subjectResource = ResourceType.DIAGNOSTICREPORT;
+    mockResource(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("result.display")
+        .withGrouping("result.resolve().code.text")
+        .withGrouping("result.resolve().code.coding.display")
+        .withGrouping("result.resolve().code.coding.code")
+        .withFilter("result.resolve().code.coding.code contains '20570-8'")
+        .build();
+
+    response = executor.execute(request);
+
+    assertResponse(
+        "AggregateQueryTest/querySharedElementGroupingsAtMultipleLevels.Parameters.json",
+        response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 

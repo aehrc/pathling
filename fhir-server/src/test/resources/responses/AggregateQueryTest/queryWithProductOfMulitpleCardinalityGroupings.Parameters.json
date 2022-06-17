@@ -1,0 +1,329 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Oberbrunner298"
+        },
+        {
+          "name": "label",
+          "valueString": "Passport Number"
+        },
+        {
+          "name": "label",
+          "valueString": "Passport Number"
+        },
+        {
+          "name": "label",
+          "valueCode": "PPN"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Oberbrunner298') and ((identifier.type.text) contains 'Passport Number') and ((identifier.type.coding.display) contains 'Passport Number') and ((identifier.type.coding.code) contains 'PPN') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Wuckert783"
+        },
+        {
+          "name": "label",
+          "valueString": "Passport Number"
+        },
+        {
+          "name": "label",
+          "valueString": "Passport Number"
+        },
+        {
+          "name": "label",
+          "valueCode": "PPN"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Wuckert783') and ((identifier.type.text) contains 'Passport Number') and ((identifier.type.coding.display) contains 'Passport Number') and ((identifier.type.coding.code) contains 'PPN') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Oberbrunner298"
+        },
+        {
+          "name": "label",
+          "valueString": "Driver's License"
+        },
+        {
+          "name": "label",
+          "valueString": "Driver's License"
+        },
+        {
+          "name": "label",
+          "valueCode": "DL"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Oberbrunner298') and ((identifier.type.text) contains 'Driver\\'s License') and ((identifier.type.coding.display) contains 'Driver\\'s License') and ((identifier.type.coding.code) contains 'DL') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Wuckert783"
+        },
+        {
+          "name": "label",
+          "valueString": "Driver's License"
+        },
+        {
+          "name": "label",
+          "valueString": "Driver's License"
+        },
+        {
+          "name": "label",
+          "valueCode": "DL"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Wuckert783') and ((identifier.type.text) contains 'Driver\\'s License') and ((identifier.type.coding.display) contains 'Driver\\'s License') and ((identifier.type.coding.code) contains 'DL') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Oberbrunner298"
+        },
+        {
+          "name": "label",
+          "valueString": "Social Security Number"
+        },
+        {
+          "name": "label",
+          "valueString": "Social Security Number"
+        },
+        {
+          "name": "label",
+          "valueCode": "SS"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Oberbrunner298') and ((identifier.type.text) contains 'Social Security Number') and ((identifier.type.coding.display) contains 'Social Security Number') and ((identifier.type.coding.code) contains 'SS') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Wuckert783"
+        },
+        {
+          "name": "label",
+          "valueString": "Social Security Number"
+        },
+        {
+          "name": "label",
+          "valueString": "Social Security Number"
+        },
+        {
+          "name": "label",
+          "valueCode": "SS"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Wuckert783') and ((identifier.type.text) contains 'Social Security Number') and ((identifier.type.coding.display) contains 'Social Security Number') and ((identifier.type.coding.code) contains 'SS') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Oberbrunner298"
+        },
+        {
+          "name": "label",
+          "valueString": "Medical Record Number"
+        },
+        {
+          "name": "label",
+          "valueString": "Medical Record Number"
+        },
+        {
+          "name": "label",
+          "valueCode": "MR"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Oberbrunner298') and ((identifier.type.text) contains 'Medical Record Number') and ((identifier.type.coding.display) contains 'Medical Record Number') and ((identifier.type.coding.code) contains 'MR') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Wuckert783"
+        },
+        {
+          "name": "label",
+          "valueString": "Medical Record Number"
+        },
+        {
+          "name": "label",
+          "valueString": "Medical Record Number"
+        },
+        {
+          "name": "label",
+          "valueCode": "MR"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Wuckert783') and ((identifier.type.text) contains 'Medical Record Number') and ((identifier.type.coding.display) contains 'Medical Record Number') and ((identifier.type.coding.code) contains 'MR') and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Oberbrunner298"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Oberbrunner298') and ((identifier.type.text).empty()) and ((identifier.type.coding.display).empty()) and ((identifier.type.coding.code).empty()) and (name.family contains 'Wuckert783')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Karina848"
+        },
+        {
+          "name": "label",
+          "valueString": "Wuckert783"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Karina848') and ((name.family) contains 'Wuckert783') and ((identifier.type.text).empty()) and ((identifier.type.coding.display).empty()) and ((identifier.type.coding.code).empty()) and (name.family contains 'Wuckert783')"
+        }
+      ]
+    }
+  ]
+}
