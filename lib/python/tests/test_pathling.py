@@ -80,7 +80,7 @@ def test_encode_json_bundles(def_pathling, json_bundles_df):
     assert def_pathling.encodeBundle(json_bundles_df, 'Condition', column="value").count() == 107
 
 
-def test_encode_json_resouces(def_pathling, json_resources_df):
+def test_encode_json_resources(def_pathling, json_resources_df):
     assert def_pathling.encode(json_resources_df, 'Patient').count() == 9
     assert def_pathling.encode(json_resources_df, 'Condition',
                                inputType=MimeType.FHIR_JSON).count() == 71
@@ -99,16 +99,16 @@ def test_element_nesting(spark_session, json_resources_df):
 
     # default nesting level is 0
     quest_def = ptl_def.encode(json_resources_df, 'Questionnaire').head()
-    assert ('item' in quest_def) and (not 'item' in quest_def['item'][0])
+    assert ('item' in quest_def) and ('item' not in quest_def['item'][0])
 
     # max nesting level set to 0
     quest_0 = ptl_0.encode(json_resources_df, 'Questionnaire').head()
-    assert ('item' in quest_0) and (not 'item' in quest_0['item'][0])
+    assert ('item' in quest_0) and ('item' not in quest_0['item'][0])
 
     # max nesting level set to 1
     quest_1 = ptl_1.encode(json_resources_df, 'Questionnaire').head()
     assert ('item' in quest_1) and ('item' in quest_1['item'][0]) and (
-        not 'item' in quest_1['item'][0]['item'][0])
+            'item' not in quest_1['item'][0]['item'][0])
 
 
 def test_extension_support(spark_session, json_resources_df):
@@ -119,11 +119,11 @@ def test_extension_support(spark_session, json_resources_df):
     ptl_ext_on = PathlingContext.create(spark_session, enableExtensions=True)
 
     patient_def = ptl_def.encode(json_resources_df, 'Patient').head()
-    assert not '_extension' in patient_def
+    assert '_extension' not in patient_def
 
     # extensions disabled
     patient_off = ptl_ext_off.encode(json_resources_df, 'Patient').head()
-    assert not '_extension' in patient_off
+    assert '_extension' not in patient_off
 
     # extensions enabled
     patient_on = ptl_ext_on.encode(json_resources_df, 'Patient').head()

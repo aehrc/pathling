@@ -6,9 +6,6 @@
 
 package au.csiro.pathling.test.helpers;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 
@@ -18,18 +15,13 @@ import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.io.Database;
 import io.delta.tables.DeltaTable;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.commons.io.IOUtils;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -45,37 +37,6 @@ public abstract class TestHelpers {
   public static final String SNOMED_URL = "http://snomed.info/sct";
   public static final String PARQUET_PATH = "src/test/resources/test-data/parquet";
   public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
-
-  @Nonnull
-  private static ClassLoader getClassLoader() {
-    return checkNotNull(Thread.currentThread().getContextClassLoader());
-  }
-
-  @Nonnull
-  public static URL getResourceAsUrl(@Nonnull final String name) {
-    final ClassLoader loader = getClassLoader();
-    return checkNotNull(loader.getResource(name));
-  }
-
-  @Nonnull
-  public static InputStream getResourceAsStream(@Nonnull final String name) {
-    final ClassLoader loader = getClassLoader();
-    final InputStream inputStream = loader.getResourceAsStream(name);
-    check(Objects.nonNull(inputStream), "Failed to load resource from : '%s'", name);
-    return checkNotNull(inputStream);
-  }
-
-  @Nonnull
-  public static String getResourceAsString(@Nonnull final String name) {
-    try {
-      final InputStream expectedStream = getResourceAsStream(name);
-      final StringWriter writer = new StringWriter();
-      IOUtils.copy(expectedStream, writer, UTF_8);
-      return writer.toString();
-    } catch (final IOException e) {
-      throw new RuntimeException("Problem retrieving test resource", e);
-    }
-  }
 
   public static void mockResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {

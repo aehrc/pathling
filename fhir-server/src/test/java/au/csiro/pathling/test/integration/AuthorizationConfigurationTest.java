@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.test.integration;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static au.csiro.pathling.test.TestResources.assertJson;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;

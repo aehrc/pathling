@@ -13,9 +13,10 @@
 
 package au.csiro.pathling.encoders;
 
-import static au.csiro.pathling.encoders.SchemaAsserts.assertFieldNotPresent;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static au.csiro.pathling.test.SchemaAsserts.assertFieldNotPresent;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
@@ -42,8 +43,8 @@ import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.QuestionnaireResponse;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import scala.collection.JavaConverters;
 
 public class SchemaConverterTest {
@@ -127,9 +128,9 @@ public class SchemaConverterTest {
     if (names.length == 1) {
 
       // Check the nullability.
-      assertEquals("Unexpected nullability of field " + field.name(),
-          isNullable,
-          field.nullable());
+      assertEquals(isNullable,
+          field.nullable(),
+          "Unexpected nullability of field " + field.name());
 
       return child;
     } else {
@@ -144,7 +145,7 @@ public class SchemaConverterTest {
            : maybeArrayType;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     converter_L0 = createSchemaConverter(0);
     converter_L1 = createSchemaConverter(1);
@@ -278,6 +279,8 @@ public class SchemaConverterTest {
   public void testDirectlyNestedType() {
     // level 0  - only the backbone element from the resource
     // Questionnaire/item
+    assertNotNull(converter_L0);
+    assertNotNull(Questionnaire.class);
     final StructType questionnaireSchema_L0 = converter_L0
         .resourceSchema(Questionnaire.class);
 
@@ -369,18 +372,18 @@ public class SchemaConverterTest {
         "boolean",
         "integer",
         "Coding",
-        "ElementDefinition" // this is not a valid R4 open type so it should not be returned
+        "ElementDefinition" // this is not a valid R4 open type, so it should not be returned
     );
 
     final SchemaConverter schemaConverter = new SchemaConverter(FHIR_CONTEXT, DATA_TYPE_MAPPINGS,
         EncoderConfig.apply(0, JavaConverters.asScalaSet(limitedOpenTypes).toSet(), true));
 
-    StructType conditionSchema = schemaConverter.resourceSchema(Condition.class);
+    final StructType conditionSchema = schemaConverter.resourceSchema(Condition.class);
     final MapType extensionsContainerType = (MapType) getField(conditionSchema, true,
         "_extension");
-    StructType extensionStruct = (StructType) ((ArrayType) extensionsContainerType.valueType())
+    final StructType extensionStruct = (StructType) ((ArrayType) extensionsContainerType.valueType())
         .elementType();
-    Set<String> actualOpenTypeFieldNames = Stream.of(extensionStruct.fieldNames())
+    final Set<String> actualOpenTypeFieldNames = Stream.of(extensionStruct.fieldNames())
         .filter(fn -> fn.startsWith("value")).collect(Collectors.toUnmodifiableSet());
     assertEquals(Set.of("valueBoolean", "valueInteger", "valueCoding"), actualOpenTypeFieldNames);
   }

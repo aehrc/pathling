@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.test.integration;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static au.csiro.pathling.test.TestResources.assertJson;
 
 import org.json.JSONException;
 import org.junit.jupiter.api.Tag;

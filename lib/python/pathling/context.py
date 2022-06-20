@@ -1,12 +1,15 @@
 from typing import Optional, Sequence
 
+# noinspection PyPackageRequirements
 from py4j.java_gateway import JavaObject
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame, SparkSession, Column
 
 from pathling.etc import find_jar
 from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
+
+EQ_EQUIVALENT = "equivalent"
 
 
 class PathlingContext:
@@ -33,7 +36,8 @@ class PathlingContext:
                fhirVersion: Optional[str] = None,
                maxNestingLevel: Optional[int] = None,
                enableExtensions: Optional[bool] = None,
-               enabledOpenTypes: Optional[Sequence[str]] = None) -> "PathlingContext":
+               enabledOpenTypes: Optional[Sequence[str]] = None,
+               terminologyServerUrl: Optional[str] = None) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` using an existing :class:`SparkSession` and configuration
         options.
@@ -47,13 +51,15 @@ class PathlingContext:
         :param enableExtensions: switches on/off the support for FHIR extensions
         :param enabledOpenTypes: list of types that are encoded within open types, such as
             extensions
+        :param terminologyServerUrl: the URL of the FHIR terminology server used to resolve
+            terminology queries
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
         spark = spark or SparkSession.builder.config('spark.jars', find_jar()).getOrCreate()
         jvm: JavaObject = spark._jvm
-        jpc: JavaObject = jvm.au.csiro.pathling.api.PathlingContext.create(
+        jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
                 spark._jsparkSession, fhirVersion, maxNestingLevel, enableExtensions,
-                enabledOpenTypes)
+                enabledOpenTypes, terminologyServerUrl)
         return PathlingContext(spark, jpc)
 
     def __init__(self, spark: SparkSession, jpc: JavaObject) -> None:
@@ -103,3 +109,40 @@ class PathlingContext:
         return self._wrapDF(self._jpc.encodeBundle(df._jdf, resourceName,
                                                    inputType or MimeType.FHIR_JSON,
                                                    column))
+
+    def memberOf(self, df: DataFrame, codingColumn: Column, valueSetUrl: str,
+                 outputColumnName: str):
+        """
+        Takes a dataframe with a Coding column as input. A new column is created which contains a 
+        Boolean value, indicating whether the input Coding is a member of the specified FHIR 
+        ValueSet.
+
+        :param df: a DataFrame containing the input data
+        :param codingColumn: a Column containing a struct representation of a Coding
+        :param valueSetUrl: an identifier for a FHIR ValueSet
+        :param outputColumnName: the name of the result column
+        :return: A new dataframe with an additional column containing the result of the operation.
+        """
+        return self._wrapDF(
+                self._jpc.memberOf(df._jdf, codingColumn._jc, valueSetUrl, outputColumnName))
+
+    def translate(self, df: DataFrame, codingColumn: Column, conceptMapUri: str,
+                  reverse: Optional[bool] = False, equivalence: Optional[str] = EQ_EQUIVALENT,
+                  outputColumnName: Optional[str] = "result"):
+        """
+        Takes a dataframe with a Coding column as input. A new column is created which contains a 
+        Coding value and contains translation targets from the specified FHIR ConceptMap. There 
+        may be more than one target concept for each input concept.
+
+        :param df: a DataFrame containing the input data
+        :param codingColumn: a Column containing a struct representation of a Coding
+        :param conceptMapUri: an identifier for a FHIR ConceptMap
+        :param reverse: the direction to traverse the map - false results in "source to target" 
+        mappings, while true results in "target to source"
+        :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
+        :param outputColumnName: the name of the result column
+        :return: A new dataframe with an additional column containing the result of the operation.
+        """
+        return self._wrapDF(
+                self._jpc.translate(df._jdf, codingColumn._jc, conceptMapUri, reverse, equivalence,
+                                    outputColumnName))

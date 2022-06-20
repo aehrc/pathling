@@ -2,34 +2,26 @@
 
 import os
 
-from pyspark.sql import SparkSession
-
 from pathling import PathlingContext
-from pathling.etc import find_jar
-from pathling.fhir import Version, MimeType
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 def main():
-    # Configure spark session to include pathling jar
-    spark = SparkSession.builder \
-        .appName('pathling-test') \
-        .master('local[*]') \
-        .config('spark.jars', find_jar()) \
-        .getOrCreate()
+    pc = PathlingContext.create()
 
-    json_bundles_dir = os.path.join(HERE, 'data/bundles/')
+    # Read each Bundle into a row within a Spark data set.
+    bundles_dir = os.path.join(HERE, 'data/bundles/')
+    bundles = pc.spark.read.text(bundles_dir, wholetext=True)
 
-    plc = PathlingContext.create(spark, fhirVersion=Version.R4)
+    # Convert the data set of strings into a structured FHIR data set.
+    patients = pc.encodeBundle(bundles, 'Patient')
 
-    json_bundles_df = spark.read.text(json_bundles_dir, wholetext=True)
-    json_bundles_df.show()
+    # JSON is the default format, XML Bundles can be encoded using input type.
+    # patients = pc.encodeBundle(bundles, 'Patient', inputType=MimeType.FHIR_XML)
 
-    # Extract 'Patient' resources from the RDD of bundls to a dataframe
-    # with FHIR extension support on.
-    condititions_df = plc.encodeBundle(json_bundles_df, 'Patient', inputType=MimeType.FHIR_JSON)
-    condititions_df.show()
+    # Do some stuff.
+    patients.select('id', 'gender', 'birthDate').show()
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.2.0</version>
+    <version>5.3.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
@@ -25,9 +25,9 @@
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>fhir-server</artifactId>
+      <artifactId>library-api</artifactId>
       <version>${project.version}</version>
-      <classifier>original</classifier>
+      <classifier>all</classifier>
     </dependency>
   </dependencies>
 

@@ -24,17 +24,17 @@ if not __version__:
 # Check for existence of uber-jar for packaging
 #
 JARS_DIR = os.path.join(HERE, 'target', 'dependency')
-UBER_JAR_GLOB = os.path.join(JARS_DIR, 'fhir-server-*-all.jar')
+UBER_JAR_GLOB = os.path.join(JARS_DIR, 'library-api-*-all.jar')
 jar_files = glob.glob(UBER_JAR_GLOB)
 if not jar_files:
     print(
-            "ERROR: Cannot find encoders uber-jar in: '%s'.\nMaybe try to run 'mvn package' ..." %
+            "ERROR: Cannot find library API JAR in: '%s'.\nMaybe try to run 'mvn package' ..." %
             JARS_DIR,
             file=sys.stderr)
     exit(1)
 if len(jar_files) > 1:
     print(
-            "ERROR: Multiple encoders uber-jars found in: '%s'.\nMaybe try to run 'mvn clean' ..." %
+            "ERROR: Multiple library API JARs found in: '%s'.\nMaybe try to run 'mvn clean' ..." %
             JARS_DIR,
             file=sys.stderr)
     exit(1)

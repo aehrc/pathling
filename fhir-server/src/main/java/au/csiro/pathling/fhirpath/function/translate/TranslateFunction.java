@@ -10,9 +10,6 @@ import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -40,6 +37,7 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -141,8 +139,9 @@ public class TranslateFunction implements NamedFunction {
 
     final Column codingArrayCol = isCodeableConcept
                                   ? conceptColumn.getField("coding")
-                                  : when(conceptColumn.isNotNull(), array(conceptColumn))
-                                      .otherwise(lit(null));
+                                  : functions.when(conceptColumn.isNotNull(),
+                                          functions.array(conceptColumn))
+                                      .otherwise(functions.lit(null));
 
     // The definition of the result is always the Coding element.
     @SuppressWarnings("OptionalGetWithoutIsPresent")

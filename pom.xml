@@ -19,7 +19,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>5.2.0</version>
+  <version>5.3.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -83,18 +83,41 @@
 
   <modules>
     <module>encoders</module>
+    <module>library-api</module>
+    <module>terminology</module>
     <module>fhir-server</module>
     <module>lib/import</module>
     <module>lib/js</module>
     <module>lib/python</module>
     <module>site</module>
+    <module>utilities</module>
   </modules>
 
   <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
+        <artifactId>encoders</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>terminology</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
         <artifactId>fhir-server</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>library-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>utilities</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -286,11 +309,6 @@
         <version>2.10.14</version>
       </dependency>
       <dependency>
-        <groupId>com.tdunning</groupId>
-        <artifactId>json</artifactId>
-        <version>1.8</version>
-      </dependency>
-      <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.2</version>
@@ -299,6 +317,11 @@
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
         <version>20220320</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-beanutils</groupId>
+        <artifactId>commons-beanutils</artifactId>
+        <version>1.9.4</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -358,7 +381,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>@{argLine} -Xmx4g -ea</argLine>
+            <!--            <argLine>@{argLine} -Xmx4g -ea</argLine>-->
             <forkCount>1C</forkCount>
           </configuration>
         </plugin>

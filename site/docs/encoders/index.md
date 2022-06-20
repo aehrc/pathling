@@ -68,7 +68,7 @@ patients.select('id', 'gender', 'birthDate').show()
 
 ```scala
 import org.apache.spark.sql.SparkSession
-import au.csiro.pathling.api.PathlingContext
+import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder.getOrCreate()
 
@@ -92,24 +92,24 @@ patients.select("id", "gender", "birthDate").show()
 ```java
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
-import au.csiro.pathling.api.PathlingContext;
+import au.csiro.pathling.library.PathlingContext;
 
 class MyApp {
 
-    public static void main(String args[]) {
-        SparkSession spark = SparkSession.builder().getOrCreate();
+  public static void main(String args[]) {
+    SparkSession spark = SparkSession.builder().getOrCreate();
 
-        // Read each line from the NDJSON into a row within a Spark data set.
-        String ndjsonDir = "/some/path/ndjson/";
-        Dataset<Row> jsonResources = spark.read().text(ndjsonDir);
+    // Read each line from the NDJSON into a row within a Spark data set.
+    String ndjsonDir = "/some/path/ndjson/";
+    Dataset<Row> jsonResources = spark.read().text(ndjsonDir);
 
-        // Convert the data set of strings into a structured FHIR data set.
-        PathlingContext pc = PathlingContext.create(spark);
-        Dataset<Row> patients = pc.encode(jsonResources, "Patient");
+    // Convert the data set of strings into a structured FHIR data set.
+    PathlingContext pc = PathlingContext.create(spark);
+    Dataset<Row> patients = pc.encode(jsonResources, "Patient");
 
-        // Do some stuff.
-        patients.select("id", "gender", "birthDate").show();
-    }
+    // Do some stuff.
+    patients.select("id", "gender", "birthDate").show();
+  }
 
 }
 ```
@@ -154,7 +154,7 @@ patients.select('id', 'gender', 'birthDate').show()
 
 ```scala
 import org.apache.spark.sql.SparkSession
-import au.csiro.pathling.api.PathlingContext
+import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder.getOrCreate()
 
@@ -181,31 +181,31 @@ patients.select("id", "gender", "birthDate").show()
 ```java
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
-import au.csiro.pathling.api.PathlingContext;
+import au.csiro.pathling.library.PathlingContext;
 
 class MyApp {
 
-    public static void main(String args[]) {
-        SparkSession spark = SparkSession.builder().getOrCreate();
+  public static void main(String args[]) {
+    SparkSession spark = SparkSession.builder().getOrCreate();
 
-        // Read each line from the NDJSON into a row within a Spark data set.
-        String bundlesDir = "/some/path/bundles/";
-        Dataset<Row> bundles = spark.read()
-                .option("wholetext", true)
-                .text(bundlesDir);
+    // Read each line from the NDJSON into a row within a Spark data set.
+    String bundlesDir = "/some/path/bundles/";
+    Dataset<Row> bundles = spark.read()
+        .option("wholetext", true)
+        .text(bundlesDir);
 
-        // Convert the data set of strings into a structured FHIR data set.
-        PathlingContext pc = PathlingContext.create(spark);
-        Dataset<Row> patients = pc.encodeBundle(bundles, "Patient");
+    // Convert the data set of strings into a structured FHIR data set.
+    PathlingContext pc = PathlingContext.create(spark);
+    Dataset<Row> patients = pc.encodeBundle(bundles, "Patient");
 
-        // JSON is the default format, XML Bundles can be encoded using input 
-        // type.
-        // Dataset<Row> patients = pc.encodeBundle(bundles, "Patient", 
-        //     FhirMimeTypes.FHIR_XML);
+    // JSON is the default format, XML Bundles can be encoded using input 
+    // type.
+    // Dataset<Row> patients = pc.encodeBundle(bundles, "Patient", 
+    //     FhirMimeTypes.FHIR_XML);
 
-        // Do some stuff.
-        patients.select("id", "gender", "birthDate").show();
-    }
+    // Do some stuff.
+    patients.select("id", "gender", "birthDate").show();
+  }
 
 }
 ```

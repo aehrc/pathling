@@ -2,28 +2,23 @@
 
 import os
 
-from pyspark.sql import SparkSession
-
 from pathling import PathlingContext
-from pathling.etc import find_jar
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 def main():
-    # Configure spark session to include pathling jar
-    spark = SparkSession.builder \
-        .appName('pathling-test') \
-        .master('local[*]') \
-        .config('spark.jars', find_jar()) \
-        .getOrCreate()
+    pc = PathlingContext.create()
 
-    json_resources_dir = os.path.join(HERE, 'data/resources/')
-    spark.read.text(json_resources_dir).show()
+    # Read each line from the NDJSON into a row within a Spark data set.
+    ndjson_dir = os.path.join(HERE, 'data/resources/')
+    json_resources = pc.spark.read.text(ndjson_dir)
 
-    plc = PathlingContext.create(spark)
-    patients_df = plc.encode(spark.read.text(json_resources_dir), 'Patient')
-    patients_df.show()
+    # Convert the data set of strings into a structured FHIR data set.
+    patients = pc.encode(json_resources, 'Patient')
+
+    # Do some stuff.
+    patients.select('id', 'gender', 'birthDate').show()
 
 
 if __name__ == "__main__":

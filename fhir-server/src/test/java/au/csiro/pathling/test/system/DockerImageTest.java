@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.test.system;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static au.csiro.pathling.test.TestResources.assertJson;
 import static java.lang.Runtime.getRuntime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
