@@ -93,7 +93,7 @@ public class AggregateExecutor extends QueryExecutor {
         .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
 
-    // Parse columns and filter together
+    // Parse groupings and filter together
     final List<FhirPath> groupings = new ArrayList<>(query.getGroupings().size());
     final List<FhirPath> filters = new ArrayList<>(query.getFilters().size());
     final Dataset<Row> groupingsAndFilters = parseFilteredValueColumns(inputContext,

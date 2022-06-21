@@ -319,7 +319,7 @@ public abstract class QueryExecutor {
   }
 
   /**
-   * Parses the provided columns and filter expression in the given input context and returns the
+   * Parses the provided column and filter expressions in the given input context and returns the
    * dataset that includes value columns of all column expressions and is filtered with the
    * conjunction of all filter expressions.
    *
