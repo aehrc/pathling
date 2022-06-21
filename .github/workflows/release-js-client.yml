@@ -2,7 +2,7 @@
 #
 # This is only run when a version tag is pushed.
 
-name: Publish pathling-client
+name: Release js/client
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   deploy:
-    name: Build and publish to NPM
+    name: NPM
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

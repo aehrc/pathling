@@ -6,7 +6,7 @@
 #
 # This is only run when a version tag is pushed.
 
-name: Deploy
+name: Release
 
 on:
   push:
@@ -16,7 +16,7 @@ on:
 jobs:
   
   deploy-maven:
-    name: Build encoders and deploy to Maven Central
+    name: Maven
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -59,7 +59,7 @@ jobs:
         timeout-minutes: 30
   
   deploy-python:
-    name: Build Python library and deploy to PyPI
+    name: PyPI
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -91,7 +91,7 @@ jobs:
         timeout-minutes: 30
   
   deploy-docker:
-    name: Build Docker image and push to Docker Hub
+    name: Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -123,9 +123,9 @@ jobs:
           -Pdocker \
           -DskipTests -DskipScalaDocs
         timeout-minutes: 30
-          
+  
   create-release:
-    name: Create a new draft GitHub release
+    name: Draft GitHub release
     runs-on: ubuntu-latest
     needs: [ deploy-maven, deploy-python, deploy-docker ]
     steps:
