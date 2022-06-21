@@ -119,7 +119,7 @@ class DockerImageTest {
     // Validate required system properties.
     List.of(VERSION, ISSUER, CLIENT_ID, CLIENT_SECRET, REQUESTED_SCOPE, TERMINOLOGY_SERVICE_URL,
         DOCKER_REPOSITORY).forEach(property -> {
-      assertTrue(isNotBlank(property), "System property " + property + " is required");
+      assertTrue(isNotBlank(property), "Required system property not set");
     });
 
     final DockerClientConfig dockerClientConfig = DefaultDockerClientConfig
