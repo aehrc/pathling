@@ -299,13 +299,26 @@ jobs:
           restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
+        if: github.actor == 'dependabot[bot]'
         env:
           # If the actor is Dependabot we skip the system test, as it requires access to secrets.
           PATHLING_OPTS: >-
             -DskipUnitTests
             -DskipScalaDocs
-            ${{ github.actor == 'dependabot[bot]' && '-DskipITs' || '' }}
-            ${{ github.actor == 'dependabot[bot]' && '' || join('-Dpathling.systemTest.auth.clientSecret=', secrets.TEST_CLIENT_SECRET) }}
+            -DskipITs
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -Pdocker,!importTestData
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 45
+      - name: Run the verify goal with Maven
+        if: github.actor != 'dependabot[bot]'
+        env:
+          PATHLING_OPTS: >-
+            -DskipUnitTests
+            -DskipScalaDocs
+            -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }}
         run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
