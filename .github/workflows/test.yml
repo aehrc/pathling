@@ -13,17 +13,14 @@ jobs:
     name: Build and test encoders
     runs-on: ubuntu-latest
     steps:
-      - &checkout
-        name: Checkout code
+      - name: Checkout code
         uses: actions/checkout@v2
-      - &setup-java
-        name: Set up JDK
+      - name: Set up JDK
         uses: actions/setup-java@v2
         with:
           java-version: 11
           distribution: 'zulu'
-      - &cache-maven
-        name: Cache local Maven repository
+      - name: Cache local Maven repository
         uses: actions/cache@v2
         with:
           path: ~/.m2/repository
@@ -34,7 +31,7 @@ jobs:
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
-          PATHLING_OPTS: &maven-dependabot-ignore-test-failures >-
+          PATHLING_OPTS: >-
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -56,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: encoders-dump-files
-          path: &dump-files |-
+          path: |-
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
@@ -72,11 +69,21 @@ jobs:
     name: Build and test FHIR server (tranche 1)
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - *cache-maven
-      - &cache-test-data
-        name: Cache test data
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Cache test data
         id: cache-test-data
         uses: actions/cache@v2
         with:
@@ -89,34 +96,37 @@ jobs:
           PATHLING_PROFILES: testTranche1${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
-          PATHLING_OPTS: *maven-dependabot-ignore-test-failures
-        run: &maven-fhir-server-verify >-
+          PATHLING_OPTS: >-
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
           -DskipEncodersTests -DskipScalaDocs
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: &maven-fhir-server-timeout 45
+        timeout-minutes: 45
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-1-surefire-reports
-          path: &fhir-server-surefire fhir-server/target/surefire-reports
+          path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-1-coverage
-          path: &fhir-server-coverage fhir-server/target/site/jacoco/jacoco.xml
+          path: fhir-server/target/site/jacoco/jacoco.xml
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-1-timing-log
-          path: &timing-log fhir-server/target/timing.log
+          path: fhir-server/target/timing.log
       - name: Upload dump files
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-1-dump-files
-          path: *dump-files
+          path: |-
+            **/*.dump
+            **/*.dumpstream
       - name: Publish test results
         # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
@@ -130,10 +140,26 @@ jobs:
     name: Build and test FHIR server (tranche 2)
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - *cache-maven
-      - *cache-test-data
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Cache test data
+        id: cache-test-data
+        uses: actions/cache@v2
+        with:
+          path: fhir-server/src/test/resources/test-data/parquet
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven
         env:
           # Activate the "tranche 2" test profile. If there is a cache hit on the test data, we 
@@ -142,9 +168,15 @@ jobs:
           PATHLING_PROFILES: testTranche2${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}${{ github.actor != 'dependabot[bot]' && ',docker' || '' }}
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
-          PATHLING_OPTS: *maven-dependabot-ignore-test-failures
-        run: *maven-fhir-server-verify
-        timeout-minutes: *maven-fhir-server-timeout
+          PATHLING_OPTS: >-
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          -DskipEncodersTests -DskipScalaDocs
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 45
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
@@ -156,22 +188,24 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-2-surefire-reports
-          path: *fhir-server-surefire
+          path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-2-coverage
-          path: *fhir-server-coverage
+          path: fhir-server/target/site/jacoco/jacoco.xml
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-2-timing-log
-          path: *timing-log
+          path: fhir-server/target/timing.log
       - name: Upload dump files
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-2-dump-files
-          path: *dump-files
+          path: |-
+            **/*.dump
+            **/*.dumpstream
       - name: Publish test results
         # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
@@ -186,10 +220,26 @@ jobs:
     name: Build and test FHIR server (tranche 3)
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - *cache-maven
-      - *cache-test-data
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Cache test data
+        id: cache-test-data
+        uses: actions/cache@v2
+        with:
+          path: fhir-server/src/test/resources/test-data/parquet
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven
         env:
           # Activate the "tranche 3" test profile. If there is a cache hit on the test data, we 
@@ -197,29 +247,37 @@ jobs:
           PATHLING_PROFILES: testTranche3${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
-          PATHLING_OPTS: *maven-dependabot-ignore-test-failures
-        run: *maven-fhir-server-verify
-        timeout-minutes: *maven-fhir-server-timeout
+          PATHLING_OPTS: >-
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          -DskipEncodersTests -DskipScalaDocs
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 45
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-surefire-reports
-          path: *fhir-server-surefire
+          path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-coverage
-          path: *fhir-server-coverage
+          path: fhir-server/target/site/jacoco/jacoco.xml
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-timing-log
-          path: *timing-log
+          path: fhir-server/target/timing.log
       - name: Upload dump files
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-dump-files
-          path: *dump-files
+          path: |-
+            **/*.dump
+            **/*.dumpstream
       - name: Publish test results
         # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
@@ -233,18 +291,39 @@ jobs:
     name: Build and run benchmark
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - *cache-maven
-      - *cache-test-data
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Cache test data
+        id: cache-test-data
+        uses: actions/cache@v2
+        with:
+          path: fhir-server/src/test/resources/test-data/parquet
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven
         env:
           # If there is a cache hit on the test data, we don't need to import it. If it is a cache
           # miss, we still need to explicitly activate the `importTestData` profile, otherwise
           # it will be deactivated by `skipTests`.
           PATHLING_PROFILES: runBenchmark${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || 'importTestData' }}
-        run: *maven-fhir-server-verify
-        timeout-minutes: *maven-fhir-server-timeout
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          -DskipEncodersTests -DskipScalaDocs
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 45
       - name: Upload benchmark results
         uses: actions/upload-artifact@v2
         with:
@@ -256,32 +335,55 @@ jobs:
     name: Build JavaScript client
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - &setup-node
-        uses: actions/setup-node@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - uses: actions/setup-node@v2
         with:
           node-version: '16'
-      - *cache-maven
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
         run: >-
           mvn --batch-mode verify
           -pl lib/js -am
-        timeout-minutes: &maven-js-timeout 5
+        timeout-minutes: 5
   
   import:
     name: Build import lambda
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - *setup-node
-      - *cache-maven
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
           -pl lib/import -am
-        timeout-minutes: *maven-js-timeout
+        timeout-minutes: 5
       - name: Upload import lambda
         uses: actions/upload-artifact@v2
         with:
@@ -292,9 +394,20 @@ jobs:
     name: Build and test Python API
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - *cache-maven
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
         with:
@@ -317,10 +430,23 @@ jobs:
     name: Build site
     runs-on: ubuntu-latest
     steps:
-      - *checkout
-      - *setup-java
-      - *setup-node
-      - *cache-maven
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
         run: >-
           mvn --batch-mode verify
@@ -334,7 +460,8 @@ jobs:
     needs: [ encoders,fhir-server-1,fhir-server-2,fhir-server-3 ]
     if: github.actor != 'dependabot[bot]'
     steps:
-      - *checkout
+      - name: Checkout code
+        uses: actions/checkout@v2
       - name: Download encoders coverage report
         uses: actions/download-artifact@v3
         with:
