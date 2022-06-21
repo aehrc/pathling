@@ -372,6 +372,8 @@
                 <tag>${pathling.fhirServerDockerTag}</tag>
                 <tag>${project.version}</tag>
                 <tag>${project.majorVersion}</tag>
+                <!--suppress UnresolvedMavenProperty -->
+                <tag>${git.commit.id}</tag>
               </tags>
             </to>
             <container>
@@ -553,6 +555,14 @@
                       </platform>
                     </platforms>
                   </from>
+                  <to>
+                    <image>${pathling.fhirServerDockerRepo}</image>
+                    <tags>
+                      <tag>${pathling.fhirServerDockerTag}</tag>
+                      <tag>${project.version}</tag>
+                      <tag>${project.majorVersion}</tag>
+                    </tags>
+                  </to>
                 </configuration>
               </execution>
             </executions>
