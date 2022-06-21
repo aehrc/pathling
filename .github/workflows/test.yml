@@ -309,7 +309,7 @@ jobs:
         run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
-          -Pdocker
+          -Pdocker,!importTestData
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 45
       - name: Scan Docker image for vulnerabilities
