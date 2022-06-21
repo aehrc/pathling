@@ -306,6 +306,7 @@ jobs:
             -DskipUnitTests
             -DskipScalaDocs
             -DskipITs
+            -Dpathling.dockerArchitecture=amd64
         run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
@@ -318,6 +319,7 @@ jobs:
           PATHLING_OPTS: >-
             -DskipUnitTests
             -DskipScalaDocs
+            -Dpathling.dockerArchitecture=amd64
             -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }}
         run: >-
           mvn --batch-mode verify
