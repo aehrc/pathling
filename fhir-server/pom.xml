@@ -414,7 +414,7 @@
               </execution>
             </executions>
             <configuration>
-              <mainClass>au.csiro.pathling.test.bechmark.PathlingBenchmarkRunner</mainClass>
+              <mainClass>au.csiro.pathling.test.benchmark.PathlingBenchmarkRunner</mainClass>
               <classpathScope>test</classpathScope>
               <cleanupDaemonThreads>false</cleanupDaemonThreads>
               <arguments>

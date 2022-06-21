@@ -1,5 +1,8 @@
-package au.csiro.pathling.test.bechmark;
+package au.csiro.pathling.test.benchmark;
 
+import static au.csiro.pathling.jmh.JmhUtils.buildResultsFileName;
+
+import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
 import org.openjdk.jmh.results.format.ResultFormatType;
 import org.openjdk.jmh.runner.Runner;
@@ -7,13 +10,6 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
-
-import java.io.File;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Properties;
-
-import static au.csiro.pathling.jmh.JmhUtils.buildResultsFileName;
 
 /**
  * Pre-configured bulk benchmark runner.
