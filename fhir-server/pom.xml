@@ -24,7 +24,9 @@
   <properties>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
+    <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
     <jmh.version>1.35</jmh.version>
+    <pathling.dockerBaseImage>openjdk:11-jre-slim</pathling.dockerBaseImage>
   </properties>
 
   <dependencies>
@@ -364,7 +366,13 @@
           <version>3.2.1</version>
           <configuration>
             <from>
-              <image>aehrc/jre:openjdk-11</image>
+              <image>${pathling.dockerBaseImage}</image>
+              <platforms>
+                <platform>
+                  <architecture>${pathling.dockerArchitecture}</architecture>
+                  <os>linux</os>
+                </platform>
+              </platforms>
             </from>
             <to>
               <image>${pathling.fhirServerDockerRepo}</image>
@@ -372,7 +380,6 @@
                 <tag>${pathling.fhirServerDockerTag}</tag>
                 <tag>${project.version}</tag>
                 <tag>${project.majorVersion}</tag>
-                <!--suppress UnresolvedMavenProperty -->
                 <tag>${git.commit.id}</tag>
               </tags>
             </to>
@@ -507,7 +514,7 @@
               </includes>
               <groups>SystemTest</groups>
               <systemPropertyVariables>
-                <pathling.systemTest.version>${project.version}</pathling.systemTest.version>
+                <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
                 <pathling.systemTest.auth.issuer>
                   https://auth.ontoserver.csiro.au/auth/realms/aehrc
                 </pathling.systemTest.auth.issuer>
@@ -543,7 +550,8 @@
                   <goal>build</goal>
                 </goals>
                 <configuration>
-                  <from combine.children="append">
+                  <from>
+                    <image>${pathling.dockerBaseImage}</image>
                     <platforms>
                       <platform>
                         <architecture>amd64</architecture>

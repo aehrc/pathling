@@ -8,10 +8,12 @@ package au.csiro.pathling.test.system;
 
 import static au.csiro.pathling.test.TestResources.assertJson;
 import static java.lang.Runtime.getRuntime;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -88,14 +90,13 @@ class DockerImageTest {
   static final String VERSION = System.getProperty("pathling.systemTest.version");
   static final String ISSUER = System.getProperty("pathling.systemTest.auth.issuer");
   static final String CLIENT_ID = System.getProperty("pathling.systemTest.auth.clientId");
-  static final String CLIENT_SECRET = System
-      .getProperty("pathling.systemTest.auth.clientSecret");
-  static final String REQUESTED_SCOPE = System
-      .getProperty("pathling.systemTest.auth.requestedScope");
-  static final String TERMINOLOGY_SERVICE_URL = System
-      .getProperty("pathling.systemTest.terminology.serverUrl");
-  static final String DOCKER_REPOSITORY = System
-      .getProperty("pathling.systemTest.dockerRepository");
+  static final String CLIENT_SECRET = System.getProperty("pathling.systemTest.auth.clientSecret");
+  static final String REQUESTED_SCOPE = System.getProperty(
+      "pathling.systemTest.auth.requestedScope");
+  static final String TERMINOLOGY_SERVICE_URL = System.getProperty(
+      "pathling.systemTest.terminology.serverUrl");
+  static final String DOCKER_REPOSITORY = System.getProperty(
+      "pathling.systemTest.dockerRepository");
   static final int HEALTHY_MAX_WAIT_SECONDS = 90;
   static final int HEALTHY_WAIT_DELAY_SECONDS = 5;
 
@@ -115,6 +116,12 @@ class DockerImageTest {
   StopContainer shutdownHook;
 
   DockerImageTest() {
+    // Validate required system properties.
+    List.of(VERSION, ISSUER, CLIENT_ID, CLIENT_SECRET, REQUESTED_SCOPE, TERMINOLOGY_SERVICE_URL,
+        DOCKER_REPOSITORY).forEach(property -> {
+      assertTrue(isNotBlank(property), "System property " + property + " is required");
+    });
+
     final DockerClientConfig dockerClientConfig = DefaultDockerClientConfig
         .createDefaultConfigBuilder()
         .build();
