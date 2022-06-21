@@ -523,7 +523,7 @@
                   openid user/*.*
                 </pathling.systemTest.auth.requestedScope>
                 <pathling.systemTest.terminology.serverUrl>
-                  https://r4.ontoserver.csiro.au/fhir
+                  https://tx.ontoserver.csiro.au/fhir
                 </pathling.systemTest.terminology.serverUrl>
                 <pathling.systemTest.dockerRepository>
                   ${pathling.fhirServerDockerRepo}
