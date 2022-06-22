@@ -41,7 +41,7 @@ public class PathlingBenchmarkRunner {
 
     log.info("Writing benchmark results to: {}", resultFile);
 
-    Options opt = new OptionsBuilder()
+    final Options opt = new OptionsBuilder()
         .include("\\.[^.]+Benchmark\\.[^.]+$")
         .warmupIterations(warmup)
         .measurementIterations(iterations)

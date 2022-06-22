@@ -29,6 +29,7 @@ def spark_session(request):
         .master('local[2]') \
         .config('spark.jars', find_pathling_jar()) \
         .config('spark.sql.warehouse.dir', mkdtemp()) \
+        .config('spark.driver.memory', '4g') \
         .getOrCreate()
 
     request.addfinalizer(lambda: spark.stop())

@@ -6,7 +6,8 @@
 
 package au.csiro.pathling.test.integration.modification;
 
-import static au.csiro.pathling.test.helpers.TestHelpers.PARQUET_PATH;
+import static au.csiro.pathling.test.helpers.TestHelpers.DATABASE_NAME;
+import static au.csiro.pathling.test.helpers.TestHelpers.WAREHOUSE_URL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -78,7 +79,8 @@ abstract class ModificationTest extends IntegrationTest {
   void setUp() throws IOException {
     databaseDirectory = new File(
         configuration.getStorage().getWarehouseUrl().replaceFirst("file://", ""), "default");
-    final Path source = new File(PARQUET_PATH).getAbsoluteFile().toPath();
+    final Path source = Path.of(
+        String.join(",", WAREHOUSE_URL, DATABASE_NAME).replaceFirst("file://", ""));
     final Path destination = databaseDirectory.toPath();
     log.debug("Copying test data from {} to {}", source, destination);
     assertTrue(databaseDirectory.mkdirs());

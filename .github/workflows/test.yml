@@ -387,15 +387,13 @@ jobs:
           mvn --batch-mode verify
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
-          -DskipEncodersTests -DskipScalaDocs
-          ${{ env.PATHLING_OPTS }}
+          -DskipSurefireTests -DskipScalaDocs
         timeout-minutes: 45
       - name: Upload benchmark results
         uses: actions/upload-artifact@v2
         with:
           name: benchmark-results
-          path: |-
-            **/jmh-*.json
+          path: "**/jmh-*.json"
   
   js-client:
     name: JavaScript client
@@ -498,7 +496,7 @@ jobs:
         run: >-
           mvn --batch-mode verify
           -pl lib/python -am
-          -DskipEncodersTests -DskipPythonDocs
+          -DskipSurefireTests -DskipScalaDocs -DskipPythonDocs
         timeout-minutes: 15
   
   site:

@@ -71,9 +71,7 @@ public class AggregateBenchmark {
     FhirEncoders fhirEncoders;
 
     AggregateExecutor executor;
-    ResourceType subjectResource;
     Database database;
-    AggregateResponse response = null;
 
     void mockResource(final ResourceType... resourceTypes) {
       TestHelpers.mockResource(database, spark, resourceTypes);
