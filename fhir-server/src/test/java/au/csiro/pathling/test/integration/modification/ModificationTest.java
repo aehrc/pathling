@@ -80,7 +80,7 @@ abstract class ModificationTest extends IntegrationTest {
     databaseDirectory = new File(
         configuration.getStorage().getWarehouseUrl().replaceFirst("file://", ""), "default");
     final Path source = Path.of(
-        String.join(",", WAREHOUSE_URL, DATABASE_NAME).replaceFirst("file://", ""));
+        String.join("/", WAREHOUSE_URL, DATABASE_NAME).replaceFirst("file://", ""));
     final Path destination = databaseDirectory.toPath();
     log.debug("Copying test data from {} to {}", source, destination);
     assertTrue(databaseDirectory.mkdirs());
