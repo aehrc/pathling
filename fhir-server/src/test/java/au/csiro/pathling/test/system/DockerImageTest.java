@@ -33,6 +33,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -48,6 +49,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -140,7 +142,8 @@ class DockerImageTest {
     final URL url = loader.getResource(folder);
     assertThat(url).isNotNull();
     final String path = url.getPath();
-    @Nullable final File[] files = new File(path).listFiles();
+    final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
+    @Nullable final File[] files = new File(path).listFiles(fileFilter);
     assertNotNull(files);
     return files;
   }
