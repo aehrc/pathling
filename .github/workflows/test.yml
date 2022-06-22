@@ -318,7 +318,7 @@ jobs:
         env:
           # If the actor is Dependabot we skip the system test, as it requires access to secrets.
           PATHLING_OPTS: >-
-            -DskipUnitTests
+            -DskipSurefireTests
             -DskipScalaDocs
             -DskipITs
             -Dpathling.dockerArchitecture=amd64
@@ -332,7 +332,7 @@ jobs:
         if: github.actor != 'dependabot[bot]'
         env:
           PATHLING_OPTS: >-
-            -DskipUnitTests
+            -DskipSurefireTests
             -DskipScalaDocs
             -Dpathling.dockerArchitecture=amd64
             -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }}
