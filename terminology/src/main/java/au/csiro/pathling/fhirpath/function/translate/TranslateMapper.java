@@ -31,7 +31,7 @@ import org.slf4j.MDC;
  * codings belongs to the specified ValueSet.
  */
 @Slf4j
-public class TranslateMapperWithPreview implements
+public class TranslateMapper implements
     MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> {
 
   private static final long serialVersionUID = 2879761794073649202L;
@@ -58,7 +58,7 @@ public class TranslateMapperWithPreview implements
    * @param reverse If set, reverse source and target within the map
    * @param equivalences The list of equivalence values that will be matched
    */
-  public TranslateMapperWithPreview(@Nonnull final String requestId,
+  public TranslateMapper(@Nonnull final String requestId,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final String conceptMapUrl, final boolean reverse,
       @Nonnull final List<ConceptMapEquivalence> equivalences) {

@@ -31,7 +31,7 @@ import org.slf4j.MDC;
  * coding in the left list is in the subsumption relation with any coding in the right list.
  */
 @Slf4j
-public class SubsumptionMapperWithPreview implements
+public class SubsumesMapper implements
     MapperWithPreview<ImmutablePair<
         List<SimpleCoding>, List<SimpleCoding>>, Boolean, Relation> {
 
@@ -51,7 +51,7 @@ public class SubsumptionMapperWithPreview implements
    * {@link au.csiro.pathling.fhir.TerminologyClient}
    * @param inverted if true checks for `subsumedBy` relation, otherwise for `subsumes`
    */
-  public SubsumptionMapperWithPreview(@Nonnull final String requestId,
+  public SubsumesMapper(@Nonnull final String requestId,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       final boolean inverted) {
     this.requestId = requestId;

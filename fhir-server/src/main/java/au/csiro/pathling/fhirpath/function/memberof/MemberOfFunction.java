@@ -85,7 +85,7 @@ public class MemberOfFunction implements NamedFunction {
     // Perform a "validate code" operation on each Coding or CodeableConcept in the input dataset,
     // then create a new dataset with the boolean results.
     final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapperWithPreview(MDC.get("requestId"), terminologyServiceFactory,
+        new MemberOfMapper(MDC.get("requestId"), terminologyServiceFactory,
             valueSetUri);
 
     // This de-duplicates the Codings to be validated, then performs the validation on a

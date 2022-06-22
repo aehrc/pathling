@@ -16,8 +16,8 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
-import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapperWithPreview;
-import au.csiro.pathling.fhirpath.function.translate.TranslateMapperWithPreview;
+import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapper;
+import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.terminology.ConceptTranslator;
@@ -35,21 +35,13 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
-
 public class PathlingContext {
 
-  private final String serverUrl;
   private final TerminologyServiceFactory terminologyServiceFactory;
 
-  private PathlingContext(String serverUrl) {
-
-    this.serverUrl = serverUrl;
-    this.terminologyServiceFactory = new DefaultTerminologyServiceFactory(
-        FhirContext.forR4(),
-        serverUrl,
-        60000,
-        false
-    );
+  private PathlingContext(@Nonnull final String serverUrl) {
+    this.terminologyServiceFactory = new DefaultTerminologyServiceFactory(FhirContext.forR4(),
+        serverUrl, 60000, false);
   }
 
   @Nonnull
@@ -67,44 +59,38 @@ public class PathlingContext {
     // then create a new dataset with the boolean results.
     // TODO: Find a better request id
     final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapperWithPreview("none", terminologyServiceFactory,
-            valueSetUri);
+        new MemberOfMapper("none", terminologyServiceFactory, valueSetUri);
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
     // per-partition basis.
-    return SqlExtensions
-        .mapWithPartitionPreview(codingDataframe, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
+    final StructField resultField = StructField.apply(outputColumnName, DataTypes.BooleanType, true,
+        Metadata.empty());
+    return SqlExtensions.mapWithPartitionPreview(codingDataframe, codingArrayCol,
+        SimpleCodingsDecoders::decodeList, mapper, resultField);
   }
-
 
   @Nonnull
   public Dataset<Row> translate(@Nonnull final Dataset<Row> codingDataframe,
       @Nonnull final Column codingColumn, @Nonnull final String conceptMapUri,
-      @Nonnull final boolean reverse,
-      @Nonnull final String equivalence,
+      final boolean reverse, @Nonnull final String equivalence,
       @Nonnull final String outputColumnName) {
     final Column codingArrayCol = when(codingColumn.isNotNull(), array(codingColumn))
         .otherwise(lit(null));
 
+    final List<ConceptMapEquivalence> equivalences = Strings.parseCsvList(equivalence,
+        wrapInUserInputError(ConceptMapEquivalence::fromCode));
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapperWithPreview("none", terminologyServiceFactory,
-            conceptMapUri, reverse, Strings.parseCsvList(equivalence,
-            wrapInUserInputError(ConceptMapEquivalence::fromCode)));
+        new TranslateMapper("none", terminologyServiceFactory, conceptMapUri, reverse,
+            equivalences);
 
-    final Dataset<Row> translatedDataset = SqlExtensions
-        .mapWithPartitionPreview(codingDataframe, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField
-                .apply(outputColumnName, DataTypes.createArrayType(CodingEncoding.DATA_TYPE), true,
-                    Metadata.empty()));
+    final StructField resultField = StructField.apply(outputColumnName,
+        DataTypes.createArrayType(CodingEncoding.DATA_TYPE),
+        true, Metadata.empty());
+    final Dataset<Row> translatedDataset = SqlExtensions.mapWithPartitionPreview(codingDataframe,
+        codingArrayCol, SimpleCodingsDecoders::decodeList, mapper, resultField);
 
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
   }
-
 
   @Nonnull
   public static PathlingContext create(@Nonnull final String serverUrl) {

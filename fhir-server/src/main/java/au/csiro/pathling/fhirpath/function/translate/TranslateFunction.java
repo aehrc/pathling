@@ -163,7 +163,7 @@ public class TranslateFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
 
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapperWithPreview(MDC.get("requestId"), terminologyServiceFactory,
+        new TranslateMapper(MDC.get("requestId"), terminologyServiceFactory,
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 

@@ -25,8 +25,8 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
-import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapperWithPreview;
-import au.csiro.pathling.fhirpath.function.translate.TranslateMapperWithPreview;
+import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapper;
+import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.support.FhirConversionSupport;
@@ -361,7 +361,7 @@ public class PathlingContext {
     // then create a new dataset with the boolean results.
     // TODO: Find a better request id
     final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapperWithPreview("none", terminologyServiceFactory,
+        new MemberOfMapper("none", terminologyServiceFactory,
             valueSetUri);
 
     // This de-duplicates the Codings to be validated, then performs the validation on a
@@ -384,7 +384,7 @@ public class PathlingContext {
         .otherwise(lit(null));
 
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapperWithPreview("none", terminologyServiceFactory,
+        new TranslateMapper("none", terminologyServiceFactory,
             conceptMapUri, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 

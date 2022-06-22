@@ -27,7 +27,7 @@ import org.slf4j.MDC;
  * codings belongs to the specified ValueSet.
  */
 @Slf4j
-public class MemberOfMapperWithPreview implements
+public class MemberOfMapper implements
     MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> {
 
   private static final long serialVersionUID = 2879761794073649202L;
@@ -46,7 +46,7 @@ public class MemberOfMapperWithPreview implements
    * @param terminologyServiceFactory Used to create instances of the terminology client on workers
    * @param valueSetUri The identifier of the ValueSet that codes will be validated against
    */
-  public MemberOfMapperWithPreview(@Nonnull final String requestId,
+  public MemberOfMapper(@Nonnull final String requestId,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final String valueSetUri) {
     this.requestId = requestId;

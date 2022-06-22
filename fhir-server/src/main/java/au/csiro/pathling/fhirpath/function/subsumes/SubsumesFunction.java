@@ -106,8 +106,8 @@ public class SubsumesFunction implements NamedFunction {
         idAndCodingSet.col(COL_ARG_CODINGS));
 
     @SuppressWarnings({"OptionalGetWithoutIsPresent", "TypeMayBeWeakened"})
-    final SubsumptionMapperWithPreview mapper =
-        new SubsumptionMapperWithPreview(MDC.get("requestId"),
+    final SubsumesMapper mapper =
+        new SubsumesMapper(MDC.get("requestId"),
             input.getContext().getTerminologyServiceFactory().get(),
             inverted);
 
