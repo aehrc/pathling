@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapper;
 import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
+import au.csiro.pathling.sql.PathlingStrategy;
 import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.ConceptTranslator;
@@ -75,13 +76,14 @@ public class PathlingContext {
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
-  private PathlingContext(@Nonnull final SparkSession sparkSession,
+  private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
-    this.sparkSession = sparkSession;
+    this.sparkSession = spark;
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
+    PathlingStrategy.setup(spark);
   }
 
   /**

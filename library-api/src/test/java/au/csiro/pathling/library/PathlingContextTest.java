@@ -13,16 +13,33 @@
 
 package au.csiro.pathling.library;
 
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SchemaAsserts;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.streaming.OutputMode;
 import org.apache.spark.sql.streaming.StreamingQuery;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Condition;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -187,4 +204,37 @@ public class PathlingContextTest {
     final long conditionsCount = spark.sql("select * from countCondition").head().getLong(0);
     assertEquals(71, conditionsCount);
   }
+
+  @Test
+  void testMemberOf() {
+    final SimpleCoding coding1 = new SimpleCoding("urn:test:123", "ABC");
+    final SimpleCoding coding2 = new SimpleCoding("urn:test:123", "DEF");
+
+    final TerminologyServiceFactory terminologyServiceFactory = mock(
+        TerminologyServiceFactory.class, withSettings().serializable());
+    final TerminologyService terminologyService = mock(TerminologyService.class,
+        withSettings().serializable());
+    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
+    when(terminologyService.intersect(any(), any())).thenReturn(
+        new HashSet<>(List.of(coding1)));
+
+    final PathlingContext pathlingContext = PathlingContext.create(spark,
+        FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
+
+    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1.toCoding()));
+    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding2.toCoding()));
+    final List<Row> datasetRows = List.of(row1, row2);
+    final StructType schema = DataTypes.createStructType(
+        new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
+            DataTypes.createStructField("coding", CodingEncoding.codingStructType(), true)});
+    final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
+    final Column codingColumn = col("coding");
+    final Dataset<Row> result = pathlingContext.memberOf(codingDataFrame, codingColumn,
+        "urn:test:456", "result");
+
+    final List<Row> rows = result.select("id", "result").collectAsList();
+    assertEquals(RowFactory.create("foo", true), rows.get(0));
+    assertEquals(RowFactory.create("bar", false), rows.get(1));
+  }
+
 }
