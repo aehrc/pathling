@@ -38,6 +38,7 @@ import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -54,9 +55,14 @@ import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.slf4j.MDC;
 
 /**
- * Main entry point to Pathling Java API
+ * A class designed to provide access to selected Pathling functionality from non-JVM language
+ * libraries.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
  */
 public class PathlingContext {
 
@@ -356,18 +362,9 @@ public class PathlingContext {
     final Column codingArrayCol = when(codingColumn.isNotNull(), array(codingColumn))
         .otherwise(lit(null));
 
-    // Prepare the data which will be used within the map operation. All of these things must be
-    // Serializable.
-
-    // Perform a validate code operation on each Coding or CodeableConcept in the input dataset,
-    // then create a new dataset with the boolean results.
-    // TODO: Find a better request id
     final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapper("none", terminologyServiceFactory,
-            valueSetUri);
+        new MemberOfMapper(getRequestId(), terminologyServiceFactory, valueSetUri);
 
-    // This de-duplicates the Codings to be validated, then performs the validation on a
-    // per-partition basis.
     return SqlExtensions
         .mapWithPartitionPreview(codingDataframe, codingArrayCol,
             SimpleCodingsDecoders::decodeList,
@@ -375,18 +372,16 @@ public class PathlingContext {
             StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
   }
 
-
   @Nonnull
   public Dataset<Row> translate(@Nonnull final Dataset<Row> codingDataframe,
       @Nonnull final Column codingColumn, @Nonnull final String conceptMapUri,
-      @Nonnull final boolean reverse,
-      @Nonnull final String equivalence,
+      final boolean reverse, @Nonnull final String equivalence,
       @Nonnull final String outputColumnName) {
     final Column codingArrayCol = when(codingColumn.isNotNull(), array(codingColumn))
         .otherwise(lit(null));
 
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapper("none", terminologyServiceFactory,
+        new TranslateMapper(getRequestId(), terminologyServiceFactory,
             conceptMapUri, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
@@ -399,6 +394,12 @@ public class PathlingContext {
                     Metadata.empty()));
 
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
+  }
+
+  private static String getRequestId() {
+    final String requestId = UUID.randomUUID().toString();
+    MDC.put("requestId", requestId);
+    return requestId;
   }
 
 }
