@@ -1,5 +1,11 @@
 # This workflow will build the software and documentation to ensure there are no errors, and also
 # execute the tests.
+#
+# The FHIR server build is separated into three tranches, to minimise overall build time:
+#
+# Tranche 1: ModificationTest, AggregateQueryTest, ExtractTest
+# Tranche 2: ManifestConverterTest, integration tests
+# Tranche 3: All other FHIR server tests, tests from utilities and terminology modules
 
 name: Test
 
@@ -35,13 +41,13 @@ jobs:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
           PATHLING_OPTS: >-
+            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
           -pl encoders -am
-          -DskipScalaDocs
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 30
+        timeout-minutes: 20
       - name: Upload encoders test reports
         uses: actions/upload-artifact@v2
         with:
@@ -103,14 +109,17 @@ jobs:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
           PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
+            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
-          -DskipEncodersTests -DskipScalaDocs
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 45
+        timeout-minutes: 30
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
@@ -177,14 +186,17 @@ jobs:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
           PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
+            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
-          -DskipEncodersTests -DskipScalaDocs
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 45
+        timeout-minutes: 30
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
@@ -252,14 +264,15 @@ jobs:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
           PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
-          -DskipEncodersTests -DskipScalaDocs
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 45
+        timeout-minutes: 30
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
@@ -327,7 +340,7 @@ jobs:
           -pl fhir-server -am
           -Pdocker,!importTestData
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 45
+        timeout-minutes: 15
       - name: Run the verify goal with Maven
         if: github.actor != 'dependabot[bot]'
         env:
@@ -341,7 +354,7 @@ jobs:
           -pl fhir-server -am
           -Pdocker,!importTestData
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 45
+        timeout-minutes: 15
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@master
         with:
@@ -388,7 +401,7 @@ jobs:
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
           -DskipSurefireTests -DskipScalaDocs
-        timeout-minutes: 45
+        timeout-minutes: 20
       - name: Upload benchmark results
         uses: actions/upload-artifact@v2
         with:
@@ -493,11 +506,29 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements.txt') }}
           restore-keys: ${{ runner.os }}-pip
       - name: Run the verify goal with Maven
+        env:
+          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
+          # report action to report them.
+          PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
+            -DskipScalaDocs
+            -DskipPythonDocs
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
           -pl lib/python -am
-          -DskipSurefireTests -DskipScalaDocs -DskipPythonDocs
+          ${{ env.PATHLING_OPTS }}
         timeout-minutes: 15
+      - name: Publish test results
+        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
+        if: github.actor != 'dependabot[bot]'
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Python API test report
+          fail_on_test_failures: true
   
   site:
     name: Site
@@ -528,7 +559,7 @@ jobs:
           mvn --batch-mode verify
           -pl site -am
           -DskipTests
-        timeout-minutes: 30
+        timeout-minutes: 15
   
   upload-coverage:
     name: Upload coverage
