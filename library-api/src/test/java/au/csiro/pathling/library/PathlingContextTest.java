@@ -26,6 +26,8 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.ConceptTranslator;
+import au.csiro.pathling.terminology.Relation;
+import au.csiro.pathling.terminology.Relation.Entry;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SchemaAsserts;
 import java.util.Arrays;
@@ -275,6 +277,44 @@ public class PathlingContextTest {
 
     final List<Row> rows = result.select("id", "result").collectAsList();
     assertEquals(RowFactory.create("foo", CodingEncoding.encode(coding2.toCoding())), rows.get(0));
+  }
+
+  @Test
+  void testSubsumes() {
+    final SimpleCoding coding1 = new SimpleCoding("urn:test:123", "ABC");
+    final SimpleCoding coding2 = new SimpleCoding("urn:test:123", "DEF");
+    final SimpleCoding coding3 = new SimpleCoding("urn:test:123", "GHI");
+
+    final TerminologyServiceFactory terminologyServiceFactory = mock(
+        TerminologyServiceFactory.class, withSettings().serializable());
+    final TerminologyService terminologyService = mock(TerminologyService.class,
+        withSettings().serializable());
+    final Entry entry = Entry.of(coding1, coding2);
+    final Relation relation = Relation.fromMappings(List.of(entry));
+    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
+    when(terminologyService.getSubsumesRelation(any())).thenReturn(relation);
+
+    final PathlingContext pathlingContext = PathlingContext.create(spark,
+        FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
+
+    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1.toCoding()),
+        CodingEncoding.encode(coding2.toCoding()));
+    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding1.toCoding()),
+        CodingEncoding.encode(coding3.toCoding()));
+    final List<Row> datasetRows = List.of(row1, row2);
+    final StructType schema = DataTypes.createStructType(
+        new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
+            DataTypes.createStructField("leftCoding", CodingEncoding.codingStructType(), true),
+            DataTypes.createStructField("rightCoding", CodingEncoding.codingStructType(), true)});
+    final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
+    final Column leftCoding = col("leftCoding");
+    final Column rightCoding = col("rightCoding");
+    final Dataset<Row> result = pathlingContext.subsumes(codingDataFrame, leftCoding, rightCoding,
+        "result");
+
+    final List<Row> rows = result.select("id", "result").collectAsList();
+    assertEquals(RowFactory.create("foo", true), rows.get(0));
+    assertEquals(RowFactory.create("bar", false), rows.get(1));
   }
 
 }

@@ -13,10 +13,13 @@
 
 package au.csiro.pathling.library;
 
+import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
+import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -26,12 +29,14 @@ import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapper;
+import au.csiro.pathling.fhirpath.function.subsumes.SubsumesMapper;
 import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.PathlingStrategy;
 import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.ConceptTranslator;
+import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.utilities.Strings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -43,6 +48,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -355,29 +361,29 @@ public class PathlingContext {
   }
 
   @Nonnull
-  public Dataset<Row> memberOf(@Nonnull final Dataset<Row> codingDataframe,
-      @Nonnull final Column codingColumn, @Nonnull final String valueSetUri,
+  public Dataset<Row> memberOf(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column coding, @Nonnull final String valueSetUri,
       @Nonnull final String outputColumnName) {
 
-    final Column codingArrayCol = when(codingColumn.isNotNull(), array(codingColumn))
+    final Column codingArrayCol = when(coding.isNotNull(), array(coding))
         .otherwise(lit(null));
 
     final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
         new MemberOfMapper(getRequestId(), terminologyServiceFactory, valueSetUri);
 
     return SqlExtensions
-        .mapWithPartitionPreview(codingDataframe, codingArrayCol,
+        .mapWithPartitionPreview(dataset, codingArrayCol,
             SimpleCodingsDecoders::decodeList,
             mapper,
             StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
   }
 
   @Nonnull
-  public Dataset<Row> translate(@Nonnull final Dataset<Row> codingDataframe,
-      @Nonnull final Column codingColumn, @Nonnull final String conceptMapUri,
+  public Dataset<Row> translate(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column coding, @Nonnull final String conceptMapUri,
       final boolean reverse, @Nonnull final String equivalence,
       @Nonnull final String outputColumnName) {
-    final Column codingArrayCol = when(codingColumn.isNotNull(), array(codingColumn))
+    final Column codingArrayCol = when(coding.isNotNull(), array(coding))
         .otherwise(lit(null));
 
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
@@ -386,7 +392,7 @@ public class PathlingContext {
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
     final Dataset<Row> translatedDataset = SqlExtensions
-        .mapWithPartitionPreview(codingDataframe, codingArrayCol,
+        .mapWithPartitionPreview(dataset, codingArrayCol,
             SimpleCodingsDecoders::decodeList,
             mapper,
             StructField
@@ -394,6 +400,29 @@ public class PathlingContext {
                     Metadata.empty()));
 
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
+  }
+
+  @Nonnull
+  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column leftCoding, @Nonnull final Column rightCoding,
+      @Nonnull final String outputColumnName) {
+    final MapperWithPreview<ImmutablePair<List<SimpleCoding>, List<SimpleCoding>>, Boolean, Relation> mapper =
+        new SubsumesMapper(getRequestId(), terminologyServiceFactory, false);
+
+    final Column fromArray = array(leftCoding);
+    final Column toArray = array(rightCoding);
+    final Column fromCodings = when(leftCoding.isNotNull(), fromArray).otherwise(null);
+    final Column toCodings = when(rightCoding.isNotNull(), toArray).otherwise(null);
+
+    final Dataset<Row> idAndCodingSet = dataset.withColumn(COL_INPUT_CODINGS, fromCodings)
+        .withColumn(COL_ARG_CODINGS, toCodings);
+    final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
+        idAndCodingSet.col(COL_ARG_CODINGS));
+
+    return SqlExtensions
+        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
+            SimpleCodingsDecoders::decodeListPair, mapper,
+            StructField.apply(outputColumnName, DataTypes.BooleanType, false, Metadata.empty()));
   }
 
   private static String getRequestId() {

@@ -20,6 +20,16 @@ import org.apache.spark.sql.catalyst.util.GenericArrayData;
  */
 public interface SimpleCodingsDecoders {
 
+  /**
+   * The column name that this function uses to represent input codings within its working dataset.
+   */
+  String COL_INPUT_CODINGS = "inputCodings";
+  /**
+   * The column name that this function uses to represent argument codings within its working
+   * dataset.
+   */
+  String COL_ARG_CODINGS = "argCodings";
+
   @Nullable
   private static String safeGetString(@Nonnull final InternalRow ir, final int ordinal) {
     return ir.isNullAt(ordinal)

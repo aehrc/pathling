@@ -7,7 +7,6 @@
 package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import com.google.common.collect.Streams;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -33,7 +33,9 @@ import lombok.ToString;
  */
 @ToString
 @EqualsAndHashCode
-public class Relation {
+public class Relation implements Serializable {
+
+  private static final long serialVersionUID = -8124924480216379884L;
 
   /**
    * An entry representing the existence of relation between {@code form} and {@code to}.
@@ -100,7 +102,7 @@ public class Relation {
   @Nonnull
   private Set<SimpleCoding> expand(@Nonnull final Set<SimpleCoding> codings) {
     final Relation.CodingSet baseSet = new Relation.CodingSet(codings);
-    return Streams
+    return Stream
         .concat(codings.stream(), mappings.entrySet().stream()
             .filter(kv -> baseSet.contains(kv.getKey())).flatMap(kv -> kv.getValue().stream()))
         .collect(Collectors.toSet());

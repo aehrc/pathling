@@ -8,6 +8,8 @@ package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConcept;
+import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
+import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
@@ -54,17 +56,6 @@ public class SubsumesFunction implements NamedFunction {
    * The column name that this function uses to represent resource ID within its working dataset.
    */
   private static final String COL_ID = "id";
-
-  /**
-   * The column name that this function uses to represent input codings within its working dataset.
-   */
-  private static final String COL_INPUT_CODINGS = "inputCodings";
-
-  /**
-   * The column name that this function uses to represent argument codings within its working
-   * dataset.
-   */
-  private static final String COL_ARG_CODINGS = "argCodings";
 
   private static final String COL_ARG_ID = "argId";
   private static final String COL_CODING = "coding";
@@ -198,7 +189,8 @@ public class SubsumesFunction implements NamedFunction {
 
     return systemAndCodeDataset
         .groupBy(systemAndCodeDataset.col(COL_ARG_ID))
-        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_ARG_CODINGS));
+        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(
+            COL_ARG_CODINGS));
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

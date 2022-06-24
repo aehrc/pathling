@@ -12,6 +12,7 @@ __all__ = ["PathlingContext"]
 EQ_EQUIVALENT = "equivalent"
 
 
+# noinspection PyProtectedMember
 class PathlingContext:
     """
     Main entry point for Pathling API functionality.
@@ -67,7 +68,9 @@ class PathlingContext:
         """
         spark = (spark or
                  SparkSession.getActiveSession() or
-                 SparkSession.builder.config('spark.jars', find_jar()).getOrCreate())
+                 SparkSession.builder
+                 .config('spark.jars', find_jar())
+                 .getOrCreate())
         jvm: JavaObject = spark._jvm
         jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
                 spark._jsparkSession, fhir_version, max_nesting_level, enable_extensions,
@@ -159,3 +162,21 @@ class PathlingContext:
                 self._jpc.translate(df._jdf, coding_column._jc, concept_map_uri, reverse,
                                     equivalence,
                                     output_column_name))
+
+    def subsumes(self, df: DataFrame, left_coding_column: Column, right_coding_column: Column,
+                 output_column_name: str):
+        """
+        Takes a dataframe with two Coding columns. A new column is created which contains a
+        Boolean value, indicating whether the left Coding subsumes the right Coding.
+
+        :param df: a DataFrame containing the input data
+        :param left_coding_column: a Column containing a struct representation of a Coding,
+        for the left-hand side of the subsumption test
+        :param right_coding_column: a Column containing a struct representation of a Coding,
+        for the right-hand side of the subsumption test
+        :param output_column_name: the name of the result column
+        :return: A new dataframe with an additional column containing the result of the operation.
+        """
+        return self._wrap_df(
+                self._jpc.subsumes(df._jdf, left_coding_column._jc, right_coding_column._jc,
+                                   output_column_name))
