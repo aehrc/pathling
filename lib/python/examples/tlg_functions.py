@@ -33,8 +33,8 @@ def main():
     pathling_ctx = PathlingContext(spark,
                                    serverUrl='https://tx.ontoserver.csiro.au/fhir')
 
-    memberOf_df = pathling_ctx.memberOf(coding_df, col('coding'), SINUS_INFECTION_VS,
-                                        'is_sinus_infection')
+    memberOf_df = pathling_ctx.member_of(coding_df, col('coding'), SINUS_INFECTION_VS,
+                                         'is_sinus_infection')
     result = memberOf_df.select('id',
                                 col('coding').getField('code'),
                                 col('coding').getField('display'),

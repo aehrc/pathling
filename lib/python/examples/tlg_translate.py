@@ -30,7 +30,7 @@ def main():
                               "=900000000000497000";
 
     translated_df = pathling_ctx.translate(coding_df, col('coding'), TO_READ_CONCEPT_MAP_URI,
-                                           outputColumnName='readCoding')
+                                           output_column_name='readCoding')
     result = translated_df.select('id',
                                   col('coding').getField('code'),
                                   col('coding').getField('display'),

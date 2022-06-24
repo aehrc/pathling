@@ -15,7 +15,7 @@ def main():
     bundles = pc.spark.read.text(bundles_dir, wholetext=True)
 
     # Convert the data set of strings into a structured FHIR data set.
-    patients = pc.encodeBundle(bundles, 'Patient')
+    patients = pc.encode_bundle(bundles, 'Patient')
 
     # JSON is the default format, XML Bundles can be encoded using input type.
     # patients = pc.encodeBundle(bundles, 'Patient', inputType=MimeType.FHIR_XML)
