@@ -17,4 +17,4 @@ result = pc.translate(csv, to_coding(csv.CODE, 'http://snomed.info/sct'),
                       'http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000',
                       output_column_name='READ_CODE')
 result = result.withColumn('READ_CODE', result.READ_CODE.code)
-result.show()
+result.select('CODE', 'DESCRIPTION', 'READ_CODE').show()
