@@ -4,10 +4,13 @@ from typing import Optional, Sequence
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
 
+from pathling.coding import Coding
 from pathling.etc import find_jar
 from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
+
+from pathling.functions import to_coding_literal
 
 EQ_EQUIVALENT = "equivalent"
 
@@ -163,8 +166,11 @@ class PathlingContext:
                                     equivalence,
                                     output_column_name))
 
-    def subsumes(self, df: DataFrame, left_coding_column: Column, right_coding_column: Column,
-                 output_column_name: str):
+    def subsumes(self, df: DataFrame, output_column_name: str,
+                 left_coding_column: Optional[Column] = None,
+                 right_coding_column: Optional[Column] = None,
+                 left_coding: Optional[Coding] = None,
+                 right_coding: Optional[Coding] = None):
         """
         Takes a dataframe with two Coding columns. A new column is created which contains a
         Boolean value, indicating whether the left Coding subsumes the right Coding.
@@ -174,9 +180,17 @@ class PathlingContext:
         for the left-hand side of the subsumption test
         :param right_coding_column: a Column containing a struct representation of a Coding,
         for the right-hand side of the subsumption test
+        :param left_coding: a Coding object for the left-hand side of the subsumption test
+        :param right_coding: a Coding object for the right-hand side of the subsumption test
         :param output_column_name: the name of the result column
         :return: A new dataframe with an additional column containing the result of the operation.
         """
+        if (left_coding_column is None and left_coding is None) or (
+                right_coding_column is None and right_coding is None):
+            raise ValueError(
+                    "Must provide either left_coding_column or left_coding, and either "
+                    "right_coding_column or right_coding")
+        left_column = to_coding_literal(left_coding) if left_coding else left_coding_column
+        right_column = to_coding_literal(right_coding) if right_coding else right_coding_column
         return self._wrap_df(
-                self._jpc.subsumes(df._jdf, left_coding_column._jc, right_coding_column._jc,
-                                   output_column_name))
+                self._jpc.subsumes(df._jdf, left_column._jc, right_column._jc, output_column_name))
