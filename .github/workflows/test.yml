@@ -73,7 +73,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Encoders test report
           fail_on_test_failures: true
-  
+
   fhir-server-1:
     name: FHIR server (tranche 1)
     runs-on: ubuntu-latest
@@ -103,7 +103,7 @@ jobs:
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven
         env:
-          # Activate the "tranche 1" test profile. If there is a cache hit on the test data, we 
+          # Activate the "tranche 1" test profile. If there is a cache hit on the test data, we
           # don't need to import it.
           PATHLING_PROFILES: testTranche1${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
@@ -150,7 +150,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 1
           fail_on_test_failures: true
-  
+
   fhir-server-2:
     name: FHIR server (tranche 2)
     runs-on: ubuntu-latest
@@ -180,7 +180,7 @@ jobs:
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven
         env:
-          # Activate the "tranche 2" test profile. If there is a cache hit on the test data, we 
+          # Activate the "tranche 2" test profile. If there is a cache hit on the test data, we
           # don't need to import it.
           PATHLING_PROFILES: testTranche2${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
@@ -227,7 +227,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 2
           fail_on_test_failures: true
-  
+
   # This job builds the FHIR server, and runs all tests that do not fall into tranches 1 or 2.
   fhir-server-3:
     name: FHIR server (tranche 3)
@@ -258,7 +258,7 @@ jobs:
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
       - name: Run the verify goal with Maven
         env:
-          # Activate the "tranche 3" test profile. If there is a cache hit on the test data, we 
+          # Activate the "tranche 3" test profile. If there is a cache hit on the test data, we
           # don't need to import it.
           PATHLING_PROFILES: testTranche3${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
@@ -323,7 +323,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 3
           fail_on_test_failures: true
-  
+
   # This job builds, tests and scans the FHIR server Docker image.
   docker-image:
     name: Docker image
@@ -391,7 +391,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Docker image test report
           fail_on_test_failures: true
-  
+
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest
@@ -436,7 +436,7 @@ jobs:
         with:
           name: benchmark-results
           path: "**/jmh-*.json"
-  
+
   js-client:
     name: JavaScript client
     runs-on: ubuntu-latest
@@ -466,7 +466,7 @@ jobs:
           mvn --batch-mode verify
           -pl lib/js -am
         timeout-minutes: 5
-  
+
   import:
     name: Import lambda
     runs-on: ubuntu-latest
@@ -501,7 +501,7 @@ jobs:
         with:
           name: import-lambda
           path: lib/import/target/pathling-import-lambda.zip
-  
+
   python-api:
     name: Python API
     runs-on: ubuntu-latest
@@ -568,7 +568,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Python API test report
           fail_on_test_failures: true
-  
+
   site:
     name: Site
     runs-on: ubuntu-latest
@@ -599,7 +599,7 @@ jobs:
           -pl site -am
           -DskipTests
         timeout-minutes: 15
-  
+
   upload-coverage:
     name: Upload coverage
     runs-on: ubuntu-latest
