@@ -14,7 +14,7 @@ on:
       - 'v**'
 
 jobs:
-  
+
   deploy-maven:
     name: Maven
     runs-on: ubuntu-latest
@@ -57,7 +57,7 @@ jobs:
           -DskipTests \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         timeout-minutes: 30
-  
+
   deploy-python:
     name: PyPI
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
           -PpythonRelease \
           -DskipTests
         timeout-minutes: 30
-  
+
   deploy-docker:
     name: Docker Hub
     runs-on: ubuntu-latest
@@ -123,7 +123,7 @@ jobs:
           -Pdocker \
           -DskipTests -DskipScalaDocs
         timeout-minutes: 30
-  
+
   create-release:
     name: Draft GitHub release
     runs-on: ubuntu-latest
