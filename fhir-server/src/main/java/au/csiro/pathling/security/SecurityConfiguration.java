@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.security;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

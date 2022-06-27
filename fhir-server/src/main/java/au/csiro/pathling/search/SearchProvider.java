@@ -8,7 +8,7 @@ package au.csiro.pathling.search;
 
 import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourceDefinition;

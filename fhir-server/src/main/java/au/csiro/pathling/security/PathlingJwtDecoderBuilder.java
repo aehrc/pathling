@@ -11,8 +11,8 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.AuthorizationConfiguration;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -82,7 +82,7 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
    * @return a JWT decoder
    */
   public JwtDecoder build(@Nonnull final Configuration configuration) {
-    final Authorization auth = getAuthConfiguration(configuration);
+    final AuthorizationConfiguration auth = getAuthConfiguration(configuration);
 
     // Audience and issuer within each incoming bearer token are validated against the values
     // configured into the server.
@@ -93,9 +93,9 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   }
 
   @Nonnull
-  protected Authorization getAuthConfiguration(@Nullable final Configuration configuration) {
+  protected AuthorizationConfiguration getAuthConfiguration(@Nullable final Configuration configuration) {
     checkArgument(configuration != null, "configuration cannot be null");
-    final Authorization auth = configuration.getAuth();
+    final AuthorizationConfiguration auth = configuration.getAuth();
     check(auth.isEnabled());
     return auth;
   }

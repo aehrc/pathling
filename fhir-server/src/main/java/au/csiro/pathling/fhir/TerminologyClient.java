@@ -6,6 +6,9 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Elements;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -22,6 +25,8 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.impl.client.HttpClients;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Coding;
@@ -121,8 +126,11 @@ public interface TerminologyClient extends IRestfulClient {
   @Nonnull
   static TerminologyClient build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
-      final boolean verboseRequestLogging, @Nonnull final Logger logger) {
+      final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
+      @Nonnull final Logger logger) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
+    restfulClientFactory.setHttpClient(HttpClients.custom().setRetryHandler(
+        new DefaultHttpRequestRetryHandler()).build());
     restfulClientFactory.setSocketTimeout(socketTimeout);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
@@ -134,13 +142,23 @@ public interface TerminologyClient extends IRestfulClient {
     loggingInterceptor.setLogger(logger);
     loggingInterceptor.setLogRequestSummary(true);
     loggingInterceptor.setLogResponseSummary(true);
+    loggingInterceptor.setLogRequestHeaders(false);
+    loggingInterceptor.setLogResponseHeaders(false);
     if (verboseRequestLogging) {
-      loggingInterceptor.setLogRequestHeaders(true);
       loggingInterceptor.setLogRequestBody(true);
-      loggingInterceptor.setLogResponseHeaders(true);
       loggingInterceptor.setLogResponseBody(true);
     }
     terminologyClient.registerInterceptor(loggingInterceptor);
+
+    if (authConfig.isEnabled()) {
+      checkNotNull(authConfig.getTokenEndpoint());
+      checkNotNull(authConfig.getClientId());
+      checkNotNull(authConfig.getClientSecret());
+      final ClientAuthInterceptor clientAuthInterceptor = new ClientAuthInterceptor(
+          authConfig.getTokenEndpoint(), authConfig.getClientId(), authConfig.getClientSecret(),
+          authConfig.getScope());
+      terminologyClient.registerInterceptor(clientAuthInterceptor);
+    }
 
     return terminologyClient;
   }

@@ -9,7 +9,7 @@ package au.csiro.pathling.aggregate;
 import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;

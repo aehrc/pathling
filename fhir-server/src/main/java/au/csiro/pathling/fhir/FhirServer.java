@@ -8,7 +8,7 @@ package au.csiro.pathling.fhir;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.encoders.EncoderBuilder;
@@ -334,4 +334,3 @@ public class FhirServer extends RestfulServer {
   }
 
 }
-

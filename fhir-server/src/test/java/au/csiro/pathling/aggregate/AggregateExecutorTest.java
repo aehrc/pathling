@@ -10,7 +10,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;

@@ -14,8 +14,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.HttpCaching;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.HttpCachingConfiguration;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -53,7 +53,7 @@ class EntityTagInterceptorTest {
     requestDetails = mock(RequestDetails.class);
     response = mock(HttpServletResponse.class);
     final Configuration configuration = mock(Configuration.class);
-    final HttpCaching httpCaching = mock(HttpCaching.class);
+    final HttpCachingConfiguration httpCaching = mock(HttpCachingConfiguration.class);
     when(httpCaching.getVary()).thenReturn(
         List.of("Accept", "Accept-Encoding", "Prefer", "Authorization"));
     when(httpCaching.getCacheableControl()).thenReturn(List.of("must-revalidate", "max-age=1"));

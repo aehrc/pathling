@@ -6,8 +6,8 @@
 
 package au.csiro.pathling.security.ga4gh;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.PathlingJwtDecoderBuilder;
 import java.util.ArrayList;
@@ -36,7 +36,7 @@ public class PassportDecoderBuilder extends PathlingJwtDecoderBuilder {
 
   @Override
   public JwtDecoder build(@Nonnull final Configuration configuration) {
-    final Authorization auth = getAuthConfiguration(configuration);
+    final AuthorizationConfiguration auth = getAuthConfiguration(configuration);
 
     // The passport decoder is the same as the regular Pathling decoder with the exception that the
     // audience claim is not required.

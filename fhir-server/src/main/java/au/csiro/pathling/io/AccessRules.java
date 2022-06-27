@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.io;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.errors.SecurityError;
 import java.util.List;
 import java.util.stream.Collectors;

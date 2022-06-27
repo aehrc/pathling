@@ -12,7 +12,7 @@ import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.security.OidcConfiguration;

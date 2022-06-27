@@ -14,7 +14,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.asc;
 import static org.apache.spark.sql.functions.desc;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;

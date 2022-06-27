@@ -9,8 +9,8 @@ package au.csiro.pathling.security;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.springframework.security.oauth2.jwt.JwtDecoderProviderConfigurationUtilsProxy.getConfigurationForIssuerLocation;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.AuthorizationConfiguration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -40,7 +40,7 @@ public class OidcConfiguration {
    */
   @Autowired
   public OidcConfiguration(@Nonnull final Configuration configuration) {
-    final Authorization authConfig = configuration.getAuth();
+    final AuthorizationConfiguration authConfig = configuration.getAuth();
     final Supplier<RuntimeException> authConfigError = () -> new RuntimeException(
         "Configuration for issuer must be present if authorization is enabled");
     final String issuer = authConfig.getIssuer().orElseThrow(authConfigError);
