@@ -51,10 +51,12 @@ public class ClientAuthInterceptor {
   private final String scope;
 
   @Nullable
-  private ClientCredentialsResponse token = null;
+  private static ClientCredentialsResponse token = null;
 
   @Nullable
-  private Instant expires = null;
+  private static Instant expires = null;
+
+  // TODO: Make the static variables into a map, that is keyed on token endpoint, client ID and scope.
 
   public ClientAuthInterceptor(@Nonnull final String tokenEndpoint, @Nonnull final String clientId,
       @Nonnull final String clientSecret, @Nullable final String scope) {
@@ -67,11 +69,12 @@ public class ClientAuthInterceptor {
   @Hook(Pointcut.CLIENT_REQUEST)
   public void handleClientRequest(@Nullable final IHttpRequest httpRequest) throws IOException {
     if (httpRequest != null) {
-      checkAndUpdateToken();
+      final ClientCredentialsResponse currentToken = checkAndUpdateToken(clientId, clientSecret,
+          tokenEndpoint, scope);
       // Now we should have a token, so we can add it to the request.
-      checkNotNull(token);
-      checkNotNull(token.getAccessToken());
-      httpRequest.addHeader("Authorization", "Bearer " + token.getAccessToken());
+      checkNotNull(currentToken);
+      checkNotNull(currentToken.getAccessToken());
+      httpRequest.addHeader("Authorization", "Bearer " + currentToken.getAccessToken());
     }
   }
 
@@ -81,44 +84,51 @@ public class ClientAuthInterceptor {
       throws IOException {
     if (httpResponse != null && httpResponse.getStatus() == 401) {
       log.debug("Received 401 response from server, attempting to retrieve a new token");
-      checkAndUpdateToken();
+      checkAndUpdateToken(clientId, clientSecret, tokenEndpoint, scope);
     }
     // The HttpClient retry mechanism will take care of retrying the request.
   }
 
-  private void checkAndUpdateToken() throws IOException {
+  private static synchronized ClientCredentialsResponse checkAndUpdateToken(final String clientId,
+      final String clientSecret, final String tokenEndpoint, final String scope)
+      throws IOException {
     if (token == null) {
       // If we don't have a token, we need to get one.
-      token = getToken();
+      token = getToken(clientId, clientSecret, tokenEndpoint, scope);
       updateExpiry();
     } else if (expires != null && expires.isBefore(Instant.now())
         && token.getRefreshToken() != null) {
       // If we have a token, but it's expired, we need to refresh it.
-      token = refreshToken(token.getRefreshToken());
+      token = refreshToken(token.getRefreshToken(), tokenEndpoint, scope);
       updateExpiry();
     }
+    return token;
   }
 
   @Nonnull
-  private ClientCredentialsResponse getToken() throws IOException {
+  private static ClientCredentialsResponse getToken(final String clientId,
+      final String clientSecret, final String tokenEndpoint, final String scope)
+      throws IOException {
     final List<NameValuePair> authParams = new ArrayList<>();
     authParams.add(new BasicNameValuePair("client_id", clientId));
     authParams.add(new BasicNameValuePair("client_secret", clientSecret));
-    return clientCredentialsGrant(authParams);
+    return clientCredentialsGrant(authParams, tokenEndpoint, scope);
   }
 
   @Nonnull
-  private ClientCredentialsResponse refreshToken(@Nonnull final String refreshToken)
+  private static ClientCredentialsResponse refreshToken(@Nonnull final String refreshToken,
+      final String tokenEndpoint, final String scope)
       throws IOException {
     log.debug("Refreshing token, expired at: {}", expires);
     final List<NameValuePair> authParams = new ArrayList<>();
     authParams.add(new BasicNameValuePair("refresh_token", refreshToken));
-    return clientCredentialsGrant(authParams);
+    return clientCredentialsGrant(authParams, tokenEndpoint, scope);
   }
 
   @Nonnull
-  private ClientCredentialsResponse clientCredentialsGrant(
-      @Nonnull final List<NameValuePair> authParams) throws IOException {
+  private static ClientCredentialsResponse clientCredentialsGrant(
+      @Nonnull final List<NameValuePair> authParams, final String tokenEndpoint, final String scope)
+      throws IOException {
     log.debug("Performing client credentials grant using token endpoint: {}", tokenEndpoint);
     try (final CloseableHttpClient httpClient = HttpClients.createDefault()) {
       final HttpPost request = new HttpPost(tokenEndpoint);
@@ -154,7 +164,7 @@ public class ClientAuthInterceptor {
     }
   }
 
-  private void updateExpiry() {
+  private static void updateExpiry() {
     checkNotNull(token);
     expires = Instant.now().plusSeconds(token.getExpiresIn());
     log.debug("New token will expire at {}", expires);
