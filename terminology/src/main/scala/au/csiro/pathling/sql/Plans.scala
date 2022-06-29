@@ -11,9 +11,10 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.catalyst.expressions.codegen.GenerateUnsafeRowJoiner
-import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, NamedExpression, UnsafeRow}
-import org.apache.spark.sql.catalyst.plans.logical.{LogicalPlan, UnaryNode}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, Expression, ExpressionSet, NamedExpression, UnsafeRow}
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.plans.physical.Partitioning
+import org.apache.spark.sql.catalyst.trees.UnaryLike
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.types.{StructField, StructType}
 
@@ -80,8 +81,14 @@ object MapWithPartitionPreview {
  * to Java/Scala objects with the `decoder` function, before being passed to `preview` and `mapper`
  * respectively.
  *
- * This is based on {`org.apache.spark.sql.catalyst.plans.logical.AppendColumns`}.
- *
+ * @impNote This is based on {`org.apache.spark.sql.catalyst.plans.logical.AppendColumns`}. 
+ *          Originally it extended {`org.apache.spark.sql.catalyst.plans.logical.UnaryNode`}
+ *          but that was causing problems in Databricks environments (it appears they are using a 
+ *          customized version of catalyst where UnaryNode is an abstract class rather than a trait.
+ *          So now instead we are inheriting directly from 
+ *          {`org.apache.spark.sql.catalyst.plans.logical.LogicalPlan`}
+ *          and mixing in  {`org.apache.spark.sql.catalyst.plans.logical.UnaryLike`} just as
+ *          {`org.apache.spark.sql.catalyst.plans.logical.UnaryNode`} does.
  * @param serializer   the function that converts the mapper result to the new column to be appended
  *                     to the child produced dataset.
  * @param decoder      the function that converts the 'raw' spark sql object produced by
@@ -96,12 +103,13 @@ object MapWithPartitionPreview {
  *                     state to the result. Currently the result needs to be a 'raw' spark sql type
  *                     that can be used with `Row(...)`.
  * @param child        the child `LogicalPlan`
+ *
  */
 case class MapWithPartitionPreview(serializer: ExpressionWrapper, decoder: Any => Any,
                                    deserializer: Expression,
                                    preview: Iterator[Any] => Any,
                                    mapper: (Any, Any) => Any,
-                                   child: LogicalPlan) extends UnaryNode {
+                                   child: LogicalPlan) extends LogicalPlan with UnaryLike[LogicalPlan] {
 
   override def output: Seq[Attribute] = child.output ++ newColumns
 
@@ -110,6 +118,8 @@ case class MapWithPartitionPreview(serializer: ExpressionWrapper, decoder: Any =
   override protected def withNewChildInternal(newChild: LogicalPlan): LogicalPlan = {
     MapWithPartitionPreview(serializer, decoder, deserializer, preview, mapper, newChild)
   }
+
+  override protected lazy val validConstraints: ExpressionSet = child.constraints
 }
 
 
