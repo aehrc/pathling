@@ -154,10 +154,10 @@ pathling:
   encoding:
     # Controls the maximum depth of nested element data that is encoded upon import.
     maxNestingLevel: 3
-    
+
     # Enables support for FHIR extensions.
     enableExtensions: true
-    
+
     # The list of types that are encoded within open types, such as extensions. This default list 
     # was taken from the data types that are common to extensions found in widely-used IGs, 
     # such as the US and AU base profiles. In general, you will get the best query performance by 
