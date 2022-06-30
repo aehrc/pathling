@@ -22,3 +22,7 @@ CVE-2020-36518
 # We have assessed this as low-risk in the context of Pathling, as this only applies to the AWS 
 # client and is also mitigated by the white-list of trusted data sources.
 CVE-2020-25644
+
+# This vulnerability affects openssl, which is not a dependency is not exposed through any of the 
+# interfaces to our application.
+CVE-2022-2068
