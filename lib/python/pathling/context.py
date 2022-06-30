@@ -1,8 +1,7 @@
-from typing import Optional, Sequence
-
 # noinspection PyPackageRequirements
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
+from typing import Optional, Sequence
 
 from pathling.coding import Coding
 from pathling.etc import find_jar
@@ -85,7 +84,7 @@ class PathlingContext:
         self._jpc: JavaObject = jpc
 
     def _wrap_df(self, jdf: JavaObject) -> DataFrame:
-        return DataFrame(jdf, self._spark)
+        return DataFrame(jdf, self._spark._wrapped)
 
     def encode(self, df: DataFrame, resource_name: str,
                input_type: Optional[str] = None, column: Optional[str] = None) -> DataFrame:
