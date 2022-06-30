@@ -84,7 +84,13 @@ class PathlingContext:
         self._jpc: JavaObject = jpc
 
     def _wrap_df(self, jdf: JavaObject) -> DataFrame:
-        return DataFrame(jdf, self._spark._wrapped)
+        #
+        # Before Spark v3.3 Dataframes were constructs with SQLContext, which was available
+        # in `_wrapped` attribute of SparkSession.
+        # Since v3.3 Dataframes are constructed with SparkSession instance direclty.
+        #
+        return DataFrame(jdf,
+                         self._spark._wrapped if hasattr(self._spark, '_wrapped') else self._spark)
 
     def encode(self, df: DataFrame, resource_name: str,
                input_type: Optional[str] = None, column: Optional[str] = None) -> DataFrame:
