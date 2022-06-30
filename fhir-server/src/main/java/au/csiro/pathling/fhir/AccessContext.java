@@ -6,24 +6,16 @@
 
 package au.csiro.pathling.fhir;
 
-import javax.annotation.Nullable;
+import java.time.Instant;
+import javax.annotation.Nonnull;
 import lombok.Value;
 
 @Value
-public class ClientCredentialsResponse {
+class AccessContext {
 
-  @Nullable
-  String accessToken;
+  @Nonnull
+  ClientCredentialsResponse clientCredentialsResponse;
 
-  @Nullable
-  String tokenType;
-
-  int expiresIn;
-
-  @Nullable
-  String refreshToken;
-
-  @Nullable
-  String scope;
-
+  @Nonnull
+  Instant expiryTime;
 }

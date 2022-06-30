@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -50,13 +52,8 @@ public class ClientAuthInterceptor {
   @Nullable
   private final String scope;
 
-  @Nullable
-  private static ClientCredentialsResponse token = null;
-
-  @Nullable
-  private static Instant expires = null;
-
-  // TODO: Make the static variables into a map, that is keyed on token endpoint, client ID and scope.
+  @Nonnull
+  private static final Map<AccessScope, AccessContext> accessContexts = new ConcurrentHashMap<>();
 
   public ClientAuthInterceptor(@Nonnull final String tokenEndpoint, @Nonnull final String clientId,
       @Nonnull final String clientSecret, @Nullable final String scope) {
@@ -66,63 +63,79 @@ public class ClientAuthInterceptor {
     this.scope = scope;
   }
 
+  @SuppressWarnings("unused")
   @Hook(Pointcut.CLIENT_REQUEST)
   public void handleClientRequest(@Nullable final IHttpRequest httpRequest) throws IOException {
     if (httpRequest != null) {
-      final ClientCredentialsResponse currentToken = checkAndUpdateToken(clientId, clientSecret,
-          tokenEndpoint, scope);
-      // Now we should have a token, so we can add it to the request.
-      checkNotNull(currentToken);
-      checkNotNull(currentToken.getAccessToken());
-      httpRequest.addHeader("Authorization", "Bearer " + currentToken.getAccessToken());
+      final AccessContext accessContext = ensureAccessContext(clientId, clientSecret, tokenEndpoint,
+          scope);
+      // Now we should have a valid token, so we can add it to the request.
+      final String accessToken = accessContext.getClientCredentialsResponse().getAccessToken();
+      checkNotNull(accessToken);
+      httpRequest.addHeader("Authorization", "Bearer " + accessToken);
     }
   }
 
+  @SuppressWarnings("unused")
   @Hook(Pointcut.CLIENT_RESPONSE)
   public void handleClientResponse(@Nullable final IHttpRequest httpRequest,
       @Nullable final IHttpResponse httpResponse, @Nullable final IRestfulClient client)
       throws IOException {
     if (httpResponse != null && httpResponse.getStatus() == 401) {
       log.debug("Received 401 response from server, attempting to retrieve a new token");
-      checkAndUpdateToken(clientId, clientSecret, tokenEndpoint, scope);
+      ensureAccessContext(clientId, clientSecret, tokenEndpoint, scope);
     }
     // The HttpClient retry mechanism will take care of retrying the request.
   }
 
-  private static synchronized ClientCredentialsResponse checkAndUpdateToken(final String clientId,
+  private static synchronized AccessContext ensureAccessContext(final String clientId,
       final String clientSecret, final String tokenEndpoint, final String scope)
       throws IOException {
-    if (token == null) {
+    final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, clientSecret, scope);
+    AccessContext accessContext = accessContexts.get(accessScope);
+    if (accessContext == null) {
       // If we don't have a token, we need to get one.
-      token = getToken(clientId, clientSecret, tokenEndpoint, scope);
-      updateExpiry();
-    } else if (expires != null && expires.isBefore(Instant.now())
-        && token.getRefreshToken() != null) {
+      log.debug("Getting new token");
+      accessContext = getNewAccessContext(clientId, clientSecret,
+          tokenEndpoint, scope);
+      accessContexts.put(accessScope, accessContext);
+    } else if (accessContext.getExpiryTime().isBefore(Instant.now())
+        && accessContext.getClientCredentialsResponse().getRefreshToken() != null) {
       // If we have a token, but it's expired, we need to refresh it.
-      token = refreshToken(token.getRefreshToken(), tokenEndpoint, scope);
-      updateExpiry();
+      log.debug("Refreshing token, expired at: {}", accessContext.getExpiryTime());
+      accessContext = refreshAccessContext(
+          accessContext.getClientCredentialsResponse().getRefreshToken(), tokenEndpoint, scope);
+      accessContexts.put(accessScope, accessContext);
     }
-    return token;
+    return accessContext;
   }
 
   @Nonnull
-  private static ClientCredentialsResponse getToken(final String clientId,
+  private static AccessContext getNewAccessContext(final String clientId,
       final String clientSecret, final String tokenEndpoint, final String scope)
       throws IOException {
     final List<NameValuePair> authParams = new ArrayList<>();
     authParams.add(new BasicNameValuePair("client_id", clientId));
     authParams.add(new BasicNameValuePair("client_secret", clientSecret));
-    return clientCredentialsGrant(authParams, tokenEndpoint, scope);
+    return getAccessContext(authParams, tokenEndpoint, scope);
   }
 
   @Nonnull
-  private static ClientCredentialsResponse refreshToken(@Nonnull final String refreshToken,
-      final String tokenEndpoint, final String scope)
-      throws IOException {
-    log.debug("Refreshing token, expired at: {}", expires);
+  private static AccessContext refreshAccessContext(@Nonnull final String refreshToken,
+      final String tokenEndpoint, final String scope) throws IOException {
     final List<NameValuePair> authParams = new ArrayList<>();
     authParams.add(new BasicNameValuePair("refresh_token", refreshToken));
-    return clientCredentialsGrant(authParams, tokenEndpoint, scope);
+    return getAccessContext(authParams, tokenEndpoint, scope);
+  }
+
+  @Nonnull
+  private static AccessContext getAccessContext(@Nonnull final List<NameValuePair> authParams,
+      @Nonnull final String tokenEndpoint, @Nonnull final String scope) throws IOException {
+    final ClientCredentialsResponse response = clientCredentialsGrant(authParams, tokenEndpoint,
+        scope);
+    final Instant expires = getExpiryTime(response);
+    log.debug("New token will expire at {}", expires);
+    return new AccessContext(response, expires);
   }
 
   @Nonnull
@@ -164,10 +177,8 @@ public class ClientAuthInterceptor {
     }
   }
 
-  private static void updateExpiry() {
-    checkNotNull(token);
-    expires = Instant.now().plusSeconds(token.getExpiresIn());
-    log.debug("New token will expire at {}", expires);
+  private static Instant getExpiryTime(@Nonnull final ClientCredentialsResponse response) {
+    return Instant.now().plusSeconds(response.getExpiresIn());
   }
 
 }

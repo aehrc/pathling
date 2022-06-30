@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
@@ -49,16 +48,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author Piotr Szul
  */
 @TestPropertySource(properties = {
-    "pathling.test.recording.terminologyServerUrl=https://r4.ontoserver.csiro.au/",
+    "pathling.test.recording.terminologyServerUrl=https://tx.ontoserver.csiro.au/fhir",
     "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
 })
 @Tag("Tranche2")
@@ -68,15 +67,14 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   @Autowired
   FhirContext fhirContext;
 
-  @Value("${pathling.test.recording.terminologyServerUrl}")
-  String recordingTxServerUrl;
-
-  @Value("${pathling.terminology.serverUrl}")
-  String terminologyServerUrl;
-
+  @Autowired
   TerminologyService terminologyService;
 
-  UUIDFactory mockUUIDFactory;
+  @MockBean
+  UUIDFactory uuidFactory;
+
+  @Value("${pathling.test.recording.terminologyServerUrl}")
+  String recordingTxServerUrl;
 
   @BeforeEach
   @Override
@@ -87,13 +85,6 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
       log.warn("Proxying all request to: {}", recordingTxServerUrl);
       stubFor(proxyAllTo(recordingTxServerUrl));
     }
-
-    mockUUIDFactory = Mockito.mock(UUIDFactory.class);
-    // TODO: Refactor to use actual dependency injection, requires possible refactoring of test
-    //  contexts.
-    final DefaultTerminologyServiceFactory tcf = new DefaultTerminologyServiceFactory(fhirContext,
-        terminologyServerUrl, 0, false);
-    terminologyService = tcf.buildService(log, mockUUIDFactory);
   }
 
   @AfterEach
@@ -183,15 +174,16 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
   @Test
   void testCorrectlyBuildsClosureKnownAndUnknownSystems() {
-
-    when(mockUUIDFactory.nextUUID())
+    when(uuidFactory.nextUUID())
         .thenReturn(UUID.fromString("5d1b976d-c50c-445a-8030-64074b83f355"));
+
     final Relation actualRelation = terminologyService
         .getSubsumesRelation(
             setOfSimpleFrom(CD_SNOMED_107963000, CD_SNOMED_VER_63816008,
                 CD_SNOMED_72940011000036107, CD_AST_VIC,
                 new Coding("uuid:unknown", "unknown", "Unknown")
             ));
+   
     // It appears that in the response all codings are versioned regardless
     // of whether the version was present in the request
     final Relation expectedRelation = RelationBuilder.empty()
