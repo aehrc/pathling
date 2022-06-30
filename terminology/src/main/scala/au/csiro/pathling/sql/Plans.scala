@@ -81,11 +81,11 @@ object MapWithPartitionPreview {
  * to Java/Scala objects with the `decoder` function, before being passed to `preview` and `mapper`
  * respectively.
  *
- * @impNote This is based on {`org.apache.spark.sql.catalyst.plans.logical.AppendColumns`}. 
+ * @impNote This is based on {`org.apache.spark.sql.catalyst.plans.logical.AppendColumns`}.
  *          Originally it extended {`org.apache.spark.sql.catalyst.plans.logical.UnaryNode`}
- *          but that was causing problems in Databricks environments (it appears they are using a 
+ *          but that was causing problems in Databricks environments (it appears they are using a
  *          customized version of catalyst where UnaryNode is an abstract class rather than a trait.
- *          So now instead we are inheriting directly from 
+ *          So now instead we are inheriting directly from
  *          {`org.apache.spark.sql.catalyst.plans.logical.LogicalPlan`}
  *          and mixing in  {`org.apache.spark.sql.catalyst.plans.logical.UnaryLike`} just as
  *          {`org.apache.spark.sql.catalyst.plans.logical.UnaryNode`} does.
@@ -109,7 +109,8 @@ case class MapWithPartitionPreview(serializer: ExpressionWrapper, decoder: Any =
                                    deserializer: Expression,
                                    preview: Iterator[Any] => Any,
                                    mapper: (Any, Any) => Any,
-                                   child: LogicalPlan) extends LogicalPlan with UnaryLike[LogicalPlan] {
+                                   child: LogicalPlan)
+  extends LogicalPlan with UnaryLike[LogicalPlan] {
 
   override def output: Seq[Attribute] = child.output ++ newColumns
 
