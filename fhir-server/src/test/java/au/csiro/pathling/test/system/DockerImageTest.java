@@ -458,9 +458,12 @@ class DockerImageTest {
 
   @Nonnull
   private static String getRequiredProperty(@Nonnull final String key) {
+    if (key.isBlank()) {
+      throw new IllegalArgumentException("Required property key cannot be blank");
+    }
     final String value = System.getProperty(key);
-    final String errorMessage = "Property " + key + " must be provided";
-    if (value == null || key.isBlank()) {
+    if (value == null) {
+      final String errorMessage = "Property " + key + " must be provided";
       log.error(errorMessage);
       throw new IllegalArgumentException(errorMessage);
     }
