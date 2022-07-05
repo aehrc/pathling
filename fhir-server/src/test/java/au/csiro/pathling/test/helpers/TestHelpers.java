@@ -85,12 +85,17 @@ public abstract class TestHelpers {
   public static Dataset<Row> getDatasetForResourceType(@Nonnull final SparkSession spark,
       @Nonnull final ResourceType resourceType) {
     return getDatasetFromParquetFile(spark,
-        getParquetPathForResourceType(resourceType));
+        getParquetUrlForResourceType(resourceType));
   }
 
   @Nonnull
-  public static String getParquetPathForResourceType(final @Nonnull ResourceType resourceType) {
-    return WAREHOUSE_URL + "/" + DATABASE_NAME + "/" + resourceType.toCode() + ".parquet";
+  public static String getDatabaseUrl() {
+    return String.join("/", WAREHOUSE_URL, DATABASE_NAME);
+  }
+
+  @Nonnull
+  public static String getParquetUrlForResourceType(final @Nonnull ResourceType resourceType) {
+    return getDatabaseUrl() + "/" + resourceType.toCode() + ".parquet";
   }
 
   @Nonnull
