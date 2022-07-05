@@ -10,8 +10,6 @@ from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
 
-from pathling.functions import to_coding_literal
-
 EQ_EQUIVALENT = "equivalent"
 
 
@@ -196,7 +194,7 @@ class PathlingContext:
             raise ValueError(
                     "Must provide either left_coding_column or left_coding, and either "
                     "right_coding_column or right_coding")
-        left_column = to_coding_literal(left_coding) if left_coding else left_coding_column
-        right_column = to_coding_literal(right_coding) if right_coding else right_coding_column
+        left_column = left_coding.to_literal() if left_coding else left_coding_column
+        right_column = right_coding.to_literal() if right_coding else right_coding_column
         return self._wrap_df(
                 self._jpc.subsumes(df._jdf, left_column._jc, right_column._jc, output_column_name))

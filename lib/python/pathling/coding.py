@@ -1,3 +1,6 @@
+from pyspark.sql.functions import lit, struct
+
+
 class Coding:
     """
     A Coding represents a code in a code system.
@@ -18,3 +21,19 @@ class Coding:
         self.version = version
         self.display = display
         self.user_selected = user_selected
+
+    def to_literal(self):
+        """
+        Converts a Coding into a Column that contains a Coding struct. The Coding
+        struct Column can be used as an input to terminology functions such as `member_of` and
+        `translate`.
+        :return: a Column containing a Coding struct
+        """
+        id_column = lit(None).alias('id')
+        system_column = lit(self.system).alias('system')
+        version_column = lit(self.version).alias('version')
+        code_column = lit(self.code).alias('code')
+        display_column = lit(self.display).alias('display')
+        user_selected_column = lit(self.user_selected).alias('userSelected')
+        return struct(id_column, system_column, version_column, code_column, display_column,
+                      user_selected_column)
