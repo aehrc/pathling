@@ -1,7 +1,8 @@
 # noinspection PyPackageRequirements
+from typing import Optional, Sequence
+
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
-from typing import Optional, Sequence
 
 from pathling.coding import Coding
 from pathling.etc import find_jar
@@ -35,7 +36,7 @@ class PathlingContext:
         return self._spark
 
     @classmethod
-    def create(cls, spark: SparkSession = None,
+    def create(cls, spark: Optional[SparkSession] = None,
                fhir_version: Optional[str] = None,
                max_nesting_level: Optional[int] = None,
                enable_extensions: Optional[bool] = None,
