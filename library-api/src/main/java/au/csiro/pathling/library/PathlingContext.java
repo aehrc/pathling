@@ -76,10 +76,6 @@ public class PathlingContext {
   public static final int DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT = 60_000;
 
   @Nonnull
-  @SuppressWarnings({"FieldCanBeLocal", "unused"})
-  private final SparkSession sparkSession;
-
-  @Nonnull
   private final FhirVersionEnum fhirVersion;
 
   @Nonnull
@@ -91,7 +87,6 @@ public class PathlingContext {
   private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
-    this.sparkSession = spark;
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
