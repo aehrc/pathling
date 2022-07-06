@@ -9,26 +9,19 @@ package au.csiro.pathling.fhirpath.function.translate;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.sql.MapperWithPreview;
-import au.csiro.pathling.sql.SqlExtensions;
-import au.csiro.pathling.terminology.ConceptTranslator;
-import au.csiro.pathling.utilities.Strings;
+import au.csiro.pathling.terminology.TerminologyFunctions;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -38,11 +31,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set Codings
@@ -162,17 +150,10 @@ public class TranslateFunction implements NamedFunction {
     final String equivalence = arguments.getValueOr(2, DEFAULT_EQUIVALENCE);
     final Dataset<Row> dataset = inputPath.getDataset();
 
-    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapper(MDC.get("requestId"), terminologyServiceFactory,
-            conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
-            wrapInUserInputError(ConceptMapEquivalence::fromCode)));
-
-    final Dataset<Row> translatedDataset = SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply("result", DataTypes.createArrayType(CodingEncoding.DATA_TYPE), true,
-                Metadata.empty()));
+    final Dataset<Row> translatedDataset = TerminologyFunctions.translate(
+        codingArrayCol, conceptMapUrl, reverse, equivalence, dataset, "result",
+        terminologyServiceFactory
+    );
 
     // The result is an array of translations per each input element, which we now
     // need to explode in the same way as for path traversal, creating unique element ids.

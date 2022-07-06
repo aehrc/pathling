@@ -15,7 +15,6 @@ package au.csiro.pathling.library;
 
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
-import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
@@ -25,19 +24,15 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.subsumes.SubsumesMapper;
-import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.PathlingStrategy;
 import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.support.FhirConversionSupport;
-import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyFunctions;
-import au.csiro.pathling.utilities.Strings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -59,7 +54,6 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.slf4j.MDC;
 
 /**
@@ -372,18 +366,8 @@ public class PathlingContext {
     final Column codingArrayCol = when(coding.isNotNull(), array(coding))
         .otherwise(lit(null));
 
-    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapper(getRequestId(), terminologyServiceFactory,
-            conceptMapUri, reverse, Strings.parseCsvList(equivalence,
-            wrapInUserInputError(ConceptMapEquivalence::fromCode)));
-
-    final Dataset<Row> translatedDataset = SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField
-                .apply(outputColumnName, DataTypes.createArrayType(CodingEncoding.DATA_TYPE), true,
-                    Metadata.empty()));
+    final Dataset<Row> translatedDataset = TerminologyFunctions.translate(codingArrayCol,
+        conceptMapUri, reverse, equivalence, dataset, outputColumnName, terminologyServiceFactory);
 
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
   }
