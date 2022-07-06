@@ -3,7 +3,8 @@ spring:
     banner-mode: off
 
 pathling:
-  warehouseUrl: file:///some/nonexistent/path
+  storage:
+    warehouseUrl: file:///some/nonexistent/path
   terminology:
     serverUrl: https://somenonexistenttxserver.com/fhir
   async:

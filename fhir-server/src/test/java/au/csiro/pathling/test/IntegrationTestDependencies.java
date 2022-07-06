@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class IntegrationTestDependencies {
 
-  private static final int WIREMOCK_PORT = 4072;
+  public static final int WIREMOCK_PORT = 4072;
 
   @Bean(destroyMethod = "stop")
   public WireMockServer wireMockServer() {
@@ -44,6 +44,7 @@ public class IntegrationTestDependencies {
   public DefaultTerminologyServiceFactory terminologyServiceFactory(
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration) {
+    log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
     return new DefaultTerminologyServiceFactory(fhirContext,
         configuration.getTerminology().getServerUrl(), 0, false,
         configuration.getTerminology().getAuthentication());
@@ -57,7 +58,7 @@ public class IntegrationTestDependencies {
   @Bean
   public TerminologyService terminologyService(
       @Nonnull final DefaultTerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final UUIDFactory uuidFactory) {
+      @Nonnull final UUIDFactory uuidFactory) throws NoSuchFieldException, IllegalAccessException {
     return terminologyServiceFactory.buildService(log, uuidFactory);
   }
 

@@ -51,15 +51,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author Piotr Szul
  */
-@TestPropertySource(properties = {
-    "pathling.test.recording.terminologyServerUrl=https://tx.ontoserver.csiro.au/fhir",
-    "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
-})
 @Tag("Tranche2")
 @Slf4j
 class TerminologyServiceIntegrationTest extends WireMockTest {
@@ -183,7 +178,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
                 CD_SNOMED_72940011000036107, CD_AST_VIC,
                 new Coding("uuid:unknown", "unknown", "Unknown")
             ));
-   
+
     // It appears that in the response all codings are versioned regardless
     // of whether the version was present in the request
     final Relation expectedRelation = RelationBuilder.empty()
