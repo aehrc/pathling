@@ -28,7 +28,6 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
-import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapper;
 import au.csiro.pathling.fhirpath.function.subsumes.SubsumesMapper;
 import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
@@ -37,12 +36,12 @@ import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
+import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.utilities.Strings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -359,18 +358,10 @@ public class PathlingContext {
   public Dataset<Row> memberOf(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column coding, @Nonnull final String valueSetUri,
       @Nonnull final String outputColumnName) {
-
     final Column codingArrayCol = when(coding.isNotNull(), array(coding))
         .otherwise(lit(null));
-
-    final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapper(getRequestId(), terminologyServiceFactory, valueSetUri);
-
-    return SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
+    return TerminologyFunctions.memberOf(codingArrayCol, valueSetUri, dataset, outputColumnName,
+        terminologyServiceFactory);
   }
 
   @Nonnull

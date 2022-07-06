@@ -14,26 +14,17 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.sql.MapperWithPreview;
-import au.csiro.pathling.sql.SqlExtensions;
-import java.util.List;
-import java.util.Set;
+import au.csiro.pathling.terminology.TerminologyFunctions;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
@@ -82,19 +73,8 @@ public class MemberOfFunction implements NamedFunction {
     final String valueSetUri = argument.getJavaValue();
     final Dataset<Row> dataset = inputPath.getDataset();
 
-    // Perform a "validate code" operation on each Coding or CodeableConcept in the input dataset,
-    // then create a new dataset with the boolean results.
-    final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapper(MDC.get("requestId"), terminologyServiceFactory,
-            valueSetUri);
-
-    // This de-duplicates the Codings to be validated, then performs the validation on a
-    // per-partition basis.
-    final Dataset<Row> resultDataset = SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply("result", DataTypes.BooleanType, true, Metadata.empty()));
+    final Dataset<Row> resultDataset = TerminologyFunctions.memberOf(codingArrayCol, valueSetUri,
+        dataset, "result", terminologyServiceFactory);
     final Column resultColumn = functions.col("result");
 
     // Construct a new result expression.
