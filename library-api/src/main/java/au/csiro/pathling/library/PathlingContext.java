@@ -24,14 +24,8 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
-import au.csiro.pathling.fhirpath.function.subsumes.SubsumesMapper;
-import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.PathlingStrategy;
-import au.csiro.pathling.sql.SqlExtensions;
 import au.csiro.pathling.support.FhirConversionSupport;
-import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -42,16 +36,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.slf4j.MDC;
@@ -352,10 +342,12 @@ public class PathlingContext {
   public Dataset<Row> memberOf(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column coding, @Nonnull final String valueSetUri,
       @Nonnull final String outputColumnName) {
+
     final Column codingArrayCol = when(coding.isNotNull(), array(coding))
         .otherwise(lit(null));
+
     return TerminologyFunctions.memberOf(codingArrayCol, valueSetUri, dataset, outputColumnName,
-        terminologyServiceFactory);
+        terminologyServiceFactory, getRequestId());
   }
 
   @Nonnull
@@ -363,11 +355,13 @@ public class PathlingContext {
       @Nonnull final Column coding, @Nonnull final String conceptMapUri,
       final boolean reverse, @Nonnull final String equivalence,
       @Nonnull final String outputColumnName) {
+
     final Column codingArrayCol = when(coding.isNotNull(), array(coding))
         .otherwise(lit(null));
 
     final Dataset<Row> translatedDataset = TerminologyFunctions.translate(codingArrayCol,
-        conceptMapUri, reverse, equivalence, dataset, outputColumnName, terminologyServiceFactory);
+        conceptMapUri, reverse, equivalence, dataset, outputColumnName, terminologyServiceFactory,
+        getRequestId());
 
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
   }
@@ -376,8 +370,6 @@ public class PathlingContext {
   public Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column leftCoding, @Nonnull final Column rightCoding,
       @Nonnull final String outputColumnName) {
-    final MapperWithPreview<ImmutablePair<List<SimpleCoding>, List<SimpleCoding>>, Boolean, Relation> mapper =
-        new SubsumesMapper(getRequestId(), terminologyServiceFactory, false);
 
     final Column fromArray = array(leftCoding);
     final Column toArray = array(rightCoding);
@@ -389,10 +381,8 @@ public class PathlingContext {
     final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
         idAndCodingSet.col(COL_ARG_CODINGS));
 
-    return SqlExtensions
-        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
-            SimpleCodingsDecoders::decodeListPair, mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, false, Metadata.empty()));
+    return TerminologyFunctions.subsumes(idAndCodingSet, codingPairCol, outputColumnName, false,
+        terminologyServiceFactory, getRequestId());
   }
 
   private static String getRequestId() {

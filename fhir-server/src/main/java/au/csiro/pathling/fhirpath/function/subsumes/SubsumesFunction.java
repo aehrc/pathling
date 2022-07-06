@@ -11,6 +11,7 @@ import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConc
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.col;
@@ -19,22 +20,19 @@ import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.sql.SqlExtensions;
+import au.csiro.pathling.terminology.TerminologyFunctions;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.slf4j.MDC;
 
@@ -91,21 +89,14 @@ public class SubsumesFunction implements NamedFunction {
     final NonLiteralPath inputFhirPath = input.getInput();
     final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
         input.getArguments().get(0));
-    // Process the subsumption operation per partition, adding a result column to the dataset.
 
     final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
         idAndCodingSet.col(COL_ARG_CODINGS));
 
-    @SuppressWarnings({"OptionalGetWithoutIsPresent", "TypeMayBeWeakened"})
-    final SubsumesMapper mapper =
-        new SubsumesMapper(MDC.get("requestId"),
-            input.getContext().getTerminologyServiceFactory().get(),
-            inverted);
-
-    final Dataset<Row> resultDataset = SqlExtensions
-        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
-            SimpleCodingsDecoders::decodeListPair,
-            mapper, StructField.apply("result", DataTypes.BooleanType, true, Metadata.empty()));
+    final TerminologyServiceFactory terminologyServiceFactory = checkPresent(
+        input.getContext().getTerminologyServiceFactory());
+    final Dataset<Row> resultDataset = TerminologyFunctions.subsumes(idAndCodingSet, codingPairCol,
+        "result", inverted, terminologyServiceFactory, MDC.get("requestId"));
     final Column resultColumn = col("result");
 
     // Construct a new result expression.

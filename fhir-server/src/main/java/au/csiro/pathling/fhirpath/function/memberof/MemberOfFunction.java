@@ -7,6 +7,7 @@
 package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.when;
@@ -25,6 +26,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
@@ -67,14 +69,13 @@ public class MemberOfFunction implements NamedFunction {
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    final TerminologyServiceFactory terminologyServiceFactory = inputContext
-        .getTerminologyServiceFactory().get();
+    final TerminologyServiceFactory terminologyServiceFactory =
+        checkPresent(inputContext.getTerminologyServiceFactory());
     final String valueSetUri = argument.getJavaValue();
     final Dataset<Row> dataset = inputPath.getDataset();
 
     final Dataset<Row> resultDataset = TerminologyFunctions.memberOf(codingArrayCol, valueSetUri,
-        dataset, "result", terminologyServiceFactory);
+        dataset, "result", terminologyServiceFactory, MDC.get("requestId"));
     final Column resultColumn = functions.col("result");
 
     // Construct a new result expression.

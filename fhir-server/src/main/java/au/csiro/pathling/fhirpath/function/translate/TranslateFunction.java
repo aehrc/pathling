@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.function.translate;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
@@ -31,6 +32,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set Codings
@@ -139,9 +141,8 @@ public class TranslateFunction implements NamedFunction {
 
     // Prepare the data which will be used within the map operation. All of these things must be
     // Serializable.
-    @SuppressWarnings("OptionalGetWithoutIsPresent")
-    final TerminologyServiceFactory terminologyServiceFactory = inputContext
-        .getTerminologyServiceFactory().get();
+    final TerminologyServiceFactory terminologyServiceFactory =
+        checkPresent(inputContext.getTerminologyServiceFactory());
 
     final Arguments arguments = Arguments.of(input);
 
@@ -152,7 +153,7 @@ public class TranslateFunction implements NamedFunction {
 
     final Dataset<Row> translatedDataset = TerminologyFunctions.translate(
         codingArrayCol, conceptMapUrl, reverse, equivalence, dataset, "result",
-        terminologyServiceFactory
+        terminologyServiceFactory, MDC.get("requestId")
     );
 
     // The result is an array of translations per each input element, which we now

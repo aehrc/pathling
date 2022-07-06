@@ -7,6 +7,7 @@ import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
 import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapper;
+import au.csiro.pathling.fhirpath.function.subsumes.SubsumesMapper;
 import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.SqlExtensions;
@@ -21,7 +22,6 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.slf4j.MDC;
 
 public interface TerminologyFunctions {
 
@@ -29,10 +29,11 @@ public interface TerminologyFunctions {
   static Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
       @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName,
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
+      @Nonnull final String requestId) {
 
     final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapper(MDC.get("requestId"), terminologyServiceFactory,
+        new MemberOfMapper(requestId, terminologyServiceFactory,
             valueSetUri);
 
     return SqlExtensions
@@ -47,10 +48,11 @@ public interface TerminologyFunctions {
       @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName,
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
+      @Nonnull final String requestId) {
 
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapper(MDC.get("requestId"), terminologyServiceFactory,
+        new TranslateMapper(requestId, terminologyServiceFactory,
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
@@ -59,8 +61,25 @@ public interface TerminologyFunctions {
             SimpleCodingsDecoders::decodeList,
             mapper,
             StructField.apply(outputColumnName, DataTypes.createArrayType(CodingEncoding.DATA_TYPE),
-                true,
-                Metadata.empty()));
+                true, Metadata.empty()));
   }
 
+  @Nonnull
+  static Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
+      @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
+      final boolean inverted, @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
+      @Nonnull final String requestId) {
+
+    final SubsumesMapper mapper =
+        new SubsumesMapper(requestId,
+            terminologyServiceFactory,
+            inverted);
+
+    return SqlExtensions
+        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
+            SimpleCodingsDecoders::decodeListPair,
+            mapper,
+            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
+  }
+  
 }
