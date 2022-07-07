@@ -53,7 +53,7 @@ public class ClientAuthInterceptor {
   private final String scope;
 
   @Nonnull
-  private static final Map<AccessScope, AccessContext> accessContexts = new ConcurrentHashMap<>();
+  private static final Map<AccessScope, AccessContext> accessContexts = new HashMap<>();
 
   public ClientAuthInterceptor(@Nonnull final String tokenEndpoint, @Nonnull final String clientId,
       @Nonnull final String clientSecret, @Nullable final String scope) {
