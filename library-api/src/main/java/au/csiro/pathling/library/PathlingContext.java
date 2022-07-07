@@ -21,6 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
@@ -131,7 +132,7 @@ public class PathlingContext {
                                                 : DEFAULT_TERMINOLOGY_SERVER_URL;
     final DefaultTerminologyServiceFactory terminologyServiceFactory = new DefaultTerminologyServiceFactory(
         FhirContext.forR4(), resolvedTerminologyServerUrl, DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT,
-        false);
+        false, new TerminologyAuthConfiguration());
 
     return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
   }
