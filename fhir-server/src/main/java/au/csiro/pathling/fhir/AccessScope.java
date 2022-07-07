@@ -19,9 +19,6 @@ class AccessScope {
   @Nonnull
   String clientId;
 
-  @Nonnull
-  String clientSecret;
-
   @Nullable
   String scope;
 }

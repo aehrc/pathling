@@ -20,9 +20,9 @@ import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -91,13 +91,12 @@ public class ClientAuthInterceptor {
   private static synchronized AccessContext ensureAccessContext(final String clientId,
       final String clientSecret, final String tokenEndpoint, final String scope)
       throws IOException {
-    final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, clientSecret, scope);
+    final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, scope);
     AccessContext accessContext = accessContexts.get(accessScope);
     if (accessContext == null) {
       // If we don't have a token, we need to get one.
       log.debug("Getting new token");
-      accessContext = getNewAccessContext(clientId, clientSecret,
-          tokenEndpoint, scope);
+      accessContext = getNewAccessContext(clientId, clientSecret, tokenEndpoint, scope);
       accessContexts.put(accessScope, accessContext);
     } else if (accessContext.getExpiryTime().isBefore(Instant.now())
         && accessContext.getClientCredentialsResponse().getRefreshToken() != null) {
