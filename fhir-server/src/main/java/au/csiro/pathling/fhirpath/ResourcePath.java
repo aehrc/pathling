@@ -204,4 +204,19 @@ public class ResourcePath extends NonLiteralPath {
             .getExpression());
   }
 
+
+  @Nonnull
+  public ResourcePath adoptDataset(@Nonnull final Dataset<Row> newDataset) {
+
+    return new ResourcePath(this.expression,
+        newDataset,
+        this.idColumn,
+        this.eidColumn,
+        this.valueColumn,
+        this.singular,
+        this.thisColumn,
+        this.definition,
+        this.elementsToColumns
+    );
+  }
 }

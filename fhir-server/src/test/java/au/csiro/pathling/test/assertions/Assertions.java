@@ -84,6 +84,26 @@ public abstract class Assertions {
     }
   }
 
+
+  public static void assertJsonString(@Nonnull final String expectedJson,
+      @Nonnull final String actualJson) {
+    assertJsonString(expectedJson, actualJson, JSONCompareMode.NON_EXTENSIBLE);
+  }
+  
+  public static void assertJsonString(@Nonnull final String expectedJson,
+      @Nonnull final String actualJson, @Nonnull final JSONCompareMode compareMode) {
+    try {
+      JSONAssert.assertEquals(expectedJson, actualJson, compareMode);
+    } catch (final AssertionError e) {
+      final Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+      final JsonElement jsonElement = JsonParser.parseString(actualJson);
+      final String prettyJsonString = gson.toJson(jsonElement);
+      log.info("Expected response: {}", expectedJson);
+      log.info("Actual response: {}", prettyJsonString);
+      throw e;
+    }
+  }
+
   public static void assertMatches(@Nonnull final String expectedRegex,
       @Nonnull final String actualString) {
     if (!Pattern.matches(expectedRegex, actualString)) {

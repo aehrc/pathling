@@ -1,0 +1,47 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "2"
+        },
+        {
+          "name": "label",
+          "valueCode": "HISTOPATHOLOGY"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((item.linkId) contains '2') and ((item.code.code) contains 'HISTOPATHOLOGY')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "1"
+        },
+        {
+          "name": "label",
+          "valueCode": "COMORBIDITY"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((item.linkId) contains '1') and ((item.code.code) contains 'COMORBIDITY')"
+        }
+      ]
+    }
+  ]
+}

@@ -6,13 +6,6 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
@@ -23,6 +16,13 @@ import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * @author John Grimes
@@ -608,6 +608,84 @@ class AggregateQueryTest extends AggregateExecutorTest {
   }
 
   @Test
+  void queryWithMultipleCardinalityGroupingsAtResourceLevel() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping(
+            "reverseResolve(Observation.subject).code.coding.where($this = http://loinc.org|72166-2||'Tobacco smoking status NHIS')")
+        .withGrouping("reverseResolve(Observation.subject).valueCodeableConcept.coding")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse(
+        "AggregateQueryTest/queryWithMultipleCardinalityGroupingsAtResourceLevel.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithMultipleCardinalityGroupingsAtElementLevel() {
+    subjectResource = ResourceType.QUESTIONNAIRE;
+    mockResource(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("item.linkId")
+        .withGrouping("item.code.code")
+        .build();
+
+    response = executor.execute(request);
+    assertResponse(
+        "AggregateQueryTest/queryWithMultipleCardinalityGroupingsAtElementLevel.Parameters.json",
+        response);
+  }
+
+  @Test
+  void queryWithProductOfMulitpleCardinalityGroupings() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("name.given")
+        .withGrouping("name.family")
+        .withGrouping("identifier.type.text")
+        .withGrouping("identifier.type.coding.display")
+        .withGrouping("identifier.type.coding.code")
+        .withFilter("name.family contains 'Wuckert783'")
+        .build();
+
+    response = executor.execute(request);
+
+    assertResponse(
+        "AggregateQueryTest/queryWithProductOfMulitpleCardinalityGroupings.Parameters.json",
+        response);
+  }
+
+  @Test
+  void querySharedElementGroupingsAtMultipleLevels() {
+    subjectResource = ResourceType.DIAGNOSTICREPORT;
+    mockResource(subjectResource, ResourceType.OBSERVATION);
+
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("result.display")
+        .withGrouping("result.resolve().code.text")
+        .withGrouping("result.resolve().code.coding.display")
+        .withGrouping("result.resolve().code.coding.code")
+        .withFilter("result.resolve().code.coding.code contains '20570-8'")
+        .build();
+
+    response = executor.execute(request);
+
+    assertResponse(
+        "AggregateQueryTest/querySharedElementGroupingsAtMultipleLevels.Parameters.json",
+        response);
+  }
+
+  @Test
   void throwsInvalidInputOnEmptyAggregation() {
     subjectResource = ResourceType.PATIENT;
 
@@ -650,5 +728,4 @@ class AggregateQueryTest extends AggregateExecutorTest {
         () -> new AggregateRequestBuilder(subjectResource).build());
     assertEquals("Query must have at least one aggregation expression", error.getMessage());
   }
-
 }

@@ -23,7 +23,6 @@ import au.csiro.pathling.sql.PathlingFunctions;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -78,6 +77,7 @@ public class AggregateExecutor extends QueryExecutor {
     return buildResponse(resultWithExpressions);
   }
 
+
   /**
    * @param query an {@link AggregateRequest}
    * @return a {@link ResultWithExpressions}, which includes the uncollected {@link Dataset}
@@ -87,34 +87,23 @@ public class AggregateExecutor extends QueryExecutor {
   public ResultWithExpressions buildQuery(@Nonnull final AggregateRequest query) {
     log.info("Executing request: {}", query);
 
-    // Build a new expression parser, and parse all of the filter and grouping expressions within
-    // the query.
+    // Build new input context
+
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
-    final ParserContext groupingAndFilterContext = buildParserContext(inputContext,
-        Collections.singletonList(inputContext.getIdColumn()));
-    final Parser parser = new Parser(groupingAndFilterContext);
-    final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final List<FhirPathAndContext> groupingParseResult = parseMaterializableExpressions(
-        groupingAndFilterContext, query.getGroupings(), "Grouping");
-    final List<FhirPath> groupings = groupingParseResult.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toList());
 
-    // Join all filter and grouping expressions together.
-    final Column idColumn = inputContext.getIdColumn();
-    Dataset<Row> groupingsAndFilters = joinExpressionsAndFilters(inputContext, groupings, filters,
-        idColumn);
-    // Apply filters.
-    groupingsAndFilters = applyFilters(groupingsAndFilters, filters);
+    // Parse groupings and filter together
+    final List<FhirPath> groupings = new ArrayList<>(query.getGroupings().size());
+    final List<FhirPath> filters = new ArrayList<>(query.getFilters().size());
+    final Dataset<Row> groupingsAndFilters = parseFilteredValueColumns(inputContext,
+        query.getGroupings(), "Grouping",
+        query.getFilters(), groupings, filters);
 
     // Remove synthetic fields from struct values (such as _fid) before grouping.
     final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
         groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
             .map(PathlingFunctions::pruneSyntheticFields).toArray(Column[]::new));
-
-    groupingsAndFilters = datasetWithNormalizedGroupings.getDataset();
 
     final List<Column> groupingColumns = new ArrayList<>(
         datasetWithNormalizedGroupings.getColumnMap().values());
@@ -125,9 +114,7 @@ public class AggregateExecutor extends QueryExecutor {
     // during the parse can use these columns for grouping, rather than the identity of each
     // resource.
     final ResourcePath aggregationContext = inputContext
-        .copy(inputContext.getExpression(), groupingsAndFilters, idColumn,
-            inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-            Optional.empty());
+        .adoptDataset(datasetWithNormalizedGroupings.getDataset());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
         groupingColumns);
     final Parser aggregationParser = new Parser(aggregationParserContext);

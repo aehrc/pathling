@@ -1,0 +1,324 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Platelet mean volume [Entitic volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "Platelet mean volume [Entitic volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "Platelet mean volume [Entitic volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueCode": "32623-1"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'Platelet mean volume [Entitic volume] in Blood by Automated count') and ((result.resolve().code.text) contains 'Platelet mean volume [Entitic volume] in Blood by Automated count') and ((result.resolve().code.coding.display) contains 'Platelet mean volume [Entitic volume] in Blood by Automated count') and ((result.resolve().code.coding.code) contains '32623-1') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Platelet distribution width [Entitic volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "Platelet distribution width [Entitic volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "Platelet distribution width [Entitic volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueCode": "32207-3"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'Platelet distribution width [Entitic volume] in Blood by Automated count') and ((result.resolve().code.text) contains 'Platelet distribution width [Entitic volume] in Blood by Automated count') and ((result.resolve().code.coding.display) contains 'Platelet distribution width [Entitic volume] in Blood by Automated count') and ((result.resolve().code.coding.code) contains '32207-3') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Platelets [#/volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "Platelets [#/volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "Platelets [#/volume] in Blood by Automated count"
+        },
+        {
+          "name": "label",
+          "valueCode": "777-3"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'Platelets [#/volume] in Blood by Automated count') and ((result.resolve().code.text) contains 'Platelets [#/volume] in Blood by Automated count') and ((result.resolve().code.coding.display) contains 'Platelets [#/volume] in Blood by Automated count') and ((result.resolve().code.coding.code) contains '777-3') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "RDW - Erythrocyte distribution width Auto (RBC) [Entitic vol]"
+        },
+        {
+          "name": "label",
+          "valueString": "RDW - Erythrocyte distribution width Auto (RBC) [Entitic vol]"
+        },
+        {
+          "name": "label",
+          "valueString": "RDW - Erythrocyte distribution width Auto (RBC) [Entitic vol]"
+        },
+        {
+          "name": "label",
+          "valueCode": "21000-5"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'RDW - Erythrocyte distribution width Auto (RBC) [Entitic vol]') and ((result.resolve().code.text) contains 'RDW - Erythrocyte distribution width Auto (RBC) [Entitic vol]') and ((result.resolve().code.coding.display) contains 'RDW - Erythrocyte distribution width Auto (RBC) [Entitic vol]') and ((result.resolve().code.coding.code) contains '21000-5') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "MCHC [Mass/volume] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "MCHC [Mass/volume] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "MCHC [Mass/volume] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueCode": "786-4"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'MCHC [Mass/volume] by Automated count') and ((result.resolve().code.text) contains 'MCHC [Mass/volume] by Automated count') and ((result.resolve().code.coding.display) contains 'MCHC [Mass/volume] by Automated count') and ((result.resolve().code.coding.code) contains '786-4') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "MCH [Entitic mass] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "MCH [Entitic mass] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "MCH [Entitic mass] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueCode": "785-6"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'MCH [Entitic mass] by Automated count') and ((result.resolve().code.text) contains 'MCH [Entitic mass] by Automated count') and ((result.resolve().code.coding.display) contains 'MCH [Entitic mass] by Automated count') and ((result.resolve().code.coding.code) contains '785-6') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "MCV [Entitic volume] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "MCV [Entitic volume] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueString": "MCV [Entitic volume] by Automated count"
+        },
+        {
+          "name": "label",
+          "valueCode": "787-2"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'MCV [Entitic volume] by Automated count') and ((result.resolve().code.text) contains 'MCV [Entitic volume] by Automated count') and ((result.resolve().code.coding.display) contains 'MCV [Entitic volume] by Automated count') and ((result.resolve().code.coding.code) contains '787-2') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "RBC Auto (Bld) [#/Vol]"
+        },
+        {
+          "name": "label",
+          "valueString": "RBC Auto (Bld) [#/Vol]"
+        },
+        {
+          "name": "label",
+          "valueString": "RBC Auto (Bld) [#/Vol]"
+        },
+        {
+          "name": "label",
+          "valueCode": "789-8"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'RBC Auto (Bld) [#/Vol]') and ((result.resolve().code.text) contains 'RBC Auto (Bld) [#/Vol]') and ((result.resolve().code.coding.display) contains 'RBC Auto (Bld) [#/Vol]') and ((result.resolve().code.coding.code) contains '789-8') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "WBC Auto (Bld) [#/Vol]"
+        },
+        {
+          "name": "label",
+          "valueString": "WBC Auto (Bld) [#/Vol]"
+        },
+        {
+          "name": "label",
+          "valueString": "WBC Auto (Bld) [#/Vol]"
+        },
+        {
+          "name": "label",
+          "valueCode": "6690-2"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'WBC Auto (Bld) [#/Vol]') and ((result.resolve().code.text) contains 'WBC Auto (Bld) [#/Vol]') and ((result.resolve().code.coding.display) contains 'WBC Auto (Bld) [#/Vol]') and ((result.resolve().code.coding.code) contains '6690-2') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Hematocrit [Volume Fraction] of Blood"
+        },
+        {
+          "name": "label",
+          "valueString": "Hematocrit [Volume Fraction] of Blood"
+        },
+        {
+          "name": "label",
+          "valueString": "Hematocrit [Volume Fraction] of Blood"
+        },
+        {
+          "name": "label",
+          "valueCode": "20570-8"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'Hematocrit [Volume Fraction] of Blood') and ((result.resolve().code.text) contains 'Hematocrit [Volume Fraction] of Blood') and ((result.resolve().code.coding.display) contains 'Hematocrit [Volume Fraction] of Blood') and ((result.resolve().code.coding.code) contains '20570-8') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Hemoglobin [Mass/volume] in Blood"
+        },
+        {
+          "name": "label",
+          "valueString": "Hemoglobin [Mass/volume] in Blood"
+        },
+        {
+          "name": "label",
+          "valueString": "Hemoglobin [Mass/volume] in Blood"
+        },
+        {
+          "name": "label",
+          "valueCode": "718-7"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((result.display) contains 'Hemoglobin [Mass/volume] in Blood') and ((result.resolve().code.text) contains 'Hemoglobin [Mass/volume] in Blood') and ((result.resolve().code.coding.display) contains 'Hemoglobin [Mass/volume] in Blood') and ((result.resolve().code.coding.code) contains '718-7') and (result.resolve().code.coding.code contains '20570-8')"
+        }
+      ]
+    }
+  ]
+}

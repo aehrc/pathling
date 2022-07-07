@@ -7,6 +7,7 @@
 package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static au.csiro.pathling.test.assertions.Assertions.assertJsonString;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -104,6 +105,14 @@ abstract class AggregateExecutorTest {
       }
     }
   }
+
+  void assertResponse(@Nonnull final AggregateResponse expectedResponse,
+      @Nonnull final AggregateResponse response) {
+    final String expectedJson = jsonParser.encodeResourceToString(expectedResponse.toParameters());
+    final String actualJson = jsonParser.encodeResourceToString(response.toParameters());
+    assertJsonString(expectedJson, actualJson);
+  }
+
 
   void assertResponse(@Nonnull final String expectedPath,
       @Nonnull final AggregateResponse response) {
