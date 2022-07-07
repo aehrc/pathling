@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.security.ga4gh;
 
+import static au.csiro.pathling.fhirpath.literal.StringLiteralPath.escapeFhirPathString;
+
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import ca.uhn.fhir.context.FhirContext;
@@ -53,7 +55,7 @@ public class ManifestConverter {
         .map(id -> "'" + id + "'")
         .collect(Collectors.joining(" combine "));
     final String patientIdFilter =
-        "identifier.where(system = '" + StringLiteralPath.escapeFhirPathString(patientIdSystem)
+        "identifier.where(system = '" + escapeFhirPathString(patientIdSystem)
             + "').where(value in (" + patientIdCollection + "))"
             + ".empty().not()";
     final Set<String> patientFilters = passportScope.get(ResourceType.PATIENT);

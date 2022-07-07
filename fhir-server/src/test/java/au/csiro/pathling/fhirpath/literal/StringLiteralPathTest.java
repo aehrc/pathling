@@ -6,6 +6,8 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathString;
+import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Tag;
@@ -19,63 +21,55 @@ class StringLiteralPathTest {
 
   @Test
   void unescapeForwardSlash() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("\\/home\\/user\\/docs");
+    final String result = unescapeFhirPathString("\\/home\\/user\\/docs");
     assertEquals("/home/user/docs", result);
   }
 
   @Test
   void unescapeFormFeed() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("Some\\fthing");
+    final String result = unescapeFhirPathString("Some\\fthing");
     assertEquals("Some\u000Cthing", result);
   }
 
   @Test
   void unescapeNewLine() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("Some\\nthing");
+    final String result = unescapeFhirPathString("Some\\nthing");
     assertEquals("Some\nthing", result);
   }
 
   @Test
   void unescapeCarriageReturn() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("Some\\rthing");
+    final String result = unescapeFhirPathString("Some\\rthing");
     assertEquals("Some\rthing", result);
   }
 
   @Test
   void unescapeTab() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("Some\\tthing");
+    final String result = unescapeFhirPathString("Some\\tthing");
     assertEquals("Some\u0009thing", result);
   }
 
   @Test
   void unescapeBackTick() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("\\`code\\`");
+    final String result = unescapeFhirPathString("\\`code\\`");
     assertEquals("`code`", result);
   }
 
   @Test
   void unescapeSingleQuote() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("Some string and it\\'s problems");
+    final String result = unescapeFhirPathString("Some string and it\\'s problems");
     assertEquals("Some string and it's problems", result);
   }
 
   @Test
   void unescapeBackSlash() {
-    final String result = StringLiteralPath
-        .unescapeFhirPathString("C:\\\\Temp");
+    final String result = unescapeFhirPathString("C:\\\\Temp");
     assertEquals("C:\\Temp", result);
   }
 
   @Test
   void escapeSingleQuote() {
-    final String result = StringLiteralPath.escapeFhirPathString("Some string and it's problems");
+    final String result = escapeFhirPathString("Some string and it's problems");
     assertEquals("Some string and it\\'s problems", result);
   }
 

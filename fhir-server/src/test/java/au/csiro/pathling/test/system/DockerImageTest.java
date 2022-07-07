@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.test.system;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static au.csiro.pathling.test.TestResources.assertJson;
 import static java.lang.Runtime.getRuntime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -33,6 +33,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -48,6 +49,7 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -85,17 +87,17 @@ class DockerImageTest {
   static final String FHIR_SERVER_STAGING_PATH = "/usr/share/staging";
 
   // These system properties need to be set.
-  static final String VERSION = System.getProperty("pathling.systemTest.version");
-  static final String ISSUER = System.getProperty("pathling.systemTest.auth.issuer");
-  static final String CLIENT_ID = System.getProperty("pathling.systemTest.auth.clientId");
-  static final String CLIENT_SECRET = System
-      .getProperty("pathling.systemTest.auth.clientSecret");
-  static final String REQUESTED_SCOPE = System
-      .getProperty("pathling.systemTest.auth.requestedScope");
-  static final String TERMINOLOGY_SERVICE_URL = System
-      .getProperty("pathling.systemTest.terminology.serverUrl");
-  static final String DOCKER_REPOSITORY = System
-      .getProperty("pathling.systemTest.dockerRepository");
+  static final String VERSION = getRequiredProperty("pathling.systemTest.version");
+
+  static final String ISSUER = getRequiredProperty("pathling.systemTest.auth.issuer");
+  static final String CLIENT_ID = getRequiredProperty("pathling.systemTest.auth.clientId");
+  static final String CLIENT_SECRET = getRequiredProperty("pathling.systemTest.auth.clientSecret");
+  static final String REQUESTED_SCOPE = getRequiredProperty(
+      "pathling.systemTest.auth.requestedScope");
+  static final String TERMINOLOGY_SERVICE_URL = getRequiredProperty(
+      "pathling.systemTest.terminology.serverUrl");
+  static final String DOCKER_REPOSITORY = getRequiredProperty(
+      "pathling.systemTest.dockerRepository");
   static final int HEALTHY_MAX_WAIT_SECONDS = 90;
   static final int HEALTHY_WAIT_DELAY_SECONDS = 5;
 
@@ -140,7 +142,8 @@ class DockerImageTest {
     final URL url = loader.getResource(folder);
     assertThat(url).isNotNull();
     final String path = url.getPath();
-    @Nullable final File[] files = new File(path).listFiles();
+    final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
+    @Nullable final File[] files = new File(path).listFiles(fileFilter);
     assertNotNull(files);
     return files;
   }
@@ -451,6 +454,20 @@ class DockerImageTest {
   static class ClientCredentialsResponse {
 
     String accessToken;
+  }
+
+  @Nonnull
+  private static String getRequiredProperty(@Nonnull final String key) {
+    if (key.isBlank()) {
+      throw new IllegalArgumentException("Required property key cannot be blank");
+    }
+    final String value = System.getProperty(key);
+    if (value == null) {
+      final String errorMessage = "Property " + key + " must be provided";
+      log.error(errorMessage);
+      throw new IllegalArgumentException(errorMessage);
+    }
+    return value;
   }
 
 }

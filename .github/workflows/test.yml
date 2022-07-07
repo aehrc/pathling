@@ -1,5 +1,11 @@
 # This workflow will build the software and documentation to ensure there are no errors, and also
 # execute the tests.
+#
+# The FHIR server build is separated into three tranches, to minimise overall build time:
+#
+# Tranche 1: ModificationTest, AggregateQueryTest, ExtractTest
+# Tranche 2: ManifestConverterTest, integration tests
+# Tranche 3: All other FHIR server tests, tests from utilities and terminology modules
 
 name: Test
 
@@ -8,16 +14,16 @@ on:
     branches-ignore:
       - gh-pages
 
-# If the actor is Dependabot, we need to avoid anything that requires privileged access - so we skip
-# the integration test (which requires a secret), and also the test reporting actions (which require
-# a GitHub token).
 jobs:
   encoders:
-    name: Build and test encoders
+    name: Encoders
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -28,22 +34,20 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
-        if: github.actor == 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl encoders -am \
-          -DskipScalaDocs
-        timeout-minutes: 30
-      - name: Run the verify goal with Maven
-        if: github.actor != 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl encoders -am \
-          -Dmaven.test.failure.ignore=true
-        timeout-minutes: 30
+        env:
+          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
+          # report action to report them.
+          PATHLING_OPTS: >-
+            -DskipScalaDocs
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl encoders -am
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 20
       - name: Upload encoders test reports
         uses: actions/upload-artifact@v2
         with:
@@ -58,22 +62,27 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: encoders-dump-files
-          path: |
+          path: |-
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
+        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Encoders test report
           fail_on_test_failures: true
+
   fhir-server-1:
-    name: Build and test FHIR server (tranche 1)
+    name: FHIR server (tranche 1)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -84,7 +93,7 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
@@ -92,27 +101,25 @@ jobs:
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
-      - name: Import test data
-        if: steps.cache-test-data.outputs.cache-hit != 'true'
-        working-directory: fhir-server
-        run: mvn --batch-mode compile test-compile exec:java@import-test-data
-        timeout-minutes: 10
-      - name: Run the verify goal with Maven (Dependabot)
-        if: github.actor == 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -PtestTranche1,!importTestData \
-          -DskipITs -DskipEncodersTests -DskipScalaDocs
-        timeout-minutes: 45
       - name: Run the verify goal with Maven
-        if: github.actor != 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -PtestTranche1,!importTestData \
-          -Dmaven.test.failure.ignore -DskipEncodersTests
-        timeout-minutes: 45
+        env:
+          # Activate the "tranche 1" test profile. If there is a cache hit on the test data, we
+          # don't need to import it.
+          PATHLING_PROFILES: testTranche1${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
+          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
+          # report action to report them.
+          PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
+            -DskipScalaDocs
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 30
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
@@ -132,22 +139,27 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-1-dump-files
-          path: |
+          path: |-
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
+        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 1
           fail_on_test_failures: true
+
   fhir-server-2:
-    name: Build and test FHIR server (tranche 2)
+    name: FHIR server (tranche 2)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -158,7 +170,7 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
@@ -166,37 +178,25 @@ jobs:
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
-      - name: Import test data
-        if: steps.cache-test-data.outputs.cache-hit != 'true'
-        working-directory: fhir-server
-        run: mvn --batch-mode compile test-compile exec:java@import-test-data
-        timeout-minutes: 10
-      - name: Run the verify goal with Maven (Dependabot)
-        if: github.actor == 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -PtestTranche2,!importTestData,docker \
-          -Dpathling.fhirServerDockerTag=${{ github.sha }} \
-          -DskipITs -DskipEncodersTests -DskipScalaDocs
-        timeout-minutes: 45
       - name: Run the verify goal with Maven
-        if: github.actor != 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -PtestTranche2,!importTestData,docker \
-          -Dpathling.fhirServerDockerTag=${{ github.sha }} \
-          -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }} \
-          -Dmaven.test.failure.ignore -DskipEncodersTests
-        timeout-minutes: 45
-      - name: Scan Docker image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'aehrc/pathling:${{ github.sha }}'
-          exit-code: '1'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+        env:
+          # Activate the "tranche 2" test profile. If there is a cache hit on the test data, we
+          # don't need to import it.
+          PATHLING_PROFILES: testTranche2${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
+          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
+          # report action to report them.
+          PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
+            -DskipScalaDocs
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 30
       - name: Upload fhir-server test reports
         uses: actions/upload-artifact@v2
         with:
@@ -216,22 +216,28 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-2-dump-files
-          path: |
+          path: |-
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
+        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 2
           fail_on_test_failures: true
+
+  # This job builds the FHIR server, and runs all tests that do not fall into tranches 1 or 2.
   fhir-server-3:
-    name: Build and test FHIR server (tranche 3)
+    name: FHIR server (tranche 3)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -242,7 +248,7 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
@@ -250,33 +256,49 @@ jobs:
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
-      - name: Import test data
-        if: steps.cache-test-data.outputs.cache-hit != 'true'
-        working-directory: fhir-server
-        run: mvn --batch-mode compile test-compile exec:java@import-test-data
-        timeout-minutes: 10
-      - name: Run the verify goal with Maven (Dependabot)
-        if: github.actor == 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -PtestTranche3,!importTestData \
-          -DskipITs -DskipEncodersTests -DskipScalaDocs
-        timeout-minutes: 45
       - name: Run the verify goal with Maven
-        if: github.actor != 'dependabot[bot]'
-        run: |
-          mvn --batch-mode verify \
-          -pl fhir-server -am \
-          -PtestTranche3,!importTestData \
-          -Dmaven.test.failure.ignore -DskipEncodersTests
-        timeout-minutes: 45
-      - name: Upload fhir-server test reports
+        env:
+          # Activate the "tranche 3" test profile. If there is a cache hit on the test data, we
+          # don't need to import it.
+          PATHLING_PROFILES: testTranche3${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || '' }}
+          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
+          # report action to report them.
+          PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipScalaDocs
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 30
+      - name: Upload utilities test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: utilities-surefire-reports
+          path: utilities/target/surefire-reports
+      - name: Upload terminology test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: terminology-surefire-reports
+          path: terminology/target/surefire-reports
+      - name: Upload FHIR server test reports
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-surefire-reports
           path: fhir-server/target/surefire-reports
-      - name: Upload test coverage report
+      - name: Upload utilities test coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: utilities-coverage
+          path: utilities/target/site/jacoco/jacoco.xml
+      - name: Upload terminology test coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: terminology-coverage
+          path: terminology/target/site/jacoco/jacoco.xml
+      - name: Upload FHIR server test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-coverage
@@ -290,22 +312,28 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-dump-files
-          path: |
+          path: |-
             **/*.dump
             **/*.dumpstream
       - name: Publish test results
+        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
         uses: scacap/action-surefire-report@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 3
           fail_on_test_failures: true
-  benchmark:
-    name: Build and run benchmark
+
+  # This job builds, tests and scans the FHIR server Docker image.
+  docker-image:
+    name: Docker image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -316,7 +344,74 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Run the verify goal with Maven
+        if: github.actor == 'dependabot[bot]'
+        env:
+          # If the actor is Dependabot we skip the system test, as it requires access to secrets.
+          PATHLING_OPTS: >-
+            -DskipSurefireTests
+            -DskipScalaDocs
+            -DskipITs
+            -Dpathling.dockerArchitecture=amd64
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -Pdocker,!importTestData
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 15
+      - name: Run the verify goal with Maven
+        if: github.actor != 'dependabot[bot]'
+        env:
+          PATHLING_OPTS: >-
+            -DskipSurefireTests
+            -DskipScalaDocs
+            -Dmaven.test.failure.ignore
+            -Dpathling.dockerArchitecture=amd64
+            -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -Pdocker,!importTestData
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 15
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'aehrc/pathling:${{ github.sha }}'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+      - name: Publish test results
+        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
+        if: github.actor != 'dependabot[bot]'
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Docker image test report
+          fail_on_test_failures: true
+
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: 'zulu'
+      - name: Cache local Maven repository
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
@@ -324,34 +419,38 @@ jobs:
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
-      - name: Import test data
-        if: steps.cache-test-data.outputs.cache-hit != 'true'
-        working-directory: fhir-server
-        run: mvn --batch-mode compile test-compile exec:java@import-test-data
-        timeout-minutes: 10
-      - name: Build encoders
-        run: mvn --batch-mode -pl encoders -am install -DskipTests
-        timeout-minutes: 20
-      - name: Run benchmark
-        working-directory: fhir-server
-        run: mvn --batch-mode -PrunBenchmark,!importTestData compile test-compile exec:java@run-benchmark
+      - name: Run the verify goal with Maven
+        env:
+          # If there is a cache hit on the test data, we don't need to import it. If it is a cache
+          # miss, we still need to explicitly activate the `importTestData` profile, otherwise
+          # it will be deactivated by `skipTests`.
+          PATHLING_PROFILES: runBenchmark${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || 'importTestData' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl fhir-server -am
+          -P${{ env.PATHLING_PROFILES }}
+          -DskipSurefireTests -DskipScalaDocs
         timeout-minutes: 20
       - name: Upload benchmark results
         uses: actions/upload-artifact@v2
         with:
           name: benchmark-results
-          path: |
-            **/jmh-*.json
+          path: "**/jmh-*.json"
+
   js-client:
-    name: Build JavaScript client
+    name: JavaScript client
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v2
         with:
           java-version: 11
+          distribution: 'zulu'
       - uses: actions/setup-node@v2
         with:
           node-version: '16'
@@ -360,23 +459,28 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-js-
+          restore-keys: |-
+            ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
-        run: |
-          mvn --batch-mode verify \
+        run: >-
+          mvn --batch-mode verify
           -pl lib/js -am
         timeout-minutes: 5
+
   import:
-    name: Build import lambda
+    name: Import lambda
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v2
         with:
           java-version: 11
+          distribution: 'zulu'
       - uses: actions/setup-node@v2
         with:
           node-version: '16'
@@ -385,8 +489,8 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-import-
+          restore-keys: |-
+            ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
         run: |
           mvn --batch-mode verify \
@@ -397,12 +501,16 @@ jobs:
         with:
           name: import-lambda
           path: lib/import/target/pathling-import-lambda.zip
+
   python-api:
-    name: Build and test Python API
+    name: Python API
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v2
         with:
@@ -413,7 +521,7 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
@@ -427,21 +535,54 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements.txt') }}
           restore-keys: ${{ runner.os }}-pip
       - name: Run the verify goal with Maven
-        run: |
-          mvn --batch-mode verify \
-          -pl lib/python -am \
-          -DskipEncodersTests -DskipPythonDocs
+        env:
+          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
+          # report action to report them.
+          PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
+            -DskipScalaDocs
+            -DskipPythonDocs
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode verify
+          -pl lib/python -am
+          ${{ env.PATHLING_OPTS }}
         timeout-minutes: 15
+      - name: Upload library API test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: library-api-surefire-reports
+          path: library-api/target/surefire-reports
+      - name: Upload library API test coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: library-api-coverage
+          path: library-api/target/site/jacoco/jacoco.xml
+      - name: Publish test results
+        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
+        if: github.actor != 'dependabot[bot]'
+        uses: scacap/action-surefire-report@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          check_name: Python API test report
+          fail_on_test_failures: true
+
   site:
-    name: Build site
+    name: Site
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v2
         with:
           java-version: 11
+          distribution: 'zulu'
       - uses: actions/setup-node@v2
         with:
           node-version: '16'
@@ -450,18 +591,19 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
+          restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
-        run: |
-          mvn --batch-mode verify \
-          -pl site -am \
+        run: >-
+          mvn --batch-mode verify
+          -pl site -am
           -DskipTests
-        timeout-minutes: 30
+        timeout-minutes: 15
+
   upload-coverage:
-    name: Upload coverage to Codecov
+    name: Upload coverage
     runs-on: ubuntu-latest
-    needs: [ encoders,fhir-server-1,fhir-server-2,fhir-server-3 ]
+    needs: [ encoders,fhir-server-1,fhir-server-2,fhir-server-3,python-api ]
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
@@ -471,6 +613,21 @@ jobs:
         with:
           name: encoders-coverage
           path: encoders-coverage
+      - name: Download utilities coverage report
+        uses: actions/download-artifact@v3
+        with:
+          name: utilities-coverage
+          path: utilities-coverage
+      - name: Download terminology coverage report
+        uses: actions/download-artifact@v3
+        with:
+          name: terminology-coverage
+          path: terminology-coverage
+      - name: Download library API coverage report
+        uses: actions/download-artifact@v3
+        with:
+          name: library-api-coverage
+          path: library-api-coverage
       - name: Download FHIR server coverage report 1
         uses: actions/download-artifact@v3
         with:
@@ -490,4 +647,4 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders-coverage/jacoco.xml,fhir-server-1-coverage/jacoco.xml,fhir-server-2-coverage/jacoco.xml,fhir-server-3-coverage/jacoco.xml
+          files: encoders-coverage/jacoco.xml,utilities-coverage/jacoco.xml,terminology-coverage/jacoco.xml,library-api-coverage/jacoco.xml,fhir-server-1-coverage/jacoco.xml,fhir-server-2-coverage/jacoco.xml,fhir-server-3-coverage/jacoco.xml

@@ -28,17 +28,17 @@ from pyspark.sql import SparkSession
 from pathling import PathlingContext
 from pathling.etc import find_jar
 
-spark = SparkSession.builder \
-    .appName('pathling-test') \
-    .master('local[*]') \
-    .config('spark.jars', find_jar()) \
-    .getOrCreate()
+spark = SparkSession.builder
+.appName('pathling-test')
+.master('local[*]')
+.config('spark.jars', find_jar())
+.getOrCreate()
 
 ptl = PathlingContext.create(spark)
-        
+
 json_bundles = spark.read.text('examples/data/bundles/', wholetext=True)
 
-patients_df = ptl.encodeBundle(json_bundles, 'Patient')
+patients_df = ptl.encode_bundle(json_bundles, 'Patient')
 patients_df.show()
 ```
 

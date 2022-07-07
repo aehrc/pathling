@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.security.ga4gh;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertJson;
+import static au.csiro.pathling.test.TestResources.assertJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.Configuration;

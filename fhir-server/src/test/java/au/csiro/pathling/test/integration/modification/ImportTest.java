@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.test.integration.modification;
 
+import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -15,7 +16,6 @@ import au.csiro.pathling.fhir.ErrorHandlingInterceptor;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.update.ImportExecutor;
 import au.csiro.pathling.update.ImportExecutor.ImportMode;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
@@ -84,7 +84,7 @@ class ImportTest extends ModificationTest {
 
   @Test
   void importJsonFile() {
-    final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient.ndjson");
+    final URL jsonURL = getResourceAsUrl("import/Patient.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
@@ -106,7 +106,7 @@ class ImportTest extends ModificationTest {
 
   @Test
   void mergeJsonFile() {
-    final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient_updates.ndjson");
+    final URL jsonURL = getResourceAsUrl("import/Patient_updates.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT, ImportMode.MERGE));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
@@ -130,14 +130,14 @@ class ImportTest extends ModificationTest {
 
   @Test
   void importJsonFileWithBlankLines() {
-    final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient_with_eol.ndjson");
+    final URL jsonURL = getResourceAsUrl("import/Patient_with_eol.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT));
     assertEquals(9, database.read(ResourceType.PATIENT).count());
   }
 
   @Test
   void importJsonFileWithRecursiveDatatype() {
-    final URL jsonURL = TestHelpers.getResourceAsUrl("import/Questionnaire.ndjson");
+    final URL jsonURL = getResourceAsUrl("import/Questionnaire.ndjson");
     importExecutor.execute(buildImportParameters(jsonURL, ResourceType.QUESTIONNAIRE));
     final Dataset<Row> questionnaireDataset = database.read(ResourceType.QUESTIONNAIRE);
     assertEquals(1, questionnaireDataset.count());
@@ -186,7 +186,7 @@ class ImportTest extends ModificationTest {
 
   @Test
   void throwsOnMissingId() {
-    final URL jsonURL = TestHelpers.getResourceAsUrl("import/Patient_missing_id.ndjson");
+    final URL jsonURL = getResourceAsUrl("import/Patient_missing_id.ndjson");
     final Exception error = assertThrows(Exception.class,
         () -> importExecutor.execute(buildImportParameters(jsonURL, ResourceType.PATIENT)));
     final BaseServerResponseException convertedError =

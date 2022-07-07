@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.test.integration.modification;
 
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
+import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
