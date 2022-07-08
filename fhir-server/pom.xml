@@ -337,6 +337,11 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
+          </excludes>
+        </configuration>
       </plugin>
     </plugins>
     <pluginManagement>

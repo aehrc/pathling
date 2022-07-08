@@ -187,6 +187,10 @@
                   <arguments>
                     <argument>-x</argument>
                     <argument>tests</argument>
+                    <argument>--cov=pathling</argument>
+                    <argument>--cov-report=html:target/coverage/cov_html</argument>
+                    <argument>--cov-report=xml:target/coverage/cov.xml</argument>
+                    <argument>--cov-report=annotate:target/coverage/cov_annotate</argument>
                     <argument>-v</argument>
                   </arguments>
                   <environmentVariables>
