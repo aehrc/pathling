@@ -578,7 +578,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: python-api-coverage
-          path: lib/python/target/coverage
+          path: lib/python/.coverage
       - name: Publish test results
         # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
@@ -670,4 +670,4 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          files: python-api-coverage/cov.xml
