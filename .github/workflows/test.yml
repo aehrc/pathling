@@ -669,5 +669,3 @@ jobs:
           path: fhir-server-3-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
-        with:
-          files: python-api-coverage/cov.xml
