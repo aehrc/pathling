@@ -57,7 +57,9 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: encoders-coverage
-          path: encoders/target/site/jacoco/jacoco.xml
+          path: |-
+            encoders/target/site/jacoco
+            encoders/target/site/jacoco-aggregate
       - name: Upload dump files
         uses: actions/upload-artifact@v2
         with:
@@ -129,7 +131,9 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-1-coverage
-          path: fhir-server/target/site/jacoco/jacoco.xml
+          path: |-
+            fhir-server/target/site/jacoco
+            fhir-server/target/site/jacoco-aggregate
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
@@ -206,7 +210,9 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-2-coverage
-          path: fhir-server/target/site/jacoco/jacoco.xml
+          path: |-
+            fhir-server/target/site/jacoco
+            fhir-server/target/site/jacoco-aggregate
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
@@ -292,17 +298,23 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: utilities-coverage
-          path: utilities/target/site/jacoco/jacoco.xml
+          path: |-
+            utilities/target/site/jacoco
+            utilities/target/site/jacoco-aggregate
       - name: Upload terminology test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: terminology-coverage
-          path: terminology/target/site/jacoco/jacoco.xml
+          path: |-
+            terminology/target/site/jacoco
+            terminology/target/site/jacoco-aggregate
       - name: Upload FHIR server test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-coverage
-          path: fhir-server/target/site/jacoco/jacoco.xml
+          path: |-
+            fhir-server/target/site/jacoco
+            fhir-server/target/site/jacoco-aggregate
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
@@ -559,7 +571,9 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: library-api-coverage
-          path: library-api/target/site/jacoco/jacoco.xml
+          path: |-
+            library-api/target/site/jacoco
+            library-api/target/site/jacoco-aggregate
       - name: Upload Python API test coverage report
         uses: actions/upload-artifact@v2
         with:
@@ -657,4 +671,3 @@ jobs:
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders-coverage/jacoco.xml,utilities-coverage/jacoco.xml,terminology-coverage/jacoco.xml,library-api-coverage/jacoco.xml,python-api-coverage/cov.xml,fhir-server-1-coverage/jacoco.xml,fhir-server-2-coverage/jacoco.xml,fhir-server-3-coverage/jacoco.xml
