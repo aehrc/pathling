@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
+import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathString;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import static org.apache.spark.sql.functions.lit;
 
@@ -56,17 +57,6 @@ public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
 
     return new StringLiteralPath(context.getDataset(), context.getIdColumn(),
         new StringType(value));
-  }
-
-  /**
-   * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
-   *
-   * @param value the value to apply escaping to
-   * @return the escaped result
-   */
-  @Nonnull
-  public static String escapeFhirPathString(@Nonnull final String value) {
-    return value.replace("'", "\\'");
   }
 
   @Nonnull

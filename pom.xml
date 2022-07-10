@@ -13,19 +13,18 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.7.0</version>
+    <version>2.7.1</version>
     <relativePath/>
   </parent>
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>5.2.0</version>
+  <version>5.3.1</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
   <description>
-    A server based on the HL7® FHIR® standard, implementing special functionality designed to ease
-    the delivery of analytics-enabled apps and augment tasks related to health data analytics.
+    A set of tools that make it easier to use FHIR® within data analytics, built on Apache Spark.
   </description>
   <url>https://pathling.csiro.au</url>
 
@@ -37,7 +36,7 @@
     </developer>
     <developer>
       <name>Piotr Szul</name>
-      <email>Piotr.Szul@data61.csiro.au</email>
+      <email>Piotr.Szul@csiro.au</email>
       <url>https://github.com/piotrszul</url>
     </developer>
   </developers>
@@ -70,7 +69,7 @@
     <project.majorVersion>5</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.hapiFhirVersion>6.0.1</pathling.hapiFhirVersion>
+    <pathling.hapiFhirVersion>6.0.2</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.3.0</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.sparkScalaFullVersion>2.12.16</pathling.sparkScalaFullVersion>
@@ -78,23 +77,127 @@
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.3</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.240</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.256</pathling.awsSdkVersion>
   </properties>
 
   <modules>
     <module>encoders</module>
+    <module>library-api</module>
+    <module>terminology</module>
     <module>fhir-server</module>
     <module>lib/import</module>
     <module>lib/js</module>
     <module>lib/python</module>
     <module>site</module>
+    <module>utilities</module>
   </modules>
 
   <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
+        <artifactId>encoders</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>encoders</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>encoders</artifactId>
+        <version>${project.version}</version>
+        <classifier>javadoc</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>encoders</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>terminology</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>terminology</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>terminology</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
         <artifactId>fhir-server</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhir-server</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>library-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>library-api</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>library-api</artifactId>
+        <version>${project.version}</version>
+        <classifier>all</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>utilities</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>utilities</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>utilities</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>python</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>python</artifactId>
+        <version>${project.version}</version>
+        <classifier>docs</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>js</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>import</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -128,7 +231,7 @@
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
-        <version>6.2.8</version>
+        <version>6.3.0</version>
       </dependency>
 
       <!-- Apache Spark -->
@@ -200,13 +303,6 @@
         <version>3.1.3</version>
       </dependency>
 
-      <!-- Encoders -->
-      <dependency>
-        <groupId>au.csiro.pathling</groupId>
-        <artifactId>encoders</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-
       <!-- ANTLR -->
       <dependency>
         <groupId>org.antlr</groupId>
@@ -237,7 +333,7 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>6.1.0</version>
+        <version>6.1.4</version>
       </dependency>
 
       <!-- Testing -->
@@ -256,7 +352,7 @@
       <dependency>
         <groupId>org.skyscreamer</groupId>
         <artifactId>jsonassert</artifactId>
-        <version>1.5.0</version>
+        <version>1.5.1</version>
         <scope>test</scope>
         <exclusions>
           <exclusion>
@@ -286,11 +382,6 @@
         <version>2.10.14</version>
       </dependency>
       <dependency>
-        <groupId>com.tdunning</groupId>
-        <artifactId>json</artifactId>
-        <version>1.8</version>
-      </dependency>
-      <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
         <version>3.0.2</version>
@@ -300,6 +391,11 @@
         <artifactId>json</artifactId>
         <version>20220320</version>
       </dependency>
+      <dependency>
+        <groupId>commons-beanutils</groupId>
+        <artifactId>commons-beanutils</artifactId>
+        <version>1.9.4</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -308,6 +404,9 @@
       <plugin>
         <groupId>pl.project13.maven</groupId>
         <artifactId>git-commit-id-plugin</artifactId>
+        <configuration>
+          <verbose>false</verbose>
+        </configuration>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -326,7 +425,7 @@
         <plugin>
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
-          <version>4.6.2</version>
+          <version>4.6.3</version>
           <executions>
             <execution>
               <id>scala-compile-first</id>
@@ -360,6 +459,7 @@
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <argLine>@{argLine} -Xmx4g -ea</argLine>
             <forkCount>1C</forkCount>
+            <failIfNoTests>false</failIfNoTests>
           </configuration>
         </plugin>
         <plugin>
@@ -400,6 +500,27 @@
           <groupId>org.jacoco</groupId>
           <artifactId>jacoco-maven-plugin</artifactId>
           <version>0.8.8</version>
+          <executions>
+            <execution>
+              <id>prepare-agent</id>
+              <goals>
+                <goal>prepare-agent</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>report</id>
+              <goals>
+                <goal>report</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>report-aggregate</id>
+              <phase>verify</phase>
+              <goals>
+                <goal>report-aggregate</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -412,6 +533,53 @@
               </goals>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>javadoc</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>javadoc</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>javadoc-jar</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <includeDependencySources>true</includeDependencySources>
+            <dependencySourceIncludes>
+              <include>au.csiro.pathling:*</include>
+            </dependencySourceIncludes>
+            <dependencySourceExcludes>
+              <exclude>au.csiro.pathling:encoders</exclude>
+            </dependencySourceExcludes>
+            <source>11</source>
+            <links>
+              <link>https://spark.apache.org/docs/latest/api/java/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-structures-r4/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-client/</link>
+              <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-server/</link>
+            </links>
+            <detectLinks/>
+            <doctitle>Pathling ${project.version} API</doctitle>
+            <windowtitle>Pathling ${project.version} API</windowtitle>
+            <bottom>
+              <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
+            </bottom>
+            <!--            <additionalJOptions>-->
+            <!--              <option>&#45;&#45;no-module-directories</option>-->
+            <!--              <option>-Xdoclint:none</option>-->
+            <!--            </additionalJOptions>-->
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -578,6 +746,51 @@
                 <phase>package</phase>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>skipTests</id>
+      <activation>
+        <property>
+          <name>skipTests</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>skipSurefireTests</id>
+      <activation>
+        <property>
+          <name>skipSurefireTests</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
           </plugin>
         </plugins>
       </build>

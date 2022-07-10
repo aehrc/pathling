@@ -119,6 +119,8 @@ public class EntityTagInterceptor {
    * Sets caching headers on a response to make sure that it doesn't get cached.
    *
    * @param response a {@link HttpServletResponse} upon which to set caching headers
+   * @param configuration the {@link Configuration} for the server, which controls which header
+   * values are used
    */
   public static void makeRequestNonCacheable(@Nullable final HttpServletResponse response,
       @Nonnull final Configuration configuration) {

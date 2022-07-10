@@ -11,7 +11,9 @@ the FHIR server. You call the operation by specifying aggregation, grouping and
 filter expressions, and grouped results are returned.
 
 The aggregate operation is useful for exploratory data analysis, as well as
-powering visualizations and other summarized views of the data.
+powering visualizations and other summarized views of the data. Drill-down
+expressions returned within the response can be used with the [search](./search)
+operation to retrieve the resources that make up each grouped result.
 
 :::note
 The `aggregate` operation supports the [Asynchronous Request Pattern](../async),

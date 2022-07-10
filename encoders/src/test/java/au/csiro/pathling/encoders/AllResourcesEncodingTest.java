@@ -14,29 +14,26 @@
 package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.encoders.SchemaConverterTest.OPEN_TYPES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import com.google.common.collect.ImmutableSet;
-import java.util.Collection;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder.Serializer;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Base;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import scala.collection.JavaConverters;
 
-@RunWith(Parameterized.class)
 public class AllResourcesEncodingTest {
 
   private final static FhirContext FHIR_CONTEXT = FhirContext.forR4();
@@ -66,34 +63,28 @@ public class AllResourcesEncodingTest {
       // scala.MatchError: RuntimeElementDirectResource[DirectChildResource, IBaseResource] (of class ca.uhn.fhir.context.RuntimeElementDirectResource)
   );
 
-  private final Class<? extends IBaseResource> resourceClass;
-
-  public AllResourcesEncodingTest(final Class<? extends IBaseResource> resourceClass) {
-    this.resourceClass = resourceClass;
-  }
-
-
-  @Parameters(name = "{index}: class = {0}")
-  public static Collection<?> input() {
+  public static Stream<Class<? extends IBaseResource>> input() {
     return FHIR_CONTEXT.getResourceTypes().stream()
         .filter(rn -> !EXCLUDED_RESOURCES.contains(rn))
         .map(FHIR_CONTEXT::getResourceDefinition)
-        .map(RuntimeResourceDefinition::getImplementingClass)
-        .map(cls -> new Object[]{cls})
-        .collect(Collectors.toList());
+        .map(RuntimeResourceDefinition::getImplementingClass);
   }
 
 
-  @Test
-  public void testConverterSchemaMatchesEncoder() {
+  @ParameterizedTest
+  @MethodSource("input")
+  public void testConverterSchemaMatchesEncoder(
+      @Nonnull final Class<? extends IBaseResource> resourceClass) {
     final StructType schema = SCHEMA_CONVERTER_L2.resourceSchema(resourceClass);
     final ExpressionEncoder<? extends IBaseResource> encoder = FHIR_ENCODERS
         .of(resourceClass);
     assertEquals(schema.treeString(), encoder.schema().treeString());
   }
 
-  @Test
-  public void testCanEncodeDecodeResource() throws Exception {
+  @ParameterizedTest
+  @MethodSource("input")
+  public void testCanEncodeDecodeResource(
+      @Nonnull final Class<? extends IBaseResource> resourceClass) throws Exception {
 
     final ExpressionEncoder<? extends IBaseResource> encoder = FHIR_ENCODERS
         .of(resourceClass);

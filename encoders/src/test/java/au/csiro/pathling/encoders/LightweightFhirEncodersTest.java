@@ -15,10 +15,10 @@ package au.csiro.pathling.encoders;
 
 import static au.csiro.pathling.encoders.AllResourcesEncodingTest.EXCLUDED_RESOURCES;
 import static au.csiro.pathling.encoders.SchemaConverterTest.OPEN_TYPES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -41,7 +41,7 @@ import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.json4s.jackson.JsonMethods;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
 
 public class LightweightFhirEncodersTest implements JsonMethods {

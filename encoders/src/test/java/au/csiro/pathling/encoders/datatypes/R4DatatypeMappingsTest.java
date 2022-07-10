@@ -13,9 +13,8 @@
 
 package au.csiro.pathling.encoders.datatypes;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.schema.ElementCtx;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
@@ -26,13 +25,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import scala.collection.JavaConverters;
 
 public class R4DatatypeMappingsTest {
 
   private final static FhirContext fhirContext = FhirContext.forR4();
-  private final static FhirEncoders fhirEncoders = FhirEncoders.forR4().getOrCreate();
 
   // As defined in: https://www.hl7.org/fhir/datatypes.html#open
   private final static List<String> ALLOWED_R4_OPEN_ELEMENT_TYPES = Arrays.asList(
@@ -87,17 +85,17 @@ public class R4DatatypeMappingsTest {
       "Dosage",
       "Meta");
 
-  private DataTypeMappings dataTypeMappings = new R4DataTypeMappings();
+  private final DataTypeMappings dataTypeMappings = new R4DataTypeMappings();
 
   @Test
   public void testCorrectChoicesOnOpenElementType() {
-    ElementCtx<Object, Object> ex = ElementCtx.forExtension(fhirContext);
-    RuntimeChildExtension extension = (RuntimeChildExtension) ex.childDefinition();
-    RuntimeCompositeDatatypeDefinition extensionChild = (RuntimeCompositeDatatypeDefinition) extension
+    final ElementCtx<Object, Object> ex = ElementCtx.forExtension(fhirContext);
+    final RuntimeChildExtension extension = (RuntimeChildExtension) ex.childDefinition();
+    final RuntimeCompositeDatatypeDefinition extensionChild = (RuntimeCompositeDatatypeDefinition) extension
         .getChildByName("extension");
 
     // This is how we can access the 'value' child od RuntimeChildExtension.
-    RuntimeChildChoiceDefinition openTypeElement = (RuntimeChildChoiceDefinition) extensionChild
+    final RuntimeChildChoiceDefinition openTypeElement = (RuntimeChildChoiceDefinition) extensionChild
         .getChildByName("value[x]");
 
     final Set<String> actualOpenElementUniqueChildNames = JavaConverters

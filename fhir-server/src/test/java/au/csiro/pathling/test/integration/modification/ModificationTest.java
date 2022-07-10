@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.test.integration.modification;
 
-import static au.csiro.pathling.test.helpers.TestHelpers.PARQUET_PATH;
+import static au.csiro.pathling.test.helpers.TestHelpers.getDatabaseUrl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
@@ -78,7 +78,7 @@ abstract class ModificationTest extends IntegrationTest {
   void setUp() throws IOException {
     databaseDirectory = new File(
         configuration.getStorage().getWarehouseUrl().replaceFirst("file://", ""), "default");
-    final Path source = new File(PARQUET_PATH).getAbsoluteFile().toPath();
+    final Path source = Path.of(getDatabaseUrl().replaceFirst("file://", ""));
     final Path destination = databaseDirectory.toPath();
     log.debug("Copying test data from {} to {}", source, destination);
     assertTrue(databaseDirectory.mkdirs());

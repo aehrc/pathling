@@ -16,6 +16,7 @@ The extract operation is useful for preparing data for use within other tools,
 and helps to alleviate some of the burden of dealing with FHIR data in its raw
 form.
 
+
 :::info
 The `aggregate` operation supports the [Asynchronous Request Pattern](../async),
 which allows you to kick off a long-running request and check on its progress
@@ -63,6 +64,63 @@ The response for the `$extract` operation is a
 following parameters:
 
 - `url [1]` - A URL at which the result of the operation can be retrieved.
+
+## Notes
+
+The way that the columns are combined within the extract operation is a bit
+different to the [aggregate](./aggregate) operation - rows are matched on the
+nearest common ancestor element. What this means is that if you are creating
+columns from nested data, the nested groupings will be kept together and any
+invalid combinations of values across multiple columns will be eliminated.
+
+As an example - given a set of Patient resources:
+
+| id  | name.given | name.family |
+|-----|------------|-------------|
+| 1   | Benjamin   | Franklin    |
+| 1   | Silence    | Dogood      |
+| 2   | Isaac      | Asimov      |
+| 2   | Paul       | French      |
+
+And the following query:
+
+```json
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "column",
+      "valueString": "name.given"
+    },
+    {
+      "name": "column",
+      "valueString": "name.family"
+    }
+  ]
+}
+```
+
+We would get the following result:
+
+| Given name | Family name |
+|------------|-------------|
+| Benjamin   | Franklin    |
+| Silence    | Dogood      |
+| Isaac      | Asimov      |
+| Paul       | French      |
+
+Rather than:
+
+| Given name | Family name |
+|------------|-------------|
+| Benjamin   | Franklin    |
+| Benjamin   | Dogood      |
+| Silence    | Franklin    |
+| Silence    | Dogood      |
+| Isaac      | Asimov      |
+| Isaac      | French      |
+| Paul       | Asimov      |
+| Paul       | French      |
 
 ## Examples
 

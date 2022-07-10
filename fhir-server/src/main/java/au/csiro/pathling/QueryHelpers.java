@@ -436,6 +436,12 @@ public abstract class QueryHelpers {
 
   /**
    * Creates an empty dataset with the schema of the supplied resource type.
+   *
+   * @param spark a {@link SparkSession}
+   * @param fhirEncoders a {@link FhirEncoders} object
+   * @param resourceType the {@link ResourceType} that will determine the shape of the empty
+   * dataset
+   * @return a new {@link Dataset}
    */
   @Nonnull
   public static Dataset<Row> createEmptyDataset(@Nonnull final SparkSession spark,

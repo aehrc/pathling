@@ -53,6 +53,7 @@ public class ScopeAwareDatabase extends Database {
    * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving terminology
    * queries
    * @param passportScope a {@link PassportScope} that can be used to limit the scope of resources,
+   * @param executor a {@link ThreadPoolTaskExecutor} for executing background tasks
    */
   @SuppressWarnings("WeakerAccess")
   public ScopeAwareDatabase(@Nonnull final Configuration configuration,

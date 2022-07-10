@@ -2,7 +2,7 @@
 #
 # This is executed when a commit is pushed to the main branch.
 
-name: Publish documentation site
+name: Deploy site
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   deploy:
-    name: Build and deploy documentation site
+    name: GitHub Pages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

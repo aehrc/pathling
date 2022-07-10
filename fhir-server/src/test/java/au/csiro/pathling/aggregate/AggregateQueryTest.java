@@ -6,8 +6,8 @@
 
 package au.csiro.pathling.aggregate;
 
+import static au.csiro.pathling.test.TestResources.getResourceAsStream;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;

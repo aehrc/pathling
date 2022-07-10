@@ -22,7 +22,7 @@ def find_jar(verbose: bool = False) -> str:
         project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
         verbose and print("Project dir is: %s" % project_dir)
         jars_dir = os.path.join(project_dir, "target", "dependency")
-    jar_file = glob.glob(os.path.join(jars_dir, "encoders-*-all.jar"))
+    jar_file = glob.glob(os.path.join(jars_dir, "library-api-*-all.jar"))
     verbose and print("Found jar file(s): %s" % jar_file)
     if not jar_file:
         raise RuntimeError("Pathling jar not present at: %s" % jars_dir)

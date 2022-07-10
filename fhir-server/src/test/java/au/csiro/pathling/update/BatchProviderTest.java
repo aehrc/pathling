@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.update;
 
+import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -16,7 +17,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.parser.IParser;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -115,7 +115,7 @@ class BatchProviderTest {
 
   @Nonnull
   Bundle getBundle(@Nonnull final String name) {
-    final String json = TestHelpers.getResourceAsString(
+    final String json = getResourceAsString(
         "requests/BatchProviderTest/" + name + ".Bundle.json");
     return (Bundle) jsonParser.parseResource(json);
   }

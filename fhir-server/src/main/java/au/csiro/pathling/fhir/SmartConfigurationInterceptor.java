@@ -42,6 +42,7 @@ public class SmartConfigurationInterceptor {
   private final String response;
 
   /**
+   * @param issuer the required issuer of tokens
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
    */

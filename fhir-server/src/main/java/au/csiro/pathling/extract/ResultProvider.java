@@ -61,6 +61,8 @@ public class ResultProvider {
    *
    * @param id the ID of the extract request
    * @param response the {@link HttpServletResponse} for updating the response
+   * @param requestDetails the {@link RequestDetails}, for preparing the request for downstream
+   * processing
    */
   @SuppressWarnings({"unused", "TypeMayBeWeakened"})
   @OperationAccess("extract")
