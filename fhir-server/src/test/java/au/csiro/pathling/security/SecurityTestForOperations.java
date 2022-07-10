@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.security;
 
+import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -15,7 +16,6 @@ import au.csiro.pathling.fhir.ResourceProviderFactory;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
-import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
 import au.csiro.pathling.update.UpdateProvider;
@@ -97,7 +97,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
   }
 
   void assertBatchSuccess() {
-    final String json = TestHelpers.getResourceAsString(
+    final String json = getResourceAsString(
         "requests/BatchProviderTest/mixedResourceTypes.Bundle.json");
     final Bundle bundle = (Bundle) jsonParser.parseResource(json);
     batchProvider.batch(bundle);

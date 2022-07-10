@@ -6,9 +6,9 @@
 
 package au.csiro.pathling.search;
 
+import static au.csiro.pathling.test.TestResources.getResourceAsStream;
+import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsStream;
-import static au.csiro.pathling.test.helpers.TestHelpers.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;

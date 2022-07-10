@@ -13,7 +13,10 @@
 
 package au.csiro.pathling.encoders;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
@@ -47,10 +50,9 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.QuestionnaireResponse;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for FHIR encoders.
@@ -99,7 +101,7 @@ public class FhirEncodersTest {
   /**
    * Set up Spark.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     spark = SparkSession.builder()
         .master("local[*]")
@@ -146,36 +148,36 @@ public class FhirEncodersTest {
   /**
    * Tear down Spark.
    */
-  @AfterClass
+  @AfterAll
   public static void tearDown() {
     spark.stop();
   }
 
   @Test
   public void testResourceId() {
-    Assert.assertEquals(condition.getId(),
+    assertEquals(condition.getId(),
         conditionsDataset.select("id").head().get(0));
-    Assert.assertEquals(condition.getId(),
+    assertEquals(condition.getId(),
         decodedCondition.getId());
   }
 
   @Test
   public void testResourceWithVersionId() {
-    Assert.assertEquals("with-version",
+    assertEquals("with-version",
         conditionsWithVersionDataset.select("id").head().get(0));
 
-    Assert.assertEquals(conditionWithVersion.getId(),
+    assertEquals(conditionWithVersion.getId(),
         conditionsWithVersionDataset.select("id_versioned").head().get(0));
 
-    Assert.assertEquals(conditionWithVersion.getId(),
+    assertEquals(conditionWithVersion.getId(),
         decodedConditionWithVersion.getId());
   }
 
   @Test
   public void testResourceLanguage() {
-    Assert.assertEquals(condition.getLanguage(),
+    assertEquals(condition.getLanguage(),
         conditionsDataset.select("language").head().get(0));
-    Assert.assertEquals(condition.getLanguage(),
+    assertEquals(condition.getLanguage(),
         decodedCondition.getLanguage());
   }
 
@@ -191,10 +193,10 @@ public class FhirEncodersTest {
         .getList(verificationStatus.fieldIndex("coding"))
         .get(0);
 
-    Assert.assertEquals(condition.getVerificationStatus().getCoding().size(), 1);
-    Assert.assertEquals(condition.getVerificationStatus().getCodingFirstRep().getSystem(),
+    assertEquals(condition.getVerificationStatus().getCoding().size(), 1);
+    assertEquals(condition.getVerificationStatus().getCodingFirstRep().getSystem(),
         coding.getString(coding.fieldIndex("system")));
-    Assert.assertEquals(condition.getVerificationStatus().getCodingFirstRep().getCode(),
+    assertEquals(condition.getVerificationStatus().getCodingFirstRep().getCode(),
         coding.getString(coding.fieldIndex("code")));
   }
 
@@ -202,24 +204,24 @@ public class FhirEncodersTest {
   public void choiceValue() {
 
     // Our test condition uses the DateTime choice, so use that type and column.
-    Assert.assertEquals(((DateTimeType) condition.getOnset()).getValueAsString(),
+    assertEquals(((DateTimeType) condition.getOnset()).getValueAsString(),
         conditionsDataset.select("onsetDateTime").head().get(0));
 
-    Assert.assertEquals(condition.getOnset().toString(),
+    assertEquals(condition.getOnset().toString(),
         decodedCondition.getOnset().toString());
   }
 
   @Test
   public void narrative() {
 
-    Assert.assertEquals(condition.getText().getStatus().toCode(),
+    assertEquals(condition.getText().getStatus().toCode(),
         conditionsDataset.select("text.status").head().get(0));
-    Assert.assertEquals(condition.getText().getStatus(),
+    assertEquals(condition.getText().getStatus(),
         decodedCondition.getText().getStatus());
 
-    Assert.assertEquals(condition.getText().getDivAsString(),
+    assertEquals(condition.getText().getDivAsString(),
         conditionsDataset.select("text.div").head().get(0));
-    Assert.assertEquals(condition.getText().getDivAsString(),
+    assertEquals(condition.getText().getDivAsString(),
         decodedCondition.getText().getDivAsString());
   }
 
@@ -237,42 +239,42 @@ public class FhirEncodersTest {
         .select("coding.*") // Pull all fields in the coding to the top level.
         .cache();
 
-    Assert.assertEquals(expectedCoding.getCode(),
+    assertEquals(expectedCoding.getCode(),
         severityCodings.select("code").head().get(0));
-    Assert.assertEquals(expectedCoding.getCode(),
+    assertEquals(expectedCoding.getCode(),
         actualCoding.getCode());
 
-    Assert.assertEquals(expectedCoding.getSystem(),
+    assertEquals(expectedCoding.getSystem(),
         severityCodings.select("system").head().get(0));
-    Assert.assertEquals(expectedCoding.getSystem(),
+    assertEquals(expectedCoding.getSystem(),
         actualCoding.getSystem());
 
-    Assert.assertEquals(expectedCoding.getUserSelected(),
+    assertEquals(expectedCoding.getUserSelected(),
         severityCodings.select("userSelected").head().get(0));
-    Assert.assertEquals(expectedCoding.getUserSelected(),
+    assertEquals(expectedCoding.getUserSelected(),
         actualCoding.getUserSelected());
 
-    Assert.assertEquals(expectedCoding.getDisplay(),
+    assertEquals(expectedCoding.getDisplay(),
         severityCodings.select("display").head().get(0));
-    Assert.assertEquals(expectedCoding.getDisplay(),
+    assertEquals(expectedCoding.getDisplay(),
         actualCoding.getDisplay());
   }
 
   @Test
   public void reference() {
 
-    Assert.assertEquals(condition.getSubject().getReference(),
+    assertEquals(condition.getSubject().getReference(),
         conditionsDataset.select("subject.reference").head().get(0));
-    Assert.assertEquals(condition.getSubject().getReference(),
+    assertEquals(condition.getSubject().getReference(),
         decodedCondition.getSubject().getReference());
   }
 
   @Test
   public void integer() {
 
-    Assert.assertEquals(((IntegerType) patient.getMultipleBirth()).getValue(),
+    assertEquals(((IntegerType) patient.getMultipleBirth()).getValue(),
         patientDataset.select("multipleBirthInteger").head().get(0));
-    Assert.assertEquals(((IntegerType) patient.getMultipleBirth()).getValue(),
+    assertEquals(((IntegerType) patient.getMultipleBirth()).getValue(),
         ((IntegerType) decodedPatient.getMultipleBirth()).getValue());
   }
 
@@ -288,19 +290,19 @@ public class FhirEncodersTest {
         .getInt(0);
 
     // we expect the values to be the same, but they may differ in scale
-    Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
-    Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
+    assertEquals(0, originalDecimal.compareTo(queriedDecimal));
+    assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
     final BigDecimal decodedDecimal = ((Quantity) decodedObservation.getValue()).getValue();
     // here we expect same value,  scale and precision
-    Assert.assertEquals(originalDecimal, decodedDecimal);
+    assertEquals(originalDecimal, decodedDecimal);
 
     // Test can represent without loss 18 + 6 decimal places
-    Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
+    assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
         decodedObservation.getReferenceRange().get(0).getHigh().getValue());
 
     // Test rounding of decimals with scale larger than 6
-    Assert.assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
+    assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
         decodedObservation.getReferenceRange().get(0).getLow().getValue());
   }
 
@@ -324,21 +326,21 @@ public class FhirEncodersTest {
         .getInt(0);
 
     // we expect the values to be the same, but they may differ in scale
-    Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
-    Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
+    assertEquals(0, originalDecimal.compareTo(queriedDecimal));
+    assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
     final BigDecimal decodedDecimal = decodedQuestionnaire.getItemFirstRep().getEnableWhenFirstRep()
         .getAnswerDecimalType().getValue();
     // here we expect same value,  scale and precision
-    Assert.assertEquals(originalDecimal, decodedDecimal);
+    assertEquals(originalDecimal, decodedDecimal);
 
     // Test can represent without loss 18 + 6 decimal places
-    Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
+    assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
         decodedQuestionnaire.getItemFirstRep().getInitialFirstRep().getValueDecimalType()
             .getValue());
 
     // Nested item should not be present.
-    // Assert.assertTrue(decodedQuestionnaire.getItemFirstRep().getItem().isEmpty());
+    // assertTrue(decodedQuestionnaire.getItemFirstRep().getItem().isEmpty());
   }
 
   @Test
@@ -358,17 +360,17 @@ public class FhirEncodersTest {
         .head()
         .getInt(0);
 
-    Assert.assertEquals(0, originalDecimal.compareTo(queriedDecimal));
-    Assert.assertEquals(originalDecimal.scale(), queriedDecimal_scale);
+    assertEquals(0, originalDecimal.compareTo(queriedDecimal));
+    assertEquals(originalDecimal.scale(), queriedDecimal_scale);
 
     final BigDecimal decodedDecimal = decodedQuestionnaireResponse.getItemFirstRep()
         .getAnswerFirstRep().getValueDecimalType().getValue();
-    Assert.assertEquals(originalDecimal, decodedDecimal);
+    assertEquals(originalDecimal, decodedDecimal);
 
-    Assert.assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
+    assertEquals(TestData.TEST_VERY_SMALL_DECIMAL_SCALE_6,
         decodedQuestionnaireResponse.getItemFirstRep().getAnswerFirstRep().getValueDecimalType()
             .getValue());
-    Assert.assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
+    assertEquals(TestData.TEST_VERY_BIG_DECIMAL,
         decodedQuestionnaireResponse.getItemFirstRep().getAnswer().get(1).getValueDecimalType()
             .getValue());
   }
@@ -377,12 +379,12 @@ public class FhirEncodersTest {
   public void instant() {
     final Date originalInstant = TestData.TEST_DATE;
 
-    Assert.assertEquals(originalInstant,
+    assertEquals(originalInstant,
         observationsDataset.select("issued")
             .head()
             .get(0));
 
-    Assert.assertEquals(originalInstant, decodedObservation.getIssued());
+    assertEquals(originalInstant, decodedObservation.getIssued());
   }
 
   @Test
@@ -391,11 +393,11 @@ public class FhirEncodersTest {
     final Annotation original = medRequest.getNoteFirstRep();
     final Annotation decoded = decodedMedRequest.getNoteFirstRep();
 
-    Assert.assertEquals(original.getText(),
+    assertEquals(original.getText(),
         medDataset.select(functions.expr("note[0].text")).head().get(0));
 
-    Assert.assertEquals(original.getText(), decoded.getText());
-    Assert.assertEquals(original.getAuthorReference().getReference(),
+    assertEquals(original.getText(), decoded.getText());
+    assertEquals(original.getAuthorReference().getReference(),
         decoded.getAuthorReference().getReference());
 
   }
@@ -405,34 +407,33 @@ public class FhirEncodersTest {
    */
   @Test
   public void testCopyDecoded() {
-    Assert.assertEquals(condition.getId(), decodedCondition.copy().getId());
-    Assert.assertEquals(medRequest.getId(), decodedMedRequest.copy().getId());
-    Assert.assertEquals(observation.getId(), decodedObservation.copy().getId());
-    Assert.assertEquals(patient.getId(), decodedPatient.copy().getId());
+    assertEquals(condition.getId(), decodedCondition.copy().getId());
+    assertEquals(medRequest.getId(), decodedMedRequest.copy().getId());
+    assertEquals(observation.getId(), decodedObservation.copy().getId());
+    assertEquals(patient.getId(), decodedPatient.copy().getId());
   }
 
   @Test
   public void testEmptyAttributes() {
     final Map<String, String> attributes = decodedMedRequest.getText().getDiv().getAttributes();
 
-    Assert.assertNotNull(attributes);
-    Assert.assertEquals(0, attributes.size());
+    assertNotNull(attributes);
+    assertEquals(0, attributes.size());
   }
 
   @Test
   public void testFromRdd() {
+    try (final JavaSparkContext context = new JavaSparkContext(spark.sparkContext())) {
+      final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
 
-    final JavaSparkContext context = new JavaSparkContext(spark.sparkContext());
+      final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
+          ENCODERS_L0.of(Condition.class));
 
-    final JavaRDD<Condition> conditionRdd = context.parallelize(ImmutableList.of(condition));
+      final Condition convertedCondition = ds.head();
 
-    final Dataset<Condition> ds = spark.createDataset(conditionRdd.rdd(),
-        ENCODERS_L0.of(Condition.class));
-
-    final Condition convertedCondition = ds.head();
-
-    Assert.assertEquals(condition.getId(),
-        convertedCondition.getId());
+      assertEquals(condition.getId(),
+          convertedCondition.getId());
+    }
   }
 
   @Test
@@ -450,25 +451,25 @@ public class FhirEncodersTest {
 
     final Condition readCondition = ds.head();
 
-    Assert.assertEquals(condition.getId(),
+    assertEquals(condition.getId(),
         readCondition.getId());
   }
 
   @Test
   public void testEncoderCached() {
 
-    Assert.assertSame(ENCODERS_L0.of(Condition.class),
+    assertSame(ENCODERS_L0.of(Condition.class),
         ENCODERS_L0.of(Condition.class));
 
-    Assert.assertSame(ENCODERS_L0.of(Patient.class),
+    assertSame(ENCODERS_L0.of(Patient.class),
         ENCODERS_L0.of(Patient.class));
   }
 
   @Test
   public void testPrimitiveClassDecoding() {
-    Assert.assertEquals(encounter.getClass_().getCode(),
+    assertEquals(encounter.getClass_().getCode(),
         encounterDataset.select("class.code").head().get(0));
-    Assert.assertEquals(encounter.getClass_().getCode(), decodedEncounter.getClass_().getCode());
+    assertEquals(encounter.getClass_().getCode(), decodedEncounter.getClass_().getCode());
   }
 
   @Test
@@ -502,12 +503,12 @@ public class FhirEncodersTest {
       assertTrue(questionnaires.get(i).equalsDeep(decodedQuestionnaires_L3.get(i)));
     }
 
-    Assert.assertEquals(Stream.of("Item/0", "Item/0", "Item/0", "Item/0").map(RowFactory::create)
+    assertEquals(Stream.of("Item/0", "Item/0", "Item/0", "Item/0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3.select(functions.col("item").getItem(0).getField("linkId"))
             .collectAsList());
 
-    Assert.assertEquals(Stream.of(null, "Item/1.0", "Item/1.0", "Item/1.0").map(RowFactory::create)
+    assertEquals(Stream.of(null, "Item/1.0", "Item/1.0", "Item/1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
             .select(functions.col("item")
@@ -515,7 +516,7 @@ public class FhirEncodersTest {
                 .getItem(0).getField("linkId"))
             .collectAsList());
 
-    Assert.assertEquals(Stream.of(null, null, "Item/2.1.0", "Item/2.1.0").map(RowFactory::create)
+    assertEquals(Stream.of(null, null, "Item/2.1.0", "Item/2.1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
             .select(functions.col("item")
@@ -524,7 +525,7 @@ public class FhirEncodersTest {
                 .getItem(0).getField("linkId"))
             .collectAsList());
 
-    Assert.assertEquals(Stream.of(null, null, null, "Item/3.2.1.0").map(RowFactory::create)
+    assertEquals(Stream.of(null, null, null, "Item/3.2.1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
             .select(functions.col("item")

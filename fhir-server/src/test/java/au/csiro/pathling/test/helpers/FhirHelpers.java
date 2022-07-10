@@ -14,11 +14,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.mockito.ArgumentMatcher;
-import org.mockito.Mockito;
 import org.springframework.stereotype.Component;
 
 /**
@@ -39,23 +35,4 @@ public class FhirHelpers {
     return definition.getChildElement(elementName);
   }
 
-
-  public static <T extends Base> T deepEq(@Nonnull final T expected) {
-    return Mockito.argThat(new FhirDeepMatcher<>(expected));
-  }
-
-  private static class FhirDeepMatcher<T extends Base> implements ArgumentMatcher<T> {
-
-    @Nonnull
-    private final T expected;
-
-    private FhirDeepMatcher(@Nonnull final T expected) {
-      this.expected = expected;
-    }
-
-    @Override
-    public boolean matches(@Nullable final T actual) {
-      return expected.equalsDeep(actual);
-    }
-  }
 }

@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.2.0</version>
+    <version>5.3.0</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -24,10 +24,25 @@
   <properties>
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
+    <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
     <jmh.version>1.35</jmh.version>
+    <pathling.dockerBaseImage>openjdk:11-jre-slim</pathling.dockerBaseImage>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>terminology</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>utilities</artifactId>
+    </dependency>
+
     <!-- Spring Boot -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -110,12 +125,6 @@
       <artifactId>jackson-core</artifactId>
     </dependency>
 
-    <!-- Encoders -->
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders</artifactId>
-    </dependency>
-
     <!-- Logging -->
     <dependency>
       <artifactId>logback-classic</artifactId>
@@ -130,7 +139,7 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>3.19.2</version>
+      <version>4.0.0</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
@@ -161,6 +170,20 @@
     </dependency>
 
     <!-- Testing -->
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>utilities</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>terminology</artifactId>
+      <version>${project.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -209,7 +232,6 @@
     <dependency>
       <groupId>commons-beanutils</groupId>
       <artifactId>commons-beanutils</artifactId>
-      <version>1.9.4</version>
     </dependency>
     <dependency>
       <groupId>org.json</groupId>
@@ -237,6 +259,9 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <classifier>exec</classifier>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.antlr</groupId>
@@ -281,6 +306,8 @@
               <systemPropertyVariables>
                 <spring.profiles.active>unit-test</spring.profiles.active>
                 <spark.logConf>true</spark.logConf>
+                <pathling.storage.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.storage.warehouseUrl>
+                <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -304,37 +331,17 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>prepare-agent</id>
-            <goals>
-              <goal>prepare-agent</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>report</id>
-            <phase>test</phase>
-            <goals>
-              <goal>report</goal>
-            </goals>
-            <configuration>
-              <excludes>
-                <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
-                <exclude>au/csiro/pathling/Configuration*</exclude>
-              </excludes>
-            </configuration>
-          </execution>
-        </executions>
+        <configuration>
+          <excludes>
+            <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
+          </excludes>
+        </configuration>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -345,7 +352,13 @@
           <version>3.2.1</version>
           <configuration>
             <from>
-              <image>openjdk:11-jre-slim</image>
+              <image>${pathling.dockerBaseImage}</image>
+              <platforms>
+                <platform>
+                  <architecture>${pathling.dockerArchitecture}</architecture>
+                  <os>linux</os>
+                </platform>
+              </platforms>
             </from>
             <to>
               <image>${pathling.fhirServerDockerRepo}</image>
@@ -353,6 +366,7 @@
                 <tag>${pathling.fhirServerDockerTag}</tag>
                 <tag>${project.version}</tag>
                 <tag>${project.majorVersion}</tag>
+                <tag>${git.commit.id}</tag>
               </tags>
             </to>
             <container>
@@ -392,16 +406,30 @@
                 <goals>
                   <goal>java</goal>
                 </goals>
+                <configuration>
+                  <mainClass>au.csiro.pathling.test.benchmark.PathlingBenchmarkRunner</mainClass>
+                  <classpathScope>test</classpathScope>
+                  <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                  <systemProperties>
+                    <property>
+                      <key>spring.profiles.active</key>
+                      <value>unit-test</value>
+                    </property>
+                    <property>
+                      <key>pathling.storage.warehouseUrl</key>
+                      <value>file://${project.basedir}/src/test/resources/test-data</value>
+                    </property>
+                    <property>
+                      <key>pathling.storage.databaseName</key>
+                      <value>parquet</value>
+                    </property>
+                  </systemProperties>
+                  <arguments>
+                    <argument>${project.basedir}/target</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <mainClass>au.csiro.pathling.test.bechmark.PathlingBenchmarkRunner</mainClass>
-              <classpathScope>test</classpathScope>
-              <cleanupDaemonThreads>false</cleanupDaemonThreads>
-              <arguments>
-                <argument>${project.basedir}/target</argument>
-              </arguments>
-            </configuration>
           </plugin>
         </plugins>
       </build>
@@ -425,42 +453,42 @@
                 <goals>
                   <goal>java</goal>
                 </goals>
+                <configuration>
+                  <mainClass>au.csiro.pathling.test.TestDataImporter</mainClass>
+                  <systemProperties>
+                    <property>
+                      <key>spring.profiles.active</key>
+                      <value>spark,fhir,import,cli</value>
+                    </property>
+                    <property>
+                      <key>pathling.version</key>
+                      <value>${project.version}</value>
+                    </property>
+                    <property>
+                      <key>pathling.terminology.enabled</key>
+                      <value>false</value>
+                    </property>
+                    <property>
+                      <key>pathling.storage.warehouseUrl</key>
+                      <value>file://${project.basedir}/src/test/resources/test-data</value>
+                    </property>
+                    <property>
+                      <key>pathling.storage.databaseName</key>
+                      <value>parquet</value>
+                    </property>
+                    <property>
+                      <key>spark.master</key>
+                      <value>local[1]</value>
+                    </property>
+                  </systemProperties>
+                  <arguments>
+                    <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
+                  </arguments>
+                  <classpathScope>test</classpathScope>
+                  <cleanupDaemonThreads>false</cleanupDaemonThreads>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <mainClass>au.csiro.pathling.test.TestDataImporter</mainClass>
-              <systemProperties>
-                <property>
-                  <key>spring.profiles.active</key>
-                  <value>spark,fhir,import,cli</value>
-                </property>
-                <property>
-                  <key>pathling.version</key>
-                  <value>${project.version}</value>
-                </property>
-                <property>
-                  <key>pathling.terminology.enabled</key>
-                  <value>false</value>
-                </property>
-                <property>
-                  <key>pathling.storage.warehouseUrl</key>
-                  <value>file://${project.basedir}/src/test/resources/test-data</value>
-                </property>
-                <property>
-                  <key>pathling.storage.databaseName</key>
-                  <value>parquet</value>
-                </property>
-                <property>
-                  <key>spark.master</key>
-                  <value>local[1]</value>
-                </property>
-              </systemProperties>
-              <arguments>
-                <argument>${project.basedir}/src/test/resources/test-data/fhir</argument>
-              </arguments>
-              <classpathScope>test</classpathScope>
-              <cleanupDaemonThreads>false</cleanupDaemonThreads>
-            </configuration>
           </plugin>
         </plugins>
       </build>
@@ -486,7 +514,7 @@
               </includes>
               <groups>SystemTest</groups>
               <systemPropertyVariables>
-                <pathling.systemTest.version>${project.version}</pathling.systemTest.version>
+                <pathling.systemTest.version>${git.commit.id}</pathling.systemTest.version>
                 <pathling.systemTest.auth.issuer>
                   https://auth.ontoserver.csiro.au/auth/realms/aehrc
                 </pathling.systemTest.auth.issuer>
@@ -495,7 +523,7 @@
                   openid user/*.*
                 </pathling.systemTest.auth.requestedScope>
                 <pathling.systemTest.terminology.serverUrl>
-                  https://r4.ontoserver.csiro.au/fhir
+                  https://tx.ontoserver.csiro.au/fhir
                 </pathling.systemTest.terminology.serverUrl>
                 <pathling.systemTest.dockerRepository>
                   ${pathling.fhirServerDockerRepo}
@@ -522,7 +550,8 @@
                   <goal>build</goal>
                 </goals>
                 <configuration>
-                  <from combine.children="append">
+                  <from>
+                    <image>${pathling.dockerBaseImage}</image>
                     <platforms>
                       <platform>
                         <architecture>amd64</architecture>
@@ -534,6 +563,14 @@
                       </platform>
                     </platforms>
                   </from>
+                  <to>
+                    <image>${pathling.fhirServerDockerRepo}</image>
+                    <tags>
+                      <tag>${pathling.fhirServerDockerTag}</tag>
+                      <tag>${project.version}</tag>
+                      <tag>${project.majorVersion}</tag>
+                    </tags>
+                  </to>
                 </configuration>
               </execution>
             </executions>

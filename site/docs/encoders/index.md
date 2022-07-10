@@ -68,7 +68,7 @@ patients.select('id', 'gender', 'birthDate').show()
 
 ```scala
 import org.apache.spark.sql.SparkSession
-import au.csiro.pathling.api.PathlingContext
+import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder.getOrCreate()
 
@@ -92,24 +92,24 @@ patients.select("id", "gender", "birthDate").show()
 ```java
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
-import au.csiro.pathling.api.PathlingContext;
+import au.csiro.pathling.library.PathlingContext;
 
 class MyApp {
 
-    public static void main(String args[]) {
-        SparkSession spark = SparkSession.builder().getOrCreate();
+  public static void main(String args[]) {
+    SparkSession spark = SparkSession.builder().getOrCreate();
 
-        // Read each line from the NDJSON into a row within a Spark data set.
-        String ndjsonDir = "/some/path/ndjson/";
-        Dataset<Row> jsonResources = spark.read().text(ndjsonDir);
+    // Read each line from the NDJSON into a row within a Spark data set.
+    String ndjsonDir = "/some/path/ndjson/";
+    Dataset<Row> jsonResources = spark.read().text(ndjsonDir);
 
-        // Convert the data set of strings into a structured FHIR data set.
-        PathlingContext pc = PathlingContext.create(spark);
-        Dataset<Row> patients = pc.encode(jsonResources, "Patient");
+    // Convert the data set of strings into a structured FHIR data set.
+    PathlingContext pc = PathlingContext.create(spark);
+    Dataset<Row> patients = pc.encode(jsonResources, "Patient");
 
-        // Do some stuff.
-        patients.select("id", "gender", "birthDate").show();
-    }
+    // Do some stuff.
+    patients.select("id", "gender", "birthDate").show();
+  }
 
 }
 ```
@@ -138,7 +138,7 @@ bundles_dir = '/some/path/bundles/'
 bundles = pc.spark.read.text(bundles_dir, wholetext=True)
 
 # Convert the data set of strings into a structured FHIR data set.
-patients = pc.encodeBundle(bundles, 'Patient')
+patients = pc.encode_bundle(bundles, 'Patient')
 
 # JSON is the default format, XML Bundles can be encoded using input type.
 # patients = pc.encodeBundle(bundles, 'Patient', inputType=MimeType.FHIR_XML)
@@ -154,7 +154,7 @@ patients.select('id', 'gender', 'birthDate').show()
 
 ```scala
 import org.apache.spark.sql.SparkSession
-import au.csiro.pathling.api.PathlingContext
+import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder.getOrCreate()
 
@@ -181,31 +181,31 @@ patients.select("id", "gender", "birthDate").show()
 ```java
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
-import au.csiro.pathling.api.PathlingContext;
+import au.csiro.pathling.library.PathlingContext;
 
 class MyApp {
 
-    public static void main(String args[]) {
-        SparkSession spark = SparkSession.builder().getOrCreate();
+  public static void main(String args[]) {
+    SparkSession spark = SparkSession.builder().getOrCreate();
 
-        // Read each line from the NDJSON into a row within a Spark data set.
-        String bundlesDir = "/some/path/bundles/";
-        Dataset<Row> bundles = spark.read()
-                .option("wholetext", true)
-                .text(bundlesDir);
+    // Read each line from the NDJSON into a row within a Spark data set.
+    String bundlesDir = "/some/path/bundles/";
+    Dataset<Row> bundles = spark.read()
+        .option("wholetext", true)
+        .text(bundlesDir);
 
-        // Convert the data set of strings into a structured FHIR data set.
-        PathlingContext pc = PathlingContext.create(spark);
-        Dataset<Row> patients = pc.encodeBundle(bundles, "Patient");
+    // Convert the data set of strings into a structured FHIR data set.
+    PathlingContext pc = PathlingContext.create(spark);
+    Dataset<Row> patients = pc.encodeBundle(bundles, "Patient");
 
-        // JSON is the default format, XML Bundles can be encoded using input 
-        // type.
-        // Dataset<Row> patients = pc.encodeBundle(bundles, "Patient", 
-        //     FhirMimeTypes.FHIR_XML);
+    // JSON is the default format, XML Bundles can be encoded using input 
+    // type.
+    // Dataset<Row> patients = pc.encodeBundle(bundles, "Patient", 
+    //     FhirMimeTypes.FHIR_XML);
 
-        // Do some stuff.
-        patients.select("id", "gender", "birthDate").show();
-    }
+    // Do some stuff.
+    patients.select("id", "gender", "birthDate").show();
+  }
 
 }
 ```
@@ -219,7 +219,7 @@ To make the Pathling encoders available within notebooks, navigate to the
 "Compute" section and click on the cluster. Click on the "Libraries" tab, and
 click "Install new".
 
-Install both the `python` PyPI package, and the `au.csiro.pathling:encoders`
+Install both the `python` PyPI package, and the `au.csiro.pathling:library-api`
 Maven package. Once the cluster is restarted, the libraries should be available
 for import and use within all notebooks.
 
@@ -237,7 +237,7 @@ you will need to configure Pathling as a Spark package.
 You can do this by adding the following to your `spark-defaults.conf` file:
 
 ```
-spark.jars.packages au.csiro.pathling:encoders:[some version]
+spark.jars.packages au.csiro.pathling:library-api:[some version]
 ```
 
 See the [Configuration](https://spark.apache.org/docs/latest/configuration.html)
@@ -251,7 +251,7 @@ this:
 FROM jupyter/all-spark-notebook
 
 USER root
-RUN echo "spark.jars.packages au.csiro.pathling:encoders:[some version]" >> /usr/local/spark/conf/spark-defaults.conf
+RUN echo "spark.jars.packages au.csiro.pathling:library-api:[some version]" >> /usr/local/spark/conf/spark-defaults.conf
 
 USER ${NB_UID}
 
