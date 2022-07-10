@@ -27,6 +27,6 @@ CVE-2020-25644
 # interfaces to our application.
 CVE-2022-2068
 
-# This vulnerability relates to Jetty, which is used by the Spark UI. The Spark UI is not exposed by 
-# the Pathling Docker image, and is not depended upon by any Pathling code.
+# This vulnerability relates to Jetty, which is used by Wiremock within the test suite. It is not a 
+# dependency of any of the run-time code.
 CVE-2022-2191
