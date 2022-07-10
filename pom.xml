@@ -24,8 +24,7 @@
 
   <name>Pathling</name>
   <description>
-    A server based on the HL7® FHIR® standard, implementing special functionality designed to ease
-    the delivery of analytics-enabled apps and augment tasks related to health data analytics.
+    A set of tools that make it easier to use FHIR® within data analytics, built on Apache Spark.
   </description>
   <url>https://pathling.csiro.au</url>
 
@@ -37,7 +36,7 @@
     </developer>
     <developer>
       <name>Piotr Szul</name>
-      <email>Piotr.Szul@data61.csiro.au</email>
+      <email>Piotr.Szul@csiro.au</email>
       <url>https://github.com/piotrszul</url>
     </developer>
   </developers>
