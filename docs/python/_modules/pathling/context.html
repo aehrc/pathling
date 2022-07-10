@@ -39,17 +39,22 @@
           <div class="body" role="main">
             
   <h1>Source code for pathling.context</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
+<span></span><span class="c1"># noinspection PyPackageRequirements</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
 
 <span class="kn">from</span> <span class="nn">py4j.java_gateway</span> <span class="k">import</span> <span class="n">JavaObject</span>
-<span class="kn">from</span> <span class="nn">pyspark.sql</span> <span class="k">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span>
+<span class="kn">from</span> <span class="nn">pyspark.sql</span> <span class="k">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">Column</span>
 
+<span class="kn">from</span> <span class="nn">pathling.coding</span> <span class="k">import</span> <span class="n">Coding</span>
 <span class="kn">from</span> <span class="nn">pathling.etc</span> <span class="k">import</span> <span class="n">find_jar</span>
 <span class="kn">from</span> <span class="nn">pathling.fhir</span> <span class="k">import</span> <span class="n">MimeType</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PathlingContext&quot;</span><span class="p">]</span>
 
+<span class="n">EQ_EQUIVALENT</span> <span class="o">=</span> <span class="s2">&quot;equivalent&quot;</span>
 
+
+<span class="c1"># noinspection PyProtectedMember</span>
 <div class="viewcode-block" id="PathlingContext"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext">[docs]</a><span class="k">class</span> <span class="nc">PathlingContext</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Main entry point for Pathling API functionality.</span>
@@ -70,50 +75,73 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span>
 
 <div class="viewcode-block" id="PathlingContext.create"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.create">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">fhirVersion</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">maxNestingLevel</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">enableExtensions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">enabledOpenTypes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PathlingContext&quot;</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SparkSession</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">fhir_version</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">max_nesting_level</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">enable_extensions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">enabled_open_types</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">terminology_server_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PathlingContext&quot;</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Creates a :class:`PathlingContext` using an existing :class:`SparkSession` and configuration</span>
-<span class="sd">        options.</span>
+<span class="sd">        Creates a :class:`PathlingContext` with the given configuration options.</span>
+
+<span class="sd">        If no SparkSession is provided, and there is not one already present in this process - a</span>
+<span class="sd">        new SparkSession will be created.</span>
+
+<span class="sd">        If a SparkSession is not provided, and one is already running within the current process,</span>
+<span class="sd">        it will be reused - and it is assumed that the Pathling library API JAR is already on the</span>
+<span class="sd">        classpath. If you are running your own cluster, make sure it is on the list of packages.</span>
+
+<span class="sd">        If a SparkSession is provided, it needs to include the Pathling library API JAR on its</span>
+<span class="sd">        classpath. You can get the path for the JAR (which is bundled with the Python package)</span>
+<span class="sd">        using the `pathling.etc.find_jar` method.</span>
 
 <span class="sd">        :param spark: the :class:`SparkSession` instance.</span>
-<span class="sd">        :param fhirVersion: the FHIR version to use.</span>
+<span class="sd">        :param fhir_version: the FHIR version to use.</span>
 <span class="sd">            Must a valid FHIR version string. Defaults to R4.</span>
-<span class="sd">        :param maxNestingLevel: the maximum nesting level for recursive data types.</span>
+<span class="sd">        :param max_nesting_level: the maximum nesting level for recursive data types.</span>
 <span class="sd">            Zero (0) indicates that all direct or indirect fields of type T in element of type T</span>
 <span class="sd">            should be skipped</span>
-<span class="sd">        :param enableExtensions: switches on/off the support for FHIR extensions</span>
-<span class="sd">        :param enabledOpenTypes: list of types that are encoded within open types, such as</span>
+<span class="sd">        :param enable_extensions: switches on/off the support for FHIR extensions</span>
+<span class="sd">        :param enabled_open_types: list of types that are encoded within open types, such as</span>
 <span class="sd">            extensions</span>
+<span class="sd">        :param terminology_server_url: the URL of the FHIR terminology server used to resolve</span>
+<span class="sd">            terminology queries</span>
 <span class="sd">        :return: a DataFrame containing the given resource encoded into Spark columns</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">spark</span> <span class="o">=</span> <span class="n">spark</span> <span class="ow">or</span> <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s1">&#39;spark.jars&#39;</span><span class="p">,</span> <span class="n">find_jar</span><span class="p">())</span><span class="o">.</span><span class="n">getOrCreate</span><span class="p">()</span>
+        <span class="n">spark</span> <span class="o">=</span> <span class="p">(</span><span class="n">spark</span> <span class="ow">or</span>
+                 <span class="n">SparkSession</span><span class="o">.</span><span class="n">getActiveSession</span><span class="p">()</span> <span class="ow">or</span>
+                 <span class="n">SparkSession</span><span class="o">.</span><span class="n">builder</span>
+                 <span class="o">.</span><span class="n">config</span><span class="p">(</span><span class="s1">&#39;spark.jars&#39;</span><span class="p">,</span> <span class="n">find_jar</span><span class="p">())</span>
+                 <span class="o">.</span><span class="n">getOrCreate</span><span class="p">())</span>
         <span class="n">jvm</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span>
-        <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
-                <span class="n">spark</span><span class="o">.</span><span class="n">_jsparkSession</span><span class="p">,</span> <span class="n">fhirVersion</span><span class="p">,</span> <span class="n">maxNestingLevel</span><span class="p">,</span> <span class="n">enableExtensions</span><span class="p">,</span>
-                <span class="n">enabledOpenTypes</span><span class="p">)</span>
+        <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">spark</span><span class="o">.</span><span class="n">_jsparkSession</span><span class="p">,</span> <span class="n">fhir_version</span><span class="p">,</span> <span class="n">max_nesting_level</span><span class="p">,</span> <span class="n">enable_extensions</span><span class="p">,</span>
+                <span class="n">enabled_open_types</span><span class="p">,</span> <span class="n">terminology_server_url</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">PathlingContext</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">jpc</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">:</span> <span class="n">SparkSession</span> <span class="o">=</span> <span class="n">spark</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">jpc</span>
 
-    <span class="k">def</span> <span class="nf">_wrapDF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">jdf</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">jdf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_wrap_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">jdf</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+        <span class="c1">#</span>
+        <span class="c1"># Before Spark v3.3 Dataframes were constructs with SQLContext, which was available</span>
+        <span class="c1"># in `_wrapped` attribute of SparkSession.</span>
+        <span class="c1"># Since v3.3 Dataframes are constructed with SparkSession instance direclty.</span>
+        <span class="c1">#</span>
+        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">jdf</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="o">.</span><span class="n">_wrapped</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">,</span> <span class="s1">&#39;_wrapped&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">)</span>
 
-<div class="viewcode-block" id="PathlingContext.encode"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.encode">[docs]</a>    <span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">resourceName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-               <span class="n">inputType</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+<div class="viewcode-block" id="PathlingContext.encode"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.encode">[docs]</a>    <span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">resource_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+               <span class="n">input_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Takes a dataframe with a string representations of FHIR resources  in the given column and</span>
 <span class="sd">        encodes the resources of the given types as Spark dataframe.</span>
 
 <span class="sd">        :param df: a :class:`DataFrame` containing the resources to encode.</span>
-<span class="sd">        :param resourceName: the name of the FHIR resource to extract</span>
+<span class="sd">        :param resource_name: the name of the FHIR resource to extract</span>
 <span class="sd">            (Condition, Observation, etc).</span>
-<span class="sd">        :param inputType: the mime type of input string encoding.</span>
+<span class="sd">        :param input_type: the mime type of input string encoding.</span>
 <span class="sd">            Defaults to `application/fhir+json`.</span>
 <span class="sd">        :param column: the column in which the resources to encode are stored. If None then</span>
 <span class="sd">            the input dataframe is assumed to have one column of type string.</span>
@@ -121,29 +149,96 @@
 <span class="sd">            columns</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrapDF</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="p">,</span> <span class="n">resourceName</span><span class="p">,</span>
-                                             <span class="n">inputType</span> <span class="ow">or</span> <span class="n">MimeType</span><span class="o">.</span><span class="n">FHIR_JSON</span><span class="p">,</span>
-                                             <span class="n">column</span><span class="p">))</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_df</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="p">,</span> <span class="n">resource_name</span><span class="p">,</span>
+                                              <span class="n">input_type</span> <span class="ow">or</span> <span class="n">MimeType</span><span class="o">.</span><span class="n">FHIR_JSON</span><span class="p">,</span>
+                                              <span class="n">column</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="PathlingContext.encodeBundle"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.encodeBundle">[docs]</a>    <span class="k">def</span> <span class="nf">encodeBundle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">resourceName</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                     <span class="n">inputType</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+<div class="viewcode-block" id="PathlingContext.encode_bundle"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.encode_bundle">[docs]</a>    <span class="k">def</span> <span class="nf">encode_bundle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">resource_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="n">input_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Takes a dataframe with a string representations of FHIR bundles  in the given column and</span>
 <span class="sd">        encodes the resources of the given types as Spark dataframe.</span>
 
 <span class="sd">        :param df: a :class:`DataFrame` containing the bundles with the resources to encode.</span>
-<span class="sd">        :param resourceName: the name of the FHIR resource to extract</span>
+<span class="sd">        :param resource_name: the name of the FHIR resource to extract</span>
 <span class="sd">            (condition, observation, etc).</span>
-<span class="sd">        :param inputType: the mime type of input string encoding.</span>
+<span class="sd">        :param input_type: the mime type of input string encoding.</span>
 <span class="sd">            Defaults to `application/fhir+json`.</span>
 <span class="sd">        :param column: the column in which the resources to encode are stored. If None then</span>
 <span class="sd">            the input dataframe is assumed to have one column of type string.</span>
 <span class="sd">        :return: a :class:`DataFrame` containing the given type of resources encoded into Spark</span>
 <span class="sd">            columns</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrapDF</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">encodeBundle</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="p">,</span> <span class="n">resourceName</span><span class="p">,</span>
-                                                   <span class="n">inputType</span> <span class="ow">or</span> <span class="n">MimeType</span><span class="o">.</span><span class="n">FHIR_JSON</span><span class="p">,</span>
-                                                   <span class="n">column</span><span class="p">))</span></div></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_df</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">encodeBundle</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="p">,</span> <span class="n">resource_name</span><span class="p">,</span>
+                                                    <span class="n">input_type</span> <span class="ow">or</span> <span class="n">MimeType</span><span class="o">.</span><span class="n">FHIR_JSON</span><span class="p">,</span>
+                                                    <span class="n">column</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="PathlingContext.member_of"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.member_of">[docs]</a>    <span class="k">def</span> <span class="nf">member_of</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">coding_column</span><span class="p">:</span> <span class="n">Column</span><span class="p">,</span> <span class="n">value_set_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">output_column_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Takes a dataframe with a Coding column as input. A new column is created which contains a </span>
+<span class="sd">        Boolean value, indicating whether the input Coding is a member of the specified FHIR </span>
+<span class="sd">        ValueSet.</span>
+
+<span class="sd">        :param df: a DataFrame containing the input data</span>
+<span class="sd">        :param coding_column: a Column containing a struct representation of a Coding</span>
+<span class="sd">        :param value_set_url: an identifier for a FHIR ValueSet</span>
+<span class="sd">        :param output_column_name: the name of the result column</span>
+<span class="sd">        :return: A new dataframe with an additional column containing the result of the operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_df</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">memberOf</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="p">,</span> <span class="n">coding_column</span><span class="o">.</span><span class="n">_jc</span><span class="p">,</span> <span class="n">value_set_url</span><span class="p">,</span> <span class="n">output_column_name</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="PathlingContext.translate"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.translate">[docs]</a>    <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">coding_column</span><span class="p">:</span> <span class="n">Column</span><span class="p">,</span> <span class="n">concept_map_uri</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">reverse</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">equivalence</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">EQ_EQUIVALENT</span><span class="p">,</span>
+                  <span class="n">output_column_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;result&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Takes a dataframe with a Coding column as input. A new column is created which contains a </span>
+<span class="sd">        Coding value and contains translation targets from the specified FHIR ConceptMap. There </span>
+<span class="sd">        may be more than one target concept for each input concept.</span>
+
+<span class="sd">        :param df: a DataFrame containing the input data</span>
+<span class="sd">        :param coding_column: a Column containing a struct representation of a Coding</span>
+<span class="sd">        :param concept_map_uri: an identifier for a FHIR ConceptMap</span>
+<span class="sd">        :param reverse: the direction to traverse the map - false results in &quot;source to target&quot; </span>
+<span class="sd">        mappings, while true results in &quot;target to source&quot;</span>
+<span class="sd">        :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet</span>
+<span class="sd">        :param output_column_name: the name of the result column</span>
+<span class="sd">        :return: A new dataframe with an additional column containing the result of the operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_df</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="p">,</span> <span class="n">coding_column</span><span class="o">.</span><span class="n">_jc</span><span class="p">,</span> <span class="n">concept_map_uri</span><span class="p">,</span> <span class="n">reverse</span><span class="p">,</span>
+                                    <span class="n">equivalence</span><span class="p">,</span>
+                                    <span class="n">output_column_name</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="PathlingContext.subsumes"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.subsumes">[docs]</a>    <span class="k">def</span> <span class="nf">subsumes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">output_column_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">left_coding_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Column</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">right_coding_column</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Column</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">left_coding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Coding</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">right_coding</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Coding</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Takes a dataframe with two Coding columns. A new column is created which contains a</span>
+<span class="sd">        Boolean value, indicating whether the left Coding subsumes the right Coding.</span>
+
+<span class="sd">        :param df: a DataFrame containing the input data</span>
+<span class="sd">        :param left_coding_column: a Column containing a struct representation of a Coding,</span>
+<span class="sd">        for the left-hand side of the subsumption test</span>
+<span class="sd">        :param right_coding_column: a Column containing a struct representation of a Coding,</span>
+<span class="sd">        for the right-hand side of the subsumption test</span>
+<span class="sd">        :param left_coding: a Coding object for the left-hand side of the subsumption test</span>
+<span class="sd">        :param right_coding: a Coding object for the right-hand side of the subsumption test</span>
+<span class="sd">        :param output_column_name: the name of the result column</span>
+<span class="sd">        :return: A new dataframe with an additional column containing the result of the operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">left_coding_column</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">left_coding</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="n">right_coding_column</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">right_coding</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Must provide either left_coding_column or left_coding, and either &quot;</span>
+                    <span class="s2">&quot;right_coding_column or right_coding&quot;</span><span class="p">)</span>
+        <span class="n">left_column</span> <span class="o">=</span> <span class="n">left_coding</span><span class="o">.</span><span class="n">to_literal</span><span class="p">()</span> <span class="k">if</span> <span class="n">left_coding</span> <span class="k">else</span> <span class="n">left_coding_column</span>
+        <span class="n">right_column</span> <span class="o">=</span> <span class="n">right_coding</span><span class="o">.</span><span class="n">to_literal</span><span class="p">()</span> <span class="k">if</span> <span class="n">right_coding</span> <span class="k">else</span> <span class="n">right_coding_column</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_df</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">subsumes</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">_jdf</span><span class="p">,</span> <span class="n">left_column</span><span class="o">.</span><span class="n">_jc</span><span class="p">,</span> <span class="n">right_column</span><span class="o">.</span><span class="n">_jc</span><span class="p">,</span> <span class="n">output_column_name</span><span class="p">))</span></div></div>
 </pre></div>
 
             <div class="clearer"></div>

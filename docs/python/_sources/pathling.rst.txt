@@ -4,6 +4,14 @@ pathling package
 Submodules
 ----------
 
+pathling.coding module
+----------------------
+
+.. automodule:: pathling.coding
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pathling.context module
 -----------------------
 
@@ -24,6 +32,14 @@ pathling.fhir module
 --------------------
 
 .. automodule:: pathling.fhir
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.functions module
+-------------------------
+
+.. automodule:: pathling.functions
    :members:
    :undoc-members:
    :show-inheritance:

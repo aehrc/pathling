@@ -47,6 +47,26 @@
 <section id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading">¶</a></h2>
 </section>
+<section id="module-pathling.coding">
+<span id="pathling-coding-module"></span><h2>pathling.coding module<a class="headerlink" href="#module-pathling.coding" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.coding.Coding">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.coding.</span></span><span class="sig-name descname"><span class="pre">Coding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">display</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">user_selected</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/coding.html#Coding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.coding.Coding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A Coding represents a code in a code system.
+See: <a class="reference external" href="https://hl7.org/fhir/R4/datatypes.html#Coding">https://hl7.org/fhir/R4/datatypes.html#Coding</a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.coding.Coding.to_literal">
+<span class="sig-name descname"><span class="pre">to_literal</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/coding.html#Coding.to_literal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.coding.Coding.to_literal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a Coding into a Column that contains a Coding struct. The Coding
+struct Column can be used as an input to terminology functions such as <cite>member_of</cite> and
+<cite>translate</cite>.
+:return: a Column containing a Coding struct</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
 <section id="module-pathling.context">
 <span id="pathling-context-module"></span><h2>pathling.context module<a class="headerlink" href="#module-pathling.context" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
@@ -63,21 +83,30 @@ Should be instantiated with the <a class="reference internal" href="#pathling.co
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.context.PathlingContext.create">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">SparkSession</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirVersion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxNestingLevel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enableExtensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabledOpenTypes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><span class="pre">PathlingContext</span></a></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.create" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates a <a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code></a> using an existing <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> and configuration
-options.</p>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">SparkSession</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhir_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_nesting_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_extensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled_open_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">terminology_server_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><span class="pre">PathlingContext</span></a></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code></a> with the given configuration options.</p>
+<p>If no SparkSession is provided, and there is not one already present in this process - a
+new SparkSession will be created.</p>
+<p>If a SparkSession is not provided, and one is already running within the current process,
+it will be reused - and it is assumed that the Pathling library API JAR is already on the
+classpath. If you are running your own cluster, make sure it is on the list of packages.</p>
+<p>If a SparkSession is provided, it needs to include the Pathling library API JAR on its
+classpath. You can get the path for the JAR (which is bundled with the Python package)
+using the <cite>pathling.etc.find_jar</cite> method.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>spark</strong> – the <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> instance.</p></li>
-<li><p><strong>fhirVersion</strong> – the FHIR version to use.
+<li><p><strong>fhir_version</strong> – the FHIR version to use.
 Must a valid FHIR version string. Defaults to R4.</p></li>
-<li><p><strong>maxNestingLevel</strong> – the maximum nesting level for recursive data types.
+<li><p><strong>max_nesting_level</strong> – the maximum nesting level for recursive data types.
 Zero (0) indicates that all direct or indirect fields of type T in element of type T
 should be skipped</p></li>
-<li><p><strong>enableExtensions</strong> – switches on/off the support for FHIR extensions</p></li>
-<li><p><strong>enabledOpenTypes</strong> – list of types that are encoded within open types, such as
+<li><p><strong>enable_extensions</strong> – switches on/off the support for FHIR extensions</p></li>
+<li><p><strong>enabled_open_types</strong> – list of types that are encoded within open types, such as
 extensions</p></li>
+<li><p><strong>terminology_server_url</strong> – the URL of the FHIR terminology server used to resolve
+terminology queries</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -88,16 +117,16 @@ extensions</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.context.PathlingContext.encode">
-<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.encode" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.encode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a dataframe with a string representations of FHIR resources  in the given column and
 encodes the resources of the given types as Spark dataframe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the resources to encode.</p></li>
-<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+<li><p><strong>resource_name</strong> – the name of the FHIR resource to extract
 (Condition, Observation, etc).</p></li>
-<li><p><strong>inputType</strong> – the mime type of input string encoding.
+<li><p><strong>input_type</strong> – the mime type of input string encoding.
 Defaults to <cite>application/fhir+json</cite>.</p></li>
 <li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
 the input dataframe is assumed to have one column of type string.</p></li>
@@ -111,17 +140,17 @@ columns</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="pathling.context.PathlingContext.encodeBundle">
-<span class="sig-name descname"><span class="pre">encodeBundle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encodeBundle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.encodeBundle" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.encode_bundle">
+<span class="sig-name descname"><span class="pre">encode_bundle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode_bundle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.encode_bundle" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a dataframe with a string representations of FHIR bundles  in the given column and
 encodes the resources of the given types as Spark dataframe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the bundles with the resources to encode.</p></li>
-<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+<li><p><strong>resource_name</strong> – the name of the FHIR resource to extract
 (condition, observation, etc).</p></li>
-<li><p><strong>inputType</strong> – the mime type of input string encoding.
+<li><p><strong>input_type</strong> – the mime type of input string encoding.
 Defaults to <cite>application/fhir+json</cite>.</p></li>
 <li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
 the input dataframe is assumed to have one column of type string.</p></li>
@@ -134,10 +163,75 @@ columns</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.member_of">
+<span class="sig-name descname"><span class="pre">member_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_set_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.member_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.member_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a Coding column as input. A new column is created which contains a 
+Boolean value, indicating whether the input Coding is a member of the specified FHIR 
+ValueSet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
+<li><p><strong>coding_column</strong> – a Column containing a struct representation of a Coding</p></li>
+<li><p><strong>value_set_url</strong> – an identifier for a FHIR ValueSet</p></li>
+<li><p><strong>output_column_name</strong> – the name of the result column</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new dataframe with an additional column containing the result of the operation.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="pathling.context.PathlingContext.spark">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">spark</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">SparkSession</span></em><a class="headerlink" href="#pathling.context.PathlingContext.spark" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the SparkSession associated with this context.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.subsumes">
+<span class="sig-name descname"><span class="pre">subsumes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Column</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Column</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_coding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pathling.coding.Coding" title="pathling.coding.Coding"><span class="pre">Coding</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_coding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pathling.coding.Coding" title="pathling.coding.Coding"><span class="pre">Coding</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.subsumes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.subsumes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with two Coding columns. A new column is created which contains a
+Boolean value, indicating whether the left Coding subsumes the right Coding.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
+<li><p><strong>left_coding_column</strong> – a Column containing a struct representation of a Coding,</p></li>
+</ul>
+</dd>
+</dl>
+<p>for the left-hand side of the subsumption test
+:param right_coding_column: a Column containing a struct representation of a Coding,
+for the right-hand side of the subsumption test
+:param left_coding: a Coding object for the left-hand side of the subsumption test
+:param right_coding: a Coding object for the right-hand side of the subsumption test
+:param output_column_name: the name of the result column
+:return: A new dataframe with an additional column containing the result of the operation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.context.PathlingContext.translate">
+<span class="sig-name descname"><span class="pre">translate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concept_map_uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">equivalence</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'equivalent'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'result'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.translate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.translate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a Coding column as input. A new column is created which contains a 
+Coding value and contains translation targets from the specified FHIR ConceptMap. There 
+may be more than one target concept for each input concept.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
+<li><p><strong>coding_column</strong> – a Column containing a struct representation of a Coding</p></li>
+<li><p><strong>concept_map_uri</strong> – an identifier for a FHIR ConceptMap</p></li>
+<li><p><strong>reverse</strong> – the direction to traverse the map - false results in “source to target”</p></li>
+</ul>
+</dd>
+</dl>
+<p>mappings, while true results in “target to source”
+:param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
+:param output_column_name: the name of the result column
+:return: A new dataframe with an additional column containing the result of the operation.</p>
 </dd></dl>
 
 </dd></dl>
@@ -185,6 +279,21 @@ python distribution</p>
 </dd></dl>
 
 </section>
+<section id="module-pathling.functions">
+<span id="pathling-functions-module"></span><h2>pathling.functions module<a class="headerlink" href="#module-pathling.functions" title="Permalink to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.functions.to_coding">
+<span class="sig-prename descclassname"><span class="pre">pathling.functions.</span></span><span class="sig-name descname"><span class="pre">to_coding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/functions.html#to_coding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.functions.to_coding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a Column containing codes into a Column that contains a Coding struct. The Coding
+struct Column can be used as an input to terminology functions such as <cite>member_of</cite> and
+<cite>translate</cite>.
+:param coding_column: the Column containing the codes
+:param system: the URI of the system the codes belong to
+:param version: the version of the code system
+:return: a Column containing a Coding struct</p>
+</dd></dl>
+
+</section>
 <section id="module-pathling">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pathling" title="Permalink to this heading">¶</a></h2>
 <dl class="simple">
@@ -208,21 +317,30 @@ Should be instantiated with the <a class="reference internal" href="#pathling.Pa
 </div>
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.PathlingContext.create">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">SparkSession</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhirVersion</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxNestingLevel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enableExtensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabledOpenTypes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><span class="pre">PathlingContext</span></a></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.create" title="Permalink to this definition">¶</a></dt>
-<dd><p>Creates a <a class="reference internal" href="#pathling.PathlingContext" title="pathling.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code></a> using an existing <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> and configuration
-options.</p>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">SparkSession</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fhir_version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_nesting_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_extensions</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enabled_open_types</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">terminology_server_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pathling.context.PathlingContext" title="pathling.context.PathlingContext"><span class="pre">PathlingContext</span></a></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a <a class="reference internal" href="#pathling.PathlingContext" title="pathling.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">PathlingContext</span></code></a> with the given configuration options.</p>
+<p>If no SparkSession is provided, and there is not one already present in this process - a
+new SparkSession will be created.</p>
+<p>If a SparkSession is not provided, and one is already running within the current process,
+it will be reused - and it is assumed that the Pathling library API JAR is already on the
+classpath. If you are running your own cluster, make sure it is on the list of packages.</p>
+<p>If a SparkSession is provided, it needs to include the Pathling library API JAR on its
+classpath. You can get the path for the JAR (which is bundled with the Python package)
+using the <cite>pathling.etc.find_jar</cite> method.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>spark</strong> – the <code class="xref py py-class docutils literal notranslate"><span class="pre">SparkSession</span></code> instance.</p></li>
-<li><p><strong>fhirVersion</strong> – the FHIR version to use.
+<li><p><strong>fhir_version</strong> – the FHIR version to use.
 Must a valid FHIR version string. Defaults to R4.</p></li>
-<li><p><strong>maxNestingLevel</strong> – the maximum nesting level for recursive data types.
+<li><p><strong>max_nesting_level</strong> – the maximum nesting level for recursive data types.
 Zero (0) indicates that all direct or indirect fields of type T in element of type T
 should be skipped</p></li>
-<li><p><strong>enableExtensions</strong> – switches on/off the support for FHIR extensions</p></li>
-<li><p><strong>enabledOpenTypes</strong> – list of types that are encoded within open types, such as
+<li><p><strong>enable_extensions</strong> – switches on/off the support for FHIR extensions</p></li>
+<li><p><strong>enabled_open_types</strong> – list of types that are encoded within open types, such as
 extensions</p></li>
+<li><p><strong>terminology_server_url</strong> – the URL of the FHIR terminology server used to resolve
+terminology queries</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -233,16 +351,16 @@ extensions</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.PathlingContext.encode">
-<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.encode" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">encode</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.encode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a dataframe with a string representations of FHIR resources  in the given column and
 encodes the resources of the given types as Spark dataframe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the resources to encode.</p></li>
-<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+<li><p><strong>resource_name</strong> – the name of the FHIR resource to extract
 (Condition, Observation, etc).</p></li>
-<li><p><strong>inputType</strong> – the mime type of input string encoding.
+<li><p><strong>input_type</strong> – the mime type of input string encoding.
 Defaults to <cite>application/fhir+json</cite>.</p></li>
 <li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
 the input dataframe is assumed to have one column of type string.</p></li>
@@ -256,17 +374,17 @@ columns</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="pathling.PathlingContext.encodeBundle">
-<span class="sig-name descname"><span class="pre">encodeBundle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resourceName</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inputType</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encodeBundle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.encodeBundle" title="Permalink to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="pathling.PathlingContext.encode_bundle">
+<span class="sig-name descname"><span class="pre">encode_bundle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resource_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.encode_bundle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.encode_bundle" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a dataframe with a string representations of FHIR bundles  in the given column and
 encodes the resources of the given types as Spark dataframe.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>df</strong> – a <code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code> containing the bundles with the resources to encode.</p></li>
-<li><p><strong>resourceName</strong> – the name of the FHIR resource to extract
+<li><p><strong>resource_name</strong> – the name of the FHIR resource to extract
 (condition, observation, etc).</p></li>
-<li><p><strong>inputType</strong> – the mime type of input string encoding.
+<li><p><strong>input_type</strong> – the mime type of input string encoding.
 Defaults to <cite>application/fhir+json</cite>.</p></li>
 <li><p><strong>column</strong> – the column in which the resources to encode are stored. If None then
 the input dataframe is assumed to have one column of type string.</p></li>
@@ -279,10 +397,75 @@ columns</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.member_of">
+<span class="sig-name descname"><span class="pre">member_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_set_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.member_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.member_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a Coding column as input. A new column is created which contains a 
+Boolean value, indicating whether the input Coding is a member of the specified FHIR 
+ValueSet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
+<li><p><strong>coding_column</strong> – a Column containing a struct representation of a Coding</p></li>
+<li><p><strong>value_set_url</strong> – an identifier for a FHIR ValueSet</p></li>
+<li><p><strong>output_column_name</strong> – the name of the result column</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A new dataframe with an additional column containing the result of the operation.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="pathling.PathlingContext.spark">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">spark</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">SparkSession</span></em><a class="headerlink" href="#pathling.PathlingContext.spark" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the SparkSession associated with this context.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.subsumes">
+<span class="sig-name descname"><span class="pre">subsumes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Column</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">Column</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_coding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pathling.coding.Coding" title="pathling.coding.Coding"><span class="pre">Coding</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_coding</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#pathling.coding.Coding" title="pathling.coding.Coding"><span class="pre">Coding</span></a><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.subsumes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.subsumes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with two Coding columns. A new column is created which contains a
+Boolean value, indicating whether the left Coding subsumes the right Coding.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
+<li><p><strong>left_coding_column</strong> – a Column containing a struct representation of a Coding,</p></li>
+</ul>
+</dd>
+</dl>
+<p>for the left-hand side of the subsumption test
+:param right_coding_column: a Column containing a struct representation of a Coding,
+for the right-hand side of the subsumption test
+:param left_coding: a Coding object for the left-hand side of the subsumption test
+:param right_coding: a Coding object for the right-hand side of the subsumption test
+:param output_column_name: the name of the result column
+:return: A new dataframe with an additional column containing the result of the operation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pathling.PathlingContext.translate">
+<span class="sig-name descname"><span class="pre">translate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concept_map_uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reverse</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">equivalence</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'equivalent'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'result'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.translate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.translate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a dataframe with a Coding column as input. A new column is created which contains a 
+Coding value and contains translation targets from the specified FHIR ConceptMap. There 
+may be more than one target concept for each input concept.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
+<li><p><strong>coding_column</strong> – a Column containing a struct representation of a Coding</p></li>
+<li><p><strong>concept_map_uri</strong> – an identifier for a FHIR ConceptMap</p></li>
+<li><p><strong>reverse</strong> – the direction to traverse the map - false results in “source to target”</p></li>
+</ul>
+</dd>
+</dl>
+<p>mappings, while true results in “target to source”
+:param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
+:param output_column_name: the name of the result column
+:return: A new dataframe with an additional column containing the result of the operation.</p>
 </dd></dl>
 
 </dd></dl>
@@ -302,9 +485,11 @@ columns</p>
     <ul>
 <li><a class="reference internal" href="#">pathling package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-pathling.coding">pathling.coding module</a></li>
 <li><a class="reference internal" href="#module-pathling.context">pathling.context module</a></li>
 <li><a class="reference internal" href="#module-pathling.etc">pathling.etc module</a></li>
 <li><a class="reference internal" href="#module-pathling.fhir">pathling.fhir module</a></li>
+<li><a class="reference internal" href="#module-pathling.functions">pathling.functions module</a></li>
 <li><a class="reference internal" href="#module-pathling">Module contents</a></li>
 </ul>
 </li>
