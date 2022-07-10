@@ -12,4 +12,4 @@ The following Maven packages are available for use in Java programs:
 - [au.csiro.pathling:library-api](https://search.maven.org/artifact/au.csiro.pathling/library-api) - An API that exposes Pathling functionality to non-JVM language libraries.
 - [au.csiro.pathling:utilities](https://search.maven.org/artifact/au.csiro.pathling/utilities) - Utility functions used by different components of Pathling.
 
-[View the generated API documentation &rarr;](pathname:///docs/java/)
+[View the generated API documentation &rarr;](pathname:///docs/java/index.html)
