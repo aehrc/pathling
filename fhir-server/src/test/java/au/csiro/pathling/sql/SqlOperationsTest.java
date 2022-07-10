@@ -81,7 +81,7 @@ class SqlOperationsTest {
         .withRow("patient-4", null, true)
         .build().repartition(1);
 
-    final Dataset<Row> resultDataset = SqlOperations.mapWithPartitionPreview(dataset,
+    final Dataset<Row> resultDataset = SqlExtensions.mapWithPartitionPreview(dataset,
         dataset.col("gender"),
         SqlOperationsTest::stringDecoder,
         new TestMapperWithPreview(),

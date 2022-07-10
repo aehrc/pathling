@@ -543,6 +543,6 @@ public class FhirEncodersTest {
     final String queriedComparator = observationsDataset.select("valueQuantity.comparator").head()
         .getString(0);
 
-    Assert.assertEquals(originalComparator.toCode(), queriedComparator);
+    assertEquals(originalComparator.toCode(), queriedComparator);
   }
 }

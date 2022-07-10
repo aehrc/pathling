@@ -45,6 +45,9 @@ public class Spark {
    * creation
    * @param environment Spring {@link Environment} from which to harvest Spark configuration
    * @param sparkListener a {@link SparkListener} that is used to monitor progress of jobs
+   * @param sqlFunction1 a list of {@link SqlFunction1} that should be registered
+   * @param sqlFunction2 a list of {@link SqlFunction2} that should be registered
+   * @param sqlFunction3 a list of {@link SqlFunction3} that should be registered
    * @return A shiny new {@link SparkSession}
    */
   @Bean(destroyMethod = "stop")

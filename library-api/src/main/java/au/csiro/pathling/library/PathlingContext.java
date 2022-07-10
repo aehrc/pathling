@@ -24,7 +24,7 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.sql.PathlingStrategy;
+import au.csiro.pathling.sql.SqlStrategy;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import ca.uhn.fhir.context.FhirContext;
@@ -73,7 +73,7 @@ public class PathlingContext {
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
-    PathlingStrategy.setup(spark);
+    SqlStrategy.setup(spark);
   }
 
   /**

@@ -6,8 +6,8 @@
 
 package au.csiro.pathling.sql.dates;
 
-import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import org.junit.jupiter.api.BeforeEach;

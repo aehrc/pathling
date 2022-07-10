@@ -125,11 +125,10 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   /**
    * Builds a math operation result for a Decimal-like path.
    *
-   * @param source The left operand for the operation
-   * @param operation The type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
-   * @param expression The FHIRPath expression to use in the result
-   * @param dataset The {@link Dataset} to use in the result
-   * @param fhirType The {@link FHIRDefinedType} to use in the result
+   * @param source the left operand for the operation
+   * @param operation the type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
+   * @param expression the FHIRPath expression to use in the result
+   * @param dataset the {@link Dataset} to use in the result
    * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a
    * {@link NonLiteralPath}
    */

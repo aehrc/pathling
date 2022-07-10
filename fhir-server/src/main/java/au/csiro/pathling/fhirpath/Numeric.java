@@ -71,6 +71,7 @@ public interface Numeric {
    * Note that there can be multiple valid FHIR types for a given FHIRPath type, e.g. {@code uri}
    * and {@code code} both map to the {@code String} FHIRPath type.
    *
+   * @return the FHIR data type of the expression
    * @see <a href="https://hl7.org/fhir/fhirpath.html#types">Using FHIR types in expressions</a>
    */
   @Nonnull
