@@ -116,6 +116,7 @@ public class FhirServer extends RestfulServer {
    * @param conformanceProvider a {@link ConformanceProvider} for receiving requests for the server
    * CapabilityStatement
    * @param resourceProviderFactory a {@link ResourceProviderFactory} for providing instances of
+   * @param batchProvider a {@link BatchProvider} for providing batch support
    */
   public FhirServer(@Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration,
@@ -334,4 +335,3 @@ public class FhirServer extends RestfulServer {
   }
 
 }
-

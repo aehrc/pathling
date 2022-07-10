@@ -26,7 +26,6 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-api</artifactId>
-      <version>${project.version}</version>
       <classifier>all</classifier>
     </dependency>
   </dependencies>
