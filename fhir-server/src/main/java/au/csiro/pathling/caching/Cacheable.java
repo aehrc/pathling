@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface Cacheable {
 
   /**
-   * Returns the cache key for the object.
+   * @return the cache key for the object
    */
   Optional<String> getCacheKey();
 

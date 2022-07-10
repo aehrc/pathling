@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.3.0-SNAPSHOT</version>
+    <version>5.3.1</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -139,7 +139,7 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>3.19.2</version>
+      <version>4.0.0</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
@@ -173,14 +173,12 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
-      <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>terminology</artifactId>
-      <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -256,6 +254,14 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
@@ -337,6 +343,11 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
+          </excludes>
+        </configuration>
       </plugin>
     </plugins>
     <pluginManagement>
@@ -698,6 +709,28 @@
                 </configuration>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>mavenRelease</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
           </plugin>
         </plugins>
       </build>

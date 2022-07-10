@@ -57,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: encoders-coverage
-          path: encoders/target/site/jacoco/jacoco.xml
+          path: '**/jacoco.xml'
       - name: Upload dump files
         uses: actions/upload-artifact@v2
         with:
@@ -129,7 +129,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-1-coverage
-          path: fhir-server/target/site/jacoco/jacoco.xml
+          path: '**/jacoco.xml'
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
@@ -206,7 +206,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-2-coverage
-          path: fhir-server/target/site/jacoco/jacoco.xml
+          path: '**/jacoco.xml'
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
@@ -292,17 +292,17 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: utilities-coverage
-          path: utilities/target/site/jacoco/jacoco.xml
+          path: '**/jacoco.xml'
       - name: Upload terminology test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: terminology-coverage
-          path: terminology/target/site/jacoco/jacoco.xml
+          path: '**/jacoco.xml'
       - name: Upload FHIR server test coverage report
         uses: actions/upload-artifact@v2
         with:
           name: fhir-server-3-coverage
-          path: fhir-server/target/site/jacoco/jacoco.xml
+          path: '**/jacoco.xml'
       - name: Upload timing log
         uses: actions/upload-artifact@v2
         with:
@@ -559,7 +559,12 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: library-api-coverage
-          path: library-api/target/site/jacoco/jacoco.xml
+          path: '**/jacoco.xml'
+      - name: Upload Python API test coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: python-api-coverage
+          path: lib/python/**/coverage.xml
       - name: Publish test results
         # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
@@ -628,6 +633,11 @@ jobs:
         with:
           name: library-api-coverage
           path: library-api-coverage
+      - name: Download Python API coverage report
+        uses: actions/download-artifact@v3
+        with:
+          name: python-api-coverage
+          path: python-api-coverage
       - name: Download FHIR server coverage report 1
         uses: actions/download-artifact@v3
         with:
@@ -645,6 +655,3 @@ jobs:
           path: fhir-server-3-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: encoders-coverage/jacoco.xml,utilities-coverage/jacoco.xml,terminology-coverage/jacoco.xml,library-api-coverage/jacoco.xml,fhir-server-1-coverage/jacoco.xml,fhir-server-2-coverage/jacoco.xml,fhir-server-3-coverage/jacoco.xml

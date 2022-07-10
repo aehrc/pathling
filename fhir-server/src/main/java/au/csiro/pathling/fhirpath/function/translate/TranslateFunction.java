@@ -40,8 +40,8 @@ import org.slf4j.MDC;
  * <p>
  * Signature:
  * <pre>
- * collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false,
- * equivalence = 'equivalent') : collection<Coding>
+ * collection&lt;Coding|CodeableConcept&gt; -&gt; translate(conceptMapUrl: string, reverse = false,
+ * equivalence = 'equivalent') : collection&lt;Coding&gt;
  * </pre>
  * <p>
  * Uses: <a href="https://www.hl7.org/fhir/operation-conceptmap-translate.html">Translate
