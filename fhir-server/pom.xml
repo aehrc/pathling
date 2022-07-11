@@ -431,7 +431,7 @@
                     </property>
                   </systemProperties>
                   <arguments>
-                    <argument>${project.basedir}/target</argument>
+                    <argument>${project.build.directory}/benchmark</argument>
                   </arguments>
                 </configuration>
               </execution>
