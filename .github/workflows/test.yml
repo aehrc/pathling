@@ -40,9 +40,7 @@ jobs:
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
-          PATHLING_OPTS: >-
-            -DskipScalaDocs
-            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+          PATHLING_OPTS: ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
           -pl encoders -am
@@ -112,7 +110,6 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
-            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -189,7 +186,6 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
-            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -265,7 +261,6 @@ jobs:
           # report action to report them.
           PATHLING_OPTS: >-
             -DskipEncodersTests
-            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -352,7 +347,6 @@ jobs:
           # If the actor is Dependabot we skip the system test, as it requires access to secrets.
           PATHLING_OPTS: >-
             -DskipSurefireTests
-            -DskipScalaDocs
             -DskipITs
             -Dpathling.dockerArchitecture=amd64
         run: >-
@@ -366,7 +360,6 @@ jobs:
         env:
           PATHLING_OPTS: >-
             -DskipSurefireTests
-            -DskipScalaDocs
             -Dmaven.test.failure.ignore
             -Dpathling.dockerArchitecture=amd64
             -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }}
@@ -436,7 +429,7 @@ jobs:
           mvn --batch-mode verify
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
-          -DskipSurefireTests -DskipScalaDocs
+          -DskipSurefireTests
         timeout-minutes: 20
       - name: Upload benchmark artifact
         uses: actions/upload-artifact@v2
@@ -551,8 +544,6 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
-            -DskipScalaDocs
-            -DskipPythonDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -611,6 +602,7 @@ jobs:
         run: >-
           mvn --batch-mode verify
           -pl site -am
+          -Pdocs
           -DskipTests
         timeout-minutes: 15
 

@@ -554,6 +554,7 @@
             </execution>
           </executions>
           <configuration>
+            <skip>true</skip>
             <includeDependencySources>true</includeDependencySources>
             <dependencySourceIncludes>
               <include>au.csiro.pathling:*</include>
@@ -575,10 +576,6 @@
             <bottom>
               <![CDATA[This content is dedicated to the public domain via <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0<a>.]]>
             </bottom>
-            <!--            <additionalJOptions>-->
-            <!--              <option>&#45;&#45;no-module-directories</option>-->
-            <!--              <option>-Xdoclint:none</option>-->
-            <!--            </additionalJOptions>-->
           </configuration>
         </plugin>
         <plugin>
@@ -629,6 +626,20 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>docs</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>mavenRelease</id>
       <build>

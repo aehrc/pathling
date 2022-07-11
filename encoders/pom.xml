@@ -234,12 +234,7 @@
       </build>
     </profile>
     <profile>
-      <id>scalaDocs</id>
-      <activation>
-        <property>
-          <name>!skipScalaDocs</name>
-        </property>
-      </activation>
+      <id>docs</id>
       <build>
         <plugins>
           <plugin>
