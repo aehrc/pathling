@@ -7,13 +7,12 @@ on:
     branches:
       - benchmark-upload
 
-permissions:
-  id-token: read
-
 jobs:
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
