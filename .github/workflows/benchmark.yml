@@ -7,6 +7,9 @@ on:
     branches:
       - benchmark-upload
 
+permissions:
+  id-token: read
+
 jobs:
   benchmark:
     name: Benchmark
