@@ -115,7 +115,7 @@ object DecimalCustomCoder {
    * For location coordinates 6 decimal digits allow for location precision of 10cm,
    * so should be sufficient for any medical purpose.
    *
-   * So the final type is DECIMAL(32,6) which allows both for 6 decimal places and 26 digits 
+   * So the final type is DECIMAL(32,6) which allows both for 6 decimal places and 26 digits
    * (regardless if there any decimal digits or not)
    */
 
