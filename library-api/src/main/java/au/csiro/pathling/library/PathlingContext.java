@@ -101,6 +101,7 @@ public class PathlingContext {
    * that all direct or indirect fields of type T in element of type T should be skipped.
    * @param enableExtensions switches on/off the support for FHIR extensions.
    * @param enabledOpenTypes list of types that are encoded within open types, such as extensions.
+   * @param terminologyServerUrl the URL of the terminology server to use
    * @return then new instance of PathlingContext.
    */
   @Nonnull
