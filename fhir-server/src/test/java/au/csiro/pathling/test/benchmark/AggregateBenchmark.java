@@ -119,7 +119,7 @@ public class AggregateBenchmark {
   }
 
   @Benchmark
-  public void simpleAggregationAndGroupingAndFilter_Benchmark(final Blackhole bh,
+  public void simpleAggregationGroupingAndFilter_Benchmark(final Blackhole bh,
       final AggregateState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.ENCOUNTER)
@@ -153,7 +153,7 @@ public class AggregateBenchmark {
   }
 
   @Benchmark
-  public void complexAggregationAndGroupingAndFilter_Benchmark(final Blackhole bh,
+  public void complexAggregationGroupingAndFilter_Benchmark(final Blackhole bh,
       final AggregateState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.ENCOUNTER)
@@ -195,7 +195,7 @@ public class AggregateBenchmark {
   }
 
   @Benchmark
-  public void multipleAggregationsAndGroupingsAndAndFilters_Benchmark(final Blackhole bh,
+  public void multipleAggregationsGroupingsAndFilters_Benchmark(final Blackhole bh,
       final AggregateState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.ENCOUNTER)
