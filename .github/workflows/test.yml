@@ -424,7 +424,7 @@ jobs:
           # If there is a cache hit on the test data, we don't need to import it. If it is a cache
           # miss, we still need to explicitly activate the `importTestData` profile, otherwise
           # it will be deactivated by `skipTests`.
-          PATHLING_PROFILES: runBenchmark${{ steps.cache-test-data.outputs.cache-hit && ',!importTestData' || 'importTestData' }}
+          PATHLING_PROFILES: runBenchmark,${{ steps.cache-test-data.outputs.cache-hit && '!importTestData' || 'importTestData' }}
         run: >-
           mvn --batch-mode verify
           -pl fhir-server -am
