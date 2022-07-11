@@ -203,12 +203,7 @@
       </build>
     </profile>
     <profile>
-      <id>pythonDocs</id>
-      <activation>
-        <property>
-          <name>!skipPythonDocs</name>
-        </property>
-      </activation>
+      <id>docs</id>
       <build>
         <plugins>
           <plugin>
