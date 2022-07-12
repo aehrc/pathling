@@ -696,7 +696,7 @@
                   <goal>aggregate-add-third-party</goal>
                 </goals>
                 <configuration>
-                  <excludedGroups>^au\.csiro\.</excludedGroups>
+                  <excludedGroups>au.csiro.pathling.*</excludedGroups>
                   <fileTemplate>fhir-server/src/main/resources/license-template.ftl</fileTemplate>
                   <includeTransitiveDependencies>false</includeTransitiveDependencies>
                   <licenseMerges>
