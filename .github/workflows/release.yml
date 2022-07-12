@@ -61,6 +61,7 @@ jobs:
   deploy-python:
     name: PyPI
     runs-on: ubuntu-latest
+    needs: deploy-maven
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -93,6 +94,7 @@ jobs:
   deploy-docker:
     name: Docker Hub
     runs-on: ubuntu-latest
+    needs: deploy-python
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
