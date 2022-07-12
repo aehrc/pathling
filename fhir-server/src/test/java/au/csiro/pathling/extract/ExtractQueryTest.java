@@ -282,6 +282,23 @@ class ExtractQueryTest {
   }
 
   @Test
+  void multipleNonSingularColumnsWithDifferentTypes() {
+    subjectResource = ResourceType.ENCOUNTER;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("type.coding.display")
+        .withColumn("type.coding")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark,
+            "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.csv");
+  }
+
+  @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.PATIENT);
