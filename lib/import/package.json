@@ -59,6 +59,7 @@
   },
   "files": [
     "lib",
+    "src",
     "README.md",
     "LICENSE.md"
   ]
