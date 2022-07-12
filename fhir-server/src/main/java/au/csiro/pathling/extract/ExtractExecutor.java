@@ -240,7 +240,7 @@ public class ExtractExecutor extends QueryExecutor {
     } else {
       final Column additionalCondition = Arrays.stream(nonSingularColumns)
           .map(Column::isNotNull)
-          .reduce(Column::and)
+          .reduce(Column::or)
           .get();
       final List<Column> filteringColumns = new ArrayList<>();
       filteringColumns.add(idColumn);
