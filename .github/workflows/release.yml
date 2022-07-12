@@ -53,7 +53,7 @@ jobs:
         run: |
           mvn --batch-mode deploy \
           -pl fhir-server,library-api -am \
-          -PmavenRelease \
+          -PmavenRelease,docs \
           -DskipTests \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         timeout-minutes: 30
