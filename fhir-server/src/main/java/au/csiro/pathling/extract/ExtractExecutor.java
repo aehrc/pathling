@@ -10,7 +10,6 @@ import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static org.apache.spark.sql.functions.coalesce;
 
 import au.csiro.pathling.Configuration;
 import au.csiro.pathling.QueryExecutor;
@@ -138,7 +137,7 @@ public class ExtractExecutor extends QueryExecutor {
     // Join all the column expressions together.
     final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
     final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
-    final Dataset<Row> trimmedDataset = trimTrailingNulls(parserContext, inputContext.getIdColumn(),
+    final Dataset<Row> trimmedDataset = trimTrailingNulls(inputContext.getIdColumn(),
         columns, columnJoinResultDataset);
 
     // Apply the filters.
@@ -227,9 +226,8 @@ public class ExtractExecutor extends QueryExecutor {
   }
 
   @Nonnull
-  private Dataset<Row> trimTrailingNulls(@Nonnull final ParserContext parserContext,
-      final @Nonnull Column idColumn, @Nonnull final List<FhirPath> expressions,
-      @Nonnull final Dataset<Row> dataset) {
+  private Dataset<Row> trimTrailingNulls(final @Nonnull Column idColumn,
+      @Nonnull final List<FhirPath> expressions, @Nonnull final Dataset<Row> dataset) {
     checkArgument(!expressions.isEmpty(), "At least one expression is required");
 
     final Column[] nonSingularColumns = expressions.stream()
@@ -240,7 +238,10 @@ public class ExtractExecutor extends QueryExecutor {
     if (nonSingularColumns.length == 0) {
       return dataset;
     } else {
-      final Column additionalCondition = coalesce(nonSingularColumns).isNotNull();
+      final Column additionalCondition = Arrays.stream(nonSingularColumns)
+          .map(Column::isNotNull)
+          .reduce(Column::and)
+          .get();
       final List<Column> filteringColumns = new ArrayList<>();
       filteringColumns.add(idColumn);
       final List<Column> singularColumns = expressions.stream()
