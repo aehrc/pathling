@@ -1,0 +1,55 @@
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueBoolean": false
+        },
+        {
+          "name": "label",
+          "valueCode": "confirmed"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 5
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 5
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')) = false) and ((verificationStatus.coding.code) contains 'confirmed') and (code.text = 'Acute bronchitis (disorder)' or code.text = 'Laceration of foot' or code.text = 'Prediabetes') and (clinicalStatus.coding.code contains 'resolved')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueBoolean": true
+        },
+        {
+          "name": "label",
+          "valueCode": "confirmed"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "(code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109')) and ((verificationStatus.coding.code) contains 'confirmed') and (code.text = 'Acute bronchitis (disorder)' or code.text = 'Laceration of foot' or code.text = 'Prediabetes') and (clinicalStatus.coding.code contains 'resolved')"
+        }
+      ]
+    }
+  ]
+}

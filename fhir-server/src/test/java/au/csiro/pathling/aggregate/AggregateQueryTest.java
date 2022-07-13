@@ -8,21 +8,28 @@ package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsStream;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedSimple;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
+import com.google.common.collect.ImmutableSet;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 
 /**
  * @author John Grimes
@@ -649,6 +656,75 @@ class AggregateQueryTest extends AggregateExecutorTest {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> new AggregateRequestBuilder(subjectResource).build());
     assertEquals("Query must have at least one aggregation expression", error.getMessage());
+  }
+
+
+  @Test
+  void queryWithTerminologyAndFilterInWhere() {
+    subjectResource = ResourceType.CONDITION;
+    mockResource(ResourceType.CONDITION, subjectResource);
+
+    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
+        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(mockExpansion));
+
+    final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withGrouping("where($this.onsetString = 'test').code.memberOf('" + valueSetUrl + "')")
+        .build();
+
+    AggregateExecutor.ResultWithExpressions query = executor.buildQuery(request);
+    query.getDataset().explain(true);
+  }
+
+
+  @Test
+  void queryWithTerminologyAndFilter() {
+
+    subjectResource = ResourceType.CONDITION;
+    mockResource(ResourceType.CONDITION, subjectResource);
+
+    final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
+
+    // We expect only the codings for 'Acute bronchitis (disorder)' and 'Laceration of foot'
+    // to be passed to the terminology server. Conditions with 'Prediabetes' have clinicalStatus = 'active'
+    // so should be filtered out as well as any other codings not explicitly included in the filter. 
+    final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
+        .withAggregation("count()")
+        .withAggregation("id.count()")
+        .withGrouping("code.memberOf('" + valueSetUrl + "')")
+        .withGrouping("verificationStatus.coding.code")
+        .withFilter(
+            "code.text='Acute bronchitis (disorder)' or code.text='Laceration of foot' or code.text='Prediabetes'")
+        .withFilter("clinicalStatus.coding.code contains 'resolved'")
+        .build();
+
+    final ImmutableSet<SimpleCoding> filteredCodings = ImmutableSet.of(
+        snomedSimple("284551006"), // Laceration of foot
+        snomedSimple("10509002") // Acute bronchitis (disorder)
+    );
+
+    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
+        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
+    when(terminologyService.intersect(valueSetUrl, filteredCodings))
+        .thenReturn(setOfSimpleFrom(mockExpansion));
+
+    response = executor.execute(request);
+
+    // We check here that we had exactly one invocation ot the terminology function with the expected
+    // arguments (e.g. filtered codings). But that also shows that Spark is able to reuse (implicitly)
+    // the filtered and grouped dataset between multiple aggregations.
+    verify(terminologyService, Mockito.times(1)).intersect(valueSetUrl, filteredCodings);
+    verifyNoMoreInteractions(terminologyService);
+
+    assertResponse("AggregateQueryTest/queryWithTerminologyAndFilter.Parameters.json",
+        response);
+
+    // Setup the mock for the drill-down test (run after each)
+    when(terminologyService.intersect(any(), any()))
+        .thenReturn(setOfSimpleFrom(mockExpansion));
   }
 
 }
