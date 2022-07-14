@@ -16,11 +16,14 @@ import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.utilities.Preconditions;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -152,6 +155,34 @@ public class ResourcePath extends NonLiteralPath {
     return definition.getResourceType();
   }
 
+  /**
+   * Creates the copy of this resource path but based on a new dataset. The new dataset is expected
+   * to have all the columns present in the current one.
+   *
+   * @param newDataset the new dataset to use for the resource path.
+   * @return the copy of this resource path based on the new dataset.
+   */
+  @Nonnull
+  public ResourcePath adoptDataset(@Nonnull final Dataset<Row> newDataset) {
+
+    Preconditions.check(
+        Stream.of(newDataset.columns()).collect(Collectors.toUnmodifiableSet())
+            .containsAll(elementsToColumns.values().stream().map(Column::toString)
+                .collect(Collectors.toList())),
+        "Adopted dataset is missing some columns");
+
+    return new ResourcePath(this.expression,
+        newDataset,
+        this.idColumn,
+        this.eidColumn,
+        this.valueColumn,
+        this.singular,
+        this.thisColumn,
+        this.definition,
+        this.elementsToColumns
+    );
+  }
+
   @Override
   @Nonnull
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
@@ -202,20 +233,6 @@ public class ResourcePath extends NonLiteralPath {
     throw new InvalidUserInputError(
         "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
             .getExpression());
-  }
-
-  @Nonnull
-  public ResourcePath adoptDataset(@Nonnull final Dataset<Row> newDataset) {
-    return new ResourcePath(this.expression,
-        newDataset,
-        this.idColumn,
-        this.eidColumn,
-        this.valueColumn,
-        this.singular,
-        this.thisColumn,
-        this.definition,
-        this.elementsToColumns
-    );
   }
 
 }
