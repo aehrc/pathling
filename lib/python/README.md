@@ -24,22 +24,22 @@ The code below shows an example of using the Pathling API to encode Patient
 resources from FHIR JSON bundles:
 
 ```python
-from pyspark.sql import SparkSession
 from pathling import PathlingContext
-from pathling.etc import find_jar
 
-spark = SparkSession.builder
-.appName('pathling-test')
-.master('local[*]')
-.config('spark.jars', find_jar())
-.getOrCreate()
+pc = PathlingContext.create()
 
-ptl = PathlingContext.create(spark)
+# Read each Bundle into a row within a Spark data set.
+bundles_dir = '/some/path/bundles/'
+bundles = pc.spark.read.text(bundles_dir, wholetext=True)
 
-json_bundles = spark.read.text('examples/data/bundles/', wholetext=True)
+# Convert the data set of strings into a structured FHIR data set.
+patients = pc.encode_bundle(bundles, 'Patient')
 
-patients_df = ptl.encode_bundle(json_bundles, 'Patient')
-patients_df.show()
+# JSON is the default format, XML Bundles can be encoded using input type.
+# patients = pc.encodeBundle(bundles, 'Patient', inputType=MimeType.FHIR_XML)
+
+# Do some stuff.
+patients.select('id', 'gender', 'birthDate').show()
 ```
 
 More usage examples can be found in the `examples` directory.
