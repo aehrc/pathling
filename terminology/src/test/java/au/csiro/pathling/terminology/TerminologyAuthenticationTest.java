@@ -81,7 +81,7 @@ public class TerminologyAuthenticationTest {
 
     fhirContext = FhirContext.forR4();
     final TerminologyClient terminologyClient = TerminologyClient.build(fhirContext,
-        "http://localhost:" + WIREMOCK_PORT + "/fhir", 60_000, false,
+        "http://localhost:" + WIREMOCK_PORT + "/fhir", 60_000, true,
         authConfig, log);
     terminologyService = new DefaultTerminologyService(fhirContext, terminologyClient,
         UUID::randomUUID);
