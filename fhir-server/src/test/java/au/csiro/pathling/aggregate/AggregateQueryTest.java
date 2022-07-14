@@ -711,6 +711,8 @@ class AggregateQueryTest extends AggregateExecutorTest {
     when(terminologyService.intersect(valueSetUrl, filteredCodings))
         .thenReturn(setOfSimpleFrom(mockExpansion));
 
+    //executor.buildQuery(request).getDataset().explain(true);
+    
     response = executor.execute(request);
 
     // We check here that we had exactly one invocation ot the terminology function with the expected

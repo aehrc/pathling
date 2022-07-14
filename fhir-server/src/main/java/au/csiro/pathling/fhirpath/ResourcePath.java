@@ -203,12 +203,9 @@ public class ResourcePath extends NonLiteralPath {
         "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
             .getExpression());
   }
-  
+
   @Nonnull
   public ResourcePath adoptDataset(@Nonnull final Dataset<Row> newDataset) {
-    // TODO: Check that this new datsets has all the columns from the map
-    // TODO: In the future narrow this dataset to include include the columns from the map + the extra columns
-
     return new ResourcePath(this.expression,
         newDataset,
         this.idColumn,
