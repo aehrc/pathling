@@ -55,13 +55,12 @@ public class TerminologyAuthenticationTest {
   WireMockServer wireMockServer;
   TerminologyService terminologyService;
   Gson gson;
-  private String codeSystemSearchResponse;
-  private StubMapping codeSystemSearchStub;
-  private StubMapping expandStub;
-  private StubMapping clientCredentialsStub;
-  private String clientCredentialsResponse;
-  private Set<SimpleCoding> codings;
-  private FhirContext fhirContext;
+  StubMapping codeSystemSearchStub;
+  StubMapping expandStub;
+  StubMapping clientCredentialsStub;
+  String clientCredentialsResponse;
+  Set<SimpleCoding> codings;
+  FhirContext fhirContext;
 
   @BeforeEach
   void setUp() {
