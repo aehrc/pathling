@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -66,6 +67,7 @@ public class PathlingContext {
   private final FhirEncoders fhirEncoders;
 
   @Nonnull
+  @Getter
   private final TerminologyServiceFactory terminologyServiceFactory;
 
   private PathlingContext(@Nonnull final SparkSession spark,
@@ -108,7 +110,10 @@ public class PathlingContext {
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
       @Nullable final String versionString,
       @Nullable final Integer maxNestingLevel, @Nullable final Boolean enableExtensions,
-      @Nullable final List<String> enabledOpenTypes, @Nullable final String terminologyServerUrl) {
+      @Nullable final List<String> enabledOpenTypes, @Nullable final String terminologyServerUrl,
+      @Nullable final String tokenEndpoint, @Nullable final String clientId,
+      @Nullable final String clientSecret, @Nullable final String scope,
+      @Nullable final Integer tokenExpiryTolerance) {
 
     FhirEncoders.Builder encoderBuilder = nonNull(versionString)
                                           ?
@@ -130,9 +135,22 @@ public class PathlingContext {
     final String resolvedTerminologyServerUrl = nonNull(terminologyServerUrl)
                                                 ? terminologyServerUrl
                                                 : DEFAULT_TERMINOLOGY_SERVER_URL;
+
+    final TerminologyAuthConfiguration authConfig = new TerminologyAuthConfiguration();
+    if (nonNull(tokenEndpoint) && nonNull(clientId) && nonNull(clientSecret)) {
+      authConfig.setEnabled(true);
+      authConfig.setTokenEndpoint(tokenEndpoint);
+      authConfig.setClientId(clientId);
+      authConfig.setClientSecret(clientSecret);
+      authConfig.setScope(scope);
+    }
+    authConfig.setTokenExpiryTolerance(tokenExpiryTolerance != null
+                                       ? tokenExpiryTolerance
+                                       : 120L);
+
     final DefaultTerminologyServiceFactory terminologyServiceFactory = new DefaultTerminologyServiceFactory(
         FhirContext.forR4(), resolvedTerminologyServerUrl, DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT,
-        false, new TerminologyAuthConfiguration());
+        false, authConfig);
 
     return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
   }
