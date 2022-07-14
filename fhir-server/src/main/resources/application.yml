@@ -79,6 +79,10 @@ pathling:
       # tokenEndpoint: [token endpoint]
       # clientId: [client ID]
       # clientSecret: [client secret]
+      
+      # The minimum number of seconds that a token should have before expiry when deciding whether 
+      # to send it with a terminology request.
+      tokenExpiryTolerance: 120
 
   auth:
     # Enables authorization.

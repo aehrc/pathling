@@ -27,7 +27,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Coding;
@@ -130,8 +130,8 @@ public interface TerminologyClient extends IRestfulClient {
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
       @Nonnull final Logger logger) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
-    restfulClientFactory.setHttpClient(HttpClients.custom().setRetryHandler(
-        new DefaultHttpRequestRetryHandler()).build());
+    restfulClientFactory.setHttpClient(HttpClientBuilder.create().setRetryHandler(
+        new DefaultHttpRequestRetryHandler(1, true)).build());
     restfulClientFactory.setSocketTimeout(socketTimeout);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
@@ -156,7 +156,7 @@ public interface TerminologyClient extends IRestfulClient {
       checkNotNull(authConfig.getClientSecret());
       final ClientAuthInterceptor clientAuthInterceptor = new ClientAuthInterceptor(
           authConfig.getTokenEndpoint(), authConfig.getClientId(), authConfig.getClientSecret(),
-          authConfig.getScope());
+          authConfig.getScope(), authConfig.getTokenExpiryTolerance());
       terminologyClient.registerInterceptor(clientAuthInterceptor);
     }
 

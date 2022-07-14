@@ -12,8 +12,6 @@ import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.client.api.IHttpRequest;
-import ca.uhn.fhir.rest.client.api.IHttpResponse;
-import ca.uhn.fhir.rest.client.api.IRestfulClient;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -26,6 +24,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.Header;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -52,15 +51,19 @@ public class ClientAuthInterceptor {
   @Nullable
   private final String scope;
 
+  private final long tokenExpiryTolerance;
+
   @Nonnull
   private static final Map<AccessScope, AccessContext> accessContexts = new HashMap<>();
 
   public ClientAuthInterceptor(@Nonnull final String tokenEndpoint, @Nonnull final String clientId,
-      @Nonnull final String clientSecret, @Nullable final String scope) {
+      @Nonnull final String clientSecret, @Nullable final String scope,
+      final long tokenExpiryTolerance) {
     this.tokenEndpoint = tokenEndpoint;
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.scope = scope;
+    this.tokenExpiryTolerance = tokenExpiryTolerance;
   }
 
   @SuppressWarnings("unused")
@@ -68,7 +71,7 @@ public class ClientAuthInterceptor {
   public void handleClientRequest(@Nullable final IHttpRequest httpRequest) throws IOException {
     if (httpRequest != null) {
       final AccessContext accessContext = ensureAccessContext(clientId, clientSecret, tokenEndpoint,
-          scope);
+          scope, tokenExpiryTolerance);
       // Now we should have a valid token, so we can add it to the request.
       final String accessToken = accessContext.getClientCredentialsResponse().getAccessToken();
       checkNotNull(accessToken);
@@ -76,62 +79,43 @@ public class ClientAuthInterceptor {
     }
   }
 
-  @SuppressWarnings("unused")
-  @Hook(Pointcut.CLIENT_RESPONSE)
-  public void handleClientResponse(@Nullable final IHttpRequest httpRequest,
-      @Nullable final IHttpResponse httpResponse, @Nullable final IRestfulClient client)
-      throws IOException {
-    if (httpResponse != null && httpResponse.getStatus() == 401) {
-      log.debug("Received 401 response from server, attempting to retrieve a new token");
-      ensureAccessContext(clientId, clientSecret, tokenEndpoint, scope);
-    }
-    // The HttpClient retry mechanism will take care of retrying the request.
-  }
-
   private static synchronized AccessContext ensureAccessContext(final String clientId,
-      final String clientSecret, final String tokenEndpoint, final String scope)
+      final String clientSecret, final String tokenEndpoint, final String scope,
+      final long tokenExpiryTolerance)
       throws IOException {
     final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, scope);
     AccessContext accessContext = accessContexts.get(accessScope);
-    if (accessContext == null) {
-      // If we don't have a token, we need to get one.
+    if (accessContext == null || accessContext.getExpiryTime()
+        .isBefore(Instant.now().plusSeconds(tokenExpiryTolerance))) {
+      // We need to get a new token if:
+      // (1) We don't have a token yet;
+      // (2) The token is expired, or;
+      // (3) The token is about to expire (within the tolerance).
       log.debug("Getting new token");
-      accessContext = getNewAccessContext(clientId, clientSecret, tokenEndpoint, scope);
-      accessContexts.put(accessScope, accessContext);
-    } else if (accessContext.getExpiryTime().isBefore(Instant.now())
-        && accessContext.getClientCredentialsResponse().getRefreshToken() != null) {
-      // If we have a token, but it's expired, we need to refresh it.
-      log.debug("Refreshing token, expired at: {}", accessContext.getExpiryTime());
-      accessContext = refreshAccessContext(
-          accessContext.getClientCredentialsResponse().getRefreshToken(), tokenEndpoint, scope);
+      accessContext = getNewAccessContext(clientId, clientSecret, tokenEndpoint, scope,
+          tokenExpiryTolerance);
       accessContexts.put(accessScope, accessContext);
     }
     return accessContext;
   }
 
   @Nonnull
-  private static AccessContext getNewAccessContext(final String clientId,
-      final String clientSecret, final String tokenEndpoint, final String scope)
+  private static AccessContext getNewAccessContext(@Nonnull final String clientId,
+      @Nonnull final String clientSecret, @Nonnull final String tokenEndpoint,
+      @Nullable final String scope, final long tokenExpiryTolerance)
       throws IOException {
     final List<NameValuePair> authParams = new ArrayList<>();
     authParams.add(new BasicNameValuePair("client_id", clientId));
     authParams.add(new BasicNameValuePair("client_secret", clientSecret));
-    return getAccessContext(authParams, tokenEndpoint, scope);
-  }
-
-  @Nonnull
-  private static AccessContext refreshAccessContext(@Nonnull final String refreshToken,
-      final String tokenEndpoint, final String scope) throws IOException {
-    final List<NameValuePair> authParams = new ArrayList<>();
-    authParams.add(new BasicNameValuePair("refresh_token", refreshToken));
-    return getAccessContext(authParams, tokenEndpoint, scope);
+    return getAccessContext(authParams, tokenEndpoint, scope, tokenExpiryTolerance);
   }
 
   @Nonnull
   private static AccessContext getAccessContext(@Nonnull final List<NameValuePair> authParams,
-      @Nonnull final String tokenEndpoint, @Nonnull final String scope) throws IOException {
+      @Nonnull final String tokenEndpoint, @Nullable final String scope,
+      final long tokenExpiryTolerance) throws IOException {
     final ClientCredentialsResponse response = clientCredentialsGrant(authParams, tokenEndpoint,
-        scope);
+        scope, tokenExpiryTolerance);
     final Instant expires = getExpiryTime(response);
     log.debug("New token will expire at {}", expires);
     return new AccessContext(response, expires);
@@ -139,7 +123,8 @@ public class ClientAuthInterceptor {
 
   @Nonnull
   private static ClientCredentialsResponse clientCredentialsGrant(
-      @Nonnull final List<NameValuePair> authParams, final String tokenEndpoint, final String scope)
+      @Nonnull final List<NameValuePair> authParams, @Nonnull final String tokenEndpoint,
+      @Nullable final String scope, final long tokenExpiryTolerance)
       throws IOException {
     log.debug("Performing client credentials grant using token endpoint: {}", tokenEndpoint);
     try (final CloseableHttpClient httpClient = HttpClients.createDefault()) {
@@ -149,14 +134,19 @@ public class ClientAuthInterceptor {
 
       final List<NameValuePair> params = new ArrayList<>();
       params.add(new BasicNameValuePair("grant_type", "client_credentials"));
-      params.addAll(authParams);
       if (scope != null) {
         authParams.add(new BasicNameValuePair("scope", scope));
       }
+      params.addAll(authParams);
       request.setEntity(new UrlEncodedFormEntity(params));
 
       final CloseableHttpResponse response = httpClient.execute(request);
-      final boolean responseIsJson = response.getFirstHeader("Content-Type").getValue()
+      @Nullable final Header contentTypeHeader = response.getFirstHeader("Content-Type");
+      if (contentTypeHeader == null) {
+        throw new ClientProtocolException(
+            "Client credentials response contains no Content-Type header");
+      }
+      final boolean responseIsJson = contentTypeHeader.getValue()
           .startsWith("application/json");
       if (!responseIsJson) {
         throw new ClientProtocolException(
@@ -165,12 +155,16 @@ public class ClientAuthInterceptor {
       final Gson gson = new GsonBuilder()
           .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
           .create();
+      final String responseString = EntityUtils.toString(response.getEntity());
       final ClientCredentialsResponse grant = gson.fromJson(
-          EntityUtils.toString(response.getEntity()),
+          responseString,
           ClientCredentialsResponse.class);
       if (grant.getAccessToken() == null) {
+        throw new ClientProtocolException("Client credentials grant does not contain access token");
+      }
+      if (grant.getExpiresIn() < tokenExpiryTolerance) {
         throw new ClientProtocolException(
-            "Client credentials grant does not contain access token");
+            "Client credentials grant expiry is less than the tolerance: " + grant.getExpiresIn());
       }
       return grant;
     }
@@ -178,6 +172,10 @@ public class ClientAuthInterceptor {
 
   private static Instant getExpiryTime(@Nonnull final ClientCredentialsResponse response) {
     return Instant.now().plusSeconds(response.getExpiresIn());
+  }
+
+  public static synchronized void clearAccessContexts() {
+    accessContexts.clear();
   }
 
 }

@@ -61,6 +61,13 @@ public class TerminologyAuthConfiguration implements Serializable {
   @Nullable
   private String scope;
 
+  /**
+   * The minimum number of seconds that a token should have before expiry when deciding whether to
+   * send it with a terminology request.
+   */
+  @NotNull
+  private long tokenExpiryTolerance;
+
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = TerminologyAuthConfigValidator.class)
