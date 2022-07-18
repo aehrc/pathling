@@ -12,10 +12,11 @@ import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.caching.Cacheable;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.security.OidcConfiguration;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Metadata;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
@@ -93,19 +94,24 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private final PathlingVersion version;
 
+  @Nonnull
+  private final FhirContext fhirContext;
+
   /**
    * @param configuration a {@link Configuration} object controlling the behaviour of the capability
    * statement
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
    * @param version a {@link PathlingVersion} object containing version information for the server
+   * @param fhirContext a {@link FhirContext} for determining the supported FHIR version
    */
   public ConformanceProvider(@Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
-      @Nonnull final PathlingVersion version) {
+      @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.version = version;
+    this.fhirContext = fhirContext;
     restfulServer = Optional.empty();
   }
 
@@ -140,7 +146,9 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
     serverBase.ifPresent(implementation::setUrl);
     capabilityStatement.setImplementation(implementation);
 
-    capabilityStatement.setFhirVersion(FHIRVersion._4_0_1);
+    final FHIRVersion fhirVersion = FHIRVersion.fromCode(
+        fhirContext.getVersion().getVersion().getFhirVersionString());
+    capabilityStatement.setFhirVersion(fhirVersion);
     capabilityStatement.setFormat(Arrays.asList(new CodeType("json"), new CodeType("xml")));
     capabilityStatement.setRest(buildRestComponent());
 
