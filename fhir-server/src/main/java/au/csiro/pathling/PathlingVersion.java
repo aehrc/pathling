@@ -24,7 +24,7 @@ public class PathlingVersion {
 
   private static final String GIT_PROPERTIES_FILE_NAME = "git.properties";
   private static final String BUILD_VERSION_PROPERTY = "git.build.version";
-  private static final String DESCRIPTIVE_VERSION_PROPERTY = "git.commit.id.describe";
+  private static final String GIT_SHA_PROPERTY = "git.commit.id.abbrev";
 
   @Nonnull
   private final Properties gitProperties = new Properties();
@@ -68,11 +68,16 @@ public class PathlingVersion {
   }
 
   /**
-   * @return a descriptive version that includes the POM version, number of commits since, Git
-   * commit SHA and the dirty status of the repository at the time of the build
+   * @return a descriptive version that includes the POM version and the Git commit SHA at the time
+   * of the build
    */
   public Optional<String> getDescriptiveVersion() {
-    return Optional.ofNullable(gitProperties.getProperty(DESCRIPTIVE_VERSION_PROPERTY));
+    if (getBuildVersion().isEmpty()) {
+      return Optional.empty();
+    }
+    final Optional<String> gitShaProperty = Optional.ofNullable(
+        gitProperties.getProperty(GIT_SHA_PROPERTY));
+    return gitShaProperty.map(sha -> String.format("%s+%s", getBuildVersion().get(), sha));
   }
 
 }
