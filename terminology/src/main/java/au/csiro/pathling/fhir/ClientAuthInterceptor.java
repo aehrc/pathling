@@ -27,10 +27,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -38,6 +40,11 @@ import org.apache.http.util.EntityUtils;
 @Interceptor
 @Slf4j
 public class ClientAuthInterceptor {
+
+  public static final int AUTH_CONNECT_TIMEOUT = 5_000;
+  public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
+  public static final int AUTH_SOCKET_TIMEOUT = 5_000;
+  public static final int AUTH_RETRY_COUNT = 3;
 
   @Nonnull
   private final String tokenEndpoint;
@@ -130,7 +137,7 @@ public class ClientAuthInterceptor {
       @Nullable final String scope, final long tokenExpiryTolerance)
       throws IOException {
     log.debug("Performing client credentials grant using token endpoint: {}", tokenEndpoint);
-    try (final CloseableHttpClient httpClient = HttpClients.createDefault()) {
+    try (final CloseableHttpClient httpClient = getHttpClient()) {
       final HttpPost request = new HttpPost(tokenEndpoint);
       request.addHeader("Content-Type", "application/x-www-form-urlencoded");
       request.addHeader("Accept", "application/json");
@@ -171,6 +178,18 @@ public class ClientAuthInterceptor {
       }
       return grant;
     }
+  }
+
+  private static CloseableHttpClient getHttpClient() {
+    final RequestConfig requestConfig = RequestConfig.custom()
+        .setConnectTimeout(AUTH_CONNECT_TIMEOUT)
+        .setConnectionRequestTimeout(AUTH_CONNECTION_REQUEST_TIMEOUT)
+        .setSocketTimeout(AUTH_SOCKET_TIMEOUT)
+        .build();
+    return HttpClients.custom()
+        .setRetryHandler(new DefaultHttpRequestRetryHandler(AUTH_RETRY_COUNT, true))
+        .setDefaultRequestConfig(requestConfig)
+        .build();
   }
 
   private static Instant getExpiryTime(@Nonnull final ClientCredentialsResponse response) {
