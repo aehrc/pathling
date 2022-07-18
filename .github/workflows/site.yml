@@ -29,11 +29,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Run the verify goal with Maven
-        run: |
-          mvn --batch-mode verify \
-          -pl site -am \
+        run: >-
+          mvn --batch-mode verify
+          -pl site -am
+          -Pdocs
           -DskipTests
-        timeout-minutes: 30
+        timeout-minutes: 15
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:

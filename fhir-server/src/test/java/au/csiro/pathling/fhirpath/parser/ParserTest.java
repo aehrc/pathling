@@ -707,4 +707,12 @@ public class ParserTest extends AbstractParserTest {
         .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.csv");
   }
 
+  @Test
+  void testTraversalToUnsupportedReferenceChild() {
+    final String expression = "reverseResolve(MedicationRequest.subject).requester.identifier";
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        expression);
+    assertEquals("No such child: " + expression, error.getMessage());
+  }
+ 
 }

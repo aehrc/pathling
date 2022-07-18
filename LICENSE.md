@@ -74,7 +74,7 @@ separate files distributed with the Software.
 * (Apache License, Version 2.0) HAPI FHIR Structures - FHIR R4 (ca.uhn.hapi.fhir:hapi-fhir-structures-r4:6.0.2 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-structures-r4)
 * (Apache License, Version 2.0) HAPI FHIR - Validation Resources (FHIR R4) (ca.uhn.hapi.fhir:hapi-fhir-validation-resources-r4:6.0.2 - https://hapifhir.io/hapi-deployable-pom/hapi-fhir-validation-resources-r4)
 * (Eclipse Public License 1.0) (GNU Lesser General Public License) Logback Classic Module (ch.qos.logback:logback-classic:1.2.11 - http://logback.qos.ch/logback-classic)
-* (Apache License, Version 2.0) AWS Java SDK for Amazon S3 (com.amazonaws:aws-java-sdk-s3:1.12.256 - https://aws.amazon.com/sdkforjava)
+* (Apache License, Version 2.0) AWS Java SDK for Amazon S3 (com.amazonaws:aws-java-sdk-s3:1.12.257 - https://aws.amazon.com/sdkforjava)
 * (MIT License) java jwt (com.auth0:java-jwt:4.0.0 - https://github.com/auth0/java-jwt)
 * (MIT License) jwks-rsa (com.auth0:jwks-rsa:0.21.1 - https://github.com/auth0/jwks-rsa-java)
 * (Apache License, Version 2.0) Jackson-core (com.fasterxml.jackson.core:jackson-core:2.13.3 - https://github.com/FasterXML/jackson-core)
