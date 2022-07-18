@@ -227,6 +227,13 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
               aggregateOperationUri);
       resource.addOperation(aggregateOperation);
 
+      // Add the `extract` operation to all resources.
+      final CanonicalType extractOperationUri = new CanonicalType(getOperationUri("extract"));
+      final CapabilityStatementRestResourceOperationComponent extractOperation =
+          new CapabilityStatementRestResourceOperationComponent(new StringType("extract"),
+              extractOperationUri);
+      resource.addOperation(extractOperation);
+
       // Add the `fhirPath` search parameter to all resources.
       final CapabilityStatementRestResourceOperationComponent searchOperation = new CapabilityStatementRestResourceOperationComponent();
       searchOperation.setName("fhirPath");
