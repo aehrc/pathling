@@ -15,6 +15,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import lombok.Getter;
 import org.slf4j.Logger;
 
 /**
@@ -24,6 +25,7 @@ import org.slf4j.Logger;
  * @author John Grimes
  * @author Piotr Szul
  */
+@Getter
 public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
 
   private static final long serialVersionUID = 8862251697418622614L;

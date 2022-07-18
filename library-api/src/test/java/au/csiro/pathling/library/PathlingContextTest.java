@@ -16,6 +16,7 @@ package au.csiro.pathling.library;
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -23,6 +24,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
@@ -49,7 +51,6 @@ import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
@@ -186,12 +187,12 @@ public class PathlingContextTest {
 
     final Dataset<Row> jsonResources = spark.readStream().text(testDataUrl + "/resources/R4/json");
 
-    Assertions.assertTrue(jsonResources.isStreaming());
+    assertTrue(jsonResources.isStreaming());
 
     final Dataset<Row> patientsStream = pathling.encode(jsonResources, "Patient",
         FhirMimeTypes.FHIR_JSON);
 
-    Assertions.assertTrue(patientsStream.isStreaming());
+    assertTrue(patientsStream.isStreaming());
 
     final StreamingQuery patientsQuery = patientsStream
         .writeStream()
@@ -327,13 +328,33 @@ public class PathlingContextTest {
 
   @Test
   void testBuildContextWithTerminology() {
+    final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
+    final String tokenEndpoint = "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
+    final String clientId = "some-client";
+    final String clientSecret = "some-secret";
+    final String scope = "openid";
+    final int tokenExpiryTolerance = 120;
+
     final PathlingContext pathlingContext = PathlingContext.create(spark, null, null, null, null,
-        "https://tx.ontoserver.csiro.au/fhir",
-        "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token",
-        "some-client", "some-secret", null, 0);
-    final TerminologyService terminologyService = pathlingContext.getTerminologyServiceFactory()
-        .buildService(log);
+        terminologyServerUrl, tokenEndpoint,
+        clientId, clientSecret, scope, tokenExpiryTolerance);
     assertNotNull(pathlingContext);
+
+    final TerminologyServiceFactory terminologyServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertNotNull(terminologyServiceFactory);
+    assertTrue(terminologyServiceFactory instanceof DefaultTerminologyServiceFactory);
+    final DefaultTerminologyServiceFactory defaultTerminologyServiceFactory = (DefaultTerminologyServiceFactory) terminologyServiceFactory;
+    assertEquals(terminologyServerUrl, defaultTerminologyServiceFactory.getTerminologyServerUrl());
+    assertEquals(tokenEndpoint,
+        defaultTerminologyServiceFactory.getAuthConfig().getTokenEndpoint());
+    assertEquals(clientId, defaultTerminologyServiceFactory.getAuthConfig().getClientId());
+    assertEquals(clientSecret, defaultTerminologyServiceFactory.getAuthConfig().getClientSecret());
+    assertEquals(scope, defaultTerminologyServiceFactory.getAuthConfig().getScope());
+    assertEquals(tokenExpiryTolerance,
+        defaultTerminologyServiceFactory.getAuthConfig().getTokenExpiryTolerance());
+
+    final TerminologyService terminologyService = terminologyServiceFactory
+        .buildService(log);
     assertNotNull(terminologyService);
   }
 
