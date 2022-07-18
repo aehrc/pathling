@@ -59,6 +59,7 @@ public class PathlingContext {
 
   public static final String DEFAULT_TERMINOLOGY_SERVER_URL = "https://tx.ontoserver.csiro.au/fhir";
   public static final int DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT = 60_000;
+  public static final long DEFAULT_TOKEN_EXPIRY_TOLERANCE = 120L;
 
   @Nonnull
   private final FhirVersionEnum fhirVersion;
@@ -146,7 +147,7 @@ public class PathlingContext {
     }
     authConfig.setTokenExpiryTolerance(tokenExpiryTolerance != null
                                        ? tokenExpiryTolerance
-                                       : 120L);
+                                       : DEFAULT_TOKEN_EXPIRY_TOLERANCE);
 
     final DefaultTerminologyServiceFactory terminologyServiceFactory = new DefaultTerminologyServiceFactory(
         FhirContext.forR4(), resolvedTerminologyServerUrl, DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT,

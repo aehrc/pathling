@@ -44,7 +44,7 @@ class PathlingContext:
                client_id: Optional[str] = None,
                client_secret: Optional[str] = None,
                scope: Optional[str] = None,
-               token_expiry_tolerance: int = 120) -> "PathlingContext":
+               token_expiry_tolerance: Optional[int] = None) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options.
 
