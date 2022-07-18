@@ -79,24 +79,27 @@ public class ClientAuthInterceptor {
     }
   }
 
-  private static synchronized AccessContext ensureAccessContext(final String clientId,
-      final String clientSecret, final String tokenEndpoint, final String scope,
-      final long tokenExpiryTolerance)
+  @Nonnull
+  private static AccessContext ensureAccessContext(@Nonnull final String clientId,
+      @Nonnull final String clientSecret, @Nonnull final String tokenEndpoint,
+      @Nonnull final String scope, final long tokenExpiryTolerance)
       throws IOException {
-    final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, scope);
-    AccessContext accessContext = accessContexts.get(accessScope);
-    if (accessContext == null || accessContext.getExpiryTime()
-        .isBefore(Instant.now().plusSeconds(tokenExpiryTolerance))) {
-      // We need to get a new token if:
-      // (1) We don't have a token yet;
-      // (2) The token is expired, or;
-      // (3) The token is about to expire (within the tolerance).
-      log.debug("Getting new token");
-      accessContext = getNewAccessContext(clientId, clientSecret, tokenEndpoint, scope,
-          tokenExpiryTolerance);
-      accessContexts.put(accessScope, accessContext);
+    synchronized (accessContexts) {
+      final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, scope);
+      AccessContext accessContext = accessContexts.get(accessScope);
+      if (accessContext == null || accessContext.getExpiryTime()
+          .isBefore(Instant.now().plusSeconds(tokenExpiryTolerance))) {
+        // We need to get a new token if:
+        // (1) We don't have a token yet;
+        // (2) The token is expired, or;
+        // (3) The token is about to expire (within the tolerance).
+        log.debug("Getting new token");
+        accessContext = getNewAccessContext(clientId, clientSecret, tokenEndpoint, scope,
+            tokenExpiryTolerance);
+        accessContexts.put(accessScope, accessContext);
+      }
+      return accessContext;
     }
-    return accessContext;
   }
 
   @Nonnull
@@ -174,8 +177,10 @@ public class ClientAuthInterceptor {
     return Instant.now().plusSeconds(response.getExpiresIn());
   }
 
-  public static synchronized void clearAccessContexts() {
-    accessContexts.clear();
+  public static void clearAccessContexts() {
+    synchronized (accessContexts) {
+      accessContexts.clear();
+    }
   }
 
 }
