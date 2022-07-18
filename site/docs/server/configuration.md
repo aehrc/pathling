@@ -154,6 +154,13 @@ spark:
 - `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
   to `true` will enable additional logging of the details of requests between
   the server and the terminology service.
+- `pathling.terminology.authentication.enabled` - (default: `false`) Enables
+  authentication for requests to the terminology service.
+- `pathling.terminology.authentication.tokenEndpoint`, 
+  `pathling.terminology.authentication.clientId`, 
+  `pathling.terminology.authentication.clientSecret` - Authentication details
+  for connecting to a terminology service that requires authentication, using
+  [OAuth 2.0 client credentials flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4).
 
 ### Authorization
 
