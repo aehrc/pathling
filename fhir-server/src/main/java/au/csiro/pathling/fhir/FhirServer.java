@@ -8,9 +8,9 @@ package au.csiro.pathling.fhir;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
@@ -78,9 +78,6 @@ public class FhirServer extends RestfulServer {
   private final ResultProvider resultProvider;
 
   @Nonnull
-  private final OperationDefinitionProvider operationDefinitionProvider;
-
-  @Nonnull
   private final RequestIdInterceptor requestIdInterceptor;
 
   @Nonnull
@@ -107,8 +104,6 @@ public class FhirServer extends RestfulServer {
    * @param importProvider a {@link ImportProvider} for receiving requests to the import operation
    * @param jobProvider a {@link JobProvider} for checking on the status of jobs
    * @param resultProvider {@link ResultProvider} for retrieving the result of extract requests
-   * @param operationDefinitionProvider a {@link OperationDefinitionProvider} for receiving requests
-   * for OperationDefinitions
    * @param requestIdInterceptor a {@link RequestIdInterceptor} for adding request IDs to logging
    * @param errorReportingInterceptor a {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
@@ -124,7 +119,6 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ImportProvider importProvider,
       @Nonnull final Optional<JobProvider> jobProvider,
       @Nonnull final ResultProvider resultProvider,
-      @Nonnull final OperationDefinitionProvider operationDefinitionProvider,
       @Nonnull final RequestIdInterceptor requestIdInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
@@ -137,7 +131,6 @@ public class FhirServer extends RestfulServer {
     this.importProvider = importProvider;
     this.jobProvider = jobProvider;
     this.resultProvider = resultProvider;
-    this.operationDefinitionProvider = operationDefinitionProvider;
     this.requestIdInterceptor = requestIdInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
@@ -174,9 +167,6 @@ public class FhirServer extends RestfulServer {
 
       // Register batch provider.
       registerProvider(batchProvider);
-
-      // Register resource providers.
-      registerProvider(operationDefinitionProvider);
 
       // Register job provider, if async is enabled.
       jobProvider.ifPresent(this::registerProvider);
@@ -221,9 +211,9 @@ public class FhirServer extends RestfulServer {
     final List<IResourceProvider> providers = new ArrayList<>();
 
     // Instantiate an aggregate provider for every resource type in FHIR.
-    for (final ResourceType resourceType : ResourceType.values()) {
+    for (final Enumerations.ResourceType resourceType : supportedResourceTypes()) {
       final IResourceProvider aggregateProvider = resourceProviderFactory
-          .createAggregateResourceProvider(resourceType);
+          .createAggregateResourceProvider(ResourceType.fromCode(resourceType.toCode()));
       providers.add(aggregateProvider);
     }
     return providers;
@@ -234,9 +224,9 @@ public class FhirServer extends RestfulServer {
     final List<IResourceProvider> providers = new ArrayList<>();
 
     // Instantiate an extract provider for every resource type in FHIR.
-    for (final ResourceType resourceType : ResourceType.values()) {
+    for (final Enumerations.ResourceType resourceType : supportedResourceTypes()) {
       final IResourceProvider extractProvider = resourceProviderFactory
-          .createExtractResourceProvider(resourceType);
+          .createExtractResourceProvider(ResourceType.fromCode(resourceType.toCode()));
       providers.add(extractProvider);
     }
     return providers;
@@ -247,9 +237,10 @@ public class FhirServer extends RestfulServer {
     final List<IResourceProvider> providers = new ArrayList<>();
 
     // Instantiate a search provider for every resource type in FHIR.
-    for (final ResourceType resourceType : ResourceType.values()) {
+    for (final Enumerations.ResourceType resourceType : supportedResourceTypes()) {
       final IResourceProvider searchProvider =
-          resourceProviderFactory.createSearchResourceProvider(resourceType);
+          resourceProviderFactory.createSearchResourceProvider(
+              ResourceType.fromCode(resourceType.toCode()));
       providers.add(searchProvider);
     }
     return providers;
@@ -259,9 +250,10 @@ public class FhirServer extends RestfulServer {
   private List<IResourceProvider> buildUpdateProviders() {
     final List<IResourceProvider> providers = new ArrayList<>();
 
-    for (final ResourceType resourceType : ResourceType.values()) {
+    for (final Enumerations.ResourceType resourceType : supportedResourceTypes()) {
       final IResourceProvider updateProvider =
-          resourceProviderFactory.createUpdateResourceProvider(resourceType);
+          resourceProviderFactory.createUpdateResourceProvider(
+              ResourceType.fromCode(resourceType.toCode()));
       providers.add(updateProvider);
     }
     return providers;
@@ -331,6 +323,7 @@ public class FhirServer extends RestfulServer {
     availableResourceTypes.remove(Enumerations.ResourceType.RESOURCE);
     availableResourceTypes.remove(Enumerations.ResourceType.DOMAINRESOURCE);
     availableResourceTypes.remove(Enumerations.ResourceType.NULL);
+    availableResourceTypes.remove(Enumerations.ResourceType.OPERATIONDEFINITION);
     return availableResourceTypes;
   }
 

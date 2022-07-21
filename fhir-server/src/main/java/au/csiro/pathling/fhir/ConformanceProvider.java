@@ -6,25 +6,34 @@
 
 package au.csiro.pathling.fhir;
 
-import static au.csiro.pathling.fhir.OperationDefinitionProvider.SYSTEM_LEVEL_OPERATIONS;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Versioning.getMajorVersion;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.parser.IParser;
+import ca.uhn.fhir.rest.annotation.IdParam;
 import ca.uhn.fhir.rest.annotation.Metadata;
+import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IServerConformanceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import com.google.common.collect.ImmutableMap;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -32,6 +41,8 @@ import javax.annotation.Nullable;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.CanonicalType;
 import org.hl7.fhir.r4.model.CapabilityStatement;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementImplementationComponent;
@@ -53,6 +64,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.OperationDefinition;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.springframework.context.annotation.Profile;
@@ -75,12 +87,34 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * The base URI for canonical URIs.
    */
   public static final String URI_BASE = "https://pathling.csiro.au/fhir";
+  /**
+   * All system-level operations available within Pathling.
+   */
+  public static final List<String> SYSTEM_LEVEL_OPERATIONS = Arrays.asList("import", "result",
+      "job");
 
   private static final String FHIR_RESOURCE_BASE = "http://hl7.org/fhir/StructureDefinition/";
   private static final String RESTFUL_SECURITY_URI = "http://terminology.hl7.org/CodeSystem/restful-security-service";
   private static final String RESTFUL_SECURITY_CODE = "SMART-on-FHIR";
   private static final String SMART_OAUTH_URI = "http://fhir-registry.smarthealthit.org/StructureDefinition/oauth-uris";
   private static final String UNKNOWN_VERSION = "UNKNOWN";
+
+  /**
+   * All resource-level operations available within Pathling.
+   */
+  private static final List<String> RESOURCE_LEVEL_OPERATIONS = Arrays.asList("aggregate",
+      "search", "extract");
+
+  /**
+   * All operations available within Pathling.
+   */
+  private static final List<String> OPERATIONS;
+
+  static {
+    OPERATIONS = new ArrayList<>();
+    OPERATIONS.addAll(ConformanceProvider.SYSTEM_LEVEL_OPERATIONS);
+    OPERATIONS.addAll(ConformanceProvider.RESOURCE_LEVEL_OPERATIONS);
+  }
 
   @Nonnull
   private final Configuration configuration;
@@ -97,6 +131,12 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Nonnull
   private final FhirContext fhirContext;
 
+  @Nonnull
+  private final IParser jsonParser;
+
+  @Nonnull
+  private final Map<String, OperationDefinition> resources;
+
   /**
    * @param configuration a {@link Configuration} object controlling the behaviour of the capability
    * statement
@@ -104,14 +144,28 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
    * from OIDC discovery
    * @param version a {@link PathlingVersion} object containing version information for the server
    * @param fhirContext a {@link FhirContext} for determining the supported FHIR version
+   * @param jsonParser a {@link IParser} for parsing JSON OperationDefinitions
    */
   public ConformanceProvider(@Nonnull final Configuration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
-      @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext) {
+      @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext,
+      @Nonnull final IParser jsonParser) {
     this.configuration = configuration;
     this.oidcConfiguration = oidcConfiguration;
     this.version = version;
     this.fhirContext = fhirContext;
+    this.jsonParser = jsonParser;
+
+    final ImmutableMap.Builder<String, OperationDefinition> mapBuilder = new ImmutableMap.Builder<>();
+    for (final String operation : ConformanceProvider.OPERATIONS) {
+      final String id =
+          "OperationDefinition/" + operation + "-" + getMajorVersion(
+              version.getMajorVersion().orElse("UNKNOWN"));
+      final String path = "fhir/" + operation + ".OperationDefinition.json";
+      mapBuilder.put(id, load(path));
+    }
+    resources = mapBuilder.build();
+
     restfulServer = Optional.empty();
   }
 
@@ -320,6 +374,46 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   @Override
   public boolean cacheKeyMatches(final String otherKey) {
     return version.getDescriptiveVersion().map(key -> key.equals(otherKey)).orElse(false);
+  }
+
+  /**
+   * Handles all read requests to the OperationDefinition resource.
+   *
+   * @param id the ID of the desired OperationDefinition
+   * @return an {@link OperationDefinition} resource
+   */
+  @Read(typeName = "OperationDefinition")
+  @SuppressWarnings("unused")
+  public IBaseResource getOperationDefinitionById(@Nullable @IdParam final IIdType id) {
+    checkUserInput(id != null, "Missing ID parameter");
+    log.info("Reading OperationDefinition with ID {}", id.getValue());
+
+    final String idString = id.getValue();
+    final OperationDefinition resource = resources.get(idString);
+    if (resource == null) {
+      throw new ResourceNotFoundError("OperationDefinition not found: " + idString);
+    }
+    return resource;
+  }
+
+  @Nonnull
+  private OperationDefinition load(@Nonnull final String resourcePath) {
+    @Nullable final InputStream resourceStream = Thread.currentThread().getContextClassLoader()
+        .getResourceAsStream(resourcePath);
+    checkNotNull(resourceStream);
+
+    final OperationDefinition operationDefinition = (OperationDefinition) jsonParser
+        .parseResource(resourceStream);
+    final String id = String
+        .format("%1$s%2$s", operationDefinition.getName(),
+            version.getMajorVersion().map(v -> String.format("-%1$s", v)).orElse(""));
+    operationDefinition.setId(id);
+    final String url = String
+        .format("%1$s/OperationDefinition/%2$s", ConformanceProvider.URI_BASE, id);
+    operationDefinition.setUrl(url);
+    operationDefinition.setVersion(version.getBuildVersion().orElse(
+        ConformanceProvider.UNKNOWN_VERSION));
+    return operationDefinition;
   }
 
 }
