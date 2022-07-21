@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhir;
 
+import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -29,6 +30,12 @@ import org.springframework.stereotype.Component;
 @Profile({"core", "fhir"})
 @Slf4j
 public class Dependencies {
+
+  @Bean
+  @Nonnull
+  static PathlingVersion version() {
+    return new PathlingVersion();
+  }
 
   @Bean
   @ConditionalOnMissingBean

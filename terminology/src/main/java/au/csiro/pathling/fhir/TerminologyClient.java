@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.hl7.fhir.r4.model.Bundle;
@@ -130,13 +131,13 @@ public interface TerminologyClient extends IRestfulClient {
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
       @Nonnull final Logger logger) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
-    restfulClientFactory.setHttpClient(HttpClientBuilder.create().setRetryHandler(
-        new DefaultHttpRequestRetryHandler(1, true)).build());
+    restfulClientFactory.setHttpClient(buildHttpClient());
     restfulClientFactory.setSocketTimeout(socketTimeout);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
     final TerminologyClient terminologyClient = restfulClientFactory
         .newClient(TerminologyClient.class, terminologyServerUrl);
+    terminologyClient.registerInterceptor(new UserAgentInterceptor());
 
     final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
     loggingInterceptor.setLogger(logger);
@@ -161,6 +162,12 @@ public interface TerminologyClient extends IRestfulClient {
     }
 
     return terminologyClient;
+  }
+
+  private static CloseableHttpClient buildHttpClient() {
+    return HttpClientBuilder.create()
+        .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
+        .build();
   }
 
 }

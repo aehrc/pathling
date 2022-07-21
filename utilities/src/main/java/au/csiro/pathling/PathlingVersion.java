@@ -11,7 +11,6 @@ import java.io.InputStream;
 import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nonnull;
-import org.springframework.stereotype.Component;
 
 /**
  * Retrieves version information from the properties file created during the build, making it
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Component;
  *
  * @author John Grimes
  */
-@Component
 public class PathlingVersion {
 
   private static final String GIT_PROPERTIES_FILE_NAME = "git.properties";
