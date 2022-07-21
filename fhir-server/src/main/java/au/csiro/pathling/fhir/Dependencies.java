@@ -32,6 +32,7 @@ import org.springframework.stereotype.Component;
 public class Dependencies {
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   static PathlingVersion version() {
     return new PathlingVersion();
