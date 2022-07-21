@@ -2808,35 +2808,6 @@
           ]
         },
         {
-          "type": "OperationDefinition",
-          "profile": "http://hl7.org/fhir/StructureDefinition/OperationDefinition",
-          "interaction": [
-            {
-              "code": "search-type"
-            },
-            {
-              "code": "create"
-            },
-            {
-              "code": "update"
-            }
-          ],
-          "operation": [
-            {
-              "name": "aggregate",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/aggregate-5"
-            },
-            {
-              "name": "extract",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/extract-5"
-            },
-            {
-              "name": "fhirPath",
-              "definition": "https://pathling.csiro.au/fhir/OperationDefinition/search-5"
-            }
-          ]
-        },
-        {
           "type": "OperationOutcome",
           "profile": "http://hl7.org/fhir/StructureDefinition/OperationOutcome",
           "interaction": [
