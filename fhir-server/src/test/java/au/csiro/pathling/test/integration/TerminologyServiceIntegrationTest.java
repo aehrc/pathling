@@ -18,12 +18,17 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_28
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.simpleOf;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedSimple;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.testSimple;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -39,6 +44,9 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -185,4 +193,15 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
         .add(CD_SNOMED_VER_107963000, CD_SNOMED_VER_63816008).build();
     assertEquals(expectedRelation, actualRelation);
   }
+
+  @Test
+  void testUserAgentHeader() {
+    final Collection<SimpleCoding> codings = new HashSet<>(
+        List.of(new SimpleCoding(SNOMED_URI, "48429009")));
+    terminologyService.intersect(SNOMED_URI + "?fhir_vs", codings);
+
+    verify(anyRequestedFor(urlPathMatching("/fhir/(.*)"))
+        .withHeader("User-Agent", matching("pathling/(.*)")));
+  }
+
 }

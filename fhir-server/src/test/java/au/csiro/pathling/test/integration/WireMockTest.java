@@ -18,7 +18,7 @@ import org.springframework.test.context.TestPropertySource;
  * @author John Grimes
  */
 @TestPropertySource(properties = {
-    "pathling.test.recording.terminologyServerUrl=https://tx.ontoserver.csiro.au/fhir",
+    "pathling.test.recording.terminologyServerUrl=https://tx.ontoserver.csiro.au",
     "pathling.sentryDsn=http://123abc@localhost:" + IntegrationTestDependencies.WIREMOCK_PORT
         + "/5513555",
     "pathling.sentryEnvironment=integration-test"
