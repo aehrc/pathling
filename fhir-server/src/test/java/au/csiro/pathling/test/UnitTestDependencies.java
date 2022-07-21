@@ -34,6 +34,7 @@ import org.springframework.stereotype.Component;
 class UnitTestDependencies {
 
   @Bean
+  @ConditionalOnMissingBean
   @Nonnull
   static PathlingVersion version() {
     return new PathlingVersion();
