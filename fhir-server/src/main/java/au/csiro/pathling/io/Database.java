@@ -11,6 +11,7 @@ import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static org.apache.spark.sql.functions.asc;
 import static org.apache.spark.sql.functions.desc;
 
 import au.csiro.pathling.caching.Cacheable;
@@ -174,7 +175,9 @@ public class Database implements Cacheable {
         .execute();
 
     final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+    applyZOrdering(resourceType, tableUrl);
     invalidateCache(tableUrl);
+    compact(resourceType, original);
   }
 
   /**
@@ -249,6 +252,8 @@ public class Database implements Cacheable {
 
     log.debug("Overwriting: {}", tableUrl);
     resources
+        // We order the resources here to reduce the amount of sorting necessary at query time.
+        .orderBy(asc(ID_COLUMN_NAME))
         .write()
         .format("delta")
         .mode(SaveMode.Overwrite)
@@ -259,7 +264,7 @@ public class Database implements Cacheable {
         .option("overwriteSchema", "true")
         .save(tableUrl);
 
-    optimize(resourceType, tableUrl);
+    applyZOrdering(resourceType, tableUrl);
     invalidateCache(tableUrl);
   }
 
@@ -271,6 +276,39 @@ public class Database implements Cacheable {
     // issues on requests that call this method.
     write(resourceType, dataset);
     return getTableUrl(warehouseUrl, databaseName, resourceType);
+  }
+
+  /**
+   * Compacts the table if it has a number of partitions that exceed the configured threshold.
+   *
+   * @param resourceType the resource type of the table to compact
+   * @param table the Delta table for which to check the number of partitions
+   * @see <a href="https://docs.delta.io/latest/best-practices.html#compact-files">Delta Lake
+   * Documentation - Compact files</a>
+   */
+  private void compact(final @Nonnull ResourceType resourceType, final DeltaTable table) {
+    final int threshold = configuration.getSpark().getCompactionThreshold();
+    final int numPartitions = table.toDF().rdd().getNumPartitions();
+    if (numPartitions > threshold) {
+      final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+      log.debug("Scheduling table compaction (number of partitions: {}, threshold: {}): {}",
+          numPartitions,
+          threshold, tableUrl);
+      executor.submit(() -> {
+        log.debug("Commencing compaction: {}", tableUrl);
+        read(resourceType)
+            .repartition()
+            .write()
+            .option("dataChange", "false")
+            .format("delta")
+            .mode(SaveMode.Overwrite)
+            .save(tableUrl);
+        log.debug("Compaction complete: {}", tableUrl);
+      });
+    } else {
+      log.debug("Compaction not needed (number of partitions: {}, threshold: {})", numPartitions,
+          threshold);
+    }
   }
 
   private void invalidateCache(final String tableUrl) {
@@ -350,15 +388,13 @@ public class Database implements Cacheable {
            : Optional.ofNullable(Collections.max(timestamps));
   }
 
-  private void optimize(final @Nonnull ResourceType resourceType,
+  private void applyZOrdering(final @Nonnull ResourceType resourceType,
       @Nonnull final String tableUrl) {
+    log.debug("Commencing z-ordering: {}", resourceType.toCode());
     final DeltaTable table = getDeltaTable(resourceType, tableUrl);
-    optimize(table);
-  }
-
-  private void optimize(final @Nonnull DeltaTable table) {
     table.optimize()
         .executeZOrderBy(JavaConverters.asScalaBuffer(List.of(ID_COLUMN_NAME)).toSeq());
+    log.debug("Z-ordering complete: {}", resourceType.toCode());
   }
 
   @Nonnull
