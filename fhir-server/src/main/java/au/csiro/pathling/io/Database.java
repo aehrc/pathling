@@ -14,8 +14,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.asc;
 import static org.apache.spark.sql.functions.desc;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.caching.Cacheable;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
@@ -45,6 +45,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
+import scala.collection.JavaConverters;
 
 /**
  * Used for reading and writing resource data in persistent storage.
@@ -56,6 +57,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class Database implements Cacheable {
 
+  public static final String ID_COLUMN_NAME = "id";
   @Nonnull
   @Getter
   private Optional<String> cacheKey;
@@ -164,7 +166,8 @@ public class Database implements Cacheable {
     log.debug("Writing updates: {}", resourceType.toCode());
     original
         .as("original")
-        .merge(updates.as("updates"), "original.id = updates.id")
+        .merge(updates.as("updates"),
+            String.format("original.%s = updates.%s", ID_COLUMN_NAME, ID_COLUMN_NAME))
         .whenMatched()
         .updateAll()
         .whenNotMatched()
@@ -172,6 +175,7 @@ public class Database implements Cacheable {
         .execute();
 
     final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+    applyZOrdering(resourceType, tableUrl);
     invalidateCache(tableUrl);
     compact(resourceType, original);
   }
@@ -249,7 +253,7 @@ public class Database implements Cacheable {
     log.debug("Overwriting: {}", tableUrl);
     resources
         // We order the resources here to reduce the amount of sorting necessary at query time.
-        .orderBy(asc("id"))
+        .orderBy(asc(ID_COLUMN_NAME))
         .write()
         .format("delta")
         .mode(SaveMode.Overwrite)
@@ -260,6 +264,7 @@ public class Database implements Cacheable {
         .option("overwriteSchema", "true")
         .save(tableUrl);
 
+    applyZOrdering(resourceType, tableUrl);
     invalidateCache(tableUrl);
   }
 
@@ -381,6 +386,15 @@ public class Database implements Cacheable {
     return timestamps.isEmpty()
            ? Optional.empty()
            : Optional.ofNullable(Collections.max(timestamps));
+  }
+
+  private void applyZOrdering(final @Nonnull ResourceType resourceType,
+      @Nonnull final String tableUrl) {
+    log.debug("Commencing z-ordering: {}", resourceType.toCode());
+    final DeltaTable table = getDeltaTable(resourceType, tableUrl);
+    table.optimize()
+        .executeZOrderBy(JavaConverters.asScalaBuffer(List.of(ID_COLUMN_NAME)).toSeq());
+    log.debug("Z-ordering complete: {}", resourceType.toCode());
   }
 
   @Nonnull
