@@ -40,6 +40,8 @@ public abstract class LiteralPath implements FhirPath {
           .put(FHIRDefinedType.BOOLEAN, BooleanLiteralPath.class)
           .put(FHIRDefinedType.STRING, StringLiteralPath.class)
           .put(FHIRDefinedType.URI, StringLiteralPath.class)
+          .put(FHIRDefinedType.URL, StringLiteralPath.class)
+          .put(FHIRDefinedType.CANONICAL, StringLiteralPath.class)
           .put(FHIRDefinedType.CODE, StringLiteralPath.class)
           .put(FHIRDefinedType.OID, StringLiteralPath.class)
           .put(FHIRDefinedType.ID, StringLiteralPath.class)
