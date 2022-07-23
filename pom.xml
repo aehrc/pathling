@@ -469,7 +469,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>@{argLine} -Xmx4g -ea</argLine>
+            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
@@ -478,7 +478,7 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
           <configuration>
-            <argLine>-Xmx4g</argLine>
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC</argLine>
           </configuration>
         </plugin>
         <plugin>
