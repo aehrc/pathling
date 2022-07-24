@@ -13,9 +13,12 @@ import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.utilities.Preconditions;
 import io.delta.tables.DeltaTable;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,9 +35,20 @@ public abstract class TestHelpers {
 
   public static final String LOINC_URL = "http://loinc.org";
   public static final String SNOMED_URL = "http://snomed.info/sct";
-  public static final String WAREHOUSE_URL = System.getProperty("pathling.storage.warehouseUrl");
-  public static final String DATABASE_NAME = System.getProperty("pathling.storage.databaseName");
+  public static final String WAREHOUSE_URL = System.getProperty("pathling.storage.warehouseUrl",
+      getResourceUrl("test-data"));
+  public static final String DATABASE_NAME = System.getProperty("pathling.storage.databaseName",
+      "parquet");
   public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
+
+  @Nonnull
+  public static String getResourceUrl(final @Nonnull String resourcePath) {
+    final URL resourceUrl = TestHelpers.class.getClassLoader().getResource(resourcePath);
+    if (Objects.isNull(resourceUrl)) {
+      throw new IllegalArgumentException("Cannot find resource at path: " + resourcePath);
+    }
+    return resourceUrl.toExternalForm();
+  }
 
   public static void mockResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
