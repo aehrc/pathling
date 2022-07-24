@@ -186,6 +186,13 @@ public class Database implements Cacheable {
   @Nonnull
   public static IBaseResource prepareResourceForUpdate(@Nonnull final IBaseResource resource,
       @Nonnull final String id) {
+    // When a `fullUrl` with a UUID is provided within a batch, the ID gets set to a URN. We need to 
+    // convert this back to a naked ID before we use it in the update.
+    final String originalId = resource.getIdElement().getIdPart();
+    final String uuidPrefix = "urn:uuid:";
+    if (originalId.startsWith(uuidPrefix)) {
+      resource.setId(originalId.replaceFirst(uuidPrefix, ""));
+    }
     checkUserInput(resource.getIdElement().getIdPart().equals(id),
         "Resource ID missing or does not match supplied ID");
     return resource;
