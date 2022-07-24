@@ -2,6 +2,7 @@ au.csiro.pathling
 au.csiro.pathling.aggregate
 au.csiro.pathling.async
 au.csiro.pathling.caching
+au.csiro.pathling.config
 au.csiro.pathling.errors
 au.csiro.pathling.extract
 au.csiro.pathling.fhir

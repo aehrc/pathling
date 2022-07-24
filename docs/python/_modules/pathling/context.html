@@ -80,7 +80,12 @@
                <span class="n">max_nesting_level</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">enable_extensions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                <span class="n">enabled_open_types</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-               <span class="n">terminology_server_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PathlingContext&quot;</span><span class="p">:</span>
+               <span class="n">terminology_server_url</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">token_endpoint</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">client_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">client_secret</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">scope</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">token_expiry_tolerance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PathlingContext&quot;</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates a :class:`PathlingContext` with the given configuration options.</span>
 
@@ -106,6 +111,12 @@
 <span class="sd">            extensions</span>
 <span class="sd">        :param terminology_server_url: the URL of the FHIR terminology server used to resolve</span>
 <span class="sd">            terminology queries</span>
+<span class="sd">        :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant</span>
+<span class="sd">        :param client_id: a client ID for use with the client credentials grant</span>
+<span class="sd">        :param client_secret: a client secret for use with the client credentials grant</span>
+<span class="sd">        :param scope: a scope value for use with the client credentials grant</span>
+<span class="sd">        :param token_expiry_tolerance: the minimum number of seconds that a token should have </span>
+<span class="sd">            before expiry when deciding whether to send it with a terminology request</span>
 <span class="sd">        :return: a DataFrame containing the given resource encoded into Spark columns</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">spark</span> <span class="o">=</span> <span class="p">(</span><span class="n">spark</span> <span class="ow">or</span>
@@ -116,7 +127,8 @@
         <span class="n">jvm</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span>
         <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span> <span class="o">=</span> <span class="n">jvm</span><span class="o">.</span><span class="n">au</span><span class="o">.</span><span class="n">csiro</span><span class="o">.</span><span class="n">pathling</span><span class="o">.</span><span class="n">library</span><span class="o">.</span><span class="n">PathlingContext</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
                 <span class="n">spark</span><span class="o">.</span><span class="n">_jsparkSession</span><span class="p">,</span> <span class="n">fhir_version</span><span class="p">,</span> <span class="n">max_nesting_level</span><span class="p">,</span> <span class="n">enable_extensions</span><span class="p">,</span>
-                <span class="n">enabled_open_types</span><span class="p">,</span> <span class="n">terminology_server_url</span><span class="p">)</span>
+                <span class="n">enabled_open_types</span><span class="p">,</span> <span class="n">terminology_server_url</span><span class="p">,</span> <span class="n">token_endpoint</span><span class="p">,</span> <span class="n">client_id</span><span class="p">,</span>
+                <span class="n">client_secret</span><span class="p">,</span> <span class="n">scope</span><span class="p">,</span> <span class="n">token_expiry_tolerance</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">PathlingContext</span><span class="p">(</span><span class="n">spark</span><span class="p">,</span> <span class="n">jpc</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spark</span><span class="p">:</span> <span class="n">SparkSession</span><span class="p">,</span> <span class="n">jpc</span><span class="p">:</span> <span class="n">JavaObject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
