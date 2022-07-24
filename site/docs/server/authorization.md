@@ -45,6 +45,7 @@ the JWT bearer token provided with each request.
 | `pathling:import`                | Provides access to the import operation.                                        |
 | `pathling:aggregate`             | Provides access to the aggregate operation.                                     |
 | `pathling:search`                | Provides access to the search operation.                                        |
+| `pathling:extract`               | Provides access to the extract operation.                                       |
 | `pathling:update`                | Provides access to the update operation.                                        |
 | `pathling:batch`                 | Provides access to the batch operation.                                         |
 
