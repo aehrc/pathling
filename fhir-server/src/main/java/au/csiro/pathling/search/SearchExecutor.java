@@ -12,7 +12,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.col;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;

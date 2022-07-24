@@ -6,6 +6,7 @@
 
 package au.csiro.pathling;
 
+import au.csiro.pathling.config.Configuration;
 import io.sentry.Sentry;
 import javax.annotation.Nonnull;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

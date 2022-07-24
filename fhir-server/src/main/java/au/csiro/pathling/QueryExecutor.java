@@ -15,6 +15,7 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;

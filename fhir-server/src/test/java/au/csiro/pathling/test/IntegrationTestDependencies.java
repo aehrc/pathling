@@ -6,9 +6,17 @@
 
 package au.csiro.pathling.test;
 
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.UUIDFactory;
+import ca.uhn.fhir.context.FhirContext;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import java.util.UUID;
+import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -18,9 +26,10 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("integration-test")
+@Slf4j
 public class IntegrationTestDependencies {
 
-  private static final int WIREMOCK_PORT = 4072;
+  public static final int WIREMOCK_PORT = 4072;
 
   @Bean(destroyMethod = "stop")
   public WireMockServer wireMockServer() {
@@ -29,6 +38,28 @@ public class IntegrationTestDependencies {
             .usingFilesUnderDirectory("src/test/resources/wiremock"));
     WireMock.configureFor("localhost", WIREMOCK_PORT);
     return wireMockServer;
+  }
+
+  @Bean
+  public DefaultTerminologyServiceFactory terminologyServiceFactory(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final Configuration configuration) {
+    log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
+    return new DefaultTerminologyServiceFactory(fhirContext,
+        configuration.getTerminology().getServerUrl(), 0, false,
+        configuration.getTerminology().getAuthentication());
+  }
+
+  @Bean
+  public UUIDFactory uuidFactory() {
+    return UUID::randomUUID;
+  }
+
+  @Bean
+  public TerminologyService terminologyService(
+      @Nonnull final DefaultTerminologyServiceFactory terminologyServiceFactory,
+      @Nonnull final UUIDFactory uuidFactory) throws NoSuchFieldException, IllegalAccessException {
+    return terminologyServiceFactory.buildService(log, uuidFactory);
   }
 
 }

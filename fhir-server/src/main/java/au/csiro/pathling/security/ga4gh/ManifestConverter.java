@@ -8,7 +8,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathString;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.context.RuntimeSearchParam;

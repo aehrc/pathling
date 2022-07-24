@@ -9,7 +9,7 @@ package au.csiro.pathling.io;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;

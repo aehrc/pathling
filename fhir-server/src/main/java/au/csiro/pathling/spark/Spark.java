@@ -6,8 +6,8 @@
 
 package au.csiro.pathling.spark;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Storage.Aws;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.StorageConfiguration.Aws;
 import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.sql.CodingToLiteral;
 import au.csiro.pathling.sql.PathlingStrategy;

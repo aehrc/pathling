@@ -17,7 +17,7 @@
       "name": "id",
       "use": "in",
       "min": 1,
-      "max": 1,
+      "max": "1",
       "documentation": "The ID of the job for which to retrieve the details."
     }
   ]

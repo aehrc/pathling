@@ -30,12 +30,10 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
 
 /**
  * @author John Grimes
  */
-@TestPropertySource(locations = {"classpath:/configuration/sentry.properties"})
 @Tag("Tranche2")
 class SentryTest extends WireMockTest {
 

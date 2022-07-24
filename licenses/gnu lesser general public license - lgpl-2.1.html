@@ -31,33 +31,6 @@
 <!-- start of server/banner.html -->
 <!-- start of head-include-2.html -->
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-
-
-
-
-
-
-
-<link rel="stylesheet" type="text/css" href="/server/banners/fundraiser.css" media="screen" />
-<style type="text/css" media="screen"><!--
-.progress-bar {
-  width: 97%;
-}
--->
-<!-- .goal { display: none } -->
-</style>
-
-<style type="text/css" media="screen">
-<!-- TRANSLATORS: Change direction to rtl if you translate
-     the fundraiser and your script is right-to-left.  -->
-#fundraiser {
-  direction: ltr;
-}
-#fundraiser p {
-  direction: ltr;
-}
-</style>
 <!-- end of head-include-2.html -->
 
 </head>
@@ -68,43 +41,27 @@
 <a class="skip" href="#content"><b>Skip to main text</b></a>
 </div>
 
-<div id='fundraiser'>
-  <div class="bg-left">
-  <a href="https://my.fsf.org/donate?mtm_campaign=spring22&amp;mtm_source=banner">
-  <img alt="" 
-    src="//static.gnu.org/nosvn/banners/202206fundraiser/img/left-715.svg"
-    /></a>
-  </div>
-  <div class="bg-right">
-  <a href="https://my.fsf.org/donate?mtm_campaign=spring22&amp;mtm_source=banner">
-  <img alt="" 
-    src="//static.gnu.org/nosvn/banners/202206fundraiser/img/right-715.svg"
-   /></a>
-  </div>
-  <a href="https://my.fsf.org/donate?mtm_campaign=spring22&amp;mtm_source=banner">
-   <img class="cat" alt=""
-     src="//static.gnu.org/nosvn/banners/202206fundraiser/img/right-360.svg"
-     /></a>
-  <div class="message">
-    <p>Free software is the driving force that can help bring major change to
-      matters of global importance.</p>
-    <p>Donate today to help us reach our spring goal of $67,000.</p>
+<div id="fsf-frame" role="complementary">
+<form id="fssbox" action="https://my.fsf.org/civicrm/profile/create?reset=1&amp;gid=31"
+      method="post">
+ <div>
+  <input name="postURL" type="hidden" value="" />
+  <input type="hidden" name="group[25]" value="1" />
+  <input name="cancelURL" type="hidden" value="https://crm.fsf.org/civicrm/profile?reset=1&amp;gid=31" />
+  <input name="_qf_default" type="hidden" value="Edit:cancel" />
+  <label for="frmEmail">
+   <a href="//www.fsf.org/fss">Free Software Supporter</a>:
+  </label>
+  <input type="text" id="frmEmail" name="email-Primary" size="18" maxlength="80"
+         value="email address" onfocus="this.value=''"/>
+  <input type="submit" name="_qf_Edit_next" value="Sign up" />
+ </div>
+</form>
 
-    <p><a href="https://my.fsf.org/donate?mtm_campaign=spring22&amp;mtm_source=banner">
-      Read more &gt;<span class="gnun-split"></span></a>
-    </p>
-  </div><!-- .message -->
-  <div class="progresswidget">
-    <div class="progress">
-      <div class="progress-bar">
-<a href="https://my.fsf.org/donate?mtm_campaign=spring22&amp;mtm_source=banner"><span class="percentage">$65,560</span></a>
-      </div><a href="https://my.fsf.org/donate?mtm_campaign=spring22&amp;mtm_source=banner"><span class="goal">$67,000<span class="gnun-split"></span></span></a>
-    </div>
-  </div><!-- .progresswidget -->
-</div><!-- #fundraiser -->
-
-
-<div style="clear: both"></div>
+<div id="join-fsf" class="button"><a
+href="https://www.fsf.org/associate/support_freedom?referrer=4052">JOIN&nbsp;THE&nbsp;FSF</a>
+</div>
+</div>
 
 <div id="header" role="banner">
 <p id="gnu-banner">

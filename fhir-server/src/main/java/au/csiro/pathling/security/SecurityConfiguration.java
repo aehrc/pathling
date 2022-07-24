@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.security;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -33,7 +33,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 @Profile("server")
 @Slf4j
-public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+public class SecurityConfiguration {
 
   private final Configuration configuration;
 
@@ -44,9 +44,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     this.configuration = configuration;
   }
 
-  @Override
-  protected void configure(@Nonnull final HttpSecurity http) throws Exception {
-
+  @Bean
+  public SecurityFilterChain securityFilterChain(@Nonnull final HttpSecurity http)
+      throws Exception {
     // Will use the bean of class CorsConfigurationSource as configuration provider.
     http.cors();
 
@@ -71,8 +71,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
           .csrf().disable()
           .authorizeRequests().anyRequest().permitAll();
     }
-  }
 
+    return http.build();
+  }
 
   /**
    * Constructs Spring CORS configuration.

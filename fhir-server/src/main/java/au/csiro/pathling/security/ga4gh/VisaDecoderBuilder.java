@@ -9,9 +9,9 @@ package au.csiro.pathling.security.ga4gh;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.JWKS_URI;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Authorization;
-import au.csiro.pathling.Configuration.Authorization.Ga4ghPassports;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.AuthorizationConfiguration.Ga4ghPassports;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.PathlingJwtDecoderBuilder;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -40,7 +40,7 @@ public class VisaDecoderBuilder extends PathlingJwtDecoderBuilder {
 
   @Override
   public JwtDecoder build(@Nonnull final Configuration configuration) {
-    final Authorization auth = getAuthConfiguration(configuration);
+    final AuthorizationConfiguration auth = getAuthConfiguration(configuration);
     final Ga4ghPassports ga4ghPassports = auth.getGa4ghPassports();
 
     // The issuer within the token is validated to ensure that it is in the allowed list.

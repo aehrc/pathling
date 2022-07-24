@@ -1,6 +1,6 @@
 {
   "name": "pathling-import",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "description": "A set of functions for performing bulk export from a FHIR server and importing to Pathling.",
   "type": "module",
   "exports": "./lib/index.js",

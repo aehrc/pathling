@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;

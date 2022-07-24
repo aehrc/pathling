@@ -12,7 +12,7 @@ import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.fhir.ErrorHandlingInterceptor;

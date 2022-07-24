@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.security.ga4gh;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;

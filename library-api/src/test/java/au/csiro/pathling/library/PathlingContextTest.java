@@ -15,6 +15,8 @@ package au.csiro.pathling.library;
 
 import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -22,6 +24,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
@@ -34,6 +37,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -47,11 +51,11 @@ import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
 
+@Slf4j
 public class PathlingContextTest {
 
   private static SparkSession spark;
@@ -85,7 +89,8 @@ public class PathlingContextTest {
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
         .textFile(testDataUrl + "/bundles/R4/json");
 
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null);
+    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
+        null, null, null, null, 0);
 
     final Dataset<Row> patientsDataframe = pathling.encodeBundle(bundlesDF.toDF(),
         "Patient", FhirMimeTypes.FHIR_JSON);
@@ -103,7 +108,8 @@ public class PathlingContextTest {
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
         .textFile(testDataUrl + "/bundles/R4/xml");
 
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null);
+    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
+        null, null, null, null, 0);
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
         FhirMimeTypes.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
@@ -115,7 +121,8 @@ public class PathlingContextTest {
     final Dataset<String> jsonResources = spark.read()
         .textFile(testDataUrl + "/resources/R4/json");
 
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null);
+    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
+        null, null, null, null, 0);
 
     final Dataset<Row> patientsDataframe = pathling.encode(jsonResources.toDF(), "Patient",
         FhirMimeTypes.FHIR_JSON);
@@ -132,7 +139,8 @@ public class PathlingContextTest {
         .text(testDataUrl + "/resources/R4/json");
 
     // Test the defaults
-    final Row defaultRow = PathlingContext.create(spark, null, null, null, null, null)
+    final Row defaultRow = PathlingContext.create(spark, null, null, null, null, null, null, null,
+            null, null, 0)
         .encode(jsonResourcesDF, "Questionnaire")
         .head();
     SchemaAsserts.assertFieldNotPresent("_extension", defaultRow.schema());
@@ -142,7 +150,7 @@ public class PathlingContextTest {
     // Test explicit options
     // Nested items
     final Row rowWithNesting = PathlingContext
-        .create(spark, null, 1, null, null, null)
+        .create(spark, null, 1, null, null, null, null, null, null, null, 0)
         .encode(jsonResourcesDF, "Questionnaire").head();
     SchemaAsserts.assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
@@ -157,7 +165,7 @@ public class PathlingContextTest {
     // Extensions and open types
     final Row rowWithExtensions = PathlingContext
         .create(spark, null, null, true,
-            Arrays.asList("boolean", "string", "Address"), null)
+            Arrays.asList("boolean", "string", "Address"), null, null, null, null, null, 0)
         .encode(jsonResourcesDF, "Patient").head();
     SchemaAsserts.assertFieldPresent("_extension", rowWithExtensions.schema());
 
@@ -174,16 +182,17 @@ public class PathlingContextTest {
 
   @Test
   public void testEncodeResourceStream() throws Exception {
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null);
+    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
+        null, null, null, null, 0);
 
     final Dataset<Row> jsonResources = spark.readStream().text(testDataUrl + "/resources/R4/json");
 
-    Assertions.assertTrue(jsonResources.isStreaming());
+    assertTrue(jsonResources.isStreaming());
 
     final Dataset<Row> patientsStream = pathling.encode(jsonResources, "Patient",
         FhirMimeTypes.FHIR_JSON);
 
-    Assertions.assertTrue(patientsStream.isStreaming());
+    assertTrue(patientsStream.isStreaming());
 
     final StreamingQuery patientsQuery = patientsStream
         .writeStream()
@@ -315,6 +324,38 @@ public class PathlingContextTest {
     final List<Row> rows = result.select("id", "result").collectAsList();
     assertEquals(RowFactory.create("foo", true), rows.get(0));
     assertEquals(RowFactory.create("bar", false), rows.get(1));
+  }
+
+  @Test
+  void testBuildContextWithTerminology() {
+    final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
+    final String tokenEndpoint = "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
+    final String clientId = "some-client";
+    final String clientSecret = "some-secret";
+    final String scope = "openid";
+    final int tokenExpiryTolerance = 120;
+
+    final PathlingContext pathlingContext = PathlingContext.create(spark, null, null, null, null,
+        terminologyServerUrl, tokenEndpoint,
+        clientId, clientSecret, scope, tokenExpiryTolerance);
+    assertNotNull(pathlingContext);
+
+    final TerminologyServiceFactory terminologyServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertNotNull(terminologyServiceFactory);
+    assertTrue(terminologyServiceFactory instanceof DefaultTerminologyServiceFactory);
+    final DefaultTerminologyServiceFactory defaultTerminologyServiceFactory = (DefaultTerminologyServiceFactory) terminologyServiceFactory;
+    assertEquals(terminologyServerUrl, defaultTerminologyServiceFactory.getTerminologyServerUrl());
+    assertEquals(tokenEndpoint,
+        defaultTerminologyServiceFactory.getAuthConfig().getTokenEndpoint());
+    assertEquals(clientId, defaultTerminologyServiceFactory.getAuthConfig().getClientId());
+    assertEquals(clientSecret, defaultTerminologyServiceFactory.getAuthConfig().getClientSecret());
+    assertEquals(scope, defaultTerminologyServiceFactory.getAuthConfig().getScope());
+    assertEquals(tokenExpiryTolerance,
+        defaultTerminologyServiceFactory.getAuthConfig().getTokenExpiryTolerance());
+
+    final TerminologyService terminologyService = terminologyServiceFactory
+        .buildService(log);
+    assertNotNull(terminologyService);
   }
 
 }
