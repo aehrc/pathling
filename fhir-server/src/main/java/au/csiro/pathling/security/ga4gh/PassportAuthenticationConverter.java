@@ -8,7 +8,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -124,7 +124,12 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
         final String datasetId = getControlledAccessDatasetId(visa);
 
         // Get the issuer and use it to retrieve the manifest.
-        final VisaManifest manifest = getManifest(visa.getIssuer(), datasetId);
+        final VisaManifest manifest;
+        try {
+          manifest = getManifest(visa.getIssuer(), datasetId);
+        } catch (final IOException e) {
+          throw new RuntimeException(e);
+        }
         log.debug("Manifest for dataset {}: {}", datasetId, manifest);
 
         // Translate each patient ID in the manifest into a set of filters, and add to the passport
@@ -164,18 +169,20 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
     }
 
     @Nonnull
-    private VisaManifest getManifest(@Nonnull final URL issuer, @Nonnull final String datasetId) {
-      final CloseableHttpClient httpClient = HttpClients.createDefault();
-      final VisaManifest manifest;
-      final String manifestUrl = issuer + "/api/manifest/" + datasetId;
-      try {
-        log.debug("Retrieving manifest from {}", issuer);
-        final HttpUriRequest get = new HttpGet(manifestUrl);
-        manifest = httpClient.execute(get, this::manifestResponseHandler);
-      } catch (final IOException e) {
-        throw new UnclassifiedServerFailureException(502, "Problem retrieving manifest for visa");
+    private VisaManifest getManifest(@Nonnull final URL issuer, @Nonnull final String datasetId)
+        throws IOException {
+      try (final CloseableHttpClient httpClient = HttpClients.createDefault()) {
+        final VisaManifest manifest;
+        final String manifestUrl = issuer + "/api/manifest/" + datasetId;
+        try {
+          log.debug("Retrieving manifest from {}", issuer);
+          final HttpUriRequest get = new HttpGet(manifestUrl);
+          manifest = httpClient.execute(get, this::manifestResponseHandler);
+        } catch (final IOException e) {
+          throw new UnclassifiedServerFailureException(502, "Problem retrieving manifest for visa");
+        }
+        return manifest;
       }
-      return manifest;
     }
 
     @Nonnull

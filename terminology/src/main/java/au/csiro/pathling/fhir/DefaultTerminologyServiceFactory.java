@@ -6,6 +6,7 @@
 
 package au.csiro.pathling.fhir;
 
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyService;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -14,6 +15,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import lombok.Getter;
 import org.slf4j.Logger;
 
 /**
@@ -23,6 +25,7 @@ import org.slf4j.Logger;
  * @author John Grimes
  * @author Piotr Szul
  */
+@Getter
 public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
 
   private static final long serialVersionUID = 8862251697418622614L;
@@ -37,6 +40,9 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   private final boolean verboseRequestLogging;
 
+  @Nonnull
+  private final TerminologyAuthConfiguration authConfig;
+
   /**
    * @param fhirContext the {@link FhirContext} used to build the client
    * @param terminologyServerUrl the URL of the terminology server this client will communicate
@@ -46,11 +52,12 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
    */
   public DefaultTerminologyServiceFactory(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
-      final boolean verboseRequestLogging) {
+      final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig) {
     this.fhirVersion = fhirContext.getVersion().getVersion();
     this.terminologyServerUrl = terminologyServerUrl;
     this.socketTimeout = socketTimeout;
     this.verboseRequestLogging = verboseRequestLogging;
+    this.authConfig = authConfig;
   }
 
   /**
@@ -65,7 +72,6 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     return buildService(logger, UUID::randomUUID);
   }
 
-
   /**
    * Builds a new instance.
    *
@@ -78,10 +84,9 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
       @Nonnull final UUIDFactory uuidFactory) {
     final TerminologyClient terminologyClient = TerminologyClient
         .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
-            verboseRequestLogging, logger);
+            verboseRequestLogging, authConfig, logger);
     return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), terminologyClient,
         uuidFactory);
   }
-
 
 }

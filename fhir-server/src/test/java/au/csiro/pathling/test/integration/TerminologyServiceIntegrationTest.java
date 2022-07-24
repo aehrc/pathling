@@ -18,17 +18,21 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_28
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.simpleOf;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedSimple;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.testSimple;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
@@ -40,6 +44,9 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -49,18 +56,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 /**
  * @author Piotr Szul
  */
-@TestPropertySource(properties = {
-    "pathling.test.recording.terminologyServerUrl=https://r4.ontoserver.csiro.au/",
-    "pathling.terminology.serverUrl=http://localhost:" + 4072 + "/fhir"
-})
 @Tag("Tranche2")
 @Slf4j
 class TerminologyServiceIntegrationTest extends WireMockTest {
@@ -68,15 +70,14 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   @Autowired
   FhirContext fhirContext;
 
-  @Value("${pathling.test.recording.terminologyServerUrl}")
-  String recordingTxServerUrl;
-
-  @Value("${pathling.terminology.serverUrl}")
-  String terminologyServerUrl;
-
+  @Autowired
   TerminologyService terminologyService;
 
-  UUIDFactory mockUUIDFactory;
+  @MockBean
+  UUIDFactory uuidFactory;
+
+  @Value("${pathling.test.recording.terminologyServerUrl}")
+  String recordingTxServerUrl;
 
   @BeforeEach
   @Override
@@ -87,13 +88,6 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
       log.warn("Proxying all request to: {}", recordingTxServerUrl);
       stubFor(proxyAllTo(recordingTxServerUrl));
     }
-
-    mockUUIDFactory = Mockito.mock(UUIDFactory.class);
-    // TODO: Refactor to use actual dependency injection, requires possible refactoring of test
-    //  contexts.
-    final DefaultTerminologyServiceFactory tcf = new DefaultTerminologyServiceFactory(fhirContext,
-        terminologyServerUrl, 0, false);
-    terminologyService = tcf.buildService(log, mockUUIDFactory);
   }
 
   @AfterEach
@@ -183,19 +177,31 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
   @Test
   void testCorrectlyBuildsClosureKnownAndUnknownSystems() {
-
-    when(mockUUIDFactory.nextUUID())
+    when(uuidFactory.nextUUID())
         .thenReturn(UUID.fromString("5d1b976d-c50c-445a-8030-64074b83f355"));
+
     final Relation actualRelation = terminologyService
         .getSubsumesRelation(
             setOfSimpleFrom(CD_SNOMED_107963000, CD_SNOMED_VER_63816008,
                 CD_SNOMED_72940011000036107, CD_AST_VIC,
                 new Coding("uuid:unknown", "unknown", "Unknown")
             ));
+
     // It appears that in the response all codings are versioned regardless
     // of whether the version was present in the request
     final Relation expectedRelation = RelationBuilder.empty()
         .add(CD_SNOMED_VER_107963000, CD_SNOMED_VER_63816008).build();
     assertEquals(expectedRelation, actualRelation);
   }
+
+  @Test
+  void testUserAgentHeader() {
+    final Collection<SimpleCoding> codings = new HashSet<>(
+        List.of(new SimpleCoding(SNOMED_URI, "48429009")));
+    terminologyService.intersect(SNOMED_URI + "?fhir_vs", codings);
+
+    verify(anyRequestedFor(urlPathMatching("/fhir/(.*)"))
+        .withHeader("User-Agent", matching("pathling/(.*)")));
+  }
+
 }

@@ -8,7 +8,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.springframework.context.annotation.Profile;

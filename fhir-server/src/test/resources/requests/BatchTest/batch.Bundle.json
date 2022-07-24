@@ -3,6 +3,7 @@
   "type": "batch",
   "entry": [
     {
+      "fullUrl": "urn:uuid:example0",
       "request": {
         "method": "PUT",
         "url": "Patient/example0"
@@ -120,6 +121,7 @@
       }
     },
     {
+      "fullUrl": "https://somecompany.com/fhir/Practitioner/example0",
       "request": {
         "method": "PUT",
         "url": "Practitioner/example0"

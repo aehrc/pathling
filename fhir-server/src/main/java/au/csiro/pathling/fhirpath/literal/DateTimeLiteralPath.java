@@ -38,7 +38,7 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
   protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Type literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof DateTimeType);
+    check(literalValue instanceof BaseDateTimeType);
   }
 
   /**
@@ -66,8 +66,8 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
   }
 
   @Override
-  public DateTimeType getLiteralValue() {
-    return (DateTimeType) literalValue;
+  public BaseDateTimeType getLiteralValue() {
+    return (BaseDateTimeType) literalValue;
   }
 
   @Nonnull

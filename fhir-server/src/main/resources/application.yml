@@ -69,6 +69,20 @@ pathling:
     # Setting this option to true will enable additional logging of the details of requests between 
     # the server and the terminology service.
     verboseLogging: false
+    
+    # Configuration relating to authentication of requests to the terminology service.
+    authentication:
+      # Enables authenticated requests.
+      enabled: false
+      
+      # Authentication details for use with the client credentials grant.
+      # tokenEndpoint: [token endpoint]
+      # clientId: [client ID]
+      # clientSecret: [client secret]
+      
+      # The minimum number of seconds that a token should have before expiry when deciding whether 
+      # to send it with a terminology request.
+      tokenExpiryTolerance: 120
 
   auth:
     # Enables authorization.
@@ -144,10 +158,10 @@ pathling:
   encoding:
     # Controls the maximum depth of nested element data that is encoded upon import.
     maxNestingLevel: 3
-    
+
     # Enables support for FHIR extensions.
     enableExtensions: true
-    
+
     # The list of types that are encoded within open types, such as extensions. This default list 
     # was taken from the data types that are common to extensions found in widely-used IGs, 
     # such as the US and AU base profiles. In general, you will get the best query performance by 

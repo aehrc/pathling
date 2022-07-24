@@ -6,10 +6,9 @@
 
 package au.csiro.pathling.fhir;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Terminology;
+import au.csiro.pathling.PathlingVersion;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -31,6 +30,13 @@ import org.springframework.stereotype.Component;
 @Profile({"core", "fhir"})
 @Slf4j
 public class Dependencies {
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static PathlingVersion version() {
+    return new PathlingVersion();
+  }
 
   @Bean
   @ConditionalOnMissingBean
@@ -68,14 +74,11 @@ public class Dependencies {
   @Nonnull
   static TerminologyClient terminologyClient(@Nonnull final Configuration configuration,
       @Nonnull final FhirContext fhirContext) {
-    final Terminology terminology = configuration.getTerminology();
-    checkNotNull(terminology);
+    final TerminologyConfiguration terminology = configuration.getTerminology();
     log.debug("Creating FHIR terminology client: {}", terminology.getServerUrl());
-    return TerminologyClient.build(fhirContext,
-        terminology.getServerUrl(),
-        terminology.getSocketTimeout(),
-        terminology.isVerboseLogging(),
-        log);
+    return TerminologyClient.build(fhirContext, terminology.getServerUrl(),
+        terminology.getSocketTimeout(), terminology.isVerboseLogging(),
+        terminology.getAuthentication(), log);
   }
 
   @Bean
@@ -84,12 +87,10 @@ public class Dependencies {
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory(
       @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
-    final Terminology terminology = configuration.getTerminology();
-    checkNotNull(terminology);
-    return new DefaultTerminologyServiceFactory(fhirContext,
-        terminology.getServerUrl(),
-        terminology.getSocketTimeout(),
-        terminology.isVerboseLogging());
+    final TerminologyConfiguration terminology = configuration.getTerminology();
+    return new DefaultTerminologyServiceFactory(fhirContext, terminology.getServerUrl(),
+        terminology.getSocketTimeout(), terminology.isVerboseLogging(),
+        terminology.getAuthentication());
   }
 
 }
