@@ -77,7 +77,7 @@
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.3</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.265</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.279</pathling.awsSdkVersion>
   </properties>
 
   <modules>
