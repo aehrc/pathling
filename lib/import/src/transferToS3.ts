@@ -16,7 +16,7 @@ import {
   HeadObjectCommand,
   HeadObjectCommandOutput,
   S3Client,
-  UploadPartCommand
+  UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { AxiosInstance, AxiosResponse } from "axios";
 import { createHash } from "crypto";
@@ -28,26 +28,23 @@ import tempDirectory from "temp-dir";
 import { URL } from "url";
 import { v4 as uuidv4 } from "uuid";
 import {
-  buildAuthenticatedClient,
-  FHIR_NDJSON_CONTENT_TYPE
+  buildClient,
+  FHIR_NDJSON_CONTENT_TYPE,
+  MaybeAuthenticated,
 } from "./common.js";
-import { FhirBulkOutput } from "./export.js";
+import { FhirBulkResult } from "./export";
 import ReadableStream = NodeJS.ReadableStream;
 
-export interface TransferParams {
+export type TransferParams = {
   endpoint: string;
-  clientId: string;
-  clientSecret: string;
-  scopes: string;
   result: FhirBulkResult;
   stagingUrl: string;
-}
+  importMode?: string;
+} & MaybeAuthenticated;
 
 export type TransferResult = Parameters;
 
-export interface FhirBulkResult {
-  output: FhirBulkOutput[];
-}
+export type ImportMode = "overwrite" | "merge";
 
 interface S3UploadJob {
   urls: string[];
@@ -67,25 +64,16 @@ const MINIMUM_PART_SIZE = 5242880;
  *
  * @return a FHIR {@link Parameters} resource suitable for input to the Pathling import operation
  */
-export async function transferExportToS3({
-  endpoint,
-  clientId,
-  clientSecret,
-  scopes,
-  result,
-  stagingUrl
-}: TransferParams): Promise<TransferResult> {
-  const client = await buildAuthenticatedClient(
-    endpoint,
-    clientId,
-    clientSecret,
-    scopes
-  );
-  const s3Client = new S3Client({});
+export async function transferExportToS3(
+  options: TransferParams
+): Promise<TransferResult> {
+  const { stagingUrl, result, importMode = "merge" } = options,
+    client = await buildClient(options),
+    s3Client = new S3Client({});
 
-  const parsedStagingUrl = new URL(stagingUrl);
-  const stagingPath = parsedStagingUrl.pathname.replace("/", "");
-  const bucket = parsedStagingUrl.hostname;
+  const parsedStagingUrl = new URL(stagingUrl),
+    stagingPath = parsedStagingUrl.pathname.replace("/", ""),
+    bucket = parsedStagingUrl.hostname;
 
   const categorisedOutputs: { [resourceType: string]: S3UploadJob } =
     result.output.reduce(
@@ -93,9 +81,9 @@ export async function transferExportToS3({
         // This assumes that the download URL provided by the source FHIR server is unique based
         // upon the contents of the file.
         const hash = createHash("sha256")
-        .update(output.url)
-        .digest("hex")
-        .slice(0, 7);
+          .update(output.url)
+          .digest("hex")
+          .slice(0, 7);
         const key = `${stagingPath}/${output.type}-${hash}.ndjson`;
 
         // Build up a map of resource types to the set of URLs which need to be downloaded and
@@ -123,7 +111,10 @@ export async function transferExportToS3({
       );
     })
   );
-  return s3ResultLocationsToParameters(s3ResultLocations);
+  return s3ResultLocationsToParameters(
+    s3ResultLocations,
+    validateImportMode(importMode)
+  );
 }
 
 async function conditionallyTransferToS3(
@@ -147,7 +138,7 @@ async function conditionallyTransferToS3(
     return {
       resourceType,
       url: stagingUrl,
-      changed: false
+      changed: false,
     };
   } catch (e) {
     // If the file does not exist, download all the source URLs and put their concatenated content
@@ -179,13 +170,13 @@ async function transferToS3(
   resourceType: string,
   stagingUrl: string
 ): Promise<S3ResultLocation> {
-  if (urls.length === 0) throw "URLs must not be empty";
+  if (urls.length === 0) throw new Error("URLs must not be empty");
 
   // We upload the concatenated data up to S3 using a multipart upload, which needs to be started
   // and ended using API requests.
   const createMultipartUpload = new CreateMultipartUploadCommand({
     Bucket: bucket,
-    Key: key
+    Key: key,
   });
   const createResult = await s3Client.send(createMultipartUpload);
   const uploadId = createResult.UploadId;
@@ -220,8 +211,8 @@ async function transferToS3(
       Key: key,
       UploadId: uploadId,
       MultipartUpload: {
-        Parts: uploadedParts
-      }
+        Parts: uploadedParts,
+      },
     });
     await s3Client.send(completeMultipartUpload);
   } catch (e) {
@@ -233,7 +224,7 @@ async function transferToS3(
     const abortMultipartUpload = new AbortMultipartUploadCommand({
       Bucket: bucket,
       Key: key,
-      UploadId: uploadId
+      UploadId: uploadId,
     });
     await s3Client.send(abortMultipartUpload);
     throw e;
@@ -242,7 +233,7 @@ async function transferToS3(
   return {
     resourceType,
     url: stagingUrl,
-    changed: true
+    changed: true,
   };
 }
 
@@ -254,7 +245,7 @@ async function checkFileExistsInS3(
   // We use a head command to check for the existence of the file on S3.
   const head = new HeadObjectCommand({
     Bucket: bucket,
-    Key: key
+    Key: key,
   });
   return s3Client.send(head);
 }
@@ -267,7 +258,7 @@ async function* downloadFiles(
   let downloadedFiles: string[] = [],
     currentFile = tempFile();
   if (!currentFile) {
-    throw "Problem creating temp file";
+    throw new Error("Problem creating temp file");
   }
 
   try {
@@ -281,16 +272,18 @@ async function* downloadFiles(
       // source files from the FHIR server.
       const writeStream = createWriteStream(currentFile, { flags: "a" });
       console.info("[%s] Downloading %s => %s", resourceType, url, currentFile);
-      const response = await client.get<undefined,
-        AxiosResponse<ReadableStream>>(url, {
+      const response = await client.get<
+        undefined,
+        AxiosResponse<ReadableStream>
+      >(url, {
         headers: {
-          Accept: FHIR_NDJSON_CONTENT_TYPE
+          Accept: FHIR_NDJSON_CONTENT_TYPE,
         },
-        responseType: "stream"
+        responseType: "stream",
       });
       response.data.pipe(writeStream);
 
-      const completedFile = await new Promise<string | null>((resolve) => {
+      const completedFile = await new Promise<string | undefined>((resolve) => {
         response.data.on("end", async () => {
           // Check the size of the current temporary file.
           let stats: Stats;
@@ -301,10 +294,10 @@ async function* downloadFiles(
               resolve(currentFile);
               currentFile = tempFile();
             }
-            resolve(null);
+            resolve(undefined);
           } catch (e) {
             // This can happen if nothing has been written to the file.
-            resolve(null);
+            resolve(undefined);
           }
         });
       });
@@ -355,7 +348,7 @@ async function uploadFile(
       Key: key,
       PartNumber: partNumber,
       UploadId: uploadId,
-      Body: readStream
+      Body: readStream,
     });
 
     const uploadResponse = await s3Client.send(uploadPart);
@@ -381,19 +374,21 @@ async function uploadFile(
 }
 
 function s3ResultLocationsToParameters(
-  locations: S3ResultLocation[]
+  locations: S3ResultLocation[],
+  importMode: ImportMode
 ): Parameters {
   return {
     resourceType: "Parameters",
     parameter: locations
-    .filter((location) => location.changed)
-    .map((location) => ({
-      name: "source",
-      part: [
-        { name: "resourceType", valueCode: location.resourceType },
-        { name: "url", valueUrl: location.url }
-      ]
-    }))
+      .filter((location) => location.changed)
+      .map((location) => ({
+        name: "source",
+        part: [
+          { name: "resourceType", valueCode: location.resourceType },
+          { name: "url", valueUrl: location.url },
+          { name: "mode", valueCode: importMode },
+        ],
+      })),
   };
 }
 
@@ -403,7 +398,14 @@ function urlFromBucketAndKey(bucket: string, key: string) {
 
 function tempFile() {
   if (!path.join) {
-    throw "path.join not available";
+    throw new Error("path.join not available");
   }
   return path.join(tempDirectory, uuidv4());
+}
+
+function validateImportMode(value: string): ImportMode {
+  if (value === "overwrite" || value === "merge") {
+    return value;
+  }
+  throw `Invalid import mode: ${value}`;
 }

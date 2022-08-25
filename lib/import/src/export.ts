@@ -9,20 +9,19 @@
  */
 
 import {
-  buildAuthenticatedClient,
+  buildClient,
   FHIR_JSON_CONTENT_TYPE,
   FHIR_NDJSON_CONTENT_TYPE,
-  getStatusUrl
+  getStatusUrl,
+  MaybeAuthenticated,
+  validateAsyncResponse,
 } from "./common.js";
 
-export interface ExportParams {
+export type ExportParams = {
   endpoint: string;
   resourceTypes?: string;
-  since?: string;
-  clientId: string;
-  clientSecret: string;
-  scopes: string;
-}
+  since: string;
+} & MaybeAuthenticated;
 
 export type ExportResult = string;
 
@@ -41,40 +40,30 @@ export interface FhirBulkOutput {
  * @return the job status endpoint
  * @see https://hl7.org/fhir/uv/bulkdata/export/index.html#endpoint---system-level-export
  */
-export async function fhirBulkExport({
-  endpoint,
-  resourceTypes,
-  since,
-  clientId,
-  clientSecret,
-  scopes
-}: ExportParams): Promise<ExportResult> {
-  const client = await buildAuthenticatedClient(
-    endpoint,
-    clientId,
-    clientSecret,
-    scopes
-  );
+export async function fhirBulkExport(
+  options: ExportParams
+): Promise<ExportResult> {
+  const { resourceTypes, since } = options;
+  const client = await buildClient({
+    ...options,
+    validator: validateAsyncResponse,
+  });
 
   let params = {
     _outputFormat: FHIR_NDJSON_CONTENT_TYPE,
     _since: since,
-    _type: resourceTypes
+    _type: resourceTypes,
   };
   console.info("Initiating export request: %j", params);
   const response = await client.get<FhirBulkResult>("/$export", {
     headers: {
       Accept: FHIR_JSON_CONTENT_TYPE,
-      Prefer: "respond-async"
+      Prefer: "respond-async",
     },
-    params: params
+    params: params,
   });
 
-  if (response.status !== 202) {
-    throw "Response from FHIR bulk export request was not 202 Accepted";
-  }
   const statusUrl = getStatusUrl(response);
   console.info("Export operation returned status URL: %s", statusUrl);
-
   return statusUrl;
 }

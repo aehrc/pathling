@@ -10,6 +10,7 @@
 
 import * as fs from "fs";
 import pRetry, { FailedAttemptError } from "p-retry";
+import { JobInProgressError } from "./checkStatus.js";
 import {
   checkExportConfigured,
   checkImportStatusConfigured,
@@ -19,7 +20,7 @@ import {
   FileConfig,
   pathlingImportConfigured,
   RetryConfigType,
-  transferToS3Configured
+  transferToS3Configured,
 } from "./config.js";
 import { initializeSentry } from "./sentry.js";
 
@@ -38,12 +39,12 @@ try {
 }
 initializeSentry(config);
 
-async function run() {
-  function retry(
+async function run(): Promise<void> {
+  function retry<ResultType>(
     type: RetryConfigType,
     message: string,
-    promise: () => Promise<any>
-  ) {
+    promise: () => Promise<ResultType>
+  ): Promise<ResultType> {
     const retryConfig = config.getRetryConfig(type);
 
     return pRetry(
@@ -55,13 +56,18 @@ async function run() {
         retries: retryConfig.times,
         minTimeout: retryConfig.wait * 1000,
         factor: retryConfig.backOff,
-        onFailedAttempt: (error: FailedAttemptError) =>
-          console.info(
-            "Attempt #%d not complete, %d retries left - %s",
-            error.attemptNumber,
-            error.retriesLeft,
-            error.message
-          )
+        onFailedAttempt: (error: FailedAttemptError) => {
+          if (error instanceof JobInProgressError) {
+            console.info(
+              "Attempt #%d not complete, %d retries left - %s",
+              error.attemptNumber,
+              error.retriesLeft,
+              error.message
+            );
+          } else {
+            throw error;
+          }
+        },
       }
     );
   }
@@ -70,7 +76,7 @@ async function run() {
   const exportStatusResult = await retry(
     "export",
     "Checking export status",
-    () => checkExportConfigured(config, { statusUrl: kickoffResult })
+    async () => checkExportConfigured(config, { statusUrl: kickoffResult })
   );
   const transferToS3Result = await retry(
     "transfer",
@@ -78,7 +84,7 @@ async function run() {
     () => transferToS3Configured(config, { result: exportStatusResult })
   );
   const importResult = await pathlingImportConfigured(config, {
-    parameters: transferToS3Result
+    parameters: transferToS3Result,
   });
   if (!importResult) {
     // This means that there was nothing to import, and we can skip the import status checking.
