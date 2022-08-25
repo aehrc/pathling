@@ -9,21 +9,21 @@
  */
 
 import { AxiosResponse } from "axios";
-import { buildAuthenticatedClient, FHIR_JSON_CONTENT_TYPE } from "./common.js";
+import {
+  buildClient,
+  FHIR_JSON_CONTENT_TYPE,
+  MaybeAuthenticated,
+  MaybeValidated,
+} from "./common.js";
+import { FhirBulkResult } from "./export.js";
 
-export interface CheckImportJobStatusParams {
+export type CheckJobStatusParams = {
   endpoint: string;
-  clientId: string;
-  clientSecret: string;
-  scopes?: string;
   statusUrl: string;
-}
+  authenticationEnabled: boolean;
+} & MaybeAuthenticated;
 
-export interface CheckExportJobStatusParams extends CheckImportJobStatusParams {
-  scopes: string;
-}
-
-export type CheckStatusResult = object;
+export type ImportStatusResult = unknown;
 
 /**
  * Checks the status of a FHIR async job.
@@ -32,36 +32,53 @@ export type CheckStatusResult = object;
  * @throws a "Job in progress" error if the job is still running
  * @see https://hl7.org/fhir/uv/bulkdata/export/index.html#endpoint---system-level-export
  */
-export async function checkExportJobStatus({
-  endpoint,
-  clientId,
-  clientSecret,
-  scopes,
-  statusUrl
-}: CheckExportJobStatusParams): Promise<CheckStatusResult> {
-  const client = await buildAuthenticatedClient(
-    endpoint,
-    clientId,
-    clientSecret,
-    scopes
-  );
+export async function checkJobStatus<
+  UnvalidatedType = unknown,
+  ResultType = unknown
+>(
+  options: CheckJobStatusParams & MaybeValidated<UnvalidatedType, ResultType>
+): Promise<ResultType> {
+  const { statusUrl } = options,
+    client = await buildClient<UnvalidatedType, ResultType>(options);
 
-  const response = await client.get<undefined, AxiosResponse<object>>(
-    statusUrl,
-    {
-      headers: { Accept: FHIR_JSON_CONTENT_TYPE }
-    }
-  );
+  const response = await client.get<ResultType>(statusUrl, {
+    headers: { Accept: FHIR_JSON_CONTENT_TYPE },
+  });
 
   if (response.status === 200) {
+    console.debug(response.data);
     return response.data;
   } else if (response.status === 202) {
     const progress = response.headers["x-progress"];
     const message = progress ? progress : "(no progress message)";
     throw new JobInProgressError(`Job in progress: ${message}`);
   } else {
-    throw `Unexpected status: ${response.status} ${response.statusText}`;
+    throw new Error(
+      `Unexpected status: ${response.status} ${response.statusText}`
+    );
   }
+}
+
+export async function checkExportJobStatus(
+  options: CheckJobStatusParams
+): Promise<FhirBulkResult> {
+  return checkJobStatus<Partial<FhirBulkResult>, FhirBulkResult>({
+    ...options,
+    validator: validateExportResponse,
+  });
+}
+
+function validateExportResponse(
+  response: AxiosResponse<Partial<FhirBulkResult>>
+): AxiosResponse<FhirBulkResult> {
+  if (
+    response.status === 200 &&
+    (!response.data.output || !Array.isArray(response.data.output))
+  ) {
+    console.log(response.data);
+    throw new Error("FHIR bulk export did not contain outputs");
+  }
+  return response as AxiosResponse<FhirBulkResult>;
 }
 
 /**
@@ -72,15 +89,30 @@ export async function checkExportJobStatus({
  * @see https://hl7.org/fhir/uv/bulkdata/export/index.html#endpoint---system-level-export
  */
 export async function checkImportJobStatus(
-  params: CheckImportJobStatusParams
-): Promise<object> {
-  return checkExportJobStatus({
-    ...params,
-    scopes: params.scopes ?? "user/*.write"
-  });
+  options: CheckJobStatusParams
+): Promise<ImportStatusResult> {
+  const { endpoint, statusUrl, authenticationEnabled } = options;
+  let checkStatusOptions: CheckJobStatusParams = {
+    endpoint,
+    statusUrl,
+    authenticationEnabled: false,
+  };
+
+  if (authenticationEnabled) {
+    const { clientId, clientSecret, scopes } = options;
+    checkStatusOptions = {
+      ...checkStatusOptions,
+      authenticationEnabled: true,
+      clientId,
+      clientSecret,
+      scopes: scopes ?? "user/*.write",
+    };
+  }
+
+  return checkJobStatus(checkStatusOptions);
 }
 
-class JobInProgressError extends Error {
+export class JobInProgressError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "JobInProgressError";

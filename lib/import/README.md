@@ -25,9 +25,12 @@ Kicks off a bulk export operation at a FHIR endpoint.
   will be requested.
 - `SINCE`: A [FHIR instant](https://hl7.org/fhir/R4/datatypes.html#instant) 
   formatted time used to filter the results based on their last updated time.
+- `SOURCE_AUTHENTICATION_ENABLED`: If this is set to `true`, the client 
+  credentials grant will be used to pass an access token along with the request.
 - `SOURCE_CLIENT_ID`, `SOURCE_CLIENT_SECRET`: Client credentials for the source 
-  token grant.
-- `SOURCE_SCOPES`: Scopes to request as part of the source token grant.
+  token grant. Required if `SOURCE_AUTHENTICATION_ENABLED` is `true`.
+- `SOURCE_SCOPES`: Scopes to request as part of the source token grant. Required 
+  if `SOURCE_AUTHENTICATION_ENABLED` is `true`.
 
 ### checkExportStatus
 

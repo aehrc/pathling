@@ -10,35 +10,31 @@
 
 import { OperationOutcome, Parameters } from "fhir/r4";
 import {
-  buildAuthenticatedClient,
+  buildClient,
   FHIR_JSON_CONTENT_TYPE,
-  getStatusUrl
+  getStatusUrl,
+  MaybeAuthenticated,
+  validateAsyncResponse,
 } from "./common.js";
 
-export interface ImportParams {
+export type ImportParams = {
   endpoint: string;
-  clientId: string;
-  clientSecret: string;
-  scopes?: string;
   parameters: Parameters;
-}
+} & MaybeAuthenticated;
 
 export type ImportResult = string | null;
 
 /**
  * Imports a set of files from S3 into Pathling.
  *
- * @return either a job status URL or the {@link OperationOutcome} resulting from the operation,
- *   depending on whether async processing is enabled on the Pathling instance
+ * @return either a job status URL or `null`, which indicates that there was
+ * nothing to import
  * @see https://pathling.csiro.au/docs/import.html
  */
-export async function importFromParameters({
-  endpoint,
-  clientId,
-  clientSecret,
-  scopes,
-  parameters
-}: ImportParams): Promise<ImportResult> {
+export async function importFromParameters(
+  options: ImportParams
+): Promise<ImportResult> {
+  const { parameters } = options;
   if (
     parameters.parameter &&
     parameters.parameter.filter((p) => p.name === "source").length < 1
@@ -46,28 +42,21 @@ export async function importFromParameters({
     console.info("Nothing to import");
     return null;
   }
-
-  const client = await buildAuthenticatedClient(
-    endpoint,
-    clientId,
-    clientSecret,
-    scopes ?? "user/*.write"
-  );
+  const client = await buildClient({
+    ...options,
+    validator: validateAsyncResponse,
+  });
 
   console.info("Initiating import request: %j", parameters);
   const response = await client.post<OperationOutcome>("$import", parameters, {
     headers: {
       Accept: FHIR_JSON_CONTENT_TYPE,
       "Content-Type": FHIR_JSON_CONTENT_TYPE,
-      Prefer: "respond-async"
-    }
+      Prefer: "respond-async",
+    },
   });
 
-  if (response.status === 202) {
-    const statusUrl = getStatusUrl(response);
-    console.info("Import operation returned status URL: %s", statusUrl);
-    return statusUrl;
-  } else {
-    throw `Unexpected status: ${response.status} ${response.statusText}`;
-  }
+  const statusUrl = getStatusUrl(response);
+  console.info("Import operation returned status URL: %s", statusUrl);
+  return statusUrl;
 }
