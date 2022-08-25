@@ -16,7 +16,7 @@ import {
   HeadObjectCommand,
   HeadObjectCommandOutput,
   S3Client,
-  UploadPartCommand
+  UploadPartCommand,
 } from "@aws-sdk/client-s3";
 import { AxiosInstance, AxiosResponse } from "axios";
 import { createHash } from "crypto";
@@ -29,7 +29,7 @@ import { URL } from "url";
 import { v4 as uuidv4 } from "uuid";
 import {
   buildAuthenticatedClient,
-  FHIR_NDJSON_CONTENT_TYPE
+  FHIR_NDJSON_CONTENT_TYPE,
 } from "./common.js";
 import { FhirBulkOutput } from "./export.js";
 import ReadableStream = NodeJS.ReadableStream;
@@ -41,6 +41,7 @@ export interface TransferParams {
   scopes: string;
   result: FhirBulkResult;
   stagingUrl: string;
+  importMode?: string;
 }
 
 export type TransferResult = Parameters;
@@ -48,6 +49,8 @@ export type TransferResult = Parameters;
 export interface FhirBulkResult {
   output: FhirBulkOutput[];
 }
+
+export type ImportMode = "overwrite" | "merge";
 
 interface S3UploadJob {
   urls: string[];
@@ -73,7 +76,8 @@ export async function transferExportToS3({
   clientSecret,
   scopes,
   result,
-  stagingUrl
+  stagingUrl,
+  importMode = "merge"
 }: TransferParams): Promise<TransferResult> {
   const client = await buildAuthenticatedClient(
     endpoint,
@@ -123,7 +127,7 @@ export async function transferExportToS3({
       );
     })
   );
-  return s3ResultLocationsToParameters(s3ResultLocations);
+  return s3ResultLocationsToParameters(s3ResultLocations, validateImportMode(importMode));
 }
 
 async function conditionallyTransferToS3(
@@ -381,19 +385,21 @@ async function uploadFile(
 }
 
 function s3ResultLocationsToParameters(
-  locations: S3ResultLocation[]
+  locations: S3ResultLocation[],
+  importMode: ImportMode
 ): Parameters {
   return {
     resourceType: "Parameters",
     parameter: locations
-    .filter((location) => location.changed)
-    .map((location) => ({
-      name: "source",
-      part: [
-        { name: "resourceType", valueCode: location.resourceType },
-        { name: "url", valueUrl: location.url }
-      ]
-    }))
+      .filter((location) => location.changed)
+      .map((location) => ({
+        name: "source",
+        part: [
+          { name: "resourceType", valueCode: location.resourceType },
+          { name: "url", valueUrl: location.url },
+          { name: "mode", "valueCode": importMode }
+        ],
+      })),
   };
 }
 
@@ -406,4 +412,11 @@ function tempFile() {
     throw "path.join not available";
   }
   return path.join(tempDirectory, uuidv4());
+}
+
+function validateImportMode(value: string): ImportMode {
+  if (value === "overwrite" || value === "merge") {
+    return value;
+  }
+  throw `Invalid import mode: ${value}`;
 }

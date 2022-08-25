@@ -15,7 +15,7 @@ import { fhirBulkExport, FhirBulkResult } from "./export.js";
 import {
   CheckStatusHandlerOutput,
   ExportHandlerOutput,
-  ImportHandlerInput
+  ImportHandlerInput,
 } from "./handlers";
 import { importFromParameters } from "./import.js";
 import { transferExportToS3 } from "./transferToS3.js";
@@ -70,7 +70,8 @@ export const transferToS3Configured = (
     clientSecret: config.getStringValue("SOURCE_CLIENT_SECRET"),
     scopes: config.getStringValue("SOURCE_SCOPES"),
     result: event.result as FhirBulkResult,
-    stagingUrl: config.getStringValue("STAGING_URL")
+    stagingUrl: config.getStringValue("STAGING_URL"),
+    importMode: config.getStringValue("IMPORT_MODE", true)
   });
 
 export const pathlingImportConfigured = (
