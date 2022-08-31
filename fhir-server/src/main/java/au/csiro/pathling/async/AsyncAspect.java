@@ -9,11 +9,15 @@ package au.csiro.pathling.async;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.fhir.DiagnosticContext;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.ITransaction;
 import io.sentry.Sentry;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Future;
@@ -21,6 +25,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import io.sentry.protocol.Request;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -105,22 +110,25 @@ public class AsyncAspect {
     final RequestDetails requestDetails = getRequestDetails(args);
     final HttpServletResponse response = getResponse(args);
     final String requestId = requestDetails.getRequestId();
-    final ITransaction transaction = Sentry.startTransaction(requestId, "async");
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    // store the diagnostic context form the current Sentry scope
+    final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
     checkNotNull(requestId);
     final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
     final Future<IBaseResource> result = executor.submit(() -> {
       try {
-        MDC.put("requestId", requestId);
-        Sentry.startTransaction(requestId, "async");
+        diagnosticContext.configureScope(true);
         SecurityContextHolder.getContext().setAuthentication(authentication);
         spark.sparkContext().setJobGroup(requestId, requestId, true);
         return (IBaseResource) joinPoint.proceed(args);
       } catch (final Throwable e) {
+        // NOTE: Here we should do the actual error handling and logging for the failed jobs
+        // Not where the future is interrogated
+        log.error("Asynchronous execution failed", e);
+        Sentry.captureException(e);
         throw new RuntimeException("Problem processing request asynchronously", e);
       } finally {
         cleanUpAfterJob(spark, requestId);
-        transaction.finish();
       }
     });
     final Optional<String> ownerId = getCurrentUserId(authentication);
@@ -156,6 +164,7 @@ public class AsyncAspect {
             "Method annotated with @AsyncSupported must include a HttpServletResponse parameter"));
   }
 
+
   private void cleanUpAfterJob(@Nonnull final SparkSession spark, @Nonnull final String requestId) {
     spark.sparkContext().clearJobGroup();
     // Clean up the stage mappings.
@@ -179,5 +188,4 @@ public class AsyncAspect {
     opOutcome.addIssue(issue);
     return opOutcome;
   }
-
 }

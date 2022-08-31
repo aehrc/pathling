@@ -37,14 +37,7 @@ import org.springframework.stereotype.Component;
 @Interceptor
 @Slf4j
 public class ErrorReportingInterceptor {
-
-  @Nonnull
-  private final IParser jsonParser;
-
-  private ErrorReportingInterceptor(@Nonnull final FhirContext fhirContext) {
-    jsonParser = fhirContext.newJsonParser();
-  }
-
+  
   /**
    * HAPI hook to intercept errors and report them to Sentry.
    *
@@ -67,40 +60,8 @@ public class ErrorReportingInterceptor {
       final Throwable reportableError = exception.getCause() == null
                                         ? exception
                                         : exception.getCause();
-      if (servletRequestDetails != null && request != null) {
-        final SentryEvent event = new SentryEvent(reportableError);
-        event.setRequest(buildSentryRequest(servletRequestDetails, request));
-        Sentry.captureEvent(event);
-      } else {
-        log.warn("Failed to capture HTTP request details for error");
-        Sentry.captureException(reportableError);
-      }
+      Sentry.captureException(reportableError);
     }
-  }
-
-  @Nonnull
-  private Request buildSentryRequest(@Nonnull final ServletRequestDetails servletRequestDetails,
-      @Nonnull final HttpServletRequest request) {
-    final Request sentryRequest = new Request();
-
-    // Harvest details out of the servlet request, and the HAPI request object. The reason we need 
-    // to do this is that unfortunately HAPI clears the body of the request out of the
-    // HttpServletRequest object, so we need to use the more verbose constructor. The other reason
-    // is that we want to omit any identifying details of users, such as remoteAddr, for privacy
-    // purposes.
-    sentryRequest.setUrl(servletRequestDetails.getCompleteUrl());
-    sentryRequest.setMethod(request.getMethod());
-    sentryRequest.setQueryString(request.getQueryString());
-    final Map<String, String> sentryHeaders = new HashMap<>();
-    for (final String key : servletRequestDetails.getHeaders().keySet()) {
-      sentryHeaders.put(key, String.join(",", servletRequestDetails.getHeaders().get(key)));
-    }
-    sentryRequest.setHeaders(sentryHeaders);
-    if (servletRequestDetails.getResource() != null) {
-      sentryRequest.setData(jsonParser.encodeResourceToString(servletRequestDetails.getResource()));
-    }
-
-    return sentryRequest;
   }
 
 }

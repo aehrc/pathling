@@ -78,7 +78,7 @@ public class FhirServer extends RestfulServer {
   private final ResultProvider resultProvider;
 
   @Nonnull
-  private final RequestIdInterceptor requestIdInterceptor;
+  private final DiagnosticContextInterceptor diagnosticContextInterceptor;
 
   @Nonnull
   private final ErrorReportingInterceptor errorReportingInterceptor;
@@ -104,7 +104,7 @@ public class FhirServer extends RestfulServer {
    * @param importProvider a {@link ImportProvider} for receiving requests to the import operation
    * @param jobProvider a {@link JobProvider} for checking on the status of jobs
    * @param resultProvider {@link ResultProvider} for retrieving the result of extract requests
-   * @param requestIdInterceptor a {@link RequestIdInterceptor} for adding request IDs to logging
+   * @param diagnosticContextInterceptor a {@link DiagnosticContextInterceptor} for adding request IDs to logging
    * @param errorReportingInterceptor a {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
    * @param entityTagInterceptor a {@link EntityTagInterceptor} validating and returning ETags
@@ -119,7 +119,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ImportProvider importProvider,
       @Nonnull final Optional<JobProvider> jobProvider,
       @Nonnull final ResultProvider resultProvider,
-      @Nonnull final RequestIdInterceptor requestIdInterceptor,
+      @Nonnull final DiagnosticContextInterceptor diagnosticContextInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
@@ -131,7 +131,7 @@ public class FhirServer extends RestfulServer {
     this.importProvider = importProvider;
     this.jobProvider = jobProvider;
     this.resultProvider = resultProvider;
-    this.requestIdInterceptor = requestIdInterceptor;
+    this.diagnosticContextInterceptor = diagnosticContextInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
     this.conformanceProvider = conformanceProvider;
@@ -261,7 +261,7 @@ public class FhirServer extends RestfulServer {
 
   private void configureRequestLogging() {
     // Add the request ID to the logging context before each request.
-    registerInterceptor(requestIdInterceptor);
+    registerInterceptor(diagnosticContextInterceptor);
 
     // Create a dedicated logger, so that we can control it independently through logging
     // configuration.
