@@ -39,4 +39,5 @@ CVE-2022-2509
 # interfaces to our application.
 CVE-2021-46828
 
-
+# TODO: Review the impact of this vulnerability before merging as it affects widely used zlib.
+CVE-2022-37434
