@@ -314,6 +314,7 @@
                 <spark.logConf>true</spark.logConf>
                 <pathling.storage.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -331,6 +332,7 @@
                   file://${project.basedir}/src/test/resources/test-data
                 </pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
