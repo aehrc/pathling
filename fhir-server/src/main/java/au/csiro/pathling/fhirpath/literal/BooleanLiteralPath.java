@@ -65,7 +65,7 @@ public class BooleanLiteralPath extends LiteralPath<BooleanType> implements
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   @Override

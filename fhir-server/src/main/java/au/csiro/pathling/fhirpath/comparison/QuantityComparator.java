@@ -1,0 +1,79 @@
+/*
+ * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
+ * Software Licence Agreement.
+ */
+
+package au.csiro.pathling.fhirpath.comparison;
+
+import au.csiro.pathling.fhirpath.Comparable.Comparator;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import org.apache.spark.sql.Column;
+import javax.annotation.Nonnull;
+import java.util.function.BiFunction;
+
+import static au.csiro.pathling.fhirpath.Comparable.STD_COMPARATOR;
+import static org.apache.spark.sql.functions.when;
+
+/**
+ * Implementation of comparator for the Quantity type. It uses canonicalized values and units for
+ * comparison rather than the original values.
+ */
+public class QuantityComparator implements Comparator {
+
+  public final static QuantityComparator INSTANCE = new QuantityComparator(STD_COMPARATOR);
+
+  private final Comparator defaultComparator;
+
+  public QuantityComparator(final Comparator defaultComparator) {
+    this.defaultComparator = defaultComparator;
+  }
+
+  private static BiFunction<Column, Column, Column> wrap(
+      @Nonnull final BiFunction<Column, Column, Column> function) {
+
+    return (left, right) -> {
+      final Column sourceCode = left.getField(
+          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
+      final Column targetCode = right.getField(
+          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
+      final Column sourceValue = left.getField(
+          QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
+      final Column targetValue = right.getField(
+          QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
+      return when(sourceCode.equalTo(targetCode),
+          function.apply(sourceValue, targetValue)).otherwise(
+          null);
+    };
+  }
+
+  @Override
+  public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
+    return wrap(defaultComparator::equalsTo).apply(left, right);
+  }
+
+  @Override
+  public Column notEqual(@Nonnull final Column left, @Nonnull final Column right) {
+    return wrap(defaultComparator::notEqual).apply(left, right);
+  }
+
+  @Override
+  public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
+    return wrap(defaultComparator::lessThan).apply(left, right);
+  }
+
+  @Override
+  public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
+    return wrap(defaultComparator::lessThanOrEqual).apply(left, right);
+  }
+
+  @Override
+  public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
+    return wrap(defaultComparator::greaterThan).apply(left, right);
+  }
+
+  @Override
+  public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
+    return wrap(defaultComparator::greaterThanOrEqual).apply(left, right);
+  }
+}

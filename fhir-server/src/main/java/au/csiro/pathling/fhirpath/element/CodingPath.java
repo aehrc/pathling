@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.comparison.CodingComparator;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.terminology.CodingToLiteral;
@@ -37,10 +38,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class CodingPath extends ElementPath implements Materializable<Coding>, Comparable {
-
-  private static final List<String> EQUALITY_COLUMNS = Arrays
-      .asList("system", "code", "version", "display", "userSelected");
-
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(CodingPath.class, CodingLiteralPath.class, NullLiteralPath.class);
@@ -92,6 +89,11 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
     return Optional.of(coding);
   }
 
+  @Nonnull
+  public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
+    return COMPARABLE_TYPES;
+  }
+
   /**
    * Builds a comparison function for Coding paths.
    *
@@ -103,35 +105,7 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   @Nonnull
   public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
       @Nonnull final ComparisonOperation operation) {
-    if (ComparisonOperation.EQUALS.equals(operation)) {
-      return Comparable.buildComparison(source, codingEqual());
-    } else if (ComparisonOperation.NOT_EQUALS.equals(operation)) {
-      return Comparable.buildComparison(source, codingNotEqual());
-    } else {
-      throw new InvalidUserInputError(
-          "Coding type does not support comparison operator: " + operation);
-    }
-  }
-
-  @Nonnull
-  private static BiFunction<Column, Column, Column> codingEqual() {
-    //noinspection OptionalGetWithoutIsPresent
-    return (l, r) ->
-        functions.when(l.isNull().or(r.isNull()), lit(null))
-            .otherwise(
-                EQUALITY_COLUMNS.stream()
-                    .map(f -> l.getField(f).eqNullSafe(r.getField(f))).reduce(Column::and).get()
-            );
-  }
-
-  @Nonnull
-  private static BiFunction<Column, Column, Column> codingNotEqual() {
-    return codingEqual().andThen(functions::not);
-  }
-
-  @Nonnull
-  public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
-    return COMPARABLE_TYPES;
+    return Comparable.buildComparison(source, operation, CodingComparator.INSTANCE);
   }
 
   @Override

@@ -106,7 +106,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   @Override

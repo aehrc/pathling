@@ -91,7 +91,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   public static org.apache.spark.sql.types.DecimalType getDecimalType() {

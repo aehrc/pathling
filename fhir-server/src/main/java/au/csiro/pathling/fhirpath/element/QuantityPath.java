@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
@@ -47,28 +48,15 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
   }
 
   @Nonnull
-  @Override
-  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return buildComparison(this, operation);
+  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+      @Nonnull final ComparisonOperation operation) {
+    return Comparable.buildComparison(source, operation, QuantityComparator.INSTANCE);
   }
 
   @Nonnull
-  public static Function<Comparable, Column> buildComparison(@Nonnull final FhirPath source,
-      @Nonnull final ComparisonOperation operation) {
-    return target -> {
-      final Column comparableSource = source.getValueColumn();
-      final Column comparableTarget = target.getValueColumn();
-      final Column sourceCode = comparableSource.getField(
-          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
-      final Column targetCode = comparableTarget.getField(
-          QuantityEncoding.CANONICALIZED_CODE_COLUMN);
-      final Column sourceValue = comparableSource.getField(
-          QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
-      final Column targetValue = comparableTarget.getField(
-          QuantityEncoding.CANONICALIZED_VALUE_COLUMN);
-      final Column compareValues = operation.getSparkFunction().apply(sourceValue, targetValue);
-      return when(sourceCode.equalTo(targetCode), compareValues).otherwise(null);
-    };
+  @Override
+  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
+    return buildComparison(this, operation);
   }
 
   @Override
