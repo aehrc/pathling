@@ -21,7 +21,7 @@ import org.apache.spark.sql.types.{DataTypes, Decimal, ObjectType, StructField}
 import org.apache.spark.unsafe.types.UTF8String
 
 /**
- * Helper class for serialization of Quantities. In order to improve the performance of 
+ * Helper class for serialization of Quantities. In order to improve the performance of
  * comparisons we store with each quantity canonicalized value (its value in the base unit of the quantity)
  * and the base (canonicalized) unit code.
  */
