@@ -14,6 +14,7 @@
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
+import au.csiro.pathling.encoders.QuantitySupport.{CODE_CANONICALIZED_FIELD_NAME, VALUE_CANONICALIZED_FIELD_NAME}
 import au.csiro.pathling.encoders.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
 import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
 import au.csiro.pathling.encoders.terminology.ucum.Ucum
@@ -107,33 +108,18 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression,
       expression :: Nil)) :: maybeExtensionValueField
   }
 
-  override def proceedCompositeChildren(value: CompositeCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
-
+  private def createSyntheticSerializers(value: CompositeCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
     value.compositeDefinition.getImplementingClass match {
-      case cls if classOf[Quantity].isAssignableFrom(cls) =>
-        val valueExp = Invoke(expression, "getValue", ObjectType(classOf[java.math.BigDecimal]))
-        val codeExp = Invoke(expression, "getCode", ObjectType(classOf[java.lang.String]))
-        // TODO: Maybe create specialized UCUM functions returning spark.Decimal and UTF8String
-        // TODO: Maybe move to overrideCompositeExpression() providing it with a callback to generate default fields on request (a lazy call to super)
-        val canonicalizedValue = StaticInvoke(classOf[Decimal],
-          DecimalCustomCoder.decimalType,
-          "apply",
-          StaticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]),
-            "getCanonicalValue", Seq(valueExp, codeExp)) :: Nil)
-        val canonicalizedCode =
-          StaticInvoke(
-            classOf[UTF8String],
-            DataTypes.StringType,
-            "fromString",
-            StaticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode",
-              Seq(valueExp, codeExp)) :: Nil)
-        super.proceedCompositeChildren(value) ++ Seq(
-          ("_value_canonicalized", canonicalizedValue),
-          ("_code_canonicalized", canonicalizedCode)
-        )
-      case _ => dataTypeMappings.overrideCompositeExpression(expression, value.compositeDefinition)
-        .getOrElse(super.proceedCompositeChildren(value))
+      case cls if classOf[Quantity].isAssignableFrom(cls) => QuantitySupport
+        .createExtraSerializers(expression)
+      case _ => Nil
     }
+  }
+
+  override def proceedCompositeChildren(value: CompositeCtx[Expression, (String, Expression)]): Seq[(String, Expression)] = {
+    dataTypeMappings.overrideCompositeExpression(expression, value.compositeDefinition)
+      .getOrElse(super.proceedCompositeChildren(value) ++ createSyntheticSerializers(value))
+
   }
 
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_],
