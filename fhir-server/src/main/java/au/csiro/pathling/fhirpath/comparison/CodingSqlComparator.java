@@ -7,27 +7,31 @@
 package au.csiro.pathling.fhirpath.comparison;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.Comparable.Comparator;
+import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
+import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 
 import static org.apache.spark.sql.functions.lit;
 
 /**
  * Implementation of comparator for Coding type.
  */
-public class CodingComparator implements Comparator {
+public class CodingSqlComparator implements SqlComparator {
 
   private static final List<String> EQUALITY_COLUMNS = Arrays
       .asList("system", "code", "version", "display", "userSelected");
 
-  public static final CodingComparator INSTANCE = new CodingComparator();
+  private static final CodingSqlComparator INSTANCE = new CodingSqlComparator();
 
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
+    //noinspection OptionalGetWithoutIsPresent
     return functions.when(left.isNull().or(right.isNull()), lit(null))
         .otherwise(
             EQUALITY_COLUMNS.stream()
@@ -46,5 +50,19 @@ public class CodingComparator implements Comparator {
   public Column greaterThan(final Column left, final Column right) {
     throw new InvalidUserInputError(
         "Coding type does not support comparison operator: " + "greaterThan");
+  }
+
+  /**
+   * Builds a comparison function for Coding paths.
+   *
+   * @param source The path to build the comparison function for
+   * @param operation The {@link au.csiro.pathling.fhirpath.Comparable.ComparisonOperation} type to
+   * build
+   * @return A new {@link Function}
+   */
+  @Nonnull
+  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+      @Nonnull final ComparisonOperation operation) {
+    return Comparable.buildComparison(source, operation, INSTANCE);
   }
 }

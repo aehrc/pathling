@@ -6,27 +6,31 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
-import au.csiro.pathling.fhirpath.Comparable.Comparator;
+import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
+import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import org.apache.spark.sql.Column;
 import javax.annotation.Nonnull;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
-import static au.csiro.pathling.fhirpath.Comparable.STD_COMPARATOR;
+import static au.csiro.pathling.fhirpath.Comparable.STD_SQL_COMPARATOR;
 import static org.apache.spark.sql.functions.when;
 
 /**
  * Implementation of comparator for the Quantity type. It uses canonicalized values and units for
  * comparison rather than the original values.
  */
-public class QuantityComparator implements Comparator {
+public class QuantitySqlComparator implements SqlComparator {
 
-  public final static QuantityComparator INSTANCE = new QuantityComparator(STD_COMPARATOR);
+  private final static QuantitySqlComparator INSTANCE = new QuantitySqlComparator(
+      STD_SQL_COMPARATOR);
 
-  private final Comparator defaultComparator;
+  private final SqlComparator defaultSqlComparator;
 
-  public QuantityComparator(final Comparator defaultComparator) {
-    this.defaultComparator = defaultComparator;
+  public QuantitySqlComparator(final SqlComparator defaultSqlComparator) {
+    this.defaultSqlComparator = defaultSqlComparator;
   }
 
   private static BiFunction<Column, Column, Column> wrap(
@@ -49,31 +53,44 @@ public class QuantityComparator implements Comparator {
 
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(defaultComparator::equalsTo).apply(left, right);
+    return wrap(defaultSqlComparator::equalsTo).apply(left, right);
   }
 
   @Override
   public Column notEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(defaultComparator::notEqual).apply(left, right);
+    return wrap(defaultSqlComparator::notEqual).apply(left, right);
   }
 
   @Override
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(defaultComparator::lessThan).apply(left, right);
+    return wrap(defaultSqlComparator::lessThan).apply(left, right);
   }
 
   @Override
   public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(defaultComparator::lessThanOrEqual).apply(left, right);
+    return wrap(defaultSqlComparator::lessThanOrEqual).apply(left, right);
   }
 
   @Override
   public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(defaultComparator::greaterThan).apply(left, right);
+    return wrap(defaultSqlComparator::greaterThan).apply(left, right);
   }
 
   @Override
   public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(defaultComparator::greaterThanOrEqual).apply(left, right);
+    return wrap(defaultSqlComparator::greaterThanOrEqual).apply(left, right);
+  }
+
+  /**
+   * Builds a comparison function for quantity like paths.
+   *
+   * @param source the path to build the comparison function for
+   * @param operation the {@link ComparisonOperation} that should be built
+   * @return a new {@link Function}
+   */
+  @Nonnull
+  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+      @Nonnull final ComparisonOperation operation) {
+    return Comparable.buildComparison(source, operation, INSTANCE);
   }
 }

@@ -15,6 +15,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.element.QuantityPath;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import com.google.common.collect.ImmutableMap;
@@ -193,7 +194,7 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   @Nonnull
   @Override
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return QuantityPath.buildComparison(this, operation);
+    return QuantitySqlComparator.buildComparison(this, operation);
   }
 
   @Override

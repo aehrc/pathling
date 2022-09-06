@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
+import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DateTimePath;
 import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
@@ -76,7 +77,7 @@ public class DateLiteralPath extends LiteralPath<DateType> implements Materializ
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return DateTimePath.buildComparison(this, operation);
+    return DateTimeSqlComparator.buildComparison(this, operation);
   }
 
   @Override

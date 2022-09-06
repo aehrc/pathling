@@ -12,6 +12,7 @@ import static org.apache.spark.sql.functions.struct;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -83,7 +84,7 @@ public class CodingLiteralPath extends LiteralPath<Coding> implements Materializ
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return CodingPath.buildComparison(this, operation);
+    return CodingSqlComparator.buildComparison(this, operation);
   }
 
   @Override

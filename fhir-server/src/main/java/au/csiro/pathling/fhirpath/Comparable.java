@@ -21,10 +21,10 @@ import org.apache.spark.sql.functions;
 public interface Comparable {
 
   /**
-   * The inteface that defines comparison operation on columns. The actual implemenation and the
+   * The interface that defines comparison operation on columns. The actual implementation and the
    * implemented operation depend on the type of value in the column.
    */
-  public interface Comparator {
+  interface SqlComparator {
 
     Column equalsTo(Column left, Column right);
 
@@ -48,7 +48,7 @@ public interface Comparable {
   /**
    * The implementation of comparator that use the standard Spark SQL operators.
    */
-  class StandardComparator implements Comparator {
+  class StandardSqlComparator implements SqlComparator {
 
     @Override
     public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
@@ -81,7 +81,7 @@ public interface Comparable {
     }
   }
 
-  Comparator STD_COMPARATOR = new StandardComparator();
+  SqlComparator STD_SQL_COMPARATOR = new StandardSqlComparator();
 
   /**
    * Get a function that can take two Comparable paths and return a {@link Column} that contains a
@@ -114,17 +114,17 @@ public interface Comparable {
    *
    * @param source The path to build the comparison function for
    * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
-   * @param comparator The {@link Comparator} to use
+   * @param sqlComparator The {@link SqlComparator} to use
    * @return A new {@link Function}
    */
   @Nonnull
   static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final ComparisonOperation operation, @Nonnull final Comparator comparator) {
+      @Nonnull final ComparisonOperation operation, @Nonnull final SqlComparator sqlComparator) {
 
-    final TriFunction<Comparator, Column, Column, Column> compFunction = operation.compFunction;
+    final TriFunction<SqlComparator, Column, Column, Column> compFunction = operation.compFunction;
 
     return target -> compFunction
-        .apply(comparator, source.getValueColumn(), target.getValueColumn());
+        .apply(sqlComparator, source.getValueColumn(), target.getValueColumn());
   }
 
   /**
@@ -138,7 +138,7 @@ public interface Comparable {
   static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
       @Nonnull final ComparisonOperation operation) {
 
-    return buildComparison(source, operation, STD_COMPARATOR);
+    return buildComparison(source, operation, STD_SQL_COMPARATOR);
   }
 
   /**
@@ -148,41 +148,41 @@ public interface Comparable {
     /**
      * The equals operation.
      */
-    EQUALS("=", Comparator::equalsTo),
+    EQUALS("=", SqlComparator::equalsTo),
 
     /**
      * The not equals operation.
      */
-    NOT_EQUALS("!=", Comparator::notEqual),
+    NOT_EQUALS("!=", SqlComparator::notEqual),
 
     /**
      * The less than or equal to operation.
      */
-    LESS_THAN_OR_EQUAL_TO("<=", Comparator::lessThanOrEqual),
+    LESS_THAN_OR_EQUAL_TO("<=", SqlComparator::lessThanOrEqual),
 
     /**
      * The less than operation.
      */
-    LESS_THAN("<", Comparator::lessThan),
+    LESS_THAN("<", SqlComparator::lessThan),
 
     /**
      * The greater than or equal to operation.
      */
-    GREATER_THAN_OR_EQUAL_TO(">=", Comparator::greaterThanOrEqual),
+    GREATER_THAN_OR_EQUAL_TO(">=", SqlComparator::greaterThanOrEqual),
 
     /**
      * The greater than operation.
      */
-    GREATER_THAN(">", Comparator::greaterThan);
+    GREATER_THAN(">", SqlComparator::greaterThan);
 
     @Nonnull
     private final String fhirPath;
 
     @Nonnull
-    private final TriFunction<Comparator, Column, Column, Column> compFunction;
+    private final TriFunction<SqlComparator, Column, Column, Column> compFunction;
 
     ComparisonOperation(@Nonnull final String fhirPath,
-        @Nonnull final TriFunction<Comparator, Column, Column, Column> compFunction) {
+        @Nonnull final TriFunction<SqlComparator, Column, Column, Column> compFunction) {
       this.fhirPath = fhirPath;
       this.compFunction = compFunction;
     }

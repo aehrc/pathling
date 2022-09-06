@@ -11,11 +11,10 @@ import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.comparison.QuantityComparator;
+import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
@@ -48,15 +47,9 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
   }
 
   @Nonnull
-  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(source, operation, QuantityComparator.INSTANCE);
-  }
-
-  @Nonnull
   @Override
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return buildComparison(this, operation);
+    return QuantitySqlComparator.buildComparison(this, operation);
   }
 
   @Override

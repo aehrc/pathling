@@ -7,28 +7,22 @@
 package au.csiro.pathling.fhirpath.element;
 
 import static org.apache.spark.sql.functions.callUDF;
-import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.comparison.CodingComparator;
+import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.terminology.CodingToLiteral;
 import com.google.common.collect.ImmutableSet;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -93,25 +87,11 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;
   }
-
-  /**
-   * Builds a comparison function for Coding paths.
-   *
-   * @param source The path to build the comparison function for
-   * @param operation The {@link au.csiro.pathling.fhirpath.Comparable.ComparisonOperation} type to
-   * build
-   * @return A new {@link Function}
-   */
-  @Nonnull
-  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(source, operation, CodingComparator.INSTANCE);
-  }
-
+  
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return buildComparison(this, operation);
+    return CodingSqlComparator.buildComparison(this, operation);
   }
 
   @Override
