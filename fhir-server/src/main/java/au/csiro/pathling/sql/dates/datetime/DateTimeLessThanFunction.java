@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("core")
+@Profile("core | unit-test")
 public class DateTimeLessThanFunction extends DateTimeComparisonFunction {
 
   private static final long serialVersionUID = -4688679934965980217L;

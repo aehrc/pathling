@@ -56,9 +56,9 @@ public class Spark {
   public static SparkSession build(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
       @Nonnull final Optional<SparkListener> sparkListener,
-      @Nonnull final List<SqlFunction1> sqlFunction1,
-      @Nonnull final List<SqlFunction2> sqlFunction2,
-      @Nonnull final List<SqlFunction3> sqlFunction3) {
+      @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
+      @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
+      @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3) {
     log.debug("Creating Spark session");
     resolveSparkConfiguration(environment);
 
@@ -69,13 +69,13 @@ public class Spark {
 
     // Configure user defined strategy and functions.
     SqlStrategy.setup(spark);
-    for (final SqlFunction1 function : sqlFunction1) {
+    for (final SqlFunction1<?, ?> function : sqlFunction1) {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
-    for (final SqlFunction2 function : sqlFunction2) {
+    for (final SqlFunction2<?, ?, ?> function : sqlFunction2) {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
-    for (final SqlFunction3 function : sqlFunction3) {
+    for (final SqlFunction3<?, ?, ?, ?> function : sqlFunction3) {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
 

@@ -23,7 +23,7 @@ import org.springframework.stereotype.Component;
  * @author John Grimes
  */
 @Component
-@Profile("core")
+@Profile("core | unit-test")
 public class CodingToLiteral implements SqlFunction1<Row, String> {
 
   /**

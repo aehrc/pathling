@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("core")
+@Profile("core | unit-test")
 public class DateAddDurationFunction extends DateArithmeticFunction {
 
   private static final long serialVersionUID = -5029179160644275584L;

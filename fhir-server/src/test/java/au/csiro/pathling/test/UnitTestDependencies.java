@@ -44,6 +44,7 @@ import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -60,17 +61,10 @@ class UnitTestDependencies {
   @Nonnull
   static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
+      @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
+      @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
+      @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
       @Nonnull final Optional<SparkListener> sparkListener) {
-    final List<SqlFunction1> sqlFunction1 = List.of(new CodingToLiteral());
-    final List<SqlFunction2> sqlFunction2 = List.of(new DateTimeAddDurationFunction(),
-        new DateTimeSubtractDurationFunction(), new DateAddDurationFunction(),
-        new DateSubtractDurationFunction(),
-        new DateTimeEqualsFunction(), new DateTimeGreaterThanFunction(),
-        new DateTimeGreaterThanOrEqualToFunction(), new DateTimeLessThanFunction(),
-        new DateTimeLessThanOrEqualToFunction(), new TimeEqualsFunction(),
-        new TimeGreaterThanFunction(), new TimeGreaterThanOrEqualToFunction(),
-        new TimeLessThanFunction(), new TimeLessThanOrEqualToFunction());
-    final List<SqlFunction3> sqlFunction3 = List.of(new TemporalDifferenceFunction());
     return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2,
         sqlFunction3);
   }

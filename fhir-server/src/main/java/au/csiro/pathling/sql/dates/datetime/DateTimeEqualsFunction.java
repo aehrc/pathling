@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("core")
+@Profile("core | unit-test")
 public class DateTimeEqualsFunction extends DateTimeComparisonFunction {
 
   private static final long serialVersionUID = -8717420985056046161L;

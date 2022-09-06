@@ -24,7 +24,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("core")
+@Profile("core | unit-test")
 public class TemporalDifferenceFunction implements SqlFunction3<String, String, String, Long> {
 
   private static final long serialVersionUID = -7306741471632636471L;
