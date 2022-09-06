@@ -11,6 +11,7 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -106,27 +107,7 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static StructType quantityStructType() {
-    final Metadata metadata = new MetadataBuilder().build();
-    final StructField id = new StructField("id", DataTypes.StringType, true, metadata);
-    final StructField value = new StructField("value", DataTypes.createDecimalType(
-        DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
-    final StructField valueScale = new StructField("value_scale", DataTypes.IntegerType, true,
-        metadata);
-    final StructField comparator = new StructField("comparator", DataTypes.StringType, true,
-        metadata);
-    final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
-    final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
-    final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
-    final StructField canonicalizedCode = new StructField("_code_canonicalized",
-        DataTypes.StringType, true, metadata);
-    final StructField canonicalizedValue = new StructField("_value_canonicalized",
-        DataTypes.createDecimalType(
-            DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
-    final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
-        metadata);
-    return new StructType(
-        new StructField[]{id, value, valueScale, comparator, unit, system, code, canonicalizedValue,
-            canonicalizedCode, fid});
+    return QuantityEncoding.dataType();
   }
 
   @Nonnull
