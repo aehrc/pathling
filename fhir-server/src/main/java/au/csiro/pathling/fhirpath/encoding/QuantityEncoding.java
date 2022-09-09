@@ -6,14 +6,20 @@
 
 package au.csiro.pathling.fhirpath.encoding;
 
+import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.struct;
+
+import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.MetadataBuilder;
@@ -24,8 +30,8 @@ import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 
 public class QuantityEncoding {
 
-  public static final String CANONICALIZED_VALUE_COLUMN = "_value_canonicalized";
-  public static final String CANONICALIZED_CODE_COLUMN = "_code_canonicalized";
+  public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME();
+  public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport.CODE_CANONICALIZED_FIELD_NAME();
 
   @Nullable
   public static Row encode(@Nullable final Quantity quantity) {
@@ -93,6 +99,33 @@ public class QuantityEncoding {
     return new StructType(
         new StructField[]{id, value, valueScale, comparator, unit, system, code, canonicalizedValue,
             canonicalizedCode, fid});
+  }
+  
+  @Nonnull
+  public static Column toStruct(
+      @Nonnull final Column id,
+      @Nonnull final Column value,
+      @Nonnull final Column value_scale,
+      @Nonnull final Column comparator,
+      @Nonnull final Column unit,
+      @Nonnull final Column system,
+      @Nonnull final Column code,
+      @Nonnull final Column canonicalizedValue,
+      @Nonnull final Column canonicalizedCode,
+      @Nonnull final Column _fid
+  ) {
+    return struct(
+        id.as("id"),
+        value.as("value"),
+        value_scale.as("value_scale"),
+        comparator.as("comparator"),
+        unit.as("unit"),
+        system.as("system"),
+        code.as("code"),
+        canonicalizedValue.as(CANONICALIZED_VALUE_COLUMN),
+        canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
+        _fid.as("_fid")
+    );
   }
 
 }

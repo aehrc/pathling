@@ -7,7 +7,6 @@
 package au.csiro.pathling.fhirpath.element;
 
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.Comparable;
@@ -90,17 +89,18 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
           QuantityEncoding.CANONICALIZED_CODE_COLUMN);
       final Column targetCanonicalizedCode = targetContext.getField(
           QuantityEncoding.CANONICALIZED_CODE_COLUMN);
-      final Column resultStruct = struct(
-          sourceContext.getField("id").as("id"),
-          resultColumn.as("value"),
-          lit(null).as("value_scale"),
-          sourceContext.getField("comparator").as("comparator"),
-          sourceCanonicalizedCode.as("unit"),
-          sourceContext.getField("system").as("system"),
-          sourceCanonicalizedCode.as("code"),
-          resultColumn.as(QuantityEncoding.CANONICALIZED_VALUE_COLUMN),
-          sourceCanonicalizedCode.as(QuantityEncoding.CANONICALIZED_CODE_COLUMN),
-          sourceContext.getField("_fid").as("_fid")
+      final Column resultStruct = QuantityEncoding.toStruct(
+          sourceContext.getField("id"),
+          resultColumn,
+          // TODO: Compute scale correctly depending on the operation
+          lit(null),
+          sourceContext.getField("comparator"),
+          sourceCanonicalizedCode,
+          sourceContext.getField("system"),
+          sourceCanonicalizedCode,
+          resultColumn,
+          sourceCanonicalizedCode,
+          sourceContext.getField("_fid")
       );
       final Column resultQuantityColumn =
           when(sourceCanonicalizedCode.equalTo(targetCanonicalizedCode), resultStruct)

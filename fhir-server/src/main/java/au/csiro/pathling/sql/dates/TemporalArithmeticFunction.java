@@ -6,10 +6,8 @@
 
 package au.csiro.pathling.sql.dates;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
+import au.csiro.pathling.fhirpath.UcumUtils;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import com.google.common.collect.ImmutableMap;
 import java.math.RoundingMode;
@@ -52,16 +50,9 @@ public abstract class TemporalArithmeticFunction<T extends BaseDateTimeType> imp
   @Nonnull
   private T performArithmetic(final @Nonnull T temporal, final @Nonnull Quantity calendarDuration,
       final boolean subtract) {
-    if (!calendarDuration.getSystem().equals(QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI)) {
-      throw new IllegalArgumentException("Calendar duration must have a system of "
-          + QuantityLiteralPath.FHIRPATH_CALENDAR_DURATION_URI);
-    }
     final int amountToAdd = calendarDuration.getValue().setScale(0, RoundingMode.HALF_UP)
         .intValue();
-    final Integer temporalUnit = TemporalArithmeticFunction.CALENDAR_DURATION_TO_UCUM.get(
-        calendarDuration.getCode());
-    checkUserInput(temporalUnit != null,
-        "Unsupported calendar duration unit: " + calendarDuration.getCode());
+    final int temporalUnit = UcumUtils.getTemporalUnit(calendarDuration);
 
     @SuppressWarnings("unchecked") final T result = (T) temporal.copy();
     result.add(temporalUnit, subtract
