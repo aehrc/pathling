@@ -1,6 +1,5 @@
 package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import com.google.common.collect.ImmutableMap;
 import org.hl7.fhir.r4.model.Quantity;
 import javax.annotation.Nonnull;
@@ -12,13 +11,12 @@ import java.util.regex.Pattern;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-public final class UcumUtils {
+public final class CalendarDurationUtils {
 
-  private UcumUtils() {
+  private CalendarDurationUtils() {
     // Toolkit class 
   }
-
-
+  
   public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
   private static final Pattern CALENDAR_DURATION_PATTERN = Pattern.compile("([0-9.]+) (\\w+)");
 

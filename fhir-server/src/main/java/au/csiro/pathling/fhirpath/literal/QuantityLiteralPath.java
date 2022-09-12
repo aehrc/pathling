@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
@@ -15,13 +14,11 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
-import au.csiro.pathling.fhirpath.UcumUtils;
+import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.element.QuantityPath;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -35,7 +32,6 @@ import org.apache.spark.sql.Row;
 import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Quantity;
-import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 
 /**
  * Represents a FHIRPath Quantity literal.
@@ -48,13 +44,6 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   //public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
 
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
-
-  private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, String>()
-      .put("second", "s")
-      .put("seconds", "s")
-      .put("millisecond", "ms")
-      .put("milliseconds", "ms")
-      .build();
 
   protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Quantity literalValue) {
@@ -102,12 +91,20 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
     return buildLiteralPath(decimalValue, unit, Optional.ofNullable(display), context, fhirPath);
   }
 
+  /**
+   * Returns a new instance, parsed from a FHIRPath literal representing a calendar duration.
+   *
+   * @param fhirPath the FHIRPath representation of the literal
+   * @param context an input context that can be used to build a {@link Dataset} to represent the
+   * literal A new instance of {@link QuantityLiteralPath}
+   * @see <a href="https://hl7.org/fhirpath/#time-valued-quantities">Time-valued quantities</a>
+   */
   @Nonnull
   public static QuantityLiteralPath fromCalendarDurationString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) {
 
     return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(),
-        UcumUtils.parseCalendarDuration(fhirPath), fhirPath);
+        CalendarDurationUtils.parseCalendarDuration(fhirPath), fhirPath);
   }
 
   private static BigDecimal getQuantityValue(final String value, final @Nonnull FhirPath context) {
@@ -143,42 +140,7 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   @Nonnull
   @Override
   public Column buildValueColumn() {
-    final Quantity quantity = getValue();
-    final Optional<QuantityComparator> comparator = Optional.ofNullable(quantity.getComparator());
-    final BigDecimal value = quantity.getValue();
-
-    final BigDecimal canonicalizedValue;
-    final String canonicalizedCode;
-    if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
-      // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
-      canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
-      canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
-    } else if (UcumUtils.isCalendarDuration(quantity) &&
-        CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
-      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the 
-      // UCUM library to canonicalize the value and code.
-      // TODO: This needs to happen in Encoders too !!!
-      final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
-      canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
-      canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
-    } else {
-      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized 
-      // form available.
-      canonicalizedValue = null;
-      canonicalizedCode = null;
-    }
-
-    return QuantityEncoding.toStruct(
-        lit(quantity.getId()),
-        lit(value),
-        lit(value.scale()),
-        lit(comparator.map(QuantityComparator::toCode).orElse(null)),
-        lit(quantity.getUnit()),
-        lit(quantity.getSystem()),
-        lit(quantity.getCode()),
-        lit(canonicalizedValue),
-        lit(canonicalizedCode),
-        lit(null));
+    return QuantityEncoding.encodeLiteral(getValue());
   }
 
   @Nonnull

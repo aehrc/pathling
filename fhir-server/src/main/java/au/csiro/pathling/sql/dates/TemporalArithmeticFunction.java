@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.sql.dates;
 
-import au.csiro.pathling.fhirpath.UcumUtils;
+import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import com.google.common.collect.ImmutableMap;
@@ -52,7 +52,7 @@ public abstract class TemporalArithmeticFunction<T extends BaseDateTimeType> imp
       final boolean subtract) {
     final int amountToAdd = calendarDuration.getValue().setScale(0, RoundingMode.HALF_UP)
         .intValue();
-    final int temporalUnit = UcumUtils.getTemporalUnit(calendarDuration);
+    final int temporalUnit = CalendarDurationUtils.getTemporalUnit(calendarDuration);
 
     @SuppressWarnings("unchecked") final T result = (T) temporal.copy();
     result.add(temporalUnit, subtract

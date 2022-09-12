@@ -13,26 +13,51 @@ import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import au.csiro.pathling.fhirpath.CalendarDurationUtils;
+import com.google.common.collect.ImmutableMap;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.MetadataBuilder;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 
-public class QuantityEncoding {
+/**
+ * Object decoders/encoders for {@link Quantity}.
+ */
+public final class QuantityEncoding {
+
+  private QuantityEncoding() {
+    // Utility class
+  }
+
+  private static final Map<String, String> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, String>()
+      .put("second", "s")
+      .put("seconds", "s")
+      .put("millisecond", "ms")
+      .put("milliseconds", "ms")
+      .build();
 
   public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME();
   public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport.CODE_CANONICALIZED_FIELD_NAME();
 
+
+  /**
+   * Encodes a Quantity to a Row (spark SQL compatible type)
+   *
+   * @param quantity a coding to encode
+   * @return the Row representation of the quantity
+   */
   @Nullable
   public static Row encode(@Nullable final Quantity quantity) {
     if (quantity == null) {
@@ -48,6 +73,12 @@ public class QuantityEncoding {
         comparator, quantity.getUnit(), quantity.getSystem(), quantity.getCode(), null /* _fid */);
   }
 
+  /**
+   * Decodes a Quantity from a Row.
+   *
+   * @param row the row to decode
+   * @return the resulting Quantity
+   */
   @Nonnull
   public static Quantity decode(@Nonnull final Row row) {
     final Quantity quantity = new Quantity();
@@ -76,6 +107,10 @@ public class QuantityEncoding {
     return quantity;
   }
 
+
+  /**
+   * A {@link StructType} for a Quantity.
+   */
   @Nonnull
   public static StructType dataType() {
     final Metadata metadata = new MetadataBuilder().build();
@@ -100,7 +135,22 @@ public class QuantityEncoding {
         new StructField[]{id, value, valueScale, comparator, unit, system, code, canonicalizedValue,
             canonicalizedCode, fid});
   }
-  
+
+  /**
+   * Creates the structure representing the quantity column from its fields.
+   *
+   * @param id the id column
+   * @param value the value column
+   * @param value_scale the scale of the value column
+   * @param comparator the comparator column
+   * @param unit the unit column
+   * @param system the system column
+   * @param code the code column
+   * @param canonicalizedValue the canonicalized value column
+   * @param canonicalizedCode the canonicalized code column
+   * @param _fid the _fid column
+   * @return the SQL struct for the Quantity type.
+   */
   @Nonnull
   public static Column toStruct(
       @Nonnull final Column id,
@@ -126,6 +176,50 @@ public class QuantityEncoding {
         canonicalizedCode.as(CANONICALIZED_CODE_COLUMN),
         _fid.as("_fid")
     );
+  }
+
+  /**
+   * Encodes the quantity as a literal column that includes appropriate canonicalization.
+   *
+   * @param quantity the quantity to encode.
+   * @return the column with the literal representation of the quantity.
+   */
+  @Nonnull
+  public static Column encodeLiteral(@Nonnull final Quantity quantity) {
+    final Optional<QuantityComparator> comparator = Optional.ofNullable(quantity.getComparator());
+    final BigDecimal value = quantity.getValue();
+
+    final BigDecimal canonicalizedValue;
+    final String canonicalizedCode;
+    if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
+      // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
+      canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
+      canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
+    } else if (CalendarDurationUtils.isCalendarDuration(quantity) &&
+        CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
+      // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the 
+      // UCUM library to canonicalize the value and code.
+      final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
+      canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
+      canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
+    } else {
+      // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized 
+      // form available.
+      canonicalizedValue = null;
+      canonicalizedCode = null;
+    }
+
+    return toStruct(
+        lit(quantity.getId()),
+        lit(value),
+        lit(value.scale()),
+        lit(comparator.map(QuantityComparator::toCode).orElse(null)),
+        lit(quantity.getUnit()),
+        lit(quantity.getSystem()),
+        lit(quantity.getCode()),
+        lit(canonicalizedValue),
+        lit(canonicalizedCode),
+        lit(null));
   }
 
 }

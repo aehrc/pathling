@@ -14,7 +14,7 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.UcumUtils;
+import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -51,7 +51,7 @@ public class DateArithmeticOperator implements Operator {
     checkUserInput(right instanceof QuantityLiteralPath,
         type + " operator does not support right operand: " + right.getExpression());
     final QuantityLiteralPath calendarDuration = (QuantityLiteralPath) right;
-    checkUserInput(UcumUtils.isCalendarDuration(calendarDuration.getValue()),
+    checkUserInput(CalendarDurationUtils.isCalendarDuration(calendarDuration.getValue()),
         "Right operand of " + type + " operator must be a calendar duration");
     checkUserInput(left.isSingular(),
         "Left operand to " + type + " operator must be singular: " + left.getExpression());
