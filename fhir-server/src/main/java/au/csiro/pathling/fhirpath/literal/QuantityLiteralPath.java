@@ -41,8 +41,6 @@ import org.hl7.fhir.r4.model.Quantity;
 @Getter
 public class QuantityLiteralPath extends LiteralPath<Quantity> implements Comparable, Numeric {
 
-  //public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
-
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
   protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,

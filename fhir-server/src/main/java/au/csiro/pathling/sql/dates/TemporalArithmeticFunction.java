@@ -28,14 +28,6 @@ public abstract class TemporalArithmeticFunction<T extends BaseDateTimeType> imp
 
   private static final long serialVersionUID = -5016153440496309996L;
 
-  static final Map<String, Integer> CALENDAR_DURATION_TO_UCUM = new ImmutableMap.Builder<String, Integer>().put(
-          "year", Calendar.YEAR).put("years", Calendar.YEAR).put("month", Calendar.MONTH)
-      .put("months", Calendar.MONTH).put("day", Calendar.DATE).put("days", Calendar.DATE)
-      .put("hour", Calendar.HOUR).put("hours", Calendar.HOUR).put("minute", Calendar.MINUTE)
-      .put("minutes", Calendar.MINUTE).put("second", Calendar.SECOND)
-      .put("seconds", Calendar.SECOND).put("millisecond", Calendar.MILLISECOND)
-      .put("milliseconds", Calendar.MILLISECOND).build();
-
   @Nonnull
   protected T performAddition(@Nonnull final T temporal, @Nonnull final Quantity calendarDuration) {
     return performArithmetic(temporal, calendarDuration, false);
