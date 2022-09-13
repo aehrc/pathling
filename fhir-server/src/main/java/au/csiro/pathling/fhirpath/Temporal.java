@@ -18,13 +18,47 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * Describes a path that represents a temporal value such as DateTime or Date, and can be the
+ * subject of date arithmetic operations involving time durations.
+ *
+ * @author John Grimes
+ */
 public interface Temporal {
 
+  /**
+   * Gets a function that can take the {@link QuantityLiteralPath} representing a time duration and
+   * return a {@link FhirPath} that contains the result of date arithmetic operation for this path
+   * and the provided duration. The type of operation is controlled by supplying a {@link
+   * MathOperation}.
+   *
+   * @param operation The {@link MathOperation} type to retrieve a result for
+   * @param dataset The {@link Dataset} to use within the result
+   * @param expression The FHIRPath expression to use within the result
+   * @return A {@link Function} that takes a {@link QuantityLiteralPath} as its parameter, and
+   * returns a {@link FhirPath}.
+   */
   @Nonnull
   Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
       @Nonnull MathOperation operation, @Nonnull Dataset<Row> dataset,
       @Nonnull String expression);
 
+  /**
+   * Gets a function that can take the {@link QuantityLiteralPath} representing a time duration and
+   * return a {@link FhirPath} that contains the result of applying the date arithmetic operation
+   * for to the source path and the provided duration. The type of operation is controlled by
+   * supplying a {@link MathOperation}.
+   *
+   * @param source the {@link FhirPath} to which the operation should be applied to. Should be a
+   * {@link Temporal} path.
+   * @param operation The {@link MathOperation} type to retrieve a result for
+   * @param dataset The {@link Dataset} to use within the result
+   * @param expression the FHIRPath expression to use within the result
+   * @param additionFunctionName the name of the UDF to use for additions.
+   * @param subtractionFunctionName the name of the UDF to use for subtractions.
+   * @return A {@link Function} that takes a {@link QuantityLiteralPath} as its parameter, and
+   * returns a {@link FhirPath}.
+   */
   @Nonnull
   static Function<QuantityLiteralPath, FhirPath> buildDateArithmeticOperation(
       @Nonnull final FhirPath source, final @Nonnull MathOperation operation,

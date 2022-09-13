@@ -26,6 +26,13 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * This function computes the time interval (duration) between two paths representing dates or dates
+ * with time.
+ *
+ * @author John Grimes
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#until">until</a>
+ */
 public class UntilFunction implements NamedFunction {
 
   private static final String NAME = "until";
