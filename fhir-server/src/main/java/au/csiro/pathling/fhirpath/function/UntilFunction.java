@@ -7,6 +7,8 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.fhirpath.NonLiteralPath.findEidColumn;
+import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.callUDF;
 
@@ -25,6 +27,7 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import java.util.Optional;
 
 /**
  * This function computes the time interval (duration) between two paths representing dates or dates
@@ -51,6 +54,12 @@ public class UntilFunction implements NamedFunction {
     checkUserInput(toArgument instanceof DateTimePath || toArgument instanceof DateTimeLiteralPath
             || toArgument instanceof DatePath || toArgument instanceof DateLiteralPath,
         "until function must have a DateTime or Date as the first argument");
+
+    checkUserInput(fromArgument.isSingular(),
+        "until function must be invoked on a singular path");
+    checkUserInput(toArgument.isSingular(),
+        "until function must have the singular path as its first argument");
+
     checkUserInput(calendarDurationArgument instanceof StringLiteralPath,
         "until function must have a String as the second argument");
     final String literalValue = ((StringLiteralPath) calendarDurationArgument).getValue()
@@ -65,9 +74,12 @@ public class UntilFunction implements NamedFunction {
         calendarDurationArgument.getValueColumn());
     final String expression = NamedFunction.expressionFromInput(input, NAME);
 
+    final Optional<Column> eidColumn = findEidColumn(fromArgument, toArgument);
+    final Optional<Column> thisColumn = findThisColumn(fromArgument, toArgument);
+
     return ElementPath.build(expression, dataset, fromArgument.getIdColumn(),
-        fromArgument.getEidColumn(), valueColumn, fromArgument.isSingular(),
-        fromArgument.getCurrentResource(), fromArgument.getThisColumn(), FHIRDefinedType.INTEGER);
+        eidColumn, valueColumn, true,
+        fromArgument.getCurrentResource(), thisColumn, FHIRDefinedType.INTEGER);
   }
 
 }

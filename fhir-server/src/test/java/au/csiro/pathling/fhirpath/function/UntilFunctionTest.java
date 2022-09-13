@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -152,11 +153,13 @@ class UntilFunctionTest {
           .fhirType(FHIRDefinedType.DATETIME)
           .dataset(leftDataset())
           .idAndValueColumns()
+          .singular(true)
           .build();
       final ElementPath argument = new ElementPathBuilder(spark)
           .fhirType(FHIRDefinedType.DATETIME)
           .dataset(rightDataset())
           .idAndValueColumns()
+          .singular(true)
           .build();
       final ParserContext context = new ParserContextBuilder(spark, fhirContext)
           .groupingColumns(Collections.singletonList(input.getIdColumn()))
@@ -206,11 +209,13 @@ class UntilFunctionTest {
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
+        .singular(true)
         .build();
     final ElementPath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATE)
         .dataset(rightDataset)
         .idAndValueColumns()
+        .singular(true)
         .build();
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(input.getIdColumn()))
@@ -245,6 +250,7 @@ class UntilFunctionTest {
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
+        .singular(true)
         .build();
     final DateLiteralPath argument = DateLiteralPath.fromString("2020-01-02", input);
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
@@ -276,6 +282,7 @@ class UntilFunctionTest {
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
+        .singular(true)
         .build();
     final DateTimeLiteralPath argument = DateTimeLiteralPath.fromString("2020-01-02T00:00:00Z",
         input);
@@ -308,10 +315,15 @@ class UntilFunctionTest {
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
+        .singular(true)
         .build();
+
+    final DateTimePath argument = mock(DateTimePath.class);
+    when(argument.isSingular()).thenReturn(true);
+
     final NamedFunctionInput functionInput = new NamedFunctionInput(mock(ParserContext.class),
         input,
-        List.of(mock(DateTimePath.class), StringLiteralPath.fromString("nanosecond", input)));
+        List.of(argument, StringLiteralPath.fromString("nanosecond", input)));
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> NamedFunction.getInstance("until").invoke(functionInput));
     assertEquals("Invalid calendar duration: nanosecond", error.getMessage());
@@ -345,4 +357,28 @@ class UntilFunctionTest {
         error.getMessage());
   }
 
+  @Test
+  void inputNotSingular() {
+    final DateTimePath input = mock(DateTimePath.class);
+    final NamedFunctionInput functionInput = new NamedFunctionInput(mock(ParserContext.class),
+        input, List.of(mock(DateTimeLiteralPath.class),
+        StringLiteralPath.fromString("nanosecond", input)));
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> NamedFunction.getInstance("until").invoke(functionInput));
+    assertEquals("until function must be invoked on a singular path", error.getMessage());
+  }
+
+  @Test
+  void argumentNotSingular() {
+    final DateTimePath input = mock(DateTimePath.class);
+    when(input.isSingular()).thenReturn(true);
+    final NamedFunctionInput functionInput = new NamedFunctionInput(mock(ParserContext.class),
+        input,
+        List.of(mock(DateTimeLiteralPath.class),
+            StringLiteralPath.fromString("nanosecond", input)));
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        () -> NamedFunction.getInstance("until").invoke(functionInput));
+    assertEquals("until function must have the singular path as its first argument",
+        error.getMessage());
+  }
 }
