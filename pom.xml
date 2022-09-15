@@ -72,7 +72,7 @@
     <pathling.hapiFhirVersion>6.0.3</pathling.hapiFhirVersion>
     <pathling.sparkVersion>3.3.0</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.sparkScalaFullVersion>2.12.16</pathling.sparkScalaFullVersion>
+    <pathling.sparkScalaFullVersion>2.12.17</pathling.sparkScalaFullVersion>
     <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
