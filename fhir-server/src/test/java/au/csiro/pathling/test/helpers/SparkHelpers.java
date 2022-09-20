@@ -180,13 +180,23 @@ public abstract class SparkHelpers {
       quantity.setValue(
           quantity.getValue().setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
     }
-    if (quantity.getValue().precision() > DecimalCustomCoder.precision()) {
-      throw new AssertionError("Attempt to encode a value with greater than supported precision");
-    }
+    // TODO: This is not really how it should work
+    // As the BigDecimal::precision is not same as DecimalType precision().
+    // Besides this results in the value being set to null
+    // if (quantity.getValue().precision() > DecimalCustomCoder.precision()) {
+    //   throw new AssertionError("Attempt to encode a value with greater than supported precision");
+    // }
     quantity.setUnit(unit);
     quantity.setSystem(TestHelpers.UCUM_URL);
     quantity.setCode(unit);
     return rowFromQuantity(quantity);
+  }
+
+
+  @Nonnull
+  public static Row rowForUcumQuantity(@Nonnull final String value,
+      @Nonnull final String unit) {
+    return rowForUcumQuantity(new BigDecimal(value), unit);
   }
 
   @Value
