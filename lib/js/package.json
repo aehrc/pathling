@@ -7,7 +7,7 @@
   "dependencies": {
     "@types/fhir": "^0.0.35",
     "@types/node": "^16.x",
-    "axios": "^0.27.2",
+    "axios": "^1.1.2",
     "just-performance": "^4.3.0",
     "p-retry": "^5.0.0"
   },
