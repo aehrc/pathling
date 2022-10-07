@@ -175,7 +175,7 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
     return QuantityPath.buildMathOperation(this, operation, expression, dataset,
-        FHIRDefinedType.QUANTITY);
+        Optional.empty());
   }
 
 }

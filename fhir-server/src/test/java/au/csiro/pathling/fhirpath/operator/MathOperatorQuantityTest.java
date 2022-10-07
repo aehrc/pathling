@@ -104,32 +104,40 @@ public class MathOperatorQuantityTest {
   }
 
   Dataset<Row> expectedResult(@Nonnull final String operator) {
-    final Row result;
+    final Row result1;
+    final Row result2;
+
     switch (operator) {
       case "+":
-        result = rowForUcumQuantity(new BigDecimal("1650.000000"), "m");
+        result1 = rowForUcumQuantity(new BigDecimal("1650.0"), "m");
+        result2 = null;
         break;
       case "-":
-        result = rowForUcumQuantity(new BigDecimal("-1350.000000"), "m");
+        result1 = rowForUcumQuantity(new BigDecimal("-1350.0"), "m");
+        result2 = null;
         break;
       case "*":
-        result = rowForUcumQuantity(new BigDecimal("225000.000000"), "m");
+        result1 = null;
+        result2 = rowForUcumQuantity("1000.0", "g");
         break;
       case "/":
-        result = rowForUcumQuantity(new BigDecimal("0.100000"), "m");
+        result1 = rowForUcumQuantity(new BigDecimal("0.1"), "1");
+        result2 = rowForUcumQuantity("4000", "g");
         break;
       default:
-        result = null;
+        result1 = null;
+        result2 = null;
     }
     return new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(quantityStructType())
-        .withRow("patient-1", result)
-        .withRow("patient-2", null)
+        .withRow("patient-1", result1)
+        .withRow("patient-2", result2)
         .withRow("patient-3", null)
         .withRow("patient-4", null)
         .withRow("patient-5", null)
         .withRow("patient-6", null)
+        .withRow("patient-7", null)
         .buildWithStructValue();
   }
 
@@ -148,20 +156,23 @@ public class MathOperatorQuantityTest {
                               ? rowForUcumQuantity(new BigDecimal("150.0"), "m")
                               : rowForUcumQuantity(new BigDecimal("1.5"), "km"))
         .withRow("patient-2", leftOperand
+                              ? rowForUcumQuantity(new BigDecimal("2.0"), "kg")
+                              : rowForUcumQuantity(new BigDecimal("0.5"), "1"))
+        .withRow("patient-3", leftOperand
                               ? rowForUcumQuantity(new BigDecimal("7.7"), "mSv")
                               : rowForUcumQuantity(new BigDecimal("1.5"), "h"))
         // Not comparable
-        .withRow("patient-3", leftOperand
+        .withRow("patient-4", leftOperand
                               ? rowForUcumQuantity(new BigDecimal("7.7"), "mSv")
                               : rowFromQuantity(nonUcumQuantity))
         // Not comparable
-        .withRow("patient-4", leftOperand
+        .withRow("patient-5", leftOperand
                               ? null
                               : rowForUcumQuantity(new BigDecimal("1.5"), "h"))
-        .withRow("patient-5", leftOperand
+        .withRow("patient-6", leftOperand
                               ? rowForUcumQuantity(new BigDecimal("7.7"), "mSv")
                               : null)
-        .withRow("patient-6", null)
+        .withRow("patient-7", null)
         .buildWithStructValue();
     return new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.QUANTITY)
@@ -211,7 +222,7 @@ public class MathOperatorQuantityTest {
         .withIdColumn()
         .withStructTypeColumns(quantityStructType())
         .withRow("patient-1",
-            rowForUcumQuantity(new BigDecimal("1204427340000000000000000.00"), "m-3"))
+            rowForUcumQuantity(new BigDecimal("1204427340000000000000000"), "m-3"))
         .buildWithStructValue();
     assertThat(result).selectOrderedResult().hasRows(expectedDataset);
   }

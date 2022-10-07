@@ -21,10 +21,13 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import au.csiro.pathling.utilities.Preconditions;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
@@ -151,24 +154,7 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
-    final BigDecimal value = quantity.getValue();
-    final String code = quantity.getCode();
-    final BigDecimal canonicalizedValue;
-    final String canonicalizedCode;
-    if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
-      canonicalizedValue = Ucum.getCanonicalValue(value, code);
-      canonicalizedCode = Ucum.getCanonicalCode(value, code);
-    } else {
-      canonicalizedValue = null;
-      canonicalizedCode = null;
-    }
-    final String comparator = Optional.ofNullable(quantity.getComparator())
-        .map(QuantityComparator::toCode).orElse(null);
-    return new GenericRowWithSchema(
-        new Object[]{quantity.getId(), quantity.getValue(), null /* scale */, comparator,
-            quantity.getUnit(), quantity.getSystem(), quantity.getCode(), canonicalizedValue,
-            canonicalizedCode, null /* _fid */},
-        quantityStructType());
+    return Preconditions.checkNotNull(QuantityEncoding.encode(quantity, false));
   }
 
   @Nonnull
@@ -180,12 +166,12 @@ public abstract class SparkHelpers {
       quantity.setValue(
           quantity.getValue().setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
     }
-    // TODO: This is not really how it should work
-    // As the BigDecimal::precision is not same as DecimalType precision().
-    // Besides this results in the value being set to null
-    // if (quantity.getValue().precision() > DecimalCustomCoder.precision()) {
-    //   throw new AssertionError("Attempt to encode a value with greater than supported precision");
-    // }
+    // NOTE: BigDecimal precision is total number od digits (before and after the decimal point)
+    // while the SQL decimal precision is the number of digits allowed before the decimal point.
+    if (quantity.getValue().precision()
+        > DecimalCustomCoder.precision() + DecimalCustomCoder.scale()) {
+      throw new AssertionError("Attempt to encode a value with greater than supported precision");
+    }
     quantity.setUnit(unit);
     quantity.setSystem(TestHelpers.UCUM_URL);
     quantity.setCode(unit);

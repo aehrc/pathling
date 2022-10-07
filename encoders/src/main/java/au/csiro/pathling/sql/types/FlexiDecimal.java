@@ -6,16 +6,11 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.MetadataBuilder;
-import org.apache.spark.sql.types.StructField;
-import org.apache.spark.sql.types.StructType;
+import org.apache.spark.sql.types.*;
 import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 
-public class FlexDecimal {
+public class FlexiDecimal {
 
   @Nonnull
   private static StructType createFlexibleDecimalType() {
@@ -33,15 +28,15 @@ public class FlexDecimal {
   private static UserDefinedFunction toBooleanUdf(
       UDF2<BigDecimal, BigDecimal, Boolean> method) {
     final UDF2<Row, Row, Boolean> f = (left, right) ->
-        method.call(fromRow(left), fromRow(right));
+        method.call(fromValue(left), fromValue(right));
     return functions.udf(f, DataTypes.BooleanType);
   }
 
   @Nonnull
   private static UDF2<Row, Row, Row> wrapBigDecimal2(
       UDF2<BigDecimal, BigDecimal, BigDecimal> method) {
-    return (left, right) -> toRow(
-        method.call(fromRow(left), fromRow(right)));
+    return (left, right) -> toValue(
+        method.call(fromValue(left), fromValue(right)));
   }
 
   @Nonnull
@@ -51,13 +46,13 @@ public class FlexDecimal {
   }
 
   @Nonnull
-  public static BigDecimal fromRow(@Nonnull final Row row) {
+  public static BigDecimal fromValue(@Nonnull final Row row) {
     final BigDecimal unscaledValue = row.getDecimal(0);
     return unscaledValue.movePointLeft(row.getInt(1));
   }
 
   @Nonnull
-  public static Row toRow(@Nonnull final BigDecimal decimal) {
+  public static Row toValue(@Nonnull final BigDecimal decimal) {
     return RowFactory.create(decimal.movePointRight(decimal.scale()), decimal.scale());
   }
 

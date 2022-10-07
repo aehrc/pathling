@@ -60,9 +60,9 @@ public class QuantityOperatorsPrecisionTest {
   // (if available)
 
   static final String REASONABLE_DECIMAL_01 = createSpanningDecimal(9, 3, 1,
-      6).toString(); // 9000.00001
+      6).toString(); // 9000.000001
   static final String REASONABLE_DECIMAL_02 = createSpanningDecimal(9, 3, 2,
-      6).toString(); // 9000.00002
+      6).toString(); // 9000.000002
 
   // for Decimal(32,6)
   static final String FULL_DECIMAL_01 = createSpanningDecimal(9, 26, 1,

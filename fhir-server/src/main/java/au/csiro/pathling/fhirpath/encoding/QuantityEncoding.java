@@ -48,9 +48,48 @@ public final class QuantityEncoding {
       .put("milliseconds", "ms")
       .build();
 
-  public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME();
-  public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport.CODE_CANONICALIZED_FIELD_NAME();
+  public static final String CANONICALIZED_VALUE_COLUMN = QuantitySupport
+      .VALUE_CANONICALIZED_FIELD_NAME();
+  public static final String CANONICALIZED_CODE_COLUMN = QuantitySupport
+      .CODE_CANONICALIZED_FIELD_NAME();
 
+
+  /**
+   * Encodes a Quantity to a Row (spark SQL compatible type)
+   *
+   * @param quantity a coding to encode
+   * @param includeScale whether the scale of the value should be encoded (or set to null)
+   * @return the Row representation of the quantity
+   */
+  @Nullable
+  public static Row encode(@Nullable final Quantity quantity, boolean includeScale) {
+    if (quantity == null) {
+      return null;
+    }
+    final BigDecimal value = quantity.getValue();
+    @Nullable final String code = quantity.getCode();
+    final String canonicalizedValue;
+    final String canonicalizedCode;
+    if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
+      canonicalizedValue = Ucum.getCanonicalValueAsString(value, code);
+      canonicalizedCode = Ucum.getCanonicalCode(value, code);
+    } else {
+      canonicalizedValue = null;
+      canonicalizedCode = null;
+    }
+    final String comparator = Optional.ofNullable(quantity.getComparator())
+        .map(QuantityComparator::toCode).orElse(null);
+    // TODO: The null scale support it a temporary measure becasue we currently 
+    // cannot encode the scale of the results of arithmetic operations.
+    return RowFactory.create(quantity.getId(),
+        quantity.getValue(),
+        includeScale
+        ? quantity.getValue().scale()
+        : null,
+        comparator,
+        quantity.getUnit(), quantity.getSystem(), quantity.getCode(), canonicalizedValue,
+        canonicalizedCode, null /* _fid */);
+  }
 
   /**
    * Encodes a Quantity to a Row (spark SQL compatible type)
@@ -60,17 +99,7 @@ public final class QuantityEncoding {
    */
   @Nullable
   public static Row encode(@Nullable final Quantity quantity) {
-    if (quantity == null) {
-      return null;
-    }
-    final String comparator = Optional.ofNullable(quantity.getComparator())
-        .map(QuantityComparator::toCode).orElse(null);
-    if (quantity.getValue().scale() > DecimalCustomCoder.scale()) {
-      quantity.setValue(
-          quantity.getValue().setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
-    }
-    return RowFactory.create(quantity.getId(), quantity.getValue(), quantity.getValue().scale(),
-        comparator, quantity.getUnit(), quantity.getSystem(), quantity.getCode(), null /* _fid */);
+    return encode(quantity, true);
   }
 
   /**
@@ -124,9 +153,9 @@ public final class QuantityEncoding {
     final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
     final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
     final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
+    // TODO: FlexDecimal
     final StructField canonicalizedValue = new StructField(CANONICALIZED_VALUE_COLUMN,
-        DataTypes.createDecimalType(
-            DecimalCustomCoder.precision(), DecimalCustomCoder.scale()), true, metadata);
+        DataTypes.StringType, true, metadata);
     final StructField canonicalizedCode = new StructField(CANONICALIZED_CODE_COLUMN,
         DataTypes.StringType, true, metadata);
     final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
@@ -166,7 +195,7 @@ public final class QuantityEncoding {
   ) {
     return struct(
         id.as("id"),
-        value.as("value"),
+        value.cast(DecimalCustomCoder.decimalType()).as("value"),
         value_scale.as("value_scale"),
         comparator.as("comparator"),
         unit.as("unit"),
@@ -189,18 +218,19 @@ public final class QuantityEncoding {
     final Optional<QuantityComparator> comparator = Optional.ofNullable(quantity.getComparator());
     final BigDecimal value = quantity.getValue();
 
-    final BigDecimal canonicalizedValue;
+    // FlexDecima;
+    final String canonicalizedValue;
     final String canonicalizedCode;
     if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
       // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
-      canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
+      canonicalizedValue = Ucum.getCanonicalValueAsString(value, quantity.getCode());
       canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
     } else if (CalendarDurationUtils.isCalendarDuration(quantity) &&
         CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
       // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the 
       // UCUM library to canonicalize the value and code.
       final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
-      canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
+      canonicalizedValue = Ucum.getCanonicalValueAsString(value, resolvedCode);
       canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
     } else {
       // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized 

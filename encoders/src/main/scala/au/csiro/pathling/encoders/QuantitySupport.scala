@@ -15,6 +15,7 @@ package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder
 import au.csiro.pathling.encoders.terminology.ucum.Ucum
+import au.csiro.pathling.sql.types.FlexDecimal
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
 import org.apache.spark.sql.types.{DataTypes, Decimal, ObjectType, StructField}
@@ -39,11 +40,27 @@ object QuantitySupport {
   def createExtraSerializers(expression: Expression): Seq[(String, Expression)] = {
     val valueExp = Invoke(expression, "getValue", ObjectType(classOf[java.math.BigDecimal]))
     val codeExp = Invoke(expression, "getCode", ObjectType(classOf[java.lang.String]))
-    val canonicalizedValue = StaticInvoke(classOf[Decimal],
-      DecimalCustomCoder.decimalType,
-      "apply",
-      StaticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]),
-        "getCanonicalValue", Seq(valueExp, codeExp)) :: Nil)
+    // TODO: Change to FlexDecimal
+    //    val canonicalizedValue = StaticInvoke(classOf[Decimal],
+    //      DecimalCustomCoder.decimalType,
+    //      "apply",
+    //      StaticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]),
+    //        "getCanonicalValue", Seq(valueExp, codeExp)) :: Nil)
+
+
+//    val struct = CreateNamedStruct(
+//      allFields.flatMap({ case (name, serializer) => Seq(Literal(name), serializer) }))
+//    If(IsNull(expression), Literal.create(null, struct.dataType), struct)
+    
+    
+    val canonicalizedValue =
+    StaticInvoke(
+      classOf[UTF8String],
+      DataTypes.StringType,
+      "fromString",
+      StaticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]),
+        "getCanonicalValueAsString", Seq(valueExp, codeExp)) :: Nil)
+
     val canonicalizedCode =
       StaticInvoke(
         classOf[UTF8String],
@@ -64,7 +81,7 @@ object QuantitySupport {
    */
   def createExtraSchemaFields(): Seq[StructField] = {
     Seq(
-      StructField(VALUE_CANONICALIZED_FIELD_NAME, DecimalCustomCoder.decimalType),
+      StructField(VALUE_CANONICALIZED_FIELD_NAME, FlexDecimal.DATA_TYPE),
       StructField(CODE_CANONICALIZED_FIELD_NAME, DataTypes.StringType)
     )
   }

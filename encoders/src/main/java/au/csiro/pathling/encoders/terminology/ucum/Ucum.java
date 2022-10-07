@@ -31,6 +31,8 @@ import org.fhir.ucum.UcumService;
  */
 public class Ucum {
 
+  public static final String NO_UNIT_CODE = "1";
+
   public static final String SYSTEM_URI = "http://unitsofmeasure.org";
 
   private static final UcumService service;
@@ -51,8 +53,8 @@ public class Ucum {
   }
 
   @Nullable
-  public static BigDecimal getCanonicalValue(@Nonnull final BigDecimal value,
-      @Nonnull final String code) {
+  public static BigDecimal getCanonicalValue(@Nullable final BigDecimal value,
+      @Nullable final String code) {
     try {
       @Nullable final Pair result = getCanonicalForm(value, code);
       if (result == null) {
@@ -73,8 +75,27 @@ public class Ucum {
   }
 
   @Nullable
-  public static String getCanonicalCode(@Nonnull final BigDecimal value,
-      @Nonnull final String code) {
+  public static String getCanonicalValueAsString(@Nullable final BigDecimal value,
+      @Nullable final String code) {
+    try {
+      @Nullable final Pair result = getCanonicalForm(value, code);
+      if (result == null) {
+        return null;
+      }
+      @Nullable final Decimal decimalValue = result.getValue();
+      if (decimalValue == null) {
+        return null;
+      }
+      @Nullable final String stringValue = decimalValue.asDecimal();
+      return stringValue;
+    } catch (final UcumException e) {
+      return null;
+    }
+  }
+
+  @Nullable
+  public static String getCanonicalCode(@Nullable final BigDecimal value,
+      @Nullable final String code) {
     try {
       @Nullable final Pair result = getCanonicalForm(value, code);
       if (result == null) {
@@ -87,12 +108,24 @@ public class Ucum {
   }
 
   @Nullable
-  private static Pair getCanonicalForm(final @Nonnull BigDecimal value, final @Nonnull String code)
+  private static Pair getCanonicalForm(final @Nullable BigDecimal value,
+      final @Nullable String code)
       throws UcumException {
-    final int maxPrecision = DecimalCustomCoder.decimalType().precision();
-    final Decimal decimalValue = new Decimal(value.toPlainString(), maxPrecision);
-    @Nullable final Pair result = service.getCanonicalForm(new Pair(decimalValue, code));
-    return result;
+    if (value == null || code == null) {
+      return null;
+    }
+    final Decimal decimalValue = new Decimal(value.toPlainString());
+    return adjustNoUnitCode(service.getCanonicalForm(new Pair(decimalValue, code)));
+  }
+
+  @Nullable
+  private static Pair adjustNoUnitCode(@Nullable Pair pair) {
+    if (pair == null) {
+      return null;
+    }
+    return (pair.getCode() != null && pair.getCode().isEmpty())
+           ? new Pair(pair.getValue(), NO_UNIT_CODE)
+           : pair;
   }
 
 }

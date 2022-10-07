@@ -8,6 +8,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
+import static au.csiro.pathling.test.helpers.SparkHelpers.rowForUcumQuantity;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -58,6 +59,7 @@ public class EqualityOperatorQuantityTest {
   QuantityLiteralPath calendarDurationLiteral1;
   QuantityLiteralPath calendarDurationLiteral2;
   QuantityLiteralPath calendarDurationLiteral3;
+  QuantityLiteralPath ucumQuantityLiteralNoUnit;
 
   @BeforeEach
   void setUp() {
@@ -109,6 +111,12 @@ public class EqualityOperatorQuantityTest {
     quantity8.setSystem(TestHelpers.UCUM_URL);
     quantity8.setCode("ms");
 
+    final Quantity nonUcumQuantity = new Quantity();
+    nonUcumQuantity.setValue(15);
+    nonUcumQuantity.setUnit("mSv");
+    nonUcumQuantity.setSystem(TestHelpers.SNOMED_URL);
+    nonUcumQuantity.setCode("282250007");
+
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(quantityStructType())
@@ -121,6 +129,9 @@ public class EqualityOperatorQuantityTest {
         .withRow("patient-7", rowFromQuantity(quantity6))  // 30 d
         .withRow("patient-8", rowFromQuantity(quantity7))  // 60 s
         .withRow("patient-9", rowFromQuantity(quantity8))  // 1000 ms
+        .withRow("patient-a", rowForUcumQuantity("1000", "mmol"))  // 1000 mmol
+        .withRow("patient-b", rowForUcumQuantity("49", "%"))  // 50 %
+        .withRow("patient-c", rowFromQuantity(nonUcumQuantity))  // non-ucum
         .buildWithStructValue();
     left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.QUANTITY)
@@ -141,6 +152,9 @@ public class EqualityOperatorQuantityTest {
         .withRow("patient-7", rowFromQuantity(quantity6))  // 30 d
         .withRow("patient-8", rowFromQuantity(quantity7))  // 60 s
         .withRow("patient-9", rowFromQuantity(quantity8))  // 1000 ms
+        .withRow("patient-a", rowForUcumQuantity("1", "mol"))  // 1 mol
+        .withRow("patient-b", rowForUcumQuantity("0.5", "1"))  // 0.5 '1'
+        .withRow("patient-c", rowForUcumQuantity("1", "%"))  // 1 %
         .buildWithStructValue();
     right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.QUANTITY)
@@ -152,6 +166,8 @@ public class EqualityOperatorQuantityTest {
     ucumQuantityLiteral1 = QuantityLiteralPath.fromUcumString("500 'mg'", left, ucumService);
     ucumQuantityLiteral2 = QuantityLiteralPath.fromUcumString("0.5 'g'", left, ucumService);
     ucumQuantityLiteral3 = QuantityLiteralPath.fromUcumString("1.8 'm'", left, ucumService);
+    ucumQuantityLiteralNoUnit = QuantityLiteralPath.fromUcumString("0.49 '1'", left, ucumService);
+
     calendarDurationLiteral1 = QuantityLiteralPath.fromCalendarDurationString("30 days", left);
     calendarDurationLiteral2 = QuantityLiteralPath.fromCalendarDurationString("60 seconds", left);
     calendarDurationLiteral3 = QuantityLiteralPath.fromCalendarDurationString("1000 milliseconds",
@@ -177,7 +193,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),  // 500 mg = {}
         RowFactory.create("patient-7", true),  // 30 d = 30 d
         RowFactory.create("patient-8", true),  // 60 s = 60 s
-        RowFactory.create("patient-9", true)   // 1000 ms = 1000 ms
+        RowFactory.create("patient-9", true),  // 1000 ms = 1000 ms
+        RowFactory.create("patient-a", true),  // 1000 mmol = 1 mol
+        RowFactory.create("patient-b", false), // 49 % = 0.5 ''
+        RowFactory.create("patient-c", null)   //  non-ucum = 1 %
     );
   }
 
@@ -196,7 +215,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg != {}
         RowFactory.create("patient-7", false),  // 30 d != 30 d
         RowFactory.create("patient-8", false),  // 60 s != 60 s
-        RowFactory.create("patient-9", false)   // 1000 ms != 1000 ms
+        RowFactory.create("patient-9", false),  // 1000 ms != 1000 ms
+        RowFactory.create("patient-a", false),  // 1000 mmol != 1 mol
+        RowFactory.create("patient-b", true),   // 49 % != 0.5 ''
+        RowFactory.create("patient-c", null)    //  non-ucum != 1 %
     );
   }
 
@@ -215,7 +237,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", true),   // 500 mg = 500 mg 
         RowFactory.create("patient-7", null),   // 30 d = 500 mg
         RowFactory.create("patient-8", null),   // 60 s = 500 mg
-        RowFactory.create("patient-9", null)    // 1000 ms = 500 mg
+        RowFactory.create("patient-9", null),   // 1000 ms = 500 mg
+        RowFactory.create("patient-a", null),   // 1000 mmol = 500 mg
+        RowFactory.create("patient-b", null),   // 49 % = 500 mg
+        RowFactory.create("patient-c", null)    // non-ucum = 500 mg
     );
 
     input = new OperatorInput(parserContext, left, ucumQuantityLiteral2);
@@ -230,7 +255,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", true),   // 500 mg = 0.5 mg 
         RowFactory.create("patient-7", null),   // 30 d = 0.5 mg
         RowFactory.create("patient-8", null),   // 60 s = 0.5 mg
-        RowFactory.create("patient-9", null)    // 1000 ms = 0.5 mg
+        RowFactory.create("patient-9", null),   // 1000 ms = 0.5 mg
+        RowFactory.create("patient-a", null),   // 1000 mmol = 0.5 mg
+        RowFactory.create("patient-b", null),   // 49 % != = 0.5 mg
+        RowFactory.create("patient-c", null)    //  non-ucum != 0.5 mg        
     );
 
     input = new OperatorInput(parserContext, left, ucumQuantityLiteral3);
@@ -245,7 +273,28 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg = 1.8 m 
         RowFactory.create("patient-7", null),   // 30 d = 1.8 m
         RowFactory.create("patient-8", null),   // 60 s = 1.8 m
-        RowFactory.create("patient-9", null)    // 1000 ms = 1.8 m
+        RowFactory.create("patient-9", null),   // 1000 ms = 1.8 m
+        RowFactory.create("patient-a", null),   // 1000 mmol = 1.8 m
+        RowFactory.create("patient-b", null),   // 49 % != = 1.8 m
+        RowFactory.create("patient-c", null)    //  non-ucum != 1.8 m   
+    );
+
+    input = new OperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
+    result = equalityOperator.invoke(input);
+
+    assertThat(result).selectOrderedResult().hasRows(
+        RowFactory.create("patient-1", null),   // 500 mg = 1.8 m
+        RowFactory.create("patient-2", null),   // 500 mg = 1.8 m
+        RowFactory.create("patient-3", null),   // 500 mg = 1.8 m
+        RowFactory.create("patient-4", null),   // 650 mg = 1.8 m
+        RowFactory.create("patient-5", null),   // {} = 1.8 m
+        RowFactory.create("patient-6", null),   // 500 mg = 1.8 m 
+        RowFactory.create("patient-7", null),   // 30 d = 1.8 m
+        RowFactory.create("patient-8", null),   // 60 s = 1.8 m
+        RowFactory.create("patient-9", null),   // 1000 ms = 1.8 m
+        RowFactory.create("patient-a", false),  // 1000 mmol = 1.8 m
+        RowFactory.create("patient-b", true),   // 49 % != = 1.8 m
+        RowFactory.create("patient-c", null)    //  non-ucum != 1.8 m   
     );
 
     input = new OperatorInput(parserContext, ucumQuantityLiteral1, ucumQuantityLiteral1);
@@ -256,7 +305,7 @@ public class EqualityOperatorQuantityTest {
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(true,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
-                "patient-7", "patient-8", "patient-9"))
+                "patient-7", "patient-8", "patient-9", "patient-a", "patient-b", "patient-c"))
         .build();
     assertThat(result).selectOrderedResult().hasRows(allTrue);
   }
@@ -276,7 +325,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", false),   // 500 mg != 500 mg 
         RowFactory.create("patient-7", null),    // 30 d != 500 mg
         RowFactory.create("patient-8", null),    // 60 s != 500 mg
-        RowFactory.create("patient-9", null)     // 1000 ms != 500 mg
+        RowFactory.create("patient-9", null),    // 1000 ms != 500 mg
+        RowFactory.create("patient-a", null),    // 1000 mmol != 500 mg
+        RowFactory.create("patient-b", null),    // 49 % != 500 mg
+        RowFactory.create("patient-c", null)     //  non-ucum != 500 mg
     );
 
     input = new OperatorInput(parserContext, left, ucumQuantityLiteral2);
@@ -291,7 +343,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", false),   // 500 mg != 0.5 mg 
         RowFactory.create("patient-7", null),    // 30 d != 0.5 mg
         RowFactory.create("patient-8", null),    // 60 s != 0.5 mg
-        RowFactory.create("patient-9", null)     // 1000 ms != 0.5 mg
+        RowFactory.create("patient-9", null),    // 1000 ms != 0.5 mg
+        RowFactory.create("patient-a", null),    // 1000 mmol != 0.5 mg
+        RowFactory.create("patient-b", null),    // 49 % != 0.5 mg
+        RowFactory.create("patient-c", null)     //  non-ucum != 0.5 mg
     );
 
     input = new OperatorInput(parserContext, left, ucumQuantityLiteral3);
@@ -306,7 +361,28 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg != 1.8 m 
         RowFactory.create("patient-7", null),   // 30 d != 1.8 m
         RowFactory.create("patient-8", null),   // 60 s != 1.8 m
-        RowFactory.create("patient-9", null)    // 1000 ms != 1.8 m
+        RowFactory.create("patient-9", null),    // 1000 ms != 1.8 m
+        RowFactory.create("patient-a", null),    // 1000 mmol != 1.8 m
+        RowFactory.create("patient-b", null),    // 49 % != 1.8 m
+        RowFactory.create("patient-c", null)     //  non-ucum != 1.8 m
+    );
+
+    input = new OperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
+    result = equalityOperator.invoke(input);
+    
+    assertThat(result).selectOrderedResult().hasRows(
+        RowFactory.create("patient-1", null),   // 500 mg != 0.49 ''
+        RowFactory.create("patient-2", null),   // 500 mg != 0.49 ''
+        RowFactory.create("patient-3", null),   // 500 mg != 0.49 ''
+        RowFactory.create("patient-4", null),   // 650 mg != 0.49 ''
+        RowFactory.create("patient-5", null),   // {} != 0.49 ''
+        RowFactory.create("patient-6", null),   // 500 mg != 0.49 '' 
+        RowFactory.create("patient-7", null),   // 30 d != 0.49 ''
+        RowFactory.create("patient-8", null),   // 60 s != 0.49 ''
+        RowFactory.create("patient-9", null),    // 1000 ms != 0.49 ''
+        RowFactory.create("patient-a", true),    // 1000 mmol != 0.49 ''
+        RowFactory.create("patient-b", false),    // 49 % != 0.49 ''
+        RowFactory.create("patient-c", null)     //  non-ucum != 0.49 ''
     );
 
     input = new OperatorInput(parserContext, ucumQuantityLiteral1, ucumQuantityLiteral1);
@@ -317,7 +393,7 @@ public class EqualityOperatorQuantityTest {
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
-                "patient-7", "patient-8", "patient-9"))
+                "patient-7", "patient-8", "patient-9", "patient-a", "patient-b", "patient-c"))
         .build();
     assertThat(result).selectOrderedResult().hasRows(allFalse);
   }
@@ -337,7 +413,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg = 30 days 
         RowFactory.create("patient-7", null),   // 30 d = 30 days
         RowFactory.create("patient-8", null),   // 60 s = 30 days
-        RowFactory.create("patient-9", null)    // 1000 ms = 30 days
+        RowFactory.create("patient-9", null),    // 1000 ms = 30 days
+        RowFactory.create("patient-a", null),    // 1000 mmol = 30 days
+        RowFactory.create("patient-b", null),    // 49 % = 30 days
+        RowFactory.create("patient-c", null)     //  non-ucum = 30 days
     );
 
     input = new OperatorInput(parserContext, left, calendarDurationLiteral2);
@@ -352,7 +431,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg = 60 seconds 
         RowFactory.create("patient-7", false),  // 30 d = 60 seconds
         RowFactory.create("patient-8", true),   // 60 s = 60 seconds
-        RowFactory.create("patient-9", false)   // 1000 ms = 60 seconds
+        RowFactory.create("patient-9", false),   // 1000 ms = 60 seconds
+        RowFactory.create("patient-a", null),    // 1000 mmol = 60 seconds
+        RowFactory.create("patient-b", null),    // 49 % = 60 seconds
+        RowFactory.create("patient-c", null)     //  non-ucum = 60 seconds
     );
 
     input = new OperatorInput(parserContext, left, calendarDurationLiteral3);
@@ -367,7 +449,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg = 1000 milliseconds 
         RowFactory.create("patient-7", false),  // 30 d = 1000 milliseconds
         RowFactory.create("patient-8", false),  // 60 s = 1000 milliseconds
-        RowFactory.create("patient-9", true)    // 1000 ms = 1000 milliseconds
+        RowFactory.create("patient-9", true),    // 1000 ms = 1000 milliseconds
+        RowFactory.create("patient-a", null),    // 1000 mmol = 1000 milliseconds
+        RowFactory.create("patient-b", null),    // 49 % = 1000 milliseconds
+        RowFactory.create("patient-c", null)     //  non-ucum = 1000 milliseconds
     );
 
     input = new OperatorInput(parserContext, calendarDurationLiteral2, calendarDurationLiteral2);
@@ -378,7 +463,7 @@ public class EqualityOperatorQuantityTest {
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(true,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
-                "patient-7", "patient-8", "patient-9"))
+                "patient-7", "patient-8", "patient-9", "patient-a", "patient-b", "patient-c"))
         .build();
     assertThat(result).selectOrderedResult().hasRows(allTrue);
   }
@@ -398,7 +483,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg != 30 days 
         RowFactory.create("patient-7", null),   // 30 d != 30 days
         RowFactory.create("patient-8", null),   // 60 s != 30 days
-        RowFactory.create("patient-9", null)    // 1000 ms != 30 days
+        RowFactory.create("patient-9", null),   // 1000 ms != 30 days
+        RowFactory.create("patient-a", null),   // 1000 mmol != 30 days
+        RowFactory.create("patient-b", null),   // 49 % != 30 days
+        RowFactory.create("patient-c", null)    //  non-ucum != 30 days
     );
 
     input = new OperatorInput(parserContext, left, calendarDurationLiteral2);
@@ -413,7 +501,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg != 60 s 
         RowFactory.create("patient-7", true),   // 30 d != 60 s
         RowFactory.create("patient-8", false),  // 60 s != 60 s
-        RowFactory.create("patient-9", true)    // 1000 ms != 60 s
+        RowFactory.create("patient-9", true),   // 1000 ms != 60 s
+        RowFactory.create("patient-a", null),   // 1000 mmol != 60 seconds
+        RowFactory.create("patient-b", null),   // 49 % != 60 seconds
+        RowFactory.create("patient-c", null)    //  non-ucum != 60 seconds
     );
 
     input = new OperatorInput(parserContext, left, calendarDurationLiteral3);
@@ -428,7 +519,10 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-6", null),   // 500 mg != 1000 ms 
         RowFactory.create("patient-7", true),   // 30 d != 1000 ms
         RowFactory.create("patient-8", true),   // 60 s != 1000 ms
-        RowFactory.create("patient-9", false)   // 1000 ms != 1000 ms
+        RowFactory.create("patient-9", false),   // 1000 ms != 1000 ms
+        RowFactory.create("patient-a", null),    // 1000 mmol != 1000 milliseconds
+        RowFactory.create("patient-b", null),    // 49 % != 1000 milliseconds
+        RowFactory.create("patient-c", null)     //  non-ucum != 1000 milliseconds
     );
 
     input = new OperatorInput(parserContext, calendarDurationLiteral2, calendarDurationLiteral2);
@@ -439,7 +533,7 @@ public class EqualityOperatorQuantityTest {
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false,
             List.of("patient-1", "patient-2", "patient-3", "patient-4", "patient-5", "patient-6",
-                "patient-7", "patient-8", "patient-9"))
+                "patient-7", "patient-8", "patient-9", "patient-a", "patient-b", "patient-c"))
         .build();
     assertThat(result).selectOrderedResult().hasRows(allFalse);
   }

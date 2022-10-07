@@ -100,12 +100,13 @@ public class LightweightFhirEncodersTest implements JsonMethods {
 
   private static void assertQuantity(final Row quantityRow, final String canonicalizedValue,
       final String canonicalizedCode) {
-    final BigDecimal actualCanonicalizedValue = quantityRow.getDecimal(
+    // TODO: FlexDecimal
+    final String actualCanonicalizedValue = quantityRow.getString(
         quantityRow.fieldIndex(QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME()));
     final String actualCanonicalizedCode = quantityRow.getString(
         quantityRow.fieldIndex(QuantitySupport.CODE_CANONICALIZED_FIELD_NAME()));
 
-    assertEquals(new BigDecimal(canonicalizedValue), actualCanonicalizedValue);
+    assertEquals(canonicalizedValue, actualCanonicalizedValue);
     assertEquals(canonicalizedCode, actualCanonicalizedCode);
   }
 
@@ -234,7 +235,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final Row observationRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     final Row quantityRow = observationRow.getStruct(observationRow.fieldIndex("valueQuantity"));
-    assertQuantity(quantityRow, "76000.000000", "g");
+    assertQuantity(quantityRow, "76000", "g");
   }
 
   @Test
@@ -253,12 +254,12 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final List<Row> properties = deviceRow.getList(deviceRow.fieldIndex("property"));
     final Row propertyRow = properties.get(0);
     final List<Row> quantityArray = propertyRow.getList(propertyRow.fieldIndex("valueQuantity"));
-
+    
     final Row quantity1 = quantityArray.get(0);
-    assertQuantity(quantity1, "0.001000", "m");
+    assertQuantity(quantity1, "0.0010", "m");
 
     final Row quantity2 = quantityArray.get(1);
-    assertQuantity(quantity2, "0.002000", "m");
+    assertQuantity(quantity2, "0.0020", "m");
   }
 
 }

@@ -32,6 +32,7 @@ import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.element.QuantityPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
@@ -759,5 +760,40 @@ public class ParserTest extends AbstractParserTest {
         .build();
     parser = new Parser(parserContext);
   }
+  
+  @Test
+  void testQuantityMultiplicationAndDivision() {
+    assertThatResultOf(
+        "((reverseResolve(Observation.subject).where(valueQuantity < 150 'cm').valueQuantity.first() * 2 '1')"
+            + " / reverseResolve(Observation.subject).where(valueQuantity < 1.50 'm').valueQuantity.first()).value")
+        .isElementPath(DecimalPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.csv");
+  }
+  
+  @Test
+  void testQuantityAdditionSubtractionAndEquality() {
+    //  33 'mmol/L == 19873051110000000000000000 'm-3'
+    assertThatResultOf(
+        "((reverseResolve(Observation.subject).where(valueQuantity > 1 'mmol/L').valueQuantity.first() + 33 'mmol/L')"
+            + " - reverseResolve(Observation.subject).where(valueQuantity > 1 'mmol/L').valueQuantity.first()) = 19873051110000000000000000 'm-3'")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionSubtractionAndEquality.csv");
+  }
 
+  @Test
+  void testQuantityAdditionWithOverflow() {
+    // values for 121503c8-9564-4b48-9086-a22df717948e and a7eb2ce7-1075-426c-addd-957b861b0e55 exceed 10^26 m-3
+    assertThatResultOf(
+        "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').value")
+        .isElementPath(DecimalPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_value.csv");
+    assertThatResultOf(
+        "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').code")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
+  }
 }

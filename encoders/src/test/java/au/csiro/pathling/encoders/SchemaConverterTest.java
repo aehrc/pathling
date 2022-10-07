@@ -417,7 +417,8 @@ public class SchemaConverterTest {
     assertTrue(getField(quantityType, true, "unit") instanceof StringType);
     assertTrue(getField(quantityType, true, "system") instanceof StringType);
     assertTrue(getField(quantityType, true, "code") instanceof StringType);
-    assertTrue(getField(quantityType, true, "_value_canonicalized") instanceof DecimalType);
+    // TODO: FlexDecimal Change
+    assertTrue(getField(quantityType, true, "_value_canonicalized") instanceof StringType);
     assertTrue(getField(quantityType, true, "_code_canonicalized") instanceof StringType);
   }
 }

@@ -9,6 +9,7 @@ package au.csiro.pathling.fhirpath.element;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
@@ -17,8 +18,10 @@ import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.sql.types.FlexDecimal;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -72,23 +75,91 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
   @Override
   public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
-    return buildMathOperation(this, operation, expression, dataset, getFhirType());
+    return buildMathOperation(this, operation, expression, dataset, getDefinition());
+  }
+
+  @Nonnull
+  private static BiFunction<Column, Column, Column> getMathOperation(
+      @Nonnull final MathOperation operation) {
+    switch (operation) {
+      case ADDITION:
+        return FlexDecimal::plus;
+      case MULTIPLICATION:
+        return FlexDecimal::multiply;
+      case DIVISION:
+        return FlexDecimal::divide;
+      case SUBTRACTION:
+        return FlexDecimal::minus;
+      default:
+        throw new AssertionError("Unsupported math operation encountered: " + operation);
+    }
+  }
+
+  private static final Column NO_UNIT_LITERAL = lit(Ucum.NO_UNIT_CODE);
+
+  @Nonnull
+  private static Column getResultUnit(
+      @Nonnull final MathOperation operation, @Nonnull final Column leftUnit,
+      @Nonnull final Column rightUnit) {
+    switch (operation) {
+      case ADDITION:
+      case SUBTRACTION:
+        return leftUnit;
+      case MULTIPLICATION:
+        // we only allow multiplication by dimensionless values at the moment
+        // the unit is preserved in this case
+        return when(leftUnit.notEqual(NO_UNIT_LITERAL), leftUnit).otherwise(rightUnit);
+      case DIVISION:
+        // we only allow division by the same unit or a dimensionless value
+        return when(leftUnit.equalTo(rightUnit), NO_UNIT_LITERAL).otherwise(leftUnit);
+      default:
+        throw new AssertionError("Unsupported math operation encountered: " + operation);
+    }
+  }
+
+  @Nonnull
+  private static Column getValidResult(
+      @Nonnull final MathOperation operation, @Nonnull final Column result,
+      @Nonnull final Column leftUnit,
+      @Nonnull final Column rightUnit) {
+    switch (operation) {
+      case ADDITION:
+      case SUBTRACTION:
+        return when(leftUnit.equalTo(rightUnit), result)
+            .otherwise(null);
+      case MULTIPLICATION:
+        // we only allow multiplication by dimensionless values at the moment
+        // the unit is preserved in this case
+        return when(leftUnit.equalTo(NO_UNIT_LITERAL).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
+            result).otherwise(null);
+      case DIVISION:
+        // we only allow division by the same unit or a dimensionless value
+        return when(leftUnit.equalTo(rightUnit).or(rightUnit.equalTo(NO_UNIT_LITERAL)),
+            result).otherwise(null);
+      default:
+        throw new AssertionError("Unsupported math operation encountered: " + operation);
+    }
   }
 
   @Nonnull
   public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,
       @Nonnull final MathOperation operation, @Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final Optional<ElementDefinition> elementDefinition) {
     return target -> {
+      final BiFunction<Column, Column, Column> mathOperation = getMathOperation(operation);
       final Column sourceComparable = source.getNumericValueColumn();
       final Column sourceContext = source.getNumericContextColumn();
       final Column targetContext = target.getNumericContextColumn();
-      final Column resultColumn = operation.getSparkFunction()
+      final Column resultColumn = mathOperation
           .apply(sourceComparable, target.getNumericValueColumn());
       final Column sourceCanonicalizedCode = sourceContext.getField(
           QuantityEncoding.CANONICALIZED_CODE_COLUMN);
       final Column targetCanonicalizedCode = targetContext.getField(
           QuantityEncoding.CANONICALIZED_CODE_COLUMN);
+      final Column resultCode = getResultUnit(operation, sourceCanonicalizedCode,
+          targetCanonicalizedCode);
+
       final Column resultStruct = QuantityEncoding.toStruct(
           sourceContext.getField("id"),
           resultColumn,
@@ -96,33 +167,31 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
           // The only Quantities that are decoded are calendar duration quantities parsed from literals.
           lit(null),
           sourceContext.getField("comparator"),
-          sourceCanonicalizedCode,
+          resultCode,
           sourceContext.getField("system"),
-          sourceCanonicalizedCode,
+          resultCode,
           resultColumn,
-          sourceCanonicalizedCode,
+          resultCode,
           sourceContext.getField("_fid")
       );
-      final Column resultQuantityColumn =
-          when(sourceCanonicalizedCode.equalTo(targetCanonicalizedCode), resultStruct)
-              .otherwise(null);
+
+      final Column validResult = getValidResult(operation, resultStruct,
+          sourceCanonicalizedCode, targetCanonicalizedCode);
+      final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
+          null).otherwise(validResult);
 
       final Column idColumn = source.getIdColumn();
       final Optional<Column> eidColumn = findEidColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
-
-      switch (operation) {
-        case ADDITION:
-        case SUBTRACTION:
-        case MULTIPLICATION:
-        case DIVISION:
-          return ElementPath
+      return
+          elementDefinition.map(definition -> ElementPath
               .build(expression, dataset, idColumn, eidColumn, resultQuantityColumn, true,
                   Optional.empty(),
-                  thisColumn, fhirType);
-        default:
-          throw new AssertionError("Unsupported math operation encountered: " + operation);
-      }
+                  thisColumn, definition)).orElseGet(() -> ElementPath
+              .build(expression, dataset, idColumn, eidColumn, resultQuantityColumn, true,
+                  Optional.empty(),
+                  thisColumn, FHIRDefinedType.QUANTITY));
+
     };
   }
 
