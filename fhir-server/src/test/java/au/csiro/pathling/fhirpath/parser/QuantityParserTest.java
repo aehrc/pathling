@@ -13,7 +13,7 @@ import java.util.Collections;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 
-public class QuantityParserTest extends ParserTest {
+public class QuantityParserTest extends AbstractParserTest {
 
   @Test
   void lengthObservationComparison() {

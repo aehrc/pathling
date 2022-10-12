@@ -16,13 +16,16 @@ package au.csiro.pathling.encoders.terminology.ucum;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import org.fhir.ucum.Decimal;
 import org.fhir.ucum.Pair;
 import org.fhir.ucum.UcumEssenceService;
 import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;
+import org.hl7.fhir.r4.model.DecimalType;
 
 /**
  * Makes UCUM services available to the rest of the application.
@@ -69,25 +72,6 @@ public class Ucum {
         return null;
       }
       return new BigDecimal(stringValue);
-    } catch (final UcumException e) {
-      return null;
-    }
-  }
-
-  @Nullable
-  public static String getCanonicalValueAsString(@Nullable final BigDecimal value,
-      @Nullable final String code) {
-    try {
-      @Nullable final Pair result = getCanonicalForm(value, code);
-      if (result == null) {
-        return null;
-      }
-      @Nullable final Decimal decimalValue = result.getValue();
-      if (decimalValue == null) {
-        return null;
-      }
-      @Nullable final String stringValue = decimalValue.asDecimal();
-      return stringValue;
     } catch (final UcumException e) {
       return null;
     }

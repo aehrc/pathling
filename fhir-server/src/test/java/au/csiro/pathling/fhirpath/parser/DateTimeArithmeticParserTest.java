@@ -15,7 +15,7 @@ import java.util.Collections;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 
-public class DateTimeArithmeticParserTest extends ParserTest {
+public class DateTimeArithmeticParserTest extends AbstractParserTest {
 
   @Test
   void lengthOfEncounter() {

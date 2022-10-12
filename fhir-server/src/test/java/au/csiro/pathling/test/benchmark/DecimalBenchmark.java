@@ -4,7 +4,6 @@ import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.sql.types.FlexDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimal;
-import au.csiro.pathling.sql.types.UcumDecimal;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -31,7 +30,8 @@ import static org.mockito.Mockito.mock;
 public class DecimalBenchmark {
 
   private static final int ROWS = 1000000;
-  private static final BigDecimal LEFT_DECIMAL = new BigDecimal("12345678901234567890123456.123456");
+  private static final BigDecimal LEFT_DECIMAL = new BigDecimal(
+      "12345678901234567890123456.123456");
   private static final BigDecimal RIGHT_DECIMAL = new BigDecimal("0.12345678901234567890123456");
 
   @State(Scope.Benchmark)
@@ -53,9 +53,7 @@ public class DecimalBenchmark {
           .withColumn("leftFlexDecimal", FlexDecimal.DATA_TYPE)
           .withColumn("rightFlexDecimal", FlexDecimal.DATA_TYPE)
           .withColumn("leftFlexiDecimal", FlexiDecimal.DATA_TYPE)
-          .withColumn("rightFlexiDecimal", FlexiDecimal.DATA_TYPE)
-          .withColumn("leftUcumDecimal", UcumDecimal.DATA_TYPE)
-          .withColumn("rightUcumDecimal", UcumDecimal.DATA_TYPE);
+          .withColumn("rightFlexiDecimal", FlexiDecimal.DATA_TYPE);
 
       for (int i = 0; i < ROWS; i++) {
         datasetBuilder = datasetBuilder.withRow(
@@ -64,9 +62,7 @@ public class DecimalBenchmark {
             FlexDecimal.toValue(LEFT_DECIMAL),
             FlexDecimal.toValue(RIGHT_DECIMAL),
             FlexiDecimal.toValue(LEFT_DECIMAL),
-            FlexiDecimal.toValue(RIGHT_DECIMAL),
-            LEFT_DECIMAL.toString(),
-            RIGHT_DECIMAL.toString()
+            FlexiDecimal.toValue(RIGHT_DECIMAL)
         );
       }
       dataset = datasetBuilder.build().cache();
@@ -135,6 +131,7 @@ public class DecimalBenchmark {
     bh.consume(ds.collectQuery(
         FlexDecimal.lt(ds.col("leftFlexDecimal"), ds.col("rightFlexDecimal"))));
   }
+
   @Benchmark
   public void multiply_flexiDec_Benchmark(final Blackhole bh,
       final DatasetState ds) {
@@ -163,31 +160,4 @@ public class DecimalBenchmark {
         FlexiDecimal.lt(ds.col("leftFlexiDecimal"), ds.col("rightFlexiDecimal"))));
   }
 
-  @Benchmark
-  public void multiply_ucumDec_Benchmark(final Blackhole bh,
-      final DatasetState ds) {
-    bh.consume(ds.collectQuery(
-        UcumDecimal.multiply(ds.col("leftUcumDecimal"), ds.col("rightUcumDecimal"))));
-  }
-
-  @Benchmark
-  public void add_ucumDec_Benchmark(final Blackhole bh,
-      final DatasetState ds) {
-    bh.consume(ds.collectQuery(
-        UcumDecimal.plus(ds.col("leftUcumDecimal"), ds.col("rightUcumDecimal"))));
-  }
-
-  @Benchmark
-  public void equals_ucumDec_Benchmark(final Blackhole bh,
-      final DatasetState ds) {
-    bh.consume(ds.collectQuery(
-        UcumDecimal.equals(ds.col("leftUcumDecimal"), ds.col("rightUcumDecimal"))));
-  }
-
-  @Benchmark
-  public void lt_ucumDec_Benchmark(final Blackhole bh,
-      final DatasetState ds) {
-    bh.consume(ds.collectQuery(
-        UcumDecimal.lt(ds.col("leftUcumDecimal"), ds.col("rightUcumDecimal"))));
-  }
 }

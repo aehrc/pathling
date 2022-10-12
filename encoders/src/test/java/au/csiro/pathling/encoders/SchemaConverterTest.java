@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.List;
@@ -96,7 +97,9 @@ public class SchemaConverterTest {
     if (type instanceof StructType) {
       final StructType structType = (StructType) type;
       consumer.accept(structType);
-      Arrays.stream(structType.fields()).forEach(f -> traverseSchema(f.dataType(), consumer));
+      Arrays.stream(structType.fields())
+          .filter(f -> !f.name().startsWith("_")) // filter out synthetic fields
+          .forEach(f -> traverseSchema(f.dataType(), consumer));
     } else if (type instanceof ArrayType) {
       traverseSchema(((ArrayType) type).elementType(), consumer);
     } else if (type instanceof MapType) {
@@ -417,8 +420,7 @@ public class SchemaConverterTest {
     assertTrue(getField(quantityType, true, "unit") instanceof StringType);
     assertTrue(getField(quantityType, true, "system") instanceof StringType);
     assertTrue(getField(quantityType, true, "code") instanceof StringType);
-    // TODO: FlexDecimal Change
-    assertTrue(getField(quantityType, true, "_value_canonicalized") instanceof StringType);
+    assertEquals(FlexiDecimal.DATA_TYPE, getField(quantityType, true, "_value_canonicalized"));
     assertTrue(getField(quantityType, true, "_code_canonicalized") instanceof StringType);
   }
 }

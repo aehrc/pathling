@@ -61,17 +61,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author Piotr Szul
  */
 public class ParserTest extends AbstractParserTest {
-
-  @Autowired
-  TerminologyService terminologyService;
-
-  @Autowired
-  FhirEncoders fhirEncoders;
-
-  FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(parser.parse(expression));
-  }
-
+  
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
     return Assertions.assertThrows(errorType, () -> parser.parse(expression));

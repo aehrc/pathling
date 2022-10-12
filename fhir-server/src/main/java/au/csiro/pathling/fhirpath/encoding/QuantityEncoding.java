@@ -19,6 +19,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.CalendarDurationUtils;
+import au.csiro.pathling.sql.types.FlexiDecimal;
+import au.csiro.pathling.sql.types.FlexiDecimalSupport;
 import com.google.common.collect.ImmutableMap;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
@@ -28,7 +30,6 @@ import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.MetadataBuilder;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Quantity;
 import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 
@@ -68,10 +69,10 @@ public final class QuantityEncoding {
     }
     final BigDecimal value = quantity.getValue();
     @Nullable final String code = quantity.getCode();
-    final String canonicalizedValue;
+    final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
     if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
-      canonicalizedValue = Ucum.getCanonicalValueAsString(value, code);
+      canonicalizedValue = Ucum.getCanonicalValue(value, code);
       canonicalizedCode = Ucum.getCanonicalCode(value, code);
     } else {
       canonicalizedValue = null;
@@ -79,7 +80,7 @@ public final class QuantityEncoding {
     }
     final String comparator = Optional.ofNullable(quantity.getComparator())
         .map(QuantityComparator::toCode).orElse(null);
-    // TODO: The null scale support it a temporary measure becasue we currently 
+    // TODO: The null scale support it a temporary measure because we currently 
     // cannot encode the scale of the results of arithmetic operations.
     return RowFactory.create(quantity.getId(),
         quantity.getValue(),
@@ -87,7 +88,8 @@ public final class QuantityEncoding {
         ? quantity.getValue().scale()
         : null,
         comparator,
-        quantity.getUnit(), quantity.getSystem(), quantity.getCode(), canonicalizedValue,
+        quantity.getUnit(), quantity.getSystem(), quantity.getCode(),
+        FlexiDecimal.toValue(canonicalizedValue),
         canonicalizedCode, null /* _fid */);
   }
 
@@ -153,9 +155,8 @@ public final class QuantityEncoding {
     final StructField unit = new StructField("unit", DataTypes.StringType, true, metadata);
     final StructField system = new StructField("system", DataTypes.StringType, true, metadata);
     final StructField code = new StructField("code", DataTypes.StringType, true, metadata);
-    // TODO: FlexDecimal
     final StructField canonicalizedValue = new StructField(CANONICALIZED_VALUE_COLUMN,
-        DataTypes.StringType, true, metadata);
+        FlexiDecimal.DATA_TYPE, true, metadata);
     final StructField canonicalizedCode = new StructField(CANONICALIZED_CODE_COLUMN,
         DataTypes.StringType, true, metadata);
     final StructField fid = new StructField("_fid", DataTypes.IntegerType, true,
@@ -219,18 +220,18 @@ public final class QuantityEncoding {
     final BigDecimal value = quantity.getValue();
 
     // FlexDecima;
-    final String canonicalizedValue;
+    final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
     if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {
       // If it is a UCUM Quantity, use the UCUM library to canonicalize the value and code.
-      canonicalizedValue = Ucum.getCanonicalValueAsString(value, quantity.getCode());
+      canonicalizedValue = Ucum.getCanonicalValue(value, quantity.getCode());
       canonicalizedCode = Ucum.getCanonicalCode(value, quantity.getCode());
     } else if (CalendarDurationUtils.isCalendarDuration(quantity) &&
         CALENDAR_DURATION_TO_UCUM.containsKey(quantity.getCode())) {
       // If it is a (supported) calendar duration, get the corresponding UCUM unit and then use the 
       // UCUM library to canonicalize the value and code.
       final String resolvedCode = CALENDAR_DURATION_TO_UCUM.get(quantity.getCode());
-      canonicalizedValue = Ucum.getCanonicalValueAsString(value, resolvedCode);
+      canonicalizedValue = Ucum.getCanonicalValue(value, resolvedCode);
       canonicalizedCode = Ucum.getCanonicalCode(value, resolvedCode);
     } else {
       // If it is neither a UCUM Quantity nor a calendar duration, it will not have a canonicalized 
@@ -247,7 +248,7 @@ public final class QuantityEncoding {
         lit(quantity.getUnit()),
         lit(quantity.getSystem()),
         lit(quantity.getCode()),
-        lit(canonicalizedValue),
+        FlexiDecimalSupport.toLiteral(canonicalizedValue),
         lit(canonicalizedCode),
         lit(null));
   }

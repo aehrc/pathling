@@ -130,7 +130,7 @@ public class EqualityOperatorQuantityTest {
         .withRow("patient-8", rowFromQuantity(quantity7))  // 60 s
         .withRow("patient-9", rowFromQuantity(quantity8))  // 1000 ms
         .withRow("patient-a", rowForUcumQuantity("1000", "mmol"))  // 1000 mmol
-        .withRow("patient-b", rowForUcumQuantity("49", "%"))  // 50 %
+        .withRow("patient-b", rowForUcumQuantity("49", "%"))  // 49 %
         .withRow("patient-c", rowFromQuantity(nonUcumQuantity))  // non-ucum
         .buildWithStructValue();
     left = new ElementPathBuilder(spark)
@@ -183,7 +183,7 @@ public class EqualityOperatorQuantityTest {
     final OperatorInput input = new OperatorInput(parserContext, left, right);
     final Operator equalityOperator = Operator.getInstance("=");
     final FhirPath result = equalityOperator.invoke(input);
-
+    
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),  // 500 mg = 500 mg
         RowFactory.create("patient-2", true),  // 500 mg = 0.5 g
@@ -257,8 +257,8 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-8", null),   // 60 s = 0.5 mg
         RowFactory.create("patient-9", null),   // 1000 ms = 0.5 mg
         RowFactory.create("patient-a", null),   // 1000 mmol = 0.5 mg
-        RowFactory.create("patient-b", null),   // 49 % != = 0.5 mg
-        RowFactory.create("patient-c", null)    //  non-ucum != 0.5 mg        
+        RowFactory.create("patient-b", null),   // 49 % = 0.5 mg
+        RowFactory.create("patient-c", null)    //  non-ucum = 0.5 mg        
     );
 
     input = new OperatorInput(parserContext, left, ucumQuantityLiteral3);
@@ -275,26 +275,26 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-8", null),   // 60 s = 1.8 m
         RowFactory.create("patient-9", null),   // 1000 ms = 1.8 m
         RowFactory.create("patient-a", null),   // 1000 mmol = 1.8 m
-        RowFactory.create("patient-b", null),   // 49 % != = 1.8 m
-        RowFactory.create("patient-c", null)    //  non-ucum != 1.8 m   
+        RowFactory.create("patient-b", null),   // 49 %  = 1.8 m
+        RowFactory.create("patient-c", null)    //  non-ucum = 1.8 m   
     );
 
     input = new OperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", null),   // 500 mg = 1.8 m
-        RowFactory.create("patient-2", null),   // 500 mg = 1.8 m
-        RowFactory.create("patient-3", null),   // 500 mg = 1.8 m
-        RowFactory.create("patient-4", null),   // 650 mg = 1.8 m
-        RowFactory.create("patient-5", null),   // {} = 1.8 m
-        RowFactory.create("patient-6", null),   // 500 mg = 1.8 m 
-        RowFactory.create("patient-7", null),   // 30 d = 1.8 m
-        RowFactory.create("patient-8", null),   // 60 s = 1.8 m
-        RowFactory.create("patient-9", null),   // 1000 ms = 1.8 m
-        RowFactory.create("patient-a", false),  // 1000 mmol = 1.8 m
-        RowFactory.create("patient-b", true),   // 49 % != = 1.8 m
-        RowFactory.create("patient-c", null)    //  non-ucum != 1.8 m   
+        RowFactory.create("patient-1", null),   // 500 mg = 0.49 '1'
+        RowFactory.create("patient-2", null),   // 500 mg = 0.49 '1'
+        RowFactory.create("patient-3", null),   // 500 mg = 0.49 '1'
+        RowFactory.create("patient-4", null),   // 650 mg = 0.49 '1'
+        RowFactory.create("patient-5", null),   // {} = 0.49 '1'
+        RowFactory.create("patient-6", null),   // 500 mg = 0.49 '1 
+        RowFactory.create("patient-7", null),   // 30 d = 0.49 '1'
+        RowFactory.create("patient-8", null),   // 60 s = 0.49 '1'
+        RowFactory.create("patient-9", null),   // 1000 ms = 0.49 '1'
+        RowFactory.create("patient-a", false),  // 1000 mmol = 0.49 '1'
+        RowFactory.create("patient-b", true),   // 49 % = 0.49 '1'
+        RowFactory.create("patient-c", null)    //  non-ucum = 0.49 '1'   
     );
 
     input = new OperatorInput(parserContext, ucumQuantityLiteral1, ucumQuantityLiteral1);
@@ -369,7 +369,7 @@ public class EqualityOperatorQuantityTest {
 
     input = new OperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
     result = equalityOperator.invoke(input);
-    
+
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", null),   // 500 mg != 0.49 ''
         RowFactory.create("patient-2", null),   // 500 mg != 0.49 ''

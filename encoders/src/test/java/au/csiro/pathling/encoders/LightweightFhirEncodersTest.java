@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.math.BigDecimal;
@@ -100,13 +101,12 @@ public class LightweightFhirEncodersTest implements JsonMethods {
 
   private static void assertQuantity(final Row quantityRow, final String canonicalizedValue,
       final String canonicalizedCode) {
-    // TODO: FlexDecimal
-    final String actualCanonicalizedValue = quantityRow.getString(
-        quantityRow.fieldIndex(QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME()));
+    final BigDecimal actualCanonicalizedValue = FlexiDecimal.fromValue(quantityRow.getStruct(
+        quantityRow.fieldIndex(QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME())));
     final String actualCanonicalizedCode = quantityRow.getString(
         quantityRow.fieldIndex(QuantitySupport.CODE_CANONICALIZED_FIELD_NAME()));
 
-    assertEquals(canonicalizedValue, actualCanonicalizedValue);
+    assertEquals(new BigDecimal(canonicalizedValue), actualCanonicalizedValue);
     assertEquals(canonicalizedCode, actualCanonicalizedCode);
   }
 

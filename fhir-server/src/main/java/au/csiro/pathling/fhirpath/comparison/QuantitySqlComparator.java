@@ -10,7 +10,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.sql.types.FlexDecimal;
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import org.apache.spark.sql.Column;
 import javax.annotation.Nonnull;
 import java.util.function.BiFunction;
@@ -50,7 +50,7 @@ public class QuantitySqlComparator implements SqlComparator {
 
   @Override
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(FlexDecimal::equals).apply(left, right);
+    return wrap(FlexiDecimal::equals).apply(left, right);
   }
 
   // @Override
@@ -60,22 +60,22 @@ public class QuantitySqlComparator implements SqlComparator {
 
   @Override
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(FlexDecimal::lt).apply(left, right);
+    return wrap(FlexiDecimal::lt).apply(left, right);
   }
 
   @Override
   public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(FlexDecimal::lte).apply(left, right);
+    return wrap(FlexiDecimal::lte).apply(left, right);
   }
 
   @Override
   public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(FlexDecimal::gt).apply(left, right);
+    return wrap(FlexiDecimal::gt).apply(left, right);
   }
 
   @Override
   public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
-    return wrap(FlexDecimal::gte).apply(left, right);
+    return wrap(FlexiDecimal::gte).apply(left, right);
   }
 
   /**

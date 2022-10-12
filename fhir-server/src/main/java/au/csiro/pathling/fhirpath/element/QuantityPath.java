@@ -18,7 +18,7 @@ import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
-import au.csiro.pathling.sql.types.FlexDecimal;
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -83,13 +83,13 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
       @Nonnull final MathOperation operation) {
     switch (operation) {
       case ADDITION:
-        return FlexDecimal::plus;
+        return FlexiDecimal::plus;
       case MULTIPLICATION:
-        return FlexDecimal::multiply;
+        return FlexiDecimal::multiply;
       case DIVISION:
-        return FlexDecimal::divide;
+        return FlexiDecimal::divide;
       case SUBTRACTION:
-        return FlexDecimal::minus;
+        return FlexiDecimal::minus;
       default:
         throw new AssertionError("Unsupported math operation encountered: " + operation);
     }
@@ -162,7 +162,7 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
 
       final Column resultStruct = QuantityEncoding.toStruct(
           sourceContext.getField("id"),
-          resultColumn,
+          FlexiDecimal.to_decimal(resultColumn),
           // NOTE: This (setting value_scale to null) works because we never decode this struct to a Quantity.
           // The only Quantities that are decoded are calendar duration quantities parsed from literals.
           lit(null),

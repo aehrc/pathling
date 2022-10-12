@@ -15,6 +15,7 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.common.collect.ImmutableSet;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -34,6 +35,7 @@ import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
@@ -69,6 +71,14 @@ public class QuantityOperatorsPrecisionTest {
       6).toString(); // 9e26 + 0.00001 
   static final String FULL_DECIMAL_02 = createSpanningDecimal(9, 26, 2,
       6).toString(); // 9e26 + 0.00002
+
+  // These units (prefixes) results in overflow for largest supported decimals (e.g.  9e26 'Tm') 
+  static final Set<String> UNSUPPORTED_FULL_DECIMAL_UNITS = ImmutableSet.of("Ym", "Zm", "Em", "Pm",
+      "Tm");
+
+  // These mol prefixes results in overflow for reasonable decimals (e.g.  9e3 'Tmol')
+  static final Set<String> UNSUPPORTED_RESONABLE_DECIMAL_MOL_UNITS = ImmutableSet.of("Ymol", "Zmol",
+      "Emol", "Pmol", "Tmol");
 
   @BeforeEach
   void setUp() {
@@ -115,10 +125,19 @@ public class QuantityOperatorsPrecisionTest {
 
   @Nonnull
   private static List<Row> createResult(@Nonnull final List<String> unitRange, boolean result) {
+    return createResult(unitRange, result, Collections.emptySet());
+  }
+
+  @Nonnull
+  private static List<Row> createResult(@Nonnull final List<String> unitRange, boolean result,
+      @Nonnull final Set<String> outOfRangeUnits) {
     return unitRange.stream().map(
         unit ->
-            RowFactory.create(unitToRowId(unit), result)).collect(Collectors.toList());
+            RowFactory.create(unitToRowId(unit), outOfRangeUnits.contains(unit)
+                                                 ? null
+                                                 : result)).collect(Collectors.toList());
   }
+
 
   @Nonnull
   private FhirPath callOperator(@Nonnull final ElementPath left, @Nonnull final String operator,
@@ -168,18 +187,18 @@ public class QuantityOperatorsPrecisionTest {
     final ElementPath left = buildQuantityPathForUnits(FULL_DECIMAL_01, unitRange);
     final ElementPath right = buildQuantityPathForUnits(FULL_DECIMAL_01, unitRange);
     final FhirPath result = callOperator(left, "=", right);
-    assertThat(result).selectResult().hasRows(createResult(unitRange, true));
+    assertThat(result).selectResult()
+        .hasRows(createResult(unitRange, true, UNSUPPORTED_FULL_DECIMAL_UNITS));
   }
-  
+
   @Test
   void nonEqualityPrecisionForFullDecimals() {
     final List<String> unitRange = getAllPrefixedUnits("m");
     final ElementPath left = buildQuantityPathForUnits(FULL_DECIMAL_01, unitRange);
-    left.getDataset().collectAsList().forEach(System.out::println);
     final ElementPath right = buildQuantityPathForUnits(FULL_DECIMAL_02, unitRange);
-    right.getDataset().collectAsList().forEach(System.out::println);
     final FhirPath result = callOperator(left, "!=", right);
-    assertThat(result).selectResult().hasRows(createResult(unitRange, true));
+    assertThat(result).selectResult()
+        .hasRows(createResult(unitRange, true, UNSUPPORTED_FULL_DECIMAL_UNITS));
   }
 
   @Test
@@ -188,7 +207,8 @@ public class QuantityOperatorsPrecisionTest {
     final ElementPath left = buildQuantityPathForUnits(FULL_DECIMAL_01, unitRange);
     final ElementPath right = buildQuantityPathForUnits(FULL_DECIMAL_02, unitRange);
     final FhirPath result = callOperator(left, "<", right);
-    assertThat(result).selectResult().hasRows(createResult(unitRange, true));
+    assertThat(result).selectResult()
+        .hasRows(createResult(unitRange, true, UNSUPPORTED_FULL_DECIMAL_UNITS));
   }
 
   @Test
@@ -197,7 +217,8 @@ public class QuantityOperatorsPrecisionTest {
     final ElementPath left = buildQuantityPathForUnits(REASONABLE_DECIMAL_01, unitRange);
     final ElementPath right = buildQuantityPathForUnits(REASONABLE_DECIMAL_01, unitRange);
     final FhirPath result = callOperator(left, "=", right);
-    assertThat(result).selectResult().hasRows(createResult(unitRange, true));
+    assertThat(result).selectResult()
+        .hasRows(createResult(unitRange, true, UNSUPPORTED_RESONABLE_DECIMAL_MOL_UNITS));
   }
 
 }
