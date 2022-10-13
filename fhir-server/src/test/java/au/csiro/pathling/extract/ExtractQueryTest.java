@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
@@ -279,6 +279,23 @@ class ExtractQueryTest {
     final Dataset<Row> result = executor.buildQuery(request);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
+  }
+
+  @Test
+  void multipleNonSingularColumnsWithDifferentTypes() {
+    subjectResource = ResourceType.ENCOUNTER;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("type.coding.display")
+        .withColumn("type.coding")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark,
+            "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.csv");
   }
 
   @Test

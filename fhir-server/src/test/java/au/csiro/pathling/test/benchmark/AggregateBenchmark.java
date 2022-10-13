@@ -2,7 +2,7 @@ package au.csiro.pathling.test.benchmark;
 
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
@@ -119,7 +119,7 @@ public class AggregateBenchmark {
   }
 
   @Benchmark
-  public void simpleAggregationAndGroupingAndFilter_Benchmark(final Blackhole bh,
+  public void simpleAggregationGroupingAndFilter_Benchmark(final Blackhole bh,
       final AggregateState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.ENCOUNTER)
@@ -153,7 +153,7 @@ public class AggregateBenchmark {
   }
 
   @Benchmark
-  public void complexAggregationAndGroupingAndFilter_Benchmark(final Blackhole bh,
+  public void complexAggregationGroupingAndFilter_Benchmark(final Blackhole bh,
       final AggregateState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.ENCOUNTER)
@@ -195,7 +195,7 @@ public class AggregateBenchmark {
   }
 
   @Benchmark
-  public void multipleAggregationsAndGroupingsAndAndFilters_Benchmark(final Blackhole bh,
+  public void multipleAggregationsGroupingsAndFilters_Benchmark(final Blackhole bh,
       final AggregateState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.ENCOUNTER)

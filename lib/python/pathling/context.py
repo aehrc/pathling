@@ -39,7 +39,12 @@ class PathlingContext:
                max_nesting_level: Optional[int] = None,
                enable_extensions: Optional[bool] = None,
                enabled_open_types: Optional[Sequence[str]] = None,
-               terminology_server_url: Optional[str] = None) -> "PathlingContext":
+               terminology_server_url: Optional[str] = None,
+               token_endpoint: Optional[str] = None,
+               client_id: Optional[str] = None,
+               client_secret: Optional[str] = None,
+               scope: Optional[str] = None,
+               token_expiry_tolerance: Optional[int] = None) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options.
 
@@ -65,6 +70,12 @@ class PathlingContext:
             extensions
         :param terminology_server_url: the URL of the FHIR terminology server used to resolve
             terminology queries
+        :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
+        :param client_id: a client ID for use with the client credentials grant
+        :param client_secret: a client secret for use with the client credentials grant
+        :param scope: a scope value for use with the client credentials grant
+        :param token_expiry_tolerance: the minimum number of seconds that a token should have 
+            before expiry when deciding whether to send it with a terminology request
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
         spark = (spark or
@@ -75,7 +86,8 @@ class PathlingContext:
         jvm: JavaObject = spark._jvm
         jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
                 spark._jsparkSession, fhir_version, max_nesting_level, enable_extensions,
-                enabled_open_types, terminology_server_url)
+                enabled_open_types, terminology_server_url, token_endpoint, client_id,
+                client_secret, scope, token_expiry_tolerance)
         return PathlingContext(spark, jpc)
 
     def __init__(self, spark: SparkSession, jpc: JavaObject) -> None:

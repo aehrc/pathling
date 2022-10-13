@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.Configuration;
-import au.csiro.pathling.Configuration.Storage;
+import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.io.IOException;
@@ -154,7 +154,7 @@ public class DatasetAssert {
     }
 
     final Configuration configuration = new Configuration();
-    final Storage storage = new Storage();
+    final StorageConfiguration storage = new StorageConfiguration();
     storage.setWarehouseUrl("file://" + location);
     configuration.setStorage(storage);
     final ResultWriter resultWriter = new ResultWriter(configuration, spark);

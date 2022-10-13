@@ -34,16 +34,16 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class DateTimeLiteralPath extends LiteralPath<DateTimeType> implements
+public class DateTimeLiteralPath extends LiteralPath<BaseDateTimeType> implements
     Materializable<BaseDateTimeType>, Comparable, Temporal {
 
   protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final DateTimeType literalValue) {
+      @Nonnull final BaseDateTimeType literalValue) {
     super(dataset, idColumn, literalValue);
   }
 
   protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final DateTimeType literalValue, @Nonnull final String expression) {
+      @Nonnull final BaseDateTimeType literalValue, @Nonnull final String expression) {
     super(dataset, idColumn, literalValue, expression);
   }
 

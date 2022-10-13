@@ -11,7 +11,7 @@ import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.hl7.fhir.r4.model.Bundle.BundleType.BATCHRESPONSE;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.io.Database;

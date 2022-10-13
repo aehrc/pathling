@@ -154,6 +154,13 @@ spark:
 - `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
   to `true` will enable additional logging of the details of requests between
   the server and the terminology service.
+- `pathling.terminology.authentication.enabled` - (default: `false`) Enables
+  authentication for requests to the terminology service.
+- `pathling.terminology.authentication.tokenEndpoint`, 
+  `pathling.terminology.authentication.clientId`, 
+  `pathling.terminology.authentication.clientSecret` - Authentication details
+  for connecting to a terminology service that requires authentication, using
+  [OAuth 2.0 client credentials flow](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4).
 
 ### Authorization
 
@@ -246,5 +253,5 @@ within URLs sent back by the API.
 Pathling can also be run directly within an Apache Spark cluster as a persistent
 application.
 
-For compatibility, Pathling runs Spark 3.1.2 (Scala 2.12), with Hadoop version
-3.2.2.
+For compatibility, Pathling runs Spark 3.3.0 (Scala 2.12), with Hadoop version
+3.3.3.

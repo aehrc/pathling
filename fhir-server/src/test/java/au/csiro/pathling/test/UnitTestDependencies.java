@@ -6,8 +6,9 @@
 
 package au.csiro.pathling.test;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.async.SparkListener;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -55,6 +56,13 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("unit-test")
 class UnitTestDependencies {
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static PathlingVersion version() {
+    return new PathlingVersion();
+  }
 
   @Bean
   @ConditionalOnMissingBean

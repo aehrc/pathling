@@ -8,6 +8,7 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.config.Configuration;
 import java.io.PrintStream;
 import javax.annotation.Nullable;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

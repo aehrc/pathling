@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.encoders.FhirEncoders;

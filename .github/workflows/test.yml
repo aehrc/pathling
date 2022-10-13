@@ -40,9 +40,7 @@ jobs:
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
-          PATHLING_OPTS: >-
-            -DskipScalaDocs
-            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+          PATHLING_OPTS: ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
           -pl encoders -am
@@ -100,7 +98,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
       - name: Run the verify goal with Maven
         env:
           # Activate the "tranche 1" test profile. If there is a cache hit on the test data, we
@@ -112,7 +110,6 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
-            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -177,7 +174,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
       - name: Run the verify goal with Maven
         env:
           # Activate the "tranche 2" test profile. If there is a cache hit on the test data, we
@@ -189,7 +186,6 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
-            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -255,7 +251,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
       - name: Run the verify goal with Maven
         env:
           # Activate the "tranche 3" test profile. If there is a cache hit on the test data, we
@@ -265,7 +261,6 @@ jobs:
           # report action to report them.
           PATHLING_OPTS: >-
             -DskipEncodersTests
-            -DskipScalaDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -352,7 +347,6 @@ jobs:
           # If the actor is Dependabot we skip the system test, as it requires access to secrets.
           PATHLING_OPTS: >-
             -DskipSurefireTests
-            -DskipScalaDocs
             -DskipITs
             -Dpathling.dockerArchitecture=amd64
         run: >-
@@ -366,7 +360,6 @@ jobs:
         env:
           PATHLING_OPTS: >-
             -DskipSurefireTests
-            -DskipScalaDocs
             -Dmaven.test.failure.ignore
             -Dpathling.dockerArchitecture=amd64
             -Dpathling.systemTest.auth.clientSecret=${{ secrets.TEST_CLIENT_SECRET }}
@@ -395,7 +388,14 @@ jobs:
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
+          aws-region: ap-southeast-2
       - name: Checkout code
         uses: actions/checkout@v2
         with:
@@ -418,7 +418,10 @@ jobs:
         uses: actions/cache@v2
         with:
           path: fhir-server/src/test/resources/test-data/parquet
-          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala') }}
+          key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
+      - name: Get current time
+        id: timestamp
+        run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M%S')"
       - name: Run the verify goal with Maven
         env:
           # If there is a cache hit on the test data, we don't need to import it. If it is a cache
@@ -429,13 +432,15 @@ jobs:
           mvn --batch-mode verify
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
-          -DskipSurefireTests -DskipScalaDocs
+          -DskipSurefireTests
         timeout-minutes: 20
-      - name: Upload benchmark results
+      - name: Upload benchmark artifact
         uses: actions/upload-artifact@v2
         with:
           name: benchmark-results
           path: "**/jmh-*.json"
+      - name: Upload benchmark file to S3
+        run: aws s3 sync fhir-server/target/benchmark s3://pathling-benchmark/${{ github.ref }}/${{ github.run_id }}/${{ steps.timestamp.outputs.timestamp }}/
 
   js-client:
     name: JavaScript client
@@ -542,8 +547,6 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
-            -DskipScalaDocs
-            -DskipPythonDocs
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -602,6 +605,7 @@ jobs:
         run: >-
           mvn --batch-mode verify
           -pl site -am
+          -Pdocs
           -DskipTests
         timeout-minutes: 15
 

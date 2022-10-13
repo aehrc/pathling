@@ -6,7 +6,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_121503c8;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_2b36c1e2;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_7001ad9c;
@@ -25,14 +24,12 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
-import au.csiro.pathling.fhirpath.element.QuantityPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
@@ -41,8 +38,6 @@ import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
@@ -55,7 +50,6 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Piotr Szul
@@ -786,4 +780,13 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
   }
+  
+  @Test
+  void testTraversalToUnsupportedReferenceChild() {
+    final String expression = "reverseResolve(MedicationRequest.subject).requester.identifier";
+    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+        expression);
+    assertEquals("No such child: " + expression, error.getMessage());
+  }
+ 
 }

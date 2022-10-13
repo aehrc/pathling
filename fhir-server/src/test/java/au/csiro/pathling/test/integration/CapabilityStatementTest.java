@@ -34,12 +34,11 @@ class CapabilityStatementTest extends IntegrationTest {
 
   @Test
   void capabilityStatement() throws JSONException {
-    final String response = restTemplate
-        .getForObject("http://localhost:" + port + "/fhir/metadata", String.class);
+    final String response = restTemplate.getForObject("http://localhost:" + port + "/fhir/metadata",
+        String.class);
     assertJson("responses/CapabilityStatementTest/capabilityStatement.CapabilityStatement.json",
         response, JSONCompareMode.LENIENT);
   }
-
 
   @Test
   void cors() throws JSONException {
@@ -47,13 +46,11 @@ class CapabilityStatementTest extends IntegrationTest {
     corsHeaders.setOrigin("http://foo.bar");
     corsHeaders.setAccessControlRequestMethod(HttpMethod.GET);
 
-    final ResponseEntity<String> response = restTemplate
-        .exchange("http://localhost:" + port + "/fhir/metadata", HttpMethod.OPTIONS,
-            new HttpEntity<String>(corsHeaders),
-            String.class);
+    final ResponseEntity<String> response = restTemplate.exchange(
+        "http://localhost:" + port + "/fhir/metadata", HttpMethod.OPTIONS,
+        new HttpEntity<String>(corsHeaders), String.class);
 
     System.out.println(response);
   }
-
 
 }

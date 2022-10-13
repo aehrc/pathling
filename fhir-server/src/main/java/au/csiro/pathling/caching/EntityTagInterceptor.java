@@ -8,7 +8,7 @@ package au.csiro.pathling.caching;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.Configuration;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.interceptor.api.Hook;

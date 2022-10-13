@@ -8,14 +8,14 @@ import * as Sentry from "@sentry/node";
 import { Config } from "./config.js";
 
 export function initializeSentry(config: Config): void {
-  const dsn = config.getStringValue("sentryDsn", true),
-    environment = config.getStringValue("sentryEnvironment", true),
-    release = config.getStringValue("sentryRelease", true);
+  const dsn = config.getOptionalStringValue("sentryDsn"),
+    environment = config.getOptionalStringValue("sentryEnvironment"),
+    release = config.getOptionalStringValue("sentryRelease");
   if (dsn) {
     Sentry.init({
       dsn,
       environment: environment ?? undefined,
-      release: release ?? undefined
+      release: release ?? undefined,
     });
   }
 }

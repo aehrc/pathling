@@ -9,7 +9,6 @@
   "description": "This named search query allows for the filtering of resources based on a set of FHIRPath expressions",
   "affectsState": false,
   "code": "fhirPath",
-  "resource": "Resource",
   "system": false,
   "type": true,
   "instance": false,

@@ -62,8 +62,8 @@ the [CSIRO Open Source Software Licence Agreement](./LICENSE.md).
 This means that you are free to use, modify and redistribute the software as
 you wish, even for commercial purposes.
 
-If you use this software in your research, please consider citing it using the 
-"Cite this repository" link on the right.
+If you use this software in your research, please consider citing our paper, 
+[Pathling: analytics on FHIR](https://doi.org/10.1186/s13326-022-00277-1).
 
 **Pathling is experimental software, use it at your own risk!** You can get a
 full description of the current set of known issues 
