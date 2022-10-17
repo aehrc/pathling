@@ -611,10 +611,7 @@
                     </platforms>
                   </from>
                   <to>
-                    <image>${pathling.fhirServerDockerRepo}</image>
-                    <tags>
-                      <tag>${pathling.fhirServerDockerTag}-develop</tag>
-                    </tags>
+                    <image>${pathling.fhirServerDockerRepo}:${pathling.fhirServerDockerTag}-develop</image>
                   </to>
                 </configuration>
               </execution>
