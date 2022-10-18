@@ -219,7 +219,8 @@ To make the Pathling encoders available within notebooks, navigate to the
 "Compute" section and click on the cluster. Click on the "Libraries" tab, and
 click "Install new".
 
-Install both the `python` PyPI package, and the `au.csiro.pathling:library-api`
+Install both the `pathling` PyPI package, and
+the `au.csiro.pathling:library-api`
 Maven package. Once the cluster is restarted, the libraries should be available
 for import and use within all notebooks.
 
