@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.4.0-SNAPSHOT</version>
+    <version>6.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -574,6 +574,44 @@
                       <tag>${project.version}</tag>
                       <tag>${project.majorVersion}</tag>
                     </tags>
+                  </to>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>dockerPreRelease</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.google.cloud.tools</groupId>
+            <artifactId>jib-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>deploy</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+                <configuration>
+                  <from>
+                    <image>${pathling.dockerBaseImage}</image>
+                    <platforms>
+                      <platform>
+                        <architecture>amd64</architecture>
+                        <os>linux</os>
+                      </platform>
+                      <platform>
+                        <architecture>arm64</architecture>
+                        <os>linux</os>
+                      </platform>
+                    </platforms>
+                  </from>
+                  <to>
+                    <image>${pathling.fhirServerDockerRepo}:${pathling.fhirServerDockerTag}-develop</image>
                   </to>
                 </configuration>
               </execution>
