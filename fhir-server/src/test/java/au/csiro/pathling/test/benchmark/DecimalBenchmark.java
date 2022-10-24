@@ -5,21 +5,29 @@ import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.sql.types.FlexDecimal;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.test.builders.DatasetBuilder;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.Tag;
-import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
-import javax.annotation.Nonnull;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static org.mockito.Mockito.mock;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -29,7 +37,7 @@ import static org.mockito.Mockito.mock;
 @Measurement(iterations = 7)
 public class DecimalBenchmark {
 
-  private static final int ROWS = 1000000;
+  private static final int ROWS = 100_000;
   private static final BigDecimal LEFT_DECIMAL = new BigDecimal(
       "12345678901234567890123456.123456");
   private static final BigDecimal RIGHT_DECIMAL = new BigDecimal("0.12345678901234567890123456");
