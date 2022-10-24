@@ -2,11 +2,11 @@ package au.csiro.pathling.test.benchmark;
 
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
@@ -40,7 +40,7 @@ import org.springframework.test.context.ActiveProfiles;
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Tag("UnitTest")
-@Fork(0)
+@Fork(jvmArgsAppend = "-Xmx4g -ea -Duser.timezone=UTC")
 @Warmup(iterations = 1)
 @Measurement(iterations = 5)
 public class AggregateBenchmark {
