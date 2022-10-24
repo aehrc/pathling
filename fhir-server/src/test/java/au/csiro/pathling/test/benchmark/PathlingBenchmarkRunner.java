@@ -59,7 +59,7 @@ public class PathlingBenchmarkRunner {
         .resultFormat(resultsFileOutputType)
         .result(resultFile)
         .shouldFailOnError(true)
-        .jvmArgs("-server")
+        .jvmArgs("-server -Xmx4g -ea -Duser.timezone=UTC")
         .build();
     new Runner(opt).run();
   }
