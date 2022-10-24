@@ -4,20 +4,21 @@ import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.Sentry;
 import io.sentry.protocol.Request;
-import org.slf4j.MDC;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
+import org.slf4j.MDC;
 
 /**
- * This class represent the diagnostic information collected from a servlet request for the purpose
- * of logging and Sentry reporting. The data in this class is not bound to the scope of the current
- * request and can be used to set diagnostic information even after the original request has been
- * completed (e.g. for the asynchronous worker threads).
+ * This class represents the diagnostic information collected from a servlet request for the purpose
+ * of logging and Sentry reporting.
+ * <p>
+ * The data in this class are not bound to the scope of the current request and can be used to set
+ * diagnostic information even after the original request has been completed (e.g. for the
+ * asynchronous worker threads).
  */
 public class DiagnosticContext {
 
@@ -61,7 +62,7 @@ public class DiagnosticContext {
   }
 
   /**
-   * Creates an empty diagnostic information.
+   * Creates an empty context for diagnostic information.
    *
    * @return the empty diagnostic information.
    */
@@ -77,6 +78,7 @@ public class DiagnosticContext {
   public static DiagnosticContext fromSentryScope() {
     final DiagnosticContext context = new DiagnosticContext();
     Sentry.withScope(scope -> {
+      //noinspection UnstableApiUsage
       context.requestId = scope.getTags().get(REQUEST_ID_TAG);
       context.request = scope.getRequest();
     });
@@ -89,7 +91,7 @@ public class DiagnosticContext {
    *
    * @param asynchronous true if the current thread the worker for an asynchronous request.
    */
-  public void configureScope(boolean asynchronous) {
+  public void configureScope(final boolean asynchronous) {
     MDC.put("requestId", requestId);
     Sentry.configureScope(scope -> {
       if (requestId != null) {
@@ -141,5 +143,3 @@ public class DiagnosticContext {
   }
 
 }
-
-

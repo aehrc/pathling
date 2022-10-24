@@ -11,13 +11,9 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.fhir.DiagnosticContext;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
-import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
-import io.sentry.ITransaction;
 import io.sentry.Sentry;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Future;
@@ -25,7 +21,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import io.sentry.protocol.Request;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -36,7 +31,6 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
-import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -111,8 +105,10 @@ public class AsyncAspect {
     final HttpServletResponse response = getResponse(args);
     final String requestId = requestDetails.getRequestId();
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    // store the diagnostic context form the current Sentry scope
+
+    // Store the diagnostic context from the current Sentry scope.
     final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
+
     checkNotNull(requestId);
     final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
     final Future<IBaseResource> result = executor.submit(() -> {
@@ -122,8 +118,8 @@ public class AsyncAspect {
         spark.sparkContext().setJobGroup(requestId, requestId, true);
         return (IBaseResource) joinPoint.proceed(args);
       } catch (final Throwable e) {
-        // NOTE: Here we should do the actual error handling and logging for the failed jobs
-        // Not where the future is interrogated
+        // NOTE: Here is where we should do the actual error handling and logging for the failed 
+        // jobs, not where the future is interrogated.
         log.error("Asynchronous execution failed", e);
         Sentry.captureException(e);
         throw new RuntimeException("Problem processing request asynchronously", e);

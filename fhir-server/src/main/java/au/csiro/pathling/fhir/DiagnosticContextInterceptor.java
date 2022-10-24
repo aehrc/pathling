@@ -11,7 +11,6 @@ import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.parser.IParser;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -20,8 +19,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * This class adds  diagnostic information about the current request to logging and Sentry
- * contexts.
+ * This class adds diagnostic information about the current request to logging and Sentry contexts.
  *
  * @author John Grimes
  */
