@@ -37,11 +37,14 @@ import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 
 /**
@@ -113,6 +116,13 @@ public class DefaultTerminologyService implements TerminologyService {
     }
     return validCodings(codings)
         .filter(coding -> knownCodeSystems.contains(coding.getSystem()));
+  }
+
+  @Nullable
+  @Override
+  public Parameters validate(@Nonnull final String url, @Nonnull final Coding coding) {
+    return terminologyClient.validateCoding(new UriType(url), new UriType(coding.getSystem()),
+        new StringType(coding.getVersion()), new CodeType(coding.getCode()));
   }
 
   @Nonnull

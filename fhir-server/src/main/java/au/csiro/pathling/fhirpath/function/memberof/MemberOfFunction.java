@@ -18,26 +18,23 @@
 package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyFunctions;
+import au.csiro.pathling.sql.udf.ValidateCoding;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
@@ -47,6 +44,7 @@ import org.slf4j.MDC;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">memberOf</a>
  */
+@Slf4j
 public class MemberOfFunction implements NamedFunction {
 
   private static final String NAME = "memberOf";
@@ -68,32 +66,23 @@ public class MemberOfFunction implements NamedFunction {
     validateInput(input);
     final ElementPath inputPath = (ElementPath) input.getInput();
     final StringLiteralPath argument = (StringLiteralPath) input.getArguments().get(0);
-    final ParserContext inputContext = input.getContext();
 
     final Column idColumn = inputPath.getIdColumn();
     final Column conceptColumn = inputPath.getValueColumn();
 
-    final Column codingArrayCol = (isCodeableConcept(inputPath))
-                                  ? conceptColumn.getField("coding")
-                                  : when(conceptColumn.isNotNull(), array(conceptColumn))
-                                      .otherwise(functions.lit(null));
-
-    // Prepare the data which will be used within the map operation. All of these things must be
-    // Serializable.
-    final TerminologyServiceFactory terminologyServiceFactory =
-        checkPresent(inputContext.getTerminologyServiceFactory());
-    final String valueSetUri = argument.getValue().getValueAsString();
+    final Column resultColumn = (isCodeableConcept(inputPath))
+                                ? lit(null)
+                                : callUDF(ValidateCoding.FUNCTION_NAME,
+                                    lit(argument.getValue().asStringValue()),
+                                    conceptColumn);
     final Dataset<Row> dataset = inputPath.getDataset();
-
-    final Dataset<Row> resultDataset = TerminologyFunctions.memberOf(codingArrayCol, valueSetUri,
-        dataset, "result", terminologyServiceFactory, MDC.get("requestId"));
-    final Column resultColumn = functions.col("result");
+    log.debug("Input dataset has {} partitions", dataset.rdd().getNumPartitions());
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, resultDataset, idColumn, inputPath.getEidColumn(), resultColumn,
+        .build(expression, dataset, idColumn, inputPath.getEidColumn(), resultColumn,
             inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }

@@ -26,6 +26,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import org.slf4j.Logger;
 
@@ -40,6 +41,9 @@ import org.slf4j.Logger;
 public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
 
   private static final long serialVersionUID = 8862251697418622614L;
+
+  @Nullable
+  private static TerminologyService terminologyService = null;
 
   @Nonnull
   private final FhirVersionEnum fhirVersion;
@@ -93,11 +97,14 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   @Nonnull
   public TerminologyService buildService(@Nonnull final Logger logger,
       @Nonnull final UUIDFactory uuidFactory) {
-    final TerminologyClient terminologyClient = TerminologyClient
-        .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
-            verboseRequestLogging, authConfig, logger);
-    return new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion), terminologyClient,
-        uuidFactory);
+    if (terminologyService == null) {
+      final TerminologyClient terminologyClient = TerminologyClient
+          .build(FhirEncoders.contextFor(fhirVersion), terminologyServerUrl, socketTimeout,
+              verboseRequestLogging, authConfig, logger);
+      terminologyService = new DefaultTerminologyService(FhirEncoders.contextFor(fhirVersion),
+          terminologyClient, uuidFactory);
+    }
+    return terminologyService;
   }
 
 }

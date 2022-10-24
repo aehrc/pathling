@@ -39,13 +39,17 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.cache.CacheConfig;
+import org.apache.http.impl.client.cache.CachingHttpClients;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.slf4j.Logger;
 
@@ -69,6 +73,14 @@ public interface TerminologyClient extends IRestfulClient {
   @Nullable
   List<CodeSystem> searchCodeSystems(@Nonnull @RequiredParam(name = CodeSystem.SP_URL) UriParam uri,
       @Nonnull @Elements Set<String> elements);
+
+  @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
+  @Nullable
+  Parameters validateCoding(@Nonnull @OperationParam(name = "url") UriType url,
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "systemVersion") StringType version,
+      @Nonnull @OperationParam(name = "code")
+      CodeType code);
 
   /**
    * Invokes an "expand" request against the terminology server, using an inline ValueSet resource
@@ -176,7 +188,11 @@ public interface TerminologyClient extends IRestfulClient {
   }
 
   private static CloseableHttpClient buildHttpClient() {
-    return HttpClientBuilder.create()
+    final CacheConfig cacheConfig = CacheConfig.custom()
+        .setMaxObjectSize(Integer.MAX_VALUE)
+        .build();
+    return CachingHttpClients.custom()
+        .setCacheConfig(cacheConfig)
         .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
         .build();
   }

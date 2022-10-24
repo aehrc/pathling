@@ -21,6 +21,8 @@ import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.terminology.CacheableTerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyService;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
@@ -99,9 +101,18 @@ public class Dependencies {
   static TerminologyServiceFactory terminologyClientFactory(
       @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
     final TerminologyConfiguration terminology = configuration.getTerminology();
-    return new DefaultTerminologyServiceFactory(fhirContext, terminology.getServerUrl(),
-        terminology.getSocketTimeout(), terminology.isVerboseLogging(),
+    return new CacheableTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
+        terminology.getServerUrl(), terminology.getSocketTimeout(), terminology.isVerboseLogging(),
         terminology.getAuthentication());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @ConditionalOnBean(TerminologyServiceFactory.class)
+  @Nonnull
+  static TerminologyService terminologyService(
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    return terminologyServiceFactory.buildService(log);
   }
 
 }
