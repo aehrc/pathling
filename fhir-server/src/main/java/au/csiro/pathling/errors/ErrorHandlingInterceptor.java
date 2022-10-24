@@ -4,13 +4,10 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.fhir;
+package au.csiro.pathling.errors;
 
 import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
-import au.csiro.pathling.errors.AccessDeniedError;
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.errors.ResourceNotFoundError;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;

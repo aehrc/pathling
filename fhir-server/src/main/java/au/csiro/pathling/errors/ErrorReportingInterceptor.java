@@ -4,22 +4,15 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling.fhir;
+package au.csiro.pathling.errors;
 
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
-import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.Sentry;
-import io.sentry.SentryEvent;
-import io.sentry.protocol.Request;
-import java.util.HashMap;
-import java.util.Map;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -37,7 +30,7 @@ import org.springframework.stereotype.Component;
 @Interceptor
 @Slf4j
 public class ErrorReportingInterceptor {
-  
+
   /**
    * HAPI hook to intercept errors and report them to Sentry.
    *

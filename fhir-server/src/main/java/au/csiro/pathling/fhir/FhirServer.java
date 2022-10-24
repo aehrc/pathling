@@ -12,6 +12,9 @@ import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.EncoderBuilder;
+import au.csiro.pathling.errors.DiagnosticContextInterceptor;
+import au.csiro.pathling.errors.ErrorHandlingInterceptor;
+import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.BatchProvider;
@@ -104,7 +107,8 @@ public class FhirServer extends RestfulServer {
    * @param importProvider a {@link ImportProvider} for receiving requests to the import operation
    * @param jobProvider a {@link JobProvider} for checking on the status of jobs
    * @param resultProvider {@link ResultProvider} for retrieving the result of extract requests
-   * @param diagnosticContextInterceptor a {@link DiagnosticContextInterceptor} for adding request IDs to logging
+   * @param diagnosticContextInterceptor a {@link DiagnosticContextInterceptor} for adding request
+   * IDs to logging
    * @param errorReportingInterceptor a {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
    * @param entityTagInterceptor a {@link EntityTagInterceptor} validating and returning ETags

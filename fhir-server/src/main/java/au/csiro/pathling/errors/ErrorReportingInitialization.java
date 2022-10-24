@@ -4,8 +4,9 @@
  * Software Licence Agreement.
  */
 
-package au.csiro.pathling;
+package au.csiro.pathling.errors;
 
+import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.Configuration;
 import io.sentry.Sentry;
 import javax.annotation.Nonnull;
@@ -15,12 +16,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Performs any required actions on startup of the application.
+ * Initialize Sentry error reporting upon the startup of the application.
  *
  * @author John Grimes
  */
 @Component
-public class PathlingServerListener implements ApplicationListener<ApplicationReadyEvent> {
+public class ErrorReportingInitialization implements ApplicationListener<ApplicationReadyEvent> {
 
   @Nonnull
   private final Configuration configuration;
@@ -33,7 +34,7 @@ public class PathlingServerListener implements ApplicationListener<ApplicationRe
    * @param version A {@link PathlingVersion} object containing version information about the
    * server
    */
-  public PathlingServerListener(@Nonnull final Configuration configuration,
+  public ErrorReportingInitialization(@Nonnull final Configuration configuration,
       @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
     this.version = version;

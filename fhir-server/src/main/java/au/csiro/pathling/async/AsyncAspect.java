@@ -9,7 +9,7 @@ package au.csiro.pathling.async;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.fhir.DiagnosticContext;
+import au.csiro.pathling.errors.DiagnosticContext;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import io.sentry.Sentry;
 import java.util.Arrays;
