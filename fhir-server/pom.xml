@@ -429,9 +429,6 @@
                     </property>
                   </systemProperties>
                   <arguments>
-                    <argument>-Xmx4g</argument>
-                    <argument>-ea</argument>
-                    <argument>-Duser.timezone=UTC</argument>
                     <argument>${project.build.directory}/benchmark</argument>
                   </arguments>
                 </configuration>
