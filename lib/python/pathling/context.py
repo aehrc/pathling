@@ -144,7 +144,7 @@ class PathlingContext:
                                                     input_type or MimeType.FHIR_JSON,
                                                     column))
 
-    def member_of(self, df: DataFrame, coding_column: Column, value_set_url: str,
+    def member_of(self, df: DataFrame, coding_column: Column, value_set_uri: str,
                   output_column_name: str):
         """
         Takes a dataframe with a Coding column as input. A new column is created which contains a 
@@ -153,12 +153,12 @@ class PathlingContext:
 
         :param df: a DataFrame containing the input data
         :param coding_column: a Column containing a struct representation of a Coding
-        :param value_set_url: an identifier for a FHIR ValueSet
+        :param value_set_uri: an identifier for a FHIR ValueSet
         :param output_column_name: the name of the result column
         :return: A new dataframe with an additional column containing the result of the operation.
         """
         return self._wrap_df(
-                self._jpc.memberOf(df._jdf, coding_column._jc, value_set_url, output_column_name))
+                self._jpc.memberOf(df._jdf, coding_column._jc, value_set_uri, output_column_name))
 
     def translate(self, df: DataFrame, coding_column: Column, concept_map_uri: str,
                   reverse: Optional[bool] = False, equivalence: Optional[str] = EQ_EQUIVALENT,

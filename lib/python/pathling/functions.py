@@ -1,3 +1,5 @@
+import urllib.parse
+
 from pyspark.sql import Column
 from pyspark.sql.functions import lit, struct
 
@@ -19,3 +21,13 @@ def to_coding(coding_column: Column, system: str, version: str = None):
     user_selected_column = lit(None).alias('userSelected')
     return struct(id_column, system_column, version_column, coding_column.alias("code"),
                   display_column, user_selected_column)
+
+
+def to_ecl_value_set(ecl: str) -> str:
+    """
+    Converts a SNOMED CT ECL expression into a FHIR ValueSet URI. Can be used with the `member_of` 
+    function.
+    :param ecl: the ECL expression
+    :return: the ValueSet URI
+    """
+    return "http://snomed.info/sct?fhir_vs=ecl/" + urllib.parse.quote(ecl, safe="()*!'")
