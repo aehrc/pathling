@@ -647,6 +647,20 @@
             <skip>true</skip>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <configuration>
+            <filters>
+              <filter>
+                <artifact>au.csiro.pathling:${project.artifactId}</artifact>
+                <excludes>
+                  <exclude>META-INF/**</exclude>
+                </excludes>
+              </filter>
+            </filters>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>

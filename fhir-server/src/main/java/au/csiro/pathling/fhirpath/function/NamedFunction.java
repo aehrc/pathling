@@ -52,6 +52,7 @@ public interface NamedFunction {
       .put("allFalse", new BooleansTestFunction(ALL_FALSE))
       .put("extension", new ExtensionFunction())
       .put("until", new UntilFunction())
+      .put("exists", new ExistsFunction())
       .build();
 
   /**
