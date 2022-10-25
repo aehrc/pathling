@@ -71,7 +71,7 @@ public class QuantityOperatorsPrecisionTest {
       "Tm");
 
   // These mol prefixes results in overflow for reasonable decimals (e.g.  9e3 'Tmol')
-  static final Set<String> UNSUPPORTED_RESONABLE_DECIMAL_MOL_UNITS = ImmutableSet.of("Ymol", "Zmol",
+  static final Set<String> UNSUPPORTED_REASONABLE_DECIMAL_MOL_UNITS = ImmutableSet.of("Ymol", "Zmol",
       "Emol", "Pmol", "Tmol");
 
   @BeforeEach
@@ -216,7 +216,7 @@ public class QuantityOperatorsPrecisionTest {
     final ElementPath right = buildQuantityPathForUnits(REASONABLE_DECIMAL_01, unitRange);
     final FhirPath result = callOperator(left, "=", right);
     assertThat(result).selectResult()
-        .hasRows(createResult(unitRange, true, UNSUPPORTED_RESONABLE_DECIMAL_MOL_UNITS));
+        .hasRows(createResult(unitRange, true, UNSUPPORTED_REASONABLE_DECIMAL_MOL_UNITS));
   }
 
 }
