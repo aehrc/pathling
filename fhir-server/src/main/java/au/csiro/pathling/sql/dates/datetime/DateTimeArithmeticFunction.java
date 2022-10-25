@@ -10,6 +10,11 @@ import au.csiro.pathling.sql.dates.TemporalArithmeticFunction;
 import java.util.function.Function;
 import org.hl7.fhir.r4.model.DateTimeType;
 
+/**
+ * Base class for functions that perform arithmetic on datetimes.
+ *
+ * @author John Grimes
+ */
 public abstract class DateTimeArithmeticFunction extends
     TemporalArithmeticFunction<DateTimeType> {
 

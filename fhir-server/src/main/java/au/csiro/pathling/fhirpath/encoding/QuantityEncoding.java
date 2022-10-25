@@ -11,17 +11,17 @@ import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.encoders.QuantitySupport;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import au.csiro.pathling.fhirpath.CalendarDurationUtils;
+import au.csiro.pathling.sql.types.FlexiDecimal;
+import au.csiro.pathling.sql.types.FlexiDecimalSupport;
+import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
-import au.csiro.pathling.fhirpath.CalendarDurationUtils;
-import au.csiro.pathling.sql.types.FlexiDecimal;
-import au.csiro.pathling.sql.types.FlexiDecimalSupport;
-import com.google.common.collect.ImmutableMap;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -35,6 +35,8 @@ import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 
 /**
  * Object decoders/encoders for {@link Quantity}.
+ *
+ * @author Piotr Szul
  */
 public final class QuantityEncoding {
 
@@ -63,7 +65,7 @@ public final class QuantityEncoding {
    * @return the Row representation of the quantity
    */
   @Nullable
-  public static Row encode(@Nullable final Quantity quantity, boolean includeScale) {
+  public static Row encode(@Nullable final Quantity quantity, final boolean includeScale) {
     if (quantity == null) {
       return null;
     }
@@ -219,7 +221,6 @@ public final class QuantityEncoding {
     final Optional<QuantityComparator> comparator = Optional.ofNullable(quantity.getComparator());
     final BigDecimal value = quantity.getValue();
 
-    // FlexDecima;
     final BigDecimal canonicalizedValue;
     final String canonicalizedCode;
     if (quantity.getSystem().equals(Ucum.SYSTEM_URI)) {

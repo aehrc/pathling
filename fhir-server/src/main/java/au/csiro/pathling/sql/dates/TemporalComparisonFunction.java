@@ -13,6 +13,11 @@ import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
+/**
+ * Base class for functions that compare temporal values.
+ *
+ * @author John Grimes
+ */
 public abstract class TemporalComparisonFunction<IntermediateType> implements
     SqlFunction2<String, String, Boolean> {
 

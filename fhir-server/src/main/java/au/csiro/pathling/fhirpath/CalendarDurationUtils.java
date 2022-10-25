@@ -1,22 +1,27 @@
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import com.google.common.collect.ImmutableMap;
-import org.hl7.fhir.r4.model.Quantity;
-import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Quantity;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
+/**
+ * Utility methods for working with calendar durations.
+ *
+ * @author Piotr Szul
+ */
 public final class CalendarDurationUtils {
 
   private CalendarDurationUtils() {
     // Toolkit class 
   }
-  
+
   public static final String FHIRPATH_CALENDAR_DURATION_URI = "https://hl7.org/fhirpath/N1/calendar-duration";
   private static final Pattern CALENDAR_DURATION_PATTERN = Pattern.compile("([0-9.]+) (\\w+)");
 
@@ -71,4 +76,5 @@ public final class CalendarDurationUtils {
     calendarDuration.setCode(keyword);
     return calendarDuration;
   }
+
 }

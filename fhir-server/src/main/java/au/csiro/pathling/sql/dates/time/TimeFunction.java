@@ -10,6 +10,11 @@ import java.time.LocalTime;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 
+/**
+ * Common functionality relating to time operations.
+ *
+ * @author John Grimes
+ */
 abstract class TimeFunction {
 
   private static final Pattern HOURS_ONLY = Pattern.compile("^\\d{2}$");

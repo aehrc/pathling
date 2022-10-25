@@ -12,6 +12,11 @@ import org.hl7.fhir.r4.model.DateTimeType;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Determines whether one datetime is before or at the same time as another.
+ *
+ * @author John Grimes
+ */
 @Component
 @Profile("core | unit-test")
 public class DateTimeLessThanOrEqualToFunction extends DateTimeComparisonFunction {

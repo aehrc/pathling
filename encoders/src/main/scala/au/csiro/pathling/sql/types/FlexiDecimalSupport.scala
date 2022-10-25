@@ -1,13 +1,15 @@
 package au.csiro.pathling.sql.types
 
 import org.apache.spark.sql.Column
-import org.apache.spark.sql.catalyst.expressions.{CreateNamedStruct, Expression, If, IsNull, Literal}
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
+import org.apache.spark.sql.catalyst.expressions.{CreateNamedStruct, Expression, If, IsNull, Literal}
 import org.apache.spark.sql.functions.{lit, struct}
-import org.apache.spark.sql.types.{DataTypes, Decimal, DecimalType, ObjectType}
+import org.apache.spark.sql.types.{DataTypes, Decimal, ObjectType}
 
 /**
  * Helper class for serialization of FlexiDecimals. 
+ *
+ * @author Piotr Szul
  */
 object FlexiDecimalSupport {
 

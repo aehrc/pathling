@@ -23,6 +23,12 @@ import org.apache.spark.sql.types.DataTypes;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Calculates the difference between two temporal values, returning an integer value using the
+ * requested unit. Used for the <code>until</code> function.
+ *
+ * @author John Grimes
+ */
 @Component
 @Profile("core | unit-test")
 public class TemporalDifferenceFunction implements SqlFunction3<String, String, String, Long> {

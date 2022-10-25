@@ -11,6 +11,11 @@ import java.util.function.BiFunction;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Determines whether one time is after or at the same time as another.
+ *
+ * @author John Grimes
+ */
 @Component
 @Profile("core | unit-test")
 public class TimeGreaterThanOrEqualToFunction extends TimeComparisonFunction {

@@ -11,12 +11,17 @@ import java.util.function.BiFunction;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Determines whether one time is before or at the same time as another.
+ *
+ * @author John Grimes
+ */
 @Component
 @Profile("core | unit-test")
 public class TimeLessThanOrEqualToFunction extends TimeComparisonFunction {
 
   private static final long serialVersionUID = -5929640258789711609L;
- 
+
   public static final String FUNCTION_NAME = "time_lte";
 
   @Override

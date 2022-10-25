@@ -6,21 +6,23 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
+import static org.apache.spark.sql.functions.lit;
+
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-
-import static org.apache.spark.sql.functions.lit;
+import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * Implementation of comparator for Coding type.
+ *
+ * @author Piotr Szul
  */
 public class CodingSqlComparator implements SqlComparator {
 

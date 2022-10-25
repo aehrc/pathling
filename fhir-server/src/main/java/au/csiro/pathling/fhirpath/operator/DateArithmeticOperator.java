@@ -11,10 +11,10 @@ import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
+import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
@@ -47,7 +47,6 @@ public class DateArithmeticOperator implements Operator {
     checkUserInput(left instanceof Temporal,
         type + " operator does not support left operand: " + left.getExpression());
 
-    // TODO: It does not seem to be strictly necessary for the right argument to be a literal. 
     checkUserInput(right instanceof QuantityLiteralPath,
         type + " operator does not support right operand: " + right.getExpression());
     final QuantityLiteralPath calendarDuration = (QuantityLiteralPath) right;

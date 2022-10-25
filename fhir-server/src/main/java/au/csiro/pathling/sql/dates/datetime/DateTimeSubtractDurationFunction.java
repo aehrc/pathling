@@ -12,6 +12,11 @@ import org.hl7.fhir.r4.model.Quantity;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+/**
+ * Subtracts a duration from a datetime.
+ *
+ * @author John Grimes
+ */
 @Component
 @Profile("core | unit-test")
 public class DateTimeSubtractDurationFunction extends DateTimeArithmeticFunction {

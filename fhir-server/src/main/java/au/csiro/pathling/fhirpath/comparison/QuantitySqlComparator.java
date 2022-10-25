@@ -6,22 +6,23 @@
 
 package au.csiro.pathling.fhirpath.comparison;
 
+import static org.apache.spark.sql.functions.when;
+
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
+import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.types.FlexiDecimal;
-import org.apache.spark.sql.Column;
-import javax.annotation.Nonnull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
-import static au.csiro.pathling.fhirpath.Comparable.STD_SQL_COMPARATOR;
-import static org.apache.spark.sql.functions.when;
+import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 
 /**
  * Implementation of comparator for the Quantity type. It uses canonicalized values and units for
  * comparison rather than the original values.
+ *
+ * @author Piotr Szul
  */
 public class QuantitySqlComparator implements SqlComparator {
 
@@ -52,11 +53,6 @@ public class QuantitySqlComparator implements SqlComparator {
   public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
     return wrap(FlexiDecimal::equals).apply(left, right);
   }
-
-  // @Override
-  // public Column notEqual(@Nonnull final Column left, @Nonnull final Column right) {
-  //   return wrap(defaultSqlComparator::notEqual).apply(left, right);
-  // }
 
   @Override
   public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {

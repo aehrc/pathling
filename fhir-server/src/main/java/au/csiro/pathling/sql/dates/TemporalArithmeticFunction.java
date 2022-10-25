@@ -9,10 +9,7 @@ package au.csiro.pathling.sql.dates;
 import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.udf.SqlFunction2;
-import com.google.common.collect.ImmutableMap;
 import java.math.RoundingMode;
-import java.util.Calendar;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -23,6 +20,11 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.Quantity;
 
+/**
+ * Base class for functions that perform arithmetic on temporal values.
+ *
+ * @author John Grimes
+ */
 public abstract class TemporalArithmeticFunction<T extends BaseDateTimeType> implements
     SqlFunction2<String, Row, String> {
 

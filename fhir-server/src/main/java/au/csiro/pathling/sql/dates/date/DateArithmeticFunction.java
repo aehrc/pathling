@@ -10,6 +10,11 @@ import au.csiro.pathling.sql.dates.TemporalArithmeticFunction;
 import java.util.function.Function;
 import org.hl7.fhir.r4.model.DateType;
 
+/**
+ * Base class for functions that perform arithmetic on dates.
+ *
+ * @author John Grimes
+ */
 public abstract class DateArithmeticFunction extends TemporalArithmeticFunction<DateType> {
 
   private static final long serialVersionUID = 6759548804191034570L;

@@ -10,6 +10,11 @@ import au.csiro.pathling.sql.dates.TemporalComparisonFunction;
 import java.time.LocalTime;
 import java.util.function.Function;
 
+/**
+ * Base class for functions that compare times.
+ *
+ * @author John Grimes
+ */
 public abstract class TimeComparisonFunction extends TemporalComparisonFunction<LocalTime> {
 
   private static final long serialVersionUID = 3661335567427062952L;
