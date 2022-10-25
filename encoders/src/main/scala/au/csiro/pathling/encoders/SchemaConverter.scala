@@ -14,12 +14,14 @@
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders.QuantitySupport.{CODE_CANONICALIZED_FIELD_NAME, VALUE_CANONICALIZED_FIELD_NAME}
+import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
 import au.csiro.pathling.schema.SchemaVisitor
 import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
+import org.hl7.fhir.r4.model.Quantity
 
 /**
  * The schema processor for converting FHIR schemas to SQL schemas.
@@ -53,9 +55,19 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
     }
   }
 
+  private def createQuantityFields(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[StructField] = {
+    definition.getImplementingClass match {
+      case cls if classOf[Quantity].isAssignableFrom(cls) => QuantitySupport
+        .createExtraSchemaFields()
+      case _ => Nil
+    }
+  }
+
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_],
                               fields: Seq[StructField]): DataType = {
-    StructType(fields ++ createFidField() ++ createExtensionField(definition))
+    StructType(
+      fields ++ createQuantityFields(definition) ++ createFidField() ++ createExtensionField(
+        definition))
   }
 
   override def buildElement(elementName: String, elementValue: DataType,

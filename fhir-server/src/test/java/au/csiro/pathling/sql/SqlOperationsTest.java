@@ -31,7 +31,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Tag("UnitTest")
-class SqlExtensionsTest {
+class SqlOperationsTest {
 
   @Autowired
   SparkSession spark;
@@ -83,7 +83,7 @@ class SqlExtensionsTest {
 
     final Dataset<Row> resultDataset = SqlExtensions.mapWithPartitionPreview(dataset,
         dataset.col("gender"),
-        SqlExtensionsTest::stringDecoder,
+        SqlOperationsTest::stringDecoder,
         new TestMapperWithPreview(),
         new StructField("myResult", DataTypes.IntegerType, true, Metadata.empty())
     );

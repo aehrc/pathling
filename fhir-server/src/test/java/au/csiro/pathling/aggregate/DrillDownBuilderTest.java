@@ -83,10 +83,10 @@ class DrillDownBuilderTest {
             "(someElement) = @2020-01-01"),
         new TestParameters(
             new DateTimeType("2018-05-19T11:03:55.123Z"),
-            "(someElement) = @2018-05-19T11:03:55Z"),
+            "(someElement) = @2018-05-19T11:03:55.123Z"),
         new TestParameters(
             new InstantType("2018-05-19T11:03:55.123Z"),
-            "(someElement) = @2018-05-19T11:03:55Z"),
+            "(someElement) = @2018-05-19T11:03:55.123Z"),
         new TestParameters(
             new DecimalType("3.4"),
             "(someElement) = 3.4"),

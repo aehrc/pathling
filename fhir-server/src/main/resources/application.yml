@@ -42,18 +42,6 @@ pathling:
     # The subdirectory within the warehouse path used to read and write data.
     databaseName: default
 
-    # Configuration relating to accessing data hosted within Amazon Web Services.
-    aws:
-      # Public S3 buckets can be accessed by default, set this to false to access protected buckets.
-      anonymousAccess: true
-
-      # Authentication details for connecting to protected Amazon S3 locations.
-      # accessKeyId: [AWS access key ID]
-      # secretAccessKey: [AWS secret access key]
-
-      # The ARN of an IAM role to be assumed using STS.
-      # assumedRole: [ARN of IAM role]
-
   terminology:
     # Enables the use of terminology functions.
     enabled: true
@@ -200,3 +188,30 @@ spark:
           enabled: true
   scheduler:
     mode: FAIR
+
+# Use this section to set or override configuration relating to S3 configuration.
+# See: https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html
+fs:
+  s3a:
+    aws:
+    # credentials:
+    #   provider: org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider
+    #   provider: org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
+    #
+    # For use with: SimpleAWSCredentialsProvider
+    # access:
+    #   key: [access key]
+    # secret:
+    #   key: [secret key]
+    #
+    # For use with: AssumedRoleCredentialProvider
+    # assumed:
+    #   role:
+    #     arn: [role ARN]
+    #
+    connection:
+      maximum: 100
+    committer:
+      name: magic
+      magic:
+        enabled: true

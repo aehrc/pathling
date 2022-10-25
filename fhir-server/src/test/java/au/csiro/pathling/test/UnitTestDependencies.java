@@ -10,18 +10,42 @@ import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
+import au.csiro.pathling.sql.dates.TemporalDifferenceFunction;
+import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
+import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeEqualsFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
+import au.csiro.pathling.sql.dates.time.TimeEqualsFunction;
+import au.csiro.pathling.sql.dates.time.TimeGreaterThanFunction;
+import au.csiro.pathling.sql.dates.time.TimeGreaterThanOrEqualToFunction;
+import au.csiro.pathling.sql.dates.time.TimeLessThanFunction;
+import au.csiro.pathling.sql.dates.time.TimeLessThanOrEqualToFunction;
+import au.csiro.pathling.sql.udf.SqlFunction1;
+import au.csiro.pathling.sql.udf.SqlFunction2;
+import au.csiro.pathling.sql.udf.SqlFunction3;
+import au.csiro.pathling.terminology.CodingToLiteral;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
+import org.fhir.ucum.UcumException;
+import org.fhir.ucum.UcumService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -45,8 +69,12 @@ class UnitTestDependencies {
   @Nonnull
   static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
+      @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
+      @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
+      @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
       @Nonnull final Optional<SparkListener> sparkListener) {
-    return Spark.build(configuration, environment, sparkListener);
+    return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2,
+        sqlFunction3);
   }
 
   @Bean
@@ -89,6 +117,13 @@ class UnitTestDependencies {
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory() {
     return new TestTerminologyServiceFactory();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static UcumService ucumService() throws UcumException {
+    return Ucum.service();
   }
 
 }

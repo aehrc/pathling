@@ -7,7 +7,7 @@ import org.apache.spark.sql.{SparkSession, Strategy}
 /**
  * Custom spark SQL strategy with additional rules for custom Pathling operations.
  */
-object PathlingStrategy extends Strategy {
+object SqlStrategy extends Strategy {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan match {
 
@@ -21,13 +21,13 @@ object PathlingStrategy extends Strategy {
 
 
   /**
-   * Injects PathlingStrategy into a given Spark session.
+   * Injects SqlStrategy into a given Spark session.
    *
-   * @param session Spark session to add PathlingStrategy to
+   * @param session Spark session to add SqlStrategy to
    */
   def setup(session: SparkSession): Unit = {
-    if (!session.experimental.extraStrategies.contains(PathlingStrategy)) {
-      session.experimental.extraStrategies = Seq(PathlingStrategy) ++ session.experimental
+    if (!session.experimental.extraStrategies.contains(SqlStrategy)) {
+      session.experimental.extraStrategies = Seq(SqlStrategy) ++ session.experimental
         .extraStrategies
     }
   }

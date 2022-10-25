@@ -36,13 +36,13 @@ an empty collection.
 String ordering is strictly lexical and is based on the Unicode value of the
 individual characters.
 
-All comparison operators return a [Boolean](./data-types#boolean) value.
+All comparison operators return a [Boolean](/docs/fhirpath/data-types#boolean) value.
 
 <sup>*</sup> Not all Quantity values are comparable, it depends upon the
-comparability of the units. See the
-[FHIRPath specification](https://hl7.org/fhirpath/#comparison) for details on
-how Quantity values are compared. Quantities with a `comparator` are treated as
-not comparable by this implementation.
+comparability of the units. See
+the <a href="https://hl7.org/fhirpath/#comparison">FHIRPath specification</a> for 
+details on how Quantity values are compared.
+<p></p>
 
 See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 
@@ -51,10 +51,10 @@ See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 The `=` operator returns `true` if the left operand is equal to the right
 operand, and a `false` otherwise. The `!=` is the inverse of the `=` operator.
 
-Both operands must be singular. The valid types and their combinations is the
-same as for the [Comparison operators](#comparison). In addition to this,
-[Coding](./data-types#coding) types can be compared using the equality
-operators.
+Both operands must be singular. The valid types and their combinations is the 
+same as for the [Comparison operators](#comparison). In addition to this, 
+[Coding](/docs/fhirpath/data-types#coding) types can 
+be compared using the equality operators.
 
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
@@ -62,8 +62,7 @@ an empty collection.
 Not all Quantity, Date and DateTime values can be compared for equality, it
 depends upon the comparability of the units within the Quantity values. See the
 [FHIRPath specification](https://hl7.org/fhirpath/#quantity-equality) for
-details on how equality works with Quantity values. Quantities with a
-`comparator` are treated as not comparable by this implementation.
+details on how equality works with Quantity values.
 
 See also: [Equality](https://hl7.org/fhirpath/#equality)
 
@@ -77,38 +76,47 @@ The following math operators are supported:
 - `/` - Division
 - `mod` - Modulus
 
-Math operators support only [Integer](./data-types#integer) and
-[Decimal](./data-types#decimal) operands.
-
-The type of the two operands can be mixed. `+`, `-` and `*` return the same type
-as the left operand, `/` returns [Decimal](./data-types#decimal) and `mod`
-returns [Integer](./data-types#integer).
+Math operators support [Integer](/docs/fhirpath/data-types#integer),
+[Decimal](/docs/fhirpath/data-types#decimal)
+and [Quantity](/docs/fhirpath/data-types#quantity) operands. The modulus 
+operator is not supported for Quantity types.
 
 Both operands must be singular.
 
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
 
-See also: [Math](https://hl7.org/fhirpath/#math)
+Integer and Decimal types can be mixed, while Quantity types can only be used
+with other Quantity types. 
+
+For Integer and Decimal, `+`, `-` and `*` return the same type as the left
+operand, `/` returns [Decimal](/docs/fhirpath/data-types#decimal) and `mod`
+returns [Integer](/docs/fhirpath/data-types#integer).
+
+For Quantity types, math operators return a new Quantity with the canonical unit 
+common to both operands. If the units are not comparable, an empty collection is 
+returned.
+
+See also: [Math](https://hl7.org/fhirpath/#math-2)
 
 ## Date/time arithmetic
 
 The following operators are supported for date arithmetic:
 
-- `+` - Add a duration to a [Date](./data-types#date) or
-  [DateTime](./data-types#datetime)
-- `-` - Subtract a duration from a [Date](./data-types#date) or
-  [DateTime](./data-types#datetime)
+- `+` - Add a duration to a [Date](/docs/fhirpath/data-types#date) or
+  [DateTime](/docs/fhirpath/data-types#datetime)
+- `-` - Subtract a duration from a [Date](/docs/fhirpath/data-types#date) or
+  [DateTime](/docs/fhirpath/data-types#datetime)
 
 Date arithmetic always has a `DateTime` or `Date` on the left-hand side, and a
 duration on the right-hand side. The duration operand is a
-[calendar duration literal](./data-types#quantity). The use of UCUM units
+[calendar duration literal](/docs/fhirpath/data-types#quantity). The use of UCUM units
 is not supported with these operators.
 
 The `Date` or `DateTime` operand must be singular. If it is an empty collection,
 the operator will return an empty collection.
 
-The use of arithmetic with the [Time](./data-types#time) type is not
+The use of arithmetic with the [Time](/docs/fhirpath/data-types#time) type is not
 supported.
 
 See also: [Date/Time Arithmetic](https://hl7.org/fhirpath/#datetime-arithmetic)
@@ -123,9 +131,9 @@ The following Boolean operations are supported:
 - `implies` - Material implication
 
 Both operands to a Boolean operator must be singular
-[Boolean](./data-types#boolean) values.
+[Boolean](/docs/fhirpath/data-types#boolean) values.
 
-All Boolean operators return a [Boolean](./data-types#boolean) value.
+All Boolean operators return a [Boolean](/docs/fhirpath/data-types#boolean) value.
 
 See also:
 [Boolean logic](https://hl7.org/fhirpath/#boolean-logic)

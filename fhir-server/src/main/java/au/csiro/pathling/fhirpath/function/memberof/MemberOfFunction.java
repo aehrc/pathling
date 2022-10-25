@@ -71,7 +71,7 @@ public class MemberOfFunction implements NamedFunction {
     // Serializable.
     final TerminologyServiceFactory terminologyServiceFactory =
         checkPresent(inputContext.getTerminologyServiceFactory());
-    final String valueSetUri = argument.getJavaValue();
+    final String valueSetUri = argument.getValue().getValueAsString();
     final Dataset<Row> dataset = inputPath.getDataset();
 
     final Dataset<Row> resultDataset = TerminologyFunctions.memberOf(codingArrayCol, valueSetUri,

@@ -209,9 +209,9 @@ unique to the Pathling implementation.
 ## Materializable types
 
 There is a subset of all possible FHIR types that can be "materialized", i.e.
-used as the result of a grouping expression in
+used as the result of an aggregation or grouping expression in
 the [aggregate](/docs/server/operations/aggregate)
-operation, or the definition of a column within
+operation, or a column expression within
 the [extract](/docs/server/operations/extract)
 operation. These types are:
 

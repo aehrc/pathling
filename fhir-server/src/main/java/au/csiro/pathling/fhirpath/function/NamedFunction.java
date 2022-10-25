@@ -51,6 +51,7 @@ public interface NamedFunction {
       .put("allTrue", new BooleansTestFunction(ALL_TRUE))
       .put("allFalse", new BooleansTestFunction(ALL_FALSE))
       .put("extension", new ExtensionFunction())
+      .put("until", new UntilFunction())
       .build();
 
   /**

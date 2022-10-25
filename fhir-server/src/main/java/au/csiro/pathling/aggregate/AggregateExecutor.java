@@ -19,7 +19,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.sql.PathlingFunctions;
+import au.csiro.pathling.sql.SqlExpressions;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -112,7 +112,7 @@ public class AggregateExecutor extends QueryExecutor {
     // Remove synthetic fields from struct values (such as _fid) before grouping.
     final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
         groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
-            .map(PathlingFunctions::pruneSyntheticFields).toArray(Column[]::new));
+            .map(SqlExpressions::pruneSyntheticFields).toArray(Column[]::new));
 
     groupingsAndFilters = datasetWithNormalizedGroupings.getDataset();
 

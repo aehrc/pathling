@@ -48,6 +48,7 @@ import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.QuestionnaireResponse;
 import org.junit.jupiter.api.AfterAll;
@@ -534,5 +535,14 @@ public class FhirEncodersTest {
                 .getItem(1).getField("item")
                 .getItem(0).getField("linkId"))
             .collectAsList());
+  }
+
+  @Test
+  public void testQuantityComparator() {
+    final QuantityComparator originalComparator = observation.getValueQuantity().getComparator();
+    final String queriedComparator = observationsDataset.select("valueQuantity.comparator").head()
+        .getString(0);
+
+    assertEquals(originalComparator.toCode(), queriedComparator);
   }
 }

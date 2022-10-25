@@ -27,6 +27,8 @@ import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Condition.ConditionStageComponent;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.Device;
+import org.hl7.fhir.r4.model.Device.DevicePropertyComponent;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.IdType;
@@ -42,6 +44,7 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Provenance;
 import org.hl7.fhir.r4.model.Provenance.ProvenanceEntityRole;
 import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 import org.hl7.fhir.r4.model.Questionnaire;
 import org.hl7.fhir.r4.model.Questionnaire.QuestionnaireItemComponent;
 import org.hl7.fhir.r4.model.QuestionnaireResponse;
@@ -151,6 +154,7 @@ public class TestData {
     final Quantity quantity = new Quantity();
     quantity.setValue(TEST_SMALL_DECIMAL);
     quantity.setUnit("mm[Hg]");
+    quantity.setComparator(QuantityComparator.LESS_THAN);
     observation.setValue(quantity);
     observation.setIssued(TEST_DATE);
 
@@ -158,6 +162,38 @@ public class TestData {
     observation.getReferenceRange().get(0).getHigh().setValue(TEST_VERY_BIG_DECIMAL);
 
     return observation;
+  }
+
+  public static Observation newUcumObservation() {
+    final Observation observation = new Observation();
+    observation.setId("weight");
+
+    final Quantity quantity = new Quantity();
+    quantity.setValue(76);
+    quantity.setUnit("kg");
+    quantity.setSystem("http://unitsofmeasure.org");
+    quantity.setCode("kg");
+
+    observation.setValue(quantity);
+
+    return observation;
+  }
+
+  public static Device newDevice() {
+    final Device device = new Device();
+    device.setId("some-device");
+
+    final DevicePropertyComponent property = new DevicePropertyComponent();
+    property.setType(
+        new CodeableConcept(new Coding("urn:example:abc", "12345", "Some property")));
+    final Quantity quantity1 = new Quantity(null, 1.0, "http://unitsofmeasure.org", "mm", "mm");
+    final Quantity quantity2 = new Quantity(null, 2.0, "http://unitsofmeasure.org", "mm", "mm");
+    final List<Quantity> quantities = List.of(quantity1, quantity2);
+    property.setValueQuantity(quantities);
+    final List<DevicePropertyComponent> properties = List.of(property);
+    device.setProperty(properties);
+
+    return device;
   }
 
   /**

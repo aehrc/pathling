@@ -105,4 +105,35 @@ class MathOperatorValidationTest {
         reversedError.getMessage());
   }
 
+  @Test
+  void operandsAreNotComparable() {
+    final ElementPath left = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.INTEGER)
+        .singular(true)
+        .expression("foo")
+        .build();
+    final ElementPath right = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.QUANTITY)
+        .singular(true)
+        .expression("bar")
+        .build();
+
+    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final Operator mathOperator = Operator.getInstance("+");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> mathOperator.invoke(input));
+    assertEquals("Left and right operands are not comparable: foo + bar",
+        error.getMessage());
+
+    // Now test the right operand.
+    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final InvalidUserInputError reversedError = assertThrows(
+        InvalidUserInputError.class,
+        () -> mathOperator.invoke(reversedInput));
+    assertEquals(
+        "Left and right operands are not comparable: bar + foo",
+        reversedError.getMessage());
+  }
+
 }

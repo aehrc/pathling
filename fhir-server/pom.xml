@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>5.4.0</version>
+    <version>6.0.0-SNAPSHOT</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -139,12 +139,12 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>4.0.0</version>
+      <version>4.2.0</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
-      <version>0.21.1</version>
+      <version>0.21.2</version>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -312,6 +312,7 @@
                 <spark.logConf>true</spark.logConf>
                 <pathling.storage.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -329,6 +330,7 @@
                   file://${project.basedir}/src/test/resources/test-data
                 </pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
+                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -353,7 +355,7 @@
         <plugin>
           <groupId>com.google.cloud.tools</groupId>
           <artifactId>jib-maven-plugin</artifactId>
-          <version>3.2.1</version>
+          <version>3.3.0</version>
           <configuration>
             <from>
               <image>${pathling.dockerBaseImage}</image>
@@ -376,9 +378,7 @@
             <container>
               <environment>
                 <PATHLING_VERSION>${project.version}</PATHLING_VERSION>
-                <JAVA_TOOL_OPTIONS>
-                  -Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m
-                </JAVA_TOOL_OPTIONS>
+                <JAVA_TOOL_OPTIONS>-Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m -Duser.timezone=UTC</JAVA_TOOL_OPTIONS>
               </environment>
               <labels>
                 <copyright>Copyright © 2018-2022, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement.</copyright>
@@ -574,6 +574,44 @@
                       <tag>${project.version}</tag>
                       <tag>${project.majorVersion}</tag>
                     </tags>
+                  </to>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>dockerPreRelease</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.google.cloud.tools</groupId>
+            <artifactId>jib-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>deploy</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+                <configuration>
+                  <from>
+                    <image>${pathling.dockerBaseImage}</image>
+                    <platforms>
+                      <platform>
+                        <architecture>amd64</architecture>
+                        <os>linux</os>
+                      </platform>
+                      <platform>
+                        <architecture>arm64</architecture>
+                        <os>linux</os>
+                      </platform>
+                    </platforms>
+                  </from>
+                  <to>
+                    <image>${pathling.fhirServerDockerRepo}:${pathling.fhirServerDockerTag}-develop</image>
                   </to>
                 </configuration>
               </execution>

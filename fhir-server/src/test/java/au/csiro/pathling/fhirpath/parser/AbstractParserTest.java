@@ -9,9 +9,11 @@ package au.csiro.pathling.fhirpath.parser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
@@ -41,6 +43,12 @@ public class AbstractParserTest {
 
   @Autowired
   FhirContext fhirContext;
+
+  @Autowired
+  TerminologyService terminologyService;
+
+  @Autowired
+  FhirEncoders fhirEncoders;
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;
@@ -91,6 +99,11 @@ public class AbstractParserTest {
         .build();
     final Parser resourceParser = new Parser(parserContext);
     return assertThat(resourceParser.parse(expression));
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  FhirPathAssertion assertThatResultOf(final String expression) {
+    return assertThat(parser.parse(expression));
   }
 
 }

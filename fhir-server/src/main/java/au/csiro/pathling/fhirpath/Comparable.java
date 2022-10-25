@@ -6,17 +6,82 @@
 
 package au.csiro.pathling.fhirpath;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 /**
  * Describes a path that can be compared with other paths, e.g. for equality.
  *
  * @author John Grimes
+ * @author Piotr Szul
  */
 public interface Comparable {
+
+  /**
+   * The interface that defines comparison operation on columns. The actual implementation and the
+   * implemented operation depend on the type of value in the column.
+   */
+  interface SqlComparator {
+
+    Column equalsTo(Column left, Column right);
+
+    default Column notEqual(final Column left, final Column right) {
+      return functions.not(equalsTo(left, right));
+    }
+
+    Column lessThan(Column left, Column right);
+
+    default Column lessThanOrEqual(final Column left, final Column right) {
+      return lessThan(left, right).or(equalsTo(left, right));
+    }
+
+    Column greaterThan(Column left, Column right);
+
+    default Column greaterThanOrEqual(final Column left, final Column right) {
+      return greaterThan(left, right).or(equalsTo(left, right));
+    }
+  }
+
+  /**
+   * The implementation of comparator that use the standard Spark SQL operators.
+   */
+  class StandardSqlComparator implements SqlComparator {
+
+    @Override
+    public Column equalsTo(@Nonnull final Column left, @Nonnull final Column right) {
+      return left.equalTo(right);
+    }
+
+    @Override
+    public Column notEqual(@Nonnull final Column left, @Nonnull final Column right) {
+      return left.notEqual(right);
+    }
+
+    @Override
+    public Column lessThan(@Nonnull final Column left, @Nonnull final Column right) {
+      return left.lt(right);
+    }
+
+    @Override
+    public Column lessThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
+      return left.leq(right);
+    }
+
+    @Override
+    public Column greaterThan(@Nonnull final Column left, @Nonnull final Column right) {
+      return left.gt(right);
+    }
+
+    @Override
+    public Column greaterThanOrEqual(@Nonnull final Column left, @Nonnull final Column right) {
+      return left.geq(right);
+    }
+  }
+
+  SqlComparator STD_SQL_COMPARATOR = new StandardSqlComparator();
 
   /**
    * Get a function that can take two Comparable paths and return a {@link Column} that contains a
@@ -45,16 +110,35 @@ public interface Comparable {
   boolean isComparableTo(@Nonnull Class<? extends Comparable> type);
 
   /**
-   * Builds a comparison function for directly comparable paths.
+   * Builds a comparison function for directly comparable paths using the custom comparator.
    *
    * @param source The path to build the comparison function for
-   * @param sparkFunction The Spark column function to use
+   * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
+   * @param sqlComparator The {@link SqlComparator} to use
    * @return A new {@link Function}
    */
   @Nonnull
   static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
-    return target -> sparkFunction.apply(source.getValueColumn(), target.getValueColumn());
+      @Nonnull final ComparisonOperation operation, @Nonnull final SqlComparator sqlComparator) {
+
+    final TriFunction<SqlComparator, Column, Column, Column> compFunction = operation.compFunction;
+
+    return target -> compFunction
+        .apply(sqlComparator, source.getValueColumn(), target.getValueColumn());
+  }
+
+  /**
+   * Builds a comparison function for directly comparable paths using the standard Spark SQL
+   * comparison operators.
+   *
+   * @param source The path to build the comparison function for
+   * @param operation The {@link ComparisonOperation} type to retrieve a comparison for
+   * @return A new {@link Function}
+   */
+  static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
+      @Nonnull final ComparisonOperation operation) {
+
+    return buildComparison(source, operation, STD_SQL_COMPARATOR);
   }
 
   /**
@@ -64,52 +148,43 @@ public interface Comparable {
     /**
      * The equals operation.
      */
-    EQUALS("=", Column::equalTo),
+    EQUALS("=", SqlComparator::equalsTo),
 
     /**
      * The not equals operation.
      */
-    NOT_EQUALS("!=", Column::notEqual),
+    NOT_EQUALS("!=", SqlComparator::notEqual),
 
     /**
      * The less than or equal to operation.
      */
-    LESS_THAN_OR_EQUAL_TO("<=", Column::leq),
+    LESS_THAN_OR_EQUAL_TO("<=", SqlComparator::lessThanOrEqual),
 
     /**
      * The less than operation.
      */
-    LESS_THAN("<", Column::lt),
+    LESS_THAN("<", SqlComparator::lessThan),
 
     /**
      * The greater than or equal to operation.
      */
-    GREATER_THAN_OR_EQUAL_TO(">=", Column::geq),
+    GREATER_THAN_OR_EQUAL_TO(">=", SqlComparator::greaterThanOrEqual),
 
     /**
      * The greater than operation.
      */
-    GREATER_THAN(">", Column::gt);
+    GREATER_THAN(">", SqlComparator::greaterThan);
 
     @Nonnull
     private final String fhirPath;
 
-    /**
-     * A Spark function that can be used to execute this type of comparison for simple types.
-     * Complex types such as Coding and Quantity will implement their own comparison functions.
-     */
     @Nonnull
-    private final BiFunction<Column, Column, Column> sparkFunction;
+    private final TriFunction<SqlComparator, Column, Column, Column> compFunction;
 
     ComparisonOperation(@Nonnull final String fhirPath,
-        @Nonnull final BiFunction<Column, Column, Column> sparkFunction) {
+        @Nonnull final TriFunction<SqlComparator, Column, Column, Column> compFunction) {
       this.fhirPath = fhirPath;
-      this.sparkFunction = sparkFunction;
-    }
-
-    @Nonnull
-    public BiFunction<Column, Column, Column> getSparkFunction() {
-      return sparkFunction;
+      this.compFunction = compFunction;
     }
 
     @Override
@@ -117,6 +192,5 @@ public interface Comparable {
     public String toString() {
       return fhirPath;
     }
-
   }
 }

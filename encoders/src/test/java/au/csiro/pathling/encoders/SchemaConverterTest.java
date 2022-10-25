@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.encoders.datatypes.DataTypeMappings;
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.sql.types.TimestampType;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.MedicationRequest;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Questionnaire;
@@ -82,6 +84,8 @@ public class SchemaConverterTest {
   private StructType questionnaireSchema;
   private StructType questionnaireResponseSchema;
 
+  private StructType deviceSchema;
+
 
   /**
    * Traverses a DataType recursively passing all encountered StructTypes to the provided consumer.
@@ -93,7 +97,9 @@ public class SchemaConverterTest {
     if (type instanceof StructType) {
       final StructType structType = (StructType) type;
       consumer.accept(structType);
-      Arrays.stream(structType.fields()).forEach(f -> traverseSchema(f.dataType(), consumer));
+      Arrays.stream(structType.fields())
+          .filter(f -> !f.name().startsWith("_")) // filter out synthetic fields
+          .forEach(f -> traverseSchema(f.dataType(), consumer));
     } else if (type instanceof ArrayType) {
       traverseSchema(((ArrayType) type).elementType(), consumer);
     } else if (type instanceof MapType) {
@@ -156,6 +162,7 @@ public class SchemaConverterTest {
     medRequestSchema = converter_L0.resourceSchema(MedicationRequest.class);
     questionnaireSchema = converter_L0.resourceSchema(Questionnaire.class);
     questionnaireResponseSchema = converter_L0.resourceSchema(QuestionnaireResponse.class);
+    deviceSchema = converter_L0.resourceSchema(Device.class);
   }
 
   @Test
@@ -386,5 +393,34 @@ public class SchemaConverterTest {
     final Set<String> actualOpenTypeFieldNames = Stream.of(extensionStruct.fieldNames())
         .filter(fn -> fn.startsWith("value")).collect(Collectors.toUnmodifiableSet());
     assertEquals(Set.of("valueBoolean", "valueInteger", "valueCoding"), actualOpenTypeFieldNames);
+  }
+
+  @Test
+  public void testQuantity() {
+    final DataType quantityType = getField(observationSchema, true, "valueQuantity");
+    assertQuantityType(quantityType);
+  }
+
+  @Test
+  public void testSimpleQuantity() {
+    final DataType quantityType = getField(medRequestSchema, true, "dispenseRequest", "quantity");
+    assertQuantityType(quantityType);
+  }
+
+  @Test
+  public void testQuantityArray() {
+    final DataType quantityType = getField(deviceSchema, true, "property", "valueQuantity");
+    assertQuantityType(quantityType);
+  }
+
+  private void assertQuantityType(final DataType quantityType) {
+    assertTrue(getField(quantityType, true, "value") instanceof DecimalType);
+    assertTrue(getField(quantityType, true, "value_scale") instanceof IntegerType);
+    assertTrue(getField(quantityType, true, "comparator") instanceof StringType);
+    assertTrue(getField(quantityType, true, "unit") instanceof StringType);
+    assertTrue(getField(quantityType, true, "system") instanceof StringType);
+    assertTrue(getField(quantityType, true, "code") instanceof StringType);
+    assertEquals(FlexiDecimal.DATA_TYPE, getField(quantityType, true, "_value_canonicalized"));
+    assertTrue(getField(quantityType, true, "_code_canonicalized") instanceof StringType);
   }
 }

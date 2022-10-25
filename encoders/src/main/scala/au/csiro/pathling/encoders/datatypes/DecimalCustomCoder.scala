@@ -115,12 +115,12 @@ object DecimalCustomCoder {
    * For location coordinates 6 decimal digits allow for location precision of 10cm,
    * so should be sufficient for any medical purpose.
    *
-   * So the final type is DECIMAL(26,6) which allows both for 6 decimal places and
-   * at least 18 digits (regardless if there any decimal digits or not)
+   * So the final type is DECIMAL(32,6) which allows both for 6 decimal places and 26 digits
+   * (regardless if there any decimal digits or not)
    */
 
   val scale: Int = 6
-  val precision: Int = 26
+  val precision: Int = 32
   val decimalType: types.DecimalType = DataTypes.createDecimalType(precision, scale)
 
 

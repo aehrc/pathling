@@ -47,9 +47,9 @@ export class JobClient {
  * finished.
  */
 export class JobInProgressError extends Error {
-  readonly progress: string;
+  readonly progress: string | undefined;
 
-  constructor(message: string, progress: string) {
+  constructor(message: string, progress?: string) {
     super(message);
     this.name = "JobInProgressError";
     this.progress = progress;

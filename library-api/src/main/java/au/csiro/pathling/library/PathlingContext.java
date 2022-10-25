@@ -25,7 +25,7 @@ import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.sql.PathlingStrategy;
+import au.csiro.pathling.sql.SqlStrategy;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import ca.uhn.fhir.context.FhirContext;
@@ -77,7 +77,7 @@ public class PathlingContext {
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
-    PathlingStrategy.setup(spark);
+    SqlStrategy.setup(spark);
   }
 
   /**
@@ -105,6 +105,7 @@ public class PathlingContext {
    * that all direct or indirect fields of type T in element of type T should be skipped.
    * @param enableExtensions switches on/off the support for FHIR extensions.
    * @param enabledOpenTypes list of types that are encoded within open types, such as extensions.
+   * @param terminologyServerUrl the URL of the terminology server to use
    * @return then new instance of PathlingContext.
    */
   @Nonnull

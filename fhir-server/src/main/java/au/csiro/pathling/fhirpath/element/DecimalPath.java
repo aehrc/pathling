@@ -15,7 +15,6 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
-import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
@@ -34,7 +33,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-@SuppressWarnings("NullableProblems")
 public class DecimalPath extends ElementPath implements Materializable<DecimalType>, Comparable,
     Numeric {
 
@@ -93,7 +91,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   public static org.apache.spark.sql.types.DecimalType getDecimalType() {
@@ -109,31 +107,38 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
   @Override
   public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
-    return buildMathOperation(this, operation, expression, dataset, getFhirType());
+    return buildMathOperation(this, operation, expression, dataset);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericValueColumn() {
+    return getValueColumn();
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericContextColumn() {
+    return getNumericValueColumn();
   }
 
   /**
    * Builds a math operation result for a Decimal-like path.
    *
-   * @param source The left operand for the operation
-   * @param operation The type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
-   * @param expression The FHIRPath expression to use in the result
-   * @param dataset The {@link Dataset} to use in the result
-   * @param fhirType The {@link FHIRDefinedType} to use in the result
+   * @param source the left operand for the operation
+   * @param operation the type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
+   * @param expression the FHIRPath expression to use in the result
+   * @param dataset the {@link Dataset} to use in the result
    * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a
    * {@link NonLiteralPath}
    */
   @Nonnull
   public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,
       @Nonnull final MathOperation operation, @Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final Dataset<Row> dataset) {
     return target -> {
-      final Column targetValueColumn =
-          target instanceof IntegerPath || target instanceof IntegerLiteralPath
-          ? target.getValueColumn().cast(DataTypes.LongType)
-          : target.getValueColumn();
       Column valueColumn = operation.getSparkFunction()
-          .apply(source.getValueColumn(), targetValueColumn);
+          .apply(source.getNumericValueColumn(), target.getNumericValueColumn());
       final Column idColumn = source.getIdColumn();
       final Optional<Column> eidColumn = findEidColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
@@ -146,7 +151,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
           valueColumn = valueColumn.cast(getDecimalType());
           return ElementPath
               .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, fhirType);
+                  thisColumn, source.getFhirType());
         case MODULUS:
           valueColumn = valueColumn.cast(DataTypes.LongType);
           return ElementPath

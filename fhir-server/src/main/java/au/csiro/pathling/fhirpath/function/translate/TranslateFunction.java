@@ -32,6 +32,9 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 import org.slf4j.MDC;
 
 /**
@@ -82,7 +85,7 @@ public class TranslateFunction implements NamedFunction {
      */
     @SuppressWarnings("unchecked")
     @Nonnull
-    private <T> T getValueOr(final int index, @Nonnull final T defaultValue) {
+    private <T extends Type> T getValueOr(final int index, @Nonnull final T defaultValue) {
       return (index < arguments.size())
              ? getValue(index, (Class<T>) defaultValue.getClass())
              : defaultValue;
@@ -91,15 +94,15 @@ public class TranslateFunction implements NamedFunction {
     /**
      * Gets the value of the required literal argument.
      *
-     * @param index the 0-based index of the argument.
-     * @param valueClass the expected Java  class of the argument value.
-     * @param <T> the Java type of the argument value.
-     * @return the java value of the requested argument.
+     * @param index the 0-based index of the argument
+     * @param valueClass the expected Java  class of the argument value
+     * @param <T> the HAPI type of the argument value
+     * @return the java value of the requested argument
      */
     @Nonnull
-    public <T> T getValue(final int index, @Nonnull final Class<T> valueClass) {
+    public <T extends Type> T getValue(final int index, @Nonnull final Class<T> valueClass) {
       return Objects
-          .requireNonNull(valueClass.cast(((LiteralPath) arguments.get(index)).getJavaValue()));
+          .requireNonNull(valueClass.cast(((LiteralPath) arguments.get(index)).getValue()));
     }
 
     /**
@@ -146,9 +149,11 @@ public class TranslateFunction implements NamedFunction {
 
     final Arguments arguments = Arguments.of(input);
 
-    final String conceptMapUrl = arguments.getValue(0, String.class);
-    final boolean reverse = arguments.getValueOr(1, DEFAULT_REVERSE);
-    final String equivalence = arguments.getValueOr(2, DEFAULT_EQUIVALENCE);
+    final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
+    final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
+        .booleanValue();
+    final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
+        .asStringValue();
     final Dataset<Row> dataset = inputPath.getDataset();
 
     final Dataset<Row> translatedDataset = TerminologyFunctions.translate(
