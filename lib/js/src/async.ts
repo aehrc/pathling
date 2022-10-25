@@ -100,11 +100,12 @@ export function waitForAsyncResult(
 }
 
 function reportProgress(e: Error, requestOptions?: QueryOptions) {
+  const progress = (e as JobInProgressError).progress;
   if (
     (e as Error).name === "JobInProgressError" &&
-    (e as JobInProgressError).progress &&
+    progress &&
     requestOptions?.onProgress
   ) {
-    requestOptions.onProgress((e as JobInProgressError).progress);
+    requestOptions.onProgress(progress);
   }
 }
