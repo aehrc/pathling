@@ -73,7 +73,7 @@
     <pathling.sparkVersion>3.3.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.sparkScalaFullVersion>2.12.17</pathling.sparkScalaFullVersion>
-    <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
+    <pathling.deltaVersion>2.1.0</pathling.deltaVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
