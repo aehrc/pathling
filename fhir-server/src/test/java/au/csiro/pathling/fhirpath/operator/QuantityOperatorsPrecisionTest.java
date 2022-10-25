@@ -6,42 +6,36 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
+import static au.csiro.pathling.test.helpers.SparkHelpers.rowForUcumQuantity;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.ImmutableSet;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
-import org.apache.spark.sql.SparkSession;
-import org.codehaus.jettison.badgerfish.BadgerFishXMLInputFactory;
-import org.fhir.ucum.Prefix;
-import org.fhir.ucum.UcumService;
-import org.hl7.fhir.r4.model.Enumerations;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Quantity;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
-import static au.csiro.pathling.test.helpers.SparkHelpers.rowForUcumQuantity;
-import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
+import javax.annotation.Nonnull;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
+import org.fhir.ucum.Prefix;
+import org.fhir.ucum.UcumService;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 @Tag("UnitTest")
@@ -91,11 +85,12 @@ public class QuantityOperatorsPrecisionTest {
   }
 
   @Nonnull
-  private ElementPath buildQuantityPathForUnits(@Nonnull final String value, List<String> units) {
+  private ElementPath buildQuantityPathForUnits(@Nonnull final String value,
+      final List<String> units) {
     DatasetBuilder datasetBuilder = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withStructTypeColumns(quantityStructType());
-    for (String unit : units) {
+    for (final String unit : units) {
       datasetBuilder = datasetBuilder.withRow(unitToRowId(unit), rowForUcumQuantity(value, unit));
     }
     final Dataset<Row> dataset = datasetBuilder.buildWithStructValue();
@@ -116,20 +111,23 @@ public class QuantityOperatorsPrecisionTest {
         .collect(Collectors.toUnmodifiableList());
   }
 
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
-  private static BigDecimal createSpanningDecimal(int leftValue, int leftScale, int rightValue,
-      int rightScale) {
+  private static BigDecimal createSpanningDecimal(final int leftValue, final int leftScale,
+      final int rightValue, final int rightScale) {
     return new BigDecimal(leftValue).movePointRight(leftScale)
         .add(new BigDecimal(rightValue).movePointLeft(rightScale));
   }
 
+  @SuppressWarnings("SameParameterValue")
   @Nonnull
-  private static List<Row> createResult(@Nonnull final List<String> unitRange, boolean result) {
+  private static List<Row> createResult(@Nonnull final List<String> unitRange,
+      final boolean result) {
     return createResult(unitRange, result, Collections.emptySet());
   }
 
   @Nonnull
-  private static List<Row> createResult(@Nonnull final List<String> unitRange, boolean result,
+  private static List<Row> createResult(@Nonnull final List<String> unitRange, final boolean result,
       @Nonnull final Set<String> outOfRangeUnits) {
     return unitRange.stream().map(
         unit ->
@@ -212,7 +210,7 @@ public class QuantityOperatorsPrecisionTest {
   }
 
   @Test
-  void equalityPrecisionForReasonableDecimalsWithMols() {
+  void equalityPrecisionForReasonableDecimalsWithMoles() {
     final List<String> unitRange = getAllPrefixedUnits("mol");
     final ElementPath left = buildQuantityPathForUnits(REASONABLE_DECIMAL_01, unitRange);
     final ElementPath right = buildQuantityPathForUnits(REASONABLE_DECIMAL_01, unitRange);
