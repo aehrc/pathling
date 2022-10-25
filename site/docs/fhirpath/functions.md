@@ -110,6 +110,22 @@ Patient.reverseResolve(Condition.subject).empty()
 
 See also: [empty](https://hl7.org/fhirpath/#empty-boolean)
 
+## exists
+
+```
+collection -> exists() : Boolean
+collection -> exists(criteria: [any]) : Boolean
+```
+
+Tests whether the input collection is empty. When invoked without arguments, 
+`exists()` is equivalent to `empty().not()`.
+
+This function can also optionally accept an argument which can filter the input
+collection prior to applying the test. When invoked with an
+argument, `exists([criteria])` is equivalent to `where([criteria]).exists()`.
+
+See also: [exists](https://hl7.org/fhirpath/#existscriteria-expression-boolean)
+
 ## extension
 
 ```
