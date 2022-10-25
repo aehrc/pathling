@@ -37,3 +37,11 @@ CVE-2022-2191
 # communicate with trusted sources, and the consequences are not critical.
 CVE-2022-42003
 CVE-2022-42004
+
+# These vulnerabilities relate to libdb, libpcre and zlib1g, and have been assessed as low risk in 
+# the context of our implementation.
+CVE-2019-8457
+CVE-2019-8457
+CVE-2022-1587
+CVE-2022-37434
+CVE-2022-1586
