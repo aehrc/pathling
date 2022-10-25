@@ -408,6 +408,13 @@
         <artifactId>commons-beanutils</artifactId>
         <version>1.9.4</version>
       </dependency>
+
+      <!-- CVE-2022-42889 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>1.10.0</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
