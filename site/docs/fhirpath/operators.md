@@ -39,10 +39,10 @@ individual characters.
 All comparison operators return a [Boolean](/docs/fhirpath/data-types#boolean) value.
 
 <sup>*</sup> Not all Quantity values are comparable, it depends upon the
-comparability of the units. See the
-[FHIRPath specification](https://hl7.org/fhirpath/#comparison) for details on
-how Quantity values are compared. Quantities with a `sqlComparator` are treated as
-not comparable by this implementation.
+comparability of the units. See
+the <a href="https://hl7.org/fhirpath/#comparison">FHIRPath specification</a> for 
+details on how Quantity values are compared.
+<p></p>
 
 See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 
@@ -62,8 +62,7 @@ an empty collection.
 Not all Quantity, Date and DateTime values can be compared for equality, it
 depends upon the comparability of the units within the Quantity values. See the
 [FHIRPath specification](https://hl7.org/fhirpath/#quantity-equality) for
-details on how equality works with Quantity values. Quantities with a
-`sqlComparator` are treated as not comparable by this implementation.
+details on how equality works with Quantity values.
 
 See also: [Equality](https://hl7.org/fhirpath/#equality)
 
@@ -77,19 +76,28 @@ The following math operators are supported:
 - `/` - Division
 - `mod` - Modulus
 
-Math operators support only [Integer](/docs/fhirpath/data-types#integer) and
-[Decimal](/docs/fhirpath/data-types#decimal) operands.
-
-The type of the two operands can be mixed. `+`, `-` and `*` return the same type
-as the left operand, `/` returns [Decimal](/docs/fhirpath/data-types#decimal) and `mod`
-returns [Integer](/docs/fhirpath/data-types#integer).
+Math operators support [Integer](/docs/fhirpath/data-types#integer),
+[Decimal](/docs/fhirpath/data-types#decimal)
+and [Quantity](/docs/fhirpath/data-types#quantity) operands. The modulus 
+operator is not supported for Quantity types.
 
 Both operands must be singular.
 
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
 
-See also: [Math](https://hl7.org/fhirpath/#math)
+Integer and Decimal types can be mixed, while Quantity types can only be used
+with other Quantity types. 
+
+For Integer and Decimal, `+`, `-` and `*` return the same type as the left
+operand, `/` returns [Decimal](/docs/fhirpath/data-types#decimal) and `mod`
+returns [Integer](/docs/fhirpath/data-types#integer).
+
+For Quantity types, math operators return a new Quantity with the canonical unit 
+common to both operands. If the units are not comparable, an empty collection is 
+returned.
+
+See also: [Math](https://hl7.org/fhirpath/#math-2)
 
 ## Date/time arithmetic
 
