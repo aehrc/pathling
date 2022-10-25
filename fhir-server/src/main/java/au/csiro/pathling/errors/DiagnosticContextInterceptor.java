@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
  * This class adds diagnostic information about the current request to logging and Sentry contexts.
  *
  * @author John Grimes
+ * @author Piotr Szul
  */
 @Component
 @Profile("server")
@@ -51,7 +52,8 @@ public class DiagnosticContextInterceptor {
     } else {
       DiagnosticContext.empty().configureScope();
       log.warn(
-          "Diagnostic Context Interceptor invoked with missing request details. Diagnostic information not set.");
+          "Diagnostic context interceptor invoked with missing request details. Diagnostic "
+              + "information not set.");
     }
   }
 }

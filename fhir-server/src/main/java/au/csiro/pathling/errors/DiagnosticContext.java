@@ -25,6 +25,8 @@ import org.slf4j.MDC;
  * The data in this class are not bound to the scope of the current request and can be used to set
  * diagnostic information even after the original request has been completed (e.g. for the
  * asynchronous worker threads).
+ *
+ * @author Piotr Szul
  */
 public class DiagnosticContext {
 
