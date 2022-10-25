@@ -46,6 +46,7 @@ public class PathlingBenchmarkRunner {
 
     final Options opt = new OptionsBuilder()
         .include("\\.[^.]+Benchmark\\.[^.]+$")
+        .exclude("\\.[^.]+DecimalBenchmark\\.[^.]+$")
         .warmupIterations(warmup)
         .measurementIterations(iterations)
         // single shot for each iteration:
@@ -59,7 +60,7 @@ public class PathlingBenchmarkRunner {
         .resultFormat(resultsFileOutputType)
         .result(resultFile)
         .shouldFailOnError(true)
-        .jvmArgs("-server -Xmx6g -ea -Duser.timezone=UTC")
+        .jvmArgs("-server -Xmx4g -ea -Duser.timezone=UTC")
         .build();
     new Runner(opt).run();
   }
