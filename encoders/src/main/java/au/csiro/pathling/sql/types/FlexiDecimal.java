@@ -1,6 +1,10 @@
 package au.csiro.pathling.sql.types;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -8,24 +12,28 @@ import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.api.java.UDF2;
 import org.apache.spark.sql.expressions.UserDefinedFunction;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.*;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.apache.spark.sql.types.Decimal;
+import org.apache.spark.sql.types.Metadata;
+import org.apache.spark.sql.types.MetadataBuilder;
+import org.apache.spark.sql.types.StructField;
+import org.apache.spark.sql.types.StructType;
 
 /**
  * Implementation of flexible decimal type represented as the unscaled value with up to 38 digits
  * and the scale.
+ *
+ * @author Piotr Szul
  */
 public class FlexiDecimal {
 
   /**
-   * The maximum precision (the number of significant digits)
+   * The maximum precision (the number of significant digits).
    */
   public static final int MAX_PRECISION = 38;
   /**
-   * The Sql type of for the unscaled value.
+   * The SQL type for the unscaled value.
    */
   public static final DataType DECIMAL_TYPE = DataTypes.createDecimalType(MAX_PRECISION, 0);
 
@@ -39,17 +47,18 @@ public class FlexiDecimal {
   }
 
   /**
-   * The Sql (struct) type for flexible decimal
+   * The SQL (struct) type for flexible decimal.
    */
   @Nonnull
   public static DataType DATA_TYPE = createFlexibleDecimalType();
 
   @Nonnull
   private static UserDefinedFunction toBooleanUdf(
-      UDF2<BigDecimal, BigDecimal, Boolean> method) {
+      @Nonnull final UDF2<BigDecimal, BigDecimal, Boolean> method) {
     final UDF2<Row, Row, Boolean> f = (left, right) -> {
       final BigDecimal leftValue = fromValue(left);
       final BigDecimal rightValue = fromValue(right);
+      //noinspection ReturnOfNull
       return (leftValue == null || rightValue == null)
              ? null
              : method.call(leftValue, rightValue);
@@ -59,7 +68,8 @@ public class FlexiDecimal {
 
   @Nonnull
   private static UDF2<Row, Row, Row> wrapBigDecimal2(
-      UDF2<BigDecimal, BigDecimal, BigDecimal> method) {
+      @Nonnull final UDF2<BigDecimal, BigDecimal, BigDecimal> method) {
+    //noinspection ReturnOfNull
     return (left, right) ->
         (left == null || right == null)
         ? null
@@ -68,7 +78,7 @@ public class FlexiDecimal {
 
   @Nonnull
   private static UserDefinedFunction toBigDecimalUdf(
-      UDF2<BigDecimal, BigDecimal, BigDecimal> method) {
+      @Nonnull final UDF2<BigDecimal, BigDecimal, BigDecimal> method) {
     return functions.udf(wrapBigDecimal2(method), DATA_TYPE);
   }
 
@@ -76,7 +86,7 @@ public class FlexiDecimal {
    * Decodes a flexible decimal from the Row
    *
    * @param row the row to decode
-   * @return the BigDecmal representation of the row
+   * @return the BigDecimal representation of the row
    */
   @Nullable
   public static BigDecimal fromValue(@Nullable final Row row) {
@@ -101,7 +111,7 @@ public class FlexiDecimal {
 
   @Nullable
   private static Object[] toArrayValue(@Nullable final BigDecimal decimal) {
-    BigDecimal normalizedValue = normalize(decimal);
+    final BigDecimal normalizedValue = normalize(decimal);
     return normalizedValue != null
            ? new Object[]{Decimal.apply(normalizedValue.unscaledValue()), normalizedValue.scale()}
            : null;
@@ -118,7 +128,8 @@ public class FlexiDecimal {
       // This may be may have too many digits
       if (adjustedValue.precision() > MAX_PRECISION) {
         // we need to adjust the scale to fit into the desired precision
-        int desiredScale = adjustedValue.scale() - (adjustedValue.precision() - MAX_PRECISION);
+        final int desiredScale =
+            adjustedValue.scale() - (adjustedValue.precision() - MAX_PRECISION);
         if (desiredScale >= 0) {
           return adjustedValue.setScale(desiredScale, RoundingMode.HALF_UP);
         } else {
@@ -191,7 +202,7 @@ public class FlexiDecimal {
   }
 
   @Nonnull
-  public static Column to_decimal(@Nonnull final Column flexiDecimal) {
+  public static Column toDecimal(@Nonnull final Column flexiDecimal) {
     return TO_DECIMAL.apply(flexiDecimal);
   }
 }

@@ -162,7 +162,7 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
 
       final Column resultStruct = QuantityEncoding.toStruct(
           sourceContext.getField("id"),
-          FlexiDecimal.to_decimal(resultColumn),
+          FlexiDecimal.toDecimal(resultColumn),
           // NOTE: This (setting value_scale to null) works because we never decode this struct to a Quantity.
           // The only Quantities that are decoded are calendar duration quantities parsed from literals.
           lit(null),
