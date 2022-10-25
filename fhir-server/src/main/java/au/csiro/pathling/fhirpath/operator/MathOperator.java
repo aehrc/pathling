@@ -11,6 +11,7 @@ import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
+import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
@@ -58,6 +59,14 @@ public class MathOperator implements Operator {
         "Left operand to " + type + " operator must be singular: " + left.getExpression());
     checkUserInput(right.isSingular(),
         "Right operand to " + type + " operator must be singular: " + right.getExpression());
+    checkUserInput(left instanceof Comparable && right instanceof Comparable,
+        "Left and right operands are not comparable: " + left.getExpression() + " "
+            + type + " " + right.getExpression());
+    final Comparable comparableLeft = (Comparable) left;
+    final Comparable comparableRight = (Comparable) right;
+    checkUserInput(comparableLeft.isComparableTo(comparableRight.getClass()),
+        "Left and right operands are not comparable: " + left.getExpression() + " "
+            + type + " " + right.getExpression());
 
     final String expression = buildExpression(input, type.toString());
     final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
