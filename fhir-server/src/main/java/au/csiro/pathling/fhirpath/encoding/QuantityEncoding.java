@@ -82,10 +82,9 @@ public final class QuantityEncoding {
     }
     final String comparator = Optional.ofNullable(quantity.getComparator())
         .map(QuantityComparator::toCode).orElse(null);
-    // TODO: The null scale support it a temporary measure because we currently 
-    // cannot encode the scale of the results of arithmetic operations.
     return RowFactory.create(quantity.getId(),
         quantity.getValue(),
+        // We cannot encode the scale of the results of arithmetic operations.
         includeScale
         ? quantity.getValue().scale()
         : null,

@@ -7,7 +7,7 @@ import org.apache.spark.sql.functions.{lit, struct}
 import org.apache.spark.sql.types.{DataTypes, Decimal, ObjectType}
 
 /**
- * Helper class for serialization of FlexiDecimals. 
+ * Helper class for serialization of FlexiDecimals.
  *
  * @author Piotr Szul
  */
@@ -27,13 +27,13 @@ object FlexiDecimalSupport {
   }
 
   def createFlexiDecimalSerializer(expression: Expression): Expression = {
-    // the expression is of type BigDecimal 
+    // the expression is of type BigDecimal
     // we want to encode it as a struct of two fields
     // value -> the BigInteger representing digits
-    // scale -> the actual position of the decimal coma
+    // scale -> the actual position of the decimal point
 
-    // TODO: Performance: consider if the normalized value could be cached in 
-    // a variable 
+    // TODO: Performance: consider if the normalized value could be cached in
+    //   a variable
     val normalizedExpression: Expression = StaticInvoke(classOf[FlexiDecimal],
       ObjectType(classOf[java.math.BigDecimal]),
       "normalize",
