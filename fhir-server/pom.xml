@@ -610,7 +610,7 @@
                       </platform>
                     </platforms>
                   </from>
-                  <to>
+                  <to combine.self="override">
                     <image>${pathling.fhirServerDockerRepo}:${pathling.fhirServerDockerTag}-develop</image>
                   </to>
                 </configuration>
