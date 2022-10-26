@@ -1,13 +1,25 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
@@ -17,6 +29,7 @@ import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
@@ -32,6 +45,8 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralCon
 import java.text.ParseException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.antlr.v4.runtime.tree.TerminalNode;
+import org.fhir.ucum.UcumException;
 
 /**
  * This class deals with terms that are literal expressions.
@@ -142,7 +157,27 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitQuantityLiteral(@Nullable final QuantityLiteralContext ctx) {
-    throw new InvalidUserInputError("Quantity literals are not supported");
+    checkNotNull(ctx);
+    @Nullable final String number = ctx.quantity().NUMBER().getText();
+    checkNotNull(number);
+
+    final FhirPath resultContext = this.context.getThisContext().orElse(context.getInputContext());
+    @Nullable final TerminalNode ucumUnit = ctx.quantity().unit().STRING();
+
+    if (ucumUnit == null) {
+      // Create a calendar duration literal.
+      final String fhirPath = String.format("%s %s", number, ctx.quantity().unit().getText());
+      return QuantityLiteralPath.fromCalendarDurationString(fhirPath, resultContext);
+    } else {
+      // Create a UCUM Quantity literal.
+      final String fhirPath = String.format("%s %s", number, ucumUnit.getText());
+      try {
+        return QuantityLiteralPath.fromUcumString(fhirPath, resultContext,
+            Ucum.service());
+      } catch (final UcumException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
 }

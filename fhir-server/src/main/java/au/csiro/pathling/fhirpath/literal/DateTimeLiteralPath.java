@@ -1,20 +1,35 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
+import au.csiro.pathling.fhirpath.Temporal;
+import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.element.DateTimePath;
+import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
+import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
 import java.text.ParseException;
-import java.util.Date;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -24,21 +39,23 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath date literal.
  *
  * @author John Grimes
  */
-public class DateTimeLiteralPath extends LiteralPath implements Materializable<BaseDateTimeType>,
-    Comparable {
+public class DateTimeLiteralPath extends LiteralPath<BaseDateTimeType> implements
+    Materializable<BaseDateTimeType>, Comparable, Temporal {
 
-  @SuppressWarnings("WeakerAccess")
   protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final BaseDateTimeType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof BaseDateTimeType);
+  }
+
+  protected DateTimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final BaseDateTimeType literalValue, @Nonnull final String expression) {
+    super(dataset, idColumn, literalValue, expression);
   }
 
   /**
@@ -50,42 +67,31 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
    * @return A new instance of {@link LiteralPath}
    * @throws ParseException if the literal is malformed
    */
+  @Nonnull
   public static DateTimeLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
     final String dateTimeString = fhirPath.replaceFirst("^@", "");
-    final java.util.Date date = DateTimePath.getDateFormat().parse(dateTimeString);
-    final DateTimeType literalValue = new DateTimeType(date);
-    literalValue.setTimeZone(DateTimePath.getTimeZone());
-    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn(), literalValue);
+    final DateTimeType dateTimeType = new DateTimeType(dateTimeString);
+    return new DateTimeLiteralPath(context.getDataset(), context.getIdColumn(), dateTimeType,
+        fhirPath);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return "@" + DateTimePath.getDateFormat().format(getLiteralValue().getValue());
-  }
-
-  @Override
-  public BaseDateTimeType getLiteralValue() {
-    return (BaseDateTimeType) literalValue;
-  }
-
-  @Nonnull
-  @Override
-  public Date getJavaValue() {
-    return getLiteralValue().getValue();
+    return expression.orElse("@" + getValue().getValueAsString());
   }
 
   @Nonnull
   @Override
   public Column buildValueColumn() {
-    return lit(getLiteralValue().asStringValue());
+    return lit(getValue().asStringValue());
   }
 
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return DateTimePath.buildComparison(this, operation.getSparkFunction());
+    return DateTimeSqlComparator.buildComparison(this, operation);
   }
 
   @Override
@@ -103,6 +109,15 @@ public class DateTimeLiteralPath extends LiteralPath implements Materializable<B
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DateTimePath;
+  }
+
+  @Nonnull
+  @Override
+  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
+      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String expression) {
+    return buildDateArithmeticOperation(this, operation, dataset, expression,
+        DateTimeAddDurationFunction.FUNCTION_NAME, DateTimeSubtractDurationFunction.FUNCTION_NAME);
   }
 
 }

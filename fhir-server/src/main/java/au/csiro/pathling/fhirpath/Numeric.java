@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath;
@@ -13,6 +24,7 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a path that represents a numeric value, and can be the subject of math operations.
@@ -47,6 +59,34 @@ public interface Numeric {
    */
   @Nonnull
   Column getValueColumn();
+
+  /**
+   * @return a {@link Column} that provides a value that can me used in math operations
+   */
+  @Nonnull
+  Column getNumericValueColumn();
+
+  /**
+   * Provides a {@link Column} that provides additional context that informs the way that math
+   * operations are carried out. This is used for Quantity math, so that the operation function has
+   * access to the canonicalized units.
+   *
+   * @return a {@link Column} that provides additional context for math operations
+   */
+  @Nonnull
+  Column getNumericContextColumn();
+
+  /**
+   * The FHIR data type of the element being represented by this expression.
+   * <p>
+   * Note that there can be multiple valid FHIR types for a given FHIRPath type, e.g. {@code uri}
+   * and {@code code} both map to the {@code String} FHIRPath type.
+   *
+   * @return the FHIR data type of the expression
+   * @see <a href="https://hl7.org/fhir/fhirpath.html#types">Using FHIR types in expressions</a>
+   */
+  @Nonnull
+  FHIRDefinedType getFhirType();
 
   /**
    * Represents a type of math operator.

@@ -1,14 +1,18 @@
 /*
- * This is a modified version of the Bunsen library, originally published at
- * https://github.com/cerner/bunsen.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
  *
- * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
- * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * These modifications are copyright © 2018-2022, Commonwealth Scientific
- * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
- * under the CSIRO Open Source Software Licence Agreement.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.library;
@@ -25,7 +29,7 @@ import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.sql.PathlingStrategy;
+import au.csiro.pathling.sql.SqlStrategy;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import ca.uhn.fhir.context.FhirContext;
@@ -77,7 +81,7 @@ public class PathlingContext {
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
-    PathlingStrategy.setup(spark);
+    SqlStrategy.setup(spark);
   }
 
   /**
@@ -105,6 +109,7 @@ public class PathlingContext {
    * that all direct or indirect fields of type T in element of type T should be skipped.
    * @param enableExtensions switches on/off the support for FHIR extensions.
    * @param enabledOpenTypes list of types that are encoded within open types, such as extensions.
+   * @param terminologyServerUrl the URL of the terminology server to use
    * @return then new instance of PathlingContext.
    */
   @Nonnull

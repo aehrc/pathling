@@ -1,13 +1,23 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
-import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -16,10 +26,10 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -32,7 +42,7 @@ import org.hl7.fhir.r4.model.Type;
  *
  * @author John Grimes
  */
-public abstract class LiteralPath implements FhirPath {
+public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
   private static final Map<FHIRDefinedType, Class<? extends LiteralPath>> FHIR_TYPE_TO_FHIRPATH_TYPE =
@@ -89,14 +99,27 @@ public abstract class LiteralPath implements FhirPath {
    * The HAPI object that represents the value of this literal.
    */
   @Getter
-  protected Type literalValue;
+  protected ValueType value;
+
+  @Nonnull
+  protected final Optional<String> expression;
 
   protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final ValueType value) {
     this.idColumn = idColumn;
-    this.literalValue = literalValue;
+    this.value = value;
     this.dataset = dataset;
     this.valueColumn = buildValueColumn();
+    this.expression = Optional.empty();
+  }
+
+  protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final ValueType value, @Nonnull final String expression) {
+    this.idColumn = idColumn;
+    this.value = value;
+    this.dataset = dataset;
+    this.valueColumn = buildValueColumn();
+    this.expression = Optional.of(expression);
   }
 
   /**
@@ -113,12 +136,19 @@ public abstract class LiteralPath implements FhirPath {
     final Class<? extends LiteralPath> literalPathClass = FHIR_TYPE_TO_FHIRPATH_TYPE
         .get(FHIRDefinedType.fromCode(literalValue.fhirType()));
     try {
-      final Constructor<? extends LiteralPath> constructor = literalPathClass
-          .getDeclaredConstructor(Dataset.class, Column.class, Type.class);
+      @SuppressWarnings("unchecked")
+      final Constructor<? extends LiteralPath> constructor = (Constructor<? extends LiteralPath>) Arrays.stream(
+              literalPathClass.getDeclaredConstructors())
+          .filter(c -> c.getParameterCount() == 3)
+          .filter(c -> c.getParameterTypes()[0] == Dataset.class)
+          .filter(c -> c.getParameterTypes()[1] == Column.class)
+          .filter(c -> Type.class.isAssignableFrom(c.getParameterTypes()[2]))
+          .findFirst()
+          .orElseThrow(() -> new AssertionError(
+              "No suitable constructor found for " + literalPathClass));
       final LiteralPath literalPath = constructor.newInstance(dataset, idColumn, literalValue);
       return literalPath.getExpression();
-    } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
-                   InvocationTargetException e) {
+    } catch (final InstantiationException | IllegalAccessException | InvocationTargetException e) {
       throw new RuntimeException("Problem building a LiteralPath class", e);
     }
   }
@@ -155,20 +185,10 @@ public abstract class LiteralPath implements FhirPath {
   }
 
   /**
-   * Returns the Java object that represents the value of this literal.
-   *
-   * @return An Object
-   */
-  @Nullable
-  public abstract Object getJavaValue();
-
-  /**
    * @return A column representing the value for this literal.
    */
   @Nonnull
-  public Column buildValueColumn() {
-    return lit(getJavaValue());
-  }
+  public abstract Column buildValueColumn();
 
   /**
    * @param fhirPathClass a subclass of LiteralPath

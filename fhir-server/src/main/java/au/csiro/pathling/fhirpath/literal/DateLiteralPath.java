@@ -1,21 +1,36 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
+import au.csiro.pathling.fhirpath.Temporal;
+import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DateTimePath;
+import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
+import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
 import java.text.ParseException;
-import java.util.Date;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -23,24 +38,23 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.DateType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath date literal.
  *
  * @author John Grimes
  */
-public class DateLiteralPath extends LiteralPath implements Materializable<DateType>, Comparable {
+public class DateLiteralPath extends LiteralPath<DateType> implements Materializable<DateType>,
+    Comparable, Temporal {
 
-  @Nonnull
-  private Optional<DateLiteralFormat> format;
-
-  @SuppressWarnings("WeakerAccess")
   protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final DateType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof DateType);
-    format = Optional.empty();
+  }
+
+  protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final DateType literalValue, @Nonnull final String expression) {
+    super(dataset, idColumn, literalValue, expression);
   }
 
   /**
@@ -55,63 +69,26 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
   public static DateLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    java.util.Date date;
-    DateLiteralFormat format;
-    // Try parsing out the date using the three possible formats, from full (most common) down to
-    // the year only format.
-    try {
-      date = DatePath.getFullDateFormat().parse(dateString);
-      format = DateLiteralFormat.FULL;
-    } catch (final ParseException e) {
-      try {
-        date = DatePath.getYearMonthDateFormat().parse(dateString);
-        format = DateLiteralFormat.YEAR_MONTH_DATE;
-      } catch (final ParseException ex) {
-        date = DatePath.getYearOnlyDateFormat().parse(dateString);
-        format = DateLiteralFormat.YEAR_ONLY;
-      }
-    }
-
-    final DateLiteralPath result = new DateLiteralPath(context.getDataset(), context.getIdColumn(),
-        new DateType(date));
-    result.format = Optional.of(format);
-    return result;
+    final DateType dateType = new DateType(dateString);
+    return new DateLiteralPath(context.getDataset(), context.getIdColumn(), dateType, fhirPath);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    if (format.isEmpty() || format.get() == DateLiteralFormat.FULL) {
-      return "@" + DatePath.getFullDateFormat().format(getLiteralValue().getValue());
-    } else if (format.get() == DateLiteralFormat.YEAR_MONTH_DATE) {
-      return "@" + DatePath.getYearMonthDateFormat().format(getLiteralValue().getValue());
-    } else {
-      return "@" + DatePath.getYearOnlyDateFormat().format(getLiteralValue().getValue());
-    }
-  }
-
-  @Override
-  public DateType getLiteralValue() {
-    return (DateType) literalValue;
-  }
-
-  @Nonnull
-  @Override
-  public Date getJavaValue() {
-    return getLiteralValue().getValue();
+    return expression.orElse("@" + getValue().asStringValue());
   }
 
   @Nonnull
   @Override
   public Column buildValueColumn() {
-    final String date = DatePath.getFullDateFormat().format(getJavaValue());
-    return lit(date);
+    return lit(getValue().asStringValue());
   }
 
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return DateTimePath.buildComparison(this, operation.getSparkFunction());
+    return DateTimeSqlComparator.buildComparison(this, operation);
   }
 
   @Override
@@ -130,8 +107,13 @@ public class DateLiteralPath extends LiteralPath implements Materializable<DateT
     return super.canBeCombinedWith(target) || target instanceof DatePath;
   }
 
-  private enum DateLiteralFormat {
-    FULL, YEAR_MONTH_DATE, YEAR_ONLY
+  @Nonnull
+  @Override
+  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
+      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String expression) {
+    return buildDateArithmeticOperation(this, operation, dataset, expression,
+        DateAddDurationFunction.FUNCTION_NAME, DateSubtractDurationFunction.FUNCTION_NAME);
   }
 
 }

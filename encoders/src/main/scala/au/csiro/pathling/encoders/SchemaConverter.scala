@@ -5,21 +5,33 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2022, Commonwealth Scientific
- * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
- * under the CSIRO Open Source Software Licence Agreement.
+ * These modifications are copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders.datatypes.DataTypeMappings
+import au.csiro.pathling.encoders.QuantitySupport.{CODE_CANONICALIZED_FIELD_NAME, VALUE_CANONICALIZED_FIELD_NAME}
+import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
 import au.csiro.pathling.schema.SchemaVisitor
 import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.types._
 import org.hl7.fhir.instance.model.api.{IBase, IBaseResource}
+import org.hl7.fhir.r4.model.Quantity
 
 /**
  * The schema processor for converting FHIR schemas to SQL schemas.
@@ -53,9 +65,19 @@ private[encoders] class SchemaConverterProcessor(override val fhirContext: FhirC
     }
   }
 
+  private def createQuantityFields(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[StructField] = {
+    definition.getImplementingClass match {
+      case cls if classOf[Quantity].isAssignableFrom(cls) => QuantitySupport
+        .createExtraSchemaFields()
+      case _ => Nil
+    }
+  }
+
   override def buildComposite(definition: BaseRuntimeElementCompositeDefinition[_],
                               fields: Seq[StructField]): DataType = {
-    StructType(fields ++ createFidField() ++ createExtensionField(definition))
+    StructType(
+      fields ++ createQuantityFields(definition) ++ createFidField() ++ createExtensionField(
+        definition))
   }
 
   override def buildElement(elementName: String, elementValue: DataType,

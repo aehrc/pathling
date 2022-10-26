@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.operator;
@@ -102,6 +113,37 @@ class MathOperatorValidationTest {
         () -> mathOperator.invoke(reversedInput));
     assertEquals(
         "Right operand to + operator must be singular: foo",
+        reversedError.getMessage());
+  }
+
+  @Test
+  void operandsAreNotComparable() {
+    final ElementPath left = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.INTEGER)
+        .singular(true)
+        .expression("foo")
+        .build();
+    final ElementPath right = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.QUANTITY)
+        .singular(true)
+        .expression("bar")
+        .build();
+
+    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final Operator mathOperator = Operator.getInstance("+");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> mathOperator.invoke(input));
+    assertEquals("Left and right operands are not comparable: foo + bar",
+        error.getMessage());
+
+    // Now test the right operand.
+    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final InvalidUserInputError reversedError = assertThrows(
+        InvalidUserInputError.class,
+        () -> mathOperator.invoke(reversedInput));
+    assertEquals(
+        "Left and right operands are not comparable: bar + foo",
         reversedError.getMessage());
   }
 

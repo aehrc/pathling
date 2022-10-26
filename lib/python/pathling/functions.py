@@ -1,3 +1,20 @@
+#  Copyright 2022 Commonwealth Scientific and Industrial Research
+#  Organisation (CSIRO) ABN 41 687 119 230.
+# 
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+import urllib.parse
+
 from pyspark.sql import Column
 from pyspark.sql.functions import lit, struct
 
@@ -19,3 +36,13 @@ def to_coding(coding_column: Column, system: str, version: str = None):
     user_selected_column = lit(None).alias('userSelected')
     return struct(id_column, system_column, version_column, coding_column.alias("code"),
                   display_column, user_selected_column)
+
+
+def to_ecl_value_set(ecl: str) -> str:
+    """
+    Converts a SNOMED CT ECL expression into a FHIR ValueSet URI. Can be used with the `member_of` 
+    function.
+    :param ecl: the ECL expression
+    :return: the ValueSet URI
+    """
+    return "http://snomed.info/sct?fhir_vs=ecl/" + urllib.parse.quote(ecl, safe="()*!'")

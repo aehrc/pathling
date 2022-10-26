@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.test.helpers;
@@ -9,17 +20,25 @@ package au.csiro.pathling.test.helpers;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static org.apache.spark.sql.functions.col;
 
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.terminology.ucum.Ucum;
+import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import au.csiro.pathling.utilities.Preconditions;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
@@ -28,6 +47,8 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Quantity;
+import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
@@ -99,6 +120,11 @@ public abstract class SparkHelpers {
   }
 
   @Nonnull
+  public static StructType quantityStructType() {
+    return QuantityEncoding.dataType();
+  }
+
+  @Nonnull
   public static Row rowFromCoding(@Nonnull final Coding coding) {
     return new GenericRowWithSchema(
         new Object[]{coding.getId(), coding.getSystem(), coding.getVersion(), coding.getCode(),
@@ -135,6 +161,39 @@ public abstract class SparkHelpers {
     return new GenericRowWithSchema(
         new Object[]{codeableConcept.getId(), buffer.toList(), codeableConcept.getText()},
         codeableConceptStructType());
+  }
+
+  @Nonnull
+  public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
+    return Preconditions.checkNotNull(QuantityEncoding.encode(quantity, false));
+  }
+
+  @Nonnull
+  public static Row rowForUcumQuantity(@Nonnull final BigDecimal value,
+      @Nonnull final String unit) {
+    final Quantity quantity = new Quantity();
+    quantity.setValue(value);
+    if (quantity.getValue().scale() > DecimalCustomCoder.scale()) {
+      quantity.setValue(
+          quantity.getValue().setScale(DecimalCustomCoder.scale(), RoundingMode.HALF_UP));
+    }
+    // NOTE: BigDecimal precision is total number od digits (before and after the decimal point)
+    // while the SQL decimal precision is the number of digits allowed before the decimal point.
+    if (quantity.getValue().precision()
+        > DecimalCustomCoder.precision() + DecimalCustomCoder.scale()) {
+      throw new AssertionError("Attempt to encode a value with greater than supported precision");
+    }
+    quantity.setUnit(unit);
+    quantity.setSystem(TestHelpers.UCUM_URL);
+    quantity.setCode(unit);
+    return rowFromQuantity(quantity);
+  }
+
+
+  @Nonnull
+  public static Row rowForUcumQuantity(@Nonnull final String value,
+      @Nonnull final String unit) {
+    return rowForUcumQuantity(new BigDecimal(value), unit);
   }
 
   @Value

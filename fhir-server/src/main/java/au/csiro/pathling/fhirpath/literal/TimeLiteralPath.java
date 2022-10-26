@@ -1,12 +1,23 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -19,20 +30,23 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.TimeType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath time literal.
  *
  * @author John Grimes
  */
-public class TimeLiteralPath extends LiteralPath implements Materializable<TimeType>, Comparable {
+public class TimeLiteralPath extends LiteralPath<TimeType> implements Materializable<TimeType>,
+    Comparable {
 
-  @SuppressWarnings("WeakerAccess")
   protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final TimeType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof TimeType);
+  }
+
+  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final TimeType literalValue, @Nonnull final String expression) {
+    super(dataset, idColumn, literalValue, expression);
   }
 
   /**
@@ -48,30 +62,25 @@ public class TimeLiteralPath extends LiteralPath implements Materializable<TimeT
       @Nonnull final FhirPath context) {
     final String timeString = fhirPath.replaceFirst("^@T", "");
     return new TimeLiteralPath(context.getDataset(), context.getIdColumn(),
-        new TimeType(timeString));
+        new TimeType(timeString), fhirPath);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return "@T" + getLiteralValue().getValue();
-  }
-
-  @Override
-  public TimeType getLiteralValue() {
-    return (TimeType) literalValue;
+    return expression.orElse("@T" + getValue().getValue());
   }
 
   @Nonnull
   @Override
-  public String getJavaValue() {
-    return getLiteralValue().getValue();
+  public Column buildValueColumn() {
+    return lit(getValue().asStringValue());
   }
 
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   @Override

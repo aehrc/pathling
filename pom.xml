@@ -1,8 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
-  ~ Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
-  ~ Software Licence Agreement.
+  ~ Copyright 2022 Commonwealth Scientific and Industrial Research
+  ~ Organisation (CSIRO) ABN 41 687 119 230.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -13,13 +24,13 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.7.2</version>
+    <version>2.7.5</version>
     <relativePath/>
   </parent>
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>5.4.0</version>
+  <version>6.0.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -47,8 +58,8 @@
   </organization>
   <licenses>
     <license>
-      <name>CSIRO Open Source Software Licence Agreement</name>
-      <url>https://github.com/aehrc/pathling/raw/main/LICENSE.md</url>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
     </license>
   </licenses>
 
@@ -66,18 +77,18 @@
   </ciManagement>
 
   <properties>
-    <project.majorVersion>5</project.majorVersion>
+    <project.majorVersion>6</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.hapiFhirVersion>6.0.3</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.3.0</pathling.sparkVersion>
+    <pathling.hapiFhirVersion>6.1.3</pathling.hapiFhirVersion>
+    <pathling.sparkVersion>3.3.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
-    <pathling.sparkScalaFullVersion>2.12.16</pathling.sparkScalaFullVersion>
-    <pathling.deltaVersion>1.2.1</pathling.deltaVersion>
+    <pathling.sparkScalaFullVersion>2.12.17</pathling.sparkScalaFullVersion>
+    <pathling.deltaVersion>2.1.0</pathling.deltaVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
-    <pathling.hadoopVersion>3.3.3</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.265</pathling.awsSdkVersion>
+    <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
+    <pathling.awsSdkVersion>1.12.327</pathling.awsSdkVersion>
   </properties>
 
   <modules>
@@ -231,7 +242,7 @@
       <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
         <artifactId>woodstox-core</artifactId>
-        <version>6.3.0</version>
+        <version>6.4.0</version>
       </dependency>
 
       <!-- Apache Spark -->
@@ -290,7 +301,7 @@
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-core</artifactId>
-        <version>2.13.3</version>
+        <version>2.13.4</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.janino</groupId>
@@ -333,7 +344,7 @@
       <dependency>
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
-        <version>6.3.0</version>
+        <version>6.6.0</version>
       </dependency>
 
       <!-- Testing -->
@@ -364,7 +375,7 @@
       <dependency>
         <groupId>com.github.tomakehurst</groupId>
         <artifactId>wiremock-jre8</artifactId>
-        <version>2.33.2</version>
+        <version>2.34.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -386,12 +397,12 @@
       <dependency>
         <groupId>com.google.code.gson</groupId>
         <artifactId>gson</artifactId>
-        <version>2.9.0</version>
+        <version>2.10</version>
       </dependency>
       <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
-        <version>2.10.14</version>
+        <version>2.12.0</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
@@ -401,12 +412,26 @@
       <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
-        <version>20220320</version>
+        <version>20220924</version>
       </dependency>
       <dependency>
         <groupId>commons-beanutils</groupId>
         <artifactId>commons-beanutils</artifactId>
         <version>1.9.4</version>
+      </dependency>
+
+      <!-- CVE-2022-42889 -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-text</artifactId>
+        <version>1.10.0</version>
+      </dependency>
+
+      <!-- CVE-2022-25857 -->
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>1.31</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -437,7 +462,7 @@
         <plugin>
           <groupId>net.alchim31.maven</groupId>
           <artifactId>scala-maven-plugin</artifactId>
-          <version>4.7.0</version>
+          <version>4.7.2</version>
           <executions>
             <execution>
               <id>scala-compile-first</id>
@@ -593,7 +618,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.4.0</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -631,6 +656,20 @@
           <artifactId>maven-deploy-plugin</artifactId>
           <configuration>
             <skip>true</skip>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <configuration>
+            <filters>
+              <filter>
+                <artifact>au.csiro.pathling:${project.artifactId}</artifact>
+                <excludes>
+                  <exclude>META-INF/**</exclude>
+                </excludes>
+              </filter>
+            </filters>
           </configuration>
         </plugin>
       </plugins>
@@ -687,7 +726,7 @@
                 <fileset>
                   <directory>${project.basedir}</directory>
                   <includes>
-                    <include>LICENSE.md</include>
+                    <include>LICENSE</include>
                   </includes>
                 </fileset>
                 <fileset>
@@ -717,7 +756,7 @@
                     <licenseMerge>Eclipse Public License 1.0|Eclipse Public License - v 1.0</licenseMerge>
                     <licenseMerge>MIT License|The MIT License (MIT)|The MIT License|MIT|The JSON License</licenseMerge>
                   </licenseMerges>
-                  <thirdPartyFilename>LICENSE.md</thirdPartyFilename>
+                  <thirdPartyFilename>LICENSE</thirdPartyFilename>
                 </configuration>
               </execution>
               <execution>
@@ -744,7 +783,7 @@
                     <resource>
                       <directory>target/generated-sources/license</directory>
                       <includes>
-                        <include>LICENSE.md</include>
+                        <include>LICENSE</include>
                       </includes>
                     </resource>
                   </resources>
@@ -821,6 +860,16 @@
       </build>
     </profile>
   </profiles>
+
+  <repositories>
+    <repository>
+      <id>ossrh</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
 
   <distributionManagement>
     <repository>

@@ -70,4 +70,4 @@ mvn install -pl lib/python -am
 Pathling is copyright © 2018-2022, Commonwealth Scientific and Industrial
 Research Organisation
 (CSIRO) ABN 41 687 119 230. Licensed under
-the [CSIRO Open Source Software Licence Agreement](./LICENSE.md).
+the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).

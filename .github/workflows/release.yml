@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -30,7 +30,7 @@ jobs:
           java-version: 11
           distribution: 'zulu'
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -64,7 +64,7 @@ jobs:
     needs: deploy-maven
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -74,7 +74,7 @@ jobs:
           java-version: 11
           distribution: 'zulu'
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -97,7 +97,7 @@ jobs:
     needs: deploy-python
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -107,7 +107,7 @@ jobs:
           java-version: 11
           distribution: 'zulu'
       - name: Cache local Maven repository
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}

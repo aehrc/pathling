@@ -1,12 +1,23 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
@@ -25,21 +36,18 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath decimal literal.
  *
  * @author John Grimes
  */
-public class DecimalLiteralPath extends LiteralPath implements Materializable<DecimalType>,
-    Comparable, Numeric {
+public class DecimalLiteralPath extends LiteralPath<DecimalType> implements
+    Materializable<DecimalType>, Comparable, Numeric {
 
-  @SuppressWarnings("WeakerAccess")
   protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final DecimalType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof DecimalType);
   }
 
   /**
@@ -73,25 +81,19 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
   @Nonnull
   @Override
   public String getExpression() {
-    return getLiteralValue().getValue().toPlainString();
-  }
-
-  @Override
-  @Nonnull
-  public DecimalType getLiteralValue() {
-    return (DecimalType) literalValue;
+    return getValue().getValue().toPlainString();
   }
 
   @Nonnull
   @Override
-  public BigDecimal getJavaValue() {
-    return getLiteralValue().getValue();
+  public Column buildValueColumn() {
+    return lit(getValue().getValue());
   }
 
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   @Override
@@ -104,7 +106,25 @@ public class DecimalLiteralPath extends LiteralPath implements Materializable<De
   public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
     return DecimalPath
-        .buildMathOperation(this, operation, expression, dataset, FHIRDefinedType.DECIMAL);
+        .buildMathOperation(this, operation, expression, dataset);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericValueColumn() {
+    return getValueColumn();
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericContextColumn() {
+    return getNumericValueColumn();
+  }
+
+  @Nonnull
+  @Override
+  public FHIRDefinedType getFhirType() {
+    return FHIRDefinedType.DECIMAL;
   }
 
   @Nonnull

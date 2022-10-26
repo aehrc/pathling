@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
@@ -12,7 +23,6 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -23,11 +33,10 @@ import org.hl7.fhir.r4.model.StringType;
  *
  * @author John Grimes
  */
-public class NullLiteralPath extends LiteralPath implements Comparable {
+public class NullLiteralPath extends LiteralPath<StringType> implements Comparable {
 
   private static final String EXPRESSION = "{}";
 
-  @SuppressWarnings("WeakerAccess")
   protected NullLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn) {
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
@@ -54,10 +63,10 @@ public class NullLiteralPath extends LiteralPath implements Comparable {
     return EXPRESSION;
   }
 
-  @Nullable
+  @Nonnull
   @Override
-  public Object getJavaValue() {
-    return null;
+  public Column buildValueColumn() {
+    return lit(null);
   }
 
   @Override

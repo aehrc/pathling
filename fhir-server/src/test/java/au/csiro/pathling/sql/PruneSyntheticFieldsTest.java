@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.sql;
@@ -54,7 +65,7 @@ public class PruneSyntheticFieldsTest {
 
     // Prune all columns.
     final Dataset<Row> prunedDataset = dataset.select(
-        Stream.of(dataset.columns()).map(dataset::col).map(PathlingFunctions::pruneSyntheticFields)
+        Stream.of(dataset.columns()).map(dataset::col).map(SqlExpressions::pruneSyntheticFields)
             .toArray(Column[]::new));
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
@@ -89,7 +100,7 @@ public class PruneSyntheticFieldsTest {
 
     final Column valueColumn = dataset.col(dataset.columns()[dataset.columns().length - 1]);
     final Dataset<Row> groupedResult = dataset.groupBy(
-            PathlingFunctions.pruneSyntheticFields(valueColumn))
+            SqlExpressions.pruneSyntheticFields(valueColumn))
         .agg(functions.count(dataset.col("gender")));
 
     DatasetAssert.of(groupedResult)

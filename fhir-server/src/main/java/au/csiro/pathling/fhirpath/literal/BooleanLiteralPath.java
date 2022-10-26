@@ -1,12 +1,23 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -19,21 +30,19 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * Represents a FHIRPath boolean literal.
  *
  * @author John Grimes
  */
-public class BooleanLiteralPath extends LiteralPath implements Materializable<BooleanType>,
-    Comparable {
+public class BooleanLiteralPath extends LiteralPath<BooleanType> implements
+    Materializable<BooleanType>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Type literalValue) {
+      @Nonnull final BooleanType literalValue) {
     super(dataset, idColumn, literalValue);
-    check(literalValue instanceof BooleanType);
   }
 
   /**
@@ -55,24 +64,19 @@ public class BooleanLiteralPath extends LiteralPath implements Materializable<Bo
   @Nonnull
   @Override
   public String getExpression() {
-    return getLiteralValue().asStringValue();
-  }
-
-  @Override
-  public BooleanType getLiteralValue() {
-    return (BooleanType) literalValue;
+    return getValue().asStringValue();
   }
 
   @Nonnull
   @Override
-  public Boolean getJavaValue() {
-    return getLiteralValue().booleanValue();
+  public Column buildValueColumn() {
+    return lit(getValue().booleanValue());
   }
 
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   @Override

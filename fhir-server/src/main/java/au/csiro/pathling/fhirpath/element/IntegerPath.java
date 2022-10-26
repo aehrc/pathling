@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.element;
@@ -106,7 +117,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation.getSparkFunction());
+    return Comparable.buildComparison(this, operation);
   }
 
   @Override
@@ -118,7 +129,19 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
   @Override
   public Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull final MathOperation operation,
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
-    return buildMathOperation(this, operation, expression, dataset, getFhirType());
+    return buildMathOperation(this, operation, expression, dataset);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericValueColumn() {
+    return getValueColumn().cast(DataTypes.LongType);
+  }
+
+  @Nonnull
+  @Override
+  public Column getNumericContextColumn() {
+    return getNumericValueColumn();
   }
 
   /**
@@ -128,21 +151,17 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
    * @param operation The type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
    * @param expression The FHIRPath expression to use in the result
    * @param dataset The {@link Dataset} to use in the result
-   * @param fhirType The {@link FHIRDefinedType} to use in the result
-   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a
-   * {@link NonLiteralPath}
+   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a {@link
+   * NonLiteralPath}
    */
   @Nonnull
   public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,
       @Nonnull final MathOperation operation, @Nonnull final String expression,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final FHIRDefinedType fhirType) {
+      @Nonnull final Dataset<Row> dataset) {
     return target -> {
-      final Column targetValueColumn =
-          target instanceof IntegerPath || target instanceof IntegerLiteralPath
-          ? target.getValueColumn().cast(DataTypes.LongType)
-          : target.getValueColumn();
+      final Column targetValueColumn = target.getNumericValueColumn();
       Column valueColumn = operation.getSparkFunction()
-          .apply(source.getValueColumn().cast(DataTypes.LongType), targetValueColumn);
+          .apply(source.getNumericValueColumn(), targetValueColumn);
       final Column idColumn = source.getIdColumn();
       final Optional<Column> eidColumn = findEidColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
@@ -157,7 +176,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           }
           return ElementPath
               .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, fhirType);
+                  thisColumn, source.getFhirType());
         case DIVISION:
           final Column numerator = source.getValueColumn().cast(DecimalPath.getDecimalType());
           valueColumn = operation.getSparkFunction().apply(numerator, targetValueColumn);

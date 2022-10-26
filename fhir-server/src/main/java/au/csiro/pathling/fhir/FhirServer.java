@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhir;
@@ -12,6 +23,9 @@ import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.EncoderBuilder;
+import au.csiro.pathling.errors.DiagnosticContextInterceptor;
+import au.csiro.pathling.errors.ErrorHandlingInterceptor;
+import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.extract.ResultProvider;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.BatchProvider;
@@ -78,7 +92,7 @@ public class FhirServer extends RestfulServer {
   private final ResultProvider resultProvider;
 
   @Nonnull
-  private final RequestIdInterceptor requestIdInterceptor;
+  private final DiagnosticContextInterceptor diagnosticContextInterceptor;
 
   @Nonnull
   private final ErrorReportingInterceptor errorReportingInterceptor;
@@ -104,7 +118,8 @@ public class FhirServer extends RestfulServer {
    * @param importProvider a {@link ImportProvider} for receiving requests to the import operation
    * @param jobProvider a {@link JobProvider} for checking on the status of jobs
    * @param resultProvider {@link ResultProvider} for retrieving the result of extract requests
-   * @param requestIdInterceptor a {@link RequestIdInterceptor} for adding request IDs to logging
+   * @param diagnosticContextInterceptor a {@link DiagnosticContextInterceptor} for adding request
+   * IDs to logging
    * @param errorReportingInterceptor a {@link ErrorReportingInterceptor} for reporting errors to
    * Sentry
    * @param entityTagInterceptor a {@link EntityTagInterceptor} validating and returning ETags
@@ -119,7 +134,7 @@ public class FhirServer extends RestfulServer {
       @Nonnull final ImportProvider importProvider,
       @Nonnull final Optional<JobProvider> jobProvider,
       @Nonnull final ResultProvider resultProvider,
-      @Nonnull final RequestIdInterceptor requestIdInterceptor,
+      @Nonnull final DiagnosticContextInterceptor diagnosticContextInterceptor,
       @Nonnull final ErrorReportingInterceptor errorReportingInterceptor,
       @Nonnull final EntityTagInterceptor entityTagInterceptor,
       @Nonnull final ConformanceProvider conformanceProvider,
@@ -131,7 +146,7 @@ public class FhirServer extends RestfulServer {
     this.importProvider = importProvider;
     this.jobProvider = jobProvider;
     this.resultProvider = resultProvider;
-    this.requestIdInterceptor = requestIdInterceptor;
+    this.diagnosticContextInterceptor = diagnosticContextInterceptor;
     this.errorReportingInterceptor = errorReportingInterceptor;
     this.entityTagInterceptor = entityTagInterceptor;
     this.conformanceProvider = conformanceProvider;
@@ -261,7 +276,7 @@ public class FhirServer extends RestfulServer {
 
   private void configureRequestLogging() {
     // Add the request ID to the logging context before each request.
-    registerInterceptor(requestIdInterceptor);
+    registerInterceptor(diagnosticContextInterceptor);
 
     // Create a dedicated logger, so that we can control it independently through logging
     // configuration.

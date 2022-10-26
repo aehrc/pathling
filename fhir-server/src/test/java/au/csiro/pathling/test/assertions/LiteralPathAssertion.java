@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.test.assertions;
@@ -12,7 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 
 /**
@@ -30,8 +43,9 @@ public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAsser
   }
 
   @Nonnull
-  public LiteralPathAssertion hasJavaValue(@Nonnull final Object value) {
-    assertEquals(value, fhirPath.getJavaValue());
+  public LiteralPathAssertion has(@Nullable final Object expected,
+      @Nonnull final Function<LiteralPath, Object> function) {
+    assertEquals(expected, function.apply(fhirPath));
     return this;
   }
 
@@ -39,7 +53,7 @@ public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAsser
   public LiteralPathAssertion hasCodingValue(@Nonnull final Coding coding) {
     assertTrue(fhirPath instanceof CodingLiteralPath);
     final SimpleCoding actualCoding = new SimpleCoding(
-        ((CodingLiteralPath) fhirPath).getJavaValue());
+        ((CodingLiteralPath) fhirPath).getValue());
     final SimpleCoding expectedCoding = new SimpleCoding(coding);
     assertEquals(expectedCoding, actualCoding);
     return this;

@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.aggregate;
@@ -19,7 +30,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.sql.PathlingFunctions;
+import au.csiro.pathling.sql.SqlExpressions;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -112,7 +123,7 @@ public class AggregateExecutor extends QueryExecutor {
     // Remove synthetic fields from struct values (such as _fid) before grouping.
     final DatasetWithColumnMap datasetWithNormalizedGroupings = createColumns(
         groupingsAndFilters, groupings.stream().map(FhirPath::getValueColumn)
-            .map(PathlingFunctions::pruneSyntheticFields).toArray(Column[]::new));
+            .map(SqlExpressions::pruneSyntheticFields).toArray(Column[]::new));
 
     groupingsAndFilters = datasetWithNormalizedGroupings.getDataset();
 

@@ -1,33 +1,39 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.element;
 
 import static org.apache.spark.sql.functions.callUDF;
-import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.sql.CodingToLiteral;
+import au.csiro.pathling.terminology.CodingToLiteral;
 import com.google.common.collect.ImmutableSet;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -37,10 +43,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class CodingPath extends ElementPath implements Materializable<Coding>, Comparable {
-
-  private static final List<String> EQUALITY_COLUMNS = Arrays
-      .asList("system", "code", "version", "display", "userSelected");
-
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(CodingPath.class, CodingLiteralPath.class, NullLiteralPath.class);
@@ -92,54 +94,15 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
     return Optional.of(coding);
   }
 
-  /**
-   * Builds a comparison function for Coding paths.
-   *
-   * @param source The path to build the comparison function for
-   * @param operation The {@link au.csiro.pathling.fhirpath.Comparable.ComparisonOperation} type to
-   * build
-   * @return A new {@link Function}
-   */
-  @Nonnull
-  public static Function<Comparable, Column> buildComparison(@Nonnull final Comparable source,
-      @Nonnull final ComparisonOperation operation) {
-    if (ComparisonOperation.EQUALS.equals(operation)) {
-      return Comparable
-          .buildComparison(source, codingEqual());
-    } else if (ComparisonOperation.NOT_EQUALS.equals(operation)) {
-      return Comparable
-          .buildComparison(source, codingNotEqual());
-    } else {
-      throw new InvalidUserInputError(
-          "Coding type does not support comparison operator: " + operation);
-    }
-  }
-
-  @Nonnull
-  private static BiFunction<Column, Column, Column> codingEqual() {
-    //noinspection OptionalGetWithoutIsPresent
-    return (l, r) ->
-        functions.when(l.isNull().or(r.isNull()), lit(null))
-            .otherwise(
-                EQUALITY_COLUMNS.stream()
-                    .map(f -> l.getField(f).eqNullSafe(r.getField(f))).reduce(Column::and).get()
-            );
-  }
-
-  @Nonnull
-  private static BiFunction<Column, Column, Column> codingNotEqual() {
-    return codingEqual().andThen(functions::not);
-  }
-
   @Nonnull
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;
   }
-
+  
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return buildComparison(this, operation);
+    return CodingSqlComparator.buildComparison(this, operation);
   }
 
   @Override

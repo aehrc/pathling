@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.literal;
@@ -65,7 +76,7 @@ class CodingLiteralPathTest {
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath.fromString(
         expression,
         inputContext);
-    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("http://snomed.info/sct", literalValue.getSystem());
     assertEquals("http://snomed.info/sct/32506021000036107/version/20201231",
         literalValue.getVersion());
@@ -80,7 +91,7 @@ class CodingLiteralPathTest {
     final String expression = "http://snomed.info/sct|166056000";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
         .fromString(expression, inputContext);
-    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("http://snomed.info/sct", literalValue.getSystem());
     assertNull(literalValue.getVersion());
     assertEquals("166056000", literalValue.getCode());
@@ -98,7 +109,7 @@ class CodingLiteralPathTest {
             + "|http://snomed.info/sct/32506021000036107/version/20201231";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
         .fromString(expression, inputContext);
-    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("http://snomed.info/sct", literalValue.getSystem());
     assertEquals("http://snomed.info/sct/32506021000036107/version/20201231",
         literalValue.getVersion());
@@ -117,7 +128,7 @@ class CodingLiteralPathTest {
         "http://snomed.info/sct|'46,2'|http://snomed.info/sct/32506021000036107/version/20201231";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
         .fromString(expression, inputContext);
-    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("http://snomed.info/sct", literalValue.getSystem());
     assertEquals("http://snomed.info/sct/32506021000036107/version/20201231",
         literalValue.getVersion());
@@ -132,7 +143,7 @@ class CodingLiteralPathTest {
     final String expression = "'Someone\\'s CodeSystem'|166056000";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
         .fromString(expression, inputContext);
-    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("Someone's CodeSystem", literalValue.getSystem());
     assertEquals("166056000", literalValue.getCode());
 
@@ -145,7 +156,7 @@ class CodingLiteralPathTest {
     final String expression = "'Some CodeSystem'|166056000";
     final CodingLiteralPath codingLiteralPath = CodingLiteralPath
         .fromString(expression, inputContext);
-    final Coding literalValue = codingLiteralPath.getLiteralValue();
+    final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("Some CodeSystem", literalValue.getSystem());
     assertEquals("166056000", literalValue.getCode());
 

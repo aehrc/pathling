@@ -5,10 +5,20 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2022, Commonwealth Scientific
- * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
- * under the CSIRO Open Source Software Licence Agreement.
+ * These modifications are copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.encoders.datatypes
@@ -115,12 +125,12 @@ object DecimalCustomCoder {
    * For location coordinates 6 decimal digits allow for location precision of 10cm,
    * so should be sufficient for any medical purpose.
    *
-   * So the final type is DECIMAL(26,6) which allows both for 6 decimal places and
-   * at least 18 digits (regardless if there any decimal digits or not)
+   * So the final type is DECIMAL(32,6) which allows both for 6 decimal places and 26 digits
+   * (regardless if there any decimal digits or not)
    */
 
   val scale: Int = 6
-  val precision: Int = 26
+  val precision: Int = 32
   val decimalType: types.DecimalType = DataTypes.createDecimalType(precision, scale)
 
 

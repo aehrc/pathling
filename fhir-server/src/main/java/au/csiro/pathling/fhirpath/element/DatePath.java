@@ -1,21 +1,36 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.element;
 
+import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.to_timestamp;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.Temporal;
+import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
+import au.csiro.pathling.sql.dates.date.DateSubtractDurationFunction;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -33,26 +48,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Slf4j
-public class DatePath extends ElementPath implements Materializable<DateType>, Comparable {
-
-  private static final ThreadLocal<SimpleDateFormat> FULL_DATE_FORMAT = ThreadLocal
-      .withInitial(() -> {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-        format.setTimeZone(DateTimePath.getTimeZone());
-        return format;
-      });
-  private static final ThreadLocal<SimpleDateFormat> YEAR_MONTH_DATE_FORMAT = ThreadLocal
-      .withInitial(() -> {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM");
-        format.setTimeZone(DateTimePath.getTimeZone());
-        return format;
-      });
-  private static final ThreadLocal<SimpleDateFormat> YEAR_ONLY_DATE_FORMAT = ThreadLocal
-      .withInitial(() -> {
-        final SimpleDateFormat format = new SimpleDateFormat("yyyy");
-        format.setTimeZone(DateTimePath.getTimeZone());
-        return format;
-      });
+public class DatePath extends ElementPath implements Materializable<DateType>, Comparable,
+    Temporal {
 
   protected DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
@@ -79,18 +76,6 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
             to_timestamp(target.getValueColumn()));
   }
 
-  public static SimpleDateFormat getFullDateFormat() {
-    return FULL_DATE_FORMAT.get();
-  }
-
-  public static SimpleDateFormat getYearMonthDateFormat() {
-    return YEAR_MONTH_DATE_FORMAT.get();
-  }
-
-  public static SimpleDateFormat getYearOnlyDateFormat() {
-    return YEAR_ONLY_DATE_FORMAT.get();
-  }
-
   @Nonnull
   @Override
   public Optional<DateType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
@@ -109,20 +94,14 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    final Date date;
-    try {
-      date = getFullDateFormat().parse(row.getString(columnNumber));
-    } catch (final ParseException e) {
-      log.warn("Error parsing date extracted from row", e);
-      return Optional.empty();
-    }
-    return Optional.of(new DateType(date));
+    final String dateString = row.getString(columnNumber);
+    return Optional.of(new DateType(dateString));
   }
 
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return DateTimePath.buildComparison(this, operation.getSparkFunction());
+    return DateTimeSqlComparator.buildComparison(this, operation);
   }
 
   @Override
@@ -134,4 +113,14 @@ public class DatePath extends ElementPath implements Materializable<DateType>, C
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DateLiteralPath;
   }
+
+  @Nonnull
+  @Override
+  public Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
+      @Nonnull final MathOperation operation, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String expression) {
+    return buildDateArithmeticOperation(this, operation, dataset, expression,
+        DateAddDurationFunction.FUNCTION_NAME, DateSubtractDurationFunction.FUNCTION_NAME);
+  }
+
 }

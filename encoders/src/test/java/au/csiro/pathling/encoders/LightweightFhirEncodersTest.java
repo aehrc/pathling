@@ -5,10 +5,20 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright © 2018-2022, Commonwealth Scientific
- * and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed
- * under the CSIRO Open Source Software Licence Agreement.
+ * These modifications are copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
  *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.encoders;
@@ -20,10 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.sql.types.FlexiDecimal;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.apache.spark.sql.Row;
@@ -32,9 +44,11 @@ import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.hl7.fhir.r4.model.BaseResource;
 import org.hl7.fhir.r4.model.Condition;
+import org.hl7.fhir.r4.model.Device;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.MolecularSequence;
 import org.hl7.fhir.r4.model.MolecularSequence.MolecularSequenceQualityRocComponent;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.PlanDefinition;
 import org.hl7.fhir.r4.model.PlanDefinition.PlanDefinitionActionComponent;
 import org.json4s.jackson.JsonMethods;
@@ -93,6 +107,17 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     assertEquals(1, nestedExtensions.length());
 
     nestedConsumer.accept((Row) nestedExtensions.apply(0));
+  }
+
+  private static void assertQuantity(final Row quantityRow, final String canonicalizedValue,
+      final String canonicalizedCode) {
+    final BigDecimal actualCanonicalizedValue = FlexiDecimal.fromValue(quantityRow.getStruct(
+        quantityRow.fieldIndex(QuantitySupport.VALUE_CANONICALIZED_FIELD_NAME())));
+    final String actualCanonicalizedCode = quantityRow.getString(
+        quantityRow.fieldIndex(QuantitySupport.CODE_CANONICALIZED_FIELD_NAME()));
+
+    assertEquals(new BigDecimal(canonicalizedValue), actualCanonicalizedValue);
+    assertEquals(canonicalizedCode, actualCanonicalizedCode);
   }
 
   @Test
@@ -205,4 +230,46 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     assertNotNull(stageTypeExtensions);
     assertStringExtension("uuid:ext12", "ext12", (Row) stageTypeExtensions.apply(0));
   }
+
+  @Test
+  public void testQuantityCanonicalization() {
+    final ExpressionEncoder<Observation> encoder = fhirEncoders.of(Observation.class);
+    final Observation observation = TestData.newUcumObservation();
+
+    final ExpressionEncoder<Observation> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
+        encoder);
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(observation);
+
+    final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
+        RowEncoder.apply(encoder.schema()));
+    final Row observationRow = rowEncoder.createDeserializer().apply(serializedRow);
+
+    final Row quantityRow = observationRow.getStruct(observationRow.fieldIndex("valueQuantity"));
+    assertQuantity(quantityRow, "76000", "g");
+  }
+
+  @Test
+  public void testQuantityArrayCanonicalization() {
+    final ExpressionEncoder<Device> encoder = fhirEncoders.of(Device.class);
+    final Device device = TestData.newDevice();
+
+    final ExpressionEncoder<Device> resolvedEncoder = EncoderUtils.defaultResolveAndBind(
+        encoder);
+    final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(device);
+
+    final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
+        RowEncoder.apply(encoder.schema()));
+    final Row deviceRow = rowEncoder.createDeserializer().apply(serializedRow);
+
+    final List<Row> properties = deviceRow.getList(deviceRow.fieldIndex("property"));
+    final Row propertyRow = properties.get(0);
+    final List<Row> quantityArray = propertyRow.getList(propertyRow.fieldIndex("valueQuantity"));
+    
+    final Row quantity1 = quantityArray.get(0);
+    assertQuantity(quantity1, "0.0010", "m");
+
+    final Row quantity2 = quantityArray.get(1);
+    assertQuantity(quantity2, "0.0020", "m");
+  }
+
 }

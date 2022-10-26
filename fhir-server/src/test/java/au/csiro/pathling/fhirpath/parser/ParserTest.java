@@ -1,12 +1,22 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_121503c8;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_2b36c1e2;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_7001ad9c;
@@ -25,7 +35,6 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -40,37 +49,24 @@ import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
-import java.sql.Date;
 import java.util.Collections;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Piotr Szul
  */
 public class ParserTest extends AbstractParserTest {
-
-  @Autowired
-  TerminologyService terminologyService;
-
-  @Autowired
-  FhirEncoders fhirEncoders;
-
-  FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(parser.parse(expression));
-  }
-
+  
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
     return Assertions.assertThrows(errorType, () -> parser.parse(expression));
@@ -126,32 +122,80 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testDateTimeLiterals() {
-    // Full DateTime.
-    assertThatResultOf("@2015-02-04T14:34:28Z")
+    // Milliseconds precision.
+    assertThatResultOf("@2015-02-04T14:34:28.350Z")
         .isLiteralPath(DateTimeLiteralPath.class)
-        .hasExpression("@2015-02-04T14:34:28Z")
-        .hasJavaValue(new Date(1423060468000L));
+        .hasExpression("@2015-02-04T14:34:28.350Z")
+        .has("2015-02-04T14:34:28.350Z",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString());
 
-    // Date with no time component.
+    // Milliseconds precision, no timezone.
+    assertThatResultOf("@2015-02-04T14:34:28.350")
+        .isLiteralPath(DateTimeLiteralPath.class)
+        .hasExpression("@2015-02-04T14:34:28.350")
+        .has("2015-02-04T14:34:28.350",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString())
+        .has(null, dateTime -> dateTime.getValue().dateTimeValue().getTimeZone());
+
+    // Seconds precision.
+    assertThatResultOf("@2015-02-04T14:34:28-05:00")
+        .isLiteralPath(DateTimeLiteralPath.class)
+        .hasExpression("@2015-02-04T14:34:28-05:00")
+        .has("2015-02-04T14:34:28-05:00",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString());
+
+    // Seconds precision, no timezone.
+    assertThatResultOf("@2015-02-04T14:34:28")
+        .isLiteralPath(DateTimeLiteralPath.class)
+        .hasExpression("@2015-02-04T14:34:28")
+        .has("2015-02-04T14:34:28",
+            dateTime -> dateTime.getValue().dateTimeValue().getValueAsString())
+        .has(null, dateTime -> dateTime.getValue().dateTimeValue().getTimeZone());
+  }
+
+  @Test
+  void testDateLiterals() {
+    // Year, month and day.
     assertThatResultOf("@2015-02-04")
         .isLiteralPath(DateLiteralPath.class)
         .hasExpression("@2015-02-04")
-        .hasJavaValue(new Date(1423008000000L));
+        .has("2015-02-04", date -> date.getValue().castToDate(date.getValue()).getValueAsString())
+        .has(null, date -> date.getValue().castToDate(date.getValue()).getTimeZone());
+
+    // Year and month.
+    assertThatResultOf("@2015-02")
+        .isLiteralPath(DateLiteralPath.class)
+        .hasExpression("@2015-02")
+        .has("2015-02", date -> date.getValue().castToDate(date.getValue()).getValueAsString())
+        .has(null, date -> date.getValue().castToDate(date.getValue()).getTimeZone());
+
+    // Year only.
+    assertThatResultOf("@2015")
+        .isLiteralPath(DateLiteralPath.class)
+        .hasExpression("@2015")
+        .has("2015", date -> date.getValue().castToDate(date.getValue()).getValueAsString())
+        .has(null, date -> date.getValue().castToDate(date.getValue()).getTimeZone());
   }
 
   @Test
   void testTimeLiterals() {
-    // Full Time.
+    // Hours, minutes and seconds.
     assertThatResultOf("@T14:34:28")
         .isLiteralPath(TimeLiteralPath.class)
         .hasExpression("@T14:34:28")
-        .hasJavaValue("14:34:28");
+        .has("14:34:28", time -> time.getValue().castToTime(time.getValue()).getValueAsString());
+
+    // Hours and minutes.
+    assertThatResultOf("@T14:34")
+        .isLiteralPath(TimeLiteralPath.class)
+        .hasExpression("@T14:34")
+        .has("14:34", time -> time.getValue().castToTime(time.getValue()).getValueAsString());
 
     // Hour only.
     assertThatResultOf("@T14")
         .isLiteralPath(TimeLiteralPath.class)
         .hasExpression("@T14")
-        .hasJavaValue("14");
+        .has("14", time -> time.getValue().castToTime(time.getValue()).getValueAsString());
   }
 
   @Test
@@ -647,18 +691,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testReverseResolveFollowingMonomorphicResolve() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
-
+    setSubjectResource(ResourceType.ENCOUNTER);
     assertThatResultOf(
         "serviceProvider.resolve().reverseResolve(Encounter.serviceProvider).id")
         .isElementPath(StringPath.class)
@@ -668,17 +701,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testReverseResolveFollowingPolymorphicResolve() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
+    setSubjectResource(ResourceType.ENCOUNTER);
 
     mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
 
@@ -707,6 +730,68 @@ public class ParserTest extends AbstractParserTest {
         .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.csv");
   }
 
+  @Test
+  void testUntilFunction() {
+    setSubjectResource(ResourceType.ENCOUNTER);
+    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
+    assertThatResultOf(
+        "subject.resolve().ofType(Patient).birthDate.until(%resource.period.start, 'years')")
+        .isElementPath(IntegerPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testUntilFunction.csv");
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private void setSubjectResource(@Nonnull final ResourceType resourceType) {
+    final ResourcePath subjectResource = ResourcePath
+        .build(fhirContext, database, resourceType, resourceType.toCode(),
+            true);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .terminologyClientFactory(terminologyServiceFactory)
+        .database(database)
+        .inputContext(subjectResource)
+        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
+        .build();
+    parser = new Parser(parserContext);
+  }
+  
+  @Test
+  void testQuantityMultiplicationAndDivision() {
+    assertThatResultOf(
+        "((reverseResolve(Observation.subject).where(valueQuantity < 150 'cm').valueQuantity.first() * 2 '1')"
+            + " / reverseResolve(Observation.subject).where(valueQuantity < 1.50 'm').valueQuantity.first()).value")
+        .isElementPath(DecimalPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.csv");
+  }
+  
+  @Test
+  void testQuantityAdditionSubtractionAndEquality() {
+    //  33 'mmol/L == 19873051110000000000000000 'm-3'
+    assertThatResultOf(
+        "((reverseResolve(Observation.subject).where(valueQuantity > 1 'mmol/L').valueQuantity.first() + 33 'mmol/L')"
+            + " - reverseResolve(Observation.subject).where(valueQuantity > 1 'mmol/L').valueQuantity.first()) = 19873051110000000000000000 'm-3'")
+        .isElementPath(BooleanPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionSubtractionAndEquality.csv");
+  }
+
+  @Test
+  void testQuantityAdditionWithOverflow() {
+    // values for 121503c8-9564-4b48-9086-a22df717948e and a7eb2ce7-1075-426c-addd-957b861b0e55 exceed 10^26 m-3
+    assertThatResultOf(
+        "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').value")
+        .isElementPath(DecimalPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_value.csv");
+    assertThatResultOf(
+        "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').code")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
+  }
+  
   @Test
   void testTraversalToUnsupportedReferenceChild() {
     final String expression = "reverseResolve(MedicationRequest.subject).requester.identifier";

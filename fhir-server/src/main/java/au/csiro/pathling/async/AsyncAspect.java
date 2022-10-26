@@ -1,7 +1,18 @@
 /*
- * Copyright © 2018-2022, Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source
- * Software Licence Agreement.
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package au.csiro.pathling.async;
@@ -9,8 +20,8 @@ package au.csiro.pathling.async;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+import au.csiro.pathling.errors.DiagnosticContext;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
-import io.sentry.ITransaction;
 import io.sentry.Sentry;
 import java.util.Arrays;
 import java.util.List;
@@ -31,7 +42,6 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueSeverity;
 import org.hl7.fhir.r4.model.OperationOutcome.IssueType;
 import org.hl7.fhir.r4.model.OperationOutcome.OperationOutcomeIssueComponent;
-import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -105,22 +115,27 @@ public class AsyncAspect {
     final RequestDetails requestDetails = getRequestDetails(args);
     final HttpServletResponse response = getResponse(args);
     final String requestId = requestDetails.getRequestId();
-    final ITransaction transaction = Sentry.startTransaction(requestId, "async");
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+    // Store the diagnostic context from the current Sentry scope.
+    final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
+
     checkNotNull(requestId);
     final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
     final Future<IBaseResource> result = executor.submit(() -> {
       try {
-        MDC.put("requestId", requestId);
-        Sentry.startTransaction(requestId, "async");
+        diagnosticContext.configureScope(true);
         SecurityContextHolder.getContext().setAuthentication(authentication);
         spark.sparkContext().setJobGroup(requestId, requestId, true);
         return (IBaseResource) joinPoint.proceed(args);
       } catch (final Throwable e) {
+        // NOTE: Here is where we should do the actual error handling and logging for the failed 
+        // jobs, not where the future is interrogated.
+        log.error("Asynchronous execution failed", e);
+        Sentry.captureException(e);
         throw new RuntimeException("Problem processing request asynchronously", e);
       } finally {
         cleanUpAfterJob(spark, requestId);
-        transaction.finish();
       }
     });
     final Optional<String> ownerId = getCurrentUserId(authentication);
@@ -156,6 +171,7 @@ public class AsyncAspect {
             "Method annotated with @AsyncSupported must include a HttpServletResponse parameter"));
   }
 
+
   private void cleanUpAfterJob(@Nonnull final SparkSession spark, @Nonnull final String requestId) {
     spark.sparkContext().clearJobGroup();
     // Clean up the stage mappings.
@@ -179,5 +195,4 @@ public class AsyncAspect {
     opOutcome.addIssue(issue);
     return opOutcome;
   }
-
 }
