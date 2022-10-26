@@ -81,7 +81,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.hapiFhirVersion>6.1.3</pathling.hapiFhirVersion>
-    <pathling.sparkVersion>3.3.0</pathling.sparkVersion>
+    <pathling.sparkVersion>3.3.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.sparkScalaFullVersion>2.12.17</pathling.sparkScalaFullVersion>
     <pathling.deltaVersion>2.1.0</pathling.deltaVersion>
