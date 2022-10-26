@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -64,7 +64,7 @@ jobs:
     needs: deploy-maven
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -97,7 +97,7 @@ jobs:
     needs: deploy-python
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
