@@ -1,3 +1,18 @@
+#  Copyright 2022 Commonwealth Scientific and Industrial Research
+#  Organisation (CSIRO) ABN 41 687 119 230.
+# 
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 import glob
 import os
 import sys
@@ -48,11 +63,11 @@ setup(
         name='pathling',
         packages=find_packages() + ['pathling.jars'],  # this must be the same as the name above
         version=__version__,
-        description='Python API to Pathling',
+        description='Python API for Pathling',
         long_description=long_description,
         long_description_content_type="text/markdown",
-        author='Piotr Szul',
-        author_email='piotr.szul@csiro.au',
+        author='Australian e-Health Research Centre, CSIRO',
+        author_email='ontoserver-support@csiro.au',
         url='https://github.com/aehrc/pathling',
         keywords=[
             "pathling",
@@ -64,13 +79,13 @@ setup(
         ],
         classifiers=[
             'Development Status :: 3 - Alpha',
-            'License :: Other/Proprietary License',
+            'License :: OSI Approved :: Apache Software License',
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
             'Programming Language :: Python :: 3.9',
             'Programming Language :: Python :: 3.10',
         ],
-        license="CSIRO Open Source Software Licence Agreement",
+        license="Apache License, version 2.0",
         python_requires=">=3.7",
         install_requires=["pyspark>=3.1.0"],
         include_package_data=True,

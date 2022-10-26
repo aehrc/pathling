@@ -44,8 +44,7 @@ FHIRPath [here](/docs/fhirpath).
 Pathling is a product of the
 [Australian e-Health Research Centre, CSIRO](https://aehrc.csiro.au), licensed
 under the
-[CSIRO Open Source Software Licence Agreement](https://github.com/aehrc/pathling/blob/main/LICENSE.md)
-.
+[Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 This means that you are free to use, modify and redistribute the software as
 you wish, even for commercial purposes.
 

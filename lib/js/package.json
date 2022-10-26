@@ -43,7 +43,7 @@
       "url": "https://github.com/johngrimes"
     }
   ],
-  "license": "SEE LICENSE IN LICENSE.md",
+  "license": "Apache-2.0",
   "scripts": {
     "compile": "tsc",
     "prepare": "npm run compile",
@@ -53,6 +53,6 @@
     "lib",
     "src",
     "README.md",
-    "LICENSE.md"
+    "LICENSE"
   ]
 }
