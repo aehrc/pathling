@@ -72,16 +72,17 @@ Additionally, you can set any variable supported by Spring Boot, see
   filesystem (`file://`) URL.
 - `pathling.storage.databaseName` - (default: `default`) The subdirectory within
   the warehouse path used to read and write data.
-- `pathling.storage.aws.anonymousAccess` - (default: `true`) Public S3 buckets
-  can be accessed by default, set this to false to access protected buckets.
-- `pathling.storage.aws.accessKeyId` - Authentication details for connecting to
-  a protected Amazon S3 bucket.
-- `pathling.storage.aws.secretAccessKey` - Authentication details for connecting
-  to a protected Amazon S3 bucket.
-- `pathling.storage.aws.assumedRole` - The ARN of an IAM role to be assumed
-  using STS.
-  See [Temporary security credentials in IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html)
-  .
+
+Pathling will automatically detect AWS authentication details within the
+environment and use them to access S3 buckets. It uses a chain of authentication
+methods,
+see [DefaultAWSCredentialsProviderChain](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html)
+for details.
+
+In addition to this, ny Hadoop S3 configuration variable (`fs.s3a.*`) can be set
+within Pathling directly. See
+the [Hadoop AWS documentation](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html)
+for all the possible options.
 
 ### Apache Spark
 
