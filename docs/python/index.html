@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>Welcome to pathling’s documentation! &#8212; pathling  documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -15,6 +15,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -49,12 +50,60 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="pathling.html">pathling package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="pathling.html#submodules">Submodules</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.coding">pathling.coding module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.context">pathling.context module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.etc">pathling.etc module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.fhir">pathling.fhir module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.functions">pathling.functions module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling">Module contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.coding">pathling.coding module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.coding.Coding"><code class="docutils literal notranslate"><span class="pre">Coding</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.coding.Coding.to_literal"><code class="docutils literal notranslate"><span class="pre">Coding.to_literal()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.context">pathling.context module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext"><code class="docutils literal notranslate"><span class="pre">PathlingContext</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext.member_of"><code class="docutils literal notranslate"><span class="pre">PathlingContext.member_of()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext.spark"><code class="docutils literal notranslate"><span class="pre">PathlingContext.spark</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext.subsumes"><code class="docutils literal notranslate"><span class="pre">PathlingContext.subsumes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.context.PathlingContext.translate"><code class="docutils literal notranslate"><span class="pre">PathlingContext.translate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.etc">pathling.etc module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.etc.find_jar"><code class="docutils literal notranslate"><span class="pre">find_jar()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.fhir">pathling.fhir module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.fhir.MimeType"><code class="docutils literal notranslate"><span class="pre">MimeType</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.fhir.MimeType.FHIR_JSON"><code class="docutils literal notranslate"><span class="pre">MimeType.FHIR_JSON</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.fhir.MimeType.FHIR_XML"><code class="docutils literal notranslate"><span class="pre">MimeType.FHIR_XML</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.fhir.Version"><code class="docutils literal notranslate"><span class="pre">Version</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.fhir.Version.R4"><code class="docutils literal notranslate"><span class="pre">Version.R4</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.functions">pathling.functions module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.functions.to_coding"><code class="docutils literal notranslate"><span class="pre">to_coding()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.functions.to_ecl_value_set"><code class="docutils literal notranslate"><span class="pre">to_ecl_value_set()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.PathlingContext"><code class="docutils literal notranslate"><span class="pre">PathlingContext</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.member_of"><code class="docutils literal notranslate"><span class="pre">PathlingContext.member_of()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.spark"><code class="docutils literal notranslate"><span class="pre">PathlingContext.spark</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.subsumes"><code class="docutils literal notranslate"><span class="pre">PathlingContext.subsumes()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.translate"><code class="docutils literal notranslate"><span class="pre">PathlingContext.translate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -128,7 +177,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.0.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     </div>
   </body>
 </html>

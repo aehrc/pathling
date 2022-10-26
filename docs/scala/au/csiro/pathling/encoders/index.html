@@ -3,9 +3,9 @@
         <head>
           <meta http-equiv="X-UA-Compatible" content="IE=edge" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <title>Pathling Encoders 5.4.0 API  - au.csiro.pathling.encoders</title>
-          <meta name="description" content="Pathling Encoders 5.4.0 API - au.csiro.pathling.encoders" />
-          <meta name="keywords" content="Pathling Encoders 5.4.0 API au.csiro.pathling.encoders" />
+          <title>Pathling Encoders 6.0.0 API  - au.csiro.pathling.encoders</title>
+          <meta name="description" content="Pathling Encoders 6.0.0 API - au.csiro.pathling.encoders" />
+          <meta name="keywords" content="Pathling Encoders 6.0.0 API au.csiro.pathling.encoders" />
           <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
           
       
@@ -28,7 +28,7 @@
         </head>
         <body>
       <div id="search">
-        <span id="doc-title">Pathling Encoders 5.4.0 API<span id="doc-version"></span></span>
+        <span id="doc-title">Pathling Encoders 6.0.0 API<span id="doc-version"></span></span>
         <span class="close-results"><span class="left">&lt;</span> Back</span>
         <div id="textfilter">
           <span class="input">
@@ -149,6 +149,22 @@
       </span>
       
       
+    </li><li name="au.csiro.pathling.encoders.terminology" visbl="pub" class="indented5 " data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="terminology"></a><a id="terminology:terminology"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/encoders/terminology/index.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <a title="" href="terminology/index.html"><span class="name">terminology</span></a>
+      </span>
+      
+      
     </li><li class="current-entities indented4">
                         <span class="separator"></span>
                         <a class="class" href="AttachExtensions.html" title="Attaches the Extensions from the provided fid-&gt;Extension map to objects registered in the _fid_mapping with RegisterFid."></a>
@@ -205,6 +221,10 @@
                         <span class="separator"></span>
                         <a class="class" href="ObjectCast.html" title="Casts the result of an expression to another type."></a>
                         <a href="ObjectCast.html" title="Casts the result of an expression to another type.">ObjectCast</a>
+                      </li><li class="current-entities indented4">
+                        <span class="separator"></span>
+                        <a class="object" href="QuantitySupport$.html" title="Helper class for serialization of Quantities."></a>
+                        <a href="QuantitySupport$.html" title="Helper class for serialization of Quantities.">QuantitySupport</a>
                       </li><li class="current-entities indented4">
                         <span class="separator"></span>
                         <a class="class" href="RegisterFid.html" title="Registers the mapping of a deserialized object to its _fid value."></a>
@@ -801,6 +821,25 @@ Usage:</p><pre>EncodingContext.runWithContext {
       </span>
       
       <p class="shortcomment cmt">Helper class with constants related to FHIR extension support.</p>
+    </li><li name="au.csiro.pathling.encoders.QuantitySupport" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="QuantitySupport"></a><a id="QuantitySupport:QuantitySupport"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/encoders/QuantitySupport$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="Helper class for serialization of Quantities." href="QuantitySupport$.html"><span class="name">QuantitySupport</span></a>
+      </span>
+      
+      <p class="shortcomment cmt">Helper class for serialization of Quantities.</p><div class="fullcomment"><div class="comment cmt"><p>Helper class for serialization of Quantities. In order to improve the performance of
+comparisons we store with each quantity canonicalized value (its value in the base unit of the quantity)
+and the base (canonicalized) unit code.
+</p></div></div>
     </li><li name="au.csiro.pathling.encoders.SerializerBuilder" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="SerializerBuilder"></a><a id="SerializerBuilder:SerializerBuilder"></a>
       <span class="permalink">

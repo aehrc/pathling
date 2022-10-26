@@ -7,6 +7,7 @@ au.csiro.pathling.errors
 au.csiro.pathling.extract
 au.csiro.pathling.fhir
 au.csiro.pathling.fhirpath
+au.csiro.pathling.fhirpath.comparison
 au.csiro.pathling.fhirpath.element
 au.csiro.pathling.fhirpath.encoding
 au.csiro.pathling.fhirpath.function
@@ -24,6 +25,11 @@ au.csiro.pathling.security
 au.csiro.pathling.security.ga4gh
 au.csiro.pathling.spark
 au.csiro.pathling.sql
+au.csiro.pathling.sql.dates
+au.csiro.pathling.sql.dates.date
+au.csiro.pathling.sql.dates.datetime
+au.csiro.pathling.sql.dates.time
+au.csiro.pathling.sql.udf
 au.csiro.pathling.terminology
 au.csiro.pathling.update
 au.csiro.pathling.utilities

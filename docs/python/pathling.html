@@ -4,7 +4,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
     <title>pathling package &#8212; pathling  documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
@@ -15,6 +15,7 @@
     <script src="_static/underscore.js"></script>
     <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -171,7 +172,7 @@ columns</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.context.PathlingContext.member_of">
-<span class="sig-name descname"><span class="pre">member_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_set_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.member_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.member_of" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">member_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_set_uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.member_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.context.PathlingContext.member_of" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a dataframe with a Coding column as input. A new column is created which contains a 
 Boolean value, indicating whether the input Coding is a member of the specified FHIR 
 ValueSet.</p>
@@ -180,7 +181,7 @@ ValueSet.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
 <li><p><strong>coding_column</strong> – a Column containing a struct representation of a Coding</p></li>
-<li><p><strong>value_set_url</strong> – an identifier for a FHIR ValueSet</p></li>
+<li><p><strong>value_set_uri</strong> – an identifier for a FHIR ValueSet</p></li>
 <li><p><strong>output_column_name</strong> – the name of the result column</p></li>
 </ul>
 </dd>
@@ -299,16 +300,18 @@ struct Column can be used as an input to terminology functions such as <cite>mem
 :return: a Column containing a Coding struct</p>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.functions.to_ecl_value_set">
+<span class="sig-prename descclassname"><span class="pre">pathling.functions.</span></span><span class="sig-name descname"><span class="pre">to_ecl_value_set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ecl</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/functions.html#to_ecl_value_set"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.functions.to_ecl_value_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a SNOMED CT ECL expression into a FHIR ValueSet URI. Can be used with the <cite>member_of</cite> 
+function.
+:param ecl: the ECL expression
+:return: the ValueSet URI</p>
+</dd></dl>
+
 </section>
 <section id="module-pathling">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pathling" title="Permalink to this heading">¶</a></h2>
-<dl class="simple">
-<dt>Important classes of Pathling Python API:</dt><dd><ul class="simple">
-<li><p><a class="reference internal" href="#pathling.PathlingContext" title="pathling.PathlingContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">pathling.PathlingContext</span></code></a>
-Main entry point for Pathling API functionality.</p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py class">
 <dt class="sig sig-object py" id="pathling.PathlingContext">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.</span></span><span class="sig-name descname"><span class="pre">PathlingContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spark</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">SparkSession</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jpc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">JavaObject</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext" title="Permalink to this definition">¶</a></dt>
@@ -411,7 +414,7 @@ columns</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.PathlingContext.member_of">
-<span class="sig-name descname"><span class="pre">member_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_set_url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.member_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.member_of" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">member_of</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value_set_uri</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_column_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pathling/context.html#PathlingContext.member_of"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.PathlingContext.member_of" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a dataframe with a Coding column as input. A new column is created which contains a 
 Boolean value, indicating whether the input Coding is a member of the specified FHIR 
 ValueSet.</p>
@@ -420,7 +423,7 @@ ValueSet.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>df</strong> – a DataFrame containing the input data</p></li>
 <li><p><strong>coding_column</strong> – a Column containing a struct representation of a Coding</p></li>
-<li><p><strong>value_set_url</strong> – an identifier for a FHIR ValueSet</p></li>
+<li><p><strong>value_set_uri</strong> – an identifier for a FHIR ValueSet</p></li>
 <li><p><strong>output_column_name</strong> – the name of the result column</p></li>
 </ul>
 </dd>
@@ -497,12 +500,60 @@ may be more than one target concept for each input concept.</p>
     <ul>
 <li><a class="reference internal" href="#">pathling package</a><ul>
 <li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-pathling.coding">pathling.coding module</a></li>
-<li><a class="reference internal" href="#module-pathling.context">pathling.context module</a></li>
-<li><a class="reference internal" href="#module-pathling.etc">pathling.etc module</a></li>
-<li><a class="reference internal" href="#module-pathling.fhir">pathling.fhir module</a></li>
-<li><a class="reference internal" href="#module-pathling.functions">pathling.functions module</a></li>
-<li><a class="reference internal" href="#module-pathling">Module contents</a></li>
+<li><a class="reference internal" href="#module-pathling.coding">pathling.coding module</a><ul>
+<li><a class="reference internal" href="#pathling.coding.Coding"><code class="docutils literal notranslate"><span class="pre">Coding</span></code></a><ul>
+<li><a class="reference internal" href="#pathling.coding.Coding.to_literal"><code class="docutils literal notranslate"><span class="pre">Coding.to_literal()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pathling.context">pathling.context module</a><ul>
+<li><a class="reference internal" href="#pathling.context.PathlingContext"><code class="docutils literal notranslate"><span class="pre">PathlingContext</span></code></a><ul>
+<li><a class="reference internal" href="#pathling.context.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.context.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.context.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.context.PathlingContext.member_of"><code class="docutils literal notranslate"><span class="pre">PathlingContext.member_of()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.context.PathlingContext.spark"><code class="docutils literal notranslate"><span class="pre">PathlingContext.spark</span></code></a></li>
+<li><a class="reference internal" href="#pathling.context.PathlingContext.subsumes"><code class="docutils literal notranslate"><span class="pre">PathlingContext.subsumes()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.context.PathlingContext.translate"><code class="docutils literal notranslate"><span class="pre">PathlingContext.translate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pathling.etc">pathling.etc module</a><ul>
+<li><a class="reference internal" href="#pathling.etc.find_jar"><code class="docutils literal notranslate"><span class="pre">find_jar()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pathling.fhir">pathling.fhir module</a><ul>
+<li><a class="reference internal" href="#pathling.fhir.MimeType"><code class="docutils literal notranslate"><span class="pre">MimeType</span></code></a><ul>
+<li><a class="reference internal" href="#pathling.fhir.MimeType.FHIR_JSON"><code class="docutils literal notranslate"><span class="pre">MimeType.FHIR_JSON</span></code></a></li>
+<li><a class="reference internal" href="#pathling.fhir.MimeType.FHIR_XML"><code class="docutils literal notranslate"><span class="pre">MimeType.FHIR_XML</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pathling.fhir.Version"><code class="docutils literal notranslate"><span class="pre">Version</span></code></a><ul>
+<li><a class="reference internal" href="#pathling.fhir.Version.R4"><code class="docutils literal notranslate"><span class="pre">Version.R4</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pathling.functions">pathling.functions module</a><ul>
+<li><a class="reference internal" href="#pathling.functions.to_coding"><code class="docutils literal notranslate"><span class="pre">to_coding()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.functions.to_ecl_value_set"><code class="docutils literal notranslate"><span class="pre">to_ecl_value_set()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-pathling">Module contents</a><ul>
+<li><a class="reference internal" href="#pathling.PathlingContext"><code class="docutils literal notranslate"><span class="pre">PathlingContext</span></code></a><ul>
+<li><a class="reference internal" href="#pathling.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.PathlingContext.encode_bundle"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode_bundle()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.PathlingContext.member_of"><code class="docutils literal notranslate"><span class="pre">PathlingContext.member_of()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.PathlingContext.spark"><code class="docutils literal notranslate"><span class="pre">PathlingContext.spark</span></code></a></li>
+<li><a class="reference internal" href="#pathling.PathlingContext.subsumes"><code class="docutils literal notranslate"><span class="pre">PathlingContext.subsumes()</span></code></a></li>
+<li><a class="reference internal" href="#pathling.PathlingContext.translate"><code class="docutils literal notranslate"><span class="pre">PathlingContext.translate()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -552,7 +603,7 @@ may be more than one target concept for each input concept.</p>
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.0.2.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
     </div>
   </body>
 </html>
