@@ -79,8 +79,15 @@ server from within your queries and transformations.
 ### Value set membership
 
 The `member_of` function can be used to test the membership of a code within a
-FHIR value set. In this example, we take a list of SNOMED CT diagnosis codes and
-create a new column which shows which are viral infections.
+[FHIR value set](https://hl7.org/fhir/valueset.html). This can be used with both
+explicit value sets (i.e. those that have been pre-defined and loaded into the
+terminology server) and implicit value sets (e.g. SNOMED CT
+[Expression Constraint Language](http://snomed.org/ecl)).
+
+In this example, we take a list of SNOMED CT diagnosis codes and
+create a new column which shows which are viral infections. We use an ECL
+expression to define viral infection as a disease with a pathological process
+of "Infectious process", and a causative agent of "Virus".
 
 ```python
 result = pc.member_of(csv, to_coding(csv.CODE, 'http://snomed.info/sct'),
@@ -130,21 +137,24 @@ Results in:
 
 ### Subsumption testing
 
-The `subsumes` function allows us to perform subsumption testing on codes within
-our data. In hierarchical code systems, a subsumption test determines whether a
-code is a subtype of another code, e.g. an "ankle fracture" is subsumed by "
-fracture".
+Subsumption test is a fancy way of saying "is this code equal or a subtype of
+this other code".
 
-In this example, we first take our codes, cross-join them and then test whether
-they subsume each other. Then we do another subsumption test against the "ear,
-nose and throat disorder" concept.
+For example, a code representing "ankle fracture" is subsumed
+by another code representing "fracture". The "fracture" code is more general,
+and using it with subsumption can help us find other codes representing
+different subtypes of fracture.
+
+The `subsumes` function allows us to perform subsumption testing on codes within
+our data. The order of the left and right operands can be reversed to query
+whether a code is "subsumed by" another code.
 
 ```python
 # 232208008 |Ear, nose and throat disorder|
 left_coding = Coding('http://snomed.info/sct', '232208008')
 right_coding_column = to_coding(csv.CODE, 'http://snomed.info/sct')
 
-result = pc.subsumes(csv, 'SUBSUMES',
+result = pc.subsumes(csv, 'IS_ENT',
                      left_coding=left_coding,
                      right_coding_column=right_coding_column)
 
@@ -164,7 +174,8 @@ Results in:
 Pathling can be configured to connect to a protected terminology server by
 supplying a set of OAuth2 client credentials and a token endpoint.
 
-Here is an example of how to authenticate to the NHS terminology server:
+Here is an example of how to authenticate to
+the [NHS terminology server](https://ontology.nhs.uk/):
 
 ```python
 from pathling import PathlingContext
@@ -221,7 +232,7 @@ To create a Pathling notebook Docker image, your `Dockerfile` might look like
 this:
 
 ```dockerfile
-FROM jupyter/all-spark-notebook
+FROM jupyter/pyspark-notebook
 
 USER root
 RUN echo "spark.jars.packages au.csiro.pathling:library-api:[some version]" >> /usr/local/spark/conf/spark-defaults.conf

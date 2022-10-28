@@ -18,8 +18,15 @@ ScalaInstallation
 ### Value set membership
 
 The `member_of` function can be used to test the membership of a code within a
-FHIR value set. In this example, we take a list of SNOMED CT diagnosis codes and
-create a new column which shows which are viral infections.
+[FHIR value set](https://hl7.org/fhir/valueset.html). This can be used with both 
+explicit value sets (i.e. those that have been pre-defined and loaded into the 
+terminology server) and implicit value sets (e.g. SNOMED CT 
+[Expression Constraint Language](http://snomed.org/ecl)).
+
+In this example, we take a list of SNOMED CT diagnosis codes and
+create a new column which shows which are viral infections. We use an ECL
+expression to define viral infection as a disease with a pathological process 
+of "Infectious process", and a causative agent of "Virus".
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -191,14 +198,17 @@ Results in:
 
 ### Subsumption testing
 
-The `subsumes` function allows us to perform subsumption testing on codes within
-our data. In hierarchical code systems, a subsumption test determines whether a
-code is a subtype of another code, e.g. an "ankle fracture" is subsumed by "
-fracture".
+Subsumption test is a fancy way of saying "is this code equal or a subtype of
+this other code".
 
-In this example, we first take our codes, cross-join them and then test whether
-they subsume each other. Then we do another subsumption test against the "ear,
-nose and throat disorder" concept.
+For example, a code representing "ankle fracture" is subsumed 
+by another code representing "fracture". The "fracture" code is more general, 
+and using it with subsumption can help us find other codes representing
+different subtypes of fracture.
+
+The `subsumes` function allows us to perform subsumption testing on codes within
+our data. The order of the left and right operands can be reversed to query 
+whether a code is "subsumed by" another code.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>

@@ -9,11 +9,11 @@ includes both language libraries and a server implementation.
 
 ### Terminology queries
 
-Health data often contains coded fields from well-known terminologies such
+Health data often contains codes from systems such
 as [SNOMED CT](https://www.snomed.org/snomed-ct/five-step-briefing)
 , [LOINC](https://loinc.org/)
-or [ICD](https://www.who.int/standards/classifications/classification-of-diseases)
-. These codes contain a great deal of information about diagnoses, procedures,
+or [ICD](https://www.who.int/standards/classifications/classification-of-diseases). 
+These codes contain a great deal of information about diagnoses, procedures,
 observations and many other aspects of a patient's clinical record.
 
 It is common to group these codes based upon their properties, relationships to
