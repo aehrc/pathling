@@ -5,7 +5,7 @@ This is the Python API for [Pathling](https://pathling.csiro.au). It provides a
 set of tools that aid the use of FHIR terminology services and FHIR data within 
 Python applications and data science workflows.
 
-[View the API documentation &rarr;](https://pathling.csiro.au/docs/python/)
+[View the API documentation &rarr;](https://pathling.csiro.au/docs/python/pathling.html)
 
 ## Installation
 
