@@ -40,7 +40,7 @@ Examples of the types of questions that can be answered include:
 - Is this ICD-10 code within the pre-defined list of codes within my cohort
   definition?
 
-See [Terminology functions](/docs/libraries/terminology) for more information.
+See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology) for more information.
 
 ### Query and transformation of FHIR data
 
@@ -62,7 +62,7 @@ possible:
   or [Parquet](https://parquet.apache.org/V)
 - Performing terminology queries against coded fields within the FHIR data
 
-See [Encoders](/docs/libraries/encoders) for more information.
+See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more information.
 
 ### FHIR analytics API
 
@@ -71,7 +71,7 @@ can be used to perform analytic queries over FHIR data. This is useful for
 powering interactive web and mobile applications that need to be able to
 aggregate, group and transform FHIR data.
 
-See [Server](/docs/server) for more information.
+See [Server](https://pathling.csiro.au/docs/server) for more information.
 
 ## Licensing and attribution
 
