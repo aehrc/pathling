@@ -92,7 +92,7 @@ public class PathlingContextTest {
     final Dataset<Row> patientsDataframe = pathling.encodeBundle(bundlesDF.toDF(),
         "Patient", FhirMimeTypes.FHIR_JSON);
     assertEquals(5, patientsDataframe.count());
-   
+
     // Test omission of MIME type.
     final Dataset<Row> patientsDataframe2 = pathling.encodeBundle(bundlesDF.toDF(),
         "Patient");
@@ -164,11 +164,11 @@ public class PathlingContextTest {
 
     // Test explicit options
     // Extensions and open types
-    PathlingContextConfiguration.builder()
+    final PathlingContextConfiguration config2 = PathlingContextConfiguration.builder()
         .extensionsEnabled(true)
         .openTypesEnabled(List.of("boolean", "string", "Address"))
         .build();
-    final Row rowWithExtensions = PathlingContext.create(spark, config)
+    final Row rowWithExtensions = PathlingContext.create(spark, config2)
         .encode(jsonResourcesDF, "Patient").head();
     SchemaAsserts.assertFieldPresent("_extension", rowWithExtensions.schema());
 
