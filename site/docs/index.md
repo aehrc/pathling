@@ -10,8 +10,7 @@ includes both language libraries and a server implementation.
 ### Terminology queries
 
 Health data often contains codes from systems such
-as [SNOMED CT](https://www.snomed.org/snomed-ct/five-step-briefing)
-, [LOINC](https://loinc.org/)
+as [SNOMED CT](https://www.snomed.org/snomed-ct/five-step-briefing), [LOINC](https://loinc.org/)
 or [ICD](https://www.who.int/standards/classifications/classification-of-diseases). 
 These codes contain a great deal of information about diagnoses, procedures,
 observations and many other aspects of a patient's clinical record.
@@ -37,10 +36,10 @@ See [Terminology functions](/docs/libraries/terminology) for more information.
 data. It comes in both [JSON](https://hl7.org/fhir/json.html)
 or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
 different types of resources, such
-as [Patient](https://hl7.org/fhir/patient.html)
-, [Observation](https://hl7.org/fhir/observation.html)
-, [Condition](https://hl7.org/fhir/condition.html)
-, [Procedure](https://hl7.org/fhir/procedure.html), and many more.
+as [Patient](https://hl7.org/fhir/patient.html), 
+[Observation](https://hl7.org/fhir/observation.html), 
+[Condition](https://hl7.org/fhir/condition.html), 
+[Procedure](https://hl7.org/fhir/procedure.html), and many more.
 
 Pathling is capable of reading all the different types of FHIR resources into a
 format suitable for data analysis tasks. This makes the following things
