@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Import
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-5)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-6)
 
 This operation allows FHIR R4 data to be imported into the server, making it
 available for query via other operations such as [search](./search),

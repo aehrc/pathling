@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Search
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-5)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/search-6)
 
 This operation extends the search capabilities of FHIR using a
 [search profile](https://hl7.org/fhir/R4/search.html#query) called `fhirPath`,

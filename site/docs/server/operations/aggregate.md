@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Aggregate
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/aggregate-5)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/aggregate-6)
 
 This operation allows a user to perform aggregate queries on data held within
 the FHIR server. You call the operation by specifying aggregation, grouping and

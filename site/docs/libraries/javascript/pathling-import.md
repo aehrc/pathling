@@ -215,5 +215,5 @@ permissions on the specified S3 location.
 * This script assumes that both source and target endpoints can be accessed
   using an OAuth2 client credentials grant.
 * The source FHIR endpoint must provide a
-  [SMART configuration document](https://hl7.org/fhir/smart-app-launch/conformance/index.html#using-well-known)
+  [SMART configuration document](https://www.hl7.org/fhir/smart-app-launch/conformance.html#using-well-known)
   for discovery of its authentication configuration.

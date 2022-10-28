@@ -59,7 +59,7 @@ possible:
 
 - Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
 - Transforming data into other formats, such as CSV
-  or [Parquet](https://parquet.apache.org/V)
+  or [Parquet](https://parquet.apache.org/)
 - Performing terminology queries against coded fields within the FHIR data
 
 See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more information.
