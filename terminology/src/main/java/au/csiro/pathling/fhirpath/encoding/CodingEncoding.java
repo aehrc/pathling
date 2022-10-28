@@ -20,8 +20,10 @@ package au.csiro.pathling.fhirpath.encoding;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.MetadataBuilder;
@@ -114,4 +116,19 @@ public interface CodingEncoding {
            ? null
            : codings.stream().map(CodingEncoding::encode).toArray(Row[]::new);
   }
+
+  @Nonnull
+  public static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
+      @Nonnull final Column version, @Nonnull final Column code, @Nonnull final Column display,
+      @Nonnull final Column userSelected) {
+    return functions.struct(
+        id.as("id"),
+        system.as("system"),
+        version.as("version"),
+        code.as("code"),
+        display.as("display"),
+        userSelected.as("userSelected")
+    );
+  }
+ 
 }

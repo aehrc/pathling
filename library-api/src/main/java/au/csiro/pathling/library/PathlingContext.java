@@ -27,6 +27,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.FhirEncoders.Builder;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.sql.SqlStrategy;
@@ -35,7 +36,7 @@ import au.csiro.pathling.terminology.TerminologyFunctions;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -66,6 +67,10 @@ public class PathlingContext {
   public static final long DEFAULT_TOKEN_EXPIRY_TOLERANCE = 120L;
 
   @Nonnull
+  @Getter
+  private final SparkSession spark;
+
+  @Nonnull
   private final FhirVersionEnum fhirVersion;
 
   @Nonnull
@@ -78,6 +83,7 @@ public class PathlingContext {
   private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    this.spark = spark;
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
@@ -85,11 +91,36 @@ public class PathlingContext {
   }
 
   /**
-   * @param spark a {@link SparkSession} for interacting with Spark
-   * @param fhirEncoders a {@link FhirEncoders} object for encoding FHIR data
-   * @param terminologyServiceFactory a {@link au.csiro.pathling.fhir.TerminologyServiceFactory} for
-   * interacting with a FHIR terminology service
-   * @return a shiny new PathlingContext
+   * Creates a new {@link PathlingContext} using default configuration, and a default or existing
+   * {@link SparkSession}.
+   */
+  @Nonnull
+  public static PathlingContext create() {
+    return create(PathlingContextConfiguration.builder().build());
+  }
+
+  /**
+   * Creates a new {@link PathlingContext} using default configuration, and a pre-configured
+   * {@link SparkSession}.
+   */
+  @Nonnull
+  public static PathlingContext create(@Nonnull final SparkSession spark) {
+    return create(spark, PathlingContextConfiguration.builder().build());
+  }
+
+  /**
+   * Creates a new {@link PathlingContext} using supplied configuration, and a default or existing
+   * {@link SparkSession}.
+   */
+  @Nonnull
+  public static PathlingContext create(@Nonnull final PathlingContextConfiguration configuration) {
+    final SparkSession spark = SparkSession.builder().getOrCreate();
+    return create(spark, configuration);
+  }
+
+  /**
+   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession},
+   * {@link FhirEncoders} and {@link TerminologyServiceFactory} objects.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark,
@@ -99,65 +130,22 @@ public class PathlingContext {
   }
 
   /**
-   * Creates new instance of PathlingContext for given SparkSession, FHIR version and encoder
-   * settings. The null setting values default to the default encoders setting.
-   *
-   * @param sparkSession the SparkSession to use.
-   * @param versionString the FHIR version to use. Must be a valid FHIR version string. If null
-   * defaults to 'R4'.
-   * @param maxNestingLevel the maximum nesting level for recursive data types. Zero (0) indicates
-   * that all direct or indirect fields of type T in element of type T should be skipped.
-   * @param enableExtensions switches on/off the support for FHIR extensions.
-   * @param enabledOpenTypes list of types that are encoded within open types, such as extensions.
-   * @param terminologyServerUrl the URL of the terminology server to use
-   * @return then new instance of PathlingContext.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
-      @Nullable final String versionString,
-      @Nullable final Integer maxNestingLevel, @Nullable final Boolean enableExtensions,
-      @Nullable final List<String> enabledOpenTypes, @Nullable final String terminologyServerUrl,
-      @Nullable final String tokenEndpoint, @Nullable final String clientId,
-      @Nullable final String clientSecret, @Nullable final String scope,
-      @Nullable final Integer tokenExpiryTolerance) {
-
-    FhirEncoders.Builder encoderBuilder = nonNull(versionString)
-                                          ?
-                                          FhirEncoders.forVersion(
-                                              FhirVersionEnum.forVersionString(versionString))
-                                          :
-                                          FhirEncoders.forR4();
-    if (nonNull(maxNestingLevel)) {
-      encoderBuilder = encoderBuilder.withMaxNestingLevel(maxNestingLevel);
-    }
-    if (nonNull(enableExtensions)) {
-      encoderBuilder = encoderBuilder.withExtensionsEnabled(enableExtensions);
-    }
-    if (nonNull(enabledOpenTypes)) {
-      encoderBuilder = encoderBuilder
-          .withOpenTypes(enabledOpenTypes.stream().collect(Collectors.toUnmodifiableSet()));
+      @Nullable final PathlingContextConfiguration configuration) {
+    final PathlingContextConfiguration c;
+    if (configuration == null) {
+      c = PathlingContextConfiguration.builder().build();
+    } else {
+      c = configuration;
     }
 
-    final String resolvedTerminologyServerUrl = nonNull(terminologyServerUrl)
-                                                ? terminologyServerUrl
-                                                : DEFAULT_TERMINOLOGY_SERVER_URL;
-
-    final TerminologyAuthConfiguration authConfig = new TerminologyAuthConfiguration();
-    if (nonNull(tokenEndpoint) && nonNull(clientId) && nonNull(clientSecret)) {
-      authConfig.setEnabled(true);
-      authConfig.setTokenEndpoint(tokenEndpoint);
-      authConfig.setClientId(clientId);
-      authConfig.setClientSecret(clientSecret);
-      authConfig.setScope(scope);
-    }
-    authConfig.setTokenExpiryTolerance(tokenExpiryTolerance != null
-                                       ? tokenExpiryTolerance
-                                       : DEFAULT_TOKEN_EXPIRY_TOLERANCE);
-
-    final DefaultTerminologyServiceFactory terminologyServiceFactory = new DefaultTerminologyServiceFactory(
-        FhirContext.forR4(), resolvedTerminologyServerUrl, DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT,
-        false, authConfig);
-
+    final Builder encoderBuilder = getEncoderBuilder(c);
+    final DefaultTerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
+        c);
     return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
   }
 
@@ -408,6 +396,50 @@ public class PathlingContext {
 
     return TerminologyFunctions.subsumes(idAndCodingSet, codingPairCol, outputColumnName, false,
         terminologyServiceFactory, getRequestId());
+  }
+
+  @Nonnull
+  private static Builder getEncoderBuilder(@Nonnull final PathlingContextConfiguration c) {
+    Builder encoderBuilder =
+        nonNull(c.getFhirVersion())
+        ? FhirEncoders.forVersion(FhirVersionEnum.forVersionString(c.getFhirVersion()))
+        : FhirEncoders.forR4();
+    if (nonNull(c.getMaxNestingLevel())) {
+      encoderBuilder = encoderBuilder.withMaxNestingLevel(c.getMaxNestingLevel());
+    }
+    if (nonNull(c.getExtensionsEnabled())) {
+      encoderBuilder = encoderBuilder.withExtensionsEnabled(c.getExtensionsEnabled());
+    }
+    if (nonNull(c.getOpenTypesEnabled())) {
+      final Set<String> openTypes = c.getOpenTypesEnabled().stream()
+          .collect(Collectors.toUnmodifiableSet());
+      encoderBuilder = encoderBuilder.withOpenTypes(openTypes);
+    }
+    return encoderBuilder;
+  }
+
+  @Nonnull
+  private static DefaultTerminologyServiceFactory getTerminologyServiceFactory(
+      @Nonnull final PathlingContextConfiguration c) {
+    final String resolvedTerminologyServerUrl = nonNull(c.getTerminologyServerUrl())
+                                                ? c.getTerminologyServerUrl()
+                                                : DEFAULT_TERMINOLOGY_SERVER_URL;
+
+    final TerminologyAuthConfiguration authConfig = new TerminologyAuthConfiguration();
+    if (nonNull(c.getTokenEndpoint()) && nonNull(c.getClientId())
+        && nonNull(c.getClientSecret())) {
+      authConfig.setEnabled(true);
+      authConfig.setTokenEndpoint(c.getTokenEndpoint());
+      authConfig.setClientId(c.getClientId());
+      authConfig.setClientSecret(c.getClientSecret());
+      authConfig.setScope(c.getScope());
+    }
+    authConfig.setTokenExpiryTolerance(c.getTokenExpiryTolerance() != null
+                                       ? c.getTokenExpiryTolerance()
+                                       : DEFAULT_TOKEN_EXPIRY_TOLERANCE);
+
+    return new DefaultTerminologyServiceFactory(FhirContext.forR4(), resolvedTerminologyServerUrl,
+        DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT, false, authConfig);
   }
 
   private static String getRequestId() {

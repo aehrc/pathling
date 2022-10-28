@@ -59,16 +59,10 @@ const config = {
             label: "Overview"
           },
           {
-            type: "doc",
-            position: "left",
-            docId: "encoders/index",
-            label: "Encoders"
-          },
-          {
             type: "docSidebar",
             position: "left",
-            sidebarId: "fhirpath",
-            label: "FHIRPath"
+            sidebarId: "libraries",
+            label: "Libraries"
           },
           {
             type: "docSidebar",
@@ -79,8 +73,8 @@ const config = {
           {
             type: "docSidebar",
             position: "left",
-            sidebarId: "libraries",
-            label: "Libraries"
+            sidebarId: "fhirpath",
+            label: "FHIRPath"
           },
           {
             href: "https://github.com/aehrc/pathling",

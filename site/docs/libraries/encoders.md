@@ -1,29 +1,16 @@
 ---
-sidebar_position: 1
-sidebar_label: Encoders
+sidebar_position: 2
 ---
 
-# Encoders
+# FHIR encoders
 
-Pathling provides a set of libraries that can be used to transform data between
-FHIR ([JSON](https://www.hl7.org/fhir/R4/json.html)
-or [XML](https://www.hl7.org/fhir/R4/xml.html)) and Apache Spark data sets. The
-encoders can be used from Python, Scala and Java.
-
-We also have upcoming support for R, subscribe to
-[this issue](https://github.com/aehrc/pathling/issues/193) for updates.
-
-Once your data is encoded as a Spark data set, it can be queried using SQL, or
+The Pathling library can be used to transform [FHIR](https://hl7.org/fhir) Bundles or NDJSON into Spark
+data sets. Once your data is encoded, it can be queried using SQL, or
 transformed using the full library of functions that Spark provides. It can also
 be written to [Parquet](https://parquet.apache.org/) and other formats that are
 compatible with a wide range of tools. See
 the [Spark documentation](https://spark.apache.org/docs/latest/) for more
 details.
-
-:::info
-We also have upcoming support for R, subscribe to
-[this issue](https://github.com/aehrc/pathling/issues/193) for updates.
-:::
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
@@ -67,7 +54,6 @@ patients.select('id', 'gender', 'birthDate').show()
 <ScalaInstallation/>
 
 ```scala
-import org.apache.spark.sql.SparkSession
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder.getOrCreate()
@@ -96,20 +82,20 @@ import au.csiro.pathling.library.PathlingContext;
 
 class MyApp {
 
-  public static void main(String args[]) {
-    SparkSession spark = SparkSession.builder().getOrCreate();
+    public static void main(String args[]) {
+        SparkSession spark = SparkSession.builder().getOrCreate();
 
-    // Read each line from the NDJSON into a row within a Spark data set.
-    String ndjsonDir = "/some/path/ndjson/";
-    Dataset<Row> jsonResources = spark.read().text(ndjsonDir);
+        // Read each line from the NDJSON into a row within a Spark data set.
+        String ndjsonDir = "/some/path/ndjson/";
+        Dataset<Row> jsonResources = spark.read().text(ndjsonDir);
 
-    // Convert the data set of strings into a structured FHIR data set.
-    PathlingContext pc = PathlingContext.create(spark);
-    Dataset<Row> patients = pc.encode(jsonResources, "Patient");
+        // Convert the data set of strings into a structured FHIR data set.
+        PathlingContext pc = PathlingContext.create(spark);
+        Dataset<Row> patients = pc.encode(jsonResources, "Patient");
 
-    // Do some stuff.
-    patients.select("id", "gender", "birthDate").show();
-  }
+        // Do some stuff.
+        patients.select("id", "gender", "birthDate").show();
+    }
 
 }
 ```
@@ -185,86 +171,30 @@ import au.csiro.pathling.library.PathlingContext;
 
 class MyApp {
 
-  public static void main(String args[]) {
-    SparkSession spark = SparkSession.builder().getOrCreate();
+    public static void main(String args[]) {
+        SparkSession spark = SparkSession.builder().getOrCreate();
 
-    // Read each line from the NDJSON into a row within a Spark data set.
-    String bundlesDir = "/some/path/bundles/";
-    Dataset<Row> bundles = spark.read()
-        .option("wholetext", true)
-        .text(bundlesDir);
+        // Read each line from the NDJSON into a row within a Spark data set.
+        String bundlesDir = "/some/path/bundles/";
+        Dataset<Row> bundles = spark.read()
+                .option("wholetext", true)
+                .text(bundlesDir);
 
-    // Convert the data set of strings into a structured FHIR data set.
-    PathlingContext pc = PathlingContext.create(spark);
-    Dataset<Row> patients = pc.encodeBundle(bundles, "Patient");
+        // Convert the data set of strings into a structured FHIR data set.
+        PathlingContext pc = PathlingContext.create(spark);
+        Dataset<Row> patients = pc.encodeBundle(bundles, "Patient");
 
-    // JSON is the default format, XML Bundles can be encoded using input 
-    // type.
-    // Dataset<Row> patients = pc.encodeBundle(bundles, "Patient", 
-    //     FhirMimeTypes.FHIR_XML);
+        // JSON is the default format, XML Bundles can be encoded using input 
+        // type.
+        // Dataset<Row> patients = pc.encodeBundle(bundles, "Patient", 
+        //     FhirMimeTypes.FHIR_XML);
 
-    // Do some stuff.
-    patients.select("id", "gender", "birthDate").show();
-  }
+        // Do some stuff.
+        patients.select("id", "gender", "birthDate").show();
+    }
 
 }
 ```
 
 </TabItem>
 </Tabs>
-
-## Installation in Databricks
-
-To make the Pathling encoders available within notebooks, navigate to the
-"Compute" section and click on the cluster. Click on the "Libraries" tab, and
-click "Install new".
-
-Install both the `pathling` PyPI package, and
-the `au.csiro.pathling:library-api`
-Maven package. Once the cluster is restarted, the libraries should be available
-for import and use within all notebooks.
-
-By default, Databricks uses Java 8 within its clusters, while Pathling requires
-Java 11. To enable Java 11 support within your cluster, navigate to __Advanced
-Options > Spark > Environment Variables__ and add the following:
-
-```bash
-JNAME=zulu11-ca-amd64
-```
-
-See the Databricks documentation on
-[Libraries](https://docs.databricks.com/libraries/index.html) for more
-information.
-
-## Spark cluster configuration
-
-If you are running your own Spark cluster, or using a Docker image (such as
-[jupyter/all-spark-notebook](https://hub.docker.com/r/jupyter/all-spark-notebook))
-,
-you will need to configure Pathling as a Spark package.
-
-You can do this by adding the following to your `spark-defaults.conf` file:
-
-```
-spark.jars.packages au.csiro.pathling:library-api:[some version]
-```
-
-See the [Configuration](https://spark.apache.org/docs/latest/configuration.html)
-page of the Spark documentation for more information about `spark.jars.packages`
-and other related configuration options.
-
-To create a Pathling notebook Docker image, your `Dockerfile` might look like
-this:
-
-```dockerfile
-FROM jupyter/all-spark-notebook
-
-USER root
-RUN echo "spark.jars.packages au.csiro.pathling:library-api:[some version]" >> /usr/local/spark/conf/spark-defaults.conf
-
-USER ${NB_UID}
-
-RUN pip install --quiet --no-cache-dir pathling && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
-```

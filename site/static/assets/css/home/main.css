@@ -3842,3 +3842,7 @@ body.is-ie #wrapper > section > .content > section {
         padding: 4rem;
     }
 }
+
+#wrapper section.intro p {
+    font-size: 1.25rem;
+}

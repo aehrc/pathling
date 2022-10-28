@@ -37,7 +37,6 @@ import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.terminology.Relation.Entry;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SchemaAsserts;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -70,12 +69,7 @@ public class PathlingContextTest {
    */
   @BeforeAll
   public static void setUp() {
-    spark = SparkSession.builder()
-        .master("local[*]")
-        .appName("testing")
-        .config("spark.driver.bindAddress", "localhost")
-        .config("spark.driver.host", "localhost")
-        .getOrCreate();
+    spark = TestHelpers.spark();
   }
 
   /**
@@ -93,12 +87,16 @@ public class PathlingContextTest {
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
         .textFile(testDataUrl + "/bundles/R4/json");
 
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
-        null, null, null, null, 0);
+    final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> patientsDataframe = pathling.encodeBundle(bundlesDF.toDF(),
         "Patient", FhirMimeTypes.FHIR_JSON);
     assertEquals(5, patientsDataframe.count());
+
+    // Test omission of MIME type.
+    final Dataset<Row> patientsDataframe2 = pathling.encodeBundle(bundlesDF.toDF(),
+        "Patient");
+    assertEquals(5, patientsDataframe2.count());
 
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
         FhirMimeTypes.FHIR_JSON);
@@ -112,8 +110,7 @@ public class PathlingContextTest {
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
         .textFile(testDataUrl + "/bundles/R4/xml");
 
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
-        null, null, null, null, 0);
+    final PathlingContext pathling = PathlingContext.create(spark);
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
         FhirMimeTypes.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
@@ -125,8 +122,7 @@ public class PathlingContextTest {
     final Dataset<String> jsonResources = spark.read()
         .textFile(testDataUrl + "/resources/R4/json");
 
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
-        null, null, null, null, 0);
+    final PathlingContext pathling = PathlingContext.create(spark);
 
     final Dataset<Row> patientsDataframe = pathling.encode(jsonResources.toDF(), "Patient",
         FhirMimeTypes.FHIR_JSON);
@@ -143,8 +139,7 @@ public class PathlingContextTest {
         .text(testDataUrl + "/resources/R4/json");
 
     // Test the defaults
-    final Row defaultRow = PathlingContext.create(spark, null, null, null, null, null, null, null,
-            null, null, 0)
+    final Row defaultRow = PathlingContext.create(spark)
         .encode(jsonResourcesDF, "Questionnaire")
         .head();
     SchemaAsserts.assertFieldNotPresent("_extension", defaultRow.schema());
@@ -153,8 +148,10 @@ public class PathlingContextTest {
 
     // Test explicit options
     // Nested items
-    final Row rowWithNesting = PathlingContext
-        .create(spark, null, 1, null, null, null, null, null, null, null, 0)
+    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+        .maxNestingLevel(1)
+        .build();
+    final Row rowWithNesting = PathlingContext.create(spark, config)
         .encode(jsonResourcesDF, "Questionnaire").head();
     SchemaAsserts.assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
@@ -167,9 +164,11 @@ public class PathlingContextTest {
 
     // Test explicit options
     // Extensions and open types
-    final Row rowWithExtensions = PathlingContext
-        .create(spark, null, null, true,
-            Arrays.asList("boolean", "string", "Address"), null, null, null, null, null, 0)
+    final PathlingContextConfiguration config2 = PathlingContextConfiguration.builder()
+        .extensionsEnabled(true)
+        .openTypesEnabled(List.of("boolean", "string", "Address"))
+        .build();
+    final Row rowWithExtensions = PathlingContext.create(spark, config2)
         .encode(jsonResourcesDF, "Patient").head();
     SchemaAsserts.assertFieldPresent("_extension", rowWithExtensions.schema());
 
@@ -186,8 +185,10 @@ public class PathlingContextTest {
 
   @Test
   public void testEncodeResourceStream() throws Exception {
-    final PathlingContext pathling = PathlingContext.create(spark, null, null, true, null, null,
-        null, null, null, null, 0);
+    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+        .extensionsEnabled(true)
+        .build();
+    final PathlingContext pathling = PathlingContext.create(spark, config);
 
     final Dataset<Row> jsonResources = spark.readStream().text(testDataUrl + "/resources/R4/json");
 
@@ -339,9 +340,15 @@ public class PathlingContextTest {
     final String scope = "openid";
     final int tokenExpiryTolerance = 120;
 
-    final PathlingContext pathlingContext = PathlingContext.create(spark, null, null, null, null,
-        terminologyServerUrl, tokenEndpoint,
-        clientId, clientSecret, scope, tokenExpiryTolerance);
+    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+        .terminologyServerUrl(terminologyServerUrl)
+        .tokenEndpoint(tokenEndpoint)
+        .clientId(clientId)
+        .clientSecret(clientSecret)
+        .scope(scope)
+        .tokenExpiryTolerance(tokenExpiryTolerance)
+        .build();
+    final PathlingContext pathlingContext = PathlingContext.create(spark, config);
     assertNotNull(pathlingContext);
 
     final TerminologyServiceFactory terminologyServiceFactory = pathlingContext.getTerminologyServiceFactory();

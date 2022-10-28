@@ -18,7 +18,7 @@
   <meta name="keywords" content="FHIR server,analytics,health data" />
   <meta
     name="og:title"
-    content="Pathling &mdash; Advanced FHIR analytics server"
+    content="Pathling &mdash; Analytics on FHIR&reg;"
   />
     <meta
       name="og:description"
@@ -34,7 +34,7 @@
     <meta name="og:image:height" content="640" />
     <meta
       name="og:image:alt"
-      content="Pathling &mdash; Advanced FHIR analytics server"
+      content="Pathling &mdash; Analytics on FHIR&reg;"
     />
     <link rel="stylesheet" href="assets/css/home/main.css" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
@@ -53,7 +53,7 @@
       <section class="intro">
         <header>
           <h1><img src="/assets/images/logo-colour-detail.svg" alt="Pathling" /></h1>
-          <p>Advanced FHIR&reg; analytics server</p>
+          <p>Analytics on FHIR&reg;</p>
           <ul class="actions">
             <li>
               <a
@@ -81,20 +81,21 @@
       <section id="first">
         <header>
           <h2>
-            FHIR server with super powers
+            Tame terminology
           </h2>
         </header>
         <div class="content">
           <p>
-            Turn your <a href="https://hl7.org/fhir">FHIR&reg;</a> data set into
-            a powerful API that can be used to develop analytics applications
-            and augment data science workflow.
+            Pathling provides libraries for Python, Java and Scala that make it 
+            easy to call out to a <a href="https://hl7.org/fhir/terminology-service.html">FHIR terminology server</a> 
+            from your <a href="https://spark.apache.org/">Apache Spark</a> 
+            queries.
           </p>
-          <ul class="feature-icons">
-            <li class="icon solid fa-chart-bar">Data visualisation</li>
-            <li class="icon solid fa-tachometer-alt">Dashboards</li>
-            <li class="icon solid fa-medkit">Patient cohort selection</li>
-            <li class="icon solid fa-table">Data preparation</li>
+          <ul class="actions">
+            <li>
+              <a href="../docs/libraries/terminology" class="button primary large">Read the docs &rarr;</a
+              >
+            </li>
           </ul>
         </div>
       </section>
@@ -102,29 +103,47 @@
       <!-- Section -->
       <section>
         <header>
-          <h2>Ready to learn more?</h2>
+          <h2>
+            Query FHIR
+          </h2>
         </header>
         <div class="content">
           <p>
-            Check out a live demo of a user interface that you can use to make queries to a Pathling
-            server.
+            Read FHIR data into Apache Spark data sets. Query it using <a
+            href="https://pathling.csiro.au/docs/fhirpath">FHIRPath</a> 
+            or SQL, or transform it for use in other tools.
           </p>
           <ul class="actions">
             <li>
-              <a
-                href="https://go.pathling.app/aggregate?subjectResource=Patient&aggregations%5B0%5D%5Blabel%5D=Number%20of%20patients&aggregations%5B0%5D%5Bexpression%5D=count%28%29&groupings%5B0%5D%5Blabel%5D=Prescribed%20TNF%20inhibitor&groupings%5B0%5D%5Bexpression%5D=reverseResolve%28MedicationRequest.subject%29%0A%20%20.medicationCodeableConcept%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Ftnf-inhibitor%27%29%20%0A%20%20contains%20true&groupings%5B1%5D%5Blabel%5D=Contracted%20lung%20infection&groupings%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Flung-infection%27%29%20%0A%20%20contains%20true&filters%5B0%5D%5Blabel%5D=Rheumatoid%20arthritis&filters%5B0%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Frheumatoid-arthritis%27%29%20%0A%20%20contains%20true&filters%5B1%5D%5Blabel%5D=Chronic%20lung%20disease&filters%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Fchronic-lung%27%29%20%0A%20%20contains%20true"
-                class="button primary large"
-              >Live demo</a
+              <a href="../docs/libraries/encoders"
+                 class="button primary large">Read the docs &rarr;</a
               >
             </li>
           </ul>
+        </div>
+      </section>
+
+      <!-- Section -->
+      <section>
+        <header>
+          <h2>
+            Build apps
+          </h2>
+        </header>
+        <div class="content">
           <p>
-            Technical overview, API specifications, expression reference and guides for getting
-            started.
+            Stand up a FHIR API that can be used to power analytic web and mobile applications.
           </p>
           <ul class="actions">
             <li>
-              <a href="../docs" class="button large">Take me to the docs</a
+              <a href="../docs/server" class="button primary large">Read the docs &rarr;</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://go.pathling.app/aggregate?subjectResource=Patient&aggregations%5B0%5D%5Blabel%5D=Number%20of%20patients&aggregations%5B0%5D%5Bexpression%5D=count%28%29&groupings%5B0%5D%5Blabel%5D=Prescribed%20TNF%20inhibitor&groupings%5B0%5D%5Bexpression%5D=reverseResolve%28MedicationRequest.subject%29%0A%20%20.medicationCodeableConcept%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Ftnf-inhibitor%27%29%20%0A%20%20contains%20true&groupings%5B1%5D%5Blabel%5D=Contracted%20lung%20infection&groupings%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Flung-infection%27%29%20%0A%20%20contains%20true&filters%5B0%5D%5Blabel%5D=Rheumatoid%20arthritis&filters%5B0%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Frheumatoid-arthritis%27%29%20%0A%20%20contains%20true&filters%5B1%5D%5Blabel%5D=Chronic%20lung%20disease&filters%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Fchronic-lung%27%29%20%0A%20%20contains%20true"
+                class="button large"
+              >Live demo &rarr;</a
               >
             </li>
           </ul>
@@ -138,15 +157,31 @@
         </header>
         <div class="content">
           <p>
-            Pathling is available as a pre-built Docker image from Docker Hub,
-            and the source code is also available via GitHub.
+            You can get the Pathling libraries via PyPI or Maven Central, and the Pathling 
+            server image via Docker Hub.
           </p>
           <ul class="feature-icons">
             <li class="icon solid fa-download">
-              <a href="https://hub.docker.com/r/aehrc/pathling"
-              >Pathling on Docker Hub</a
-              >
+              <a href="https://pypi.org/project/pathling/">Pathling on PyPI</a>
             </li>
+            <li class="icon solid fa-download">
+              <a href="https://search.maven.org/search?q=pathling">Pathling on Maven Central</a>
+            </li>
+            <li class="icon solid fa-download">
+              <a href="https://www.npmjs.com/search?q=pathling">Pathling on NPM</a>
+            </li>
+            <li class="icon solid fa-download">
+              <a href="https://hub.docker.com/r/aehrc/pathling">Pathling on Docker Hub</a>
+            </li>
+          </ul>
+          <p>
+            The source code for Pathling is available on GitHub, licensed via 
+            the <a
+            href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, version 2.0</a>. 
+            This means that you are free to use, modify and redistribute the software as you wish, 
+            even for commercial purposes.
+          </p>
+          <ul class="feature-icons">
             <li class="icon solid fa-code">
               <a href="https://github.com/aehrc/pathling">Pathling on GitHub</a>
             </li>
