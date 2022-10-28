@@ -18,6 +18,8 @@ import urllib.parse
 from pyspark.sql import Column
 from pyspark.sql.functions import lit, struct
 
+from pathling.etc import SNOMED_URI
+
 
 def to_coding(coding_column: Column, system: str, version: str = None):
     """
@@ -45,4 +47,4 @@ def to_ecl_value_set(ecl: str) -> str:
     :param ecl: the ECL expression
     :return: the ValueSet URI
     """
-    return "http://snomed.info/sct?fhir_vs=ecl/" + urllib.parse.quote(ecl, safe="()*!'")
+    return SNOMED_URI + "?fhir_vs=ecl/" + urllib.parse.quote(ecl, safe="()*!'")

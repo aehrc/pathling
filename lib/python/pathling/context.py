@@ -98,11 +98,24 @@ class PathlingContext:
                  SparkSession.builder
                  .config('spark.jars', find_jar())
                  .getOrCreate())
-        jvm: JavaObject = spark._jvm
-        jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
-                spark._jsparkSession, fhir_version, max_nesting_level, enable_extensions,
-                enabled_open_types, terminology_server_url, token_endpoint, client_id,
-                client_secret, scope, token_expiry_tolerance)
+        jvm = spark._jvm
+
+        # Build a Java configuration object from the provided parameters.
+        config = jvm.au.csiro.pathling.library.PathlingContextConfiguration.builder() \
+            .fhirVersion(fhir_version) \
+            .maxNestingLevel(max_nesting_level) \
+            .extensionsEnabled(enable_extensions) \
+            .openTypesEnabled(enabled_open_types) \
+            .terminologyServerUrl(terminology_server_url) \
+            .tokenEndpoint(token_endpoint) \
+            .clientId(client_id) \
+            .clientSecret(client_secret) \
+            .scope(scope) \
+            .tokenExpiryTolerance(token_expiry_tolerance) \
+            .build()
+
+        jpc: JavaObject = \
+            jvm.au.csiro.pathling.library.PathlingContext.create(spark._jsparkSession, config)
         return PathlingContext(spark, jpc)
 
     def __init__(self, spark: SparkSession, jpc: JavaObject) -> None:
