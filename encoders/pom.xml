@@ -30,7 +30,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.0.1</version>
+    <version>6.0.2</version>
   </parent>
   <artifactId>encoders</artifactId>
   <packaging>jar</packaging>
@@ -110,7 +110,7 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>ucum</artifactId>
-      <version>1.0.4-SNAPSHOT</version>
+      <version>1.0.4</version>
     </dependency>
 
     <!-- Logging -->
