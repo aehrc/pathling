@@ -12,7 +12,7 @@ For more information about Spark's Kafka integration, see
 the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/3.3.1/structured-streaming-kafka-integration.html#content).
 
 Here is an example of streaming a source of FHIR data, encoding it and then 
-performing some a terminology operation upon it:
+performing a terminology operation upon it:
 
 ```python
 from pathling import PathlingContext
