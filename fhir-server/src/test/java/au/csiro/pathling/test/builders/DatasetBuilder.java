@@ -260,4 +260,9 @@ public class DatasetBuilder {
     return Arrays.asList(levels);
   }
 
+  @Nonnull 
+  public static  DatasetBuilder of(@Nonnull final SparkSession spark) {
+    return new DatasetBuilder(spark);
+  }
+  
 }

@@ -27,10 +27,12 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -96,23 +98,38 @@ public class Dependencies {
 
   @Bean
   @ConditionalOnMissingBean
+  @ConditionalOnProperty(prefix = "pathling", value = "terminology.useLegacy", havingValue = "")
+  @ConditionalOnBean(TerminologyClient.class)
+  @Nonnull
+  static TerminologyServiceFactory terminologyClientFactoryDefault(
+      @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
+    log.info("Creating DefaultTerminologyServiceFactory");
+    final TerminologyConfiguration terminology = configuration.getTerminology();
+    return new DefaultTerminologyServiceFactory(fhirContext, terminology.getServerUrl(),
+        terminology.getSocketTimeout(), terminology.isVerboseLogging(),
+        terminology.getAuthentication());
+  }
+  
+  @Bean
+  @ConditionalOnMissingBean
   @ConditionalOnBean(TerminologyClient.class)
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory(
       @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
+    log.info("Creating CacheableTerminologyServiceFactory");
     final TerminologyConfiguration terminology = configuration.getTerminology();
     return new CacheableTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
         terminology.getServerUrl(), terminology.getSocketTimeout(), terminology.isVerboseLogging(),
         terminology.getAuthentication());
   }
-
-  @Bean
-  @ConditionalOnMissingBean
-  @ConditionalOnBean(TerminologyServiceFactory.class)
-  @Nonnull
-  static TerminologyService terminologyService(
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
-    return terminologyServiceFactory.buildService(log);
-  }
+  
+  // @Bean
+  // @ConditionalOnMissingBean
+  // @ConditionalOnBean(TerminologyServiceFactory.class)
+  // @Nonnull
+  // static TerminologyService terminologyService(
+  //     @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+  //   return terminologyServiceFactory.buildService(log);
+  // }
 
 }

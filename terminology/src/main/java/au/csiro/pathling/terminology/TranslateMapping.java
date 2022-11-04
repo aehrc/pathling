@@ -70,7 +70,7 @@ public final class TranslateMapping extends BaseMapping {
   }
 
   /**
-   * Converts {@link TerminologyService#translate} parameters to a batch request Bundle.
+   * Converts {@link TerminologyService#translateCoding} parameters to a batch request Bundle.
    *
    * @param codings The list of codings to be translated
    * @param conceptMapUrl The concept map url
@@ -98,8 +98,8 @@ public final class TranslateMapping extends BaseMapping {
   }
 
   /**
-   * Builds ConceptTranslator from the batch response bundle for
-   * {@link TerminologyService#translate}.
+   * Builds ConceptTranslator from the batch response bundle for {@link
+   * TerminologyService#translateCoding}.
    *
    * @param responseBundle The response from the terminology server
    * @param inputCodes The list of coding requested for translation
@@ -113,7 +113,7 @@ public final class TranslateMapping extends BaseMapping {
       @Nonnull final Collection<ConceptMapEquivalence> equivalences,
       @Nonnull final FhirContext fhirContext) {
 
-    checkResponse("batch-response".equals(responseBundle.getType().toCode()),
+    checkResponse("batch-response" .equals(responseBundle.getType().toCode()),
         "Expected bundle type 'batch-response' but got: '%s'",
         responseBundle.getType().toCode());
     checkResponse(inputCodes.size() == responseBundle.getEntry().size(),
@@ -142,11 +142,11 @@ public final class TranslateMapping extends BaseMapping {
   }
 
   @Nonnull
-  private static Stream<TranslationEntry> entriesFromParameters(
+  public static Stream<TranslationEntry> entriesFromParameters(
       @Nonnull final Parameters parameters) {
     return parameters.getParameterBool("result")
            ? parameters.getParameter().stream()
-               .filter(pc -> "match".equals(pc.getName()))
+               .filter(pc -> "match" .equals(pc.getName()))
                .map(pc -> partToBean(pc, TranslationEntry::new))
            : Stream.empty();
   }

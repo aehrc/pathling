@@ -20,6 +20,7 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyService;
+import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.UUIDFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -28,7 +29,16 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.slf4j.Logger;
+import org.slf4j.MDC;
+
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.when;
 
 /**
  * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService}
@@ -73,6 +83,22 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     this.socketTimeout = socketTimeout;
     this.verboseRequestLogging = verboseRequestLogging;
     this.authConfig = authConfig;
+  }
+
+  @Nonnull
+  @Override
+  public Result memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column value,
+      final String valueSetUri) {
+
+    final Column arrayColumn = when(value.isNotNull(), array(value))
+        .otherwise(functions.lit(null));
+
+    // Prepare the data which will be used within the map operation. All of these things must be
+    // Serializable.
+    final Dataset<Row> resultDataset = TerminologyFunctions.memberOf(arrayColumn, valueSetUri,
+        dataset, "result", this, MDC.get("requestId"));
+    final Column resultColumn = functions.col("result");
+    return new Result(resultDataset, resultColumn);
   }
 
   /**

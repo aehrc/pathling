@@ -56,6 +56,14 @@ public abstract class TestHelpers {
     }
   }
 
+  public static void mockCachedResource(@Nonnull final Database database,
+      @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
+    for (final ResourceType resourceType : resourceTypes) {
+      final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType).cache();
+      when(database.read(resourceType)).thenReturn(dataset);
+    }
+  }
+  
   public static void mockResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, final int numPartitions,
       @Nonnull final ResourceType... resourceTypes) {

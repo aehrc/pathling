@@ -18,10 +18,13 @@
 package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.fhir.TerminologyServiceFactory.Result;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
@@ -30,11 +33,14 @@ import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.udf.ValidateCoding;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.terminology.TerminologyFunctions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
@@ -70,19 +76,33 @@ public class MemberOfFunction implements NamedFunction {
     final Column idColumn = inputPath.getIdColumn();
     final Column conceptColumn = inputPath.getValueColumn();
 
-    final Column resultColumn = (isCodeableConcept(inputPath))
-                                ? lit(null)
-                                : callUDF(ValidateCoding.FUNCTION_NAME,
-                                    lit(argument.getValue().asStringValue()),
-                                    conceptColumn);
-    final Dataset<Row> dataset = inputPath.getDataset();
-    log.debug("Input dataset has {} partitions", dataset.rdd().getNumPartitions());
+    // final Column resultColumn = (isCodeableConcept(inputPath))
+    //                             ? lit(null)
+    //                             : callUDF(ValidateCoding.FUNCTION_NAME,
+    //                                 lit(argument.getValue().asStringValue()),
+    //                                 conceptColumn);
+    //
+    final Column inputColumn = (isCodeableConcept(inputPath))
+                               ? lit(null)
+                               : conceptColumn;
 
+    final Dataset<Row> inputDataset = inputPath.getDataset();
+    log.debug("Input dataset has {} partitions", inputDataset.rdd().getNumPartitions());
+
+    // Prepare the data which will be used within the map operation. All of these things must be
+    // Serializable.
+    final TerminologyServiceFactory terminologyServiceFactory =
+        checkPresent(input.getContext().getTerminologyServiceFactory());
+    final String valueSetUri = argument.getValue().getValueAsString();
+
+    final Result result = terminologyServiceFactory.memberOf(inputDataset,
+        inputColumn, valueSetUri);
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, dataset, idColumn, inputPath.getEidColumn(), resultColumn,
+        .build(expression, result.getDataset(), idColumn, inputPath.getEidColumn(),
+            result.getColumn(),
             inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }

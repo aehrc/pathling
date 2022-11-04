@@ -21,7 +21,6 @@ import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.util.Collection;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
@@ -33,8 +32,13 @@ import org.hl7.fhir.r4.model.Parameters;
  */
 public interface TerminologyService {
 
-  @Nullable
+  @Nonnull
   Parameters validate(@Nonnull final String url, @Nonnull final Coding coding);
+
+
+  @Nonnull
+  Parameters translateCoding(@Nonnull final Coding coding, @Nonnull final String conceptMapUrl,
+      boolean reverse);
 
   /**
    * Creates a translator for given set of codings according to the specified concept map. See also:

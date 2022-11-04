@@ -2,6 +2,8 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -14,18 +16,29 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 
-public class CacheableTerminologyService implements TerminologyService {
+public class CacheableTerminologyService implements TerminologyService, Closeable {
 
   @Nonnull
   private final IGenericClient fhirClient;
 
-  public CacheableTerminologyService(@Nonnull final IGenericClient fhirClient) {
+  @Nonnull
+  private final Closeable toClose;
+
+  public CacheableTerminologyService(@Nonnull final IGenericClient fhirClient,
+      @Nonnull Closeable toClose) {
     this.fhirClient = fhirClient;
+    this.toClose = toClose;
   }
 
   @Nullable
   @Override
   public Parameters validate(@Nonnull final String url, @Nonnull final Coding coding) {
+    // TODO: Check why this needs to be done with the GenericClient
+    // (Why the typed client uses POST rather then get for this operatio
+
+    // TODO: This should also do the system validation unless somehow validate is impervious
+    // to the errors caused by unknown systems.
+
     final Parameters params = new Parameters();
     params.addParameter().setName("url").setValue(new UriType(url));
     params.addParameter().setName("system").setValue(new UriType(coding.getSystem()));
@@ -40,6 +53,14 @@ public class CacheableTerminologyService implements TerminologyService {
         .withParameters(params)
         .useHttpGet()
         .execute();
+  }
+
+  @Nonnull
+  @Override
+  public Parameters translateCoding(@Nonnull final Coding coding,
+      @Nonnull final String conceptMapUrl,
+      final boolean reverse) {
+    throw new UnsupportedOperationException();
   }
 
   @Nonnull
@@ -61,5 +82,11 @@ public class CacheableTerminologyService implements TerminologyService {
   public Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,
       @Nonnull final Collection<SimpleCoding> systemAndCodes) {
     throw new NotImplementedException();
+  }
+
+
+  @Override
+  public void close() throws IOException {
+    toClose.close();
   }
 }

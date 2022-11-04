@@ -127,6 +127,14 @@ public class DefaultTerminologyService implements TerminologyService {
 
   @Nonnull
   @Override
+  public Parameters translateCoding(@Nonnull final Coding coding,
+      @Nonnull final String conceptMapUrl,
+      final boolean reverse) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Nonnull
+  @Override
   public ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,
       @Nonnull final String conceptMapUrl, final boolean reverse,
       @Nonnull final Collection<ConceptMapEquivalence> equivalences) {

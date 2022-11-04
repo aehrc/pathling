@@ -21,6 +21,10 @@ import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import javax.annotation.Nonnull;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 
 public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
@@ -28,6 +32,13 @@ public class TestTerminologyServiceFactory implements TerminologyServiceFactory 
   private static final long serialVersionUID = -8229464411116137820L;
 
   public TestTerminologyServiceFactory() {
+  }
+
+  @Nonnull
+  @Override
+  public Result memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column value,
+      final String valueSetUri) {
+    throw new NotImplementedException();
   }
 
   @Nonnull

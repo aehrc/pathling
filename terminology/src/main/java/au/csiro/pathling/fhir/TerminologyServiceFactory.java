@@ -20,6 +20,10 @@ package au.csiro.pathling.fhir;
 import au.csiro.pathling.terminology.TerminologyService;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import lombok.Value;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 
 /**
@@ -28,6 +32,20 @@ import org.slf4j.Logger;
  * Used for code that runs on Spark workers.
  */
 public interface TerminologyServiceFactory extends Serializable {
+
+
+  @Value
+  class Result {
+
+    @Nonnull
+    Dataset<Row> dataset;
+    @Nonnull
+    Column column;
+  }
+
+  @Nonnull
+  Result memberOf(@Nonnull Dataset<Row> dataset, @Nonnull Column value, String valueSetUri);
+  
 
   /**
    * Builds a new instance.

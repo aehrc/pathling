@@ -17,7 +17,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
-import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.CacheableTerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -40,24 +40,28 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(0)
-@Warmup(iterations = 1)
-@Measurement(iterations = 5)
+@Warmup(iterations = 2)
+@Measurement(iterations = 7)
 public class TerminologyBenchmark {
 
   @State(Scope.Benchmark)
-  @ActiveProfiles("core,server,integration-test")
+  @ActiveProfiles({"core", "server", "benchmark"})
+  @TestPropertySource(properties = {"pathling.terminology.serverUrl=http://localhost:8081/fhir", 
+      "pathling.terminology.useLegacy=false"})
+  // @TestPropertySource(
+  //       properties = {"pathling.terminology.serverUrl=https://tx.ontoserver.csiro.au/fhir"})
   public static class TerminologyState extends AbstractJmhSpringBootState {
 
     @Autowired
     SparkSession spark;
-
-    @Autowired
-    TerminologyService terminologyService;
 
     @Autowired
     TerminologyServiceFactory terminologyServiceFactory;
@@ -74,30 +78,38 @@ public class TerminologyBenchmark {
     @Autowired
     FhirEncoders fhirEncoders;
 
-    AggregateExecutor executor;
+    @MockBean
     Database database;
 
+    AggregateExecutor defaultExecutor;
+
     void mockResource(final ResourceType... resourceTypes) {
-      TestHelpers.mockResource(database, spark, resourceTypes);
+      TestHelpers.mockCachedResource(database, spark, resourceTypes);
     }
 
     @Setup(Level.Trial)
     public void setUp() {
-      SharedMocks.resetAll();
-      database = mock(Database.class);
-
-      SharedMocks.resetAll();
+      //database = mock(Database.class);
       mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
           ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
           ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
           ResourceType.CAREPLAN);
 
-      executor = new AggregateExecutor(configuration, fhirContext, spark, database,
+      defaultExecutor = new AggregateExecutor(configuration, fhirContext, spark, database,
           Optional.of(terminologyServiceFactory));
+
+    }
+
+    @Setup(Level.Iteration)
+    public void setupIteration() {
+      spark.sparkContext().cancelAllJobs();
+      if (terminologyServiceFactory instanceof CacheableTerminologyServiceFactory) {
+        CacheableTerminologyServiceFactory.invalidate();
+      }
     }
 
     public AggregateResponse execute(@Nonnull final AggregateRequest query) {
-      return executor.execute(query);
+      return defaultExecutor.execute(query);
     }
   }
 
@@ -114,4 +126,44 @@ public class TerminologyBenchmark {
     bh.consume(executor.execute(request));
   }
 
+  @Benchmark
+  public void memberOfLoincImplicit_Benchmark(final Blackhole bh,
+      final TerminologyBenchmark.TerminologyState executor) {
+
+    final AggregateRequest request = new AggregateRequestBuilder(ResourceType.OBSERVATION)
+        .withAggregation("count()")
+        .withFilter("code.coding.memberOf('http://loinc.org/vs/LP14885-5') contains true")
+        .build();
+    bh.consume(executor.execute(request));
+  }
+
+  @Benchmark
+  public void memberOfLoincImplicitWithShuffle_Benchmark(final Blackhole bh,
+      final TerminologyBenchmark.TerminologyState executor) {
+
+    final AggregateRequest request = new AggregateRequestBuilder(ResourceType.OBSERVATION)
+        .withAggregation("count()")
+        .withFilter(
+            "code.where($this.coding.count() > 0).coding.memberOf('http://loinc.org/vs/LP14885-5') contains true")
+        .build();
+    bh.consume(executor.execute(request));
+  }
+
+  @Benchmark
+  public void complexExpression_default_Benchmark(final Blackhole bh,
+      final TerminologyBenchmark.TerminologyState executor) {
+
+    final AggregateRequest request = new AggregateRequestBuilder(ResourceType.PATIENT)
+        .withAggregation("count()")
+        .withGrouping(
+            "reverseResolve(MedicationRequest.subject).medicationCodeableConcept.coding.memberOf('http://snomed.info/sct?fhir_vs=ecl/(%3C%3C%20416897008%20%7B%7B%20%2B%20HISTORY-MAX%20%7D%7D)') contains true")
+        .withGrouping(
+            "reverseResolve(Condition.subject).code.coding.memberOf('http://snomed.info/sct?fhir_vs=ecl/((%3C%3C%2064572001%20%3A%20(%3C%3C%20363698007%20%3D%20%3C%3C%2039607008%20%2C%20%3C%3C%20370135005%20%3D%20%3C%3C%20441862004%20))%20%7B%7B%20%2B%20HISTORY-MOD%20%7D%7D)') contains true")
+        .withFilter(
+            "reverseResolve(Condition.subject).code.coding.memberOf('http://snomed.info/sct?fhir_vs=ecl/((%3C%3C%2064572001%20%3A%20(%3C%3C%20363698007%20%3D%20%3C%3C%2039352004%20%2C%20%3C%3C%20370135005%20%3D%20%3C%3C%20263680009%20))%20%7B%7B%20%2B%20HISTORY-MOD%20%7D%7D)') contains true")
+        .withFilter(
+            "reverseResolve(Condition.subject).code.coding.memberOf('http://snomed.info/sct?fhir_vs=ecl/((%3C%3C%2064572001%20%3A%20(%3C%3C%20363698007%20%3D%20%3C%3C%2039607008%20%2C%20%3C%3C%20263502005%20%3D%20%3C%3C%2090734009%20))%20%7B%7B%20%2B%20HISTORY-MOD%20%7D%7D)') contains true")
+        .build();
+    bh.consume(executor.execute(request));
+  }
 }

@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("core")
+@Profile("core|unit-test")
 @Slf4j
 public class ValidateCoding implements SqlFunction2<String, Row, Boolean> {
 
@@ -46,6 +46,7 @@ public class ValidateCoding implements SqlFunction2<String, Row, Boolean> {
       return null;
     }
     final Coding coding = CodingEncoding.decode(codingRow);
+    // TODO: Somewhere here add validation for invalid codings
     final Parameters parameters = terminologyServiceFactory.buildService(log).validate(url, coding);
     if (parameters == null) {
       return null;
