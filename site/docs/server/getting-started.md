@@ -53,7 +53,7 @@ several configuration parameters using environment variables.
 version: "3"
 services:
   pathling:
-    image: aehrc/pathling:5
+    image: aehrc/pathling:6
     ports:
       - 8080:8080
     environment:
@@ -74,7 +74,7 @@ directory. Then the following command can be issued to run the Pathling server:
 docker-compose up
 ```
 
-In this example, the `image` key is being used to refer to the latest `5.x`
+In this example, the `image` key is being used to refer to the latest `6.x`
 version of the Pathling image on Docker Hub.
 
 We are setting the `pathling.terminology.serverUrl` configuration variable to
