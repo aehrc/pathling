@@ -30,7 +30,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>6.0.2</version>
+  <version>6.0.3</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -432,6 +432,13 @@
         <groupId>org.yaml</groupId>
         <artifactId>snakeyaml</artifactId>
         <version>1.31</version>
+      </dependency>
+
+      <!-- CVE-2022-31692 -->
+      <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-core</artifactId>
+        <version>5.7.5</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

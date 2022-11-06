@@ -38,11 +38,12 @@ individual characters.
 
 All comparison operators return a [Boolean](/docs/fhirpath/data-types#boolean) value.
 
-<sup>*</sup> Not all Quantity values are comparable, it depends upon the
-comparability of the units. See
-the <a href="https://hl7.org/fhirpath/#comparison">FHIRPath specification</a> for 
-details on how Quantity values are compared.
-<p></p>
+:::caution
+The comparability of units within Quantities is defined
+within <a href="https://unitsofmeasure.org/ucum">UCUM</a>.
+You can use the <a href="https://ucum.nlm.nih.gov/ucum-lhc/demo.html">NLM Converter Tool</a> to
+check whether your units are comparable to each other.
+:::
 
 See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 
@@ -59,10 +60,15 @@ be compared using the equality operators.
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
 
-Not all Quantity, Date and DateTime values can be compared for equality, it
-depends upon the comparability of the units within the Quantity values. See the
-[FHIRPath specification](https://hl7.org/fhirpath/#quantity-equality) for
-details on how equality works with Quantity values.
+If the operands are Quantity values and are not comparable, an empty collection
+will be returned.
+
+:::caution
+The comparability of units within Quantities is defined 
+within <a href="https://unitsofmeasure.org/ucum">UCUM</a>.
+You can use the <a href="https://ucum.nlm.nih.gov/ucum-lhc/demo.html">NLM Converter Tool</a> to
+check whether your units are comparable to each other.
+:::
 
 See also: [Equality](https://hl7.org/fhirpath/#equality)
 
@@ -116,8 +122,16 @@ is not supported with these operators.
 The `Date` or `DateTime` operand must be singular. If it is an empty collection,
 the operator will return an empty collection.
 
-The use of arithmetic with the [Time](/docs/fhirpath/data-types#time) type is not
-supported.
+:::note
+The use of arithmetic with the <a href="/docs/fhirpath/data-types#time">Time</a> 
+type is not supported.
+:::
+
+:::caution
+Arithmetic
+involving <a href="https://hl7.org/fhir/datatypes.html#instant">instant</a> 
+values is limited to a precision of seconds.
+:::
 
 See also: [Date/Time Arithmetic](https://hl7.org/fhirpath/#datetime-arithmetic)
 

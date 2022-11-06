@@ -36,41 +36,44 @@ import org.hl7.fhir.r4.model.Quantity;
  *
  * @author John Grimes
  */
-public abstract class TemporalArithmeticFunction<T extends BaseDateTimeType> implements
-    SqlFunction2<String, Row, String> {
+public abstract class TemporalArithmeticFunction<StoredType, IntermediateType extends BaseDateTimeType> implements
+    SqlFunction2<StoredType, Row, String> {
 
   private static final long serialVersionUID = -5016153440496309996L;
 
   @Nonnull
-  protected T performAddition(@Nonnull final T temporal, @Nonnull final Quantity calendarDuration) {
+  protected IntermediateType performAddition(@Nonnull final IntermediateType temporal,
+      @Nonnull final Quantity calendarDuration) {
     return performArithmetic(temporal, calendarDuration, false);
   }
 
   @Nonnull
-  protected T performSubtraction(@Nonnull final T temporal,
+  protected IntermediateType performSubtraction(@Nonnull final IntermediateType temporal,
       @Nonnull final Quantity calendarDuration) {
     return performArithmetic(temporal, calendarDuration, true);
   }
 
   @Nonnull
-  private T performArithmetic(final @Nonnull T temporal, final @Nonnull Quantity calendarDuration,
+  private IntermediateType performArithmetic(final @Nonnull IntermediateType temporal,
+      final @Nonnull Quantity calendarDuration,
       final boolean subtract) {
     final int amountToAdd = calendarDuration.getValue().setScale(0, RoundingMode.HALF_UP)
         .intValue();
     final int temporalUnit = CalendarDurationUtils.getTemporalUnit(calendarDuration);
 
-    @SuppressWarnings("unchecked") final T result = (T) temporal.copy();
+    @SuppressWarnings("unchecked")
+    final IntermediateType result = (IntermediateType) temporal.copy();
     result.add(temporalUnit, subtract
                              ? -amountToAdd
                              : amountToAdd);
     return result;
   }
 
-  protected abstract Function<String, T> parseEncodedValue();
+  protected abstract Function<StoredType, IntermediateType> parseEncodedValue();
 
-  protected abstract BiFunction<T, Quantity, T> getOperationFunction();
+  protected abstract BiFunction<IntermediateType, Quantity, IntermediateType> getOperationFunction();
 
-  protected abstract Function<T, String> encodeResult();
+  protected abstract Function<IntermediateType, String> encodeResult();
 
   @Override
   public DataType getReturnType() {
@@ -79,14 +82,15 @@ public abstract class TemporalArithmeticFunction<T extends BaseDateTimeType> imp
 
   @Nullable
   @Override
-  public String call(@Nullable final String temporalValue, @Nullable final Row calendarDurationRow)
+  public String call(@Nullable final StoredType temporalValue,
+      @Nullable final Row calendarDurationRow)
       throws Exception {
     if (temporalValue == null || calendarDurationRow == null) {
       return null;
     }
-    final T temporal = parseEncodedValue().apply(temporalValue);
+    final IntermediateType temporal = parseEncodedValue().apply(temporalValue);
     final Quantity calendarDuration = QuantityEncoding.decode(calendarDurationRow);
-    final T result = getOperationFunction().apply(temporal, calendarDuration);
+    final IntermediateType result = getOperationFunction().apply(temporal, calendarDuration);
     return encodeResult().apply(result);
   }
 

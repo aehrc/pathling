@@ -26,7 +26,7 @@ import org.hl7.fhir.r4.model.DateType;
  *
  * @author John Grimes
  */
-public abstract class DateArithmeticFunction extends TemporalArithmeticFunction<DateType> {
+public abstract class DateArithmeticFunction extends TemporalArithmeticFunction<String, DateType> {
 
   private static final long serialVersionUID = 6759548804191034570L;
 
