@@ -31,6 +31,7 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import java.text.ParseException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -138,6 +139,20 @@ public class DateArithmeticTest {
         .singular(true)
         .build();
 
+    final Dataset<Row> instantDataset = new DatasetBuilder(spark)
+        .withIdColumn(ID_ALIAS)
+        .withColumn(DataTypes.TimestampType)
+        .withRow("patient-1", Instant.ofEpochMilli(1667690454622L))
+        .withRow("patient-2", Instant.ofEpochMilli(1667690454622L))
+        .withRow("patient-3", Instant.ofEpochMilli(1667690454622L))
+        .build();
+    final ElementPath instantPath = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.DATETIME)
+        .dataset(instantDataset)
+        .idAndValueColumns()
+        .singular(true)
+        .build();
+
     final DateTimeLiteralPath dateTimeLiteral = DateTimeLiteralPath.fromString(
         "@2015-02-07T18:28:17+00:00", dateTimePath);
     final DateLiteralPath dateLiteral = DateLiteralPath.fromString("@2015-02-07", datePath);
@@ -151,6 +166,8 @@ public class DateArithmeticTest {
     parameters.addAll(dateTimeSubtraction(dateTimePath, context));
     parameters.addAll(dateAddition(datePath, context));
     parameters.addAll(dateSubtraction(datePath, context));
+    parameters.addAll(instantAddition(instantPath, context));
+    parameters.addAll(instantSubtraction(instantPath, context));
     parameters.addAll(dateTimeLiteralAddition(dateTimeLiteral, context));
     parameters.addAll(dateTimeLiteralSubtraction(dateTimeLiteral, context));
     parameters.addAll(dateLiteralAddition(dateLiteral, context));
@@ -378,6 +395,156 @@ public class DateArithmeticTest {
             .build())
     );
 
+    return parameters;
+  }
+
+  Collection<TestParameters> instantAddition(
+      final FhirPath instantPath, final ParserContext context) {
+    final List<TestParameters> parameters = new ArrayList<>();
+    parameters.add(new TestParameters("Instant + 10 years", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("10 years", instantPath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2032-11-05T23:20:54+00:00")
+            .withRow("patient-2", "2032-11-05T23:20:54+00:00")
+            .withRow("patient-3", "2032-11-05T23:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant + 9 months", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("9 months", instantPath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2023-08-05T23:20:54+00:00")
+            .withRow("patient-2", "2023-08-05T23:20:54+00:00")
+            .withRow("patient-3", "2023-08-05T23:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant + 30 days", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("30 days", instantPath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-12-05T23:20:54+00:00")
+            .withRow("patient-2", "2022-12-05T23:20:54+00:00")
+            .withRow("patient-3", "2022-12-05T23:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant + 12 hours", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("12 hours", instantPath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-06T11:20:54+00:00")
+            .withRow("patient-2", "2022-11-06T11:20:54+00:00")
+            .withRow("patient-3", "2022-11-06T11:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant + 30 minutes", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("30 minutes", instantPath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-05T23:50:54+00:00")
+            .withRow("patient-2", "2022-11-05T23:50:54+00:00")
+            .withRow("patient-3", "2022-11-05T23:50:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant + 10 seconds", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("10 seconds", instantPath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-05T23:21:04+00:00")
+            .withRow("patient-2", "2022-11-05T23:21:04+00:00")
+            .withRow("patient-3", "2022-11-05T23:21:04+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant + 300 milliseconds", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", instantPath), context,
+        Operator.getInstance("+"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-05T23:20:54+00:00")
+            .withRow("patient-2", "2022-11-05T23:20:54+00:00")
+            .withRow("patient-3", "2022-11-05T23:20:54+00:00")
+            .build())
+    );
+    return parameters;
+  }
+
+  Collection<TestParameters> instantSubtraction(
+      final FhirPath instantPath, final ParserContext context) {
+    final List<TestParameters> parameters = new ArrayList<>();
+    parameters.add(new TestParameters("Instant - 10 years", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("10 years", instantPath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2012-11-05T23:20:54+00:00")
+            .withRow("patient-2", "2012-11-05T23:20:54+00:00")
+            .withRow("patient-3", "2012-11-05T23:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant - 9 months", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("9 months", instantPath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-02-05T23:20:54+00:00")
+            .withRow("patient-2", "2022-02-05T23:20:54+00:00")
+            .withRow("patient-3", "2022-02-05T23:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant - 30 days", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("30 days", instantPath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-10-06T23:20:54+00:00")
+            .withRow("patient-2", "2022-10-06T23:20:54+00:00")
+            .withRow("patient-3", "2022-10-06T23:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant - 12 hours", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("12 hours", instantPath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-05T11:20:54+00:00")
+            .withRow("patient-2", "2022-11-05T11:20:54+00:00")
+            .withRow("patient-3", "2022-11-05T11:20:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant - 30 minutes", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("30 minutes", instantPath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-05T22:50:54+00:00")
+            .withRow("patient-2", "2022-11-05T22:50:54+00:00")
+            .withRow("patient-3", "2022-11-05T22:50:54+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant - 10 seconds", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("10 seconds", instantPath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-05T23:20:44+00:00")
+            .withRow("patient-2", "2022-11-05T23:20:44+00:00")
+            .withRow("patient-3", "2022-11-05T23:20:44+00:00")
+            .build())
+    );
+
+    parameters.add(new TestParameters("Instant - 300 milliseconds", instantPath,
+        QuantityLiteralPath.fromCalendarDurationString("300 milliseconds", instantPath), context,
+        Operator.getInstance("-"),
+        new DatasetBuilder(spark).withIdColumn(ID_ALIAS).withColumn(DataTypes.StringType)
+            .withRow("patient-1", "2022-11-05T23:20:53+00:00")
+            .withRow("patient-2", "2022-11-05T23:20:53+00:00")
+            .withRow("patient-3", "2022-11-05T23:20:53+00:00")
+            .build())
+    );
     return parameters;
   }
 

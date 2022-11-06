@@ -38,11 +38,12 @@ individual characters.
 
 All comparison operators return a [Boolean](/docs/fhirpath/data-types#boolean) value.
 
-<sup>*</sup> Not all Quantity values are comparable, it depends upon the
+:::caution
+Not all Quantity values are comparable, it depends upon the
 comparability of the units. See
 the <a href="https://hl7.org/fhirpath/#comparison">FHIRPath specification</a> for 
 details on how Quantity values are compared.
-<p></p>
+:::
 
 See also: [Comparison](https://hl7.org/fhirpath/#comparison)
 
@@ -59,10 +60,12 @@ be compared using the equality operators.
 If one or both of the operands is an empty collection, the operator will return
 an empty collection.
 
+:::caution
 Not all Quantity, Date and DateTime values can be compared for equality, it
-depends upon the comparability of the units within the Quantity values. See the
-[FHIRPath specification](https://hl7.org/fhirpath/#quantity-equality) for
-details on how equality works with Quantity values.
+depends upon the comparability of the units within the Quantity values. See 
+the <a href="https://hl7.org/fhirpath/#quantity-equality">FHIRPath specification</a> 
+for details on how equality works with Quantity values.
+:::
 
 See also: [Equality](https://hl7.org/fhirpath/#equality)
 
@@ -116,8 +119,16 @@ is not supported with these operators.
 The `Date` or `DateTime` operand must be singular. If it is an empty collection,
 the operator will return an empty collection.
 
-The use of arithmetic with the [Time](/docs/fhirpath/data-types#time) type is not
-supported.
+:::note
+The use of arithmetic with the <a href="/docs/fhirpath/data-types#time">Time</a> 
+type is not supported.
+:::
+
+:::caution
+Arithmetic
+involving <a href="https://hl7.org/fhir/datatypes.html#instant">instant</a> 
+values is limited to a precision of seconds.
+:::
 
 See also: [Date/Time Arithmetic](https://hl7.org/fhirpath/#datetime-arithmetic)
 
