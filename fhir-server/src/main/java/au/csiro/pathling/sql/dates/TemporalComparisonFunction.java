@@ -29,12 +29,12 @@ import org.apache.spark.sql.types.DataTypes;
  *
  * @author John Grimes
  */
-public abstract class TemporalComparisonFunction<IntermediateType> implements
-    SqlFunction2<String, String, Boolean> {
+public abstract class TemporalComparisonFunction<StoredType, IntermediateType> implements
+    SqlFunction2<StoredType, StoredType, Boolean> {
 
   private static final long serialVersionUID = 492467651418666881L;
 
-  protected abstract Function<String, IntermediateType> parseEncodedValue();
+  protected abstract Function<StoredType, IntermediateType> parseEncodedValue();
 
   protected abstract BiFunction<IntermediateType, IntermediateType, Boolean> getOperationFunction();
 
@@ -45,7 +45,8 @@ public abstract class TemporalComparisonFunction<IntermediateType> implements
 
   @Nullable
   @Override
-  public Boolean call(@Nullable final String left, @Nullable final String right) throws Exception {
+  public Boolean call(@Nullable final StoredType left, @Nullable final StoredType right)
+      throws Exception {
     if (left == null || right == null) {
       return null;
     }

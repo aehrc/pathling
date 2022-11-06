@@ -26,7 +26,7 @@ import java.util.function.Function;
  *
  * @author John Grimes
  */
-public abstract class TimeComparisonFunction extends TemporalComparisonFunction<LocalTime> {
+public abstract class TimeComparisonFunction extends TemporalComparisonFunction<String, LocalTime> {
 
   private static final long serialVersionUID = 3661335567427062952L;
 

@@ -18,6 +18,9 @@
 package au.csiro.pathling.sql.dates.datetime;
 
 import au.csiro.pathling.sql.dates.TemporalComparisonFunction;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Date;
 import java.util.function.Function;
 import org.hl7.fhir.r4.model.DateTimeType;
 
@@ -26,13 +29,21 @@ import org.hl7.fhir.r4.model.DateTimeType;
  *
  * @author John Grimes
  */
-public abstract class DateTimeComparisonFunction extends TemporalComparisonFunction<DateTimeType> {
+public abstract class DateTimeComparisonFunction extends
+    TemporalComparisonFunction<Object, DateTimeType> {
 
   private static final long serialVersionUID = -2449192480093120211L;
 
   @Override
-  protected Function<String, DateTimeType> parseEncodedValue() {
-    return DateTimeType::new;
+  protected Function<Object, DateTimeType> parseEncodedValue() {
+    return (object) -> {
+      if (object instanceof Timestamp) {
+        final Instant instant = ((Timestamp) object).toInstant();
+        return new DateTimeType(Date.from(instant));
+      } else {
+        return new DateTimeType((String) object);
+      }
+    };
   }
 
 }
