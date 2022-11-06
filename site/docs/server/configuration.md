@@ -56,7 +56,7 @@ Additionally, you can set any variable supported by Spring Boot, see
   FHIR extensions.
 - `pathling.encoding.openTypes` - (default: `boolean`,`code`,`date`,`dateTime`,
   `decimal`,`integer`,`string`,`Coding`,`CodeableConcept`,`Address`,`Identifier`
-  ,`Reference`) The list of types that are encoded within open types`,`
+  ,`Reference`) The list of types that are encoded within open types,
   such as extensions. This default list was taken from the data types that are
   common to extensions found in widely-used IGs, such as the US and AU base
   profiles. In general, you will get the best query performance by encoding your
