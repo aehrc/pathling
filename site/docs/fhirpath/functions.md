@@ -200,6 +200,9 @@ based on whether each concept is a member of the
 [ValueSet](https://hl7.org/fhir/R4/valueset.html) with the specified
 [url](https://hl7.org/fhir/R4/valueset-definitions.html#ValueSet.url).
 
+For a `CodeableConcept`, the function will return `true` if any of
+the codings are members of the value set.
+
 :::note
 The `memberOf` function is a terminology function, which means that it requires
 a configured
