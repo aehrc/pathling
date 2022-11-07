@@ -28,6 +28,7 @@ import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import au.csiro.pathling.sql.udf.SqlFunction3;
+import au.csiro.pathling.sql.udf.SqlFunction4;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -66,9 +67,10 @@ class UnitTestDependencies {
       @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
       @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
       @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
+      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4,
       @Nonnull final Optional<SparkListener> sparkListener) {
     return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2,
-        sqlFunction3);
+        sqlFunction3, sqlFunction4);
   }
 
   @Bean

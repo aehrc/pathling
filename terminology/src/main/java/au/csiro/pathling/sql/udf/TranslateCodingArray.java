@@ -14,6 +14,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -25,11 +26,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+
 @Component
 @Profile("core|unit-test")
 @Slf4j
 public class TranslateCodingArray implements
-    SqlFunction3<WrappedArray<Row>, String, String, Row[]> {
+    SqlFunction4<WrappedArray<Row>, String, Boolean, String, Row[]> {
 
   private static final long serialVersionUID = 7605853352299165569L;
 
@@ -57,7 +60,7 @@ public class TranslateCodingArray implements
   @Nullable
   @Override
   public Row[] call(@Nullable final WrappedArray<Row> codingsArrayRow,
-      @Nullable final String conceptMapUri,
+      @Nullable final String conceptMapUri, @Nullable Boolean reverse,
       @Nullable final String equivalences) throws Exception {
     if (conceptMapUri == null || codingsArrayRow == null) {
       return null;
@@ -66,16 +69,23 @@ public class TranslateCodingArray implements
     final Set<String> includeEquivalences = (equivalences == null || equivalences.isBlank())
                                             ? ImmutableSet.of("equivalent")
                                             : Strings.parseCsvList(equivalences,
-                                                    String::toString).stream()
+                                                    wrapInUserInputError(
+                                                        ConceptMapEquivalence::fromCode)).stream()
+                                                .map(ConceptMapEquivalence::toCode)
                                                 .collect(Collectors.toUnmodifiableSet());
+
+    // TODO: better defaults and unify with the non array version
+    final boolean resolvedReverse = reverse != null
+                                    ? reverse
+                                    : false;
 
     final TerminologyService terminologyService = terminologyServiceFactory.buildService(
         log);
-    // TODO: make codings unique
+    // TODO: make codings unique maybe without using ImmutableCoding
     return Streams.stream(JavaConverters.asJavaIterable(codingsArrayRow))
         .map(CodingEncoding::decode)
         .flatMap(coding -> TranslateMapping.entriesFromParameters(
-            terminologyService.translateCoding(coding, conceptMapUri, false)))
+            terminologyService.translateCoding(coding, conceptMapUri, resolvedReverse)))
         .filter(entry -> includeEquivalences.contains(entry.getEquivalence().getValue()))
         .map(TranslationEntry::getConcept)
         .map(ImmutableCoding::of)

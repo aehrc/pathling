@@ -12,21 +12,25 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.constraints.Null;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+
 @Component
 @Profile("core|unit-test")
 @Slf4j
-public class TranslateCoding implements SqlFunction3<Row, String, String, Row[]> {
+public class TranslateCoding implements SqlFunction4<Row, String, Boolean, String, Row[]> {
 
   private static final long serialVersionUID = 7605853352299165569L;
 
@@ -54,18 +58,18 @@ public class TranslateCoding implements SqlFunction3<Row, String, String, Row[]>
   @Nullable
   @Override
   public Row[] call(@Nullable final Row codingRow, @Nullable final String conceptMapUri,
-      @Nullable final String equivalences) throws Exception {
+      @Nullable final Boolean reverse, @Nullable final String equivalences) throws Exception {
     if (conceptMapUri == null || codingRow == null) {
       return null;
     }
 
     final Coding coding = CodingEncoding.decode(codingRow);
     // TODO: Somewhere here add validation for invalid codings
+    // TODO: Provide better defaults
     final Parameters parameters = terminologyServiceFactory.buildService(log)
-        .translateCoding(coding, conceptMapUri, true);
-    if (parameters == null) {
-      return null;
-    }
+        .translateCoding(coding, conceptMapUri, reverse != null
+                                                ? reverse
+                                                : false);
     // We need more logic here now
     final Stream<TranslationEntry> entries = TranslateMapping.entriesFromParameters(
         parameters);
@@ -73,7 +77,9 @@ public class TranslateCoding implements SqlFunction3<Row, String, String, Row[]>
     final Set<String> includeEquivalences = (equivalences == null || equivalences.isBlank())
                                             ? ImmutableSet.of("equivalent")
                                             : Strings.parseCsvList(equivalences,
-                                                    String::toString).stream()
+                                                    wrapInUserInputError(
+                                                        ConceptMapEquivalence::fromCode)).stream()
+                                                .map(ConceptMapEquivalence::toCode)
                                                 .collect(Collectors.toUnmodifiableSet());
 
     return entries

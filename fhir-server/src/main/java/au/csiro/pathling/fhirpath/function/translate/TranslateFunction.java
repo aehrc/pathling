@@ -19,10 +19,10 @@ package au.csiro.pathling.fhirpath.function.translate;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.lit;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -33,7 +33,8 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyFunctions;
+import au.csiro.pathling.sql.udf.TranslateCoding;
+import au.csiro.pathling.sql.udf.TranslateCodingArray;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,11 +43,9 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
-import org.slf4j.MDC;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set Codings
@@ -112,8 +111,8 @@ public class TranslateFunction implements NamedFunction {
      */
     @Nonnull
     public <T extends Type> T getValue(final int index, @Nonnull final Class<T> valueClass) {
-      return Objects
-          .requireNonNull(valueClass.cast(((LiteralPath) arguments.get(index)).getValue()));
+      return Objects.requireNonNull(
+          valueClass.cast(((LiteralPath<?>) arguments.get(index)).getValue()));
     }
 
     /**
@@ -141,57 +140,79 @@ public class TranslateFunction implements NamedFunction {
 
     final boolean isCodeableConcept = isCodeableConcept(inputPath);
 
-    final Column codingArrayCol = isCodeableConcept
-                                  ? conceptColumn.getField("coding")
-                                  : functions.when(conceptColumn.isNotNull(),
-                                          functions.array(conceptColumn))
-                                      .otherwise(functions.lit(null));
-
     // The definition of the result is always the Coding element.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final ElementDefinition resultDefinition = isCodeableConcept
                                                ? inputPath.getChildElement("coding").get()
                                                : inputPath.getDefinition().get();
 
-    // Prepare the data which will be used within the map operation. All of these things must be
-    // Serializable.
-    final TerminologyServiceFactory terminologyServiceFactory =
-        checkPresent(inputContext.getTerminologyServiceFactory());
+    // TODO: terminology-caching : remove or validate
+    // final Column codingArrayCol = isCodeableConcept
+    //                               ? conceptColumn.getField("coding")
+    //                               : functions.when(conceptColumn.isNotNull(),
+    //                                       functions.array(conceptColumn))
+    //                                   .otherwise(functions.lit(null));
+    //
+    // // Prepare the data which will be used within the map operation. All of these things must be
+    // // Serializable.
+    // final TerminologyServiceFactory terminologyServiceFactory =
+    //     checkPresent(inputContext.getTerminologyServiceFactory());
+    //
+    // final Arguments arguments = Arguments.of(input);
+    //
+    // final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
+    // final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
+    //     .booleanValue();
+    // final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
+    //     .asStringValue();
+    // final Dataset<Row> dataset = inputPath.getDataset();
+    //
+    // final Dataset<Row> translatedDataset = TerminologyFunctions.translate(
+    //     codingArrayCol, conceptMapUrl, reverse, equivalence, dataset, "result",
+    //     terminologyServiceFactory, MDC.get("requestId")
+    // );
+    //
+    // // The result is an array of translations per each input element, which we now
+    // // need to explode in the same way as for path traversal, creating unique element ids.
+    // final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
+    // final Dataset<Row> resultDataset = inputPath
+    //     .explodeArray(translatedDataset, translatedDataset.col("result"), valueAndEidColumns);
+    // // Construct a new result expression.
+    //
 
     final Arguments arguments = Arguments.of(input);
-
-    final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
-    final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
-        .booleanValue();
-    final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
-        .asStringValue();
+    final Column conceptMapUrl = lit(arguments.getValue(0, StringType.class).asStringValue());
+    final Column reverse = lit(arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
+        .booleanValue());
+    final Column equivalence = lit(arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
+        .asStringValue());
     final Dataset<Row> dataset = inputPath.getDataset();
 
-    final Dataset<Row> translatedDataset = TerminologyFunctions.translate(
-        codingArrayCol, conceptMapUrl, reverse, equivalence, dataset, "result",
-        terminologyServiceFactory, MDC.get("requestId")
-    );
+    // TODO: add reverse
 
-    // The result is an array of translations per each input element, which we now
-    // need to explode in the same way as for path traversal, creating unique element ids.
+    final Column translatedCodings = isCodeableConcept
+                                     ? callUDF(TranslateCodingArray.FUNCTION_NAME,
+        conceptColumn.getField("coding"), conceptMapUrl, reverse, equivalence)
+                                     : callUDF(TranslateCoding.FUNCTION_NAME, conceptColumn,
+                                         conceptMapUrl, reverse, equivalence);
+
+    // // The result is an array of translations per each input element, which we now
+    // // need to explode in the same way as for path traversal, creating unique element ids.
     final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
     final Dataset<Row> resultDataset = inputPath
-        .explodeArray(translatedDataset, translatedDataset.col("result"), valueAndEidColumns);
-    // Construct a new result expression.
+        .explodeArray(dataset, translatedCodings, valueAndEidColumns);
+
     final String expression = expressionFromInput(input, NAME);
 
-    return ElementPath
-        .build(expression, resultDataset, idColumn, Optional.of(valueAndEidColumns.getRight()),
-            valueAndEidColumns.getLeft(),
-            false, inputPath.getCurrentResource(), inputPath.getThisColumn(),
-            resultDefinition);
+    return ElementPath.build(expression, resultDataset, idColumn,
+        Optional.of(valueAndEidColumns.getRight()), valueAndEidColumns.getLeft(), false,
+        inputPath.getCurrentResource(), inputPath.getThisColumn(), resultDefinition);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
     final ParserContext context = input.getContext();
-    checkUserInput(
-        context.getTerminologyServiceFactory()
-            .isPresent(), "Attempt to call terminology function " + NAME
+    checkUserInput(context.getTerminologyServiceFactory().isPresent(),
+        "Attempt to call terminology function " + NAME
             + " when terminology service has not been configured");
 
     final FhirPath inputPath = input.getInput();

@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
@@ -59,6 +60,7 @@ public final class TranslateMapping extends BaseMapping {
    */
   @SuppressWarnings("WeakerAccess")
   @Data
+  @AllArgsConstructor
   @NoArgsConstructor
   public static class TranslationEntry {
 
@@ -67,6 +69,11 @@ public final class TranslateMapping extends BaseMapping {
 
     @Nonnull
     private CodeType equivalence;
+
+    public static TranslationEntry of(@Nonnull final ConceptMapEquivalence equivalence,
+        @Nonnull final Coding coding) {
+      return new TranslationEntry(coding, new CodeType(equivalence.toCode()));
+    }
   }
 
   /**
@@ -113,7 +120,7 @@ public final class TranslateMapping extends BaseMapping {
       @Nonnull final Collection<ConceptMapEquivalence> equivalences,
       @Nonnull final FhirContext fhirContext) {
 
-    checkResponse("batch-response" .equals(responseBundle.getType().toCode()),
+    checkResponse("batch-response".equals(responseBundle.getType().toCode()),
         "Expected bundle type 'batch-response' but got: '%s'",
         responseBundle.getType().toCode());
     checkResponse(inputCodes.size() == responseBundle.getEntry().size(),
@@ -146,7 +153,7 @@ public final class TranslateMapping extends BaseMapping {
       @Nonnull final Parameters parameters) {
     return parameters.getParameterBool("result")
            ? parameters.getParameter().stream()
-               .filter(pc -> "match" .equals(pc.getName()))
+               .filter(pc -> "match".equals(pc.getName()))
                .map(pc -> partToBean(pc, TranslationEntry::new))
            : Stream.empty();
   }

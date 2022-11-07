@@ -2,9 +2,11 @@ package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -14,6 +16,7 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,35 +81,17 @@ public class UdfTest {
   }
 
   private void setupValidateCodingExpectations() {
-    when(terminologyService.validate(any(), any())).thenReturn(RESULT_FALSE);
-    when(terminologyService.validate(eq(CODING_1_VALUE_SET_URI), deepEq(CODING_1))).thenReturn(
-        RESULT_TRUE);
-    when(terminologyService.validate(eq(CODING_2_VALUE_SET_URI), deepEq(CODING_2))).thenReturn(
-        RESULT_TRUE);
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withValueSet(CODING_1_VALUE_SET_URI, CODING_1)
+        .withValueSet(CODING_2_VALUE_SET_URI, CODING_2);
   }
 
   private void setupTranslateExpectations() {
-    final Parameters translateResponse = new Parameters()
-        .setParameter("result", true);
-
-    final ParametersParameterComponent matchParameter1 = translateResponse.addParameter()
-        .setName("match");
-    matchParameter1.addPart().setName("equivalence").setValue(
-        new CodeType("relatedto"));
-    matchParameter1.addPart().setName("concept").setValue(
-        CODING_5);
-
-    final ParametersParameterComponent matchParameter2 = translateResponse.addParameter()
-        .setName("match");
-    matchParameter2.addPart().setName("equivalence").setValue(
-        new CodeType("relatedto"));
-    matchParameter2.addPart().setName("concept").setValue(
-        CODING_4);
-
-    when(terminologyService.translateCoding(any(), any(), anyBoolean())).thenReturn(
-        RESULT_FALSE);
-    when(terminologyService.translateCoding(deepEq(CODING_1), any(), anyBoolean()
-    )).thenReturn(translateResponse);
+    TerminologyServiceHelpers.setupTranslate(terminologyService)
+        .withTranslations(CODING_1, "someUrl",
+            TranslationEntry.of(ConceptMapEquivalence.RELATEDTO, CODING_5),
+            TranslationEntry.of(ConceptMapEquivalence.RELATEDTO, CODING_4)
+        );
   }
 
   @Test

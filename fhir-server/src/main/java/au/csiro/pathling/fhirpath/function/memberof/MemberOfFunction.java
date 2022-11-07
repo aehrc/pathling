@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
+import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
@@ -33,6 +34,7 @@ import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.udf.ValidateCoding;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.sql.udf.ValidateCodingArray;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -61,11 +63,6 @@ public class MemberOfFunction implements NamedFunction {
   public MemberOfFunction() {
   }
 
-  private boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
-    return (fhirPath instanceof ElementPath &&
-        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) fhirPath).getFhirType()));
-  }
-
   @Nonnull
   @Override
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
@@ -76,33 +73,41 @@ public class MemberOfFunction implements NamedFunction {
     final Column idColumn = inputPath.getIdColumn();
     final Column conceptColumn = inputPath.getValueColumn();
 
-    // final Column resultColumn = (isCodeableConcept(inputPath))
-    //                             ? lit(null)
-    //                             : callUDF(ValidateCoding.FUNCTION_NAME,
-    //                                 lit(argument.getValue().asStringValue()),
-    //                                 conceptColumn);
+    final Column valueSetUrlColumn = lit(argument.getValue().asStringValue());
+
+    final Column resultColumn = (isCodeableConcept(inputPath))
+                                ? callUDF(ValidateCodingArray.FUNCTION_NAME, valueSetUrlColumn,
+        conceptColumn.getField("coding"))
+                                : callUDF(ValidateCoding.FUNCTION_NAME, valueSetUrlColumn,
+                                    conceptColumn);
+    final Dataset<Row> resultDataset = inputPath.getDataset();
+
+    // TODO: teminolog-cachig: maybe the switcheable version
+    // final Column inputColumn = (isCodeableConcept(inputPath))
+    //                            ? lit(null)
+    //                            : conceptColumn;
     //
-    final Column inputColumn = (isCodeableConcept(inputPath))
-                               ? lit(null)
-                               : conceptColumn;
+    // final Dataset<Row> inputDataset = inputPath.getDataset();
+    // log.debug("Input dataset has {} partitions", inputDataset.rdd().getNumPartitions());
+    //
+    // // Prepare the data which will be used within the map operation. All of these things must be
+    // // Serializable.
+    // final TerminologyServiceFactory terminologyServiceFactory =
+    //     checkPresent(input.getContext().getTerminologyServiceFactory());
+    // final String valueSetUri = argument.getValue().getValueAsString();
+    //
+    // final Result result = terminologyServiceFactory.memberOf(inputDataset,
+    //     inputColumn, valueSetUri);
+    //
+    // final Column resultColumn = result.getColumn();
+    // final Dataset<Row> resultDataset = result.getDataset();
 
-    final Dataset<Row> inputDataset = inputPath.getDataset();
-    log.debug("Input dataset has {} partitions", inputDataset.rdd().getNumPartitions());
-
-    // Prepare the data which will be used within the map operation. All of these things must be
-    // Serializable.
-    final TerminologyServiceFactory terminologyServiceFactory =
-        checkPresent(input.getContext().getTerminologyServiceFactory());
-    final String valueSetUri = argument.getValue().getValueAsString();
-
-    final Result result = terminologyServiceFactory.memberOf(inputDataset,
-        inputColumn, valueSetUri);
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, result.getDataset(), idColumn, inputPath.getEidColumn(),
-            result.getColumn(),
+        .build(expression, resultDataset, idColumn, inputPath.getEidColumn(),
+            resultColumn,
             inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }

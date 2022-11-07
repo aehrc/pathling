@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.sql.udf.SqlFunction4;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -69,7 +70,8 @@ public class Spark {
       @Nonnull final Optional<SparkListener> sparkListener,
       @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
       @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
-      @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3) {
+      @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
+      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4) {
     log.debug("Creating Spark session");
 
     // Pass through Spark configuration.
@@ -91,6 +93,9 @@ public class Spark {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
     for (final SqlFunction3<?, ?, ?, ?> function : sqlFunction3) {
+      spark.udf().register(function.getName(), function, function.getReturnType());
+    }
+    for (final SqlFunction4<?, ?, ?, ?, ?> function : sqlFunction4) {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
 
