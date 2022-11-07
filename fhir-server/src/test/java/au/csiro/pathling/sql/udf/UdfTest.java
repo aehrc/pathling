@@ -269,6 +269,7 @@ public class UdfTest {
         functions.callUDF(TranslateCoding.FUNCTION_NAME,
             ds.col("code"),
             functions.lit("someUrl"),
+            functions.lit(null),
             functions.lit("relatedto")
         ));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
@@ -300,6 +301,7 @@ public class UdfTest {
         functions.callUDF(TranslateCodingArray.FUNCTION_NAME,
             ds.col("codings"),
             functions.lit("someUrl"),
+            functions.lit(null),
             functions.lit("relatedto")
         ));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
