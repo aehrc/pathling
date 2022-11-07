@@ -21,7 +21,7 @@ The following operations support async:
 - [Aggregate](./operations/aggregate)
 - [Extract](./operations/extract)
 
-Async jobs references are stored in memory. If the server is restarted before
+Async job references are stored in memory. If the server is restarted before
 the completion of the job, the initiation request will need to be resent.
 
 If you're using JavaScript, you can use
