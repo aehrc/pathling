@@ -21,6 +21,7 @@ import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.util.Collection;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 /**
@@ -40,12 +41,14 @@ public interface TerminologyService {
    * @param conceptMapUrl the url of the concept map to use for translation.
    * @param reverse reverse true if true.
    * @param equivalences the equivalences to consider for translation.
+   * @param target Identifies the value set in which the translation is sought
    * @return the translator instance with requested translation.
    */
   @Nonnull
   ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,
       @Nonnull final String conceptMapUrl,
-      boolean reverse, @Nonnull final Collection<ConceptMapEquivalence> equivalences);
+      boolean reverse, @Nonnull final Collection<ConceptMapEquivalence> equivalences,
+      @Nullable final String target);
 
   /**
    * Creates a transitive closure representation of subsumes relation for the given set of codings.

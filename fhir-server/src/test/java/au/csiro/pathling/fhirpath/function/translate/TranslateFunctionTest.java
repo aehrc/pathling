@@ -173,7 +173,7 @@ class TranslateFunctionTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), null))
         .thenReturn(returnedConceptTranslator);
 
     // Prepare the inputs to the function.
@@ -230,7 +230,7 @@ class TranslateFunctionTest {
 
     verify(terminologyService)
         .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP1_URI), eq(false),
-            eq(expectedEquivalences));
+            eq(expectedEquivalences), null);
     verifyNoMoreInteractions(terminologyService);
   }
 
@@ -301,7 +301,7 @@ class TranslateFunctionTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), null))
         .thenReturn(returnedConceptTranslator);
 
     // Prepare the inputs to the function.
@@ -366,7 +366,7 @@ class TranslateFunctionTest {
 
     verify(terminologyService)
         .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP2_URI), eq(true),
-            eq(expectedEquivalences));
+            eq(expectedEquivalences), null);
     verifyNoMoreInteractions(terminologyService);
   }
 

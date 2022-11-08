@@ -271,7 +271,7 @@ public class PathlingContextTest {
     final ConceptTranslator conceptTranslator = mock(ConceptTranslator.class,
         withSettings().serializable());
     when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
-    when(terminologyService.translate(any(), eq(conceptMapUri), eq(false), eq(equivalences)))
+    when(terminologyService.translate(any(), eq(conceptMapUri), eq(false), eq(equivalences), any()))
         .thenReturn(conceptTranslator);
     when(conceptTranslator.translate(any())).thenReturn(List.of(coding2.toCoding()));
 
@@ -287,7 +287,7 @@ public class PathlingContextTest {
     final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
     final Column codingColumn = col("coding");
     final Dataset<Row> result = pathlingContext.translate(codingDataFrame, codingColumn,
-        conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), "result");
+        conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), null, "result");
 
     final List<Row> rows = result.select("id", "result").collectAsList();
     assertEquals(RowFactory.create("foo", CodingEncoding.encode(coding2.toCoding())), rows.get(0));
