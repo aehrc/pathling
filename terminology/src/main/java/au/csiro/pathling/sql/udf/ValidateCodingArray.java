@@ -33,6 +33,6 @@ public class ValidateCodingArray extends ValidateCodingBase implements
   @Override
   public Boolean call(@Nullable final String url,
       @Nullable final WrappedArray<Row> codingArrayRow) {
-    return doCall(url, decodeMany(codingArrayRow));
+    return doCall(url, TerminologyUdfHelpers.decodeMany(codingArrayRow));
   }
 }

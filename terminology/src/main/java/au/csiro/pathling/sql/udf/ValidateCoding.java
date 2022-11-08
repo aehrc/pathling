@@ -30,6 +30,6 @@ public class ValidateCoding extends ValidateCodingBase implements
   @Nullable
   @Override
   public Boolean call(@Nullable final String url, @Nullable final Row codingRow) throws Exception {
-    return doCall(url, decodeOne(codingRow));
+    return doCall(url, TerminologyUdfHelpers.decodeOne(codingRow));
   }
 }
