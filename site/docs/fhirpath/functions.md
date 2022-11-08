@@ -391,7 +391,7 @@ unique to the Pathling implementation.
 ## translate
 
 ```
-collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false, equivalence = 'equivalent') : collection<Coding>
+collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false, equivalence = 'equivalent', target?: string) : collection<Coding>
 ```
 
 When invoked on a [Coding](./data-types#coding)-valued element, returns any
@@ -405,6 +405,9 @@ The `equivalence` parameter is a comma-delimited set of values from
 the [ConceptMapEquivalence](https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html)
 ValueSet, and is used to filter the mappings returned to only those that have an
 equivalence value in this list.
+
+The `target` parameter identifies the value set in which a translation is 
+sought &mdash; a scope for the translation.
 
 Example:
 
