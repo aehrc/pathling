@@ -14,11 +14,9 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -27,13 +25,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static au.csiro.pathling.test.helpers.FhirDeepMatcher.deepEq;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 
 @Tag("UnitTest")
 @SpringBootTest

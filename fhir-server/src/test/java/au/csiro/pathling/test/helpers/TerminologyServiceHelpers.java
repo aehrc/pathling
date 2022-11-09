@@ -3,11 +3,16 @@ package au.csiro.pathling.test.helpers;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.ValueSet;
 import javax.annotation.Nonnull;
 
-import static au.csiro.pathling.test.helpers.FhirDeepMatcher.deepEq;
+import java.util.stream.IntStream;
+
+import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
+import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,12 +34,23 @@ public class TerminologyServiceHelpers {
       when(mockService.validate(any(), any())).thenReturn(RESULT_FALSE);
     }
 
+    @Nonnull
     public ValidateExpectations withValueSet(@Nonnull final String valueSetUrl,
         @Nonnull final Coding... codings) {
       for (Coding coding : codings) {
-        when(mockService.validate(eq(valueSetUrl), deepEq(coding))).thenReturn(RESULT_TRUE);
+        when(mockService.validate(eq(valueSetUrl), codingEq(coding))).thenReturn(RESULT_TRUE);
       }
       return this;
+    }
+
+    @Nonnull
+    public ValidateExpectations fromValueSet(@Nonnull final String valueSetUri,
+        @Nonnull final ValueSet valueSet) {
+      final Coding[] codings = valueSet.getExpansion().getContains().stream()
+          .map(contains -> new Coding(contains.getSystem(), contains.getCode(),
+              contains.getDisplay()))
+          .toArray(Coding[]::new);
+      return withValueSet(valueSetUri, codings);
     }
   }
 
@@ -55,6 +71,20 @@ public class TerminologyServiceHelpers {
       return withTranslations(coding, conceptMapUrl, false, translations);
     }
 
+
+    public TranslateExpectations withMockTranslations(final @Nonnull Coding sourceCoding,
+        final @Nonnull String conceptMapUrl, final @Nonnull String toSystem,
+        final int noOfMappings) {
+
+      final TranslationEntry[] translations = IntStream.range(0, noOfMappings)
+          .mapToObj(i -> TerminologyHelpers.mockCoding(toSystem, sourceCoding.getCode(), i))
+          .map(coding -> TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, coding))
+          .toArray(TranslationEntry[]::new);
+
+      return withTranslations(sourceCoding, conceptMapUrl, false, translations);
+    }
+
+
     public TranslateExpectations withTranslations(
         final @Nonnull Coding coding,
         final @Nonnull String conceptMapUrl,
@@ -69,7 +99,8 @@ public class TerminologyServiceHelpers {
         matchParameter1.addPart().setName("equivalence").setValue(entry.getEquivalence());
         matchParameter1.addPart().setName("concept").setValue(entry.getConcept());
       }
-      when(mockService.translateCoding(deepEq(coding), eq(conceptMapUrl), anyBoolean())).thenReturn(
+      when(
+          mockService.translateCoding(codingEq(coding), eq(conceptMapUrl), eq(reverse))).thenReturn(
           translateResponse);
       return this;
     }

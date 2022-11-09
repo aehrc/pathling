@@ -25,13 +25,15 @@ import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_bbd33563;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff242e;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_195662009;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.mockCoding;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -42,20 +44,19 @@ import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.terminology.ConceptTranslator;
 import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
 import java.util.Collections;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -66,10 +67,24 @@ import org.junit.jupiter.api.Test;
  * @author Piotr Szul
  */
 public class ParserTest extends AbstractParserTest {
-  
+
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
     return Assertions.assertThrows(errorType, () -> parser.parse(expression));
+  }
+
+  private TranslateExpectations setupMockTranslationFor_195662009_444814009(
+      final String conceptMapUrl) {
+    return TerminologyServiceHelpers.setupTranslate(terminologyService)
+        .withMockTranslations(CD_SNOMED_195662009,
+            conceptMapUrl, "uuid:test-system", 3)
+        .withMockTranslations(CD_SNOMED_444814009,
+            conceptMapUrl, "uuid:test-system", 2);
+  }
+
+  private void setupMockTranslationFor_195662009_444814009() {
+    setupMockTranslationFor_195662009_444814009(
+        "http://snomed.info/sct?fhir_cm=900000000000526001");
   }
 
   @Test
@@ -335,9 +350,10 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testWhereWithMemberOf() {
-    when(terminologyService.intersect(any(), any()))
-        .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
 
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withValueSet("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+            CD_SNOMED_403190006, CD_SNOMED_284551006);
     assertThatResultOf(
         "reverseResolve(Condition.subject).where("
             + "$this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'))"
@@ -446,15 +462,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testTranslateFunction() {
-    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
-        .toSystem("uuid:test-system")
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
-        .build();
 
-    // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
-        .thenReturn(returnedConceptTranslator);
+    setupMockTranslationFor_195662009_444814009();
 
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').code")
@@ -465,27 +474,16 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testTranslateWithWhereAndTranslate() {
 
-    final ConceptTranslator conceptTranslator1 = ConceptTranslatorBuilder
-        .toSystem("uuid:test-system")
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
-        .build();
-
-    final ConceptTranslator conceptTranslator2 = ConceptTranslatorBuilder
-        .toSystem("uuid:other-system")
-        .putTimes(new SimpleCoding("uuid:test-system", "444814009-0"), 1)
-        .putTimes(new SimpleCoding("uuid:test-system", "444814009-1"), 2)
-        .build();
-
-    // Create a mock terminology client.
-    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any()))
-        .thenReturn(conceptTranslator1);
-    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any()))
-        .thenReturn(conceptTranslator2);
-
+    setupMockTranslationFor_195662009_444814009("uuid:cm=1")
+        .withMockTranslations(mockCoding("uuid:test-system", "444814009", 0), "uuid:cm=2",
+            "uuid:other-system", 1)
+        .withMockTranslations(mockCoding("uuid:test-system", "444814009", 1), "uuid:cm=2",
+            "uuid:other-system", 2);
+    
     assertThatResultOf(ResourceType.CONDITION,
         "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=13).code")
         .selectOrderedResult()
+        .debugAllRows()
         .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
   }
 
@@ -665,15 +663,7 @@ public class ParserTest extends AbstractParserTest {
     // This is a special case as the codings here are created from the terminology server response
     // using the hardcoded encoding core in CodingEncoding.
 
-    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
-        .toSystem("uuid:test-system")
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
-        .build();
-
-    // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
-        .thenReturn(returnedConceptTranslator);
+    setupMockTranslationFor_195662009_444814009();
 
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
@@ -755,7 +745,7 @@ public class ParserTest extends AbstractParserTest {
         .build();
     parser = new Parser(parserContext);
   }
-  
+
   @Test
   void testQuantityMultiplicationAndDivision() {
     assertThatResultOf(
@@ -765,7 +755,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.csv");
   }
-  
+
   @Test
   void testQuantityAdditionSubtractionAndEquality() {
     //  33 'mmol/L == 19873051110000000000000000 'm-3'
@@ -791,7 +781,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
   }
-  
+
   @Test
   void testTraversalToUnsupportedReferenceChild() {
     final String expression = "reverseResolve(MedicationRequest.subject).requester.identifier";
@@ -799,5 +789,5 @@ public class ParserTest extends AbstractParserTest {
         expression);
     assertEquals("No such child: " + expression, error.getMessage());
   }
- 
+
 }

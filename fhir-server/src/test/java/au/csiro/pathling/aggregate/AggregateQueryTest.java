@@ -18,7 +18,10 @@
 package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsStream;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedCoding;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,6 +31,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.ValueSet;
@@ -270,12 +274,17 @@ class AggregateQueryTest extends AggregateExecutorTest {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.CONDITION, subjectResource);
 
-    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
-        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
-    when(terminologyService.intersect(any(), any()))
-        .thenReturn(setOfSimpleFrom(mockExpansion));
-
     final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
+
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withValueSet(valueSetUrl,
+            CD_SNOMED_403190006, CD_SNOMED_284551006);
+
+    // final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
+    //     getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
+    // when(terminologyService.intersect(any(), any()))
+    //     .thenReturn(setOfSimpleFrom(mockExpansion));
+
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
         .withGrouping("reverseResolve(Condition.subject).code.memberOf('" + valueSetUrl + "')")

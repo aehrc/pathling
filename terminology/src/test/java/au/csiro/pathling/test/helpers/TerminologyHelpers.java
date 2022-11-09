@@ -52,14 +52,23 @@ public final class TerminologyHelpers {
 
 
   public static final Coding CD_SNOMED_403190006 = snomedCoding("403190006",
-      "Epidermal burn of skin");
+      "First degree burn");
 
   public static final Coding CD_SNOMED_284551006 = snomedCoding("284551006",
       "Laceration of foot");
 
+
+  public static final Coding CD_SNOMED_444814009 = snomedCoding("444814009",
+      "Viral sinusitis (disorder)");
+
+  public static final Coding CD_SNOMED_195662009 = snomedCoding("195662009",
+      "Acute viral pharyngitis (disorder)");
+
+
   @SuppressWarnings("unused")
   public static Coding CD_SNOMED_63816008 = snomedCoding("63816008",
       "Left hepatectomy");
+
 
   // Subsumes CD_SNOMED_63816008
   public static final Coding CD_SNOMED_107963000 = snomedCoding("107963000",
@@ -136,16 +145,22 @@ public final class TerminologyHelpers {
   }
 
   @Nonnull
-  private static Coding snomedCoding(@Nonnull final String code,
+  public static Coding snomedCoding(@Nonnull final String code,
       @Nonnull final String displayName) {
     return new Coding(SNOMED_URI, code, displayName);
   }
 
   @Nonnull
-  private static Coding snomedVersionedCoding(@Nonnull final String code,
+  public static Coding snomedVersionedCoding(@Nonnull final String code,
       @Nonnull final String displayName) {
     return newVersionedCoding(SNOMED_URI, code, SNOMED_VERSION, displayName);
   }
 
 
+  @Nonnull
+  public static Coding mockCoding(@Nonnull final String system, @Nonnull final String code,
+      final int index) {
+    return new Coding(system, code + "-" + index, "Display-" + index);
+  }
+  
 }

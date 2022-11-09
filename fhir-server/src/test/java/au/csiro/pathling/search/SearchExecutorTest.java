@@ -31,6 +31,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -103,9 +104,12 @@ class SearchExecutorTest {
 
     final ValueSet valueSet = (ValueSet) jsonParser.parseResource(getResourceAsStream(
         "txResponses/SearchExecutorTest/simpleSearchWithMemberOf.ValueSet.json"));
-    when(terminologyService.intersect(any(), any()))
-        .thenReturn(setOfSimpleFrom(valueSet));
 
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .fromValueSet(
+            "http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009",
+            valueSet);
+    
     final SearchExecutor executor = builder.build();
     assertResponse("SearchExecutorTest/simpleSearchWithMemberOf.Bundle.json", executor);
   }

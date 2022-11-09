@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.test.helpers.FhirDeepMatcher.deepEq;
+import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
