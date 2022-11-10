@@ -438,8 +438,16 @@ public class PathlingContext {
                                        ? c.getTokenExpiryTolerance()
                                        : DEFAULT_TOKEN_EXPIRY_TOLERANCE);
 
+    final int terminologySocketTimeout = c.getTerminologySocketTimeout() != null
+                                         ? c.getTerminologySocketTimeout()
+                                         : DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT;
+
+    final boolean verboseRequestLogging = c.getTerminologyVerboseRequestLogging() != null
+                                          ? c.getTerminologyVerboseRequestLogging()
+                                          : false;
+
     return new DefaultTerminologyServiceFactory(FhirContext.forR4(), resolvedTerminologyServerUrl,
-        DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT, false, authConfig);
+        terminologySocketTimeout, verboseRequestLogging, authConfig);
   }
 
   private static String getRequestId() {
