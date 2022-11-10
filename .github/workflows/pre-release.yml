@@ -7,6 +7,8 @@ on:
     workflows: [ "Test" ]
     types:
       - completed
+    branches:
+      - 'release/*'
 
 jobs:
   deploy-docker:
