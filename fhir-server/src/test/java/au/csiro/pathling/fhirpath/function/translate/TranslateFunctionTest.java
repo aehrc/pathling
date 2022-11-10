@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -173,7 +174,7 @@ class TranslateFunctionTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any(), null))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), isNull()))
         .thenReturn(returnedConceptTranslator);
 
     // Prepare the inputs to the function.
@@ -230,7 +231,7 @@ class TranslateFunctionTest {
 
     verify(terminologyService)
         .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP1_URI), eq(false),
-            eq(expectedEquivalences), null);
+            eq(expectedEquivalences), isNull());
     verifyNoMoreInteractions(terminologyService);
   }
 
@@ -301,7 +302,7 @@ class TranslateFunctionTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any(), null))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), isNull()))
         .thenReturn(returnedConceptTranslator);
 
     // Prepare the inputs to the function.
@@ -366,7 +367,7 @@ class TranslateFunctionTest {
 
     verify(terminologyService)
         .translate(eq(expectedSourceCodings), eq(CONCEPT_MAP2_URI), eq(true),
-            eq(expectedEquivalences), null);
+            eq(expectedEquivalences), isNull());
     verifyNoMoreInteractions(terminologyService);
   }
 

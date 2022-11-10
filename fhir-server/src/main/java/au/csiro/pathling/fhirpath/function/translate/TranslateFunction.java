@@ -113,7 +113,13 @@ public class TranslateFunction implements NamedFunction {
     @Nullable
     private <T extends Type> T getNullableValue(final int index,
         @Nonnull final Class<T> valueClass) {
-      return valueClass.cast(((LiteralPath) arguments.get(index)).getValue());
+      final LiteralPath literalPath;
+      try {
+        literalPath = (LiteralPath) arguments.get(index);
+      } catch (final IndexOutOfBoundsException e) {
+        return null;
+      }
+      return valueClass.cast(literalPath.getValue());
     }
 
     /**

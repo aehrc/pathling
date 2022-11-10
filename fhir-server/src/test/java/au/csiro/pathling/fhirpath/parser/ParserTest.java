@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -478,9 +479,9 @@ public class ParserTest extends AbstractParserTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any(), null))
+    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any(), isNull()))
         .thenReturn(conceptTranslator1);
-    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any(), null))
+    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any(), isNull()))
         .thenReturn(conceptTranslator2);
 
     assertThatResultOf(ResourceType.CONDITION,
@@ -672,7 +673,7 @@ public class ParserTest extends AbstractParserTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any(), null))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), isNull()))
         .thenReturn(returnedConceptTranslator);
 
     assertThatResultOf(ResourceType.CONDITION,
