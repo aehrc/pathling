@@ -59,6 +59,9 @@ public class TerminologyConfiguration {
   private boolean verboseLogging;
 
   @NotNull
+  private HttpClientConfiguration client;
+
+  @NotNull
   private TerminologyAuthConfiguration authentication;
 
 }

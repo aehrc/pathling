@@ -118,11 +118,10 @@ public class DefaultTerminologyService implements TerminologyService {
         .filter(coding -> knownCodeSystems.contains(coding.getSystem()));
   }
 
-  @Nullable
+  @Nonnull
   @Override
   public Parameters validate(@Nonnull final String url, @Nonnull final Coding coding) {
-    return terminologyClient.validateCoding(new UriType(url), new UriType(coding.getSystem()),
-        new StringType(coding.getVersion()), new CodeType(coding.getCode()));
+    throw new UnsupportedOperationException();
   }
 
   @Nonnull

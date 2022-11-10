@@ -58,6 +58,18 @@ pathling:
     # the server and the terminology service.
     verboseLogging: false
     
+    # Configuration relating to HTTP client 
+    client:
+      
+      maxConnectionsTotal: 32
+      
+      maxConnectionsPerRoute: 16
+      
+      cache:
+        enabled: true
+        maxCacheEntries: 500_000
+        storageType: "memory"
+          
     # Configuration relating to authentication of requests to the terminology service.
     authentication:
       # Enables authenticated requests.

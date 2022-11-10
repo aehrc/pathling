@@ -85,21 +85,7 @@ public class Dependencies {
 
   @Bean
   @ConditionalOnMissingBean
-  @ConditionalOnProperty(prefix = "pathling", value = "terminology.enabled", havingValue = "true")
-  @Nonnull
-  static TerminologyClient terminologyClient(@Nonnull final Configuration configuration,
-      @Nonnull final FhirContext fhirContext) {
-    final TerminologyConfiguration terminology = configuration.getTerminology();
-    log.debug("Creating FHIR terminology client: {}", terminology.getServerUrl());
-    return TerminologyClient.build(fhirContext, terminology.getServerUrl(),
-        terminology.getSocketTimeout(), terminology.isVerboseLogging(),
-        terminology.getAuthentication(), log);
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
   @ConditionalOnProperty(prefix = "pathling", value = "terminology.useLegacy", havingValue = "")
-  @ConditionalOnBean(TerminologyClient.class)
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactoryDefault(
       @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
@@ -109,10 +95,9 @@ public class Dependencies {
         terminology.getSocketTimeout(), terminology.isVerboseLogging(),
         terminology.getAuthentication());
   }
-  
+
   @Bean
   @ConditionalOnMissingBean
-  @ConditionalOnBean(TerminologyClient.class)
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory(
       @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
@@ -120,9 +105,10 @@ public class Dependencies {
     final TerminologyConfiguration terminology = configuration.getTerminology();
     return new CacheableTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
         terminology.getServerUrl(), terminology.getSocketTimeout(), terminology.isVerboseLogging(),
+        terminology.getClient(),
         terminology.getAuthentication());
   }
-  
+
   // @Bean
   // @ConditionalOnMissingBean
   // @ConditionalOnBean(TerminologyServiceFactory.class)

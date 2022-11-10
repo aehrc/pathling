@@ -73,15 +73,7 @@ public interface TerminologyClient extends IRestfulClient {
   @Nullable
   List<CodeSystem> searchCodeSystems(@Nonnull @RequiredParam(name = CodeSystem.SP_URL) UriParam uri,
       @Nonnull @Elements Set<String> elements);
-
-  @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
-  @Nullable
-  Parameters validateCoding(@Nonnull @OperationParam(name = "url") UriType url,
-      @Nonnull @OperationParam(name = "system") UriType system,
-      @Nullable @OperationParam(name = "systemVersion") StringType version,
-      @Nonnull @OperationParam(name = "code")
-      CodeType code);
-
+  
   /**
    * Invokes an "expand" request against the terminology server, using an inline ValueSet resource
    *
