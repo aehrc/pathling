@@ -454,7 +454,7 @@ public class ParserTest extends AbstractParserTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any(), null))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), isNull()))
         .thenReturn(returnedConceptTranslator);
 
     assertThatResultOf(ResourceType.CONDITION,
