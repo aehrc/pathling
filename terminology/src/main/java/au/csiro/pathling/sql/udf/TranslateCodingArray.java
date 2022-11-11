@@ -8,12 +8,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Row;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 import scala.collection.mutable.WrappedArray;
 
-@Component
-@Profile("core|unit-test")
 @Slf4j
 public class TranslateCodingArray extends TranslateCodingBase implements
     SqlFunction4<WrappedArray<Row>, String, Boolean, String, Row[]> {

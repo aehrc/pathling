@@ -1,5 +1,7 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
@@ -8,25 +10,17 @@ import au.csiro.pathling.terminology.TranslateMapping;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.utilities.Strings;
 import com.google.common.collect.ImmutableSet;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.shaded.org.apache.curator.shaded.com.google.common.collect.Streams;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
-import scala.collection.JavaConverters;
-import scala.collection.mutable.WrappedArray;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
 @Slf4j
 public abstract class TranslateCodingBase implements SqlFunction, Serializable {

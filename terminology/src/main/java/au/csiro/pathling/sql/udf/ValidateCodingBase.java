@@ -2,18 +2,16 @@ package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
+import java.io.Serializable;
+import java.util.Objects;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.Serializable;
-import java.util.Objects;
-import java.util.stream.Stream;
-
 
 @Slf4j
 abstract public class ValidateCodingBase implements SqlFunction, Serializable {

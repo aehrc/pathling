@@ -25,6 +25,7 @@ import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
+import au.csiro.pathling.spark.SparkConfigurer;
 import au.csiro.pathling.sql.udf.SqlFunction1;
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import au.csiro.pathling.sql.udf.SqlFunction3;
@@ -64,13 +65,9 @@ class UnitTestDependencies {
   @Nonnull
   static SparkSession sparkSession(@Nonnull final Configuration configuration,
       @Nonnull final Environment environment,
-      @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
-      @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
-      @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
-      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4,
+      @Nonnull final List<SparkConfigurer> sparkConfigurers,
       @Nonnull final Optional<SparkListener> sparkListener) {
-    return Spark.build(configuration, environment, sparkListener, sqlFunction1, sqlFunction2,
-        sqlFunction3, sqlFunction4);
+    return Spark.build(configuration, environment, sparkListener, sparkConfigurers);
   }
 
   @Bean

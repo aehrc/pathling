@@ -31,6 +31,7 @@ import au.csiro.pathling.encoders.FhirEncoders.Builder;
 import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.sql.SqlStrategy;
+import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import ca.uhn.fhir.context.FhirContext;
@@ -88,6 +89,7 @@ public class PathlingContext {
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
     SqlStrategy.setup(spark);
+    TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
   }
 
   /**
@@ -100,8 +102,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using default configuration, and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using default configuration, and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark) {
@@ -119,8 +121,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession},
-   * {@link FhirEncoders} and {@link TerminologyServiceFactory} objects.
+   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession}, {@link
+   * FhirEncoders} and {@link TerminologyServiceFactory} objects.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark,
@@ -130,8 +132,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
