@@ -5,11 +5,11 @@ import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.commons.lang.NotImplementedException;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
@@ -17,7 +17,6 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
-import org.hl7.fhir.r4.model.ValueSet;
 
 public class SimpleTerminologyService implements TerminologyService, Closeable {
 
@@ -34,10 +33,17 @@ public class SimpleTerminologyService implements TerminologyService, Closeable {
   }
 
   @Nullable
-  private static <T> T typed(@Nonnull final Function<String, T> converter, @Nullable String value) {
+  private static <T> T optional(@Nonnull final Function<String, T> converter,
+      @Nullable String value) {
     return value != null
            ? converter.apply(value)
            : null;
+  }
+
+  @Nonnull
+  private static <T> T required(@Nonnull final Function<String, T> converter,
+      @Nullable String value) {
+    return converter.apply(Objects.requireNonNull(value));
   }
 
   @Nonnull
@@ -45,13 +51,10 @@ public class SimpleTerminologyService implements TerminologyService, Closeable {
   public Parameters validate(@Nonnull final String url, @Nonnull final Coding coding) {
     // TODO: This should also do the system validation unless somehow validate is impervious
     // to the errors caused by unknown systems.
-
-    // TODO: Fix the Nullability
-
     return terminologyClient.validateCode(
-        typed(UriType::new, url), typed(UriType::new, coding.getSystem()),
-        typed(StringType::new, coding.getVersion()),
-        typed(CodeType::new, coding.getCode())
+        required(UriType::new, url), required(UriType::new, coding.getSystem()),
+        optional(StringType::new, coding.getVersion()),
+        required(CodeType::new, coding.getCode())
     );
   }
 
@@ -61,9 +64,9 @@ public class SimpleTerminologyService implements TerminologyService, Closeable {
       @Nonnull final String conceptMapUrl,
       final boolean reverse) {
     return terminologyClient.translate(
-        typed(UriType::new, conceptMapUrl), typed(UriType::new, coding.getSystem()),
-        typed(StringType::new, coding.getVersion()),
-        typed(CodeType::new, coding.getCode()),
+        required(UriType::new, conceptMapUrl), required(UriType::new, coding.getSystem()),
+        optional(StringType::new, coding.getVersion()),
+        required(CodeType::new, coding.getCode()),
         new BooleanType(reverse)
     );
   }

@@ -10,6 +10,7 @@ import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
 import org.apache.http.client.HttpClient;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Parameters;
@@ -29,19 +30,33 @@ public interface TerminologyClient2 {
 
   @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
   @Nonnull
-  Parameters validateCode(@Nonnull @OperationParam(name = "url") UriType url,
+  Parameters validateCode(
+      @Nonnull @OperationParam(name = "url") UriType url,
       @Nonnull @OperationParam(name = "system") UriType system,
       @Nullable @OperationParam(name = "systemVersion") StringType version,
-      @Nonnull @OperationParam(name = "code") CodeType code);
+      @Nonnull @OperationParam(name = "code") CodeType code
+  );
 
 
-  @Operation(name = "$translate", type = ConceptMap.class, idempotent = true)
+  @Operation(name = "$translate", type = CodeSystem.class, idempotent = true)
   @Nonnull
-  Parameters translate(@Nonnull @OperationParam(name = "url") UriType url,
+  Parameters translate(
+      @Nonnull @OperationParam(name = "url") UriType url,
       @Nonnull @OperationParam(name = "system") UriType system,
       @Nullable @OperationParam(name = "version") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code,
-      @Nullable @OperationParam(name = "reverse") BooleanType reverse);
+      @Nullable @OperationParam(name = "reverse") BooleanType reverse
+  );
+
+  @Operation(name = "$subsumes", type = ConceptMap.class, idempotent = true)
+  @Nonnull
+  Parameters subsumes(
+      @Nonnull @OperationParam(name = "codeA") CodeType codeA,
+      @Nonnull @OperationParam(name = "codeB") CodeType codeB,
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "version") StringType version
+  );
+
 
   static TerminologyClient2 build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
@@ -131,6 +146,25 @@ class TerminologyClient2Impl implements TerminologyClient2 {
     return fhirClient.operation()
         .onType(ConceptMap.class)
         .named("$translate")
+        .withParameters(params)
+        .useHttpGet()
+        .execute();
+  }
+
+  @Nonnull
+  @Override
+  public Parameters subsumes(@Nonnull final CodeType codeA, @Nonnull final CodeType codeB,
+      @Nonnull final UriType system, @Nullable final StringType version) {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("codeA").setValue(codeA);
+    params.addParameter().setName("codeB").setValue(codeB);
+    params.addParameter().setName("system").setValue(system);
+    if (version != null) {
+      params.addParameter().setName("version").setValue(version);
+    }
+    return fhirClient.operation()
+        .onType(ConceptMap.class)
+        .named("$subsumes")
         .withParameters(params)
         .useHttpGet()
         .execute();

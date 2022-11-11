@@ -72,7 +72,6 @@ public class CacheableTerminologyServiceFactory implements TerminologyServiceFac
     this.clientConfig = clientConfig;
   }
 
-
   @Nonnull
   @Override
   public Result memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column value,
@@ -93,6 +92,9 @@ public class CacheableTerminologyServiceFactory implements TerminologyServiceFac
 
   @Nonnull
   private SimpleTerminologyService createService() {
+    // TODO: check if the socket timeout is actually use when we pass
+    // a HttpClient to the RestFactory
+
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
     final CloseableHttpClient httpClient = buildHttpClient(clientConfig);
     final TerminologyClient2 terminologyClient = TerminologyClient2.build(
@@ -103,7 +105,6 @@ public class CacheableTerminologyServiceFactory implements TerminologyServiceFac
 
   private static CloseableHttpClient buildHttpClient(
       @Nonnull final HttpClientConfiguration config) {
-
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(config.getMaxConnectionsTotal());
     connectionManager.setDefaultMaxPerRoute(config.getMaxConnectionsPerRoute());

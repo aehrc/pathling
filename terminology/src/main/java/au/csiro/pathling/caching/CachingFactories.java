@@ -1,13 +1,12 @@
 package au.csiro.pathling.caching;
 
-import au.csiro.pathling.config.HttpCacheConfiguration;
+import java.io.File;
+import java.util.Map;
+import javax.annotation.Nonnull;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.apache.http.impl.client.cache.CachingHttpClients;
 import org.jetbrains.annotations.Nullable;
-import javax.annotation.Nonnull;
-import java.io.File;
-import java.util.Map;
 
 public class CachingFactories {
 
