@@ -77,6 +77,11 @@ const config = {
             label: "FHIRPath"
           },
           {
+            type: "doc",
+            docId: "roadmap",
+            label: "Roadmap"
+          },
+          {
             href: "https://github.com/aehrc/pathling",
             label: "GitHub",
             position: "right"
