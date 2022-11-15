@@ -24,6 +24,7 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.Sentry;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -57,15 +58,47 @@ public class ErrorReportingInterceptor {
       @Nullable final ServletRequestDetails servletRequestDetails,
       @Nullable final HttpServletRequest request, @Nullable final HttpServletResponse response,
       @Nullable final BaseServerResponseException exception) {
-    // We only want to report 500 series errors, not errors such as resource not found and bad
-    // request.
-    final boolean errorReportable = exception != null && exception.getStatusCode() / 100 == 5;
-    if (errorReportable) {
-      final Throwable reportableError = exception.getCause() == null
-                                        ? exception
-                                        : exception.getCause();
-      Sentry.captureException(reportableError);
+
+    if (exception != null) {
+      reportExceptionToSentry(exception);
     }
   }
 
+
+  /**
+   * Checks if the exception constitutes an unexpected error (as opposed to a user input error) that
+   * should be reported for investigation (e.g. to Sentry). We only want to report 500 series
+   * errors, not errors such as resource not found and bad request.
+   *
+   * @param exception the exception to test.
+   */
+  public static boolean isReportableException(
+      @Nonnull final BaseServerResponseException exception) {
+    return exception.getStatusCode() / 100 == 5;
+  }
+
+  /**
+   * Gets the root cause exception from the server BaseServerResponseException.
+   *
+   * @param exception the exception to extracts the root cause from.
+   * @return the root cause of this exception.
+   */
+  @Nonnull
+  public static Throwable getReportableError(@Nonnull final BaseServerResponseException exception) {
+    return exception.getCause() == null
+           ? exception
+           : exception.getCause();
+  }
+
+  /**
+   * Reports the exception to Sentry if reportable.
+   *
+   * @param exception the exception to be reported.
+   */
+  public static void reportExceptionToSentry(
+      @Nonnull final BaseServerResponseException exception) {
+    if (isReportableException(exception)) {
+      Sentry.captureException(getReportableError(exception));
+    }
+  }
 }

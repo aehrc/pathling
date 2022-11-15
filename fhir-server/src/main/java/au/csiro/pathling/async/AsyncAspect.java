@@ -21,8 +21,11 @@ import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.errors.DiagnosticContext;
+import au.csiro.pathling.errors.ErrorHandlingInterceptor;
+import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
-import io.sentry.Sentry;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
@@ -131,9 +134,22 @@ public class AsyncAspect {
       } catch (final Throwable e) {
         // NOTE: Here is where we should do the actual error handling and logging for the failed 
         // jobs, not where the future is interrogated.
-        log.error("Asynchronous execution failed", e);
-        Sentry.captureException(e);
-        throw new RuntimeException("Problem processing request asynchronously", e);
+
+        // unwrap the actual exception from the aspect proxy wrapper if needed
+        final Throwable actualEx = unwrapFromProxy(e);
+
+        // Apply the same processing and filtering as we do for synchronous requests.
+        final BaseServerResponseException convertedError = ErrorHandlingInterceptor.convertError(
+            actualEx);
+        ErrorReportingInterceptor.reportExceptionToSentry(convertedError);
+        if (ErrorReportingInterceptor.isReportableException(convertedError)) {
+          log.error("Unexpected exception in asynchronous execution.",
+              ErrorReportingInterceptor.getReportableError(convertedError));
+        } else {
+          log.warn("Asynchronous execution failed: {}.",
+              ErrorReportingInterceptor.getReportableError(convertedError).getMessage());
+        }
+        throw new RuntimeException("Problem processing request asynchronously", actualEx);
       } finally {
         cleanUpAfterJob(spark, requestId);
       }
@@ -182,6 +198,13 @@ public class AsyncAspect {
     stageMap.keySet().removeAll(keys);
     // We can't clean up the entry in the job registry, it needs to stay there so that clients can
     // retrieve the result of completed jobs.
+  }
+
+  @Nonnull
+  private static Throwable unwrapFromProxy(@Nonnull final Throwable ex) {
+    return ex instanceof UndeclaredThrowableException
+           ? ((UndeclaredThrowableException) ex).getUndeclaredThrowable()
+           : ex;
   }
 
   @Nonnull
