@@ -31,7 +31,7 @@ abstract public class ValidateCodingBase implements SqlFunction, Serializable {
   }
 
   @Nullable
-  protected Boolean doCall(@Nullable final String url, @Nullable final Stream<Coding> codings) {
+  protected Boolean doCall(@Nullable final Stream<Coding> codings, @Nullable final String url) {
     if (url == null || codings == null) {
       return null;
     }

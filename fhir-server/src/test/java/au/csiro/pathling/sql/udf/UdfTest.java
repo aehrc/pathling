@@ -27,8 +27,7 @@ import java.util.Collections;
 
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static au.csiro.pathling.sql.Terminology.*;
 
 @Tag("UnitTest")
 @SpringBootTest
@@ -59,11 +58,6 @@ public class UdfTest {
       "Fungus colony count [#/volume] in Unspecified specimen by Environmental culture");
   private final static Coding CODING_5 = new Coding(SNOMED_URL, "416399002",
       "Procollagen type I amino-terminal propeptide level");
-
-
-  private final static Parameters RESULT_TRUE = new Parameters().setParameter("result", true);
-  private final static Parameters RESULT_FALSE = new Parameters().setParameter("result", false);
-
 
   private final static String CODING_1_VALUE_SET_URI = "uiid:ValueSet_coding1";
   private final static String CODING_2_VALUE_SET_URI = "uiid:ValueSet_coding2";
@@ -98,13 +92,11 @@ public class UdfTest {
         .withRow("id-3", null)
         .build();
 
-    final Dataset<Row> result1 = df.select(functions.callUDF(ValidateCoding.FUNCTION_NAME,
-        functions.lit(CODING_1_VALUE_SET_URI),
-        df.col("code")));
+    final Dataset<Row> result1 = df.select(
+        validate_coding(df.col("code"), CODING_1_VALUE_SET_URI));
 
-    final Dataset<Row> result2 = df.select(functions.callUDF(ValidateCoding.FUNCTION_NAME,
-        functions.lit(CODING_2_VALUE_SET_URI),
-        df.col("code")));
+    final Dataset<Row> result2 = df.select(
+        validate_coding(df.col("code"), CODING_2_VALUE_SET_URI));
 
     DatasetAssert.of(result1).hasRows(
         RowFactory.create(true),
@@ -128,9 +120,8 @@ public class UdfTest {
         .withRow("id-3", null)
         .build();
 
-    final Dataset<Row> result = df.select(functions.callUDF(ValidateCoding.FUNCTION_NAME,
-        functions.lit(null),
-        df.col("code")));
+    final Dataset<Row> result = df.select(validate_coding(df.col("code"),
+        null));
 
     DatasetAssert.of(result).hasRows(
         RowFactory.create((Boolean) null),
@@ -170,14 +161,10 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result1 = ds.select(ds.col("id"),
-        functions.callUDF(ValidateCodingArray.FUNCTION_NAME,
-            functions.lit(CODING_1_VALUE_SET_URI),
-            ds.col("codings")));
+        validate_coding_array(ds.col("codings"), CODING_1_VALUE_SET_URI));
 
     final Dataset<Row> result2 = ds.select(ds.col("id"),
-        functions.callUDF(ValidateCodingArray.FUNCTION_NAME,
-            functions.lit(CODING_2_VALUE_SET_URI),
-            ds.col("codings")));
+        validate_coding_array(ds.col("codings"), CODING_2_VALUE_SET_URI));
 
     final Dataset<Row> expectedResult1 = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -221,8 +208,7 @@ public class UdfTest {
 
     DatasetAssert.of(result2).hasRows(expectedResult2);
   }
-
-
+  
   @Test
   public void validateCodingArrayWithNullDataset() {
     setupValidateCodingExpectations();
@@ -237,9 +223,8 @@ public class UdfTest {
             Arrays.asList(CodingEncoding.encode(CODING_1), CodingEncoding.encode(CODING_5)))
         .build();
 
-    final Dataset<Row> result = ds.select(functions.callUDF(ValidateCodingArray.FUNCTION_NAME,
-        functions.lit(null),
-        ds.col("codings")));
+    final Dataset<Row> result = ds.select(validate_coding_array(ds.col("codings"),
+        null));
 
     DatasetAssert.of(result).hasRows(
         RowFactory.create((Boolean) null),

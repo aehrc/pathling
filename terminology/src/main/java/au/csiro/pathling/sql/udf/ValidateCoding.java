@@ -8,7 +8,7 @@ import org.apache.spark.sql.Row;
 
 @Slf4j
 public class ValidateCoding extends ValidateCodingBase implements
-    SqlFunction2<String, Row, Boolean> {
+    SqlFunction2<Row, String, Boolean> {
 
   private static final long serialVersionUID = 7605853352299165569L;
 
@@ -25,7 +25,7 @@ public class ValidateCoding extends ValidateCodingBase implements
 
   @Nullable
   @Override
-  public Boolean call(@Nullable final String url, @Nullable final Row codingRow) throws Exception {
-    return doCall(url, TerminologyUdfHelpers.decodeOne(codingRow));
+  public Boolean call(@Nullable final Row codingRow, @Nullable final String url) throws Exception {
+    return doCall(TerminologyUdfHelpers.decodeOne(codingRow), url);
   }
 }

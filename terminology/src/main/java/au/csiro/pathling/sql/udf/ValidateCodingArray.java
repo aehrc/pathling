@@ -10,7 +10,7 @@ import scala.collection.mutable.WrappedArray;
 
 @Slf4j
 public class ValidateCodingArray extends ValidateCodingBase implements
-    SqlFunction2<String, WrappedArray<Row>, Boolean> {
+    SqlFunction2<WrappedArray<Row>, String, Boolean> {
 
   private static final long serialVersionUID = 7605853352299165569L;
 
@@ -27,8 +27,8 @@ public class ValidateCodingArray extends ValidateCodingBase implements
 
   @Nullable
   @Override
-  public Boolean call(@Nullable final String url,
-      @Nullable final WrappedArray<Row> codingArrayRow) {
-    return doCall(url, TerminologyUdfHelpers.decodeMany(codingArrayRow));
+  public Boolean call(@Nullable final WrappedArray<Row> codingArrayRow,
+      @Nullable final String url) {
+    return doCall(TerminologyUdfHelpers.decodeMany(codingArrayRow), url);
   }
 }
