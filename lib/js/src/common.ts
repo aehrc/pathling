@@ -15,16 +15,23 @@
  * limitations under the License.
  */
 
-import axios, { AxiosRequestConfig } from "axios";
-import { performance } from "just-performance";
-import { getStatusUrl, waitForAsyncResult } from "./async";
-import { PathlingClientOptionsResolved, QueryOptions } from "./index";
-import { buildResponseError } from "./OperationOutcome";
+import { getStatusUrl, waitForAsyncResult } from "./async.js";
+import { PathlingClientOptionsResolved, QueryOptions } from "./index.js";
 
 /**
  * The FHIR JSON content type.
  */
 export const FHIR_CONTENT_TYPE = "application/fhir+json";
+
+export interface RequestConfig {
+  input: RequestInfo | URL;
+  init?: RequestInit;
+}
+
+export interface ResponseWithExecutionTime<ResponseType> {
+  response: ResponseType;
+  executionTime: number;
+}
 
 /**
  * Create request config common to any request.
@@ -32,16 +39,18 @@ export const FHIR_CONTENT_TYPE = "application/fhir+json";
 export function requestConfig(
   url: string,
   options?: QueryOptions
-): AxiosRequestConfig {
+): RequestConfig {
   const auth = { Authorization: `Bearer ${options?.token}` },
     preferAsync = { Prefer: "respond-async" };
   return {
-    url,
-    headers: {
-      Accept: FHIR_CONTENT_TYPE,
-      ...(options?.token ? auth : {}),
-      ...(options?.preferAsync ? preferAsync : {})
-    }
+    input: new URL(url),
+    init: {
+      headers: {
+        Accept: FHIR_CONTENT_TYPE,
+        ...(options?.token ? auth : {}),
+        ...(options?.preferAsync ? preferAsync : {}),
+      },
+    },
   };
 }
 
@@ -50,30 +59,40 @@ export function requestConfig(
  */
 export function getConfig(
   url: string,
-  params: URLSearchParams,
+  params?: URLSearchParams,
   options?: QueryOptions
-): AxiosRequestConfig {
+): RequestConfig {
+  const baseConfig = requestConfig(url, options);
   return {
-    ...requestConfig(url, options),
-    method: "GET",
-    params
+    ...baseConfig,
+    input: new URL(params ? `${url}?${params.toString()}` : url),
+    init: {
+      ...baseConfig.init,
+      method: "GET",
+    },
   };
 }
 
 /**
  * Create request config for a POST request with a FHIR JSON body.
  */
-export function postFhirConfig<T>(
+export function postFhirConfig(
   url: string,
-  data: T,
+  data: any,
   options?: QueryOptions
-): AxiosRequestConfig<T> {
+): RequestConfig {
   const baseConfig = requestConfig(url, options);
   return {
     ...baseConfig,
-    method: "POST",
-    data,
-    headers: { ...baseConfig.headers, "Content-Type": FHIR_CONTENT_TYPE }
+    init: {
+      ...baseConfig.init,
+      method: "POST",
+      headers: {
+        ...baseConfig.init?.headers,
+        "Content-Type": FHIR_CONTENT_TYPE,
+      },
+      body: JSON.stringify(data),
+    },
   };
 }
 
@@ -85,12 +104,15 @@ export function postFormConfig(
   url: string,
   params: URLSearchParams,
   options?: QueryOptions
-): AxiosRequestConfig {
+): RequestConfig {
   const baseConfig = requestConfig(url, options);
   return {
     ...baseConfig,
-    method: "POST",
-    params
+    init: {
+      ...baseConfig.init,
+      method: "POST",
+      body: params,
+    },
   };
 }
 
@@ -103,24 +125,22 @@ export function postFormConfig(
  * @param clientOptions The relevant Pathling client options.
  * @param requestOptions The options specific to this query.
  */
-export function makeRequest<I, O>(
-  config: AxiosRequestConfig<I>,
+export function makeRequest<ResponseType>(
+  config: RequestConfig,
   message: string,
   clientOptions: PathlingClientOptionsResolved,
   requestOptions?: QueryOptions
-) {
-  return addExecutionTime<O>(async () => {
-    const response = await axios.request<O>(config);
+): Promise<ResponseWithExecutionTime<ResponseType>> {
+  return addExecutionTime<ResponseType>(async () => {
+    const response = await fetch(config.input, config.init);
     return response.status === 202
       ? waitForAsyncResult(
-        getStatusUrl(response),
-        message,
-        clientOptions,
-        requestOptions
-      )
-      : response.data;
-  }).catch((e) => {
-    throw buildResponseError(e);
+          getStatusUrl(response),
+          message,
+          clientOptions,
+          requestOptions
+        )
+      : ((await response.json()) as ResponseType);
   });
 }
 
@@ -130,13 +150,13 @@ export function makeRequest<I, O>(
  *
  * @param executor A function returning a Promise which resolves to an object
  */
-export async function addExecutionTime<T = object>(
-  executor: () => Promise<T>
-): Promise<{ response: T; executionTime: number }> {
+export async function addExecutionTime<ResponseType = object>(
+  executor: () => Promise<ResponseType>
+): Promise<ResponseWithExecutionTime<ResponseType>> {
   const startTime = performance.now(),
-    response: T = await executor();
+    response: ResponseType = await executor();
   return {
     response,
-    executionTime: performance.now() - startTime
+    executionTime: performance.now() - startTime,
   };
 }

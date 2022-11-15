@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-import axios from "axios";
-import { FHIR_CONTENT_TYPE } from "./common";
-import { QueryOptions } from "./index";
+import { getConfig } from "./common.js";
+import { QueryOptions } from "./index.js";
+import { buildResponseError } from "./OperationOutcome.js";
 
 /**
  * A class that can be used to check the progress of an asynchronous job.
@@ -30,25 +30,26 @@ export class JobClient {
    * @returns The response body, if the job is complete.
    * @throws {JobInProgressError} if the job is incomplete.
    */
-  async request(url: string, options?: QueryOptions): Promise<any> {
-    const auth = { Authorization: `Bearer ${options?.token}` },
-      config = {
-        url,
-        headers: {
-          Accept: FHIR_CONTENT_TYPE,
-          ...(options?.token ? auth : {})
-        }
-      },
-      response = await axios.request<any>(config);
+  async request<ResponseType>(
+    url: string,
+    options?: QueryOptions
+  ): Promise<ResponseType> {
+    const config = getConfig(url, undefined, {
+        token: options?.token,
+      }),
+      response = await fetch(config.input, config.init);
 
     if (response.status === 200) {
-      return response.data;
+      return (await response.json()) as ResponseType;
     } else if (response.status === 202) {
-      const progress = response.headers["x-progress"];
+      const progress = response.headers.get("x-progress");
       const message = progress ? progress : "(no progress message)";
-      throw new JobInProgressError(`Job in progress: ${message}`, progress);
+      throw new JobInProgressError(
+        `Job in progress: ${message}`,
+        progress ?? undefined
+      );
     } else {
-      throw `Unexpected status: ${response.status} ${response.statusText}`;
+      throw await buildResponseError(response);
     }
   }
 }

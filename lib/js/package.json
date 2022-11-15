@@ -1,20 +1,19 @@
 {
   "name": "pathling-client",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "description": "Client library for the Pathling FHIR API.",
+  "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@types/fhir": "^0.0.35",
-    "@types/node": "^16.x",
-    "axios": "^0.27.2",
-    "just-performance": "^4.3.0",
     "p-retry": "^5.0.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.16.0",
     "@babel/preset-typescript": "^7.16.0",
+    "@types/fhir": "^0.0.35",
     "@types/jest": "^29.2.0",
+    "@types/node": "^16.x",
     "jest": "^29.2.2",
     "prettier": "^2.4.1",
     "ts-node": "^10.4.0",

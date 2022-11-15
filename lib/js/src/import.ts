@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { OperationOutcome, Parameters } from "fhir/r4";
-import { makeRequest, postFhirConfig } from "./common";
+import { OperationOutcome, Parameters } from "fhir/r4.js";
+import { makeRequest, postFhirConfig } from "./common.js";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
   QueryResult
-} from "./index";
+} from "./index.js";
 
 /**
  * The parameters that make up an import query.

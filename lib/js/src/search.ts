@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { Bundle } from "fhir/r4";
-import { getConfig, makeRequest, postFormConfig } from "./common";
+import { Bundle } from "fhir/r4.js";
+import { getConfig, makeRequest, postFormConfig } from "./common.js";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
   QueryResult
-} from "./index";
+} from "./index.js";
 
 /**
  * The parameters that make up a search query.

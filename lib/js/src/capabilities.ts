@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { CapabilityStatement } from "fhir/r4";
-import { getConfig, makeRequest } from "./common";
+import { CapabilityStatement } from "fhir/r4.js";
+import { getConfig, makeRequest } from "./common.js";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
   QueryResult
-} from "./index";
+} from "./index.js";
 
 export type CapabilitiesQueryOptions = QueryOptions;
 
