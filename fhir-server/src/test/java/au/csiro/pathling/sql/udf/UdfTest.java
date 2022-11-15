@@ -1,5 +1,12 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.sql.Terminology.translate_coding;
+import static au.csiro.pathling.sql.Terminology.translate_coding_array;
+import static au.csiro.pathling.sql.Terminology.validate_coding;
+import static au.csiro.pathling.sql.Terminology.validate_coding_array;
+import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
+import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
+
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
@@ -8,26 +15,20 @@ import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.parser.IParser;
+import java.util.Arrays;
+import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import java.util.Arrays;
-import java.util.Collections;
-
-import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
-import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
-import static au.csiro.pathling.sql.Terminology.*;
 
 @Tag("UnitTest")
 @SpringBootTest
@@ -38,8 +39,7 @@ public class UdfTest {
 
   @Autowired
   TerminologyService terminologyService;
-
-
+  
   @Autowired
   IParser jsonParser;
 
@@ -208,7 +208,7 @@ public class UdfTest {
 
     DatasetAssert.of(result2).hasRows(expectedResult2);
   }
-  
+
   @Test
   public void validateCodingArrayWithNullDataset() {
     setupValidateCodingExpectations();
@@ -246,12 +246,11 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
-        functions.callUDF(TranslateCoding.FUNCTION_NAME,
+        translate_coding(
             ds.col("code"),
-            functions.lit("someUrl"),
-            functions.lit(null),
-            functions.lit("relatedto")
-        ));
+            "someUrl",
+            false,
+            "relatedto"));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateCoding.RETURN_TYPE)
         .withRow("uc-null", null)
@@ -278,12 +277,11 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
-        functions.callUDF(TranslateCodingArray.FUNCTION_NAME,
+        translate_coding_array(
             ds.col("codings"),
-            functions.lit("someUrl"),
-            functions.lit(null),
-            functions.lit("relatedto")
-        ));
+            "someUrl",
+            false,
+            "relatedto"));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateCoding.RETURN_TYPE)
         .withRow("uc-null", null)

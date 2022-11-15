@@ -19,6 +19,8 @@ package au.csiro.pathling.fhirpath.function.translate;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.sql.Terminology.translate_coding;
+import static au.csiro.pathling.sql.Terminology.translate_coding_array;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.lit;
@@ -181,20 +183,18 @@ public class TranslateFunction implements NamedFunction {
     //
 
     final Arguments arguments = Arguments.of(input);
-    final Column conceptMapUrl = lit(arguments.getValue(0, StringType.class).asStringValue());
-    final Column reverse = lit(arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
-        .booleanValue());
-    final Column equivalence = lit(arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
-        .asStringValue());
+    final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
+    final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
+        .booleanValue();
+    final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
+        .asStringValue();
     final Dataset<Row> dataset = inputPath.getDataset();
 
-    // TODO: add reverse
-
     final Column translatedCodings = isCodeableConcept
-                                     ? callUDF(TranslateCodingArray.FUNCTION_NAME,
-        conceptColumn.getField("coding"), conceptMapUrl, reverse, equivalence)
-                                     : callUDF(TranslateCoding.FUNCTION_NAME, conceptColumn,
-                                         conceptMapUrl, reverse, equivalence);
+                                     ? translate_coding_array(conceptColumn.getField("coding"),
+        conceptMapUrl, reverse, equivalence)
+                                     : translate_coding(conceptColumn, conceptMapUrl, reverse,
+                                         equivalence);
 
     // // The result is an array of translations per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
