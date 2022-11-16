@@ -1,12 +1,12 @@
 #  Copyright 2022 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-#
+# 
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
-#
+# 
 #      http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,8 @@ from pyspark.sql import DataFrame, SparkSession, Column
 from pathling.coding import Coding
 from pathling.etc import find_jar
 from pathling.fhir import MimeType
+
+from deprecated import deprecated
 
 __all__ = ["PathlingContext"]
 
@@ -200,7 +202,7 @@ class PathlingContext:
                 df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
             )
         )
-
+    @deprecated(reason="You should use the 'udfs.member_of' UDF instread")
     def member_of(
         self,
         df: DataFrame,
@@ -225,6 +227,7 @@ class PathlingContext:
             )
         )
 
+    @deprecated(reason="You should use the 'udfs.translate' UDF instead")
     def translate(
         self,
         df: DataFrame,

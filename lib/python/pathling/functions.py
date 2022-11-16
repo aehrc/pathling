@@ -15,13 +15,14 @@
 
 import urllib.parse
 
+from typing import Optional
 from pyspark.sql import Column
 from pyspark.sql.functions import lit, struct
 
 from pathling.etc import SNOMED_URI
 
 
-def to_coding(coding_column: Column, system: str, version: str = None):
+def to_coding(coding_column: Column, system: str, version: Optional[str] = None) -> Column:
     """
     Converts a Column containing codes into a Column that contains a Coding struct. The Coding
     struct Column can be used as an input to terminology functions such as `member_of` and
@@ -38,6 +39,19 @@ def to_coding(coding_column: Column, system: str, version: str = None):
     user_selected_column = lit(None).alias('userSelected')
     return struct(id_column, system_column, version_column, coding_column.alias("code"),
                   display_column, user_selected_column)
+
+
+def to_snomed_coding(coding_column: Column, version: Optional[str] = None) -> Column:
+    """
+    Converts a Column containing codes into a Column that contains a SNOMED Coding struct. The 
+    Coding
+    struct Column can be used as an input to terminology functions such as `member_of` and
+    `translate`.
+    :param coding_column: the Column containing the codes
+    :param version: the version of the code system
+    :return: a Column containing a Coding struct
+    """
+    return to_coding(coding_column, SNOMED_URI, version)
 
 
 def to_ecl_value_set(ecl: str) -> str:

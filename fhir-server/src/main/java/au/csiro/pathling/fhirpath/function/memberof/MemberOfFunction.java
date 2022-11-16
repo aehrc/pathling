@@ -19,8 +19,8 @@ package au.csiro.pathling.fhirpath.function.memberof;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.validate_coding;
-import static au.csiro.pathling.sql.Terminology.validate_coding_array;
+import static au.csiro.pathling.sql.Terminology.member_of;
+import static au.csiro.pathling.sql.Terminology.member_of_array;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.callUDF;
@@ -70,9 +70,9 @@ public class MemberOfFunction implements NamedFunction {
     final String valueSetUrl = argument.getValue().asStringValue();
 
     final Column resultColumn = (isCodeableConcept(inputPath))
-                                ? validate_coding_array(conceptColumn.getField("coding"),
+                                ? member_of_array(conceptColumn.getField("coding"),
         valueSetUrl)
-                                : validate_coding(conceptColumn, valueSetUrl);
+                                : member_of(conceptColumn, valueSetUrl);
     final Dataset<Row> resultDataset = inputPath.getDataset();
 
     // TODO: teminolog-cachig: maybe the switcheable version

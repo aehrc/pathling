@@ -18,20 +18,27 @@
 import os
 
 from pathling import PathlingContext
-from pathling.functions import to_snomed_coding
-from pathling.udfs import translate
-from pyspark.sql.functions import explode_outer
+from pathling.functions import to_coding, to_ecl_value_set
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-        f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
 )
 
-# Translate codings to Read CTV3 using the map that ships with SNOMED CT.
-
-result = csv.withColumn("READ_CODES", translate(to_snomed_coding(csv.CODE),
-                                                "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000").code)
-result.select("CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")).show()
+result = pc.member_of(
+    csv,
+    to_coding(csv.CODE, "http://snomed.info/sct"),
+    to_ecl_value_set(
+        """
+        << 64572001|Disease| : (
+          << 370135005|Pathological process| = << 441862004|Infectious process|,
+          << 246075003|Causative agent| = << 49872002|Virus|
+        )
+                              """
+    ),
+    "VIRAL_INFECTION",
+)
+result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show()

@@ -87,7 +87,8 @@ setup(
         ],
         license="Apache License, version 2.0",
         python_requires=">=3.7",
-        install_requires=["pyspark>=3.1.0"],
+        install_requires=["pyspark>=3.1.0",
+                          "deprecated>=1.2.13"],
         include_package_data=True,
         package_dir={
             'pathling.jars': 'target/dependency',

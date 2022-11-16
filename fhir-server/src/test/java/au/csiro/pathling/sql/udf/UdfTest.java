@@ -1,9 +1,9 @@
 package au.csiro.pathling.sql.udf;
 
-import static au.csiro.pathling.sql.Terminology.translate_coding;
-import static au.csiro.pathling.sql.Terminology.translate_coding_array;
-import static au.csiro.pathling.sql.Terminology.validate_coding;
-import static au.csiro.pathling.sql.Terminology.validate_coding_array;
+import static au.csiro.pathling.sql.Terminology.translate;
+import static au.csiro.pathling.sql.Terminology.translate_array;
+import static au.csiro.pathling.sql.Terminology.member_of;
+import static au.csiro.pathling.sql.Terminology.member_of_array;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 
@@ -93,10 +93,10 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result1 = df.select(
-        validate_coding(df.col("code"), CODING_1_VALUE_SET_URI));
+        member_of(df.col("code"), CODING_1_VALUE_SET_URI));
 
     final Dataset<Row> result2 = df.select(
-        validate_coding(df.col("code"), CODING_2_VALUE_SET_URI));
+        member_of(df.col("code"), CODING_2_VALUE_SET_URI));
 
     DatasetAssert.of(result1).hasRows(
         RowFactory.create(true),
@@ -120,7 +120,7 @@ public class UdfTest {
         .withRow("id-3", null)
         .build();
 
-    final Dataset<Row> result = df.select(validate_coding(df.col("code"),
+    final Dataset<Row> result = df.select(member_of(df.col("code"),
         null));
 
     DatasetAssert.of(result).hasRows(
@@ -161,10 +161,10 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result1 = ds.select(ds.col("id"),
-        validate_coding_array(ds.col("codings"), CODING_1_VALUE_SET_URI));
+        member_of_array(ds.col("codings"), CODING_1_VALUE_SET_URI));
 
     final Dataset<Row> result2 = ds.select(ds.col("id"),
-        validate_coding_array(ds.col("codings"), CODING_2_VALUE_SET_URI));
+        member_of_array(ds.col("codings"), CODING_2_VALUE_SET_URI));
 
     final Dataset<Row> expectedResult1 = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -223,7 +223,7 @@ public class UdfTest {
             Arrays.asList(CodingEncoding.encode(CODING_1), CodingEncoding.encode(CODING_5)))
         .build();
 
-    final Dataset<Row> result = ds.select(validate_coding_array(ds.col("codings"),
+    final Dataset<Row> result = ds.select(member_of_array(ds.col("codings"),
         null));
 
     DatasetAssert.of(result).hasRows(
@@ -246,7 +246,7 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
-        translate_coding(
+        translate(
             ds.col("code"),
             "someUrl",
             false,
@@ -277,7 +277,7 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
-        translate_coding_array(
+        translate_array(
             ds.col("codings"),
             "someUrl",
             false,

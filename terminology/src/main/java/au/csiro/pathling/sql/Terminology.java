@@ -1,6 +1,6 @@
 package au.csiro.pathling.sql;
 
-import static org.apache.spark.sql.functions.callUDF;
+import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.sql.udf.TranslateCoding;
@@ -17,31 +17,31 @@ public interface Terminology {
   // TODO: consider nullablity of the arguments
 
   @Nonnull
-  static Column validate_coding(@Nonnull final Column coding, @Nullable final String valueSetUrl) {
-    return callUDF(ValidateCoding.FUNCTION_NAME, coding, lit(valueSetUrl));
+  static Column member_of(@Nonnull final Column coding, @Nullable final String valueSetUri) {
+    return call_udf(ValidateCoding.FUNCTION_NAME, coding, lit(valueSetUri));
   }
 
   @Nonnull
-  static Column validate_coding_array(@Nonnull final Column codings,
-      @Nullable final String valueSetUrl) {
-    return callUDF(ValidateCodingArray.FUNCTION_NAME, codings, lit(valueSetUrl));
+  static Column member_of_array(@Nonnull final Column codings,
+      @Nullable final String valueSetUri) {
+    return call_udf(ValidateCodingArray.FUNCTION_NAME, codings, lit(valueSetUri));
   }
 
   // TODO: consider the order of reverse and equivaleces
   // TODO: consider other forms of passing equivalences (i.e collection of enum types)
 
   @Nonnull
-  static Column translate_coding(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
+  static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
       boolean reverse, @Nullable final String equivalences) {
-    return callUDF(TranslateCoding.FUNCTION_NAME, coding, lit(conceptMapUri), lit(reverse),
+    return call_udf(TranslateCoding.FUNCTION_NAME, coding, lit(conceptMapUri), lit(reverse),
         lit(equivalences));
   }
 
   @Nonnull
-  static Column translate_coding_array(@Nonnull final Column codings,
+  static Column translate_array(@Nonnull final Column codings,
       @Nonnull final String conceptMapUri,
       boolean reverse, @Nullable final String equivalences) {
-    return callUDF(TranslateCodingArray.FUNCTION_NAME, codings, lit(conceptMapUri), lit(reverse),
+    return call_udf(TranslateCodingArray.FUNCTION_NAME, codings, lit(conceptMapUri), lit(reverse),
         lit(equivalences));
   }
 

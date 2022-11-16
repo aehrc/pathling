@@ -19,11 +19,10 @@ package au.csiro.pathling.fhirpath.function.translate;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.translate_coding;
-import static au.csiro.pathling.sql.Terminology.translate_coding_array;
+import static au.csiro.pathling.sql.Terminology.translate;
+import static au.csiro.pathling.sql.Terminology.translate_array;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.callUDF;
-import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
@@ -35,8 +34,6 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.sql.udf.TranslateCoding;
-import au.csiro.pathling.sql.udf.TranslateCodingArray;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -191,9 +188,9 @@ public class TranslateFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
 
     final Column translatedCodings = isCodeableConcept
-                                     ? translate_coding_array(conceptColumn.getField("coding"),
+                                     ? translate_array(conceptColumn.getField("coding"),
         conceptMapUrl, reverse, equivalence)
-                                     : translate_coding(conceptColumn, conceptMapUrl, reverse,
+                                     : translate(conceptColumn, conceptMapUrl, reverse,
                                          equivalence);
 
     // // The result is an array of translations per each input element, which we now
