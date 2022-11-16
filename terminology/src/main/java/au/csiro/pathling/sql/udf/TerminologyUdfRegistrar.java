@@ -5,12 +5,13 @@ import org.apache.spark.sql.SparkSession;
 import javax.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
   public TerminologyUdfRegistrar(@Nonnull TerminologyServiceFactory tsf) {
     super(Collections.emptyList(),
-        Arrays.asList(new ValidateCoding(tsf), new ValidateCodingArray(tsf)),
+        List.of(new ValidateCoding(tsf)),
         Collections.emptyList(),
         Arrays.asList(new TranslateCoding(tsf), new TranslateCodingArray(tsf)));
   }

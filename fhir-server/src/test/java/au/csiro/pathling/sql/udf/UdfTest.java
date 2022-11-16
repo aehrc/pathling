@@ -3,7 +3,6 @@ package au.csiro.pathling.sql.udf;
 import static au.csiro.pathling.sql.Terminology.translate;
 import static au.csiro.pathling.sql.Terminology.translate_array;
 import static au.csiro.pathling.sql.Terminology.member_of;
-import static au.csiro.pathling.sql.Terminology.member_of_array;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 
@@ -161,10 +160,10 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result1 = ds.select(ds.col("id"),
-        member_of_array(ds.col("codings"), CODING_1_VALUE_SET_URI));
+        member_of(ds.col("codings"), CODING_1_VALUE_SET_URI));
 
     final Dataset<Row> result2 = ds.select(ds.col("id"),
-        member_of_array(ds.col("codings"), CODING_2_VALUE_SET_URI));
+        member_of(ds.col("codings"), CODING_2_VALUE_SET_URI));
 
     final Dataset<Row> expectedResult1 = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -223,7 +222,7 @@ public class UdfTest {
             Arrays.asList(CodingEncoding.encode(CODING_1), CodingEncoding.encode(CODING_5)))
         .build();
 
-    final Dataset<Row> result = ds.select(member_of_array(ds.col("codings"),
+    final Dataset<Row> result = ds.select(member_of(ds.col("codings"),
         null));
 
     DatasetAssert.of(result).hasRows(
@@ -293,5 +292,7 @@ public class UdfTest {
         .build();
     DatasetAssert.of(result).hasRows(expectedResult);
   }
+
+  // TODO: Add test to check that exception is thrown when the coding is not Row or array<Row>
 }
  

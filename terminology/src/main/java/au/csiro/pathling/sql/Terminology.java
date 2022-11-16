@@ -6,7 +6,6 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.sql.udf.TranslateCoding;
 import au.csiro.pathling.sql.udf.TranslateCodingArray;
 import au.csiro.pathling.sql.udf.ValidateCoding;
-import au.csiro.pathling.sql.udf.ValidateCodingArray;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -19,12 +18,6 @@ public interface Terminology {
   @Nonnull
   static Column member_of(@Nonnull final Column coding, @Nullable final String valueSetUri) {
     return call_udf(ValidateCoding.FUNCTION_NAME, coding, lit(valueSetUri));
-  }
-
-  @Nonnull
-  static Column member_of_array(@Nonnull final Column codings,
-      @Nullable final String valueSetUri) {
-    return call_udf(ValidateCodingArray.FUNCTION_NAME, codings, lit(valueSetUri));
   }
 
   // TODO: consider the order of reverse and equivaleces

@@ -47,11 +47,12 @@ def _invoke_function(name: str, *args: Any) -> Column:
 
 def member_of(coding: ColumnOrName, value_set_uri: str) -> Column:
     """
-    Takes a Coding column as input. Returns the column which contains a 
-    Boolean value, indicating whether the input Coding is a member of the specified FHIR 
+    Takes a Coding or array of Codings column as its input. Returns the column which contains a 
+    Boolean value, indicating whether any of the input Codings is the member of the specified FHIR 
     ValueSet.
 
-    :param coding: a Column containing a struct representation of a Coding
+    :param coding: a Column containing a struct representation of a Coding or an array of such 
+    structs.
     :param value_set_uri: an identifier for a FHIR ValueSet
     :return: a Column containing the result of the operation.
     """
