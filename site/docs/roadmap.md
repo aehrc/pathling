@@ -1,7 +1,3 @@
----
-sidebar_position: 10
----
-
 # Roadmap
 
 We are continually adding new features to the various different components of
@@ -9,17 +5,6 @@ Pathling. If you are interested in specific functionality that doesn't exist
 yet, please [get into contact](https://pathling.csiro.au/#contact) with us
 or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
 understand your use case.
-
-## Quantity support
-
-This change will add support for Quantity types, including literals support for
-equality and comparison operators. It also introduces calendar durations and
-support for date arithmetic.
-
-See also:
-
-- [Quantity type](https://github.com/aehrc/pathling/issues/340)
-- [Date/time arithmetic](https://github.com/aehrc/pathling/issues/341)
 
 ## Terminology functions: `property` and `designation`
 

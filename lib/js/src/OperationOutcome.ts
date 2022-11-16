@@ -15,12 +15,7 @@
  * limitations under the License.
  */
 
-import { AxiosError, AxiosResponse } from "axios";
-import { OperationOutcome } from "fhir/r4";
-
-interface OpOutcomeSourceError extends AxiosError {
-  response: AxiosResponse;
-}
+import { OperationOutcome } from "fhir/r4.js";
 
 /**
  * Custom error class for representing an error returned from a FHIR API as an
@@ -29,8 +24,7 @@ interface OpOutcomeSourceError extends AxiosError {
 export class OpOutcomeError extends Error {
   resource: OperationOutcome;
 
-  constructor(error: OpOutcomeSourceError) {
-    const opOutcome: OperationOutcome = error.response.data;
+  constructor(opOutcome: OperationOutcome) {
     const issue = opOutcome.issue[0],
       message =
         issue.code === "login"
@@ -50,22 +44,24 @@ export class OpOutcomeError extends Error {
  * Create an {@link OpOutcomeError} from a response that may contain an
  * OperationOutcome resource.
  */
-export const buildResponseError = (error: AxiosError): Error => {
-  if (
-    !error.response ||
-    !error.response.data ||
-    !responseIsOpOutcome(error.response.data)
-  ) {
-    return error;
-  } else {
-    return new OpOutcomeError(error as OpOutcomeSourceError);
+export const buildResponseError = async (
+  response: Response
+): Promise<Error> => {
+  if (response.body) {
+    const parsedBody = await response.json();
+    if (responseIsOpOutcome(parsedBody)) {
+      return new OpOutcomeError(parsedBody);
+    }
   }
+  return new Error(response.statusText);
 };
 
 /**
  * Check if a response contains an OperationOutcome resource.
  */
-export const responseIsOpOutcome = (parsed: any) =>
-  parsed.resourceType === "OperationOutcome" &&
-  parsed.issue &&
-  parsed.issue.length > 0;
+export const responseIsOpOutcome = (
+  response: any
+): response is OperationOutcome =>
+  response.resourceType === "OperationOutcome" &&
+  response.issue &&
+  response.issue.length > 0;

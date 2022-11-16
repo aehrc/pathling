@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-import { escapeSearchParameter } from "./search";
+import { escapeSearchParameter } from "./search.js";
 
 describe("escapeSearchParameter", () => {
   it("should escape \\", () => {
