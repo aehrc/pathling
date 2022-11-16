@@ -64,7 +64,6 @@ public class ErrorReportingInterceptor {
     }
   }
 
-
   /**
    * Checks if the exception constitutes an unexpected error (as opposed to a user input error) that
    * should be reported for investigation (e.g. to Sentry). We only want to report 500 series

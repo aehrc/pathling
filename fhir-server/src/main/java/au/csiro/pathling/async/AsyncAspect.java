@@ -132,10 +132,7 @@ public class AsyncAspect {
         spark.sparkContext().setJobGroup(requestId, requestId, true);
         return (IBaseResource) joinPoint.proceed(args);
       } catch (final Throwable e) {
-        // NOTE: Here is where we should do the actual error handling and logging for the failed 
-        // jobs, not where the future is interrogated.
-
-        // unwrap the actual exception from the aspect proxy wrapper if needed
+        // Unwrap the actual exception from the aspect proxy wrapper, if needed.
         final Throwable actualEx = unwrapFromProxy(e);
 
         // Apply the same processing and filtering as we do for synchronous requests.
