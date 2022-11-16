@@ -28,8 +28,8 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.terminology.ConceptTranslator;
@@ -234,7 +234,7 @@ public class PathlingContextTest {
         TerminologyServiceFactory.class, withSettings().serializable());
     final TerminologyService terminologyService = mock(TerminologyService.class,
         withSettings().serializable());
-    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
+    when(terminologyServiceFactory.buildService()).thenReturn(terminologyService);
     when(terminologyService.intersect(eq(valueSetUri), any()))
         .thenReturn(new HashSet<>(List.of(coding1)));
 
@@ -270,7 +270,7 @@ public class PathlingContextTest {
         withSettings().serializable());
     final ConceptTranslator conceptTranslator = mock(ConceptTranslator.class,
         withSettings().serializable());
-    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
+    when(terminologyServiceFactory.buildService()).thenReturn(terminologyService);
     when(terminologyService.translate(any(), eq(conceptMapUri), eq(false), eq(equivalences)))
         .thenReturn(conceptTranslator);
     when(conceptTranslator.translate(any())).thenReturn(List.of(coding2.toCoding()));
@@ -305,7 +305,7 @@ public class PathlingContextTest {
         withSettings().serializable());
     final Entry entry = Entry.of(coding1, coding2);
     final Relation relation = Relation.fromMappings(List.of(entry));
-    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
+    when(terminologyServiceFactory.buildService()).thenReturn(terminologyService);
     when(terminologyService.getSubsumesRelation(any())).thenReturn(relation);
 
     final PathlingContext pathlingContext = PathlingContext.create(spark,
@@ -365,7 +365,7 @@ public class PathlingContextTest {
         defaultTerminologyServiceFactory.getAuthConfig().getTokenExpiryTolerance());
 
     final TerminologyService terminologyService = terminologyServiceFactory
-        .buildService(log);
+        .buildService();
     assertNotNull(terminologyService);
   }
 

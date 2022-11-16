@@ -21,7 +21,8 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -58,6 +59,9 @@ public class AbstractParserTest {
   @Autowired
   TerminologyService terminologyService;
 
+  @Autowired
+  TerminologyService2 terminologyService2;
+  
   @Autowired
   FhirEncoders fhirEncoders;
 

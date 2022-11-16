@@ -276,7 +276,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
 
-    TerminologyServiceHelpers.setupValidate(terminologyService)
+    TerminologyServiceHelpers.setupValidate(terminologyService2)
         .withValueSet(valueSetUrl,
             CD_SNOMED_403190006, CD_SNOMED_284551006);
 

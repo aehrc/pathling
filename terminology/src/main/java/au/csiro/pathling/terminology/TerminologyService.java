@@ -28,8 +28,8 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
  *
  * @author Piotr Szul
  */
-public interface TerminologyService extends  TerminologyService2{
-  
+public interface TerminologyService {
+
   /**
    * Creates a translator for given set of codings according to the specified concept map. See also:
    * https://www.hl7.org/fhir/operation-conceptmap-translate.html.

@@ -3,7 +3,7 @@ package au.csiro.pathling.sql.udf;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOne;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.encodeMany;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;

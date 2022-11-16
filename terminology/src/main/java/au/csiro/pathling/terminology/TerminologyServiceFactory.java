@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhir;
+package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.terminology.TerminologyService;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.terminology.TerminologyService2;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.slf4j.Logger;
 
 /**
  * Represents something that creates a {@link TerminologyService}.
@@ -32,27 +32,20 @@ import org.slf4j.Logger;
  * Used for code that runs on Spark workers.
  */
 public interface TerminologyServiceFactory extends Serializable {
-
-
-  @Value
-  class Result {
-
-    @Nonnull
-    Dataset<Row> dataset;
-    @Nonnull
-    Column column;
-  }
-
-  @Nonnull
-  Result memberOf(@Nonnull Dataset<Row> dataset, @Nonnull Column value, String valueSetUri);
   
+  /**
+   * Builds a new instance.
+   *
+   * @return a shiny new TerminologyService instance
+   */
+  @Nonnull
+  TerminologyService buildService();
 
   /**
    * Builds a new instance.
    *
-   * @param logger a {@link Logger} to use for logging
-   * @return a shiny new TerminologyClient instance
+   * @return a shiny new TerminologyService2 instance
    */
   @Nonnull
-  TerminologyService buildService(@Nonnull final Logger logger);
+  TerminologyService2 buildService2();
 }

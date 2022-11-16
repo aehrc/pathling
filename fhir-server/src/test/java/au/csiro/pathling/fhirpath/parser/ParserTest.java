@@ -75,7 +75,7 @@ public class ParserTest extends AbstractParserTest {
 
   private TranslateExpectations setupMockTranslationFor_195662009_444814009(
       final String conceptMapUrl) {
-    return TerminologyServiceHelpers.setupTranslate(terminologyService)
+    return TerminologyServiceHelpers.setupTranslate(terminologyService2)
         .withMockTranslations(CD_SNOMED_195662009,
             conceptMapUrl, "uuid:test-system", 3)
         .withMockTranslations(CD_SNOMED_444814009,
@@ -351,7 +351,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testWhereWithMemberOf() {
 
-    TerminologyServiceHelpers.setupValidate(terminologyService)
+    TerminologyServiceHelpers.setupValidate(terminologyService2)
         .withValueSet("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             CD_SNOMED_403190006, CD_SNOMED_284551006);
     assertThatResultOf(
@@ -479,7 +479,7 @@ public class ParserTest extends AbstractParserTest {
             "uuid:other-system", 1)
         .withMockTranslations(mockCoding("uuid:test-system", "444814009", 1), "uuid:cm=2",
             "uuid:other-system", 2);
-    
+
     assertThatResultOf(ResourceType.CONDITION,
         "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=13).code")
         .selectOrderedResult()

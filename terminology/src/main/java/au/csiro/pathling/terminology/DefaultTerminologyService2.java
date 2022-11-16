@@ -18,7 +18,7 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 
-public class SimpleTerminologyService implements TerminologyService, Closeable {
+public class DefaultTerminologyService2 implements TerminologyService2, Closeable {
 
   @Nonnull
   private final TerminologyClient2 terminologyClient;
@@ -26,7 +26,7 @@ public class SimpleTerminologyService implements TerminologyService, Closeable {
   @Nonnull
   private final Closeable toClose;
 
-  public SimpleTerminologyService(@Nonnull final TerminologyClient2 terminologyClient,
+  public DefaultTerminologyService2(@Nonnull final TerminologyClient2 terminologyClient,
       @Nonnull Closeable toClose) {
     this.terminologyClient = terminologyClient;
     this.toClose = toClose;
@@ -70,29 +70,7 @@ public class SimpleTerminologyService implements TerminologyService, Closeable {
         new BooleanType(reverse)
     );
   }
-
-  @Nonnull
-  @Override
-  public ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,
-      @Nonnull final String conceptMapUrl, final boolean reverse,
-      @Nonnull final Collection<ConceptMapEquivalence> equivalences) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Nonnull
-  @Override
-  public Relation getSubsumesRelation(@Nonnull final Collection<SimpleCoding> systemAndCodes) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Nonnull
-  @Override
-  public Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,
-      @Nonnull final Collection<SimpleCoding> systemAndCodes) {
-    throw new UnsupportedOperationException();
-  }
-
-
+  
   @Override
   public void close() throws IOException {
     toClose.close();

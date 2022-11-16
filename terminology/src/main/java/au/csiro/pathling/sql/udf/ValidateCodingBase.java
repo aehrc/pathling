@@ -1,6 +1,7 @@
 package au.csiro.pathling.sql.udf;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import java.io.Serializable;
 import java.util.Objects;
@@ -35,8 +36,7 @@ abstract public class ValidateCodingBase implements SqlFunction, Serializable {
     if (url == null || codings == null) {
       return null;
     }
-    final TerminologyService terminologyService = terminologyServiceFactory.buildService(
-        log);
+    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
     return codings
         .filter(Objects::nonNull).anyMatch(coding -> {
           final Parameters parameters = terminologyService.validate(url, coding);

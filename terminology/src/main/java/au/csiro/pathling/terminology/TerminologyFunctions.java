@@ -19,7 +19,6 @@ package au.csiro.pathling.terminology;
 
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;

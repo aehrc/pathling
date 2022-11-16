@@ -21,13 +21,14 @@ import static au.csiro.pathling.test.TestResources.assertJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
+import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -58,6 +59,9 @@ abstract class AggregateExecutorTest {
   @Autowired
   SparkSession spark;
 
+  @Autowired
+  TerminologyService2 terminologyService2;
+  
   @Autowired
   TerminologyService terminologyService;
 

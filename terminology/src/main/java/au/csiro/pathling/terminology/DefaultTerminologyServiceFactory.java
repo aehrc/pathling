@@ -1,21 +1,20 @@
 package au.csiro.pathling.terminology;
 
 import static org.apache.spark.sql.functions.callUDF;
-import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.caching.CachingFactories;
 import au.csiro.pathling.config.HttpCacheConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClient2;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.sql.udf.ValidateCoding;
 import au.csiro.pathling.terminology.ObjectHolder.SingletonHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
@@ -23,20 +22,29 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.slf4j.Logger;
+import java.util.UUID;
 
 
+/**
+ * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService}
+ * implemented using {@link TerminologyClient} with given configuration.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 @Slf4j
 @EqualsAndHashCode
-public class CacheableTerminologyServiceFactory implements TerminologyServiceFactory {
+@Getter
+public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
 
   private static final long serialVersionUID = 2837933007972812597L;
 
   @Nonnull
-  private static final ObjectHolder<CacheableTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = new SingletonHolder<>();
+  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService2> terminologyServiceHolder2 = new SingletonHolder<>();
+
+  @Nonnull
+  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = new SingletonHolder<>();
+
 
   @Nonnull
   private final FhirVersionEnum fhirVersion;
@@ -56,10 +64,10 @@ public class CacheableTerminologyServiceFactory implements TerminologyServiceFac
 
   public static synchronized void invalidate() {
     log.info("Invalidating HTTPClient cache");
-    terminologyServiceHolder.invalidate();
+    terminologyServiceHolder2.invalidate();
   }
 
-  public CacheableTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
+  public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
       final boolean verboseRequestLogging,
       @Nonnull final HttpClientConfiguration clientConfig,
@@ -71,27 +79,48 @@ public class CacheableTerminologyServiceFactory implements TerminologyServiceFac
     this.authConfig = authConfig;
     this.clientConfig = clientConfig;
   }
-
+  
   @Nonnull
   @Override
-  public Result memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column value,
-      final String valueSetUri) {
-    final Column resultColumn = callUDF(ValidateCoding.FUNCTION_NAME,
-        lit(valueSetUri),
-        value);
-    return new Result(dataset.repartition(8)
-        , resultColumn);
+  public TerminologyService buildService() {
+    return buildService(UUID::randomUUID);
   }
 
+  /**
+   * Builds a new instance.
+   *
+   * @param uuidFactory the {@link UUIDFactory to use for UUID generation}
+   * @return a shiny new TerminologyService instance =
+   */
   @Nonnull
-  @Override
-  public TerminologyService buildService(@Nonnull final Logger logger) {
+  @Deprecated
+  public TerminologyService buildService(
+      @Nonnull final UUIDFactory uuidFactory) {
+    // TODO: we ignore here rhe uuidFactor in the lookp key, but hopfully that's not an issue.
     return terminologyServiceHolder.getOrCreate(this,
-        CacheableTerminologyServiceFactory::createService);
+        f -> f.createService(uuidFactory));
   }
 
   @Nonnull
-  private SimpleTerminologyService createService() {
+  @Override
+  public TerminologyService2 buildService2() {
+    return terminologyServiceHolder2.getOrCreate(this,
+        DefaultTerminologyServiceFactory::createService2);
+  }
+
+  @Nonnull
+  private TerminologyService createService(@Nonnull final UUIDFactory uuidFactory) {
+    final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
+    //TODO: maybe share the HttpClient 
+    final CloseableHttpClient httpClient = buildHttpClient(clientConfig);
+    final TerminologyClient terminologyClient = TerminologyClient.build(
+        fhirContext, terminologyServerUrl, socketTimeout, verboseRequestLogging, authConfig,
+        httpClient);
+    return new DefaultTerminologyService(fhirContext, terminologyClient, uuidFactory);
+  }
+
+  @Nonnull
+  private DefaultTerminologyService2 createService2() {
     // TODO: check if the socket timeout is actually use when we pass
     // a HttpClient to the RestFactory
 
@@ -100,7 +129,7 @@ public class CacheableTerminologyServiceFactory implements TerminologyServiceFac
     final TerminologyClient2 terminologyClient = TerminologyClient2.build(
         fhirContext, terminologyServerUrl, socketTimeout, verboseRequestLogging, authConfig,
         httpClient);
-    return new SimpleTerminologyService(terminologyClient, httpClient);
+    return new DefaultTerminologyService2(terminologyClient, httpClient);
   }
 
   private static CloseableHttpClient buildHttpClient(

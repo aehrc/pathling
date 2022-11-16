@@ -19,7 +19,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;

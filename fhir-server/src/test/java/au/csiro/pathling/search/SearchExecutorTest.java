@@ -19,17 +19,14 @@ package au.csiro.pathling.search;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsStream;
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
@@ -85,7 +82,7 @@ class SearchExecutorTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  TerminologyService terminologyService;
+  TerminologyService2 terminologyService2;
 
   @BeforeEach
   void setUp() {
@@ -105,11 +102,11 @@ class SearchExecutorTest {
     final ValueSet valueSet = (ValueSet) jsonParser.parseResource(getResourceAsStream(
         "txResponses/SearchExecutorTest/simpleSearchWithMemberOf.ValueSet.json"));
 
-    TerminologyServiceHelpers.setupValidate(terminologyService)
+    TerminologyServiceHelpers.setupValidate(terminologyService2)
         .fromValueSet(
             "http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009",
             valueSet);
-    
+
     final SearchExecutor executor = builder.build();
     assertResponse("SearchExecutorTest/simpleSearchWithMemberOf.Bundle.json", executor);
   }

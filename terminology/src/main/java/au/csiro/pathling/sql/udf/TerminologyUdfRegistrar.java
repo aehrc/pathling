@@ -1,6 +1,6 @@
 package au.csiro.pathling.sql.udf;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import org.apache.spark.sql.SparkSession;
 import javax.annotation.Nonnull;
 import java.util.Arrays;

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService;

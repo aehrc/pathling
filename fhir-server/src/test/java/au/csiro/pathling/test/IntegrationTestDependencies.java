@@ -18,7 +18,7 @@
 package au.csiro.pathling.test;
 
 import au.csiro.pathling.config.Configuration;
-import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.UUIDFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -56,8 +56,9 @@ public class IntegrationTestDependencies {
       @Nonnull final FhirContext fhirContext,
       @Nonnull final Configuration configuration) {
     log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
-    return new DefaultTerminologyServiceFactory(fhirContext,
+    return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
         configuration.getTerminology().getServerUrl(), 0, false,
+        configuration.getTerminology().getClient(),
         configuration.getTerminology().getAuthentication());
   }
 
@@ -70,7 +71,7 @@ public class IntegrationTestDependencies {
   public TerminologyService terminologyService(
       @Nonnull final DefaultTerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final UUIDFactory uuidFactory) throws NoSuchFieldException, IllegalAccessException {
-    return terminologyServiceFactory.buildService(log, uuidFactory);
+    return terminologyServiceFactory.buildService(uuidFactory);
   }
 
 }

@@ -8,7 +8,7 @@ import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
@@ -38,8 +38,8 @@ public class UdfTest {
   private SparkSession spark;
 
   @Autowired
-  TerminologyService terminologyService;
-  
+  TerminologyService2 terminologyService;
+
   @Autowired
   IParser jsonParser;
 

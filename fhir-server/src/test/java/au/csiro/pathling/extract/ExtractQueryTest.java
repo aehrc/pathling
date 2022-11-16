@@ -26,7 +26,7 @@ import static org.mockito.Mockito.mock;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.test.SharedMocks;

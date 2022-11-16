@@ -17,7 +17,9 @@
 
 package au.csiro.pathling.test.stubs;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyOperations.Result;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import javax.annotation.Nonnull;
@@ -25,7 +27,6 @@ import org.apache.commons.lang.NotImplementedException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.slf4j.Logger;
 
 public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
 
@@ -36,14 +37,14 @@ public class TestTerminologyServiceFactory implements TerminologyServiceFactory 
 
   @Nonnull
   @Override
-  public Result memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column value,
-      final String valueSetUri) {
-    throw new NotImplementedException();
+  public TerminologyService buildService() {
+    return SharedMocks.getOrCreate(TerminologyService.class);
   }
 
   @Nonnull
   @Override
-  public TerminologyService buildService(@Nonnull final Logger logger) {
-    return SharedMocks.getOrCreate(TerminologyService.class);
+  public TerminologyService2 buildService2() {
+    return SharedMocks.getOrCreate(TerminologyService2.class);
   }
+
 }

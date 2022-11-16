@@ -17,25 +17,14 @@
 
 package au.csiro.pathling.spark;
 
-import au.csiro.pathling.async.SparkListener;
-import au.csiro.pathling.config.Configuration;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.sql.SqlStrategy;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.sql.udf.*;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.env.*;
 import org.springframework.stereotype.Component;
 import javax.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Consumer;
 
 /**
  * Provides an Apache Spark session for use by the Pathling server.

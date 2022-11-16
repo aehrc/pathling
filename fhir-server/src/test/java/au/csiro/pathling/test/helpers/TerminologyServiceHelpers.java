@@ -1,6 +1,7 @@
 package au.csiro.pathling.test.helpers;
 
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
@@ -27,9 +28,9 @@ public class TerminologyServiceHelpers {
   public static class ValidateExpectations {
 
     private final @Nonnull
-    TerminologyService mockService;
+    TerminologyService2 mockService;
 
-    ValidateExpectations(@Nonnull final TerminologyService mockService) {
+    ValidateExpectations(@Nonnull final TerminologyService2 mockService) {
       this.mockService = mockService;
       when(mockService.validate(any(), any())).thenReturn(RESULT_FALSE);
     }
@@ -58,9 +59,9 @@ public class TerminologyServiceHelpers {
   public static class TranslateExpectations {
 
     private final @Nonnull
-    TerminologyService mockService;
+    TerminologyService2 mockService;
 
-    TranslateExpectations(@Nonnull final TerminologyService mockService) {
+    TranslateExpectations(@Nonnull final TerminologyService2 mockService) {
       this.mockService = mockService;
       when(mockService.translateCoding(any(), any(), anyBoolean())).thenReturn(RESULT_FALSE);
     }
@@ -106,13 +107,13 @@ public class TerminologyServiceHelpers {
     }
   }
 
-  public static ValidateExpectations setupValidate(final @Nonnull TerminologyService mockService) {
+  public static ValidateExpectations setupValidate(final @Nonnull TerminologyService2 mockService) {
     return new ValidateExpectations(mockService);
   }
 
 
   public static TranslateExpectations setupTranslate(
-      final @Nonnull TerminologyService mockService) {
+      final @Nonnull TerminologyService2 mockService) {
     return new TranslateExpectations(mockService);
   }
 

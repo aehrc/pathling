@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -75,7 +75,7 @@ public class MemberOfMapper implements
         .flatMap(List::stream)
         .collect(Collectors.toSet());
 
-    final TerminologyService terminologyService = terminologyServiceFactory.buildService(log);
+    final TerminologyService terminologyService = terminologyServiceFactory.buildService();
     return terminologyService.intersect(valueSetUri, codings);
   }
 

@@ -23,13 +23,10 @@ import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.spark.SparkConfigurer;
-import au.csiro.pathling.sql.udf.SqlFunction1;
-import au.csiro.pathling.sql.udf.SqlFunction2;
-import au.csiro.pathling.sql.udf.SqlFunction3;
-import au.csiro.pathling.sql.udf.SqlFunction4;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -103,6 +100,13 @@ class UnitTestDependencies {
   @Nonnull
   static TerminologyService terminologyService() {
     return SharedMocks.getOrCreate(TerminologyService.class);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static TerminologyService2 terminologyService2() {
+    return SharedMocks.getOrCreate(TerminologyService2.class);
   }
 
   @Bean

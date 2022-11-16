@@ -117,21 +117,7 @@ public class DefaultTerminologyService implements TerminologyService {
     return validCodings(codings)
         .filter(coding -> knownCodeSystems.contains(coding.getSystem()));
   }
-
-  @Nonnull
-  @Override
-  public Parameters validate(@Nonnull final String url, @Nonnull final Coding coding) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Nonnull
-  @Override
-  public Parameters translateCoding(@Nonnull final Coding coding,
-      @Nonnull final String conceptMapUrl,
-      final boolean reverse) {
-    throw new UnsupportedOperationException();
-  }
-
+  
   @Nonnull
   @Override
   public ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,

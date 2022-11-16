@@ -17,15 +17,21 @@
 
 package au.csiro.pathling.config;
 
-import lombok.Data;
-
+import java.io.Serializable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
-import java.io.Serializable;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 // TODO: Add validation is needed
 //@ValidTerminologyAuthConfiguration
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class HttpClientConfiguration implements Serializable {
 
   private static final long serialVersionUID = -1624276800166930462L;
@@ -79,5 +85,10 @@ public class HttpClientConfiguration implements Serializable {
   //   }
   //
   // }
+
+  public static HttpClientConfiguration defaults() {
+    return HttpClientConfiguration.builder().maxConnectionsTotal(32).maxConnectionsPerRoute(16)
+        .cache(HttpCacheConfiguration.defaults()).build();
+  }
 
 }

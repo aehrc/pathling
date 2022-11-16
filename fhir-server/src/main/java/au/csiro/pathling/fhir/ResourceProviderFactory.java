@@ -25,6 +25,7 @@ import au.csiro.pathling.extract.ExtractExecutor;
 import au.csiro.pathling.extract.ExtractProvider;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchProvider;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.IResourceProvider;

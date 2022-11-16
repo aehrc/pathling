@@ -37,21 +37,20 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.client.cache.CachingHttpClients;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
-import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A HAPI "annotation client" for communicating with a R4 FHIR terminology service.
@@ -61,6 +60,8 @@ import org.slf4j.Logger;
  * Client</a>
  */
 public interface TerminologyClient extends IRestfulClient {
+
+  Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
   /**
    * Performs a CodeSystem search using a single URI.
@@ -73,7 +74,7 @@ public interface TerminologyClient extends IRestfulClient {
   @Nullable
   List<CodeSystem> searchCodeSystems(@Nonnull @RequiredParam(name = CodeSystem.SP_URL) UriParam uri,
       @Nonnull @Elements Set<String> elements);
-  
+
   /**
    * Invokes an "expand" request against the terminology server, using an inline ValueSet resource
    *
@@ -137,16 +138,34 @@ public interface TerminologyClient extends IRestfulClient {
    * with
    * @param socketTimeout the number of milliseconds to wait for response data
    * @param verboseRequestLogging whether to log out verbose details of each request
-   * @param logger a {@link Logger} to use for logging
+   * @return a shiny new TerminologyClient instance
+   */
+  @Nonnull
+  static TerminologyClient build(@Nonnull final FhirContext fhirContext,
+      @Nonnull final String terminologyServerUrl, final int socketTimeout,
+      final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig) {
+    return build(fhirContext, terminologyServerUrl, socketTimeout, verboseRequestLogging,
+        authConfig, buildHttpClient());
+  }
+
+  /**
+   * Build a new instance using the supplied {@link FhirContext} and configuration options.
+   *
+   * @param fhirContext the {@link FhirContext} used to build the client
+   * @param terminologyServerUrl the URL of the terminology server this client will communicate
+   * with
+   * @param socketTimeout the number of milliseconds to wait for response data
+   * @param verboseRequestLogging whether to log out verbose details of each request
+   * @param httpClient  the http client instance to use
    * @return a shiny new TerminologyClient instance
    */
   @Nonnull
   static TerminologyClient build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
-      @Nonnull final Logger logger) {
+      @Nonnull final HttpClient httpClient) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
-    restfulClientFactory.setHttpClient(buildHttpClient());
+    restfulClientFactory.setHttpClient(httpClient);
     restfulClientFactory.setSocketTimeout(socketTimeout);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
@@ -155,7 +174,7 @@ public interface TerminologyClient extends IRestfulClient {
     terminologyClient.registerInterceptor(new UserAgentInterceptor());
 
     final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
-    loggingInterceptor.setLogger(logger);
+    loggingInterceptor.setLogger(log);
     loggingInterceptor.setLogRequestSummary(true);
     loggingInterceptor.setLogResponseSummary(true);
     loggingInterceptor.setLogRequestHeaders(false);

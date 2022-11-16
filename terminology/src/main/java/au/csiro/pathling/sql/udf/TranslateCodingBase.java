@@ -2,10 +2,10 @@ package au.csiro.pathling.sql.udf;
 
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
-import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TranslateMapping;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.utilities.Strings;
@@ -64,8 +64,7 @@ public abstract class TranslateCodingBase implements SqlFunction, Serializable {
                                     ? reverse
                                     : PARAM_REVERSE_DEFAULT;
 
-    final TerminologyService terminologyService = terminologyServiceFactory.buildService(
-        log);
+    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
     // TODO: make codings unique maybe without using ImmutableCoding
     return codings
         .flatMap(coding -> TranslateMapping.entriesFromParameters(

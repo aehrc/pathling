@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.translate;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.sql.MapperWithPreview;
@@ -95,7 +95,7 @@ public class TranslateMapper implements
         .filter(Objects::nonNull)
         .flatMap(List::stream)
         .collect(Collectors.toSet());
-    final TerminologyService terminologyService = terminologyServiceFactory.buildService(log);
+    final TerminologyService terminologyService = terminologyServiceFactory.buildService();
     return terminologyService.translate(uniqueCodings, conceptMapUrl,
         reverse, equivalences);
   }

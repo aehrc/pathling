@@ -36,7 +36,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -110,7 +111,7 @@ class TranslateFunctionTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  TerminologyService terminologyService;
+  TerminologyService2 terminologyService;
 
   @BeforeEach
   void setUp() {
