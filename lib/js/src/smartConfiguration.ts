@@ -15,12 +15,12 @@
  * limitations under the License.
  */
 
-import { getConfig, makeRequest } from "./common";
+import { getConfig, makeRequest } from "./common.js";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
   QueryResult
-} from "./index";
+} from "./index.js";
 
 export type SmartConfigurationQueryOptions = QueryOptions;
 

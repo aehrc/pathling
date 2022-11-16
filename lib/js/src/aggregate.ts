@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { Parameters } from "fhir/r4";
-import { getConfig, makeRequest, postFhirConfig } from "./common";
+import { Parameters } from "fhir/r4.js";
+import { getConfig, makeRequest, postFhirConfig } from "./common.js";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
   QueryResult
-} from "./index";
+} from "./index.js";
 
 /**
  * The parameters that make up an aggregate query.

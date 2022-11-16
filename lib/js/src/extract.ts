@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { Parameters } from "fhir/r4";
-import { getConfig, makeRequest, postFhirConfig } from "./common";
+import { Parameters } from "fhir/r4.js";
+import { getConfig, makeRequest, postFhirConfig } from "./common.js";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  QueryResult
-} from "./index";
+  QueryResult,
+} from "./index.js";
 
 /**
  * The parameters that make up an extract query.
@@ -107,7 +107,7 @@ export class ExtractClient {
         ? postFhirConfig(url, ExtractClient.parametersFromQuery(query), options)
         : getConfig(url, params, options);
 
-    const result = await makeRequest<any, Parameters>(
+    const result = await makeRequest<Parameters>(
       config,
       "Checking status of extract job",
       this.options,
@@ -121,7 +121,7 @@ export class ExtractClient {
     }
     return {
       ...result,
-      url: resultUrl.valueUrl
+      url: resultUrl.valueUrl,
     };
   }
 
@@ -155,23 +155,23 @@ export class ExtractClient {
       parameter: [
         ...query.columns.map((c: string) => ({
           name: "column",
-          valueString: c
+          valueString: c,
         })),
         ...(query.filters
           ? query.filters.map((f: string) => ({
-            name: "filter",
-            valueString: f
-          }))
+              name: "filter",
+              valueString: f,
+            }))
           : []),
         ...(query.limit
           ? [
-            {
-              name: "limit",
-              valueInteger: query.limit
-            }
-          ]
-          : [])
-      ]
+              {
+                name: "limit",
+                valueInteger: query.limit,
+              },
+            ]
+          : []),
+      ],
     };
   }
 }

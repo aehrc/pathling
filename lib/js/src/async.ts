@@ -17,15 +17,13 @@
 
 // noinspection JSUnusedGlobalSymbols
 
-import { AxiosResponse } from "axios";
 import pRetry, { AbortError, FailedAttemptError } from "p-retry";
 import {
   PathlingClientOptionsResolved,
   QueryOptions,
-  RetryConfig
-} from "./index";
-import { JobClient, JobInProgressError } from "./job";
-import { buildResponseError } from "./OperationOutcome";
+  RetryConfig,
+} from "./index.js";
+import { JobClient, JobInProgressError } from "./job.js";
 
 /**
  * A set of options that can be passed to the `retry` function.
@@ -64,7 +62,7 @@ export function retry(promise: () => Promise<any>, options: RetryOptions) {
             error.message
           );
         }
-      }
+      },
     }
   );
 }
@@ -72,8 +70,8 @@ export function retry(promise: () => Promise<any>, options: RetryOptions) {
 /**
  * Extract a status URL from the headers of a response.
  */
-export function getStatusUrl<T>(response: AxiosResponse<T>) {
-  const statusUrl = response.headers["content-location"];
+export function getStatusUrl(response: Response): string {
+  const statusUrl = response.headers.get("content-location");
   if (!statusUrl) {
     throw new Error("No Content-Location header found");
   }
@@ -83,20 +81,20 @@ export function getStatusUrl<T>(response: AxiosResponse<T>) {
 /**
  * Wait for the eventual response provided by an async job status URL.
  */
-export function waitForAsyncResult(
+export function waitForAsyncResult<ResponseType>(
   url: string,
   message: string,
   clientOptions: PathlingClientOptionsResolved,
   requestOptions?: QueryOptions
-): Promise<any> {
+): Promise<ResponseType> {
   const jobClient = new JobClient();
   return retry(
     async () => {
       try {
         return await jobClient.request(url, requestOptions);
       } catch (e: any) {
-        if (e.response && (e.response as AxiosResponse).status !== 202) {
-          throw new AbortError(buildResponseError(e));
+        if (!(e instanceof JobInProgressError)) {
+          throw new AbortError(e);
         }
         reportProgress(e as Error, requestOptions);
         throw e;
@@ -105,7 +103,7 @@ export function waitForAsyncResult(
     {
       retry: clientOptions.asyncRetry,
       verboseLogging: clientOptions.verboseLogging,
-      message
+      message,
     }
   );
 }

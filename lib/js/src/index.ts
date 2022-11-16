@@ -15,13 +15,13 @@
  * limitations under the License.
  */
 
-import { AggregateClient } from "./aggregate";
-import { CapabilitiesClient } from "./capabilities";
-import { ExtractClient } from "./extract";
-import { ImportClient } from "./import";
-import { JobClient } from "./job";
-import { SearchClient } from "./search";
-import { SmartConfigurationClient } from "./smartConfiguration";
+import { AggregateClient } from "./aggregate.js";
+import { CapabilitiesClient } from "./capabilities.js";
+import { ExtractClient } from "./extract.js";
+import { ImportClient } from "./import.js";
+import { JobClient } from "./job.js";
+import { SearchClient } from "./search.js";
+import { SmartConfigurationClient } from "./smartConfiguration.js";
 
 /**
  * Configuration options for a Pathling client instance.
