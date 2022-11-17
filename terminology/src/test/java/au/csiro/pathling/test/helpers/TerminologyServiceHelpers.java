@@ -1,9 +1,12 @@
 package au.csiro.pathling.test.helpers;
 
 import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.terminology.TerminologyService2;
@@ -15,12 +18,31 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
 
 public class TerminologyServiceHelpers {
 
   public final static Parameters RESULT_TRUE = new Parameters().setParameter("result", true);
   public final static Parameters RESULT_FALSE = new Parameters().setParameter("result", false);
 
+
+  public final static Parameters OUTCOME_EQUIVALENT = new Parameters().setParameter("outcome",
+      EQUIVALENT.toCode());
+
+  public final static Parameters OUTCOME_SUBSUMES = new Parameters().setParameter("outcome",
+      SUBSUMES.toCode());
+  public final static Parameters OUTCOME_SUBSUMEDBY = new Parameters().setParameter("outcome",
+      SUBSUMEDBY.toCode());
+
+
+  public final static Parameters OUTCOME_NOTSUBSUMED = new Parameters().setParameter("outcome",
+      NOTSUBSUMED.toCode());
 
   public static class ValidateExpectations {
 
@@ -29,6 +51,7 @@ public class TerminologyServiceHelpers {
 
     ValidateExpectations(@Nonnull final TerminologyService2 mockService) {
       this.mockService = mockService;
+      clearInvocations(mockService);
       when(mockService.validate(any(), any())).thenReturn(RESULT_FALSE);
     }
 
@@ -41,6 +64,7 @@ public class TerminologyServiceHelpers {
       return this;
     }
 
+    @SuppressWarnings("UnusedReturnValue")
     @Nonnull
     public ValidateExpectations fromValueSet(@Nonnull final String valueSetUri,
         @Nonnull final ValueSet valueSet) {
@@ -52,7 +76,6 @@ public class TerminologyServiceHelpers {
     }
   }
 
-
   public static class TranslateExpectations {
 
     private final @Nonnull
@@ -60,7 +83,8 @@ public class TerminologyServiceHelpers {
 
     TranslateExpectations(@Nonnull final TerminologyService2 mockService) {
       this.mockService = mockService;
-      when(mockService.translateCoding(any(), any(), anyBoolean())).thenReturn(RESULT_FALSE);
+      clearInvocations(mockService);
+      when(mockService.translate(any(), any(), anyBoolean())).thenReturn(RESULT_FALSE);
     }
 
     public TranslateExpectations withTranslations(final @Nonnull Coding coding,
@@ -82,7 +106,6 @@ public class TerminologyServiceHelpers {
       return withTranslations(sourceCoding, conceptMapUrl, false, translations);
     }
 
-
     public TranslateExpectations withTranslations(
         final @Nonnull Coding coding,
         final @Nonnull String conceptMapUrl,
@@ -98,11 +121,47 @@ public class TerminologyServiceHelpers {
         matchParameter1.addPart().setName("concept").setValue(entry.getConcept());
       }
       when(
-          mockService.translateCoding(codingEq(coding), eq(conceptMapUrl), eq(reverse))).thenReturn(
+          mockService.translate(codingEq(coding), eq(conceptMapUrl), eq(reverse))).thenReturn(
           translateResponse);
       return this;
     }
   }
+
+  public static class SubsumesExpectations {
+
+    private final @Nonnull
+    TerminologyService2 mockService;
+
+    private static class DefaultAnswer implements Answer<Parameters> {
+
+      @Override
+      public Parameters answer(final InvocationOnMock invocationOnMock) {
+        final Coding codingA = invocationOnMock.getArgument(0);
+        final Coding codingB = invocationOnMock.getArgument(1);
+
+        if (codingA != null && codingEquals(codingA, codingB)) {
+          return OUTCOME_EQUIVALENT;
+        } else {
+          return OUTCOME_NOTSUBSUMED;
+        }
+      }
+    }
+
+    public SubsumesExpectations(@Nonnull final TerminologyService2 mockService) {
+      this.mockService = mockService;
+      clearInvocations(mockService);
+      doAnswer(new DefaultAnswer()).when(mockService).subsumes(any(), any());
+    }
+
+    public SubsumesExpectations withSubsumes(@Nonnull final Coding codingA,
+        @Nonnull final Coding codingB) {
+      when(mockService.subsumes(codingEq(codingA), codingEq(codingB))).thenReturn(OUTCOME_SUBSUMES);
+      when(mockService.subsumes(codingEq(codingB), codingEq(codingA))).thenReturn(
+          OUTCOME_SUBSUMEDBY);
+      return this;
+    }
+  }
+
 
   public static ValidateExpectations setupValidate(final @Nonnull TerminologyService2 mockService) {
     return new ValidateExpectations(mockService);
@@ -113,5 +172,12 @@ public class TerminologyServiceHelpers {
       final @Nonnull TerminologyService2 mockService) {
     return new TranslateExpectations(mockService);
   }
+
+
+  public static SubsumesExpectations setupSubsumes(
+      final @Nonnull TerminologyService2 mockService) {
+    return new SubsumesExpectations(mockService);
+  }
+
 
 }

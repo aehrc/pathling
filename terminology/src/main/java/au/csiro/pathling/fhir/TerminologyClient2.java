@@ -48,7 +48,7 @@ public interface TerminologyClient2 {
       @Nullable @OperationParam(name = "reverse") BooleanType reverse
   );
 
-  @Operation(name = "$subsumes", type = ConceptMap.class, idempotent = true)
+  @Operation(name = "$subsumes", type = CodeSystem.class, idempotent = true)
   @Nonnull
   Parameters subsumes(
       @Nonnull @OperationParam(name = "codeA") CodeType codeA,
@@ -163,7 +163,7 @@ class TerminologyClient2Impl implements TerminologyClient2 {
       params.addParameter().setName("version").setValue(version);
     }
     return fhirClient.operation()
-        .onType(ConceptMap.class)
+        .onType(CodeSystem.class)
         .named("$subsumes")
         .withParameters(params)
         .useHttpGet()

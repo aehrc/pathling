@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
@@ -64,6 +65,8 @@ public final class TerminologyHelpers {
   public static final Coding CD_SNOMED_195662009 = snomedCoding("195662009",
       "Acute viral pharyngitis (disorder)");
 
+  public static final Coding CD_SNOMED_40055000 = snomedCoding("40055000",
+      "Chronic sinusitis (disorder)");
 
   @SuppressWarnings("unused")
   public static Coding CD_SNOMED_63816008 = snomedCoding("63816008",
@@ -97,6 +100,7 @@ public final class TerminologyHelpers {
       "Chronic sinusitis (disorder)");
   private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");
+
 
   public static final Relation REL_SNOMED_444814009_SUBSUMES_40055000 = RelationBuilder.empty()
       .add(CD_SNOMED_VER_444814009, CD_SNOMED_VER_40055000).build();
@@ -162,5 +166,21 @@ public final class TerminologyHelpers {
       final int index) {
     return new Coding(system, code + "-" + index, "Display-" + index);
   }
-  
+
+  public static boolean codingEquals(@Nullable final Coding left,
+      @Nullable final Coding right) {
+    if (left == null) {
+      return right == null;
+    } else {
+      return right != null &&
+          (left.hasSystem()
+           ? left.getSystem().equals(right.getSystem())
+           : !right.hasSystem()) &&
+          (left.hasCode()
+           ? left.getCode().equals(right.getCode())
+           : !right.hasCode()) &&
+          (!left.hasVersion() || left.getVersion().equals(right.getVersion()));
+    }
+  }
+
 }

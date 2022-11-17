@@ -5,29 +5,27 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
-import scala.collection.mutable.WrappedArray;
 import java.util.Objects;
 import java.util.stream.Stream;
 
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOneOrMany;
 
 @Slf4j
-public class ValidateCoding implements SqlFunction,
+public class MemberOfUdf implements SqlFunction,
     SqlFunction2<Object, String, Boolean> {
 
   private static final long serialVersionUID = 7605853352299165569L;
 
-  public static final String FUNCTION_NAME = "validate_coding";
+  public static final String FUNCTION_NAME = "member_of";
 
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
-  protected ValidateCoding(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+  protected MemberOfUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 

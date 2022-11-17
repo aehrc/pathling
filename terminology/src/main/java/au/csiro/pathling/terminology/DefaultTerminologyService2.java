@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.utilities.Preconditions;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
@@ -60,9 +61,12 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Nonnull
   @Override
-  public Parameters translateCoding(@Nonnull final Coding coding,
+  public Parameters translate(@Nonnull final Coding coding,
       @Nonnull final String conceptMapUrl,
       final boolean reverse) {
+
+    // TODO: how should we deal with things like null code inside here ???
+    // Should this be an error or should we just return null 
     return terminologyClient.translate(
         required(UriType::new, conceptMapUrl), required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
@@ -70,7 +74,38 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
         new BooleanType(reverse)
     );
   }
-  
+
+  @Nullable
+  @Override
+  public Parameters subsumes(@Nonnull final Coding codingA, @Nonnull final Coding codingB) {
+
+    // TODO: 
+    if (codingA.getSystem() == null || !codingA.getSystem().equals(codingB.getSystem())) {
+      return null;
+    }
+    final String resolvedSystem = codingA.getSystem();
+
+    // if both version are present then ten need to be equal
+    // TODO: this should most likely result either in null or false
+    if (!(codingA.getVersion() == null || codingB.getVersion() == null || codingA.getVersion()
+        .equals(codingB.getVersion()))) {
+      return null;
+    }
+    final String resolvedVersion = codingA.getVersion() != null
+                                   ? codingA.getVersion()
+                                   : codingB.getVersion();
+
+    // TODO: optimize not call the client if not needed
+
+    // there are some assertions here to make
+    return terminologyClient.subsumes(
+        required(CodeType::new, codingA.getCode()),
+        required(CodeType::new, codingB.getCode()),
+        required(UriType::new, resolvedSystem),
+        optional(StringType::new, resolvedVersion)
+    );
+  }
+
   @Override
   public void close() throws IOException {
     toClose.close();

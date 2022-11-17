@@ -1,6 +1,5 @@
 package au.csiro.pathling.sql.udf;
 
-import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOne;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOneOrMany;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.encodeMany;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
@@ -26,19 +25,19 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
-public class TranslateCoding implements SqlFunction,
+public class TranslateUdf implements SqlFunction,
     SqlFunction4<Object, String, Boolean, String, Row[]> {
 
   private static final long serialVersionUID = 7605853352299165569L;
 
-  public static final String FUNCTION_NAME = "translate_coding";
+  public static final String FUNCTION_NAME = "translate";
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(CodingEncoding.DATA_TYPE);
   public static boolean PARAM_REVERSE_DEFAULT = false;
 
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
-  public TranslateCoding(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+  public TranslateUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
@@ -77,7 +76,7 @@ public class TranslateCoding implements SqlFunction,
     // TODO: make codings unique maybe without using ImmutableCoding
     return codings
         .flatMap(coding -> TranslateMapping.entriesFromParameters(
-            terminologyService.translateCoding(coding, conceptMapUri, resolvedReverse)))
+            terminologyService.translate(coding, conceptMapUri, resolvedReverse)))
         .filter(entry -> includeEquivalences.contains(entry.getEquivalence().getValue()))
         .map(TranslationEntry::getConcept)
         .map(ImmutableCoding::of)

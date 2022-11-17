@@ -36,6 +36,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
@@ -49,20 +50,18 @@ public interface TerminologyFunctions {
   Logger log = LoggerFactory.getLogger(TerminologyFunctions.class);
 
   @Nonnull
-  Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
-      @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName);
+  Dataset<Row> memberOf(@Nonnull final Column codingArrayCol, @Nonnull final String valueSetUri,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName);
 
   @Nonnull
-  Dataset<Row> translate(@Nonnull final Column codingArrayCol,
-      @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
-      @Nonnull final Dataset<Row> dataset,
+  Dataset<Row> translate(@Nonnull final Column codingArrayCol, @Nonnull final String conceptMapUrl,
+      final boolean reverse, @Nonnull final String equivalence, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName);
 
   @Nonnull
   Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
-      @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
-      final boolean inverted);
+      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
+      @Nonnull final String outputColumnName, final boolean inverted);
 
   @Nonnull
   static TerminologyFunctions of(
@@ -72,7 +71,7 @@ public interface TerminologyFunctions {
       log.warn("Using legacy implementation of terminology functions");
       return new TerminologyFunctionsLegacyImpl(terminologyServiceFactory);
     } else {
-      return new TerminologyFunctionsImpl(terminologyServiceFactory);
+      return new TerminologyFunctionsImpl();
     }
   }
 }
@@ -93,53 +92,43 @@ class TerminologyFunctionsLegacyImpl implements TerminologyFunctions {
       @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName) {
 
-    final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapper(getOrCreateRequestId(), terminologyServiceFactory,
-            valueSetUri);
+    final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper = new MemberOfMapper(
+        getOrCreateRequestId(), terminologyServiceFactory, valueSetUri);
 
-    return SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
+    return SqlExtensions.mapWithPartitionPreview(dataset, codingArrayCol,
+        SimpleCodingsDecoders::decodeList, mapper,
+        StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
   }
 
   @Override
   @Nonnull
   public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
       @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
-      @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
 
-    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapper(getOrCreateRequestId(), terminologyServiceFactory,
-            conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
-            wrapInUserInputError(ConceptMapEquivalence::fromCode)));
+    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper = new TranslateMapper(
+        getOrCreateRequestId(), terminologyServiceFactory, conceptMapUrl, reverse,
+        Strings.parseCsvList(equivalence, wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
-    return SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.createArrayType(CodingEncoding.DATA_TYPE),
-                true, Metadata.empty()));
+    return SqlExtensions.mapWithPartitionPreview(dataset, codingArrayCol,
+        SimpleCodingsDecoders::decodeList, mapper,
+        StructField.apply(outputColumnName, DataTypes.createArrayType(CodingEncoding.DATA_TYPE),
+            true, Metadata.empty()));
   }
 
   @Override
   @Nonnull
   public Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
-      @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
-      final boolean inverted) {
+      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
+      @Nonnull final String outputColumnName, final boolean inverted) {
 
-    final SubsumesMapper mapper =
-        new SubsumesMapper(getOrCreateRequestId(),
-            terminologyServiceFactory,
-            inverted);
+    final SubsumesMapper mapper = new SubsumesMapper(getOrCreateRequestId(),
+        terminologyServiceFactory, inverted);
 
-    return SqlExtensions
-        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
-            SimpleCodingsDecoders::decodeListPair,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
+    return SqlExtensions.mapWithPartitionPreview(idAndCodingSet,
+        functions.struct(codingArrayA, codingArrayB),
+        SimpleCodingsDecoders::decodeListPair, mapper,
+        StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
   }
 
   @Nonnull
@@ -156,12 +145,7 @@ class TerminologyFunctionsLegacyImpl implements TerminologyFunctions {
 
 class TerminologyFunctionsImpl implements TerminologyFunctions {
 
-  @Nonnull
-  private final TerminologyServiceFactory terminologyServiceFactory;
-
-  TerminologyFunctionsImpl(
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
-    this.terminologyServiceFactory = terminologyServiceFactory;
+  TerminologyFunctionsImpl() {
   }
 
   @Nonnull
@@ -184,20 +168,11 @@ class TerminologyFunctionsImpl implements TerminologyFunctions {
   @Override
   @Nonnull
   public Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
-      @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
+      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB
+      , @Nonnull final String outputColumnName,
       final boolean inverted) {
+    return idAndCodingSet.withColumn(outputColumnName,
+        Terminology.subsumes(codingArrayA, codingArrayB, inverted));
 
-    // TODO: replace with the new implementation
-    
-    final SubsumesMapper mapper =
-        new SubsumesMapper(TerminologyFunctionsLegacyImpl.getOrCreateRequestId(),
-            terminologyServiceFactory,
-            inverted);
-
-    return SqlExtensions
-        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
-            SimpleCodingsDecoders::decodeListPair,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
   }
 }

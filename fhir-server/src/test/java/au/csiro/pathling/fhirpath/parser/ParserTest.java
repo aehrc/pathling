@@ -27,14 +27,17 @@ import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_195662009;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_40055000;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.mockCoding;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -271,8 +274,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testSubsumesAndSubsumedBy() {
-    when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.equality());
 
+    setupSubsumes(terminologyService2);
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
     // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
@@ -295,10 +298,9 @@ public class ParserTest extends AbstractParserTest {
         "reverseResolve(Condition.subject).code.coding.subsumes(%resource.reverseResolve(Condition.subject).code)")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
-
-    // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(TerminologyHelpers.REL_SNOMED_444814009_SUBSUMES_40055000);
+    
+    setupSubsumes(terminologyService2).withSubsumes(
+        CD_SNOMED_444814009, CD_SNOMED_40055000);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectOrderedResult()
@@ -332,11 +334,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testWhereWithSubsumes() {
-    // Not a real subsumption - just works for this use case.
-    // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(RelationBuilder.empty().add(TerminologyHelpers.CD_SNOMED_VER_284551006,
-            TerminologyHelpers.CD_SNOMED_VER_40055000).build());
+
+    setupSubsumes(terminologyService2).withSubsumes(CD_SNOMED_284551006, CD_SNOMED_40055000);
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"

@@ -100,23 +100,18 @@ public class SubsumesFunction implements NamedFunction {
     final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
         input.getArguments().get(0));
 
-    final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
-        idAndCodingSet.col(COL_ARG_CODINGS));
-
     final TerminologyServiceFactory terminologyServiceFactory = checkPresent(
         input.getContext().getTerminologyServiceFactory());
     final Dataset<Row> resultDataset = TerminologyFunctions.of(terminologyServiceFactory)
-        .subsumes(idAndCodingSet, codingPairCol,
-            "result", inverted);
+        .subsumes(idAndCodingSet, idAndCodingSet.col(COL_INPUT_CODINGS),
+            idAndCodingSet.col(COL_ARG_CODINGS), "result", inverted);
     final Column resultColumn = col("result");
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
-    return ElementPath
-        .build(expression, resultDataset, inputFhirPath.getIdColumn(),
-            inputFhirPath.getEidColumn(), resultColumn, inputFhirPath.isSingular(),
-            inputFhirPath.getCurrentResource(), inputFhirPath.getThisColumn(),
-            FHIRDefinedType.BOOLEAN);
+    return ElementPath.build(expression, resultDataset, inputFhirPath.getIdColumn(),
+        inputFhirPath.getEidColumn(), resultColumn, inputFhirPath.isSingular(),
+        inputFhirPath.getCurrentResource(), inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 
   /**
@@ -133,8 +128,7 @@ public class SubsumesFunction implements NamedFunction {
     final Dataset<Row> inputCodingSet = toInputDataset(inputFhirPath);
     final Dataset<Row> argCodingSet = toArgDataset(argFhirPath);
 
-    return inputCodingSet.join(argCodingSet,
-        col(COL_ID).equalTo(col(COL_ARG_ID)), "left_outer");
+    return inputCodingSet.join(argCodingSet, col(COL_ID).equalTo(col(COL_ARG_ID)), "left_outer");
   }
 
   /**
@@ -186,26 +180,22 @@ public class SubsumesFunction implements NamedFunction {
                              ? explode_outer(valueColumn.getField(FIELD_CODING))
                              : valueColumn;
 
-    final Dataset<Row> systemAndCodeDataset = expressionDataset
-        .select(fhirPath.getIdColumn().alias(COL_ARG_ID), codingCol.alias(COL_CODING));
+    final Dataset<Row> systemAndCodeDataset = expressionDataset.select(
+        fhirPath.getIdColumn().alias(COL_ARG_ID), codingCol.alias(COL_CODING));
 
-    return systemAndCodeDataset
-        .groupBy(systemAndCodeDataset.col(COL_ARG_ID))
-        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(
-            COL_ARG_CODINGS));
+    return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ARG_ID))
+        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_ARG_CODINGS));
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
 
     final ParserContext context = input.getContext();
-    checkUserInput(context.getTerminologyServiceFactory()
-        .isPresent(), "Attempt to call terminology function " + functionName
-        + " when terminology service has not been configured");
+    checkUserInput(context.getTerminologyServiceFactory().isPresent(),
+        "Attempt to call terminology function " + functionName
+            + " when terminology service has not been configured");
 
-    checkUserInput(
-        input.getArguments().size() == 1,
-        functionName + " function accepts one argument of type Coding or CodeableConcept"
-    );
+    checkUserInput(input.getArguments().size() == 1,
+        functionName + " function accepts one argument of type Coding or CodeableConcept");
 
     validateExpressionType(input.getInput(), "input");
     validateExpressionType(input.getArguments().get(0), "argument");
@@ -213,9 +203,7 @@ public class SubsumesFunction implements NamedFunction {
 
   private void validateExpressionType(@Nonnull final FhirPath inputPath,
       @Nonnull final String pathRole) {
-    checkUserInput(
-        isCodingOrCodeableConcept(inputPath),
-        functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept"
-    );
+    checkUserInput(isCodingOrCodeableConcept(inputPath),
+        functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept");
   }
 }

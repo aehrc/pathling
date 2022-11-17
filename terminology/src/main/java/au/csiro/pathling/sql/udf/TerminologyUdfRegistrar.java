@@ -10,9 +10,9 @@ public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
   public TerminologyUdfRegistrar(@Nonnull TerminologyServiceFactory tsf) {
     super(Collections.emptyList(),
-        List.of(new ValidateCoding(tsf)),
-        Collections.emptyList(),
-        List.of(new TranslateCoding(tsf)));
+        List.of(new MemberOfUdf(tsf)),
+        List.of(new SubsumesUdf(tsf)),
+        List.of(new TranslateUdf(tsf)));
   }
 
   public static void registerUdfs(@Nonnull final SparkSession spark,

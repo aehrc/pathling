@@ -23,14 +23,18 @@ import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Coding;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
+import java.io.Serializable;
+
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
 
 public final class FhirMatchers {
 
   private FhirMatchers() {
   }
 
-  static class FhirDeepMatcher<T extends Base> implements ArgumentMatcher<T> {
+  static class FhirDeepMatcher<T extends Base> implements ArgumentMatcher<T>, Serializable {
 
+    private static final long serialVersionUID = -7388475686640982425L;
     @Nonnull
     private final T expected;
 
@@ -44,8 +48,9 @@ public final class FhirMatchers {
     }
   }
 
-  private static class CodingMatcher implements ArgumentMatcher<Coding> {
+  private static class CodingMatcher implements ArgumentMatcher<Coding>, Serializable {
 
+    private static final long serialVersionUID = -4669154939085510783L;
     @Nonnull
     private final Coding expected;
 
@@ -55,16 +60,8 @@ public final class FhirMatchers {
 
     @Override
     public boolean matches(@Nullable final Coding actual) {
-      return actual != null &&
-          (expected.hasSystem()
-           ? expected.getSystem().equals(actual.getSystem())
-           : !actual.hasSystem()) &&
-          (expected.hasCode()
-           ? expected.getCode().equals(actual.getCode())
-           : !actual.hasCode()) &&
-          (!expected.hasVersion() || expected.getVersion().equals(actual.getVersion()));
+      return codingEquals(expected, actual);
     }
-
   }
 
   public static <T extends Base> T deepEq(@Nonnull final T expected) {

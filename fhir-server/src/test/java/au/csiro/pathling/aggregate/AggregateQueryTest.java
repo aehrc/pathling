@@ -525,9 +525,10 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResource(ResourceType.CONDITION, subjectResource);
     // Not a real subsumption - just works for this use case.
     // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(RelationBuilder.empty().add(TerminologyHelpers.CD_SNOMED_VER_284551006,
-            TerminologyHelpers.CD_SNOMED_VER_40055000).build());
+
+    TerminologyServiceHelpers.setupSubsumes(terminologyService2)
+        .withSubsumes(CD_SNOMED_284551006,
+            TerminologyHelpers.CD_SNOMED_40055000);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")

@@ -47,7 +47,6 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -221,7 +220,7 @@ class TranslateFunctionTest {
     // Verify mocks
     Stream.of(CODING_1, CODING_2, CODING_3, CODING_5).forEach(coding ->
         verify(terminologyService, atLeastOnce())
-            .translateCoding(deepEq(coding), eq(CONCEPT_MAP1_URI), eq(false))
+            .translate(deepEq(coding), eq(CONCEPT_MAP1_URI), eq(false))
     );
     verifyNoMoreInteractions(terminologyService);
   }
@@ -350,7 +349,7 @@ class TranslateFunctionTest {
     // Verify mocks
     Stream.of(CODING_1, CODING_2, CODING_3, CODING_4, CODING_5).forEach(coding ->
         verify(terminologyService, atLeastOnce())
-            .translateCoding(deepEq(coding), eq(CONCEPT_MAP2_URI), eq(true))
+            .translate(deepEq(coding), eq(CONCEPT_MAP2_URI), eq(true))
     );
     verifyNoMoreInteractions(terminologyService);
   }

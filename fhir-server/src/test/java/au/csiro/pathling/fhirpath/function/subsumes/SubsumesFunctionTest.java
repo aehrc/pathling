@@ -30,6 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -50,6 +51,7 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.fixtures.RelationBuilder;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
 import java.util.Collections;
@@ -109,7 +111,7 @@ class SubsumesFunctionTest {
   FhirContext fhirContext;
 
   @Autowired
-  TerminologyService terminologyService;
+  TerminologyService2 terminologyService;
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;
@@ -125,7 +127,10 @@ class SubsumesFunctionTest {
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    when(terminologyService.getSubsumesRelation(any())).thenReturn(RELATION_LARGE_MEDIUM_SMALL);
+    TerminologyServiceHelpers.setupSubsumes(terminologyService)
+        .withSubsumes(CODING_LARGE, CODING_MEDIUM)
+        .withSubsumes(CODING_MEDIUM, CODING_SMALL)
+        .withSubsumes(CODING_LARGE, CODING_SMALL);
   }
 
   CodingPath createCodingInput() {

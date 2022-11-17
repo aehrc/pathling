@@ -18,8 +18,8 @@ public final class TerminologyUdfHelpers {
     // Utility class
   }
 
-  public static boolean isTrue(final @Nonnull Parameters parameters) {
-    return parameters.getParameterBool("result");
+  public static boolean isTrue(final @Nullable Parameters parameters) {
+    return parameters != null && parameters.getParameterBool("result");
   }
 
   @Nullable

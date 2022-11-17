@@ -250,15 +250,12 @@ class PathlingContext:
             )
         )
 
-    def subsumes(
-        self,
-        df: DataFrame,
-        output_column_name: str,
-        left_coding_column: Optional[Column] = None,
-        right_coding_column: Optional[Column] = None,
-        left_coding: Optional[Coding] = None,
-        right_coding: Optional[Coding] = None,
-    ):
+    @deprecated(reason="You should use the 'udfs.subsumes' UDF instead")
+    def subsumes(self, df: DataFrame, output_column_name: str,
+                 left_coding_column: Optional[Column] = None,
+                 right_coding_column: Optional[Column] = None,
+                 left_coding: Optional[Coding] = None,
+                 right_coding: Optional[Coding] = None):
         """
         Takes a dataframe with two Coding columns. A new column is created which contains a
         Boolean value, indicating whether the left Coding subsumes the right Coding.

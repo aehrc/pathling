@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library;
 
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupTranslate;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupValidate;
 import static org.apache.spark.sql.functions.col;
@@ -297,30 +298,21 @@ public class PathlingContextTest {
     assertEquals(RowFactory.create("foo", CodingEncoding.encode(coding2)), rows.get(0));
   }
 
-  // TODO: Enable when subsumes is implemented
   @Test
-  @Disabled
   void testSubsumes() {
-    final SimpleCoding coding1 = new SimpleCoding("urn:test:123", "ABC");
-    final SimpleCoding coding2 = new SimpleCoding("urn:test:123", "DEF");
-    final SimpleCoding coding3 = new SimpleCoding("urn:test:123", "GHI");
+    final Coding coding1 = new Coding("urn:test:123", "ABC", "abc");
+    final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
+    final Coding coding3 = new Coding("urn:test:123", "GHI", "ghi");
 
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class, withSettings().serializable());
-    final TerminologyService terminologyService = mock(TerminologyService.class,
-        withSettings().serializable());
-    final Entry entry = Entry.of(coding1, coding2);
-    final Relation relation = Relation.fromMappings(List.of(entry));
-    when(terminologyServiceFactory.buildService()).thenReturn(terminologyService);
-    when(terminologyService.getSubsumesRelation(any())).thenReturn(relation);
+    setupSubsumes(terminologyService).withSubsumes(coding1, coding2);
 
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
 
-    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1.toCoding()),
-        CodingEncoding.encode(coding2.toCoding()));
-    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding1.toCoding()),
-        CodingEncoding.encode(coding3.toCoding()));
+    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1),
+        CodingEncoding.encode(coding2));
+    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding1),
+        CodingEncoding.encode(coding3));
     final List<Row> datasetRows = List.of(row1, row2);
     final StructType schema = DataTypes.createStructType(
         new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),

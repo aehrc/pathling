@@ -382,10 +382,8 @@ public class PathlingContext {
 
     final Dataset<Row> idAndCodingSet = dataset.withColumn(COL_INPUT_CODINGS, fromCodings)
         .withColumn(COL_ARG_CODINGS, toCodings);
-    final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
-        idAndCodingSet.col(COL_ARG_CODINGS));
-
-    return terminologyFunctions.subsumes(idAndCodingSet, codingPairCol, outputColumnName, false);
+    return terminologyFunctions.subsumes(idAndCodingSet, idAndCodingSet.col(COL_INPUT_CODINGS),
+        idAndCodingSet.col(COL_ARG_CODINGS), outputColumnName, false);
   }
 
   @Nonnull

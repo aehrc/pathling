@@ -22,8 +22,13 @@ from typing import (
 
 from pyspark import SparkContext
 from pyspark.sql.column import Column, _to_java_column
+from pathling.coding import Coding
 
-ColumnOrName = Union[Column, str]
+CodingArg = Union[Column, str, Coding]
+
+
+def _coding_to_java_column(coding: CodingArg) -> Any:
+    return _to_java_column(coding.to_literal() if Coding == type(coding) else coding)
 
 
 def _get_jvm_function(name: str, sc: SparkContext) -> Callable:
@@ -45,7 +50,7 @@ def _invoke_function(name: str, *args: Any) -> Column:
     return Column(jf(*args))
 
 
-def member_of(coding: ColumnOrName, value_set_uri: str) -> Column:
+def member_of(coding: CodingArg, value_set_uri: str) -> Column:
     """
     Takes a Coding or array of Codings column as its input. Returns the column which contains a 
     Boolean value, indicating whether any of the input Codings is the member of the specified FHIR 
@@ -56,10 +61,10 @@ def member_of(coding: ColumnOrName, value_set_uri: str) -> Column:
     :param value_set_uri: an identifier for a FHIR ValueSet
     :return: a Column containing the result of the operation.
     """
-    return _invoke_function("member_of", _to_java_column(coding), value_set_uri)
+    return _invoke_function("member_of", _coding_to_java_column(coding), value_set_uri)
 
 
-def translate(coding: ColumnOrName, concept_map_uri: str,
+def translate(coding: CodingArg, concept_map_uri: str,
               reverse: bool = False, equivalences: Optional[str] = None) -> Column:
     """
     Takes a Coding column as input.  Returns the Column which contains an array of 
@@ -73,5 +78,20 @@ def translate(coding: ColumnOrName, concept_map_uri: str,
     :param equivalences: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
     :return: a Column containing the result of the operation (an array of Coding structs).
     """
-    return _invoke_function("translate", _to_java_column(coding), concept_map_uri, reverse,
+    return _invoke_function("translate", _coding_to_java_column(coding), concept_map_uri, reverse,
                             equivalences)
+
+
+def subsumes(left_coding: CodingArg, right_coding: CodingArg) -> Column:
+    """
+    Takes two Coding columns as input. Returns the Column, which contains a
+        Boolean value, indicating whether the left Coding subsumes the right Coding.
+    
+    :param left_coding: a Column containing a struct representation of a Coding or an array of 
+    Codings.
+    :param right_coding: a Column containing a struct representation of a Coding or an array of 
+    Codings.
+    :return: a Column containing the result of the operation (boolean).
+    """
+    return _invoke_function("subsumes", _coding_to_java_column(left_coding),
+                            _coding_to_java_column(right_coding))

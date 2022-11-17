@@ -250,7 +250,7 @@ public class UdfTest {
             false,
             "relatedto"));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
-        .withColumn("result", TranslateCoding.RETURN_TYPE)
+        .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
         .withRow("uc-coding_1", CodingEncoding.encodeList(Arrays.asList(CODING_5, CODING_4)))
         .withRow("uc-coding_2", Collections.emptyList())
@@ -281,7 +281,7 @@ public class UdfTest {
             false,
             "relatedto"));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
-        .withColumn("result", TranslateCoding.RETURN_TYPE)
+        .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
         .withRow("uc-empty", Collections.emptyList())
         .withRow("uc-coding_1", CodingEncoding.encodeList(Arrays.asList(CODING_5, CODING_4)))
