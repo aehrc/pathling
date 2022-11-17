@@ -30,6 +30,26 @@ public final class TerminologyUdfHelpers {
   }
 
   @Nullable
+  public static Stream<Coding> decodeOneOrMany(final @Nullable Object codingRowOrArray,
+      final int argumentIndex) {
+    if (codingRowOrArray instanceof WrappedArray<?>) {
+      //noinspection unchecked
+      return decodeMany((WrappedArray<Row>) codingRowOrArray);
+    } else if (codingRowOrArray instanceof Row || codingRowOrArray == null) {
+      return decodeOne((Row) codingRowOrArray);
+    } else {
+      throw new IllegalArgumentException(
+          String.format("Row or WrappedArray<Row> column expected in argument %s, but given: %s,",
+              argumentIndex, codingRowOrArray.getClass()));
+    }
+  }
+
+  @Nullable
+  public static Stream<Coding> decodeOneOrMany(final @Nullable Object codingRowOrArray) {
+    return decodeOneOrMany(codingRowOrArray, 0);
+  }
+
+  @Nullable
   public static Stream<Coding> decodeOne(final @Nullable Row codingRow) {
     return codingRow != null
            ? Stream.of(CodingEncoding.decode(codingRow))

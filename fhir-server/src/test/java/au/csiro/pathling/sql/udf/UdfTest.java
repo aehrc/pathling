@@ -1,7 +1,6 @@
 package au.csiro.pathling.sql.udf;
 
 import static au.csiro.pathling.sql.Terminology.translate;
-import static au.csiro.pathling.sql.Terminology.translate_array;
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
@@ -276,7 +275,7 @@ public class UdfTest {
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
-        translate_array(
+        translate(
             ds.col("codings"),
             "someUrl",
             false,

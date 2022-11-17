@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.memberof;
 
-import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
+import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
@@ -62,12 +62,9 @@ public class MemberOfFunction implements NamedFunction {
     final StringLiteralPath argument = (StringLiteralPath) input.getArguments().get(0);
 
     final Column idColumn = inputPath.getIdColumn();
-    final Column conceptColumn = inputPath.getValueColumn();
     final String valueSetUrl = argument.getValue().asStringValue();
-
-    final Column resultColumn = member_of(isCodeableConcept(inputPath)
-                                          ? conceptColumn.getField("coding")
-                                          : conceptColumn, valueSetUrl);
+    
+    final Column resultColumn = member_of(getCodingColumn(inputPath), valueSetUrl);
     final Dataset<Row> resultDataset = inputPath.getDataset();
 
     // TODO: teminolog-cachig: maybe the switcheable version

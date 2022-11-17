@@ -14,6 +14,8 @@ import scala.collection.mutable.WrappedArray;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOneOrMany;
+
 @Slf4j
 public class ValidateCoding implements SqlFunction,
     SqlFunction2<Object, String, Boolean> {
@@ -41,17 +43,9 @@ public class ValidateCoding implements SqlFunction,
 
   @Nullable
   @Override
-  public Boolean call(@Nullable final Object codingRow, @Nullable final String url)
+  public Boolean call(@Nullable final Object codingRowOrArray, @Nullable final String url)
       throws Exception {
-    if (codingRow instanceof WrappedArray<?>) {
-      //noinspection unchecked
-      return doCall(TerminologyUdfHelpers.decodeMany((WrappedArray<Row>) codingRow), url);
-    } else if (codingRow instanceof Row || codingRow == null) {
-      return doCall(TerminologyUdfHelpers.decodeOne((Row) codingRow), url);
-    } else {
-      throw new IllegalArgumentException(
-          "struct or array<struct> column expected as the first argument");
-    }
+    return doCall(decodeOneOrMany(codingRowOrArray), url);
   }
 
   @Nullable

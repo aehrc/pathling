@@ -17,12 +17,11 @@
 
 package au.csiro.pathling.fhirpath.function.translate;
 
+import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.translate;
-import static au.csiro.pathling.sql.Terminology.translate_array;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.callUDF;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
@@ -186,12 +185,8 @@ public class TranslateFunction implements NamedFunction {
     final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
         .asStringValue();
     final Dataset<Row> dataset = inputPath.getDataset();
-
-    final Column translatedCodings = isCodeableConcept
-                                     ? translate_array(conceptColumn.getField("coding"),
-        conceptMapUrl, reverse, equivalence)
-                                     : translate(conceptColumn, conceptMapUrl, reverse,
-                                         equivalence);
+    final Column translatedCodings = translate(getCodingColumn(inputPath), conceptMapUrl, reverse,
+        equivalence);
 
     // // The result is an array of translations per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
