@@ -197,19 +197,13 @@ class PathlingContext:
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
             columns
         """
-        return self._wrap_df(
-            self._jpc.encodeBundle(
-                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
-            )
-        )
-    @deprecated(reason="You should use the 'udfs.member_of' UDF instread")
-    def member_of(
-        self,
-        df: DataFrame,
-        coding_column: Column,
-        value_set_uri: str,
-        output_column_name: str,
-    ):
+        return self._wrap_df(self._jpc.encodeBundle(df._jdf, resource_name,
+                                                    input_type or MimeType.FHIR_JSON,
+                                                    column))
+
+    @deprecated(reason="You should use the 'udfs.member_of' UDF instead")
+    def member_of(self, df: DataFrame, coding_column: Column, value_set_uri: str,
+                  output_column_name: str):
         """
         Takes a dataframe with a Coding column as input. A new column is created which contains a
         Boolean value, indicating whether the input Coding is a member of the specified FHIR
@@ -228,15 +222,9 @@ class PathlingContext:
         )
 
     @deprecated(reason="You should use the 'udfs.translate' UDF instead")
-    def translate(
-        self,
-        df: DataFrame,
-        coding_column: Column,
-        concept_map_uri: str,
-        reverse: Optional[bool] = False,
-        equivalence: Optional[str] = EQ_EQUIVALENT,
-        output_column_name: Optional[str] = "result",
-    ):
+    def translate(self, df: DataFrame, coding_column: Column, concept_map_uri: str,
+                  reverse: Optional[bool] = False, equivalence: Optional[str] = EQ_EQUIVALENT,
+                  output_column_name: Optional[str] = "result"):
         """
         Takes a dataframe with a Coding column as input. A new column is created which contains a
         Coding value and contains translation targets from the specified FHIR ConceptMap. There

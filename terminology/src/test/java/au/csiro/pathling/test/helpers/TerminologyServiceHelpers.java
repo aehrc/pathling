@@ -1,23 +1,20 @@
 package au.csiro.pathling.test.helpers;
 
-import au.csiro.pathling.terminology.TerminologyService;
+import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
+import java.util.stream.IntStream;
+import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.ValueSet;
-import javax.annotation.Nonnull;
-
-import java.util.stream.IntStream;
-
-import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
-import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 
 public class TerminologyServiceHelpers {
 

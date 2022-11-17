@@ -45,7 +45,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.slf4j.MDC;
 
 
 /**
@@ -106,8 +105,9 @@ public class SubsumesFunction implements NamedFunction {
 
     final TerminologyServiceFactory terminologyServiceFactory = checkPresent(
         input.getContext().getTerminologyServiceFactory());
-    final Dataset<Row> resultDataset = TerminologyFunctions.subsumes(idAndCodingSet, codingPairCol,
-        "result", inverted, terminologyServiceFactory, MDC.get("requestId"));
+    final Dataset<Row> resultDataset = TerminologyFunctions.of(terminologyServiceFactory)
+        .subsumes(idAndCodingSet, codingPairCol,
+            "result", inverted);
     final Column resultColumn = col("result");
 
     // Construct a new result expression.

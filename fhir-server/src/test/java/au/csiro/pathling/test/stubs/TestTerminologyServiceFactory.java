@@ -17,16 +17,11 @@
 
 package au.csiro.pathling.test.stubs;
 
-import au.csiro.pathling.terminology.TerminologyOperations.Result;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import javax.annotation.Nonnull;
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
 

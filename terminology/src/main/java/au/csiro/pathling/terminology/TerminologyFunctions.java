@@ -27,9 +27,11 @@ import au.csiro.pathling.fhirpath.function.subsumes.SubsumesMapper;
 import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
 import au.csiro.pathling.sql.MapperWithPreview;
 import au.csiro.pathling.sql.SqlExtensions;
+import au.csiro.pathling.sql.Terminology;
 import au.csiro.pathling.utilities.Strings;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -38,18 +40,61 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 public interface TerminologyFunctions {
 
+  Logger log = LoggerFactory.getLogger(TerminologyFunctions.class);
+
   @Nonnull
-  static Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
+  Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
       @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName,
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final String requestId) {
+      @Nonnull final String outputColumnName);
+
+  @Nonnull
+  Dataset<Row> translate(@Nonnull final Column codingArrayCol,
+      @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
+      @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String outputColumnName);
+
+  @Nonnull
+  Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
+      @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
+      final boolean inverted);
+
+  @Nonnull
+  static TerminologyFunctions of(
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    // TODO: remove the legacy dependency at some point
+    if ("legacy".equals(System.getenv("PATHLING_TERMINOLOGY"))) {
+      log.warn("Using legacy implementation of terminology functions");
+      return new TerminologyFunctionsLegacyImpl(terminologyServiceFactory);
+    } else {
+      return new TerminologyFunctionsImpl(terminologyServiceFactory);
+    }
+  }
+}
+
+class TerminologyFunctionsLegacyImpl implements TerminologyFunctions {
+
+  @Nonnull
+  private final TerminologyServiceFactory terminologyServiceFactory;
+
+  TerminologyFunctionsLegacyImpl(
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    this.terminologyServiceFactory = terminologyServiceFactory;
+  }
+
+  @Override
+  @Nonnull
+  public Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
+      @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String outputColumnName) {
 
     final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapper(requestId, terminologyServiceFactory,
+        new MemberOfMapper(getOrCreateRequestId(), terminologyServiceFactory,
             valueSetUri);
 
     return SqlExtensions
@@ -59,16 +104,15 @@ public interface TerminologyFunctions {
             StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
   }
 
+  @Override
   @Nonnull
-  static Dataset<Row> translate(@Nonnull final Column codingArrayCol,
+  public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
       @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
       @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName,
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final String requestId) {
+      @Nonnull final String outputColumnName) {
 
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapper(requestId, terminologyServiceFactory,
+        new TranslateMapper(getOrCreateRequestId(), terminologyServiceFactory,
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
             wrapInUserInputError(ConceptMapEquivalence::fromCode)));
 
@@ -80,14 +124,14 @@ public interface TerminologyFunctions {
                 true, Metadata.empty()));
   }
 
+  @Override
   @Nonnull
-  static Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
+  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
       @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
-      final boolean inverted, @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final String requestId) {
+      final boolean inverted) {
 
     final SubsumesMapper mapper =
-        new SubsumesMapper(requestId,
+        new SubsumesMapper(getOrCreateRequestId(),
             terminologyServiceFactory,
             inverted);
 
@@ -98,4 +142,62 @@ public interface TerminologyFunctions {
             StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
   }
 
+  @Nonnull
+  static String getOrCreateRequestId() {
+    String requestId = MDC.get("requestId");
+    if (requestId == null) {
+      requestId = UUID.randomUUID().toString();
+      MDC.put("requestId", requestId);
+    }
+    return requestId;
+  }
+}
+
+
+class TerminologyFunctionsImpl implements TerminologyFunctions {
+
+  @Nonnull
+  private final TerminologyServiceFactory terminologyServiceFactory;
+
+  TerminologyFunctionsImpl(
+      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+    this.terminologyServiceFactory = terminologyServiceFactory;
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
+      @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String outputColumnName) {
+    return dataset.withColumn(outputColumnName, Terminology.member_of(codingArrayCol, valueSetUri));
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
+      @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
+    return dataset.withColumn(outputColumnName,
+        Terminology.translate(codingArrayCol, conceptMapUrl, reverse, equivalence));
+  }
+
+  @Override
+  @Nonnull
+  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
+      @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
+      final boolean inverted) {
+
+    // TODO: replace with the new implementation
+    
+    final SubsumesMapper mapper =
+        new SubsumesMapper(TerminologyFunctionsLegacyImpl.getOrCreateRequestId(),
+            terminologyServiceFactory,
+            inverted);
+
+    return SqlExtensions
+        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
+            SimpleCodingsDecoders::decodeListPair,
+            mapper,
+            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
+  }
 }

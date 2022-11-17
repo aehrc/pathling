@@ -39,7 +39,6 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -53,7 +52,6 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.slf4j.MDC;
 
 /**
  * A class designed to provide access to selected Pathling functionality from non-JVM language
@@ -82,6 +80,10 @@ public class PathlingContext {
   @Getter
   private final TerminologyServiceFactory terminologyServiceFactory;
 
+  @Nonnull
+  private final TerminologyFunctions terminologyFunctions;
+
+
   private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
@@ -89,6 +91,7 @@ public class PathlingContext {
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
+    this.terminologyFunctions = TerminologyFunctions.of(terminologyServiceFactory);
     SqlStrategy.setup(spark);
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
   }
@@ -182,9 +185,7 @@ public class PathlingContext {
    */
   @Nonnull
   public <T extends IBaseResource> Dataset<T> encode(@Nonnull final Dataset<String> stringResources,
-      @Nonnull final Class<T> resourceClass,
-      @Nonnull final String inputMimeType
-  ) {
+      @Nonnull final Class<T> resourceClass, @Nonnull final String inputMimeType) {
     return stringResources.mapPartitions(
         new EncodeResourceMapPartitionsFunc<>(fhirVersion, inputMimeType, resourceClass),
         fhirEncoders.of(resourceClass));
@@ -204,13 +205,11 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encode(@Nonnull final Dataset<Row> stringResourcesDF,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType,
+      @Nonnull final String resourceName, @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringResources = (nonNull(maybeColumnName)
-                                             ?
-                                             stringResourcesDF.select(maybeColumnName)
+                                             ? stringResourcesDF.select(maybeColumnName)
                                              : stringResourcesDF).as(Encoders.STRING());
 
     final RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
@@ -230,8 +229,7 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encode(@Nonnull final Dataset<Row> stringResourcesDF,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType) {
+      @Nonnull final String resourceName, @Nonnull final String inputMimeType) {
 
     return encode(stringResourcesDF, resourceName, inputMimeType, null);
   }
@@ -286,8 +284,7 @@ public class PathlingContext {
    */
   @Nonnull
   public <T extends IBaseResource> Dataset<T> encodeBundle(
-      @Nonnull final Dataset<String> stringBundles,
-      @Nonnull final Class<T> resourceClass,
+      @Nonnull final Dataset<String> stringBundles, @Nonnull final Class<T> resourceClass,
       @Nonnull final String inputMimeType) {
     return stringBundles.mapPartitions(
         new EncodeBundleMapPartitionsFunc<>(fhirVersion, inputMimeType, resourceClass),
@@ -307,13 +304,11 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encodeBundle(@Nonnull final Dataset<Row> stringBundlesDF,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType,
+      @Nonnull final String resourceName, @Nonnull final String inputMimeType,
       @Nullable final String maybeColumnName) {
 
     final Dataset<String> stringResources = (nonNull(maybeColumnName)
-                                             ?
-                                             stringBundlesDF.select(maybeColumnName)
+                                             ? stringBundlesDF.select(maybeColumnName)
                                              : stringBundlesDF).as(Encoders.STRING());
 
     final RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
@@ -333,8 +328,7 @@ public class PathlingContext {
    */
   @Nonnull
   public Dataset<Row> encodeBundle(@Nonnull final Dataset<Row> stringBundlesDF,
-      @Nonnull final String resourceName,
-      @Nonnull final String inputMimeType) {
+      @Nonnull final String resourceName, @Nonnull final String inputMimeType) {
     return encodeBundle(stringBundlesDF, resourceName, inputMimeType, null);
   }
 
@@ -355,29 +349,23 @@ public class PathlingContext {
   }
 
   @Nonnull
-  public Dataset<Row> memberOf(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column coding, @Nonnull final String valueSetUri,
-      @Nonnull final String outputColumnName) {
+  public Dataset<Row> memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column coding,
+      @Nonnull final String valueSetUri, @Nonnull final String outputColumnName) {
 
-    final Column codingArrayCol = when(coding.isNotNull(), array(coding))
-        .otherwise(lit(null));
+    final Column codingArrayCol = when(coding.isNotNull(), array(coding)).otherwise(lit(null));
 
-    return TerminologyFunctions.memberOf(codingArrayCol, valueSetUri, dataset, outputColumnName,
-        terminologyServiceFactory, getRequestId());
+    return terminologyFunctions.memberOf(codingArrayCol, valueSetUri, dataset, outputColumnName);
   }
 
   @Nonnull
-  public Dataset<Row> translate(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      final boolean reverse, @Nonnull final String equivalence,
+  public Dataset<Row> translate(@Nonnull final Dataset<Row> dataset, @Nonnull final Column coding,
+      @Nonnull final String conceptMapUri, final boolean reverse, @Nonnull final String equivalence,
       @Nonnull final String outputColumnName) {
 
-    final Column codingArrayCol = when(coding.isNotNull(), array(coding))
-        .otherwise(lit(null));
+    final Column codingArrayCol = when(coding.isNotNull(), array(coding)).otherwise(lit(null));
 
-    final Dataset<Row> translatedDataset = TerminologyFunctions.translate(codingArrayCol,
-        conceptMapUri, reverse, equivalence, dataset, outputColumnName, terminologyServiceFactory,
-        getRequestId());
+    final Dataset<Row> translatedDataset = terminologyFunctions.translate(codingArrayCol,
+        conceptMapUri, reverse, equivalence, dataset, outputColumnName);
 
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
   }
@@ -397,16 +385,15 @@ public class PathlingContext {
     final Column codingPairCol = struct(idAndCodingSet.col(COL_INPUT_CODINGS),
         idAndCodingSet.col(COL_ARG_CODINGS));
 
-    return TerminologyFunctions.subsumes(idAndCodingSet, codingPairCol, outputColumnName, false,
-        terminologyServiceFactory, getRequestId());
+    return terminologyFunctions.subsumes(idAndCodingSet, codingPairCol, outputColumnName, false);
   }
 
   @Nonnull
   private static Builder getEncoderBuilder(@Nonnull final PathlingContextConfiguration c) {
-    Builder encoderBuilder =
-        nonNull(c.getFhirVersion())
-        ? FhirEncoders.forVersion(FhirVersionEnum.forVersionString(c.getFhirVersion()))
-        : FhirEncoders.forR4();
+    Builder encoderBuilder = nonNull(c.getFhirVersion())
+                             ? FhirEncoders.forVersion(
+        FhirVersionEnum.forVersionString(c.getFhirVersion()))
+                             : FhirEncoders.forR4();
     if (nonNull(c.getMaxNestingLevel())) {
       encoderBuilder = encoderBuilder.withMaxNestingLevel(c.getMaxNestingLevel());
     }
@@ -429,8 +416,7 @@ public class PathlingContext {
                                                 : DEFAULT_TERMINOLOGY_SERVER_URL;
 
     final TerminologyAuthConfiguration authConfig = new TerminologyAuthConfiguration();
-    if (nonNull(c.getTokenEndpoint()) && nonNull(c.getClientId())
-        && nonNull(c.getClientSecret())) {
+    if (nonNull(c.getTokenEndpoint()) && nonNull(c.getClientId()) && nonNull(c.getClientSecret())) {
       authConfig.setEnabled(true);
       authConfig.setTokenEndpoint(c.getTokenEndpoint());
       authConfig.setClientId(c.getClientId());
@@ -454,11 +440,4 @@ public class PathlingContext {
         terminologySocketTimeout, verboseRequestLogging, HttpClientConfiguration.defaults(),
         authConfig);
   }
-
-  private static String getRequestId() {
-    final String requestId = UUID.randomUUID().toString();
-    MDC.put("requestId", requestId);
-    return requestId;
-  }
-
 }
