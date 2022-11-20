@@ -52,7 +52,7 @@ pathling:
 
     # The maximum period (in milliseconds) that the server should wait for incoming data from the
     # terminology service.
-    socketTimeout: 60000
+    socketTimeout: 60_000
     
     # Setting this option to true will enable additional logging of the details of requests between 
     # the server and the terminology service.
@@ -68,6 +68,7 @@ pathling:
       cache:
         enabled: true
         maxCacheEntries: 500_000
+        maxObjectSize: 100_000
         storageType: "memory"
           
     # Configuration relating to authentication of requests to the terminology service.

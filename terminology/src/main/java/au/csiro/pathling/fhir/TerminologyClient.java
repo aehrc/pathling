@@ -38,6 +38,7 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.cache.CacheConfig;
@@ -144,8 +145,8 @@ public interface TerminologyClient extends IRestfulClient {
   static TerminologyClient build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl, final int socketTimeout,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig) {
-    return build(fhirContext, terminologyServerUrl, socketTimeout, verboseRequestLogging,
-        authConfig, buildHttpClient());
+    return build(fhirContext, terminologyServerUrl, verboseRequestLogging,
+        authConfig, buildHttpClient(socketTimeout));
   }
 
   /**
@@ -154,19 +155,17 @@ public interface TerminologyClient extends IRestfulClient {
    * @param fhirContext the {@link FhirContext} used to build the client
    * @param terminologyServerUrl the URL of the terminology server this client will communicate
    * with
-   * @param socketTimeout the number of milliseconds to wait for response data
    * @param verboseRequestLogging whether to log out verbose details of each request
-   * @param httpClient  the http client instance to use
+   * @param httpClient the http client instance to use
    * @return a shiny new TerminologyClient instance
    */
   @Nonnull
   static TerminologyClient build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final String terminologyServerUrl, final int socketTimeout,
+      @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
       @Nonnull final HttpClient httpClient) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
     restfulClientFactory.setHttpClient(httpClient);
-    restfulClientFactory.setSocketTimeout(socketTimeout);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
     final TerminologyClient terminologyClient = restfulClientFactory
@@ -198,12 +197,18 @@ public interface TerminologyClient extends IRestfulClient {
     return terminologyClient;
   }
 
-  private static CloseableHttpClient buildHttpClient() {
+  private static CloseableHttpClient buildHttpClient(final int socketTimeout) {
     final CacheConfig cacheConfig = CacheConfig.custom()
         .setMaxObjectSize(Integer.MAX_VALUE)
         .build();
+
+    final RequestConfig defaultRequestConfig = RequestConfig.custom()
+        .setSocketTimeout(socketTimeout)
+        .build();
+
     return CachingHttpClients.custom()
         .setCacheConfig(cacheConfig)
+        .setDefaultRequestConfig(defaultRequestConfig)
         .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
         .build();
   }

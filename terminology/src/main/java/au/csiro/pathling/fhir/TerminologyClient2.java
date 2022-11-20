@@ -59,13 +59,12 @@ public interface TerminologyClient2 {
 
 
   static TerminologyClient2 build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final String terminologyServerUrl, final int socketTimeout,
+      @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
       @Nonnull final
       HttpClient httpClient) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
     restfulClientFactory.setHttpClient(httpClient);
-    restfulClientFactory.setSocketTimeout(socketTimeout);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
     final IGenericClient genericClient = restfulClientFactory.newGenericClient(

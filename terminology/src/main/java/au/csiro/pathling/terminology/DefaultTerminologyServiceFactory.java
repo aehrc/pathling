@@ -16,6 +16,7 @@ import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -79,7 +80,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     this.authConfig = authConfig;
     this.clientConfig = clientConfig;
   }
-  
+
   @Nonnull
   @Override
   public TerminologyService buildService() {
@@ -112,27 +113,24 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private TerminologyService createService(@Nonnull final UUIDFactory uuidFactory) {
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
     //TODO: maybe share the HttpClient 
-    final CloseableHttpClient httpClient = buildHttpClient(clientConfig);
+    final CloseableHttpClient httpClient = buildHttpClient(socketTimeout, clientConfig);
     final TerminologyClient terminologyClient = TerminologyClient.build(
-        fhirContext, terminologyServerUrl, socketTimeout, verboseRequestLogging, authConfig,
+        fhirContext, terminologyServerUrl, verboseRequestLogging, authConfig,
         httpClient);
     return new DefaultTerminologyService(fhirContext, terminologyClient, uuidFactory);
   }
 
   @Nonnull
   private DefaultTerminologyService2 createService2() {
-    // TODO: check if the socket timeout is actually use when we pass
-    // a HttpClient to the RestFactory
-
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
-    final CloseableHttpClient httpClient = buildHttpClient(clientConfig);
+    final CloseableHttpClient httpClient = buildHttpClient(socketTimeout, clientConfig);
     final TerminologyClient2 terminologyClient = TerminologyClient2.build(
-        fhirContext, terminologyServerUrl, socketTimeout, verboseRequestLogging, authConfig,
+        fhirContext, terminologyServerUrl, verboseRequestLogging, authConfig,
         httpClient);
     return new DefaultTerminologyService2(terminologyClient, httpClient);
   }
 
-  private static CloseableHttpClient buildHttpClient(
+  private static CloseableHttpClient buildHttpClient(final int socketTimeout,
       @Nonnull final HttpClientConfiguration config) {
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(config.getMaxConnectionsTotal());
@@ -149,7 +147,13 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     } else {
       clientBuilder = HttpClients.custom();
     }
+
+    final RequestConfig defaultRequestConfig = RequestConfig.custom()
+        .setSocketTimeout(socketTimeout)
+        .build();
+
     return clientBuilder
+        .setDefaultRequestConfig(defaultRequestConfig)
         .setConnectionManager(connectionManager)
         .setConnectionManagerShared(false)
         .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
