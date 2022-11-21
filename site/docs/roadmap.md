@@ -17,6 +17,19 @@ See also:
 - [FHIRPath function: property](https://github.com/aehrc/pathling/issues/366)
 - [FHIRPath function: designation](https://github.com/aehrc/pathling/issues/519)
 
+## Library API: `aggregate` and `extract` operations
+
+This change will make it possible to use
+the [aggregate](https://pathling.csiro.au/docs/server/operations/aggregate)
+and [extract](https://pathling.csiro.au/docs/server/operations/extract)
+operations to aggregate and transform FHIR data from Python, Java and Scala
+applications. This feature is currently limited to the server implementation.
+
+See also:
+
+- [Add aggregate function to library API](https://github.com/aehrc/pathling/issues/1060)
+- [Add extract operation to library API](https://github.com/aehrc/pathling/issues/1061)
+
 ## Ordering
 
 The implementation of an `order` function will allow for the arbitrary
@@ -52,8 +65,7 @@ Implementation of a number of functions is planned:
 - `startsWith`
 - `endsWith`
 
-See [Arbitrary function construction](https://github.com/aehrc/pathling/issues/510)
-.
+See [Arbitrary function construction](https://github.com/aehrc/pathling/issues/510).
 
 ## R integration
 
@@ -73,22 +85,8 @@ sophisticated alert systems within the clinical setting.
 
 See [Subscriptions](https://github.com/aehrc/pathling/issues/164).
 
-## Temporal query
-
-Some types of data are captured within the FHIR model using dates and timestamps
-to describe their temporal aspects. Others are updated in place, and
-information about the previous value and the time of update is effectively lost
-when the change is made.
-
-This change will expand upon the work done on incremental update to add the
-ability to query the history of FHIR resources as they were updated within the
-Pathling data store. This will include the ability to query the state of a
-resource at a point in time and compare it to other versions of that resource.
-
-See [Temporal query](https://github.com/aehrc/pathling/issues/350).
-
 ## Project board
 
 You can see more planned features, in greater detail, on the
-[Pathling project board](https://github.com/aehrc/pathling/projects/1) on
+[Pathling project board](https://github.com/orgs/aehrc/projects/11) on
 GitHub.
