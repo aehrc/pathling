@@ -139,6 +139,7 @@ public interface TerminologyClient extends IRestfulClient {
    * with
    * @param socketTimeout the number of milliseconds to wait for response data
    * @param verboseRequestLogging whether to log out verbose details of each request
+   * @param authConfig the configuration for terminology service authentication.
    * @return a shiny new TerminologyClient instance
    */
   @Nonnull
@@ -156,6 +157,7 @@ public interface TerminologyClient extends IRestfulClient {
    * @param terminologyServerUrl the URL of the terminology server this client will communicate
    * with
    * @param verboseRequestLogging whether to log out verbose details of each request
+   * @param authConfig the configuration for terminology service authentication.
    * @param httpClient the http client instance to use
    * @return a shiny new TerminologyClient instance
    */

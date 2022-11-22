@@ -63,7 +63,7 @@ public class PathlingBenchmarkRunner {
 
     final Options opt = new OptionsBuilder()
         .include("\\.[^.]+Benchmark\\.[^.]+$")
-        .exclude("\\.[^.]+DecimalBenchmark\\.[^.]+$")
+        .exclude("\\.[^.]+DevBenchmark\\.[^.]+$")
         .warmupIterations(warmup)
         .measurementIterations(iterations)
         // single shot for each iteration:

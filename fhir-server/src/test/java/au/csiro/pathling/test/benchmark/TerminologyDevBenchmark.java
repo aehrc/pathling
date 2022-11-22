@@ -48,7 +48,7 @@ import org.springframework.test.context.TestPropertySource;
 @Fork(0)
 @Warmup(iterations = 2)
 @Measurement(iterations = 7)
-public class TerminologyBenchmark {
+public class TerminologyDevBenchmark {
 
   @State(Scope.Benchmark)
   @ActiveProfiles({"core", "server", "benchmark"})
@@ -113,7 +113,7 @@ public class TerminologyBenchmark {
 
   @Benchmark
   public void memberOfSnomedImplicit_Benchmark(final Blackhole bh,
-      final TerminologyBenchmark.TerminologyState executor) {
+      final TerminologyDevBenchmark.TerminologyState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.CONDITION)
         .withAggregation("count()")
@@ -126,7 +126,7 @@ public class TerminologyBenchmark {
 
   @Benchmark
   public void memberOfLoincImplicit_Benchmark(final Blackhole bh,
-      final TerminologyBenchmark.TerminologyState executor) {
+      final TerminologyDevBenchmark.TerminologyState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.OBSERVATION)
         .withAggregation("count()")
@@ -137,7 +137,7 @@ public class TerminologyBenchmark {
 
   @Benchmark
   public void memberOfLoincImplicitWithShuffle_Benchmark(final Blackhole bh,
-      final TerminologyBenchmark.TerminologyState executor) {
+      final TerminologyDevBenchmark.TerminologyState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.OBSERVATION)
         .withAggregation("count()")
@@ -149,7 +149,7 @@ public class TerminologyBenchmark {
 
   @Benchmark
   public void complexExpression_default_Benchmark(final Blackhole bh,
-      final TerminologyBenchmark.TerminologyState executor) {
+      final TerminologyDevBenchmark.TerminologyState executor) {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.PATIENT)
         .withAggregation("count()")

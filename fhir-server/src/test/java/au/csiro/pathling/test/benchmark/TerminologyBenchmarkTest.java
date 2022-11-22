@@ -21,6 +21,7 @@ import ca.uhn.fhir.parser.IParser;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -32,6 +33,7 @@ import java.util.Optional;
 
 import static org.mockito.Mockito.mock;
 
+@Disabled
 @SpringBootTest
 @ActiveProfiles({"core", "server", "benchmark"})
 @TestPropertySource(properties = {"pathling.terminology.serverUrl=http://localhost:8081/fhir",
@@ -103,7 +105,7 @@ public class TerminologyBenchmarkTest {
 
 
   @Test
-  public void memberOfLoincImplicit_Benchmark() throws Exception {
+  public void memberOfLoincImplicit_Benchmark() {
 
     System.out.println(2_000_000);
     
@@ -117,7 +119,7 @@ public class TerminologyBenchmarkTest {
 
 
   @Test
-  public void memberOfSnomed() throws Exception {
+  public void memberOfSnomed() {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.CONDITION)
         .withAggregation("count()")

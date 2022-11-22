@@ -77,7 +77,8 @@ public final class TranslateMapping extends BaseMapping {
   }
 
   /**
-   * Converts {@link TerminologyService#translateCoding} parameters to a batch request Bundle.
+   * Converts {@link TerminologyService#translate(Collection, String, boolean, Collection)}
+   * parameters to a batch request Bundle.
    *
    * @param codings The list of codings to be translated
    * @param conceptMapUrl The concept map url
@@ -106,7 +107,7 @@ public final class TranslateMapping extends BaseMapping {
 
   /**
    * Builds ConceptTranslator from the batch response bundle for {@link
-   * TerminologyService#translateCoding}.
+   * TerminologyService#translate(Collection, String, boolean, Collection)}.
    *
    * @param responseBundle The response from the terminology server
    * @param inputCodes The list of coding requested for translation

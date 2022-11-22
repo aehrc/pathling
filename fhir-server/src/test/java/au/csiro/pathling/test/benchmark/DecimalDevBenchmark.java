@@ -56,7 +56,7 @@ import org.springframework.test.context.ActiveProfiles;
 @Fork(0)
 @Warmup(iterations = 3)
 @Measurement(iterations = 7)
-public class DecimalBenchmark {
+public class DecimalDevBenchmark {
 
   private static final int ROWS = 100_000;
   private static final BigDecimal LEFT_DECIMAL = new BigDecimal(
