@@ -30,20 +30,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import au.csiro.pathling.config.HttpCacheConf;
+import au.csiro.pathling.config.HttpClientConf;
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.terminology.Relation;
-import au.csiro.pathling.terminology.Relation.Entry;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.test.SchemaAsserts;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import ca.uhn.fhir.context.FhirVersionEnum;
+import com.google.common.collect.ImmutableMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -61,7 +62,6 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
 
@@ -98,6 +98,8 @@ public class PathlingContextTest {
     terminologyService = mock(TerminologyService2.class,
         withSettings().serializable());
     when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService);
+
+    DefaultTerminologyServiceFactory.reset();
   }
 
 
@@ -330,40 +332,110 @@ public class PathlingContextTest {
   }
 
   @Test
-  void testBuildContextWithTerminology() {
+  void testBuildContextWithTerminologyDefaults() {
+
     final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
+
+    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+        .terminologyServerUrl(terminologyServerUrl)
+        .build();
+    final PathlingContext pathlingContext = PathlingContext.create(spark, config);
+    assertNotNull(pathlingContext);
+    final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
+        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConf.defaults(),
+        HttpCacheConf.defaults(), TerminologyAuthConfiguration.defaults());
+
+    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertEquals(expectedFactory, actualServiceFactory);
+    final TerminologyService2 terminologyService = actualServiceFactory.buildService2();
+    assertNotNull(terminologyService);
+  }
+
+  @Test
+  void testBuildContextWithTerminologyNoCache() {
+
+    final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
+
+    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+        .terminologyServerUrl(terminologyServerUrl)
+        .cacheStorageType(null)
+        .build();
+    final PathlingContext pathlingContext = PathlingContext.create(spark, config);
+    assertNotNull(pathlingContext);
+    final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
+        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConf.defaults(),
+        HttpCacheConf.disabled(), TerminologyAuthConfiguration.defaults());
+
+    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertEquals(expectedFactory, actualServiceFactory);
+    final TerminologyService2 terminologyService = actualServiceFactory.buildService2();
+    assertNotNull(terminologyService);
+  }
+
+
+  @Test
+  void testBuildContextWithCustomizedTerminology() {
+    final String terminologyServerUrl = "https://r4.ontoserver.csiro.au/fhir";
     final String tokenEndpoint = "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
     final String clientId = "some-client";
     final String clientSecret = "some-secret";
     final String scope = "openid";
-    final int tokenExpiryTolerance = 120;
+    final long tokenExpiryTolerance = 300L;
+
+    final int maxConnectionsTotal = 66;
+    final int maxConnectionsPerRoute = 33;
+    final int socketTimeout = 123;
+
+    final int cacheMaxEntries = 1233;
+    final long cacheMaxObjectSize = 4453L;
+    final String cacheStorgeType = "disk";
+    final Map<String, String> cacheStorageProperties = ImmutableMap.of("cacheDir", "/tmp");
 
     final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
         .terminologyServerUrl(terminologyServerUrl)
+        .terminologyVerboseRequestLogging(true)
+        .terminologySocketTimeout(socketTimeout)
+        .maxConnectionsTotal(maxConnectionsTotal)
+        .maxConnectionsPerRoute(maxConnectionsPerRoute)
+        .cacheMaxEntries(cacheMaxEntries)
+        .cacheMaxObjectSize(cacheMaxObjectSize)
+        .cacheStorageType(cacheStorgeType)
+        .cacheStorageProperties(cacheStorageProperties)
         .tokenEndpoint(tokenEndpoint)
         .clientId(clientId)
         .clientSecret(clientSecret)
         .scope(scope)
         .tokenExpiryTolerance(tokenExpiryTolerance)
         .build();
+
     final PathlingContext pathlingContext = PathlingContext.create(spark, config);
     assertNotNull(pathlingContext);
+    final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
+        FhirVersionEnum.R4, terminologyServerUrl, true,
+        HttpClientConf.builder()
+            .socketTimeout(socketTimeout)
+            .maxConnectionsTotal(maxConnectionsTotal)
+            .maxConnectionsPerRoute(maxConnectionsPerRoute)
+            .build(),
+        HttpCacheConf.builder()
+            .maxCacheEntries(cacheMaxEntries)
+            .maxObjectSize(cacheMaxObjectSize)
+            .storageType(cacheStorgeType)
+            .storage(cacheStorageProperties)
+            .build(),
+        TerminologyAuthConfiguration.builder()
+            .enabled(true)
+            .tokenEndpoint(tokenEndpoint)
+            .clientId(clientId)
+            .clientSecret(clientSecret)
+            .scope(scope)
+            .tokenExpiryTolerance(tokenExpiryTolerance)
+            .build()
+    );
 
-    final TerminologyServiceFactory terminologyServiceFactory = pathlingContext.getTerminologyServiceFactory();
-    assertNotNull(terminologyServiceFactory);
-    assertTrue(terminologyServiceFactory instanceof DefaultTerminologyServiceFactory);
-    final DefaultTerminologyServiceFactory defaultTerminologyServiceFactory = (DefaultTerminologyServiceFactory) terminologyServiceFactory;
-    assertEquals(terminologyServerUrl, defaultTerminologyServiceFactory.getTerminologyServerUrl());
-    assertEquals(tokenEndpoint,
-        defaultTerminologyServiceFactory.getAuthConfig().getTokenEndpoint());
-    assertEquals(clientId, defaultTerminologyServiceFactory.getAuthConfig().getClientId());
-    assertEquals(clientSecret, defaultTerminologyServiceFactory.getAuthConfig().getClientSecret());
-    assertEquals(scope, defaultTerminologyServiceFactory.getAuthConfig().getScope());
-    assertEquals(tokenExpiryTolerance,
-        defaultTerminologyServiceFactory.getAuthConfig().getTokenExpiryTolerance());
-
-    final TerminologyService terminologyService = terminologyServiceFactory
-        .buildService();
+    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertEquals(expectedFactory, actualServiceFactory);
+    final TerminologyService2 terminologyService = actualServiceFactory.buildService2();
     assertNotNull(terminologyService);
   }
 

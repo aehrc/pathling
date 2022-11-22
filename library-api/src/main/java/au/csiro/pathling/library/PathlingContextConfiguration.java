@@ -18,13 +18,42 @@
 package au.csiro.pathling.library;
 
 import java.util.List;
+import java.util.Map;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.config.HttpCacheConf;
+import au.csiro.pathling.config.HttpClientConf;
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.utilities.Default;
 import lombok.Builder;
 import lombok.Value;
+
+import static java.util.Objects.nonNull;
 
 @Builder
 @Value
 public class PathlingContextConfiguration {
+
+  public static final Default<String> DEFAULT_TERMINOLOGY_SERVER_URL = Default.of(
+      "https://tx.ontoserver.csiro.au/fhir");
+
+  public static final Default<Long> DEFAULT_TOKEN_EXPIRY_TOLERANCE = Default.of(
+      TerminologyAuthConfiguration.DEF_TOKEN_EXPIRY_TOLERANCE);
+  public static final Default<Boolean> DEFAULT_TERMINOLOGY_VERBOSE_LOGGING = Default.of(false);
+
+  public static final Default<Integer> DEFAULT_MAX_TOTAL_CONNECTIONS = Default.of(
+      HttpClientConf.DEF_MAX_CONNECTIONS_TOTAL);
+  public static final Default<Integer> DEFAULT_MAX_CONNECTIONS_PER_ROUTE = Default.of(
+      HttpClientConf.DEF_MAX_CONNECTIONS_PER_ROUTE);
+  public static final Default<Integer> DEFAULT_SOCKET_TIMEOUT = Default.of(
+      HttpClientConf.DEF_SOCKET_TIMEOUT);
+
+  public static final Default<String> DEFAULT_CACHE_STORAGE_TYPE = Default.of(
+      HttpCacheConf.DEF_STORAGE_TYPE);
+  public static final Default<Integer> DEFAULT_CACHE_MAX_ENTRIES = Default.of(
+      HttpCacheConf.DEF_MAX_CACHE_ENTRIES);
+  public static final Default<Long> DEFAULT_CACHE_MAX_OBJECT_SIZE = Default.of(
+      HttpCacheConf.DEF_MAX_OBJECT_SIZE);
 
   @Nullable
   String fhirVersion;
@@ -48,6 +77,25 @@ public class PathlingContextConfiguration {
   Boolean terminologyVerboseRequestLogging;
 
   @Nullable
+  Integer maxConnectionsTotal;
+
+  @Nullable
+  Integer maxConnectionsPerRoute;
+
+  @Nullable
+  Integer cacheMaxEntries;
+
+  @Nullable
+  Long cacheMaxObjectSize;
+
+  @Nullable
+  @Builder.Default
+  String cacheStorageType = HttpCacheConf.DEF_STORAGE_TYPE;
+
+  @Nullable
+  Map<String, String> cacheStorageProperties;
+
+  @Nullable
   String tokenEndpoint;
 
   @Nullable
@@ -60,6 +108,44 @@ public class PathlingContextConfiguration {
   String scope;
 
   @Nullable
-  Integer tokenExpiryTolerance;
+  Long tokenExpiryTolerance;
 
+  @Nonnull
+  TerminologyAuthConfiguration toAuthConfig() {
+
+    final TerminologyAuthConfiguration authConfig = TerminologyAuthConfiguration.defaults();
+    if (nonNull(getTokenEndpoint()) && nonNull(getClientId()) && nonNull(getClientSecret())) {
+      authConfig.setEnabled(true);
+      authConfig.setTokenEndpoint(getTokenEndpoint());
+      authConfig.setClientId(getClientId());
+      authConfig.setClientSecret(getClientSecret());
+      authConfig.setScope(getScope());
+    }
+    authConfig.setTokenExpiryTolerance(
+        DEFAULT_TOKEN_EXPIRY_TOLERANCE.resolve(getTokenExpiryTolerance()));
+    return authConfig;
+  }
+
+
+  @Nonnull
+  HttpClientConf toClientConfig() {
+    final HttpClientConf c = HttpClientConf.defaults();
+    c.setMaxConnectionsTotal(
+        DEFAULT_MAX_TOTAL_CONNECTIONS.resolve(getMaxConnectionsTotal()));
+    c.setMaxConnectionsPerRoute(
+        DEFAULT_MAX_CONNECTIONS_PER_ROUTE.resolve(getMaxConnectionsPerRoute()));
+    c.setSocketTimeout(DEFAULT_SOCKET_TIMEOUT.resolve(getTerminologySocketTimeout()));
+    return c;
+  }
+
+  @Nonnull
+  HttpCacheConf toCacheConfig() {
+    final HttpCacheConf c = HttpCacheConf.defaults();
+    c.setEnabled(nonNull(getCacheStorageType()));
+    c.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(getCacheStorageType()));
+    c.setMaxCacheEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
+    c.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
+    c.setStorage(getCacheStorageProperties());
+    return c;
+  }
 }

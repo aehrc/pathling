@@ -20,7 +20,7 @@ public class CachingFactories {
     }
   }
 
-  private static class FileCachingFactory implements CacheFactory {
+  private static class DiskCachingFactory implements CacheFactory {
 
     @Nonnull
     @Override
@@ -37,8 +37,8 @@ public class CachingFactories {
   public static CacheFactory of(@Nonnull final String storageType) {
     if ("memory".equals(storageType)) {
       return new MemoryCachingFactory();
-    } else if ("file".equals(storageType)) {
-      return new FileCachingFactory();
+    } else if ("disk".equals(storageType)) {
+      return new DiskCachingFactory();
     } else {
       throw new IllegalArgumentException("Cannot configure cache with storageType: " + storageType);
     }

@@ -102,7 +102,7 @@ public class TerminologyBenchmark {
     public void setupIteration() {
       spark.sparkContext().cancelAllJobs();
       if (terminologyServiceFactory instanceof DefaultTerminologyServiceFactory) {
-        DefaultTerminologyServiceFactory.invalidate();
+        DefaultTerminologyServiceFactory.reset();
       }
     }
 

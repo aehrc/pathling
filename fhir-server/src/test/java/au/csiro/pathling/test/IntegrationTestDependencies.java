@@ -59,6 +59,7 @@ public class IntegrationTestDependencies {
     return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
         configuration.getTerminology().getServerUrl(), 0, false,
         configuration.getTerminology().getClient(),
+        configuration.getTerminology().getCache(),
         configuration.getTerminology().getAuthentication());
   }
 

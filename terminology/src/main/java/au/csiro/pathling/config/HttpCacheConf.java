@@ -16,14 +16,21 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class HttpCacheConfiguration implements Serializable {
+public class HttpCacheConf implements Serializable {
 
   private static final long serialVersionUID = -3030386957343963899L;
+
+  public static final boolean DEF_ENABLED = true;
+  public static final int DEF_MAX_CACHE_ENTRIES = 10_000;
+  public static final long DEF_MAX_OBJECT_SIZE = 64_000L;
+  public static final String DEF_STORAGE_TYPE = "memory";
+
   /**
    * Enables client side caching of REST requests.
    */
   @NotNull
-  private boolean enabled;
+  @Builder.Default
+  private boolean enabled = DEF_ENABLED;
 
   /**
    * Sets the maximum number of cache entries the cache will retain. See also: {@link
@@ -31,7 +38,8 @@ public class HttpCacheConfiguration implements Serializable {
    */
   @NotNull
   @Min(0)
-  private int maxCacheEntries;
+  @Builder.Default
+  private int maxCacheEntries = DEF_MAX_CACHE_ENTRIES;
 
   /**
    * Sets the maximum number of cache entries the cache will retain. See also: {@link
@@ -39,15 +47,22 @@ public class HttpCacheConfiguration implements Serializable {
    */
   @Min(0)
   @NotNull
-  private long maxObjectSize;
+  @Builder.Default
+  private long maxObjectSize = DEF_MAX_OBJECT_SIZE;
 
   @NotNull
-  private String storageType;
+  @Builder.Default
+  private String storageType = DEF_STORAGE_TYPE;
 
   @Nullable
   private Map<String, String> storage;
 
-  public static HttpCacheConfiguration defaults() {
-    return HttpCacheConfiguration.builder().enabled(true).storageType("memory").build();
+  public static HttpCacheConf defaults() {
+    return HttpCacheConf.builder().build();
   }
+
+  public static HttpCacheConf disabled() {
+    return HttpCacheConf.builder().enabled(false).build();
+  }
+
 }

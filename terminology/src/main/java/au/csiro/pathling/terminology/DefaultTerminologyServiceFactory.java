@@ -1,10 +1,8 @@
 package au.csiro.pathling.terminology;
 
-import static org.apache.spark.sql.functions.callUDF;
-
 import au.csiro.pathling.caching.CachingFactories;
-import au.csiro.pathling.config.HttpCacheConfiguration;
-import au.csiro.pathling.config.HttpClientConfiguration;
+import au.csiro.pathling.config.HttpCacheConf;
+import au.csiro.pathling.config.HttpClientConf;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -12,9 +10,12 @@ import au.csiro.pathling.fhir.TerminologyClient2;
 import au.csiro.pathling.terminology.ObjectHolder.SingletonHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
+import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -23,7 +24,8 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import java.util.UUID;
+
+import static java.util.Objects.nonNull;
 
 
 /**
@@ -35,6 +37,7 @@ import java.util.UUID;
  */
 @Slf4j
 @EqualsAndHashCode
+@ToString
 @Getter
 public class DefaultTerminologyServiceFactory implements TerminologyServiceFactory {
 
@@ -53,32 +56,55 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   @Nonnull
   private final String terminologyServerUrl;
 
-  private final int socketTimeout;
-
   private final boolean verboseRequestLogging;
 
   @Nonnull
-  private final HttpClientConfiguration clientConfig;
+  private final HttpClientConf clientConfig;
 
+  @Nonnull
+  private final HttpCacheConf cacheConfig;
+  
   @Nonnull
   private final TerminologyAuthConfiguration authConfig;
 
-  public static synchronized void invalidate() {
-    log.info("Invalidating HTTPClient cache");
+  public static synchronized void reset() {
+    log.info("Resetting terminology services");
+    terminologyServiceHolder.invalidate();
     terminologyServiceHolder2.invalidate();
   }
 
+  @Deprecated
   public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final String terminologyServerUrl, final int socketTimeout,
+      @Nonnull final String terminologyServerUrl,
+      @Nullable final Integer socketTimeout,
       final boolean verboseRequestLogging,
-      @Nonnull final HttpClientConfiguration clientConfig,
+      @Nonnull final HttpClientConf clientConfig,
+      @Nonnull final HttpCacheConf cacheConfig,
+      @Nonnull final TerminologyAuthConfiguration authConfig) {
+
+    // For backwards compatibility with the old version config version
+    this(fhirVersion, terminologyServerUrl, verboseRequestLogging,
+        nonNull(socketTimeout)
+        ? clientConfig.toBuilder()
+            .socketTimeout(socketTimeout)
+            .build()
+        : clientConfig,
+        cacheConfig,
+        authConfig);
+  }
+
+  public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
+      @Nonnull final String terminologyServerUrl,
+      final boolean verboseRequestLogging,
+      @Nonnull final HttpClientConf clientConfig,
+      @Nonnull final HttpCacheConf cacheConfig,
       @Nonnull final TerminologyAuthConfiguration authConfig) {
     this.fhirVersion = fhirVersion;
     this.terminologyServerUrl = terminologyServerUrl;
-    this.socketTimeout = socketTimeout;
     this.verboseRequestLogging = verboseRequestLogging;
     this.authConfig = authConfig;
     this.clientConfig = clientConfig;
+    this.cacheConfig = cacheConfig;
   }
 
   @Nonnull
@@ -113,7 +139,8 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private TerminologyService createService(@Nonnull final UUIDFactory uuidFactory) {
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
     //TODO: maybe share the HttpClient 
-    final CloseableHttpClient httpClient = buildHttpClient(socketTimeout, clientConfig);
+    final CloseableHttpClient httpClient = buildHttpClient(clientConfig,
+        cacheConfig);
     final TerminologyClient terminologyClient = TerminologyClient.build(
         fhirContext, terminologyServerUrl, verboseRequestLogging, authConfig,
         httpClient);
@@ -123,33 +150,34 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   @Nonnull
   private DefaultTerminologyService2 createService2() {
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
-    final CloseableHttpClient httpClient = buildHttpClient(socketTimeout, clientConfig);
+    final CloseableHttpClient httpClient = buildHttpClient(clientConfig,
+        cacheConfig);
     final TerminologyClient2 terminologyClient = TerminologyClient2.build(
         fhirContext, terminologyServerUrl, verboseRequestLogging, authConfig,
         httpClient);
     return new DefaultTerminologyService2(terminologyClient, httpClient);
   }
 
-  private static CloseableHttpClient buildHttpClient(final int socketTimeout,
-      @Nonnull final HttpClientConfiguration config) {
+  private static CloseableHttpClient buildHttpClient(
+      @Nonnull final HttpClientConf clientConf,
+      @Nonnull final HttpCacheConf cacheConf) {
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-    connectionManager.setMaxTotal(config.getMaxConnectionsTotal());
-    connectionManager.setDefaultMaxPerRoute(config.getMaxConnectionsPerRoute());
-    final HttpCacheConfiguration cacheConfiguration = config.getCache();
+    connectionManager.setMaxTotal(clientConf.getMaxConnectionsTotal());
+    connectionManager.setDefaultMaxPerRoute(clientConf.getMaxConnectionsPerRoute());
     final HttpClientBuilder clientBuilder;
-    if (cacheConfiguration.isEnabled()) {
+    if (cacheConf.isEnabled()) {
       final CacheConfig cacheConfig = CacheConfig.custom()
-          .setMaxCacheEntries(cacheConfiguration.getMaxCacheEntries())
-          .setMaxObjectSize(cacheConfiguration.getMaxObjectSize())
+          .setMaxCacheEntries(cacheConf.getMaxCacheEntries())
+          .setMaxObjectSize(cacheConf.getMaxObjectSize())
           .build();
-      clientBuilder = CachingFactories.of(cacheConfiguration.getStorageType())
-          .create(cacheConfig, cacheConfiguration.getStorage());
+      clientBuilder = CachingFactories.of(cacheConf.getStorageType())
+          .create(cacheConfig, cacheConf.getStorage());
     } else {
       clientBuilder = HttpClients.custom();
     }
 
     final RequestConfig defaultRequestConfig = RequestConfig.custom()
-        .setSocketTimeout(socketTimeout)
+        .setSocketTimeout(clientConf.getSocketTimeout())
         .build();
 
     return clientBuilder

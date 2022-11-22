@@ -52,20 +52,26 @@ class PathlingContext:
 
     @classmethod
     def create(
-        cls,
-        spark: Optional[SparkSession] = None,
-        fhir_version: Optional[str] = None,
-        max_nesting_level: Optional[int] = None,
-        enable_extensions: Optional[bool] = None,
-        enabled_open_types: Optional[Sequence[str]] = None,
-        terminology_server_url: Optional[str] = None,
-        terminology_socket_timeout: Optional[int] = None,
-        terminology_verbose_request_logging: Optional[bool] = None,
-        token_endpoint: Optional[str] = None,
-        client_id: Optional[str] = None,
-        client_secret: Optional[str] = None,
-        scope: Optional[str] = None,
-        token_expiry_tolerance: Optional[int] = None,
+            cls,
+            spark: Optional[SparkSession] = None,
+            fhir_version: Optional[str] = None,
+            max_nesting_level: Optional[int] = None,
+            enable_extensions: Optional[bool] = None,
+            enabled_open_types: Optional[Sequence[str]] = None,
+            terminology_server_url: Optional[str] = None,
+            terminology_socket_timeout: Optional[int] = None,
+            terminology_verbose_request_logging: Optional[bool] = None,
+            max_connections_total: Optional[int] = None,
+            max_connections_per_route: Optional[int] = None,
+            cache_storge_type: Optional[str] = "memory",
+            cache_max_entries: Optional[int] = None,
+            cache_max_object_size: Optional[int] = None,
+            cache_storage_properties: Optional[dict] = None,
+            token_endpoint: Optional[str] = None,
+            client_id: Optional[str] = None,
+            client_secret: Optional[str] = None,
+            scope: Optional[str] = None,
+            token_expiry_tolerance: Optional[int] = None,
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options.
@@ -81,6 +87,7 @@ class PathlingContext:
         classpath. You can get the path for the JAR (which is bundled with the Python package)
         using the `pathling.etc.find_jar` method.
 
+        http services.
         :param spark: the :class:`SparkSession` instance.
         :param fhir_version: the FHIR version to use.
             Must a valid FHIR version string. Defaults to R4.
@@ -95,6 +102,14 @@ class PathlingContext:
         :param terminology_socket_timeout: the socket timeout for terminology server requests
         :param terminology_verbose_request_logging: enables verbose logging of terminology server
         requests
+        :param max_connections_total: the maximum total number of connections for  http services.
+        :param max_connections_per_route: the maximum number of connections per route for  
+        :param cache_storge_type: the type of cache storage to use for http service. By default, 
+        uses transient in-memory cache. 'None' disables caching all together.
+        :param cache_max_entries: the maximum nunber of cached entries.
+        :param cache_max_object_size:  the maximum size of cacheable responses in bytes.
+        :param cache_storage_properties: additional configuration properties for the cache 
+        storage. The supported properties depend on the selected storage type.
         :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
         :param client_id: a client ID for use with the client credentials grant
         :param client_secret: a client secret for use with the client credentials grant
@@ -104,32 +119,38 @@ class PathlingContext:
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
         spark = (
-            spark
-            or SparkSession.getActiveSession()
-            or SparkSession.builder.config("spark.jars", find_jar()).getOrCreate()
+                spark
+                or SparkSession.getActiveSession()
+                or SparkSession.builder.config("spark.jars", find_jar()).getOrCreate()
         )
         jvm = spark._jvm
 
         # Build a Java configuration object from the provided parameters.
         config = (
             jvm.au.csiro.pathling.library.PathlingContextConfiguration.builder()
-            .fhirVersion(fhir_version)
-            .maxNestingLevel(max_nesting_level)
-            .extensionsEnabled(enable_extensions)
-            .openTypesEnabled(enabled_open_types)
-            .terminologyServerUrl(terminology_server_url)
-            .terminologySocketTimeout(terminology_socket_timeout)
-            .terminologyVerboseRequestLogging(terminology_verbose_request_logging)
-            .tokenEndpoint(token_endpoint)
-            .clientId(client_id)
-            .clientSecret(client_secret)
-            .scope(scope)
-            .tokenExpiryTolerance(token_expiry_tolerance)
-            .build()
+                .fhirVersion(fhir_version)
+                .maxNestingLevel(max_nesting_level)
+                .extensionsEnabled(enable_extensions)
+                .openTypesEnabled(enabled_open_types)
+                .terminologyServerUrl(terminology_server_url)
+                .terminologySocketTimeout(terminology_socket_timeout)
+                .terminologyVerboseRequestLogging(terminology_verbose_request_logging)
+                .maxConnectionsTotal(max_connections_total)
+                .maxConnectionsPerRoute(max_connections_per_route)
+                .cacheStorageType(cache_storge_type)
+                .cacheMaxEntries(cache_max_entries)
+                .cacheMaxObjectSize(cache_max_object_size)
+                .cacheStorageProperties(cache_storage_properties)
+                .tokenEndpoint(token_endpoint)
+                .clientId(client_id)
+                .clientSecret(client_secret)
+                .scope(scope)
+                .tokenExpiryTolerance(token_expiry_tolerance)
+                .build()
         )
 
         jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
-            spark._jsparkSession, config
+                spark._jsparkSession, config
         )
         return PathlingContext(spark, jpc)
 
@@ -144,16 +165,16 @@ class PathlingContext:
         # Since v3.3 Dataframes are constructed with SparkSession instance direclty.
         #
         return DataFrame(
-            jdf,
-            self._spark._wrapped if hasattr(self._spark, "_wrapped") else self._spark,
+                jdf,
+                self._spark._wrapped if hasattr(self._spark, "_wrapped") else self._spark,
         )
 
     def encode(
-        self,
-        df: DataFrame,
-        resource_name: str,
-        input_type: Optional[str] = None,
-        column: Optional[str] = None,
+            self,
+            df: DataFrame,
+            resource_name: str,
+            input_type: Optional[str] = None,
+            column: Optional[str] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR resources  in the given column and
@@ -171,17 +192,17 @@ class PathlingContext:
         """
 
         return self._wrap_df(
-            self._jpc.encode(
-                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
-            )
+                self._jpc.encode(
+                        df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
+                )
         )
 
     def encode_bundle(
-        self,
-        df: DataFrame,
-        resource_name: str,
-        input_type: Optional[str] = None,
-        column: Optional[str] = None,
+            self,
+            df: DataFrame,
+            resource_name: str,
+            input_type: Optional[str] = None,
+            column: Optional[str] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR bundles  in the given column and
@@ -216,9 +237,9 @@ class PathlingContext:
         :return: A new dataframe with an additional column containing the result of the operation.
         """
         return self._wrap_df(
-            self._jpc.memberOf(
-                df._jdf, coding_column._jc, value_set_uri, output_column_name
-            )
+                self._jpc.memberOf(
+                        df._jdf, coding_column._jc, value_set_uri, output_column_name
+                )
         )
 
     @deprecated(reason="You should use the 'udfs.translate' UDF instead")
@@ -240,14 +261,14 @@ class PathlingContext:
         :return: A new dataframe with an additional column containing the result of the operation.
         """
         return self._wrap_df(
-            self._jpc.translate(
-                df._jdf,
-                coding_column._jc,
-                concept_map_uri,
-                reverse,
-                equivalence,
-                output_column_name,
-            )
+                self._jpc.translate(
+                        df._jdf,
+                        coding_column._jc,
+                        concept_map_uri,
+                        reverse,
+                        equivalence,
+                        output_column_name,
+                )
         )
 
     @deprecated(reason="You should use the 'udfs.subsumes' UDF instead")
@@ -271,18 +292,18 @@ class PathlingContext:
         :return: A new dataframe with an additional column containing the result of the operation.
         """
         if (left_coding_column is None and left_coding is None) or (
-            right_coding_column is None and right_coding is None
+                right_coding_column is None and right_coding is None
         ):
             raise ValueError(
-                "Must provide either left_coding_column or left_coding, and either "
-                "right_coding_column or right_coding"
+                    "Must provide either left_coding_column or left_coding, and either "
+                    "right_coding_column or right_coding"
             )
         left_column = left_coding.to_literal() if left_coding else left_coding_column
         right_column = (
             right_coding.to_literal() if right_coding else right_coding_column
         )
         return self._wrap_df(
-            self._jpc.subsumes(
-                df._jdf, left_column._jc, right_column._jc, output_column_name
-            )
+                self._jpc.subsumes(
+                        df._jdf, left_column._jc, right_column._jc, output_column_name
+                )
         )

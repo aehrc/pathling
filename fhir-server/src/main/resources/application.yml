@@ -49,10 +49,6 @@ pathling:
     # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
     # queries. The server listed here is suitable for testing purposes only.
     serverUrl: https://tx.ontoserver.csiro.au/fhir
-
-    # The maximum period (in milliseconds) that the server should wait for incoming data from the
-    # terminology service.
-    socketTimeout: 60_000
     
     # Setting this option to true will enable additional logging of the details of requests between 
     # the server and the terminology service.
@@ -60,17 +56,20 @@ pathling:
     
     # Configuration relating to HTTP client 
     client:
+      # The maximum period (in milliseconds) that the server should wait for incoming data from the
+      # terminology service.
+      socketTimeout: 60_000
       
       maxConnectionsTotal: 32
       
       maxConnectionsPerRoute: 16
-      
-      cache:
-        enabled: true
-        maxCacheEntries: 500_000
-        maxObjectSize: 100_000
-        storageType: "memory"
-          
+    
+    cache:
+      enabled: true
+      maxCacheEntries: 50_000
+      maxObjectSize: 64_000
+      storageType: "memory"
+    
     # Configuration relating to authentication of requests to the terminology service.
     authentication:
       # Enables authenticated requests.

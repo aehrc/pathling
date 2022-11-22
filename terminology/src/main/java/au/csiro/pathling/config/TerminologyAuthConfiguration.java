@@ -29,16 +29,26 @@ import javax.validation.Constraint;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import javax.validation.Payload;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.hibernate.validator.constraints.URL;
 
 @Data
+@Builder(toBuilder = true)
+@NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ValidTerminologyAuthConfiguration
 public class TerminologyAuthConfiguration implements Serializable {
 
   private static final long serialVersionUID = 6321330066417583745L;
+
+  public static final long DEF_TOKEN_EXPIRY_TOLERANCE = 120;
 
   /**
    * Enables authentication of requests to the terminology server.
@@ -77,13 +87,15 @@ public class TerminologyAuthConfiguration implements Serializable {
    * send it with a terminology request.
    */
   @NotNull
-  private long tokenExpiryTolerance;
+  @Min(0)
+  @Builder.Default
+  private long tokenExpiryTolerance = DEF_TOKEN_EXPIRY_TOLERANCE;
 
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = TerminologyAuthConfigValidator.class)
   @Documented
-  public static @interface ValidTerminologyAuthConfiguration {
+  public @interface ValidTerminologyAuthConfiguration {
 
     String message() default "If terminology authentication is enabled, token endpoint, "
         + "client ID and client secret must be supplied.";
@@ -113,4 +125,7 @@ public class TerminologyAuthConfiguration implements Serializable {
 
   }
 
+  public static TerminologyAuthConfiguration defaults() {
+    return TerminologyAuthConfiguration.builder().build();
+  }
 }

@@ -19,22 +19,25 @@ package au.csiro.pathling.library;
 
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
+import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_SERVER_URL;
+import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_SOCKET_TIMEOUT;
+import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_VERBOSE_LOGGING;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.config.HttpClientConfiguration;
+import au.csiro.pathling.config.HttpCacheConf;
+import au.csiro.pathling.config.HttpClientConf;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
-import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.sql.SqlStrategy;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.support.FhirConversionSupport;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -61,10 +64,6 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * @author John Grimes
  */
 public class PathlingContext {
-
-  public static final String DEFAULT_TERMINOLOGY_SERVER_URL = "https://tx.ontoserver.csiro.au/fhir";
-  public static final int DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT = 60_000;
-  public static final long DEFAULT_TOKEN_EXPIRY_TOLERANCE = 120L;
 
   @Nonnull
   @Getter
@@ -409,33 +408,17 @@ public class PathlingContext {
   @Nonnull
   private static DefaultTerminologyServiceFactory getTerminologyServiceFactory(
       @Nonnull final PathlingContextConfiguration c) {
-    final String resolvedTerminologyServerUrl = nonNull(c.getTerminologyServerUrl())
-                                                ? c.getTerminologyServerUrl()
-                                                : DEFAULT_TERMINOLOGY_SERVER_URL;
+    final String resolvedTerminologyServerUrl = DEFAULT_TERMINOLOGY_SERVER_URL.resolve(
+        c.getTerminologyServerUrl());
+    final boolean verboseRequestLogging = DEFAULT_TERMINOLOGY_VERBOSE_LOGGING.resolve(
+        c.getTerminologyVerboseRequestLogging());
 
-    final TerminologyAuthConfiguration authConfig = new TerminologyAuthConfiguration();
-    if (nonNull(c.getTokenEndpoint()) && nonNull(c.getClientId()) && nonNull(c.getClientSecret())) {
-      authConfig.setEnabled(true);
-      authConfig.setTokenEndpoint(c.getTokenEndpoint());
-      authConfig.setClientId(c.getClientId());
-      authConfig.setClientSecret(c.getClientSecret());
-      authConfig.setScope(c.getScope());
-    }
-    authConfig.setTokenExpiryTolerance(c.getTokenExpiryTolerance() != null
-                                       ? c.getTokenExpiryTolerance()
-                                       : DEFAULT_TOKEN_EXPIRY_TOLERANCE);
-    final int terminologySocketTimeout = c.getTerminologySocketTimeout() != null
-                                         ? c.getTerminologySocketTimeout()
-                                         : DEFAULT_TERMINOLOGY_SOCKET_TIMEOUT;
+    final TerminologyAuthConfiguration authConfig = c.toAuthConfig();
+    final HttpClientConf clientConfig = c.toClientConfig();
+    final HttpCacheConf cacheConfig = c.toCacheConfig();
 
-    final boolean verboseRequestLogging = c.getTerminologyVerboseRequestLogging() != null
-                                          ? c.getTerminologyVerboseRequestLogging()
-                                          : false;
-
-    // TODO: Fix the httpclient configuration and the constructor (builder method)
     return new DefaultTerminologyServiceFactory(FhirContext.forR4().getVersion().getVersion(),
-        resolvedTerminologyServerUrl,
-        terminologySocketTimeout, verboseRequestLogging, HttpClientConfiguration.defaults(),
+        resolvedTerminologyServerUrl, verboseRequestLogging, clientConfig, cacheConfig,
         authConfig);
   }
 }

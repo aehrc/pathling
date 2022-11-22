@@ -90,6 +90,7 @@ public class Dependencies {
     return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
         terminology.getServerUrl(), terminology.getSocketTimeout(), terminology.isVerboseLogging(),
         terminology.getClient(),
+        terminology.getCache(),
         terminology.getAuthentication());
   }
 }

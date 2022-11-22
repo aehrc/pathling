@@ -17,11 +17,13 @@
 
 package au.csiro.pathling.config;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
+import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 
 /**
  * Represents configuration specific to the terminology functions of the server.
@@ -43,14 +45,21 @@ public class TerminologyConfiguration {
   @URL
   private String serverUrl;
 
+
   /**
    * The maximum period (in milliseconds) that the server should wait for incoming data from the
    * terminology service.
    */
-  @NotNull
+  @Nullable
   @Min(0)
   private Integer socketTimeout;
 
+  @DeprecatedConfigurationProperty(replacement = "client.socketTimeout")
+  @Nullable
+  public Integer getSocketTimeout() {
+    return socketTimeout;
+  }
+  
   /**
    * Setting this option to {@code true} will enable additional logging of the details of requests
    * between the server and the terminology service.
@@ -59,7 +68,10 @@ public class TerminologyConfiguration {
   private boolean verboseLogging;
 
   @NotNull
-  private HttpClientConfiguration client;
+  private HttpClientConf client;
+
+  @NotNull
+  private HttpCacheConf cache;
 
   @NotNull
   private TerminologyAuthConfiguration authentication;
