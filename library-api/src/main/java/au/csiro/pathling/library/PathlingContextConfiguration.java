@@ -109,6 +109,9 @@ public class PathlingContextConfiguration {
 
   @Nullable
   Long tokenExpiryTolerance;
+  
+  @Builder.Default
+  boolean mockTerminology = false;
 
   @Nonnull
   TerminologyAuthConfiguration toAuthConfig() {

@@ -21,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.Validation;
+import javax.validation.ValidatorFactory;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
@@ -93,7 +95,6 @@ public interface TerminologyClient2 {
           authConfig.getScope(), authConfig.getTokenExpiryTolerance());
       genericClient.registerInterceptor(clientAuthInterceptor);
     }
-
     return new TerminologyClient2Impl(genericClient);
   }
 }

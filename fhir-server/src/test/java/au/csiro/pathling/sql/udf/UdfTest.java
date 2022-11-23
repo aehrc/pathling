@@ -4,6 +4,7 @@ import static au.csiro.pathling.sql.Terminology.translate;
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService2;
@@ -118,8 +119,7 @@ public class UdfTest {
         .withRow("id-3", null)
         .build();
 
-    final Dataset<Row> result = df.select(member_of(df.col("code"),
-        null));
+    final Dataset<Row> result = df.select(member_of(df.col("code"), lit(null)));
 
     DatasetAssert.of(result).hasRows(
         RowFactory.create((Boolean) null),
@@ -221,8 +221,7 @@ public class UdfTest {
             Arrays.asList(CodingEncoding.encode(CODING_1), CodingEncoding.encode(CODING_5)))
         .build();
 
-    final Dataset<Row> result = ds.select(member_of(ds.col("codings"),
-        null));
+    final Dataset<Row> result = ds.select(member_of(ds.col("codings"), lit(null)));
 
     DatasetAssert.of(result).hasRows(
         RowFactory.create((Boolean) null),

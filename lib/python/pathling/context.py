@@ -72,6 +72,7 @@ class PathlingContext:
             client_secret: Optional[str] = None,
             scope: Optional[str] = None,
             token_expiry_tolerance: Optional[int] = None,
+            mock_terminology: bool = False
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options.
@@ -146,6 +147,7 @@ class PathlingContext:
                 .clientSecret(client_secret)
                 .scope(scope)
                 .tokenExpiryTolerance(token_expiry_tolerance)
+                .mockTerminology(mock_terminology)
                 .build()
         )
 

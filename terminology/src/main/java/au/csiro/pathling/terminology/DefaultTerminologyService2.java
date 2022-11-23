@@ -1,34 +1,31 @@
 package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.utilities.Preconditions;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
+
+import static java.util.Objects.nonNull;
 
 public class DefaultTerminologyService2 implements TerminologyService2, Closeable {
 
   @Nonnull
   private final TerminologyClient2 terminologyClient;
 
-  @Nonnull
+  @Nullable
   private final Closeable toClose;
 
   public DefaultTerminologyService2(@Nonnull final TerminologyClient2 terminologyClient,
-      @Nonnull Closeable toClose) {
+      @Nullable Closeable toClose) {
     this.terminologyClient = terminologyClient;
     this.toClose = toClose;
   }
@@ -47,16 +44,17 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
     return converter.apply(Objects.requireNonNull(value));
   }
 
-  @Nonnull
+  public static boolean isResultTrue(final @Nonnull Parameters parameters) {
+    return parameters.getParameterBool("result");
+  }
+
   @Override
-  public Parameters validate(@Nonnull final String url, @Nonnull final Coding coding) {
-    // TODO: This should also do the system validation unless somehow validate is impervious
-    // to the errors caused by unknown systems.
-    return terminologyClient.validateCode(
+  public boolean validate(@Nonnull final String url, @Nonnull final Coding coding) {
+    return isResultTrue(terminologyClient.validateCode(
         required(UriType::new, url), required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
         required(CodeType::new, coding.getCode())
-    );
+    ));
   }
 
   @Nonnull
@@ -108,6 +106,8 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Override
   public void close() throws IOException {
-    toClose.close();
+    if (nonNull(toClose)) {
+      toClose.close();
+    }
   }
 }

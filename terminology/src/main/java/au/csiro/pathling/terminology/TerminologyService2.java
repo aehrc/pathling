@@ -7,8 +7,7 @@ import javax.annotation.Nullable;
 
 public interface TerminologyService2 {
 
-  @Nonnull
-  Parameters validate(@Nonnull String url, @Nonnull Coding coding);
+  boolean validate(@Nonnull String url, @Nonnull Coding coding);
 
   @Nonnull
   Parameters translate(@Nonnull Coding coding, @Nonnull String conceptMapUrl,

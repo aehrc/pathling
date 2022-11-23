@@ -12,6 +12,8 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import static java.util.Objects.nonNull;
+
 public final class TerminologyUdfHelpers {
 
   private TerminologyUdfHelpers() {
@@ -62,5 +64,14 @@ public final class TerminologyUdfHelpers {
            ? Streams.stream(JavaConverters.asJavaIterable(codingsRow)).filter(Objects::nonNull)
                .map(CodingEncoding::decode)
            : null;
+  }
+
+  public static boolean isValidCoding(@Nullable Coding coding) {
+    return nonNull(coding) && nonNull(coding.getSystem()) && nonNull(coding.getCode());
+  }
+
+  @Nonnull
+  public static Stream<Coding> validCodings(@Nonnull final Stream<Coding> codings) {
+    return codings.filter(TerminologyUdfHelpers::isValidCoding);
   }
 }

@@ -1,18 +1,17 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOneOrMany;
+import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.validCodings;
+
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Parameters;
-import java.util.Objects;
-import java.util.stream.Stream;
-
-import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOneOrMany;
 
 @Slf4j
 public class MemberOfUdf implements SqlFunction,
@@ -52,10 +51,7 @@ public class MemberOfUdf implements SqlFunction,
       return null;
     }
     final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
-    return codings
-        .filter(Objects::nonNull).anyMatch(coding -> {
-          final Parameters parameters = terminologyService.validate(url, coding);
-          return TerminologyUdfHelpers.isTrue(parameters);
-        });
+    return validCodings(codings)
+        .anyMatch(coding -> terminologyService.validate(url, coding));
   }
 }

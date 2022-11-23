@@ -38,6 +38,7 @@ import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -47,6 +48,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -63,6 +65,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
  * @author Piotr Szul
  * @author John Grimes
  */
+@Slf4j
 public class PathlingContext {
 
   @Nonnull
@@ -149,7 +152,7 @@ public class PathlingContext {
     }
 
     final Builder encoderBuilder = getEncoderBuilder(c);
-    final DefaultTerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
+    final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
         c);
     return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
   }
@@ -406,19 +409,26 @@ public class PathlingContext {
   }
 
   @Nonnull
-  private static DefaultTerminologyServiceFactory getTerminologyServiceFactory(
+  private static TerminologyServiceFactory getTerminologyServiceFactory(
       @Nonnull final PathlingContextConfiguration c) {
-    final String resolvedTerminologyServerUrl = DEFAULT_TERMINOLOGY_SERVER_URL.resolve(
-        c.getTerminologyServerUrl());
-    final boolean verboseRequestLogging = DEFAULT_TERMINOLOGY_VERBOSE_LOGGING.resolve(
-        c.getTerminologyVerboseRequestLogging());
 
-    final TerminologyAuthConfiguration authConfig = c.toAuthConfig();
-    final HttpClientConf clientConfig = c.toClientConfig();
-    final HttpCacheConf cacheConfig = c.toCacheConfig();
+    if (!c.isMockTerminology()) {
+      final String resolvedTerminologyServerUrl = DEFAULT_TERMINOLOGY_SERVER_URL.resolve(
+          c.getTerminologyServerUrl());
+      final boolean verboseRequestLogging = DEFAULT_TERMINOLOGY_VERBOSE_LOGGING.resolve(
+          c.getTerminologyVerboseRequestLogging());
 
-    return new DefaultTerminologyServiceFactory(FhirContext.forR4().getVersion().getVersion(),
-        resolvedTerminologyServerUrl, verboseRequestLogging, clientConfig, cacheConfig,
-        authConfig);
+      final TerminologyAuthConfiguration authConfig = c.toAuthConfig();
+      final HttpClientConf clientConfig = c.toClientConfig();
+      final HttpCacheConf cacheConfig = c.toCacheConfig();
+
+      return new DefaultTerminologyServiceFactory(FhirContext.forR4().getVersion().getVersion(),
+          resolvedTerminologyServerUrl, verboseRequestLogging, clientConfig, cacheConfig,
+          authConfig);
+    } else {
+      log.warn("Using mock terminology service. NOT connecting to server: {}",
+          c.getTerminologyServerUrl());
+      return new MockTerminologyServiceFactory();
+    }
   }
 }

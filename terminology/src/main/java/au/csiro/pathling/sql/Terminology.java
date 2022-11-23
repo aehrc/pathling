@@ -10,15 +10,41 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 
+/**
+ * JAVA API for terminology UDFs
+ */
 public interface Terminology {
 
-  // TODO: consider adding all column versions (could be useful e.g. to get valueSetUri from a table or template)
-
-  // TODO: consider nullablity of the arguments
+  /**
+   * Takes a Coding or an array of Codings column as its input. Returns the column which, contains a
+   * Boolean value, indicating whether any of the input Codings is the member of the specified FHIR
+   * ValueSet.
+   *
+   * @param coding a Column containing the struct representation of a Coding or an array of such
+   * structs.
+   * @param valueSetUrl the identifier for a FHIR ValueSet.
+   * @return the Column containing the result of the operation
+   */
   @Nonnull
-  static Column member_of(@Nonnull final Column coding, @Nullable final String valueSetUri) {
-    return call_udf(MemberOfUdf.FUNCTION_NAME, coding, lit(valueSetUri));
+  static Column member_of(@Nonnull final Column coding, @Nonnull final String valueSetUrl) {
+    return member_of(coding, lit(valueSetUrl));
   }
+
+  /**
+   * Takes a Coding or an array of Codings column as its input. Returns the column which, contains a
+   * Boolean value, indicating whether any of the input Codings is the member of the specified FHIR
+   * ValueSet.
+   *
+   * @param coding a Column containing the struct representation of a Coding or an array of such
+   * structs.
+   * @param valueSetUrl the column with the identifier for a FHIR ValueSet.
+   * @return the Column containing the result of the operation
+   */
+  @Nonnull
+  static Column member_of(@Nonnull final Column coding, @Nonnull final Column valueSetUrl) {
+    return call_udf(MemberOfUdf.FUNCTION_NAME, coding, valueSetUrl);
+  }
+
 
   // TODO: consider the order of reverse and equivaleces
   // TODO: consider other forms of passing equivalences (i.e collection of enum types)
@@ -35,7 +61,7 @@ public interface Terminology {
       boolean inverted) {
     return call_udf(SubsumesUdf.FUNCTION_NAME, codingA, codingB, lit(inverted));
   }
-  
+
   @Nonnull
   static Column subsumes(@Nonnull final Column codingA, @Nonnull final Column codingB) {
     return subsumes(codingA, codingB, SubsumesUdf.PARAM_INVERTED_DEFAULT);
