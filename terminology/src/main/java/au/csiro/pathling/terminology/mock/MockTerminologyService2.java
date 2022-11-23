@@ -3,11 +3,13 @@ package au.csiro.pathling.terminology.mock;
 import au.csiro.pathling.terminology.TerminologyService2;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
-import org.jetbrains.annotations.Nullable;
+import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import javax.annotation.Nonnull;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,12 +49,17 @@ public class MockTerminologyService2 implements TerminologyService2 {
   }
 
   private final Map<String, ValueSet> valueSets = new HashMap<>();
+  private final Set<Pair<SystemAndCode, SystemAndCode>> subsumes = new HashSet<>();
 
   public MockTerminologyService2() {
     valueSets.put("http://snomed.info/sct?fhir_vs=refset/723264001",
         new ValueSet(new Coding("http://snomed.info/sct", "368529001", null)));
     valueSets.put("http://loinc.org/vs/LP14885-5",
         new ValueSet(new Coding("http://loinc.org", "55915-3", null)));
+
+    subsumes.add(Pair.of(new SystemAndCode("http://snomed.info/sct", "107963000"),
+        new SystemAndCode("http://snomed.info/sct", "63816008")));
+
   }
 
   @Override
@@ -67,9 +74,23 @@ public class MockTerminologyService2 implements TerminologyService2 {
     throw new UnsupportedOperationException();
   }
 
-  @Nullable
   @Override
-  public Parameters subsumes(@Nonnull final Coding codingA, @Nonnull final Coding codingB) {
-    throw new UnsupportedOperationException();
+  @Nonnull
+  public ConceptSubsumptionOutcome subsumes(@Nonnull final Coding codingA,
+      @Nonnull final Coding codingB) {
+
+    final SystemAndCode systemAndCodeA = SystemAndCode.of(codingA);
+    final SystemAndCode systemAndCodeB = SystemAndCode.of(codingB);
+
+    if (systemAndCodeA.equals(systemAndCodeB)) {
+      return ConceptSubsumptionOutcome.EQUIVALENT;
+    } else if (subsumes.contains(Pair.of(systemAndCodeA, systemAndCodeB))) {
+      return ConceptSubsumptionOutcome.SUBSUMES;
+    } else if (subsumes.contains(Pair.of(systemAndCodeB, systemAndCodeA))) {
+      return ConceptSubsumptionOutcome.SUBSUMEDBY;
+    } else {
+      return ConceptSubsumptionOutcome.NOTSUBSUMED;
+    }
   }
 }
+

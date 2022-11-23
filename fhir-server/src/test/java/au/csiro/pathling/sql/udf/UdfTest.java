@@ -1,5 +1,7 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.sql.Terminology.subsumed_by;
+import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.sql.Terminology.translate;
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
@@ -16,6 +18,9 @@ import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.parser.IParser;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -28,6 +33,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 @Tag("UnitTest")
 @SpringBootTest
@@ -46,8 +53,7 @@ public class UdfTest {
   void setUp() {
     SharedMocks.resetAll();
   }
-
-
+  
   private final static Coding CODING_1 = new Coding(LOINC_URL, "10337-4",
       "Procollagen type I [Mass/volume] in Serum");
   private final static Coding CODING_2 = new Coding(LOINC_URL, "10428-1",
@@ -60,6 +66,12 @@ public class UdfTest {
 
   private final static String CODING_1_VALUE_SET_URI = "uiid:ValueSet_coding1";
   private final static String CODING_2_VALUE_SET_URI = "uiid:ValueSet_coding2";
+
+
+  private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
+  private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
+  private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
+
 
   // helper functions
   private DatasetBuilder codingDatasetBuilder() {
@@ -81,6 +93,13 @@ public class UdfTest {
             TranslationEntry.of(ConceptMapEquivalence.RELATEDTO, CODING_4)
         );
   }
+
+  private void setupSubsumesExpectations() {
+    TerminologyServiceHelpers.setupSubsumes(terminologyService)
+        .withSubsumes(CODING_1, CODING_2)
+        .withSubsumes(CODING_3, CODING_4);
+  }
+
 
   @Test
   public void testValidateCoding() {
@@ -291,6 +310,103 @@ public class UdfTest {
     DatasetAssert.of(result).hasRows(expectedResult);
   }
 
-  // TODO: Add test to check that exception is thrown when the coding is not Row or array<Row>
+  @Nullable
+  private static Row toRow(@Nonnull Coding coding) {
+    return CodingEncoding.encode(coding);
+  }
+
+  @Nonnull
+  private static List<Row> toArray(@Nonnull Coding... codings) {
+    return Stream.of(codings).map(CodingEncoding::encode).collect(Collectors.toList());
+  }
+
+  @Test
+  public void testSubsumes() {
+
+    setupSubsumesExpectations();
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("codingA", CodingEncoding.DATA_TYPE)
+        .withColumn("codingsB", DataTypes.createArrayType(CodingEncoding.DATA_TYPE))
+        .withRow("uc-null-empty", null, Collections.emptyList())
+        .withRow("uc-any-null", toRow(CODING_1), null)
+        .withRow("uc-invalid", toRow(INVALID_CODING_0),
+            toArray(INVALID_CODING_1, INVALID_CODING_2, null))
+        .withRow("uc-subsumes", toRow(CODING_1), toArray(CODING_2, CODING_3))
+        .withRow("uc-subsumed_by", toRow(CODING_4), toArray(CODING_5, CODING_3))
+        .build();
+
+    final Dataset<Row> result = ds.select(ds.col("id"),
+        subsumes(ds.col("codingA"), ds.col("codingsB")));
+
+    final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.BooleanType)
+        .withRow("uc-null-empty", null)
+        .withRow("uc-any-null", null)
+        .withRow("uc-invalid", false)
+        .withRow("uc-subsumes", true)
+        .withRow("uc-subsumed_by", false)
+        .build();
+    DatasetAssert.of(result).hasRows(expectedResult);
+
+    final Dataset<Row> resultSwapped = ds.select(ds.col("id"),
+        subsumes(ds.col("codingsB"), ds.col("codingA")));
+
+    final Dataset<Row> expectedResultSwapped = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.BooleanType)
+        .withRow("uc-null-empty", null)
+        .withRow("uc-any-null", null)
+        .withRow("uc-invalid", false)
+        .withRow("uc-subsumes", false)
+        .withRow("uc-subsumed_by", true)
+        .build();
+    DatasetAssert.of(resultSwapped).hasRows(expectedResultSwapped);
+  }
+
+
+  @Test
+  public void testSubsumedBy() {
+
+    setupSubsumesExpectations();
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("codingA", CodingEncoding.DATA_TYPE)
+        .withColumn("codingsB", DataTypes.createArrayType(CodingEncoding.DATA_TYPE))
+        .withRow("uc-null-empty", null, Collections.emptyList())
+        .withRow("uc-any-null", toRow(CODING_1), null)
+        .withRow("uc-invalid", toRow(INVALID_CODING_0),
+            toArray(INVALID_CODING_1, INVALID_CODING_2, null))
+        .withRow("uc-subsumes", toRow(CODING_1), toArray(CODING_2, CODING_3))
+        .withRow("uc-subsumed_by", toRow(CODING_4), toArray(CODING_5, CODING_3))
+        .build();
+
+    final Dataset<Row> result = ds.select(ds.col("id"),
+        subsumed_by(ds.col("codingA"), ds.col("codingsB")));
+
+    final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.BooleanType)
+        .withRow("uc-null-empty", null)
+        .withRow("uc-any-null", null)
+        .withRow("uc-invalid", false)
+        .withRow("uc-subsumes", false)
+        .withRow("uc-subsumed_by", true)
+        .build();
+    DatasetAssert.of(result).hasRows(expectedResult);
+
+    final Dataset<Row> resultSwapped = ds.select(ds.col("id"),
+        subsumed_by(ds.col("codingsB"), ds.col("codingA")));
+
+    final Dataset<Row> expectedResultSwapped = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.BooleanType)
+        .withRow("uc-null-empty", null)
+        .withRow("uc-any-null", null)
+        .withRow("uc-invalid", false)
+        .withRow("uc-subsumes", true)
+        .withRow("uc-subsumed_by", false)
+        .build();
+    DatasetAssert.of(resultSwapped).hasRows(expectedResultSwapped);
+  }
 }
  

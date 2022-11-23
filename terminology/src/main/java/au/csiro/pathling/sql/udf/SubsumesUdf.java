@@ -63,7 +63,7 @@ public class SubsumesUdf implements SqlFunction,
 
     // does any of the input codings subsume any of the output codings (within the same system)
     // TODO: refactor to use standard coding validation
-    
+
     final List<Coding> validCodingsB = codingsB.filter(Objects::nonNull)
         .collect(Collectors.toUnmodifiableList());
 
@@ -88,9 +88,8 @@ public class SubsumesUdf implements SqlFunction,
         inverted);
   }
 
-  private static boolean isSubsumes(@Nonnull final Parameters parameter, final boolean inverted) {
-    final ConceptSubsumptionOutcome outcome = ConceptSubsumptionOutcome.fromCode(
-        parameter.getParameter("outcome").primitiveValue());
+  private static boolean isSubsumes(@Nonnull final ConceptSubsumptionOutcome outcome,
+      final boolean inverted) {
     return EQUIVALENT.equals(outcome) || (inverted
                                           ? SUBSUMEDBY
                                           : SUBSUMES).equals(outcome);

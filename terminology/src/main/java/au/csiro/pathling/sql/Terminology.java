@@ -56,14 +56,31 @@ public interface Terminology {
         lit(equivalences));
   }
 
-  @Nonnull
-  static Column subsumes(@Nonnull final Column codingA, @Nonnull final Column codingB,
-      boolean inverted) {
-    return call_udf(SubsumesUdf.FUNCTION_NAME, codingA, codingB, lit(inverted));
-  }
-
+  /**
+   * Takes two Coding or array of Codings columns as its input. Returns the Column, which contains a
+   * Boolean value, indicating whether the left Coding subsumes the right Coding.
+   *
+   * @param codingA a Column containing a struct representation of a Coding or an array of Codings.
+   * @param codingB a Column containing a struct representation of a Coding or an array of *
+   * Codings.
+   * @return the Column containing the result of the operation (boolean)
+   */
   @Nonnull
   static Column subsumes(@Nonnull final Column codingA, @Nonnull final Column codingB) {
-    return subsumes(codingA, codingB, SubsumesUdf.PARAM_INVERTED_DEFAULT);
+    return call_udf(SubsumesUdf.FUNCTION_NAME, codingA, codingB, lit(false));
+  }
+
+  /**
+   * Takes two Coding or array of Codings columns as its input. Returns the Column, which contains a
+   * Boolean value, indicating whether the left Coding is subsumed by the right Coding.
+   *
+   * @param codingA a Column containing a struct representation of a Coding or an array of Codings.
+   * @param codingB a Column containing a struct representation of a Coding or an array of *
+   * Codings.
+   * @return the Column containing the result of the operation (boolean)
+   */
+  @Nonnull
+  static Column subsumed_by(@Nonnull final Column codingA, @Nonnull final Column codingB) {
+    return call_udf(SubsumesUdf.FUNCTION_NAME, codingA, codingB, lit(true));
   }
 }

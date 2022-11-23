@@ -13,8 +13,10 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
 import static java.util.Objects.nonNull;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 
 public class DefaultTerminologyService2 implements TerminologyService2, Closeable {
 
@@ -48,6 +50,14 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
     return parameters.getParameterBool("result");
   }
 
+  @Nonnull
+  public static ConceptSubsumptionOutcome getSubsumptionOutcome(
+      final @Nonnull Parameters parameters) {
+    return ConceptSubsumptionOutcome.fromCode(
+        parameters.getParameter("outcome").primitiveValue());
+  }
+
+
   @Override
   public boolean validate(@Nonnull final String url, @Nonnull final Coding coding) {
     return isResultTrue(terminologyClient.validateCode(
@@ -73,35 +83,38 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
     );
   }
 
-  @Nullable
+  @Nonnull
   @Override
-  public Parameters subsumes(@Nonnull final Coding codingA, @Nonnull final Coding codingB) {
+  public ConceptSubsumptionOutcome subsumes(@Nonnull final Coding codingA,
+      @Nonnull final Coding codingB) {
 
-    // TODO: 
     if (codingA.getSystem() == null || !codingA.getSystem().equals(codingB.getSystem())) {
-      return null;
+      return NOTSUBSUMED;
     }
-    final String resolvedSystem = codingA.getSystem();
+    
+    if (codingA.getCode() == null || codingA.getCode() == null) {
+      return NOTSUBSUMED;
+    }
 
+    final String resolvedSystem = codingA.getSystem();
     // if both version are present then ten need to be equal
-    // TODO: this should most likely result either in null or false
     if (!(codingA.getVersion() == null || codingB.getVersion() == null || codingA.getVersion()
         .equals(codingB.getVersion()))) {
-      return null;
+      return NOTSUBSUMED;
     }
     final String resolvedVersion = codingA.getVersion() != null
                                    ? codingA.getVersion()
                                    : codingB.getVersion();
 
-    // TODO: optimize not call the client if not needed
+    // TODO: optimize not call the client if not needed (when codings are equal)
 
     // there are some assertions here to make
-    return terminologyClient.subsumes(
+    return getSubsumptionOutcome(terminologyClient.subsumes(
         required(CodeType::new, codingA.getCode()),
         required(CodeType::new, codingB.getCode()),
         required(UriType::new, resolvedSystem),
         optional(StringType::new, resolvedVersion)
-    );
+    ));
   }
 
   @Override

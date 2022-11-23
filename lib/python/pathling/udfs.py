@@ -95,3 +95,18 @@ def subsumes(left_coding: CodingArg, right_coding: CodingArg) -> Column:
     """
     return _invoke_function("subsumes", _coding_to_java_column(left_coding),
                             _coding_to_java_column(right_coding))
+
+
+def subsumed_by(left_coding: CodingArg, right_coding: CodingArg) -> Column:
+    """
+    Takes two Coding columns as input. Returns the Column, which contains a
+        Boolean value, indicating whether the left Coding is subsumed by the right Coding.
+    
+    :param left_coding: a Column containing a struct representation of a Coding or an array of 
+    Codings.
+    :param right_coding: a Column containing a struct representation of a Coding or an array of 
+    Codings.
+    :return: a Column containing the result of the operation (boolean).
+    """
+    return _invoke_function("subsumed_by", _coding_to_java_column(left_coding),
+                            _coding_to_java_column(right_coding))

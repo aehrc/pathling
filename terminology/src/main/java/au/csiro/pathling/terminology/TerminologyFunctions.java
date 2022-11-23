@@ -173,7 +173,9 @@ class TerminologyFunctionsImpl implements TerminologyFunctions {
       , @Nonnull final String outputColumnName,
       final boolean inverted) {
     return idAndCodingSet.withColumn(outputColumnName,
-        Terminology.subsumes(codingArrayA, codingArrayB, inverted));
+        inverted
+        ? Terminology.subsumed_by(codingArrayA, codingArrayB)
+        : Terminology.subsumes(codingArrayA, codingArrayB));
 
   }
 }

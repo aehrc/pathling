@@ -18,6 +18,7 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -31,7 +32,6 @@ public class TerminologyServiceHelpers {
   public final static Parameters RESULT_TRUE = new Parameters().setParameter("result", true);
   public final static Parameters RESULT_FALSE = new Parameters().setParameter("result", false);
 
-
   public final static Parameters OUTCOME_EQUIVALENT = new Parameters().setParameter("outcome",
       EQUIVALENT.toCode());
 
@@ -39,8 +39,7 @@ public class TerminologyServiceHelpers {
       SUBSUMES.toCode());
   public final static Parameters OUTCOME_SUBSUMEDBY = new Parameters().setParameter("outcome",
       SUBSUMEDBY.toCode());
-
-
+  
   public final static Parameters OUTCOME_NOTSUBSUMED = new Parameters().setParameter("outcome",
       NOTSUBSUMED.toCode());
 
@@ -132,17 +131,17 @@ public class TerminologyServiceHelpers {
     private final @Nonnull
     TerminologyService2 mockService;
 
-    private static class DefaultAnswer implements Answer<Parameters> {
+    private static class DefaultAnswer implements Answer<ConceptSubsumptionOutcome> {
 
       @Override
-      public Parameters answer(final InvocationOnMock invocationOnMock) {
+      public ConceptSubsumptionOutcome answer(final InvocationOnMock invocationOnMock) {
         final Coding codingA = invocationOnMock.getArgument(0);
         final Coding codingB = invocationOnMock.getArgument(1);
 
         if (codingA != null && codingEquals(codingA, codingB)) {
-          return OUTCOME_EQUIVALENT;
+          return EQUIVALENT;
         } else {
-          return OUTCOME_NOTSUBSUMED;
+          return NOTSUBSUMED;
         }
       }
     }
@@ -155,14 +154,13 @@ public class TerminologyServiceHelpers {
 
     public SubsumesExpectations withSubsumes(@Nonnull final Coding codingA,
         @Nonnull final Coding codingB) {
-      when(mockService.subsumes(codingEq(codingA), codingEq(codingB))).thenReturn(OUTCOME_SUBSUMES);
+      when(mockService.subsumes(codingEq(codingA), codingEq(codingB))).thenReturn(SUBSUMES);
       when(mockService.subsumes(codingEq(codingB), codingEq(codingA))).thenReturn(
-          OUTCOME_SUBSUMEDBY);
+          SUBSUMEDBY);
       return this;
     }
   }
-
-
+  
   public static ValidateExpectations setupValidate(final @Nonnull TerminologyService2 mockService) {
     return new ValidateExpectations(mockService);
   }
