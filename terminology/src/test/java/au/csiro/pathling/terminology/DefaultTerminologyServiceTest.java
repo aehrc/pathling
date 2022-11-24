@@ -210,8 +210,8 @@ class DefaultTerminologyServiceTest {
   void testTranslateForEmptyCodingSet() {
     // Does NOT call the terminologyClient and returns equality relation
     final ConceptTranslator actualTranslator = terminologyService
-        .translate(Collections.emptySet(), "uuid:concept-map", false, Arrays
-            .asList(ConceptMapEquivalence.values()));
+        .translate(Collections.emptySet(), "uuid:concept-map", false,
+            Arrays.asList(ConceptMapEquivalence.values()), null);
     assertEquals(ConceptTranslatorBuilder.empty().build(), actualTranslator);
     verifyNoMoreInteractions(terminologyClient);
   }
@@ -221,7 +221,7 @@ class DefaultTerminologyServiceTest {
     // Does NOT call the terminologyClient and returns equality relation
     final ConceptTranslator actualTranslator = terminologyService
         .translate(Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1),
-            "uuid:concept-map", false, Collections.emptyList());
+            "uuid:concept-map", false, Collections.emptyList(), null);
     assertEquals(ConceptTranslatorBuilder.empty().build(), actualTranslator);
     verifyNoMoreInteractions(terminologyClient);
   }
@@ -262,7 +262,7 @@ class DefaultTerminologyServiceTest {
                     new SimpleCoding(null, "code1"),
                     new SimpleCoding(null, null), null),
             "uuid:concept-map", false,
-            Collections.singletonList(ConceptMapEquivalence.EQUIVALENT));
+            Collections.singletonList(ConceptMapEquivalence.EQUIVALENT), null);
     assertEquals(
         ConceptTranslatorBuilder.empty().put(CODING2_VERSION1, CODING3_VERSION1.toCoding()).build(),
         actualTranslator);

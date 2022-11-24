@@ -26,10 +26,12 @@ import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
@@ -80,7 +82,7 @@ public final class TranslateMapping extends BaseMapping {
   @Nonnull
   public static Bundle toRequestBundle(@Nonnull final Iterable<SimpleCoding> codings,
       @Nonnull final String conceptMapUrl,
-      final boolean reverse) {
+      final boolean reverse, @Nullable final String target) {
     final Bundle translateBatch = new Bundle();
     translateBatch.setType(BundleType.BATCH);
     codings.forEach(coding -> {
@@ -93,6 +95,7 @@ public final class TranslateMapping extends BaseMapping {
       parameters.addParameter().setName("url").setValue(new UriType(conceptMapUrl));
       parameters.addParameter("reverse", reverse);
       parameters.addParameter().setName("coding").setValue(coding.toCoding());
+      Optional.ofNullable(target).ifPresent(t -> parameters.addParameter("target", new UriType(t)));
     });
     return translateBatch;
   }

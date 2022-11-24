@@ -119,7 +119,8 @@ public class DefaultTerminologyService implements TerminologyService {
   @Override
   public ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,
       @Nonnull final String conceptMapUrl, final boolean reverse,
-      @Nonnull final Collection<ConceptMapEquivalence> equivalences) {
+      @Nonnull final Collection<ConceptMapEquivalence> equivalences,
+      @Nullable final String target) {
 
     final List<SimpleCoding> uniqueCodings = validCodings(codings)
         .distinct()
@@ -131,7 +132,7 @@ public class DefaultTerminologyService implements TerminologyService {
     // create bundle
     if (!uniqueCodings.isEmpty() && !uniqueEquivalences.isEmpty()) {
       final Bundle translateBatch = TranslateMapping
-          .toRequestBundle(uniqueCodings, conceptMapUrl, reverse);
+          .toRequestBundle(uniqueCodings, conceptMapUrl, reverse, target);
       final Bundle result = terminologyClient.batch(translateBatch);
       return TranslateMapping
           .fromResponseBundle(checkNotNull(result), uniqueCodings, uniqueEquivalences,

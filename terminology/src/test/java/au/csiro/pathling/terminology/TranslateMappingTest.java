@@ -71,7 +71,7 @@ class TranslateMappingTest extends MappingTest {
   void testToBundleEmpty() {
     final Bundle requestBundle = TranslateMapping
         .toRequestBundle(Collections.emptyList(), CONCEPT_MAP_URL_1,
-            false);
+            false, null);
     assertRequest(requestBundle);
   }
 
@@ -79,7 +79,7 @@ class TranslateMappingTest extends MappingTest {
   void testToBundleForward() {
     final Bundle requestBundle = TranslateMapping
         .toRequestBundle(Arrays.asList(SIMPLE_CODING_1, SIMPLE_CODING_2), CONCEPT_MAP_URL_1,
-            false);
+            false, null);
     assertRequest(requestBundle);
   }
 
@@ -88,7 +88,15 @@ class TranslateMappingTest extends MappingTest {
     final Bundle requestBundle = TranslateMapping
         .toRequestBundle(
             Arrays.asList(SIMPLE_CODING_2, SIMPLE_CODING_1), CONCEPT_MAP_URL_2,
-            true);
+            true, null);
+    assertRequest(requestBundle);
+  }
+
+  @Test
+  void testToBundleWithTarget() {
+    final Bundle requestBundle = TranslateMapping
+        .toRequestBundle(Arrays.asList(SIMPLE_CODING_1, SIMPLE_CODING_2), CONCEPT_MAP_URL_1,
+            false, "http://snomed.info/sct?fhir_vs=refset/171881000036108");
     assertRequest(requestBundle);
   }
 

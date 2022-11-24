@@ -61,6 +61,9 @@ public class TranslateMapper implements
   @Nonnull
   private final List<ConceptMapEquivalence> equivalences;
 
+  @Nullable
+  private final String target;
+
 
   /**
    * @param requestId An identifier used alongside any logging that the mapper outputs
@@ -68,16 +71,18 @@ public class TranslateMapper implements
    * @param conceptMapUrl The URI of the ConceptMap to use for translations
    * @param reverse If set, reverse source and target within the map
    * @param equivalences The list of equivalence values that will be matched
+   * @param target Identifies the value set in which the translation is sought
    */
   public TranslateMapper(@Nonnull final String requestId,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final String conceptMapUrl, final boolean reverse,
-      @Nonnull final List<ConceptMapEquivalence> equivalences) {
+      @Nonnull final List<ConceptMapEquivalence> equivalences, @Nullable final String target) {
     this.requestId = requestId;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.conceptMapUrl = conceptMapUrl;
     this.reverse = reverse;
     this.equivalences = equivalences;
+    this.target = target;
   }
 
   @Override
@@ -97,7 +102,7 @@ public class TranslateMapper implements
         .collect(Collectors.toSet());
     final TerminologyService terminologyService = terminologyServiceFactory.buildService(log);
     return terminologyService.translate(uniqueCodings, conceptMapUrl,
-        reverse, equivalences);
+        reverse, equivalences, target);
   }
 
   @Override

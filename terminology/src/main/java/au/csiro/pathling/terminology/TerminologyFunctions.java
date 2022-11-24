@@ -32,6 +32,7 @@ import au.csiro.pathling.utilities.Strings;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -63,7 +64,7 @@ public interface TerminologyFunctions {
   @Nonnull
   static Dataset<Row> translate(@Nonnull final Column codingArrayCol,
       @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
-      @Nonnull final Dataset<Row> dataset,
+      @Nullable final String target, @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
       @Nonnull final String requestId) {
@@ -71,7 +72,7 @@ public interface TerminologyFunctions {
     final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
         new TranslateMapper(requestId, terminologyServiceFactory,
             conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
-            wrapInUserInputError(ConceptMapEquivalence::fromCode)));
+            wrapInUserInputError(ConceptMapEquivalence::fromCode)), target);
 
     return SqlExtensions
         .mapWithPartitionPreview(dataset, codingArrayCol,

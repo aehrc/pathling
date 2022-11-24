@@ -232,6 +232,7 @@ class PathlingContext:
         concept_map_uri: str,
         reverse: Optional[bool] = False,
         equivalence: Optional[str] = EQ_EQUIVALENT,
+        target: Optional[str] = None,
         output_column_name: Optional[str] = "result",
     ):
         """
@@ -255,6 +256,7 @@ class PathlingContext:
                 concept_map_uri,
                 reverse,
                 equivalence,
+                target,
                 output_column_name,
             )
         )

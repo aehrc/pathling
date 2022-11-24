@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -66,7 +67,7 @@ import org.junit.jupiter.api.Test;
  * @author Piotr Szul
  */
 public class ParserTest extends AbstractParserTest {
-  
+
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
     return Assertions.assertThrows(errorType, () -> parser.parse(expression));
@@ -453,7 +454,7 @@ public class ParserTest extends AbstractParserTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), isNull()))
         .thenReturn(returnedConceptTranslator);
 
     assertThatResultOf(ResourceType.CONDITION,
@@ -478,9 +479,9 @@ public class ParserTest extends AbstractParserTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any()))
+    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any(), isNull()))
         .thenReturn(conceptTranslator1);
-    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any()))
+    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any(), isNull()))
         .thenReturn(conceptTranslator2);
 
     assertThatResultOf(ResourceType.CONDITION,
@@ -672,7 +673,7 @@ public class ParserTest extends AbstractParserTest {
         .build();
 
     // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
+    when(terminologyService.translate(any(), any(), anyBoolean(), any(), isNull()))
         .thenReturn(returnedConceptTranslator);
 
     assertThatResultOf(ResourceType.CONDITION,
@@ -755,7 +756,7 @@ public class ParserTest extends AbstractParserTest {
         .build();
     parser = new Parser(parserContext);
   }
-  
+
   @Test
   void testQuantityMultiplicationAndDivision() {
     assertThatResultOf(
@@ -765,7 +766,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.csv");
   }
-  
+
   @Test
   void testQuantityAdditionSubtractionAndEquality() {
     //  33 'mmol/L == 19873051110000000000000000 'm-3'
@@ -791,7 +792,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
   }
-  
+
   @Test
   void testTraversalToUnsupportedReferenceChild() {
     final String expression = "reverseResolve(MedicationRequest.subject).requester.identifier";
@@ -799,5 +800,5 @@ public class ParserTest extends AbstractParserTest {
         expression);
     assertEquals("No such child: " + expression, error.getMessage());
   }
- 
+
 }
