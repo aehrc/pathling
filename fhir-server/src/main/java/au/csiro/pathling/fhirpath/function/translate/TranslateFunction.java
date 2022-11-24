@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -100,6 +101,25 @@ public class TranslateFunction implements NamedFunction {
     }
 
     /**
+     * Gets the value of an optional literal argument that does not have a default value.
+     *
+     * @param index the 0-based index of the argument.
+     * @param <T> the Java type of the argument value.
+     * @return the java value of the requested argument.
+     */
+    @Nullable
+    private <T extends Type> T getNullableValue(final int index,
+        @Nonnull final Class<T> valueClass) {
+      final LiteralPath<?> literalPath;
+      try {
+        literalPath = (LiteralPath<?>) arguments.get(index);
+      } catch (final IndexOutOfBoundsException e) {
+        return null;
+      }
+      return valueClass.cast(literalPath.getValue());
+    }
+
+    /**
      * Gets the value of the required literal argument.
      *
      * @param index the 0-based index of the argument
@@ -109,8 +129,7 @@ public class TranslateFunction implements NamedFunction {
      */
     @Nonnull
     public <T extends Type> T getValue(final int index, @Nonnull final Class<T> valueClass) {
-      return Objects.requireNonNull(
-          valueClass.cast(((LiteralPath<?>) arguments.get(index)).getValue()));
+      return Objects.requireNonNull(getNullableValue(index, valueClass));
     }
 
     /**
@@ -184,9 +203,13 @@ public class TranslateFunction implements NamedFunction {
         .booleanValue();
     final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
         .asStringValue();
+    @Nullable final String target = Optional.ofNullable(
+            arguments.getNullableValue(3, StringType.class))
+        .map(StringType::asStringValue)
+        .orElse(null);
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column translatedCodings = translate(getCodingColumn(inputPath), conceptMapUrl, reverse,
-        equivalence);
+        equivalence, target);
 
     // // The result is an array of translations per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.

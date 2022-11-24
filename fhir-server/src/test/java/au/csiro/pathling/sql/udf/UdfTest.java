@@ -53,7 +53,7 @@ public class UdfTest {
   void setUp() {
     SharedMocks.resetAll();
   }
-  
+
   private final static Coding CODING_1 = new Coding(LOINC_URL, "10337-4",
       "Procollagen type I [Mass/volume] in Serum");
   private final static Coding CODING_2 = new Coding(LOINC_URL, "10428-1",

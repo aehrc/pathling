@@ -360,14 +360,15 @@ public class PathlingContext {
   }
 
   @Nonnull
-  public Dataset<Row> translate(@Nonnull final Dataset<Row> dataset, @Nonnull final Column coding,
-      @Nonnull final String conceptMapUri, final boolean reverse, @Nonnull final String equivalence,
+  public Dataset<Row> translate(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column coding, @Nonnull final String conceptMapUri,
+      final boolean reverse, @Nonnull final String equivalence, @Nullable final String target,
       @Nonnull final String outputColumnName) {
 
     final Column codingArrayCol = when(coding.isNotNull(), array(coding)).otherwise(lit(null));
 
     final Dataset<Row> translatedDataset = terminologyFunctions.translate(codingArrayCol,
-        conceptMapUri, reverse, equivalence, dataset, outputColumnName);
+        conceptMapUri, reverse, equivalence, target, dataset, outputColumnName);
 
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
   }

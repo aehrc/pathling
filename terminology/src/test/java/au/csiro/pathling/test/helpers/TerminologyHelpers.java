@@ -39,12 +39,18 @@ public final class TerminologyHelpers {
   public static final String SNOMED_URI = "http://snomed.info/sct";
   public static final String SNOMED_VERSION = "http://snomed.info/sct/32506021000036107/version/20210331";
 
+  public static final String AUTOMAP_INPUT_URI = "http://ontoserver.csiro.au/fhir/CodeSystem/codesystem-terms";
+
   private static final String AST_URI = "http://csiro.au/fhir/au-states-territories";
 
   public static final String CM_HIST_ASSOCIATIONS = "http://snomed.info/sct?fhir_cm=900000000000526001";
 
+  public static final String CM_AUTOMAP_DEFAULT = "http://ontoserver.csiro.au/fhir/ConceptMap/automapstrategy-default";
+
   public static final List<ConceptMapEquivalence> ALL_EQUIVALENCES = Arrays
       .asList(ConceptMapEquivalence.values());
+
+  public static final List<ConceptMapEquivalence> INEXACT = List.of(ConceptMapEquivalence.INEXACT);
 
   public static final Coding CD_SNOMED_720471000168102 = snomedCoding("720471000168102",
       "Duodopa intestinal gel");
@@ -100,10 +106,12 @@ public final class TerminologyHelpers {
       "Chronic sinusitis (disorder)");
   private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");
-
-
+  
   public static final Relation REL_SNOMED_444814009_SUBSUMES_40055000 = RelationBuilder.empty()
       .add(CD_SNOMED_VER_444814009, CD_SNOMED_VER_40055000).build();
+
+  public static final Coding CD_AUTOMAP_INPUT_DESCRIPTION_ID = new Coding(AUTOMAP_INPUT_URI,
+      "101013", null);
 
   @Nonnull
   public static SimpleCoding snomedSimple(@Nonnull final String code) {
@@ -152,6 +160,14 @@ public final class TerminologyHelpers {
   public static Coding snomedCoding(@Nonnull final String code,
       @Nonnull final String displayName) {
     return new Coding(SNOMED_URI, code, displayName);
+  }
+
+  @Nonnull
+  public static Coding snomedCoding(@Nonnull final String code,
+      @Nonnull final String displayName, @Nonnull final String version) {
+    final Coding coding = snomedCoding(code, displayName);
+    coding.setVersion(version);
+    return coding;
   }
 
   @Nonnull

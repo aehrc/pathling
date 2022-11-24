@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -56,7 +57,8 @@ public interface TerminologyFunctions {
 
   @Nonnull
   Dataset<Row> translate(@Nonnull final Column codingArrayCol, @Nonnull final String conceptMapUrl,
-      final boolean reverse, @Nonnull final String equivalence, @Nonnull final Dataset<Row> dataset,
+      final boolean reverse, @Nonnull final String equivalence,@Nullable final String target, 
+      @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName);
 
   @Nonnull
@@ -104,12 +106,15 @@ class TerminologyFunctionsLegacyImpl implements TerminologyFunctions {
   @Override
   @Nonnull
   public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
-      @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
+      @Nonnull final String conceptMapUrl, final boolean reverse, 
+      @Nonnull final String equivalence,
+      @Nullable final String target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
 
-    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper = new TranslateMapper(
-        getOrCreateRequestId(), terminologyServiceFactory, conceptMapUrl, reverse,
-        Strings.parseCsvList(equivalence, wrapInUserInputError(ConceptMapEquivalence::fromCode)));
+    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
+        new TranslateMapper(getOrCreateRequestId(), terminologyServiceFactory,
+            conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
+            wrapInUserInputError(ConceptMapEquivalence::fromCode)), target);
 
     return SqlExtensions.mapWithPartitionPreview(dataset, codingArrayCol,
         SimpleCodingsDecoders::decodeList, mapper,
@@ -160,10 +165,12 @@ class TerminologyFunctionsImpl implements TerminologyFunctions {
   @Nonnull
   @Override
   public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
-      @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
+      @Nonnull final String conceptMapUrl, final boolean reverse, 
+      @Nonnull final String equivalence,
+      @Nullable final String target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
     return dataset.withColumn(outputColumnName,
-        Terminology.translate(codingArrayCol, conceptMapUrl, reverse, equivalence));
+        Terminology.translate(codingArrayCol, conceptMapUrl, reverse, equivalence, target));
   }
 
   @Override

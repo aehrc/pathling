@@ -51,10 +51,17 @@ public interface Terminology {
   // TODO: add overloaded methods for default arguments.
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse, @Nullable final String equivalences) {
+      boolean reverse, @Nullable final String equivalences, @Nullable final String target) {
     return call_udf(TranslateUdf.FUNCTION_NAME, coding, lit(conceptMapUri), lit(reverse),
         lit(equivalences));
   }
+  
+  @Nonnull
+  static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
+      boolean reverse, @Nullable final String equivalences) {
+    return translate(coding, conceptMapUri, reverse, equivalences, null);
+  }
+
 
   /**
    * Takes two Coding or array of Codings columns as its input. Returns the Column, which contains a

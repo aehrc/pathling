@@ -26,10 +26,12 @@ import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -77,7 +79,7 @@ public final class TranslateMapping extends BaseMapping {
   }
 
   /**
-   * Converts {@link TerminologyService#translate(Collection, String, boolean, Collection)}
+   * Converts {@link TerminologyService#translate(Collection, String, boolean, Collection, String)}
    * parameters to a batch request Bundle.
    *
    * @param codings The list of codings to be translated
@@ -88,7 +90,7 @@ public final class TranslateMapping extends BaseMapping {
   @Nonnull
   public static Bundle toRequestBundle(@Nonnull final Iterable<SimpleCoding> codings,
       @Nonnull final String conceptMapUrl,
-      final boolean reverse) {
+      final boolean reverse, @Nullable final String target) {
     final Bundle translateBatch = new Bundle();
     translateBatch.setType(BundleType.BATCH);
     codings.forEach(coding -> {
@@ -101,13 +103,14 @@ public final class TranslateMapping extends BaseMapping {
       parameters.addParameter().setName("url").setValue(new UriType(conceptMapUrl));
       parameters.addParameter("reverse", reverse);
       parameters.addParameter().setName("coding").setValue(coding.toCoding());
+      Optional.ofNullable(target).ifPresent(t -> parameters.addParameter("target", new UriType(t)));
     });
     return translateBatch;
   }
 
   /**
    * Builds ConceptTranslator from the batch response bundle for {@link
-   * TerminologyService#translate(Collection, String, boolean, Collection)}.
+   * TerminologyService#translate(Collection, String, boolean, Collection, String)}.
    *
    * @param responseBundle The response from the terminology server
    * @param inputCodes The list of coding requested for translation

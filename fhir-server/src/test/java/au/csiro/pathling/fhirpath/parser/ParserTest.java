@@ -31,13 +31,11 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_400550
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.mockCoding;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -51,15 +49,12 @@ import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.RelationBuilder;
-import au.csiro.pathling.test.helpers.TerminologyHelpers;
-import java.util.Collections;
-import javax.annotation.Nonnull;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
+import java.util.Collections;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -298,7 +293,7 @@ public class ParserTest extends AbstractParserTest {
         "reverseResolve(Condition.subject).code.coding.subsumes(%resource.reverseResolve(Condition.subject).code)")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
-    
+
     setupSubsumes(terminologyService2).withSubsumes(
         CD_SNOMED_444814009, CD_SNOMED_40055000);
     assertThatResultOf(

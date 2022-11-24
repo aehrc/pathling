@@ -245,9 +245,16 @@ class PathlingContext:
         )
 
     @deprecated(reason="You should use the 'udfs.translate' UDF instead")
-    def translate(self, df: DataFrame, coding_column: Column, concept_map_uri: str,
-                  reverse: Optional[bool] = False, equivalence: Optional[str] = EQ_EQUIVALENT,
-                  output_column_name: Optional[str] = "result"):
+    def translate(
+            self,
+            df: DataFrame,
+            coding_column: Column,
+            concept_map_uri: str,
+            reverse: Optional[bool] = False,
+            equivalence: Optional[str] = EQ_EQUIVALENT,
+            target: Optional[str] = None,
+            output_column_name: Optional[str] = "result",
+    ):
         """
         Takes a dataframe with a Coding column as input. A new column is created which contains a
         Coding value and contains translation targets from the specified FHIR ConceptMap. There
@@ -269,6 +276,7 @@ class PathlingContext:
                         concept_map_uri,
                         reverse,
                         equivalence,
+                        target,
                         output_column_name,
                 )
         )

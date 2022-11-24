@@ -294,7 +294,7 @@ public class PathlingContextTest {
     final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
     final Column codingColumn = col("coding");
     final Dataset<Row> result = pathlingContext.translate(codingDataFrame, codingColumn,
-        conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), "result");
+        conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), null, "result");
 
     final List<Row> rows = result.select("id", "result").collectAsList();
     assertEquals(RowFactory.create("foo", CodingEncoding.encode(coding2)), rows.get(0));

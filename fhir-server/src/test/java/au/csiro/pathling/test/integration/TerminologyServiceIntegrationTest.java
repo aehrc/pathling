@@ -19,6 +19,7 @@ package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.ALL_EQUIVALENCES;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
@@ -28,10 +29,13 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_10
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_AUTOMAP_DEFAULT;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.INEXACT;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.simpleOf;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedCoding;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedSimple;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.testSimple;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
@@ -121,7 +125,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
     final ConceptTranslator actualTranslation = terminologyService.translate(
         Arrays.asList(simpleOf(CD_SNOMED_72940011000036107), snomedSimple("444814009")),
-        CM_HIST_ASSOCIATIONS, false, ALL_EQUIVALENCES);
+        CM_HIST_ASSOCIATIONS, false, ALL_EQUIVALENCES, null);
 
     final ConceptTranslator expectedTranslation = ConceptTranslatorBuilder.empty()
         .put(CD_SNOMED_72940011000036107, CD_SNOMED_720471000168102)
@@ -134,7 +138,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
     final ConceptTranslator actualTranslation = terminologyService.translate(
         Arrays.asList(simpleOf(CD_SNOMED_720471000168102), snomedSimple("444814009")),
-        CM_HIST_ASSOCIATIONS, true, ALL_EQUIVALENCES);
+        CM_HIST_ASSOCIATIONS, true, ALL_EQUIVALENCES, null);
 
     final ConceptTranslator expectedTranslation = ConceptTranslatorBuilder.empty()
         .put(CD_SNOMED_720471000168102, CD_SNOMED_72940011000036107)
@@ -142,6 +146,47 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     assertEquals(expectedTranslation, actualTranslation);
   }
 
+  @Test
+  void testAutomap() {
+    final Coding input = new Coding(AUTOMAP_INPUT_URI, "shortness of breath", null);
+    final String version = "http://snomed.info/sct/32506021000036107/version/20221031";
+
+    final Coding result1 = snomedCoding("267036007", "Dyspnea (finding)", version);
+    final Coding result2 = snomedCoding("390870001",
+        "Short of breath dressing/undressing (finding)", version);
+    final Coding result3 = snomedCoding("1217110005",
+        "Dyspnea when bending forward (finding)", version);
+    final Coding result4 = snomedCoding("161941007", "Dyspnea at rest (finding)", version);
+    final Coding result5 = snomedCoding("60845006", "Dyspnea on exertion (finding)", version);
+
+    final String target = "http://snomed.info/sct?fhir_vs=ecl/(%3C%3C%2064572001%20%7CDisease%7C%20OR%20%3C%3C%20404684003%20%7CClinical%20finding%7C)";
+
+    final ConceptTranslator actualTranslation = terminologyService.translate(
+        List.of(simpleOf(input)), CM_AUTOMAP_DEFAULT, false, INEXACT, target);
+
+    final ConceptTranslator expectedTranslation = ConceptTranslatorBuilder.empty()
+        .put(input, result1, result2, result3, result4, result5)
+        .build();
+    assertEquals(expectedTranslation, actualTranslation);
+  }
+
+  @Test
+  void testAutomapDescriptionId() {
+    final Coding input = new Coding(AUTOMAP_INPUT_URI, "397889019", null);
+    final String version = "http://snomed.info/sct/32506021000036107/version/20221031";
+
+    final Coding result = snomedCoding("267036007", "Dyspnea (finding)", version);
+
+    final String target = "http://snomed.info/sct?fhir_vs";
+
+    final ConceptTranslator actualTranslation = terminologyService.translate(
+        List.of(simpleOf(input)), CM_AUTOMAP_DEFAULT, false, INEXACT, target);
+
+    final ConceptTranslator expectedTranslation = ConceptTranslatorBuilder.empty()
+        .put(input, result)
+        .build();
+    assertEquals(expectedTranslation, actualTranslation);
+  }
 
   // TODO: Enable when fixed in terminology server, that is it does not accept ignore systems in
   //  codings.
@@ -151,7 +196,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
     final ConceptTranslator actualTranslation = terminologyService.translate(
         Arrays.asList(testSimple("72940011000036107"), testSimple("444814009")),
-        CM_HIST_ASSOCIATIONS, false, ALL_EQUIVALENCES);
+        CM_HIST_ASSOCIATIONS, false, ALL_EQUIVALENCES, null);
 
     final ConceptTranslator expectedTranslation = ConceptTranslatorBuilder.empty().build();
     assertEquals(expectedTranslation, actualTranslation);
@@ -164,7 +209,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
         () -> terminologyService.translate(
             Arrays.asList(simpleOf(CD_SNOMED_72940011000036107), snomedSimple("444814009")),
             "http://snomed.info/sct?fhir_cm=xxxx", false,
-            ALL_EQUIVALENCES));
+            ALL_EQUIVALENCES, null));
 
     assertMatches(
         "Error in response entry : HTTP 404 : "
