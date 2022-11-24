@@ -57,6 +57,8 @@ class PathlingContext:
         enable_extensions: Optional[bool] = None,
         enabled_open_types: Optional[Sequence[str]] = None,
         terminology_server_url: Optional[str] = None,
+        terminology_socket_timeout: Optional[int] = None,
+        terminology_verbose_request_logging: Optional[bool] = None,
         token_endpoint: Optional[str] = None,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
@@ -88,6 +90,9 @@ class PathlingContext:
             extensions
         :param terminology_server_url: the URL of the FHIR terminology server used to resolve
             terminology queries
+        :param terminology_socket_timeout: the socket timeout for terminology server requests
+        :param terminology_verbose_request_logging: enables verbose logging of terminology server
+        requests
         :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
         :param client_id: a client ID for use with the client credentials grant
         :param client_secret: a client secret for use with the client credentials grant
@@ -111,6 +116,8 @@ class PathlingContext:
             .extensionsEnabled(enable_extensions)
             .openTypesEnabled(enabled_open_types)
             .terminologyServerUrl(terminology_server_url)
+            .terminologySocketTimeout(terminology_socket_timeout)
+            .terminologyVerboseRequestLogging(terminology_verbose_request_logging)
             .tokenEndpoint(token_endpoint)
             .clientId(client_id)
             .clientSecret(client_secret)
@@ -239,7 +246,6 @@ class PathlingContext:
         :param reverse: the direction to traverse the map - false results in "source to target"
         mappings, while true results in "target to source"
         :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
-        :param target: identifies the value set in which the translation is sought
         :param output_column_name: the name of the result column
         :return: A new dataframe with an additional column containing the result of the operation.
         """

@@ -42,6 +42,12 @@ public class PathlingContextConfiguration {
   String terminologyServerUrl;
 
   @Nullable
+  Integer terminologySocketTimeout;
+
+  @Nullable
+  Boolean terminologyVerboseRequestLogging;
+
+  @Nullable
   String tokenEndpoint;
 
   @Nullable
