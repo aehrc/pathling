@@ -45,17 +45,45 @@ public interface Terminology {
     return call_udf(MemberOfUdf.FUNCTION_NAME, coding, valueSetUrl);
   }
 
-
-  // TODO: consider the order of reverse and equivaleces
+  // TODO: consider the order of target and equivaleces
   // TODO: consider other forms of passing equivalences (i.e collection of enum types)
   // TODO: add overloaded methods for default arguments.
+
+  /**
+   * Takes a Coding or an array of Codings column as its input.  Returns the Column which contains
+   * an array of Coding value with translation targets from the specified FHIR ConceptMap. There may
+   * be more than one target concept for each input concept.
+   *
+   * @param coding a Column containing the struct representation of a Coding or an array of such
+   * structs.
+   * @param conceptMapUri an identifier for a FHIR ConceptMap.
+   * @param reverse the direction to traverse the map - false results in "source to target"
+   * mappings, while true results in "target to source".
+   * @param equivalences a comma-delimited set of values from the ConceptMapEquivalence ValueSet.
+   * @param target identifies the value set in which a translation is sought.  If there's no target
+   * specified, the server should return all known translations.
+   * @return the Column containing the result of the operation (an array of Coding structs).
+   */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
       boolean reverse, @Nullable final String equivalences, @Nullable final String target) {
     return call_udf(TranslateUdf.FUNCTION_NAME, coding, lit(conceptMapUri), lit(reverse),
-        lit(equivalences));
+        lit(equivalences), lit(target));
   }
-  
+
+  /**
+   * Takes a Coding or an array of Codings column as its input.  Returns the Column which contains
+   * an array of Coding value with translation targets from the specified FHIR ConceptMap. There may
+   * be more than one target concept for each input concept.
+   *
+   * @param coding a Column containing the struct representation of a Coding or an array of such
+   * structs.
+   * @param conceptMapUri an identifier for a FHIR ConceptMap.
+   * @param reverse the direction to traverse the map - false results in "source to target"
+   * mappings, while true results in "target to source".
+   * @param equivalences a comma-delimited set of values from the ConceptMapEquivalence ValueSet.
+   * @return the Column containing the result of the operation (an array of Coding structs).
+   */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
       boolean reverse, @Nullable final String equivalences) {

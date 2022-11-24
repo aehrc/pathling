@@ -18,14 +18,15 @@ import os
 from tempfile import mkdtemp
 
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StringType, StructField, BooleanType, Row, ArrayType
+from pyspark.sql.types import StructType, StringType, StructField, BooleanType, Row, ArrayType, \
+    IntegerType
 from pytest import fixture
 
 from pathling import PathlingContext
 from pathling.coding import Coding
 from pathling.etc import SNOMED_URI
 from pathling.etc import find_jar as find_pathling_jar
-from pathling.udfs import member_of, subsumes, subsumed_by
+from pathling.udfs import member_of, subsumes, subsumed_by, translate
 
 PROJECT_DIR = os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
@@ -67,21 +68,23 @@ CODING_TYPE = StructType([
     StructField("code", StringType(), True),
     StructField("display", StringType(), True),
     StructField("userSelected", BooleanType(), True),
+    StructField("_fid", IntegerType(), True),
 ])
 
 LOINC_URI = "http://loinc.org"
 
+CodingRow = Row("id", "system", "version", "code", "display", "userSelected", "_fid")
+
 
 def snomed_coding_row(code: str):
-    return (None, SNOMED_URI, None, code, None, None)
+    return CodingRow(None, SNOMED_URI, None, code, None, None, None)
 
 
 def loinc_coding_row(code: str):
-    return (None, LOINC_URI, None, code, None, None)
+    return CodingRow(None, LOINC_URI, None, code, None, None, None)
 
 
 Result = Row("id", "result")
-IIBResult = Row("id_a", "id_b", "result")
 
 
 def test_member_of(spark: SparkSession, ptl: PathlingContext):
@@ -101,8 +104,8 @@ def test_member_of(spark: SparkSession, ptl: PathlingContext):
                       "http://snomed.info/sct?fhir_vs=refset/723264001").alias(
                     "is_member"))
 
-    assert [Result("code-1", True), Result("code-2", False),
-            Result("code-3", None)] == result_df_col.collect()
+    assert result_df_col.collect() == [Result("code-1", True), Result("code-2", False),
+                                       Result("code-3", None)]
 
     result_df_str = df.select(
             "id",
@@ -110,8 +113,8 @@ def test_member_of(spark: SparkSession, ptl: PathlingContext):
                       "http://loinc.org/vs/LP14885-5").alias(
                     "is_member"))
 
-    assert [Result("code-1", False), Result("code-2", True),
-            Result("code-3", None)] == result_df_str.collect()
+    assert result_df_str.collect() == [Result("code-1", False), Result("code-2", True),
+                                       Result("code-3", None)]
 
     result_df_coding = df.limit(1).select(
             "id",
@@ -119,7 +122,7 @@ def test_member_of(spark: SparkSession, ptl: PathlingContext):
                       "http://snomed.info/sct?fhir_vs=refset/723264001").alias(
                     "result"))
 
-    assert [Result("code-1", True)] == result_df_coding.collect()
+    assert result_df_coding.collect() == [Result("code-1", True)]
 
 
 def test_member_of_array(spark: SparkSession, ptl: PathlingContext):
@@ -140,8 +143,8 @@ def test_member_of_array(spark: SparkSession, ptl: PathlingContext):
                       "http://snomed.info/sct?fhir_vs=refset/723264001").alias(
                     "is_member"))
 
-    assert [Result("code-1", True), Result("code-2", False),
-            Result("code-3", None)] == result_df_col.collect()
+    assert result_df_col.collect() == [Result("code-1", True), Result("code-2", False),
+                                       Result("code-3", None)]
 
     result_df_str = df.select(
             "id",
@@ -149,8 +152,8 @@ def test_member_of_array(spark: SparkSession, ptl: PathlingContext):
                       "http://loinc.org/vs/LP14885-5").alias(
                     "is_member"))
 
-    assert [Result("code-1", False), Result("code-2", True),
-            Result("code-3", None)] == result_df_str.collect()
+    assert result_df_str.collect() == [Result("code-1", False), Result("code-2", True),
+                                       Result("code-3", None)]
 
     result_df_coding = df.limit(1).select(
             "id",
@@ -158,7 +161,7 @@ def test_member_of_array(spark: SparkSession, ptl: PathlingContext):
                       "http://snomed.info/sct?fhir_vs=refset/723264001").alias(
                     "result"))
 
-    assert [Result("code-1", True)] == result_df_coding.collect()
+    assert result_df_coding.collect() == [Result("code-1", True)]
 
 
 @fixture(scope="module")
@@ -180,54 +183,111 @@ def subsumption_df(spark: SparkSession):
 def test_subsumes(subsumption_df, ptl: PathlingContext):
     result_df = subsumption_df.select("id",
                                       subsumes(subsumption_df["codeA"], "codeB").alias("result"))
-    assert [
-               Result("id-1", True),
-               Result("id-2", False),
-               Result("id-3", None)
-           ] == result_df.collect();
+    assert result_df.collect() == [
+        Result("id-1", True),
+        Result("id-2", False),
+        Result("id-3", None)
+    ]
 
     result_df = subsumption_df.select("id", subsumes("codeA", Coding(SNOMED_URI, "63816008")).alias(
             "result"))
-    assert [
-               Result("id-1", True),
-               Result("id-2", False),
-               Result("id-3", None)
-           ] == result_df.collect();
+    assert result_df.collect() == [
+        Result("id-1", True),
+        Result("id-2", False),
+        Result("id-3", None)
+    ]
 
     result_df = subsumption_df.select("id",
                                       subsumes(Coding(LOINC_URI, "55914-3"),
                                                subsumption_df["codeB"]).alias(
                                               "result"))
-    assert [
-               Result("id-1", False),
-               Result("id-2", True),
-               Result("id-3", False)
-           ] == result_df.collect();
+    assert result_df.collect() == [
+        Result("id-1", False),
+        Result("id-2", True),
+        Result("id-3", False)
+    ]
 
 
 def test_subsumed_by(subsumption_df, ptl: PathlingContext):
     result_df = subsumption_df.select("id",
                                       subsumed_by(subsumption_df["codeB"], "codeA").alias("result"))
-    assert [
-               Result("id-1", True),
-               Result("id-2", False),
-               Result("id-3", None)
-           ] == result_df.collect();
+    assert result_df.collect() == [
+        Result("id-1", True),
+        Result("id-2", False),
+        Result("id-3", None)
+    ]
 
     result_df = subsumption_df.select("id",
                                       subsumed_by(Coding(SNOMED_URI, "63816008"), "codeA").alias(
-                                          "result"))
-    assert [
-               Result("id-1", True),
-               Result("id-2", False),
-               Result("id-3", None)
-           ] == result_df.collect();
+                                              "result"))
+    assert result_df.collect() == [
+        Result("id-1", True),
+        Result("id-2", False),
+        Result("id-3", None)
+    ]
 
     result_df = subsumption_df.select("id",
                                       subsumed_by(subsumption_df["codeB"],
                                                   Coding(LOINC_URI, "55914-3")).alias("result"))
-    assert [
-               Result("id-1", False),
-               Result("id-2", True),
-               Result("id-3", False)
-           ] == result_df.collect();
+    assert result_df.collect() == [
+        Result("id-1", False),
+        Result("id-2", True),
+        Result("id-3", False)
+    ]
+
+
+def test_translate(spark: SparkSession, ptl: PathlingContext):
+    df = spark.createDataFrame(
+            [
+                ("id-1", snomed_coding_row("368529001")),
+                ("id-2", loinc_coding_row("55915-3")),
+                ("id-3", None),
+            ],
+            schema=StructType([StructField("id", StringType()),
+                               StructField("code", CODING_TYPE)])
+    )
+
+    result_df = df.select("id", translate(
+            df["code"], "http://snomed.info/sct?fhir_cm=100").alias("result"))
+
+    assert result_df.collect() == [
+        Result("id-1", [snomed_coding_row("368529002")]),
+        Result("id-2", []),
+        Result("id-3", None),
+    ];
+
+    result_df = df.select("id", translate(
+            "code", "http://snomed.info/sct?fhir_cm=100",
+            equivalences="equivalent,relatedto").alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", [snomed_coding_row("368529002"), loinc_coding_row("55916-3")]),
+        Result("id-2", []),
+        Result("id-3", None),
+    ];
+
+    result_df = df.select("id", translate(
+            "code", "http://snomed.info/sct?fhir_cm=100",
+            equivalences="equivalent,relatedto", target=LOINC_URI).alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", [loinc_coding_row("55916-3")]),
+        Result("id-2", []),
+        Result("id-3", None),
+    ];
+
+    result_df = df.select("id", translate(
+            "code", "http://snomed.info/sct?fhir_cm=200",
+            equivalences="equivalent,relatedto").alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", []),
+        Result("id-2", []),
+        Result("id-3", None),
+    ];
+
+    result_df = df.limit(1).select("id", translate(
+            Coding(LOINC_URI, "55915-3"), "http://snomed.info/sct?fhir_cm=200",
+            reverse=True,
+            equivalences="relatedto").alias("result"))
+
+    assert result_df.collect() == [
+        Result("id-1", [snomed_coding_row("368529002")]),
+    ];

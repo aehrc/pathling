@@ -21,6 +21,7 @@ import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubs
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupTranslate;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupValidate;
 import static org.apache.spark.sql.functions.col;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +37,7 @@ import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -280,7 +282,7 @@ public class PathlingContextTest {
     final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
 
     setupTranslate(terminologyService).withTranslations(coding1, conceptMapUri,
-        TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, coding2));
+        Translation.of(EQUIVALENT, coding2));
 
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);

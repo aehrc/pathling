@@ -24,9 +24,12 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructT
 import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.NARROWER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -45,8 +48,8 @@ import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -65,7 +68,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -166,10 +168,10 @@ class TranslateFunctionTest {
 
     TerminologyServiceHelpers.setupTranslate(terminologyService)
         .withTranslations(CODING_1, CONCEPT_MAP1_URI,
-            TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, TRANSLATED_1))
+            Translation.of(EQUIVALENT, TRANSLATED_1))
         .withTranslations(CODING_2, CONCEPT_MAP1_URI,
-            TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, TRANSLATED_1),
-            TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, TRANSLATED_2)
+            Translation.of(EQUIVALENT, TRANSLATED_1),
+            Translation.of(EQUIVALENT, TRANSLATED_2)
         );
 
     // Prepare the inputs to the function.
@@ -219,7 +221,7 @@ class TranslateFunctionTest {
     // Verify mocks
     Stream.of(CODING_1, CODING_2, CODING_3, CODING_5).forEach(coding ->
         verify(terminologyService, atLeastOnce())
-            .translate(deepEq(coding), eq(CONCEPT_MAP1_URI), eq(false))
+            .translate(deepEq(coding), eq(CONCEPT_MAP1_URI), eq(false), isNull())
     );
     verifyNoMoreInteractions(terminologyService);
   }
@@ -285,12 +287,12 @@ class TranslateFunctionTest {
 
     TerminologyServiceHelpers.setupTranslate(terminologyService)
         .withTranslations(CODING_1, CONCEPT_MAP2_URI, true,
-            TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, TRANSLATED_1))
+            Translation.of(EQUIVALENT, TRANSLATED_1))
         .withTranslations(CODING_2, CONCEPT_MAP2_URI, true,
-            TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, TRANSLATED_1),
-            TranslationEntry.of(ConceptMapEquivalence.EQUIVALENT, TRANSLATED_2)
+            Translation.of(EQUIVALENT, TRANSLATED_1),
+            Translation.of(EQUIVALENT, TRANSLATED_2)
         ).withTranslations(CODING_4, CONCEPT_MAP2_URI, true,
-            TranslationEntry.of(ConceptMapEquivalence.NARROWER, TRANSLATED_2)
+            Translation.of(NARROWER, TRANSLATED_2)
         );
 
     // Prepare the inputs to the function.
@@ -348,7 +350,7 @@ class TranslateFunctionTest {
     // Verify mocks
     Stream.of(CODING_1, CODING_2, CODING_3, CODING_4, CODING_5).forEach(coding ->
         verify(terminologyService, atLeastOnce())
-            .translate(deepEq(coding), eq(CONCEPT_MAP2_URI), eq(true))
+            .translate(deepEq(coding), eq(CONCEPT_MAP2_URI), eq(true), isNull())
     );
     verifyNoMoreInteractions(terminologyService);
   }

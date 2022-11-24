@@ -50,7 +50,9 @@ public class Udfs {
       @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
       @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
       @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
-      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4) {
-    return new SqlFunctionRegistrar(sqlFunction1, sqlFunction2, sqlFunction3, sqlFunction4);
+      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4,
+      @Nonnull final List<SqlFunction5<?, ?, ?, ?, ?, ?>> sqlFunction5) {
+    return new SqlFunctionRegistrar(sqlFunction1, sqlFunction2, sqlFunction3, sqlFunction4,
+        sqlFunction5);
   }
 }

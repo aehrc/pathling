@@ -1,19 +1,27 @@
 package au.csiro.pathling.terminology.mock;
 
 import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
+import com.google.common.collect.ImmutableMap;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.util.Objects.isNull;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 
 public class MockTerminologyService2 implements TerminologyService2 {
 
@@ -28,6 +36,31 @@ public class MockTerminologyService2 implements TerminologyService2 {
 
     static SystemAndCode of(@Nonnull final Coding coding) {
       return new SystemAndCode(coding.getSystem(), coding.getCode());
+    }
+  }
+
+  static class ConceptMap {
+
+    public static final ConceptMap EMPTY = new ConceptMap(Collections.emptyMap(),
+        Collections.emptyMap());
+
+    private final Map<SystemAndCode, List<Translation>> mappings;
+    private final Map<SystemAndCode, List<Translation>> invertedMappings;
+
+    ConceptMap(final Map<SystemAndCode, List<Translation>> mappings,
+        final Map<SystemAndCode, List<Translation>> invertedMappings
+    ) {
+      this.mappings = mappings;
+      this.invertedMappings = invertedMappings;
+    }
+
+    public List<Translation> translate(Coding coding, boolean reverse, final String target) {
+      return (reverse
+              ? invertedMappings
+              : mappings)
+          .getOrDefault(SystemAndCode.of(coding), Collections.emptyList()).stream()
+          .filter(c -> (isNull(target) || target.equals(c.getConcept().getSystem())))
+          .collect(Collectors.toUnmodifiableList());
     }
   }
 
@@ -49,6 +82,7 @@ public class MockTerminologyService2 implements TerminologyService2 {
   }
 
   private final Map<String, ValueSet> valueSets = new HashMap<>();
+  private final Map<String, ConceptMap> conceptMap = new HashMap<>();
   private final Set<Pair<SystemAndCode, SystemAndCode>> subsumes = new HashSet<>();
 
   public MockTerminologyService2() {
@@ -60,6 +94,26 @@ public class MockTerminologyService2 implements TerminologyService2 {
     subsumes.add(Pair.of(new SystemAndCode("http://snomed.info/sct", "107963000"),
         new SystemAndCode("http://snomed.info/sct", "63816008")));
 
+    conceptMap.put("http://snomed.info/sct?fhir_cm=100", new ConceptMap(
+        ImmutableMap.of(
+            new SystemAndCode("http://snomed.info/sct", "368529001"), List.of(
+                Translation.of(EQUIVALENT,
+                    new Coding("http://snomed.info/sct", "368529002", null)),
+                Translation.of(RELATEDTO, new Coding("http://loinc.org", "55916-3", null))
+            )
+        ), Collections.emptyMap()));
+
+    conceptMap.put("http://snomed.info/sct?fhir_cm=200", new ConceptMap(
+        Collections.emptyMap(),
+        ImmutableMap.of(
+            new SystemAndCode("http://loinc.org", "55915-3"), List.of(
+                Translation.of(RELATEDTO,
+                    new Coding("http://snomed.info/sct", "368529002", null)),
+                Translation.of(EQUIVALENT, new Coding("http://loinc.org", "55916-3", null))
+            )
+        ))
+    );
+
   }
 
   @Override
@@ -69,9 +123,13 @@ public class MockTerminologyService2 implements TerminologyService2 {
 
   @Nonnull
   @Override
-  public Parameters translate(@Nonnull final Coding coding, @Nonnull final String conceptMapUrl,
-      final boolean reverse) {
-    throw new UnsupportedOperationException();
+  public List<Translation> translate(@Nonnull final Coding coding,
+      @Nonnull final String conceptMapUrl,
+      final boolean reverse, @Nullable final String target) {
+
+    return conceptMap.getOrDefault(conceptMapUrl, ConceptMap.EMPTY)
+        .translate(coding, reverse, target);
+
   }
 
   @Override

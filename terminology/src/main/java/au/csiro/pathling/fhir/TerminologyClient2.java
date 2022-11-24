@@ -1,6 +1,7 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.utilities.Preconditions;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -47,7 +48,8 @@ public interface TerminologyClient2 {
       @Nonnull @OperationParam(name = "system") UriType system,
       @Nullable @OperationParam(name = "version") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code,
-      @Nullable @OperationParam(name = "reverse") BooleanType reverse
+      @Nullable @OperationParam(name = "reverse") BooleanType reverse,
+      @Nullable @OperationParam(name = "system") UriType target
   );
 
   @Operation(name = "$subsumes", type = CodeSystem.class, idempotent = true)
@@ -132,7 +134,8 @@ class TerminologyClient2Impl implements TerminologyClient2 {
   @Override
   public Parameters translate(@Nonnull final UriType url, @Nonnull final UriType system,
       @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final BooleanType reverse) {
+      @Nullable final BooleanType reverse,
+      @Nullable final UriType target) {
     final Parameters params = new Parameters();
     params.addParameter().setName("url").setValue(url);
     params.addParameter().setName("system").setValue(system);
@@ -142,6 +145,9 @@ class TerminologyClient2Impl implements TerminologyClient2 {
     }
     if (reverse != null) {
       params.addParameter().setName("reverse").setValue(reverse);
+    }
+    if (target != null) {
+      params.addParameter().setName("target").setValue(target);
     }
     return fhirClient.operation()
         .onType(ConceptMap.class)

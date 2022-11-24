@@ -13,7 +13,6 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUM
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -21,10 +20,18 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
+import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import java.util.Collections;
+import java.util.List;
+import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +58,9 @@ public class DefaultTerminologyService2Test {
       "displayAB").setVersion(
       VERSION_2);
 
-  private static final Coding CODING_B = new Coding(SYSTEM_B, CODE_B, "displayB").setVersion(
+  private static final Coding CODING_B = new Coding(SYSTEM_B, CODE_B, "displayB");
+  private static final Coding CODING_B_VERSION1 = new Coding(SYSTEM_B, CODE_B,
+      "displayB").setVersion(
       VERSION_1);
 
   private static final String VALUE_SET_X = "uuid:valueSetX";
@@ -61,6 +70,29 @@ public class DefaultTerminologyService2Test {
   private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
   private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
   private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
+
+
+  private static final String CONCEPT_MAP_0 = "uuid:conceptMap0";
+  private static final String CONCEPT_MAP_1 = "uuid:conceptMap1";
+
+
+  @Nonnull
+  private static Parameters translation(@Nonnull final Translation... entries) {
+    final Parameters translateResponse = new Parameters()
+        .setParameter("result", true);
+
+    for (Translation entry : entries) {
+      final ParametersParameterComponent matchParameter1 = translateResponse.addParameter()
+          .setName("match");
+      matchParameter1.addPart().setName("equivalence")
+          .setValue(new CodeType(entry.getEquivalence().toCode()));
+      matchParameter1.addPart().setName("concept").setValue(entry.getConcept());
+    }
+    return translateResponse;
+  }
+
+
+  private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
 
   private TerminologyClient2 terminologClient;
   private DefaultTerminologyService2 terminologyService;
@@ -91,21 +123,15 @@ public class DefaultTerminologyService2Test {
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B))
     )).thenReturn(RESULT_FALSE);
-    assertFalse(terminologyService.validate(VALUE_SET_Y, CODING_B));
+    assertFalse(terminologyService.validate(VALUE_SET_Y, CODING_B_VERSION1));
   }
 
   @Test
-  public void throwsExceptionForIllegalArguments() {
-    assertThrows(NullPointerException.class,
-        () -> terminologyService.validate(null, CODING_AA));
-    assertThrows(NullPointerException.class,
-        () -> terminologyService.validate(VALUE_SET_Y, INVALID_CODING_0));
-    assertThrows(NullPointerException.class,
-        () -> terminologyService.validate(VALUE_SET_Y, INVALID_CODING_1));
-    assertThrows(NullPointerException.class,
-        () -> terminologyService.validate(VALUE_SET_Y, INVALID_CODING_2));
+  public void testValidateInvalidCodings() {
+    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_0));
+    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_1));
+    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_2));
   }
-
 
   @Test
   public void testSubsumesNoVersion() {
@@ -159,10 +185,10 @@ public class DefaultTerminologyService2Test {
 
   @Test
   public void testSubsumesDifferentSystems() {
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA, CODING_B));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA, CODING_B_VERSION1));
     verifyNoMoreInteractions(terminologClient);
   }
-  
+
   @Test
   public void testSubsumesInvalidCodings() {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, INVALID_CODING_0));
@@ -171,12 +197,70 @@ public class DefaultTerminologyService2Test {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, CODING_AB));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, CODING_AB));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, CODING_AB));
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B, INVALID_CODING_0));
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B, INVALID_CODING_1));
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B, INVALID_CODING_2));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B_VERSION1, INVALID_CODING_0));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B_VERSION1, INVALID_CODING_1));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B_VERSION1, INVALID_CODING_2));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, INVALID_CODING_1));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, INVALID_CODING_2));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, INVALID_CODING_0));
+    verifyNoMoreInteractions(terminologClient);
+  }
+
+
+  @Test
+  public void testTranslatesVersionedCodingWithDefaults() {
+
+    when(terminologClient.translate(
+        deepEq(new UriType(CONCEPT_MAP_0)),
+        deepEq(new UriType(SYSTEM_A)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new BooleanType(false)),
+        isNull()
+    )).thenReturn(RESULT_FALSE);
+
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(CODING_AA_VERSION1, CONCEPT_MAP_0, false, null));
+  }
+
+  @Test
+  public void testTranslatesUnversionedCoding() {
+
+    final Parameters translationResponse = translation(
+        Translation.of(ConceptMapEquivalence.RELATEDTO, CODING_AA),
+        Translation.of(ConceptMapEquivalence.EQUIVALENT, CODING_AB),
+        Translation.of(ConceptMapEquivalence.SUBSUMES, CODING_AA_VERSION1),
+        Translation.of(ConceptMapEquivalence.NARROWER, CODING_AB_VERSION1)
+    );
+
+    when(terminologClient.translate(
+        deepEq(new UriType(CONCEPT_MAP_1)),
+        deepEq(new UriType(SYSTEM_B)),
+        isNull(),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new BooleanType(true)),
+        deepEq(new UriType(SYSTEM_A))
+    )).thenReturn(translationResponse);
+
+    assertEquals(
+        List.of(
+            Translation.of(ConceptMapEquivalence.RELATEDTO, CODING_AA),
+            Translation.of(ConceptMapEquivalence.EQUIVALENT, CODING_AB),
+            Translation.of(ConceptMapEquivalence.SUBSUMES, CODING_AA_VERSION1),
+            Translation.of(ConceptMapEquivalence.NARROWER, CODING_AB_VERSION1)
+        ),
+        terminologyService.translate(CODING_B, CONCEPT_MAP_1, true, SYSTEM_A));
+  }
+
+  @Test
+  public void testTranslatesInvalidsCoding() {
+
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(INVALID_CODING_0, CONCEPT_MAP_0, false, null));
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(INVALID_CODING_1, CONCEPT_MAP_0, true, null));
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(INVALID_CODING_2, CONCEPT_MAP_0, false, SYSTEM_B));
     verifyNoMoreInteractions(terminologClient);
   }
 

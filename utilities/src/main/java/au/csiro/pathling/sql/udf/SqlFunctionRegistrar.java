@@ -16,15 +16,21 @@ public class SqlFunctionRegistrar implements SparkConfigurer {
   @Nonnull
   private final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4;
 
+  @Nonnull
+  private final List<SqlFunction5<?, ?, ?, ?, ?, ?>> sqlFunction5;
+
   public SqlFunctionRegistrar(
       @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
       @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
       @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
-      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4) {
+      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4,
+      @Nonnull final List<SqlFunction5<?, ?, ?, ?, ?, ?>> sqlFunction5
+  ) {
     this.sqlFunction1 = sqlFunction1;
     this.sqlFunction2 = sqlFunction2;
     this.sqlFunction3 = sqlFunction3;
     this.sqlFunction4 = sqlFunction4;
+    this.sqlFunction5 = sqlFunction5;
   }
 
   @Override
@@ -39,6 +45,9 @@ public class SqlFunctionRegistrar implements SparkConfigurer {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
     for (final SqlFunction4<?, ?, ?, ?, ?> function : sqlFunction4) {
+      spark.udf().register(function.getName(), function, function.getReturnType());
+    }
+    for (final SqlFunction5<?, ?, ?, ?, ?, ?> function : sqlFunction5) {
       spark.udf().register(function.getName(), function, function.getReturnType());
     }
   }

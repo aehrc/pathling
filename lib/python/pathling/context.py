@@ -266,6 +266,8 @@ class PathlingContext:
         :param reverse: the direction to traverse the map - false results in "source to target"
         mappings, while true results in "target to source"
         :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
+        :param target: identifies the value set in which a translation is sought.  If there's no 
+        target specified, the server should return all known translations.
         :param output_column_name: the name of the result column
         :return: A new dataframe with an additional column containing the result of the operation.
         """

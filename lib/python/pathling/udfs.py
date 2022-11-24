@@ -65,7 +65,8 @@ def member_of(coding: CodingArg, value_set_uri: str) -> Column:
 
 
 def translate(coding: CodingArg, concept_map_uri: str,
-              reverse: bool = False, equivalences: Optional[str] = None) -> Column:
+              reverse: bool = False, equivalences: Optional[str] = None,
+              target: Optional[str] = None) -> Column:
     """
     Takes a Coding column as input.  Returns the Column which contains an array of 
     Coding value with translation targets from the specified FHIR ConceptMap. There 
@@ -76,10 +77,12 @@ def translate(coding: CodingArg, concept_map_uri: str,
     :param reverse: the direction to traverse the map - false results in "source to target" 
     mappings, while true results in "target to source"
     :param equivalences: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
+    :param target: identifies the value set in which a translation is sought.  If there's no 
+    target specified, the server should return all known translations.
     :return: a Column containing the result of the operation (an array of Coding structs).
     """
     return _invoke_function("translate", _coding_to_java_column(coding), concept_map_uri, reverse,
-                            equivalences)
+                            equivalences, target)
 
 
 def subsumes(left_coding: CodingArg, right_coding: CodingArg) -> Column:

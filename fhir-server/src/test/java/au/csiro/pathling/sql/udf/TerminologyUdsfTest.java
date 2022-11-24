@@ -1,16 +1,17 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
 import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.sql.Terminology.translate;
-import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.apache.spark.sql.functions.lit;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
+import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -21,24 +22,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 @Tag("UnitTest")
 @SpringBootTest
-public class UdfTest {
+public class TerminologyUdsfTest {
 
   @Autowired
   private SparkSession spark;
@@ -89,8 +89,8 @@ public class UdfTest {
   private void setupTranslateExpectations() {
     TerminologyServiceHelpers.setupTranslate(terminologyService)
         .withTranslations(CODING_1, "someUrl",
-            TranslationEntry.of(ConceptMapEquivalence.RELATEDTO, CODING_5),
-            TranslationEntry.of(ConceptMapEquivalence.RELATEDTO, CODING_4)
+            Translation.of(RELATEDTO, CODING_5),
+            Translation.of(RELATEDTO, CODING_4)
         );
   }
 

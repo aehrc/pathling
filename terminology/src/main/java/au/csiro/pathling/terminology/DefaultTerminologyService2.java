@@ -3,18 +3,24 @@ package au.csiro.pathling.terminology;
 import au.csiro.pathling.fhir.TerminologyClient2;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 
@@ -60,6 +66,11 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Override
   public boolean validate(@Nonnull final String url, @Nonnull final Coding coding) {
+
+    if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
+      return false;
+    }
+
     return isResultTrue(terminologyClient.validateCode(
         required(UriType::new, url), required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
@@ -69,18 +80,27 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Nonnull
   @Override
-  public Parameters translate(@Nonnull final Coding coding,
+  public List<Translation> translate(@Nonnull final Coding coding,
       @Nonnull final String conceptMapUrl,
-      final boolean reverse) {
+      final boolean reverse,
+      @Nullable final String target) {
 
-    // TODO: how should we deal with things like null code inside here ???
-    // Should this be an error or should we just return null 
-    return terminologyClient.translate(
-        required(UriType::new, conceptMapUrl), required(UriType::new, coding.getSystem()),
-        optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode()),
-        new BooleanType(reverse)
-    );
+    if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
+      return Collections.emptyList();
+    }
+
+    // TODO: fix this
+    return TranslateMapping.entriesFromParameters(terminologyClient.translate(
+            required(UriType::new, conceptMapUrl),
+            required(UriType::new, coding.getSystem()),
+            optional(StringType::new, coding.getVersion()),
+            required(CodeType::new, coding.getCode()),
+            new BooleanType(reverse),
+            optional(UriType::new, target)
+        )).map(
+            te -> Translation.of(ConceptMapEquivalence.fromCode(te.getEquivalence().getValueAsString()),
+                te.getConcept()))
+        .collect(Collectors.toUnmodifiableList());
   }
 
   @Nonnull
@@ -91,7 +111,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
     if (codingA.getSystem() == null || !codingA.getSystem().equals(codingB.getSystem())) {
       return NOTSUBSUMED;
     }
-    
+
     if (codingA.getCode() == null || codingA.getCode() == null) {
       return NOTSUBSUMED;
     }

@@ -12,6 +12,7 @@ public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
     super(Collections.emptyList(),
         List.of(new MemberOfUdf(tsf)),
         List.of(new SubsumesUdf(tsf)),
+        Collections.emptyList(),
         List.of(new TranslateUdf(tsf)));
   }
 
