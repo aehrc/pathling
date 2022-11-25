@@ -42,6 +42,7 @@ import org.slf4j.MDC;
  * codings belongs to the specified ValueSet.
  */
 @Slf4j
+@Deprecated
 public class TranslateMapper implements
     MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> {
 

@@ -27,6 +27,7 @@ import java.io.Serializable;
  * @param <T> type of the object to produce.
  */
 @FunctionalInterface
+@Deprecated
 public interface ObjectDecoder<T> extends Serializable {
 
   /**

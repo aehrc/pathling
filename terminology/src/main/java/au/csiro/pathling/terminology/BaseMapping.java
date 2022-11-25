@@ -37,6 +37,7 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
  *
  * @author Piotr Szul
  */
+@Deprecated
 public class BaseMapping {
 
   protected BaseMapping() {

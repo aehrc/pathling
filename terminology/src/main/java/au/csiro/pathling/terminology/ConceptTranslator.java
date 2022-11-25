@@ -36,6 +36,7 @@ import org.hl7.fhir.r4.model.Coding;
  */
 @ToString
 @EqualsAndHashCode
+@Deprecated
 public class ConceptTranslator implements Serializable {
 
   private static final long serialVersionUID = -8246857034657784595L;

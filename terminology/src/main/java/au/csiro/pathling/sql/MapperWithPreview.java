@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
  * @param <R> result type of the mapper
  * @param <S> state type of the mapper
  */
+@Deprecated
 public interface MapperWithPreview<I, R, S> extends Serializable {
 
   /**

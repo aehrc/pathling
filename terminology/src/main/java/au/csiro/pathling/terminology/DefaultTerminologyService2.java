@@ -1,5 +1,12 @@
 package au.csiro.pathling.terminology;
 
+import static au.csiro.pathling.fhir.ParametersUtils.toBoolean;
+import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
+import static au.csiro.pathling.fhir.ParametersUtils.toTranslationParts;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
+
 import au.csiro.pathling.fhir.TerminologyClient2;
 import java.io.Closeable;
 import java.io.IOException;
@@ -10,7 +17,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
@@ -20,10 +26,10 @@ import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
-
+/**
+ * The default implementation of the TerminologyServiceFactory2 accessing the REST interface of FHIR
+ * compliant terminology server.
+ */
 public class DefaultTerminologyService2 implements TerminologyService2, Closeable {
 
   @Nonnull
@@ -52,17 +58,13 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
     return converter.apply(Objects.requireNonNull(value));
   }
 
-  public static boolean isResultTrue(final @Nonnull Parameters parameters) {
-    return parameters.getParameterBool("result");
-  }
-
   @Nonnull
-  public static ConceptSubsumptionOutcome getSubsumptionOutcome(
-      final @Nonnull Parameters parameters) {
-    return ConceptSubsumptionOutcome.fromCode(
-        parameters.getParameter("outcome").primitiveValue());
+  private static List<Translation> toTranslations(final @Nonnull Parameters parameters) {
+    return toTranslationParts(parameters)
+        .map(tp -> Translation.of(ConceptMapEquivalence.fromCode(tp.getEquivalence().getCode()),
+            tp.getConcept()))
+        .collect(Collectors.toUnmodifiableList());
   }
-
 
   @Override
   public boolean validate(@Nonnull final String url, @Nonnull final Coding coding) {
@@ -71,7 +73,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
       return false;
     }
 
-    return isResultTrue(terminologyClient.validateCode(
+    return toBoolean(terminologyClient.validateCode(
         required(UriType::new, url), required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
         required(CodeType::new, coding.getCode())
@@ -89,18 +91,14 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
       return Collections.emptyList();
     }
 
-    // TODO: fix this
-    return TranslateMapping.entriesFromParameters(terminologyClient.translate(
-            required(UriType::new, conceptMapUrl),
-            required(UriType::new, coding.getSystem()),
-            optional(StringType::new, coding.getVersion()),
-            required(CodeType::new, coding.getCode()),
-            new BooleanType(reverse),
-            optional(UriType::new, target)
-        )).map(
-            te -> Translation.of(ConceptMapEquivalence.fromCode(te.getEquivalence().getValueAsString()),
-                te.getConcept()))
-        .collect(Collectors.toUnmodifiableList());
+    return toTranslations(terminologyClient.translate(
+        required(UriType::new, conceptMapUrl),
+        required(UriType::new, coding.getSystem()),
+        optional(StringType::new, coding.getVersion()),
+        required(CodeType::new, coding.getCode()),
+        new BooleanType(reverse),
+        optional(UriType::new, target)
+    ));
   }
 
   @Nonnull
@@ -117,6 +115,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
     }
 
     final String resolvedSystem = codingA.getSystem();
+    // TODO: Check how that should work with versions (e.g. how should we treat the case of null version with non null version)
     // if both version are present then ten need to be equal
     if (!(codingA.getVersion() == null || codingB.getVersion() == null || codingA.getVersion()
         .equals(codingB.getVersion()))) {
@@ -127,9 +126,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
                                    : codingB.getVersion();
 
     // TODO: optimize not call the client if not needed (when codings are equal)
-
-    // there are some assertions here to make
-    return getSubsumptionOutcome(terminologyClient.subsumes(
+    return toSubsumptionOutcome(terminologyClient.subsumes(
         required(CodeType::new, codingA.getCode()),
         required(CodeType::new, codingB.getCode()),
         required(UriType::new, resolvedSystem),

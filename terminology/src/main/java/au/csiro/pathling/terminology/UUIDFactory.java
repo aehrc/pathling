@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
  * A factory for creating UUIDs. Used mostly to allow predictable testing of UUID dependent
  * classes.
  */
+@Deprecated
 @FunctionalInterface
 public interface UUIDFactory {
 

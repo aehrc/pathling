@@ -40,6 +40,7 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
  * ConceptMap</a>
  */
 @Slf4j
+@Deprecated
 public final class ClosureMapping extends BaseMapping {
 
   private ClosureMapping() {

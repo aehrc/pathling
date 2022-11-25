@@ -42,6 +42,7 @@ import org.hl7.fhir.r4.model.ValueSet.ValueSetComposeComponent;
  * @author Piotr Szul
  */
 @Slf4j
+@Deprecated
 public final class ValueSetMapping extends BaseMapping {
 
   private ValueSetMapping() {

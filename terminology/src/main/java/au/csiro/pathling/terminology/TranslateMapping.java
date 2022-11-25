@@ -52,6 +52,7 @@ import org.hl7.fhir.r4.model.UriType;
  *
  * @see <a href="https://hapifhir.io/hapi-fhir/docs/client/examples.html">HAPI Bundle example</a>.
  */
+@Deprecated
 public final class TranslateMapping extends BaseMapping {
 
   private TranslateMapping() {

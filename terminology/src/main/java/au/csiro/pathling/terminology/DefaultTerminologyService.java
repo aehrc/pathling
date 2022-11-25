@@ -51,6 +51,7 @@ import org.hl7.fhir.r4.model.ValueSet;
  * Default implementation of TerminologyService using a backend terminology server.
  */
 @Slf4j
+@Deprecated
 public class DefaultTerminologyService implements TerminologyService {
 
   @Nonnull

@@ -24,6 +24,7 @@ import org.apache.spark.sql.{SparkSession, Strategy}
 /**
  * Custom spark SQL strategy with additional rules for custom Pathling operations.
  */
+@deprecated
 object SqlStrategy extends Strategy {
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan match {

@@ -60,6 +60,7 @@ import org.slf4j.LoggerFactory;
  * @see <a href="https://hapifhir.io/hapi-fhir/docs/client/annotation_client.html">Annotation
  * Client</a>
  */
+@Deprecated
 public interface TerminologyClient extends IRestfulClient {
 
   Logger log = LoggerFactory.getLogger(TerminologyClient.class);

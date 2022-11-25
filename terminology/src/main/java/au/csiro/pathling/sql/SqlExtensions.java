@@ -27,6 +27,7 @@ import org.apache.spark.sql.types.StructField;
 /**
  * Custom dataset operations.
  */
+@Deprecated
 public interface SqlExtensions {
 
   /**

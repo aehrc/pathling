@@ -44,6 +44,7 @@ import lombok.ToString;
  */
 @ToString
 @EqualsAndHashCode
+@Deprecated
 public class Relation implements Serializable {
 
   private static final long serialVersionUID = -8124924480216379884L;

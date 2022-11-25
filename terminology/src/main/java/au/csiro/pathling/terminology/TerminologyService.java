@@ -29,6 +29,7 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
  *
  * @author Piotr Szul
  */
+@Deprecated
 public interface TerminologyService {
 
   /**

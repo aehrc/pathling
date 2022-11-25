@@ -39,6 +39,7 @@ public interface TerminologyServiceFactory extends Serializable {
    * @return a shiny new TerminologyService instance
    */
   @Nonnull
+  @Deprecated
   TerminologyService buildService();
 
   /**

@@ -34,6 +34,7 @@ import org.hl7.fhir.r4.model.Coding;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Deprecated
 public class SimpleCoding implements Serializable {
 
   private static final long serialVersionUID = 6509272647875353748L;

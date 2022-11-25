@@ -29,6 +29,7 @@ import org.apache.spark.sql.catalyst.util.GenericArrayData;
 /**
  * Object decoders for {@link SimpleCoding} and collections of it.
  */
+@Deprecated
 public interface SimpleCodingsDecoders {
 
   /**

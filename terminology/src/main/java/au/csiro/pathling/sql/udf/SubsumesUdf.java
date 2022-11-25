@@ -1,6 +1,7 @@
 package au.csiro.pathling.sql.udf;
 
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOneOrMany;
+import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.validCodings;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
@@ -62,13 +63,10 @@ public class SubsumesUdf implements SqlFunction,
     final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
 
     // does any of the input codings subsume any of the output codings (within the same system)
-    // TODO: refactor to use standard coding validation
-
-    final List<Coding> validCodingsB = codingsB.filter(Objects::nonNull)
+    final List<Coding> validCodingsB = validCodings(codingsB)
         .collect(Collectors.toUnmodifiableList());
 
-    return codingsA.filter(Objects::nonNull)
-        .filter(codingA -> codingA.getSystem() != null)
+    return validCodings(codingsA)
         .anyMatch(codingA ->
             validCodingsB.stream()
                 .filter(codingB -> codingA.getSystem().equals(codingB.getSystem()))

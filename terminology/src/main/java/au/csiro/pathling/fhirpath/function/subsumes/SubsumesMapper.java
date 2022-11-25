@@ -42,6 +42,7 @@ import org.slf4j.MDC;
  * coding in the left list is in the subsumption relation with any coding in the right list.
  */
 @Slf4j
+@Deprecated
 public class SubsumesMapper implements
     MapperWithPreview<ImmutablePair<
         List<SimpleCoding>, List<SimpleCoding>>, Boolean, Relation> {
