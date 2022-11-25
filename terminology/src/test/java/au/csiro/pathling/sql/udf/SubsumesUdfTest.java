@@ -3,6 +3,7 @@ package au.csiro.pathling.sql.udf;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.TerminologyTest;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
@@ -24,24 +25,10 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("ConstantConditions")
-public class SubsumesUdfTest {
-
-  private static final Coding CODING_A = CD_SNOMED_284551006;
-  private static final Coding CODING_B = CD_SNOMED_40055000;
-  private static final Coding CODING_C = CD_SNOMED_403190006;
-  private static final Coding CODING_D = CD_SNOMED_444814009;
-
-  private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
-  private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
-  private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
-
+public class SubsumesUdfTest extends TerminologyTest {
 
   private SubsumesUdf subsumesUdf;
   private TerminologyService2 terminologyService2;
-
-  public static WrappedArray<Row> encodeMany(Coding... codings) {
-    return WrappedArray.make(Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new));
-  }
 
   @BeforeEach
   void setUp() {
@@ -51,8 +38,8 @@ public class SubsumesUdfTest {
     when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService2);
 
     TerminologyServiceHelpers.setupSubsumes(terminologyService2)
-        .withSubsumes(CODING_A, CODING_B)
-        .withSubsumes(CODING_C, CODING_D);
+        .withSubsumes(CODING_AA, CODING_AB)
+        .withSubsumes(CODING_BA, CODING_BB);
     subsumesUdf = new SubsumesUdf(terminologyServiceFactory);
   }
 
@@ -90,14 +77,14 @@ public class SubsumesUdfTest {
     assertTrue(subsumesUdf.call(encode(CODING_C), encode(CODING_C), true));
 
     // positive cases 
-    assertTrue(subsumesUdf.call(encode(CODING_A), encode(CODING_B), null));
-    assertTrue(subsumesUdf.call(encode(CODING_C), encode(CODING_D), false));
-    assertTrue(subsumesUdf.call(encode(CODING_B), encode(CODING_A), true));
+    assertTrue(subsumesUdf.call(encode(CODING_AA), encode(CODING_AB), null));
+    assertTrue(subsumesUdf.call(encode(CODING_BA), encode(CODING_BB), false));
+    assertTrue(subsumesUdf.call(encode(CODING_BB), encode(CODING_BA), true));
 
     // negative cases
-    assertFalse(subsumesUdf.call(encode(CODING_D), encode(CODING_C), null));
-    assertFalse(subsumesUdf.call(encode(CODING_B), encode(CODING_A), false));
-    assertFalse(subsumesUdf.call(encode(CODING_A), encode(CODING_B), true));
+    assertFalse(subsumesUdf.call(encode(CODING_BB), encode(CODING_BA), null));
+    assertFalse(subsumesUdf.call(encode(CODING_AB), encode(CODING_AA), false));
+    assertFalse(subsumesUdf.call(encode(CODING_AA), encode(CODING_AB), true));
     assertFalse(subsumesUdf.call(encode(CODING_C), encode(CODING_B), null));
     assertFalse(subsumesUdf.call(encode(CODING_A), encode(CODING_C), true));
   }
@@ -106,14 +93,15 @@ public class SubsumesUdfTest {
   void testSubsumesCodings() {
     // positive cases 
     assertTrue(
-        subsumesUdf.call(encodeMany(null, INVALID_CODING_0, CODING_A, CODING_D), encode(CODING_B),
+        subsumesUdf.call(encodeMany(null, INVALID_CODING_0, CODING_AA, CODING_D), encode(CODING_AB),
             null));
     assertTrue(
-        subsumesUdf.call(encodeMany(CODING_B, CODING_C), encodeMany(CODING_A, CODING_D), false));
+        subsumesUdf.call(encodeMany(CODING_AB, CODING_BA), encodeMany(CODING_AA, CODING_BB),
+            false));
     assertTrue(
-        subsumesUdf.call(encodeMany(CODING_B, CODING_C), encodeMany(CODING_A, CODING_D), true));
+        subsumesUdf.call(encodeMany(CODING_AB, CODING_BA), encodeMany(CODING_AA, CODING_BB), true));
     assertTrue(
-        subsumesUdf.call(encodeMany(null, INVALID_CODING_1, CODING_B, CODING_C), encode(CODING_D),
+        subsumesUdf.call(encodeMany(null, INVALID_CODING_1, CODING_C, CODING_BA), encode(CODING_BB),
             false));
 
     // NegativeCases
@@ -121,11 +109,12 @@ public class SubsumesUdfTest {
     assertFalse(subsumesUdf.call(encode(CODING_C), encodeMany(), true));
     assertFalse(subsumesUdf.call(encodeMany(), encodeMany(), true));
 
-    assertFalse(subsumesUdf.call(encode(CODING_B), encodeMany(CODING_A, CODING_C, CODING_D), null));
     assertFalse(
-        subsumesUdf.call(encodeMany(CODING_D, CODING_A, CODING_B), encode(CODING_C), false));
+        subsumesUdf.call(encode(CODING_AB), encodeMany(CODING_AA, CODING_C, CODING_D), null));
     assertFalse(
-        subsumesUdf.call(encodeMany(CODING_A, CODING_C), encodeMany(CODING_B, CODING_D), true));
+        subsumesUdf.call(encodeMany(CODING_BB, CODING_AA, CODING_AB), encode(CODING_BA), false));
+    assertFalse(
+        subsumesUdf.call(encodeMany(CODING_AA, CODING_BA), encodeMany(CODING_AB, CODING_BB), true));
   }
 
 }

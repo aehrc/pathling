@@ -5,6 +5,7 @@ import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.TerminologyTest;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
@@ -23,59 +24,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-public class TranslateOfUdfTest {
-  
-  public static final String SYSTEM_A = "uuid:systemA";
-  public static final String CODE_A = "codeA";
-  private static final String SYSTEM_B = "uuid:systemB";
-  private static final String CODE_B = "codeB";
-
-  private static final Coding CODING_AA = new Coding(SYSTEM_A, CODE_A, "displayAA");
-  private static final Coding CODING_AB = new Coding(SYSTEM_A, CODE_B, "displayAB");
-
-  public static final String VERSION_1 = "version1";
-  public static final String VERSION_2 = "version2";
-
-  private static final Coding CODING_AA_VERSION1 = new Coding(SYSTEM_A, CODE_A,
-      "displayAA").setVersion(
-      VERSION_1);
-  private static final Coding CODING_AB_VERSION1 = new Coding(SYSTEM_A, CODE_B,
-      "displayAB").setVersion(
-      VERSION_1);
-  private static final Coding CODING_AB_VERSION2 = new Coding(SYSTEM_A, CODE_B,
-      "displayAB").setVersion(
-      VERSION_2);
-
-  private static final Coding CODING_BA = new Coding(SYSTEM_B, CODE_A, "displayBA");
-  private static final Coding CODING_BB = new Coding(SYSTEM_B, CODE_B, "displayBB");
-  private static final Coding CODING_BB_VERSION1 = new Coding(SYSTEM_B, CODE_B,
-      "displayB").setVersion(
-      VERSION_1);
+public class TranslateOfUdfTest extends TerminologyTest {
 
   private static final String CONCEPT_MAP_A = "uuid:caA";
   private static final String CONCEPT_MAP_B = "uuid:caB";
-
-
-  private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
-  private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
-  private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
 
   private static final Row[] NO_TRANSLATIONS = new Row[]{};
 
   private TranslateUdf translateUdf;
   private TerminologyService2 terminologyService2;
-
-
-  @Nonnull
-  private static Row[] asArray(@Nonnull final Coding... codings) {
-    return Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new);
-  }
-
-  @Nonnull
-  public static WrappedArray<Row> encodeMany(Coding... codings) {
-    return WrappedArray.make(Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new));
-  }
-
+  
   @BeforeEach
   void setUp() {
     terminologyService2 = mock(TerminologyService2.class);

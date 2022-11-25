@@ -1,22 +1,8 @@
 package au.csiro.pathling.sql.udf;
 
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Coding;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import scala.collection.mutable.WrappedArray;
-
-import java.util.stream.Stream;
-
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_40055000;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,29 +12,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.TerminologyTest;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 @SuppressWarnings("ConstantConditions")
-public class MemberOfUdfTest {
-
-
-  private static final Coding CODING_A = CD_SNOMED_284551006;
-  private static final Coding CODING_B = CD_SNOMED_40055000;
-  private static final Coding CODING_C = CD_SNOMED_403190006;
+public class MemberOfUdfTest extends TerminologyTest {
 
   private static final String VALUE_SET_URL_A = "uuid:vsA";
   private static final String VALUE_SET_URL_AB = "uuid:vsAB";
 
-
-  private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
-  private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
-  private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
-
   private MemberOfUdf memberUdf;
   private TerminologyService2 terminologyService2;
-
-  public static WrappedArray<Row> encodeMany(Coding... codings) {
-    return WrappedArray.make(Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new));
-  }
-
+  
   @BeforeEach
   void setUp() {
     terminologyService2 = mock(TerminologyService2.class);

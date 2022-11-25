@@ -21,12 +21,12 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.test.TerminologyTest;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
-import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
@@ -35,46 +35,15 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DefaultTerminologyService2Test {
-
-  public static final String SYSTEM_A = "uuid:systemA";
-  public static final String CODE_A = "codeA";
-  private static final String SYSTEM_B = "uuid:systemB";
-  private static final String CODE_B = "codeB";
-
-  private static final Coding CODING_AA = new Coding(SYSTEM_A, CODE_A, "displayAA");
-  private static final Coding CODING_AB = new Coding(SYSTEM_A, CODE_B, "displayAB");
-
-  public static final String VERSION_1 = "version1";
-  public static final String VERSION_2 = "version2";
-
-  private static final Coding CODING_AA_VERSION1 = new Coding(SYSTEM_A, CODE_A,
-      "displayAA").setVersion(
-      VERSION_1);
-  private static final Coding CODING_AB_VERSION1 = new Coding(SYSTEM_A, CODE_B,
-      "displayAB").setVersion(
-      VERSION_1);
-  private static final Coding CODING_AB_VERSION2 = new Coding(SYSTEM_A, CODE_B,
-      "displayAB").setVersion(
-      VERSION_2);
-
-  private static final Coding CODING_B = new Coding(SYSTEM_B, CODE_B, "displayB");
-  private static final Coding CODING_B_VERSION1 = new Coding(SYSTEM_B, CODE_B,
-      "displayB").setVersion(
-      VERSION_1);
+public class DefaultTerminologyService2Test extends TerminologyTest {
 
   private static final String VALUE_SET_X = "uuid:valueSetX";
   private static final String VALUE_SET_Y = "uuid:valueSetY";
 
-
-  private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
-  private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
-  private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
-
-
   private static final String CONCEPT_MAP_0 = "uuid:conceptMap0";
   private static final String CONCEPT_MAP_1 = "uuid:conceptMap1";
 
+  private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
 
   @Nonnull
   private static Parameters translation(@Nonnull final Translation... entries) {
@@ -91,8 +60,6 @@ public class DefaultTerminologyService2Test {
     return translateResponse;
   }
 
-
-  private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
 
   private TerminologyClient2 terminologClient;
   private DefaultTerminologyService2 terminologyService;
@@ -123,7 +90,7 @@ public class DefaultTerminologyService2Test {
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B))
     )).thenReturn(RESULT_FALSE);
-    assertFalse(terminologyService.validate(VALUE_SET_Y, CODING_B_VERSION1));
+    assertFalse(terminologyService.validate(VALUE_SET_Y, CODING_BB_VERSION1));
   }
 
   @Test
@@ -185,7 +152,7 @@ public class DefaultTerminologyService2Test {
 
   @Test
   public void testSubsumesDifferentSystems() {
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA, CODING_B_VERSION1));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA, CODING_BB_VERSION1));
     verifyNoMoreInteractions(terminologClient);
   }
 
@@ -197,9 +164,9 @@ public class DefaultTerminologyService2Test {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, CODING_AB));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, CODING_AB));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, CODING_AB));
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B_VERSION1, INVALID_CODING_0));
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B_VERSION1, INVALID_CODING_1));
-    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_B_VERSION1, INVALID_CODING_2));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_BB_VERSION1, INVALID_CODING_0));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_BB_VERSION1, INVALID_CODING_1));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_BB_VERSION1, INVALID_CODING_2));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, INVALID_CODING_1));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, INVALID_CODING_2));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, INVALID_CODING_0));
