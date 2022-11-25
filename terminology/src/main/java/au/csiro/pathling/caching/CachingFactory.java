@@ -6,8 +6,9 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public interface CacheFactory {
+public interface CachingFactory {
 
   @Nonnull
-  CachingHttpClientBuilder create(@Nonnull CacheConfig cacheConfig, @Nullable Map<String, String> storageProperties);
+  CachingHttpClientBuilder create(@Nonnull CacheConfig cacheConfig,
+      @Nullable Map<String, String> storageProperties);
 }

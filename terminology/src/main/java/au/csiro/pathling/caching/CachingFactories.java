@@ -1,46 +1,45 @@
 package au.csiro.pathling.caching;
 
 import java.io.File;
-import java.util.Map;
 import javax.annotation.Nonnull;
-import org.apache.http.impl.client.cache.CacheConfig;
+import au.csiro.pathling.errors.InvalidConfigError;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.apache.http.impl.client.cache.CachingHttpClients;
-import org.jetbrains.annotations.Nullable;
 
 public class CachingFactories {
 
-  private static class MemoryCachingFactory implements CacheFactory {
+  public static final String MEMORY_STORAGE = "memory";
+  public static final String DISK_STORAGE = "disk";
+
+  public static final String DISK_CACHE_DIR = "cacheDir";
+
+  private static class MemoryCachingFactory extends AbstractCachingFactoryBase {
 
     @Nonnull
     @Override
-    public CachingHttpClientBuilder create(@Nonnull final CacheConfig cacheConfig,
-        @Nullable final Map<String, String> storageProperties) {
-      return CachingHttpClients.custom().setCacheConfig(cacheConfig);
+    protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder,
+        @Nonnull final Config config) {
+      return builder;
     }
   }
 
-  private static class DiskCachingFactory implements CacheFactory {
+  private static class DiskCachingFactory extends AbstractCachingFactoryBase {
 
     @Nonnull
     @Override
-    public CachingHttpClientBuilder create(@Nonnull final CacheConfig cacheConfig,
-        @Nullable final Map<String, String> storageProperties) {
-      // TODO: fix @Nullable
-      return CachingHttpClients.custom()
-          .setCacheConfig(cacheConfig)
-          .setCacheDir(new File(storageProperties.get("cacheDir")));
+    protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder,
+        @Nonnull final Config config) {
+      return builder.setCacheDir(new File(config.required(DISK_CACHE_DIR)));
     }
   }
 
   @Nonnull
-  public static CacheFactory of(@Nonnull final String storageType) {
-    if ("memory".equals(storageType)) {
+  public static CachingFactory of(@Nonnull final String storageType) {
+    if (MEMORY_STORAGE.equals(storageType)) {
       return new MemoryCachingFactory();
-    } else if ("disk".equals(storageType)) {
+    } else if (DISK_STORAGE.equals(storageType)) {
       return new DiskCachingFactory();
     } else {
-      throw new IllegalArgumentException("Cannot configure cache with storageType: " + storageType);
+      throw new InvalidConfigError("Cannot configure cache with storageType: " + storageType);
     }
   }
 
