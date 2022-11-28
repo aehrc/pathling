@@ -295,7 +295,8 @@ public class PathlingContextTest {
         conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), null, "result");
 
     final List<Row> rows = result.select("id", "result").collectAsList();
-    assertEquals(RowFactory.create("foo", CodingEncoding.encode(coding2)), rows.get(0));
+    assertEquals(RowFactory.create("foo", WrappedArray.make(new Row[]{CodingEncoding.encode(coding2)})),
+        rows.get(0));
   }
 
   @Test

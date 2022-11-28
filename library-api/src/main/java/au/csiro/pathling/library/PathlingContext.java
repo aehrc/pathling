@@ -369,7 +369,7 @@ public class PathlingContext {
     final Dataset<Row> translatedDataset = terminologyFunctions.translate(codingArrayCol,
         conceptMapUri, reverse, equivalence, target, dataset, outputColumnName);
 
-    return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName).apply(0));
+    return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName));
   }
 
   @Nonnull

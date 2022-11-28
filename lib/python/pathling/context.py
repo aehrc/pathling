@@ -256,18 +256,18 @@ class PathlingContext:
             output_column_name: Optional[str] = "result",
     ):
         """
-        Takes a dataframe with a Coding column as input. A new column is created which contains a
-        Coding value and contains translation targets from the specified FHIR ConceptMap. There
-        may be more than one target concept for each input concept.
+        Takes a dataframe with a Coding column as input. A new column is created which contains 
+        the array of Codings value with translation targets from the specified FHIR ConceptMap. 
+        There may be more than one target concept for each input concept.
 
         :param df: a DataFrame containing the input data
         :param coding_column: a Column containing a struct representation of a Coding
         :param concept_map_uri: an identifier for a FHIR ConceptMap
-        :param reverse: the direction to traverse the map - false results in "source to target"
-        mappings, while true results in "target to source"
+        :param reverse: the direction to traverse the map - false results in "source to target" 
+            mappings, while true results in "target to source"
         :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
         :param target: identifies the value set in which a translation is sought.  If there's no 
-        target specified, the server should return all known translations.
+            target specified, the server should return all known translations.
         :param output_column_name: the name of the result column
         :return: A new dataframe with an additional column containing the result of the operation.
         """
@@ -295,9 +295,9 @@ class PathlingContext:
 
         :param df: a DataFrame containing the input data
         :param left_coding_column: a Column containing a struct representation of a Coding,
-        for the left-hand side of the subsumption test
+            for the left-hand side of the subsumption test
         :param right_coding_column: a Column containing a struct representation of a Coding,
-        for the right-hand side of the subsumption test
+            for the right-hand side of the subsumption test
         :param left_coding: a Coding object for the left-hand side of the subsumption test
         :param right_coding: a Coding object for the right-hand side of the subsumption test
         :param output_column_name: the name of the result column

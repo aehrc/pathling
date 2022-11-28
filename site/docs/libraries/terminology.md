@@ -7,26 +7,21 @@ sidebar_position: 3
 The library also provides a set of functions for querying a FHIR terminology
 server from within your queries and transformations.
 
-import Tabs from "@theme/Tabs";
-import TabItem from "@theme/TabItem";
-import {
-JavaInstallation,
-PythonInstallation,
-ScalaInstallation
-} from "../../src/components/installation";
+import Tabs from "@theme/Tabs"; import TabItem from "@theme/TabItem"; import {
+JavaInstallation, PythonInstallation, ScalaInstallation } from "../../src/components/installation";
 
 ### Value set membership
 
 The `member_of` function can be used to test the membership of a code within a
-[FHIR value set](https://hl7.org/fhir/valueset.html). This can be used with both 
-explicit value sets (i.e. those that have been pre-defined and loaded into the 
-terminology server) and implicit value sets (e.g. SNOMED CT 
+[FHIR value set](https://hl7.org/fhir/valueset.html). This can be used with both
+explicit value sets (i.e. those that have been pre-defined and loaded into the
+terminology server) and implicit value sets (e.g. SNOMED CT
 [Expression Constraint Language](http://snomed.org/ecl)).
 
-In this example, we take a list of SNOMED CT diagnosis codes and
-create a new column which shows which are viral infections. We use an ECL
-expression to define viral infection as a disease with a pathological process 
-of "Infectious process", and a causative agent of "Virus".
+In this example, we take a list of SNOMED CT diagnosis codes and create a new
+column which shows which are viral infections. We use an ECL expression to
+define viral infection as a disease with a pathological process of "Infectious
+process", and a causative agent of "Virus".
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -64,7 +59,8 @@ val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
 
 val result = pc.memberOf(csv, toCoding(csv.col("CODE"), "http://snomed.info/sct"),
-    toEclValueSet("""
+    toEclValueSet(
+        """
         << 64572001|Disease| : (
           << 370135005|Pathological process| = << 441862004|Infectious process|,
           << 246075003|Causative agent| = << 49872002|Virus|
@@ -80,6 +76,7 @@ result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show()
 
 ```java
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -90,10 +87,10 @@ class MyApp {
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
         Dataset<Row> result = pc.memberOf(csv, toCoding(csv.col("code"), SNOMED_URI),
-            toEclValueSet("<< 64572001|Disease| : ("
-                + "<< 370135005|Pathological process| = << 441862004|Infectious process|,"
-                + "<< 246075003|Causative agent| = << 49872002|Virus|"
-                + ")"), "VIRAL_INFECTION");
+                toEclValueSet("<< 64572001|Disease| : ("
+                        + "<< 370135005|Pathological process| = << 441862004|Infectious process|,"
+                        + "<< 246075003|Causative agent| = << 49872002|Virus|"
+                        + ")"), "VIRAL_INFECTION");
         result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show();
     }
 }
@@ -117,7 +114,11 @@ Results in:
 
 The `translate` function can be used to translate codes from one code system to
 another using maps that are known to the terminology server. In this example, we
-translate our SNOMED CT diagnosis codes into Read CTV3.
+translate our SNOMED CT diagnosis codes into Read CTV3. 
+
+Please note that the
+type of the output column is the array of coding structs, as the translation may
+produce multiple results for each input coding.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -153,7 +154,7 @@ val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
 
 val result = pc.translate(csv, toCoding(csv.col("CODE"), SNOMED_URI),
-    "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000", 
+    "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
     false, "equivalent", "READ_CODE")
 result.select("CODE", "DESCRIPTION", "READ_CODE").show()
 ```
@@ -165,6 +166,7 @@ result.select("CODE", "DESCRIPTION", "READ_CODE").show()
 
 ```java
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -175,8 +177,8 @@ class MyApp {
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
         Dataset<Row> result = pc.translate(csv, toCoding(csv.col("CODE"), SNOMED_URI),
-            "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000", 
-            false, "equivalent", "READ_CODE");
+                "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+                false, "equivalent", "READ_CODE");
         result.select("CODE", "DESCRIPTION", "READ_CODE").show();
     }
 }
@@ -190,24 +192,24 @@ Results in:
 
 | CODE      | DESCRIPTION               | READ_CODE |
 |-----------|---------------------------|-----------|
-| 65363002  | Otitis media              | X00ik     |
-| 16114001  | Fracture of ankle         | S34..     |
-| 444814009 | Viral sinusitis           | XUjp0     |
-| 444814009 | Viral sinusitis           | XUjp0     |
-| 43878008  | Streptococcal sore throat | A340.     |
+| 65363002  | Otitis media              | \[X00ik\] |
+| 16114001  | Fracture of ankle         | \[S34..\] |
+| 444814009 | Viral sinusitis           | \[XUjp0\] |
+| 444814009 | Viral sinusitis           | \[XUjp0\] |
+| 43878008  | Streptococcal sore throat | \[A340.\] |
 
 ### Subsumption testing
 
 Subsumption test is a fancy way of saying "is this code equal or a subtype of
 this other code".
 
-For example, a code representing "ankle fracture" is subsumed 
-by another code representing "fracture". The "fracture" code is more general, 
-and using it with subsumption can help us find other codes representing
-different subtypes of fracture.
+For example, a code representing "ankle fracture" is subsumed by another code
+representing "fracture". The "fracture" code is more general, and using it with
+subsumption can help us find other codes representing different subtypes of
+fracture.
 
 The `subsumes` function allows us to perform subsumption testing on codes within
-our data. The order of the left and right operands can be reversed to query 
+our data. The order of the left and right operands can be reversed to query
 whether a code is "subsumed by" another code.
 
 <!--suppress CheckEmptyScriptTag -->
@@ -268,6 +270,7 @@ result.select("CODE", "DESCRIPTION", "IS_ENT").show()
 
 ```java
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -278,15 +281,15 @@ class MyApp {
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
         Dataset<Row> result = pc.subsumes(csv,
-            // 232208008 |Ear, nose and throat disorder|
-            CodingEncoding.toStruct(
-                lit(null),
-                lit(SNOMED_URI),
-                lit(null),
-                lit("232208008"),
-                lit(null),
-                lit(null)
-            ), toCoding(csv.col("CODE"), SNOMED_URI), "IS_ENT");
+                // 232208008 |Ear, nose and throat disorder|
+                CodingEncoding.toStruct(
+                        lit(null),
+                        lit(SNOMED_URI),
+                        lit(null),
+                        lit("232208008"),
+                        lit(null),
+                        lit(null)
+                ), toCoding(csv.col("CODE"), SNOMED_URI), "IS_ENT");
         result.select("CODE", "DESCRIPTION", "IS_ENT").show();
     }
 }
