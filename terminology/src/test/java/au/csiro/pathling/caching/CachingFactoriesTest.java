@@ -1,19 +1,16 @@
 package au.csiro.pathling.caching;
 
-import au.csiro.pathling.errors.InvalidConfigError;
-import com.google.common.collect.ImmutableMap;
-import org.apache.commons.lang.reflect.FieldUtils;
-import org.apache.http.impl.client.cache.CacheConfig;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import org.junit.jupiter.api.Test;
-
-import java.io.File;
-import java.util.HashMap;
-
 import static org.apache.commons.lang.reflect.FieldUtils.readField;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import au.csiro.pathling.errors.InvalidConfigError;
+import com.google.common.collect.ImmutableMap;
+import java.io.File;
+import org.apache.http.impl.client.cache.CacheConfig;
+import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import org.junit.jupiter.api.Test;
 
 public class CachingFactoriesTest {
 

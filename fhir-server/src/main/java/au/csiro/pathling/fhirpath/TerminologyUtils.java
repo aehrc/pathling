@@ -22,11 +22,7 @@ import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import javax.annotation.Nonnull;
 import au.csiro.pathling.utilities.Preconditions;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-
-import static au.csiro.pathling.sql.Terminology.member_of;
 
 /**
  * Terminology helper functions

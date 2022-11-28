@@ -25,9 +25,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.terminology.TerminologyService2;
@@ -43,7 +41,6 @@ import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.Relation;
-import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.assertions.ElementPathAssertion;

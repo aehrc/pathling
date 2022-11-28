@@ -31,8 +31,6 @@ import org.springframework.test.context.TestPropertySource;
 import javax.annotation.Nonnull;
 import java.util.Optional;
 
-import static org.mockito.Mockito.mock;
-
 @Disabled
 @SpringBootTest
 @ActiveProfiles({"core", "server", "benchmark"})

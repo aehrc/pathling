@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.element;
 
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
-import static org.apache.spark.sql.functions.callUDF;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;

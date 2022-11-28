@@ -7,7 +7,8 @@ import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClient2;
-import au.csiro.pathling.terminology.ObjectHolder.SingletonHolder;
+import au.csiro.pathling.utilities.ObjectHolder;
+import au.csiro.pathling.utilities.ObjectHolder.SingletonHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.util.UUID;
@@ -44,10 +45,12 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private static final long serialVersionUID = 2837933007972812597L;
 
   @Nonnull
-  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService2> terminologyServiceHolder2 = new SingletonHolder<>();
+  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService2> terminologyServiceHolder2 = ObjectHolder.singleton(
+      DefaultTerminologyServiceFactory::createService2);
 
   @Nonnull
-  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = new SingletonHolder<>();
+  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = ObjectHolder.singleton(
+      DefaultTerminologyServiceFactory::createService);
 
 
   @Nonnull
@@ -63,14 +66,18 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   @Nonnull
   private final HttpCacheConf cacheConfig;
-  
+
   @Nonnull
   private final TerminologyAuthConfiguration authConfig;
 
+  @Deprecated
+  @Nonnull
+  private transient UUIDFactory uuidFactory = UUID::randomUUID;
+
   public static synchronized void reset() {
     log.info("Resetting terminology services");
-    terminologyServiceHolder.invalidate();
-    terminologyServiceHolder2.invalidate();
+    terminologyServiceHolder.reset();
+    terminologyServiceHolder2.reset();
   }
 
   @Deprecated
@@ -110,33 +117,18 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   @Nonnull
   @Override
   public TerminologyService buildService() {
-    return buildService(UUID::randomUUID);
-  }
-
-  /**
-   * Builds a new instance.
-   *
-   * @param uuidFactory the {@link UUIDFactory to use for UUID generation}
-   * @return a shiny new TerminologyService instance =
-   */
-  @Nonnull
-  @Deprecated
-  public TerminologyService buildService(
-      @Nonnull final UUIDFactory uuidFactory) {
-    // TODO: we ignore here rhe uuidFactor in the lookp key, but hopfully that's not an issue.
-    return terminologyServiceHolder.getOrCreate(this,
-        f -> f.createService(uuidFactory));
+    //noinspection NullableProblems
+    return terminologyServiceHolder.getOrCreate(this);
   }
 
   @Nonnull
   @Override
   public TerminologyService2 buildService2() {
-    return terminologyServiceHolder2.getOrCreate(this,
-        DefaultTerminologyServiceFactory::createService2);
+    return terminologyServiceHolder2.getOrCreate(this);
   }
 
   @Nonnull
-  private TerminologyService createService(@Nonnull final UUIDFactory uuidFactory) {
+  private TerminologyService createService() {
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
     //TODO: maybe share the HttpClient 
     final CloseableHttpClient httpClient = buildHttpClient(clientConfig,
@@ -188,4 +180,8 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
         .build();
   }
 
+  @Deprecated
+  public void setUUIDFactory(UUIDFactory uuidFactory) {
+    this.uuidFactory = uuidFactory;
+  }
 }

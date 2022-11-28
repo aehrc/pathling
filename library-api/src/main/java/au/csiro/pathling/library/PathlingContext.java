@@ -20,7 +20,6 @@ package au.csiro.pathling.library;
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
 import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
 import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_SERVER_URL;
-import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_SOCKET_TIMEOUT;
 import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_VERBOSE_LOGGING;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;

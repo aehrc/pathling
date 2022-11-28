@@ -1,27 +1,20 @@
 package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.TerminologyTest;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import scala.collection.mutable.WrappedArray;
-
-import javax.annotation.Nonnull;
-import java.util.stream.Stream;
 
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.NARROWER;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 public class TranslateOfUdfTest extends TerminologyTest {

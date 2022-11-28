@@ -5,6 +5,9 @@ import org.apache.spark.sql.SparkSession;
 import javax.annotation.Nonnull;
 import java.util.List;
 
+/**
+ * A spark configurer that registers user defined functions in the sessions.
+ */
 public class SqlFunctionRegistrar implements SparkConfigurer {
 
   @Nonnull

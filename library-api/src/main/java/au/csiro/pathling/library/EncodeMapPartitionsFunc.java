@@ -35,7 +35,7 @@ abstract class EncodeMapPartitionsFunc<T extends IBaseResource> implements
     MapPartitionsFunction<String, T> {
 
   private static final long serialVersionUID = -189338116652852324L;
-  protected FhirVersionEnum fhirVersion;
+  protected final FhirVersionEnum fhirVersion;
   protected final String inputMimeType;
   protected final Class<T> resourceClass;
 

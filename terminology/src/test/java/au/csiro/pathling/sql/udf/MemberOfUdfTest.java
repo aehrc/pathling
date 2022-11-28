@@ -42,17 +42,17 @@ public class MemberOfUdfTest extends TerminologyTest {
   }
 
   @Test
-  void testNullCodings() throws Exception {
+  void testNullCodings() {
     assertNull(memberUdf.call(null, "uiid:url"));
   }
 
   @Test
-  void testNullValueSetUrl() throws Exception {
+  void testNullValueSetUrl() {
     assertNull(memberUdf.call(encode(CD_SNOMED_284551006), null));
   }
 
   @Test
-  void testInvalidAndNullCodings() throws Exception {
+  void testInvalidAndNullCodings() {
     assertFalse(
         memberUdf.call(encodeMany(INVALID_CODING_0, INVALID_CODING_1, INVALID_CODING_2, null),
             VALUE_SET_URL_A));
@@ -60,13 +60,13 @@ public class MemberOfUdfTest extends TerminologyTest {
   }
 
   @Test
-  void testInvalidCoding() throws Exception {
+  void testInvalidCoding() {
     assertFalse(memberUdf.call(encode(INVALID_CODING_0), VALUE_SET_URL_A));
     verifyNoMoreInteractions(terminologyService2);
   }
 
   @Test
-  void testCodingBelongsToValueSet() throws Exception {
+  void testCodingBelongsToValueSet() {
     assertTrue(memberUdf.call(encode(CODING_A), VALUE_SET_URL_A));
     assertTrue(memberUdf.call(encode(CODING_A), VALUE_SET_URL_AB));
     assertTrue(memberUdf.call(encode(CODING_B), VALUE_SET_URL_AB));
@@ -77,7 +77,7 @@ public class MemberOfUdfTest extends TerminologyTest {
   }
 
   @Test
-  void testCodingsBelongsToValueSet() throws Exception {
+  void testCodingsBelongsToValueSet() {
     // positive cases
     assertTrue(memberUdf.call(encodeMany(CODING_C, CODING_A), VALUE_SET_URL_A));
     assertTrue(memberUdf.call(encodeMany(null, INVALID_CODING_0, CODING_B), VALUE_SET_URL_AB));
@@ -89,7 +89,7 @@ public class MemberOfUdfTest extends TerminologyTest {
   }
 
   @Test
-  void testEarlyExitWhenMatchingCodingFound() throws Exception {
+  void testEarlyExitWhenMatchingCodingFound() {
     assertTrue(memberUdf.call(encodeMany(CODING_A, CODING_B), VALUE_SET_URL_AB));
     verify(terminologyService2).validate(eq(VALUE_SET_URL_AB), deepEq(CODING_A));
     verifyNoMoreInteractions(terminologyService2);

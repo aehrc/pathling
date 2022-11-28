@@ -1,7 +1,6 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
-import au.csiro.pathling.utilities.Preconditions;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -22,8 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.Validation;
-import javax.validation.ValidatorFactory;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 

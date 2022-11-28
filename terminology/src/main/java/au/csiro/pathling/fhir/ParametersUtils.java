@@ -15,14 +15,14 @@ import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
 /**
- *
+ * Helper functions for dealing with FHIR {@link Parameters} resource.
  */
 public final class ParametersUtils {
 
   private ParametersUtils() {
     // Utility class
   }
-  
+
   private static void setProperty(@Nonnull final Object bean, @Nonnull final String name,
       @Nullable final Object value) {
     try {
@@ -49,10 +49,22 @@ public final class ParametersUtils {
     return result;
   }
 
-  public static boolean toBoolean(final @Nonnull Parameters parameters) {
+  /**
+   * Extracts the boolean value of the 'result' parameter.
+   *
+   * @param parameters the parameters to convert.
+   * @return the boolean value of the 'result' parameter.
+   */
+  public static boolean toBooleanResult(final @Nonnull Parameters parameters) {
     return parameters.getParameterBool("result");
   }
 
+  /**
+   * Extracts the {@link ConceptSubsumptionOutcome} value of the 'outcome' parameter.
+   *
+   * @param parameters the parameters to convert.
+   * @return the {@link ConceptSubsumptionOutcome} value.
+   */
   @Nonnull
   public static ConceptSubsumptionOutcome toSubsumptionOutcome(
       final @Nonnull Parameters parameters) {
@@ -60,9 +72,12 @@ public final class ParametersUtils {
         parameters.getParameter("outcome").primitiveValue());
   }
 
+  /**
+   * Object representation of a 'match' part from 'translate()' result.
+   */
   @Data
   @NoArgsConstructor
-  public static class TranslationPart {
+  public static class MatchPart {
 
     @Nonnull
     private Coding concept;
@@ -72,17 +87,23 @@ public final class ParametersUtils {
   }
 
   @Nonnull
-  private static TranslationPart matchToTranslationPart(
+  private static MatchPart componentToMatchPart(
       @Nonnull final Parameters.ParametersParameterComponent component) {
-    return ParametersUtils.partsToBean(component, TranslationPart::new);
+    return ParametersUtils.partsToBean(component, MatchPart::new);
   }
 
+  /**
+   * Extracts 'match' parts from the result of 'translate()'
+   *
+   * @param parameters the parameters to convert.
+   * @return the stream of 'match' parts.
+   */
   @Nonnull
-  public static Stream<TranslationPart> toTranslationParts(final @Nonnull Parameters parameters) {
-    return toBoolean(parameters)
+  public static Stream<MatchPart> toMatchParts(final @Nonnull Parameters parameters) {
+    return toBooleanResult(parameters)
            ? parameters.getParameter().stream()
                .filter(pc -> "match".equals(pc.getName()))
-               .map(ParametersUtils::matchToTranslationPart)
+               .map(ParametersUtils::componentToMatchPart)
            : Stream.empty();
   }
 }

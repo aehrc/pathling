@@ -28,7 +28,6 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.collect_set;
 import static org.apache.spark.sql.functions.explode_outer;
-import static org.apache.spark.sql.functions.struct;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.terminology.TerminologyServiceFactory;

@@ -21,10 +21,6 @@ import au.csiro.pathling.terminology.TerminologyService;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
 import au.csiro.pathling.terminology.TerminologyService2;
-import lombok.Value;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * Represents something that creates a {@link TerminologyService}.

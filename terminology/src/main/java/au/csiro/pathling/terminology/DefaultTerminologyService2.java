@@ -1,8 +1,8 @@
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.fhir.ParametersUtils.toBoolean;
+import static au.csiro.pathling.fhir.ParametersUtils.toBooleanResult;
 import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
-import static au.csiro.pathling.fhir.ParametersUtils.toTranslationParts;
+import static au.csiro.pathling.fhir.ParametersUtils.toMatchParts;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
@@ -60,7 +60,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Nonnull
   private static List<Translation> toTranslations(final @Nonnull Parameters parameters) {
-    return toTranslationParts(parameters)
+    return toMatchParts(parameters)
         .map(tp -> Translation.of(ConceptMapEquivalence.fromCode(tp.getEquivalence().getCode()),
             tp.getConcept()))
         .collect(Collectors.toUnmodifiableList());
@@ -73,7 +73,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
       return false;
     }
 
-    return toBoolean(terminologyClient.validateCode(
+    return toBooleanResult(terminologyClient.validateCode(
         required(UriType::new, url), required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
         required(CodeType::new, coding.getCode())

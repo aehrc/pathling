@@ -1,22 +1,13 @@
 package au.csiro.pathling.sql.udf;
 
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.TerminologyTest;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Coding;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import scala.collection.mutable.WrappedArray;
-import java.util.stream.Stream;
 
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_40055000;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;

@@ -82,14 +82,11 @@ public class QuantityOperatorsPrecisionTest {
       "Tm");
 
   // These mol prefixes results in overflow for reasonable decimals (e.g.  9e3 'Tmol')
-  static final Set<String> UNSUPPORTED_REASONABLE_DECIMAL_MOL_UNITS = ImmutableSet.of("Ymol", "Zmol",
+  static final Set<String> UNSUPPORTED_REASONABLE_DECIMAL_MOL_UNITS = ImmutableSet.of("Ymol",
+      "Zmol",
       "Emol", "Pmol", "Tmol");
 
-  @BeforeEach
-  void setUp() {
-  }
-
-
+  
   @Nonnull
   private static String unitToRowId(@Nonnull final String unit) {
     return "unit-" + unit;

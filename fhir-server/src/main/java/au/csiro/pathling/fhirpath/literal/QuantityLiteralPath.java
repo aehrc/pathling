@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static org.apache.spark.sql.functions.struct;
-
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;

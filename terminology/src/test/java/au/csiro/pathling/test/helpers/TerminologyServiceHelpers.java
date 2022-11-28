@@ -12,13 +12,11 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
-import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.ValueSet;

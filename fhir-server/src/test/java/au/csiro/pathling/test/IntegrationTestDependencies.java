@@ -52,27 +52,30 @@ public class IntegrationTestDependencies {
   }
 
   @Bean
-  public DefaultTerminologyServiceFactory terminologyServiceFactory(
-      @Nonnull final FhirContext fhirContext,
-      @Nonnull final Configuration configuration) {
-    log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
-    return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
-        configuration.getTerminology().getServerUrl(), 0, false,
-        configuration.getTerminology().getClient(),
-        configuration.getTerminology().getCache(),
-        configuration.getTerminology().getAuthentication());
-  }
-
-  @Bean
   public UUIDFactory uuidFactory() {
     return UUID::randomUUID;
   }
 
   @Bean
+  public DefaultTerminologyServiceFactory terminologyServiceFactory(
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final Configuration configuration, 
+      @Nonnull final UUIDFactory uuidFactory) {
+    log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
+    final DefaultTerminologyServiceFactory factory = new DefaultTerminologyServiceFactory(
+        fhirContext.getVersion().getVersion(),
+        configuration.getTerminology().getServerUrl(), 0, false,
+        configuration.getTerminology().getClient(),
+        configuration.getTerminology().getCache(),
+        configuration.getTerminology().getAuthentication());
+    factory.setUUIDFactory(uuidFactory);
+    return factory;
+  }
+  
+  @Bean
   public TerminologyService terminologyService(
-      @Nonnull final DefaultTerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final UUIDFactory uuidFactory) throws NoSuchFieldException, IllegalAccessException {
-    return terminologyServiceFactory.buildService(uuidFactory);
+      @Nonnull final DefaultTerminologyServiceFactory terminologyServiceFactory) throws NoSuchFieldException, IllegalAccessException {
+    return terminologyServiceFactory.buildService();
   }
 
 }

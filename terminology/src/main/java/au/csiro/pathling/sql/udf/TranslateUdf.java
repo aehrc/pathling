@@ -12,8 +12,6 @@ import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.terminology.TranslateMapping;
-import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.utilities.Strings;
 import com.google.common.collect.ImmutableSet;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +24,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * The implementation of the 'translate()' udf.
+ */
 @Slf4j
 public class TranslateUdf implements SqlFunction,
     SqlFunction5<Object, String, Boolean, String, String, Row[]> {
@@ -34,12 +35,12 @@ public class TranslateUdf implements SqlFunction,
 
   public static final String FUNCTION_NAME = "translate";
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(CodingEncoding.DATA_TYPE);
-  public static boolean PARAM_REVERSE_DEFAULT = false;
+  public static final boolean PARAM_REVERSE_DEFAULT = false;
 
   @Nonnull
   private final TerminologyServiceFactory terminologyServiceFactory;
 
-  public TranslateUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+  TranslateUdf(@Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 

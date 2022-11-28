@@ -118,7 +118,7 @@ public interface CodingEncoding {
   }
 
   @Nonnull
-  public static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
+  static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
       @Nonnull final Column version, @Nonnull final Column code, @Nonnull final Column display,
       @Nonnull final Column userSelected) {
     return functions.struct(
@@ -130,5 +130,5 @@ public interface CodingEncoding {
         userSelected.as("userSelected")
     );
   }
- 
+
 }

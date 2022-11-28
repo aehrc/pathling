@@ -22,6 +22,18 @@ import javax.annotation.Nullable;
 
 import static java.util.Objects.isNull;
 
+/**
+ * Represents a default value of type T. Simplifies resolution of values where null represents the
+ * default, e.g:
+ * <pre>{@code
+ *    Default<Integer> DEF_VALUE = Default.of(100);
+ *    ...
+ *    int value = DEF_VALUE.resolve(valueOrNull);
+ * }</pre>
+ *
+ * @param <T> the type of the value.
+ */
+
 public class Default<T> {
 
   @Nonnull
@@ -31,6 +43,13 @@ public class Default<T> {
     this.defValue = defValue;
   }
 
+  /**
+   * Resolved a nullable value to the value itself it not null or otherwise to the underlying
+   * default value.
+   *
+   * @param value the nullable value to resolve
+   * @return the value of the default
+   */
   @Nonnull
   public T resolve(@Nullable T value) {
     return isNull(value)
@@ -38,6 +57,14 @@ public class Default<T> {
            : value;
   }
 
+  /**
+   * Constructs the default value for given type T.
+   *
+   * @param defValue the default value.
+   * @param <T> the type of the value.
+   * @return the default object.
+   */
+  @Nonnull
   public static <T> Default<T> of(@Nonnull final T defValue) {
     return new Default<>(defValue);
   }

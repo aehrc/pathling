@@ -25,8 +25,6 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -40,8 +38,6 @@ import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TranslateMapping.TranslationEntry;
 import au.csiro.pathling.test.SchemaAsserts;
 import java.util.List;
 import java.util.Map;
