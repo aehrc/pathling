@@ -38,6 +38,7 @@ public final class TerminologyHelpers {
 
   public static final String SNOMED_URI = "http://snomed.info/sct";
   public static final String SNOMED_VERSION = "http://snomed.info/sct/32506021000036107/version/20210331";
+  public static final String SNOMED_VERSION_20220930 = "http://snomed.info/sct/32506021000036107/version/20220930";
 
   public static final String AUTOMAP_INPUT_URI = "http://ontoserver.csiro.au/fhir/CodeSystem/codesystem-terms";
 
@@ -54,6 +55,13 @@ public final class TerminologyHelpers {
 
   public static final Coding CD_SNOMED_720471000168102 = snomedCoding("720471000168102",
       "Duodopa intestinal gel");
+
+
+  public static final Coding CD_SNOMED_720471000168102_VER2021 = snomedVersionedCoding(
+      "720471000168102",
+      "Duodopa intestinal gel");
+
+
   public static final Coding CD_SNOMED_72940011000036107 = snomedCoding("72940011000036107",
       "Duodopa gel: intestinal");
 
@@ -86,6 +94,9 @@ public final class TerminologyHelpers {
   public static final Coding CD_SNOMED_VER_63816008 = snomedVersionedCoding("63816008",
       "Left hepatectomy");
 
+  public static final Coding CD_SNOMED_63816008_VER2022 = newVersionedCoding(SNOMED_URI, "63816008",
+      SNOMED_VERSION_20220930, "Left hepatectomy");
+
   // Subsumes CD_SNOMED_63816008
   public static final Coding CD_SNOMED_VER_107963000 = snomedVersionedCoding("107963000",
       "Liver resection");
@@ -106,7 +117,7 @@ public final class TerminologyHelpers {
       "Chronic sinusitis (disorder)");
   private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");
-  
+
   public static final Relation REL_SNOMED_444814009_SUBSUMES_40055000 = RelationBuilder.empty()
       .add(CD_SNOMED_VER_444814009, CD_SNOMED_VER_40055000).build();
 

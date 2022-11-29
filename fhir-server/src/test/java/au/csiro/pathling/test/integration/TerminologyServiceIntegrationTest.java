@@ -81,8 +81,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 
 // TODO: terminology cache: Implement if needed for the new cachable service
 @Tag("Tranche2")
-@Slf4j
 @Disabled
+@Slf4j
 class TerminologyServiceIntegrationTest extends WireMockTest {
 
   @Autowired
