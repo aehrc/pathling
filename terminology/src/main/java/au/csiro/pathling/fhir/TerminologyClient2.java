@@ -59,6 +59,17 @@ public interface TerminologyClient2 {
   );
 
 
+  @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
+  @Nonnull
+  Parameters lookup(
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "version") StringType version,
+      @Nonnull @OperationParam(name = "code") CodeType code,
+      @Nullable @OperationParam(name = "property") CodeType property,
+      @Nullable @OperationParam(name = "displayLanguage") CodeType displayLanguage
+  );
+
+
   static TerminologyClient2 build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
@@ -172,4 +183,31 @@ class TerminologyClient2Impl implements TerminologyClient2 {
         .useHttpGet()
         .execute();
   }
+
+  @Nonnull
+  @Override
+  public Parameters lookup(@Nonnull final UriType system,
+      @Nullable final StringType version, @Nonnull final CodeType code,
+      @Nullable final CodeType property,
+      @Nullable final CodeType displayLanguage) {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("system").setValue(system);
+    params.addParameter().setName("code").setValue(code);
+    if (version != null) {
+      params.addParameter().setName("version").setValue(version);
+    }
+    if (property != null) {
+      params.addParameter().setName("property").setValue(property);
+    }
+    if (displayLanguage != null) {
+      params.addParameter().setName("displayLanguage").setValue(displayLanguage);
+    }
+    return fhirClient.operation()
+        .onType(CodeSystem.class)
+        .named("$lookup")
+        .withParameters(params)
+        .useHttpGet()
+        .execute();
+  }
+
 }

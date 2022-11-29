@@ -17,19 +17,25 @@
 
 package au.csiro.pathling.test.integration;
 
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService2.Property;
+import au.csiro.pathling.terminology.TerminologyService2.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import java.util.*;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
@@ -65,7 +71,12 @@ class TerminologyService2IntegrationTest extends WireMockTest {
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;
-  
+
+  // we do not need to access the resources here
+  @SuppressWarnings("unused")
+  @MockBean
+  private Database database;
+
   private TerminologyService2 terminologyService;
 
   @BeforeEach
@@ -232,6 +243,29 @@ class TerminologyService2IntegrationTest extends WireMockTest {
     terminologyService.validate(SNOMED_URI + "?fhir_vs", CD_SNOMED_284551006);
     verify(anyRequestedFor(urlPathMatching("/fhir/(.*)"))
         .withHeader("User-Agent", matching("pathling/(.*)")));
+  }
+
+
+  @Test
+  void testLookupStandardPropertiesForKnownAndUnknownSystems() {
+    assertEquals(
+        List.of(Property.of("display", new StringType("Left hepatectomy"))),
+        terminologyService.lookup(CD_SNOMED_VER_63816008, "display", null));
+
+    assertEquals(
+        List.of(Property.of("code", new CodeType("55915-3"))),
+        terminologyService.lookup(LC_55915_3, "code", "en"));
+
+    // TODO: Unexpected: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: [0dbaeea4-1bcc-40c0-b7b1-61fe4b4e188a]: A usable code system with URL uuid:unknown could not be resolved.
+
+    // assertEquals(
+    //     Collections.emptyList(),
+    //     terminologyService.lookup(UNKNOWN_SYSTEM_CODING, "display", null));
+
+    // TODO: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: [410fa0b5-50c4-42ba-a4f4-6e952d43a46f]: A usable code system with URL http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/19000101 could not be resolved.
+    // assertEquals(
+    //     Collections.emptyList(),
+    //     terminologyService.lookup(CD_SNOMED_403190006_VERSION_UNKN, "display", null));
   }
 
 }

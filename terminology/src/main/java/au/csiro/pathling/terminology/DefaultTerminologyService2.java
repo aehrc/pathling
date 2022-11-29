@@ -5,6 +5,7 @@ import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
 import static au.csiro.pathling.fhir.ParametersUtils.toMatchParts;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.function.Predicate.not;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
@@ -21,6 +22,7 @@ import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
@@ -65,6 +67,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
             tp.getConcept()))
         .collect(Collectors.toUnmodifiableList());
   }
+
 
   @Override
   public boolean validate(@Nonnull final String url, @Nonnull final Coding coding) {
@@ -132,6 +135,37 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
         required(UriType::new, resolvedSystem),
         optional(StringType::new, resolvedVersion)
     ));
+  }
+
+
+  @Nonnull
+  private static List<PropertyOrDesignation> toPropertiesAndDesignations(
+      @Nonnull final Parameters parameters, @Nullable final String propertyCode) {
+
+    return parameters.getParameter().stream()
+        .filter(not(ParametersParameterComponent::hasPart))
+        .filter(p -> isNull(propertyCode) || propertyCode.equals(p.getName()))
+        .map(p -> Property.of(p.getName(), p.getValue()))
+        .collect(Collectors.toUnmodifiableList());
+  }
+
+  @Nonnull
+  @Override
+  public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
+      @Nullable final String property,
+      @Nullable final String displayLanguage) {
+
+    if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
+      return Collections.emptyList();
+    }
+
+    return toPropertiesAndDesignations(terminologyClient.lookup(
+        required(UriType::new, coding.getSystem()),
+        optional(StringType::new, coding.getVersion()),
+        required(CodeType::new, coding.getCode()),
+        optional(CodeType::new, property),
+        optional(CodeType::new, displayLanguage)
+    ), property);
   }
 
   @Override

@@ -3,6 +3,7 @@ package au.csiro.pathling.sql;
 import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.sql.udf.DisplayUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
 import au.csiro.pathling.sql.udf.TranslateUdf;
 import au.csiro.pathling.sql.udf.MemberOfUdf;
@@ -110,12 +111,23 @@ public interface Terminology {
    * Boolean value, indicating whether the left Coding is subsumed by the right Coding.
    *
    * @param codingA a Column containing a struct representation of a Coding or an array of Codings.
-   * @param codingB a Column containing a struct representation of a Coding or an array of *
+   * @param codingB a Column containing a struct representation of a Coding or an array of
    * Codings.
    * @return the Column containing the result of the operation (boolean)
    */
   @Nonnull
   static Column subsumed_by(@Nonnull final Column codingA, @Nonnull final Column codingB) {
     return call_udf(SubsumesUdf.FUNCTION_NAME, codingA, codingB, lit(true));
+  }
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the canonical display
+   * name associated with the given code.
+   *
+   * @return the Column containing the result of the operation (String)
+   */
+  @Nonnull
+  static Column display(@Nonnull final Column coding) {
+    return call_udf(DisplayUdf.FUNCTION_NAME, coding);
   }
 }

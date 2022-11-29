@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -164,6 +165,22 @@ public class MockTerminologyService2 implements TerminologyService2 {
       return ConceptSubsumptionOutcome.SUBSUMEDBY;
     } else {
       return ConceptSubsumptionOutcome.NOTSUBSUMED;
+    }
+  }
+
+  @Nonnull
+  @Override
+  public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
+      @Nullable final String property,
+      @Nullable final String displayLanguage) {
+
+    final Coding snomedCoding = new Coding("http://snomed.info/sct", "439319006",
+        "Screening for phenothiazine in serum");
+
+    if (SystemAndCode.of(snomedCoding).equals(SystemAndCode.of(coding))) {
+      return List.of(Property.of("display", new StringType(snomedCoding.getDisplay())));
+    } else {
+      return Collections.emptyList();
     }
   }
 }

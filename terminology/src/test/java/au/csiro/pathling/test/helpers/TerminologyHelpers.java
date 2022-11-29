@@ -118,6 +118,14 @@ public final class TerminologyHelpers {
   private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");
 
+  // LOINC
+  
+  public static final String LOINC_URI = "http://loinc.org";
+  public static final String LOINC_NAME = "LOINC v2.73";
+  public static final Coding LC_55915_3 = new Coding(LOINC_URI, "55915-3",
+      "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
+
+
   public static final Relation REL_SNOMED_444814009_SUBSUMES_40055000 = RelationBuilder.empty()
       .add(CD_SNOMED_VER_444814009, CD_SNOMED_VER_40055000).build();
 

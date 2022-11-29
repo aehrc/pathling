@@ -29,7 +29,7 @@ import org.apache.spark.sql.SparkSession;
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
   public TerminologyUdfRegistrar(@Nonnull TerminologyServiceFactory tsf) {
-    super(Collections.emptyList(),
+    super(List.of(new DisplayUdf(tsf)),
         List.of(new MemberOfUdf(tsf)),
         List.of(new SubsumesUdf(tsf)),
         Collections.emptyList(),

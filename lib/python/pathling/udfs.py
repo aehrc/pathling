@@ -113,3 +113,13 @@ def subsumed_by(left_coding: CodingArg, right_coding: CodingArg) -> Column:
     """
     return _invoke_function("subsumed_by", _coding_to_java_column(left_coding),
                             _coding_to_java_column(right_coding))
+
+
+def display(coding: CodingArg) -> Column:
+    """
+    Takes a Coding column as its input. Returns the Column, which contains the canonical display 
+    name associated with the given code.    
+    :param coding: a Column containing a struct representation of a Coding.
+    :return: a Column containing the result of the operation (String).
+    """
+    return _invoke_function("display", _coding_to_java_column(coding))

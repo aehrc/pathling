@@ -19,6 +19,7 @@ package au.csiro.pathling.terminology;
 
 import lombok.Value;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import javax.annotation.Nonnull;
@@ -48,4 +49,61 @@ public interface TerminologyService2 {
 
   @Nonnull
   ConceptSubsumptionOutcome subsumes(@Nonnull Coding codingA, @Nonnull Coding codingB);
+
+
+  interface PropertyOrDesignation {
+    // marker interface
+  }
+
+
+  @Value(staticConstructor = "of")
+  class Property implements PropertyOrDesignation {
+
+    @Nonnull
+    String code;
+    @Nonnull
+    Type value;
+
+    @Nonnull
+    public String getValueAsString() {
+      return value.primitiveValue();
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      Property property = (Property) o;
+
+      if (!code.equals(property.code)) {
+        return false;
+      }
+      return value.equalsDeep(property.value);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = code.hashCode();
+      result = 31 * result + value.hashCode();
+      return result;
+    }
+  }
+
+  /**
+   * Looks up the properties and designations of given coding in the terminology server.
+   *
+   * @param coding the coding to lookup.
+   * @param property the code of the property to lookup.
+   * @param displayLanguage the language to use for narrowing down designations.
+   * @return the list of properties and/or designations.
+   */
+  @Nonnull
+  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String property,
+      @Nullable String displayLanguage);
+
 }

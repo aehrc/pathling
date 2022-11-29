@@ -20,6 +20,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
+import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.test.TerminologyTest;
 import java.util.Collections;
@@ -27,6 +28,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
@@ -229,6 +231,49 @@ public class DefaultTerminologyService2Test extends TerminologyTest {
     assertEquals(EMPTY_TRANSLATION,
         terminologyService.translate(INVALID_CODING_2, CONCEPT_MAP_0, false, SYSTEM_B));
     verifyNoMoreInteractions(terminologClient);
+  }
+
+  @Test
+  public void testLooksUpInvalidCoding() {
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(INVALID_CODING_0, null, null));
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(INVALID_CODING_1, "display", null));
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(INVALID_CODING_2, "designation", "en"));
+    verifyNoMoreInteractions(terminologClient);
+  }
+
+  @Nonnull
+  private static Parameters standardProperties(@Nonnull final Coding coding) {
+    return new Parameters()
+        .addParameter("display", coding.getDisplay())
+        .addParameter("code", new CodeType(coding.getCode()))
+        .addParameter("name", "My Test Coding System");
+  }
+
+  @Test
+  public void testLooksUpStandardProperty() {
+
+    when(terminologClient.lookup(
+        deepEq(new UriType(SYSTEM_A)),
+        isNull(),
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType("display")),
+        isNull())).thenReturn(standardProperties(CODING_A));
+
+    when(terminologClient.lookup(
+        deepEq(new UriType(SYSTEM_B)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new CodeType("code")),
+        deepEq(new CodeType("en")))).thenReturn(standardProperties(CODING_BB_VERSION1));
+    
+    assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
+        terminologyService.lookup(CODING_AA, "display", null));
+
+    assertEquals(List.of(Property.of("code", new CodeType(CODING_BB_VERSION1.getCode()))),
+        terminologyService.lookup(CODING_BB_VERSION1, "code", "en"));
   }
 
 }

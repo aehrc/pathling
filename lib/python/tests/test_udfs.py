@@ -26,7 +26,7 @@ from pathling import PathlingContext
 from pathling.coding import Coding
 from pathling.etc import SNOMED_URI
 from pathling.etc import find_jar as find_pathling_jar
-from pathling.udfs import member_of, subsumes, subsumed_by, translate
+from pathling.udfs import member_of, subsumes, subsumed_by, translate, display
 
 PROJECT_DIR = os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
@@ -290,4 +290,33 @@ def test_translate(spark: SparkSession, ptl: PathlingContext):
 
     assert result_df.collect() == [
         Result("id-1", [snomed_coding_row("368529002")]),
+    ];
+
+
+def test_display(spark: SparkSession, ptl: PathlingContext):
+    df = spark.createDataFrame(
+            [
+                ("id-1", snomed_coding_row("439319006")),
+                ("id-2", loinc_coding_row("55915-3")),
+                ("id-3", None),
+            ],
+            schema=StructType([StructField("id", StringType()),
+                               StructField("code", CODING_TYPE)])
+    )
+
+    expected_result = [
+        Result("id-1", "Screening for phenothiazine in serum"),
+        Result("id-2", None),
+        Result("id-3", None),
+    ]
+
+    result_df = df.select("id", display("code").alias("result"))
+    assert result_df.collect() == expected_result
+
+    result_df = df.select("id", display(df["code"]).alias("result"))
+    assert result_df.collect() == expected_result
+
+    result_df = df.limit(1).select("id", display(Coding(SNOMED_URI, "439319006")).alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", "Screening for phenothiazine in serum")
     ];
