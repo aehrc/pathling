@@ -11,6 +11,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +20,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
@@ -162,21 +164,53 @@ public class TerminologyServiceHelpers {
     }
   }
 
+
+  public static class LookupExpectations {
+
+    private final TerminologyService2 mockService;
+
+    public LookupExpectations(final TerminologyService2 mockService) {
+      this.mockService = mockService;
+      clearInvocations(mockService);
+      when(mockService.lookup(any(), any(), any())).thenReturn(Collections.emptyList());
+    }
+
+    @Nonnull
+    public LookupExpectations withDisplay(@Nonnull final Coding coding,
+        @Nonnull final String displayName) {
+      when(mockService.lookup(codingEq(coding), eq("display"), any()))
+          .thenReturn(List.of(
+              Property.of("display", new StringType(displayName))));
+      return this;
+    }
+    
+    @Nonnull
+    public LookupExpectations withDisplay(@Nonnull final Coding coding) {
+      return withDisplay(coding, coding.getDisplay());
+    }
+  }
+
+  @Nonnull
   public static ValidateExpectations setupValidate(@Nonnull final TerminologyService2 mockService) {
     return new ValidateExpectations(mockService);
   }
 
 
+  @Nonnull
   public static TranslateExpectations setupTranslate(
       @Nonnull final TerminologyService2 mockService) {
     return new TranslateExpectations(mockService);
   }
 
 
+  @Nonnull
   public static SubsumesExpectations setupSubsumes(
       @Nonnull final TerminologyService2 mockService) {
     return new SubsumesExpectations(mockService);
   }
 
+  public static LookupExpectations setupLookup(@Nonnull final TerminologyService2 mockService) {
+    return new LookupExpectations(mockService);
+  }
 
 }

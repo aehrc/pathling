@@ -15,9 +15,11 @@ import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.TerminologyTest;
 import java.util.List;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 public class DisplayUdfTest extends TerminologyTest {
 
 
@@ -55,14 +57,10 @@ public class DisplayUdfTest extends TerminologyTest {
   @Test
   void testGetsDisplayName() {
 
-    when(terminologyService2.lookup(deepEq(CODING_A), eq("display"),
-        isNull())).thenReturn(List.of(
-        Property.of("display", new StringType(DISPLAY_NAME_A))
-    ));
-    when(terminologyService2.lookup(deepEq(CODING_BB_VERSION1),
-        eq("display"), isNull())).thenReturn(List.of(
-        Property.of("display", new StringType(DISPLAY_NAME_B))
-    ));
+    TerminologyServiceHelpers.setupLookup(terminologyService2)
+        .withDisplay(CODING_A, DISPLAY_NAME_A)
+        .withDisplay(CODING_BB_VERSION1, DISPLAY_NAME_B);
+
     assertEquals(DISPLAY_NAME_A, displayUdf.call(encode(CODING_A)));
     assertEquals(DISPLAY_NAME_B, displayUdf.call(encode(CODING_BB_VERSION1)));
   }

@@ -109,17 +109,12 @@ public class TerminologyUdsfTest {
 
 
   private void setupDisplayExpectations() {
-    when(terminologyService.lookup(deepEq(CODING_1), eq("display"),
-        isNull())).thenReturn(List.of(
-        Property.of("display", new StringType(CODING_1.getDisplay()))
-    ));
-    when(terminologyService.lookup(deepEq(CODING_2),
-        eq("display"), isNull())).thenReturn(List.of(
-        Property.of("display", new StringType(CODING_2.getDisplay()))
-    ));
+
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDisplay(CODING_1)
+        .withDisplay(CODING_2);
   }
-
-
+  
   @Test
   public void testValidateCoding() {
     setupValidateCodingExpectations();
@@ -427,7 +422,7 @@ public class TerminologyUdsfTest {
         .build();
     DatasetAssert.of(resultSwapped).hasRows(expectedResultSwapped);
   }
-  
+
   @Test
   public void testDisplay() {
     setupDisplayExpectations();

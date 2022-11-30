@@ -64,6 +64,7 @@ public interface NamedFunction {
       .put("extension", new ExtensionFunction())
       .put("until", new UntilFunction())
       .put("exists", new ExistsFunction())
+      .put("display", new DisplayFunction())
       .build();
 
   /**
