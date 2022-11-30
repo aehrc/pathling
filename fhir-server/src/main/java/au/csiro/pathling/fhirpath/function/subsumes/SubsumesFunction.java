@@ -19,9 +19,9 @@ package au.csiro.pathling.fhirpath.function.subsumes;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConcept;
-import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
-import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.sql.Terminology.subsumed_by;
+import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
@@ -68,6 +68,11 @@ public class SubsumesFunction implements NamedFunction {
   private static final String COL_CODING = "coding";
   private static final String FIELD_CODING = "coding";
 
+
+  private static final String COL_INPUT_CODINGS = "inputCodings";
+  private static final String COL_ARG_CODINGS = "argCodings";
+
+
   private boolean inverted = false;
   private String functionName = "subsumes";
 
@@ -98,17 +103,15 @@ public class SubsumesFunction implements NamedFunction {
     final NonLiteralPath inputFhirPath = input.getInput();
     final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
         input.getArguments().get(0));
-
-    final TerminologyServiceFactory terminologyServiceFactory = checkPresent(
-        input.getContext().getTerminologyServiceFactory());
-    final Dataset<Row> resultDataset = TerminologyFunctions.of(terminologyServiceFactory)
-        .subsumes(idAndCodingSet, idAndCodingSet.col(COL_INPUT_CODINGS),
-            idAndCodingSet.col(COL_ARG_CODINGS), "result", inverted);
-    final Column resultColumn = col("result");
+    final Column leftCodings = idAndCodingSet.col(COL_INPUT_CODINGS);
+    final Column rightCodings = idAndCodingSet.col(COL_ARG_CODINGS);
+    final Column resultColumn = inverted
+                                ? subsumed_by(leftCodings, rightCodings)
+                                : subsumes(leftCodings, rightCodings);
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
-    return ElementPath.build(expression, resultDataset, inputFhirPath.getIdColumn(),
+    return ElementPath.build(expression, idAndCodingSet, inputFhirPath.getIdColumn(),
         inputFhirPath.getEidColumn(), resultColumn, inputFhirPath.isSingular(),
         inputFhirPath.getCurrentResource(), inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }

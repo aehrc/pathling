@@ -163,40 +163,6 @@ public class TranslateFunction implements NamedFunction {
                                                ? inputPath.getChildElement("coding").get()
                                                : inputPath.getDefinition().get();
 
-    // TODO: terminology-caching : remove or validate
-    // final Column codingArrayCol = isCodeableConcept
-    //                               ? conceptColumn.getField("coding")
-    //                               : functions.when(conceptColumn.isNotNull(),
-    //                                       functions.array(conceptColumn))
-    //                                   .otherwise(functions.lit(null));
-    //
-    // // Prepare the data which will be used within the map operation. All of these things must be
-    // // Serializable.
-    // final TerminologyServiceFactory terminologyServiceFactory =
-    //     checkPresent(inputContext.getTerminologyServiceFactory());
-    //
-    // final Arguments arguments = Arguments.of(input);
-    //
-    // final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
-    // final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
-    //     .booleanValue();
-    // final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
-    //     .asStringValue();
-    // final Dataset<Row> dataset = inputPath.getDataset();
-    //
-    // final Dataset<Row> translatedDataset = TerminologyFunctions.translate(
-    //     codingArrayCol, conceptMapUrl, reverse, equivalence, dataset, "result",
-    //     terminologyServiceFactory, MDC.get("requestId")
-    // );
-    //
-    // // The result is an array of translations per each input element, which we now
-    // // need to explode in the same way as for path traversal, creating unique element ids.
-    // final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
-    // final Dataset<Row> resultDataset = inputPath
-    //     .explodeArray(translatedDataset, translatedDataset.col("result"), valueAndEidColumns);
-    // // Construct a new result expression.
-    //
-
     final Arguments arguments = Arguments.of(input);
     final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
     final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))

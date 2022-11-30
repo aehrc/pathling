@@ -26,7 +26,6 @@ import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchExecutor;
-import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
@@ -61,9 +60,6 @@ abstract class AggregateExecutorTest {
 
   @Autowired
   TerminologyService2 terminologyService2;
-  
-  @Autowired
-  TerminologyService terminologyService;
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;

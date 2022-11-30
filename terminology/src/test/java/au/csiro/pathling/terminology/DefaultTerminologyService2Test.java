@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
-import au.csiro.pathling.test.TerminologyTest;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -35,7 +35,7 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DefaultTerminologyService2Test extends TerminologyTest {
+public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase {
 
   private static final String VALUE_SET_X = "uuid:valueSetX";
   private static final String VALUE_SET_Y = "uuid:valueSetY";

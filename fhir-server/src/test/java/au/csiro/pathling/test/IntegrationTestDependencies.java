@@ -19,13 +19,10 @@ package au.csiro.pathling.test;
 
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.UUIDFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.util.UUID;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -52,30 +49,15 @@ public class IntegrationTestDependencies {
   }
 
   @Bean
-  public UUIDFactory uuidFactory() {
-    return UUID::randomUUID;
-  }
-
-  @Bean
   public DefaultTerminologyServiceFactory terminologyServiceFactory(
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final Configuration configuration, 
-      @Nonnull final UUIDFactory uuidFactory) {
+      @Nonnull final Configuration configuration) {
     log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
-    final DefaultTerminologyServiceFactory factory = new DefaultTerminologyServiceFactory(
+    return new DefaultTerminologyServiceFactory(
         fhirContext.getVersion().getVersion(),
-        configuration.getTerminology().getServerUrl(), 0, false,
+        configuration.getTerminology().getServerUrl(), false,
         configuration.getTerminology().getClient(),
         configuration.getTerminology().getCache(),
         configuration.getTerminology().getAuthentication());
-    factory.setUUIDFactory(uuidFactory);
-    return factory;
   }
-  
-  @Bean
-  public TerminologyService terminologyService(
-      @Nonnull final DefaultTerminologyServiceFactory terminologyServiceFactory) throws NoSuchFieldException, IllegalAccessException {
-    return terminologyServiceFactory.buildService();
-  }
-
 }

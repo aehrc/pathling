@@ -14,13 +14,13 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.TerminologyTest;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("ConstantConditions")
-public class MemberOfUdfTest extends TerminologyTest {
+public class MemberOfUdfTest extends AbstractTerminologyTestBase {
 
   private static final String VALUE_SET_URL_A = "uuid:vsA";
   private static final String VALUE_SET_URL_AB = "uuid:vsAB";
