@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function.translate;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.translate;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
@@ -36,13 +37,17 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.utilities.Strings;
+import lombok.Builder;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 
@@ -151,12 +156,8 @@ public class TranslateFunction implements NamedFunction {
 
     final ElementPath inputPath = (ElementPath) input.getInput();
 
-    final ParserContext inputContext = input.getContext();
     final Column idColumn = inputPath.getIdColumn();
-    final Column conceptColumn = inputPath.getValueColumn();
-
     final boolean isCodeableConcept = isCodeableConcept(inputPath);
-
     // The definition of the result is always the Coding element.
     @SuppressWarnings("OptionalGetWithoutIsPresent")
     final ElementDefinition resultDefinition = isCodeableConcept
@@ -167,8 +168,9 @@ public class TranslateFunction implements NamedFunction {
     final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
     final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
         .booleanValue();
-    final String equivalence = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
-        .asStringValue();
+    final String equivalence = validateEquivalences(
+        arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
+            .asStringValue());
     @Nullable final String target = Optional.ofNullable(
             arguments.getNullableValue(3, StringType.class))
         .map(StringType::asStringValue)
@@ -209,5 +211,14 @@ public class TranslateFunction implements NamedFunction {
         String.format("Function `%s` expects `%s` as argument %s", NAME, "Boolean literal", 2));
     checkUserInput(arguments.size() <= 2 || arguments.get(2) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 3));
+  }
+
+  @Nonnull
+  private String validateEquivalences(@Nonnull final String equivalencesCsv) {
+    return Strings.parseCsvList(equivalencesCsv,
+            wrapInUserInputError(
+                ConceptMapEquivalence::fromCode)).stream()
+        .map(ConceptMapEquivalence::toCode)
+        .collect(Collectors.joining(","));
   }
 }

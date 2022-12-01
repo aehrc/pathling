@@ -50,14 +50,14 @@ public class TerminologyServiceHelpers {
     ValidateExpectations(@Nonnull final TerminologyService2 mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
-      when(mockService.validate(any(), any())).thenReturn(false);
+      when(mockService.validateCode(any(), any())).thenReturn(false);
     }
 
     @Nonnull
     public ValidateExpectations withValueSet(@Nonnull final String valueSetUrl,
         @Nonnull final Coding... codings) {
       for (Coding coding : codings) {
-        when(mockService.validate(eq(valueSetUrl), codingEq(coding))).thenReturn(true);
+        when(mockService.validateCode(eq(valueSetUrl), codingEq(coding))).thenReturn(true);
       }
       return this;
     }

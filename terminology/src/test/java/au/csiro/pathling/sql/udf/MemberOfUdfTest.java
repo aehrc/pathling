@@ -91,7 +91,7 @@ public class MemberOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testEarlyExitWhenMatchingCodingFound() {
     assertTrue(memberUdf.call(encodeMany(CODING_A, CODING_B), VALUE_SET_URL_AB));
-    verify(terminologyService2).validate(eq(VALUE_SET_URL_AB), deepEq(CODING_A));
+    verify(terminologyService2).validateCode(eq(VALUE_SET_URL_AB), deepEq(CODING_A));
     verifyNoMoreInteractions(terminologyService2);
   }
 }

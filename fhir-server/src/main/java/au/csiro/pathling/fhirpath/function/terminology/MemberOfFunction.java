@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function.memberof;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;

@@ -79,7 +79,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         isNull(),
         deepEq(new CodeType(CODE_A))
     )).thenReturn(RESULT_TRUE);
-    assertTrue(terminologyService.validate(VALUE_SET_X, CODING_AA));
+    assertTrue(terminologyService.validateCode(VALUE_SET_X, CODING_AA));
   }
 
   @Test
@@ -90,14 +90,14 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B))
     )).thenReturn(RESULT_FALSE);
-    assertFalse(terminologyService.validate(VALUE_SET_Y, CODING_BB_VERSION1));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, CODING_BB_VERSION1));
   }
 
   @Test
   public void testValidateInvalidCodings() {
-    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_0));
-    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_1));
-    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_2));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_0));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_1));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_2));
   }
 
   @Test

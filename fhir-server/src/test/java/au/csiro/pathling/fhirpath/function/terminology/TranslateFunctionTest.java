@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function.translate;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
@@ -70,7 +70,6 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -451,9 +450,6 @@ class TranslateFunctionTest {
         ));
   }
 
-
-  // TODO: Add early validation in TranslateFunction
-  @Disabled
   @Test
   void throwsErrorIfCannotParseEquivalences() {
     assertThrowsErrorForArguments(

@@ -169,26 +169,26 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   void testCorrectlyValidatesKnownAndUnknownSystems() {
 
     assertTrue(
-        terminologyService.validate("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+        terminologyService.validateCode("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             CD_SNOMED_284551006)
     );
 
     assertTrue(
-        terminologyService.validate("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+        terminologyService.validateCode("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             CD_SNOMED_VER_403190006));
 
     assertFalse(
-        terminologyService.validate("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+        terminologyService.validateCode("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             CD_SNOMED_72940011000036107)
     );
 
     assertFalse(
-        terminologyService.validate("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+        terminologyService.validateCode("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             CD_AST_VIC)
     );
 
     assertFalse(
-        terminologyService.validate("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+        terminologyService.validateCode("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             UNKNOWN_SYSTEM_CODING)
     );
 
@@ -229,7 +229,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
 
   @Test
   void testUserAgentHeader() {
-    terminologyService.validate(SNOMED_URI + "?fhir_vs", CD_SNOMED_284551006);
+    terminologyService.validateCode(SNOMED_URI + "?fhir_vs", CD_SNOMED_284551006);
     verify(anyRequestedFor(urlPathMatching("/fhir/(.*)"))
         .withHeader("User-Agent", matching("pathling/(.*)")));
   }
