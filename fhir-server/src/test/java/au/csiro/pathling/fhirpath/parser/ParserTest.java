@@ -82,6 +82,12 @@ public class ParserTest extends AbstractParserTest {
         "http://snomed.info/sct?fhir_cm=900000000000526001");
   }
 
+  private void setupMockDisplayFor_195662009_444814009() {
+    TerminologyServiceHelpers.setupLookup(terminologyService2)
+        .withDisplay(CD_SNOMED_195662009)
+        .withDisplay(CD_SNOMED_444814009);
+  }
+  
   @Test
   void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
@@ -463,6 +469,17 @@ public class ParserTest extends AbstractParserTest {
   }
 
   @Test
+  void testDisplayFunction() {
+
+    setupMockDisplayFor_195662009_444814009();
+
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.display()")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+  }
+
+  @Test
   void testTranslateWithWhereAndTranslate() {
 
     setupMockTranslationFor_195662009_444814009("uuid:cm=1")
@@ -474,7 +491,6 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=13).code")
         .selectOrderedResult()
-        .debugAllRows()
         .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
   }
 

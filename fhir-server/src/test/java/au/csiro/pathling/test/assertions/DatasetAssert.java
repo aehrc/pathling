@@ -96,8 +96,10 @@ public class DatasetAssert {
   @Nonnull
   private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
     final List<Row> actualRows = dataset.collectAsList();
-    assertTrue(actualRows.containsAll(expected));
-    assertTrue(expected.containsAll(actualRows));
+    assertTrue(actualRows.containsAll(expected),
+        String.format("exp: %s\nact: %s", expected, actualRows));
+    assertTrue(expected.containsAll(actualRows),
+        String.format("exp: %s\nact: %s", expected, actualRows));
     assertEquals(expected.size(), actualRows.size());
     return this;
   }
