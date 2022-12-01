@@ -71,6 +71,6 @@ public class MemberOfUdf implements SqlFunction,
     }
     final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
     return validCodings(codings)
-        .anyMatch(coding -> terminologyService.validate(url, coding));
+        .anyMatch(coding -> terminologyService.validateCode(url, coding));
   }
 }

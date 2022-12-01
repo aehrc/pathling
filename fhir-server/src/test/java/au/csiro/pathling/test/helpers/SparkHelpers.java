@@ -22,16 +22,14 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
+import au.csiro.pathling.utilities.Preconditions;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.utilities.Preconditions;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -130,20 +128,7 @@ public abstract class SparkHelpers {
             null}, codingStructType());
   }
 
-  @Nonnull
-  public static Row rowFromSimpleCoding(@Nonnull final SimpleCoding coding) {
-    return new GenericRowWithSchema(
-        new Object[]{coding.getSystem(), coding.getVersion(), coding.getCode()},
-        simpleCodingStructType());
-  }
-
-  @Nonnull
-  public static List<Row> rowsFromSimpleCodings(@Nonnull final SimpleCoding... codings) {
-    return Stream.of(codings)
-        .map(SparkHelpers::rowFromSimpleCoding)
-        .collect(Collectors.toList());
-  }
-
+  
   @Nonnull
   public static Row rowFromCodeableConcept(@Nonnull final CodeableConcept codeableConcept) {
     final List<Coding> coding = codeableConcept.getCoding();

@@ -134,8 +134,8 @@ public class MockTerminologyService2 implements TerminologyService2 {
   }
 
   @Override
-  public boolean validate(@Nonnull final String url, @Nonnull final Coding coding) {
-    return valueSets.getOrDefault(url, ValueSet.EMPTY).contains(coding);
+  public boolean validateCode(@Nonnull final String codeSystemUrl, @Nonnull final Coding coding) {
+    return valueSets.getOrDefault(codeSystemUrl, ValueSet.EMPTY).contains(coding);
   }
 
   @Nonnull

@@ -18,9 +18,9 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.terminology.TerminologyService;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +72,7 @@ public class ParserContext {
   private final Database database;
 
   /**
-   * A factory for creating new {@link TerminologyService} objects, which is needed within blocks of
+   * A factory for creating new {@link TerminologyService2} objects, which is needed within blocks of
    * code that are run in parallel. Will only be present if a terminology service has been
    * configured.
    */
@@ -107,7 +107,7 @@ public class ParserContext {
    * @param sparkSession a {@link SparkSession} that can be used to resolve Spark queries required
    * for this expression
    * @param database for retrieving data relating to resource references
-   * @param terminologyServiceFactory a factory for {@link TerminologyService} objects, used for
+   * @param terminologyServiceFactory a factory for {@link TerminologyService2} objects, used for
    * parallel processing
    * @param groupingColumns the list of columns to group on when aggregating
    * @param nodeIdColumns columns relating to the identity of resources and elements for different

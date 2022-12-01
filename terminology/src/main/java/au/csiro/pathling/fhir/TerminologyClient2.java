@@ -24,10 +24,16 @@ import javax.annotation.Nullable;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
+/**
+ * The client interface to FHIR terminology operations.
+ */
 public interface TerminologyClient2 {
 
   Logger log = LoggerFactory.getLogger(TerminologyClient2.class);
 
+  /**
+   * See: <a href="https://www.hl7.org/fhir/R4/operation-codesystem-validate-code.html">CodeSystem/$validate-code</a>
+   */
   @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
   @Nonnull
   Parameters validateCode(
@@ -37,7 +43,9 @@ public interface TerminologyClient2 {
       @Nonnull @OperationParam(name = "code") CodeType code
   );
 
-
+  /**
+   * See: <a href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   */
   @Operation(name = "$translate", type = CodeSystem.class, idempotent = true)
   @Nonnull
   Parameters translate(
@@ -49,6 +57,9 @@ public interface TerminologyClient2 {
       @Nullable @OperationParam(name = "system") UriType target
   );
 
+  /**
+   * See: <a href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   */
   @Operation(name = "$subsumes", type = CodeSystem.class, idempotent = true)
   @Nonnull
   Parameters subsumes(
@@ -58,7 +69,9 @@ public interface TerminologyClient2 {
       @Nullable @OperationParam(name = "version") StringType version
   );
 
-
+  /**
+   * See: <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   */
   @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
   @Nonnull
   Parameters lookup(
@@ -70,11 +83,22 @@ public interface TerminologyClient2 {
   );
 
 
+  /**
+   * Builds a new terminology client.
+   *
+   * @param fhirContext the FHIR context to use.
+   * @param terminologyServerUrl the url to terminology server.
+   * @param verboseRequestLogging enables verbose logging that includes bodes HTTP requests and
+   * responses.
+   * @param authConfig the authentication to use for the server.
+   * @param httpClient the {@link HttpClient} instance to use for HTTP request.
+   * @return the new instance of {@link TerminologyClient2}.
+   */
+  
   static TerminologyClient2 build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
-      @Nonnull final
-      HttpClient httpClient) {
+      @Nonnull final HttpClient httpClient) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
     restfulClientFactory.setHttpClient(httpClient);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);

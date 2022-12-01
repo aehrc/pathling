@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function.memberof;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
@@ -60,40 +60,16 @@ public class MemberOfFunction implements NamedFunction {
     validateInput(input);
     final ElementPath inputPath = (ElementPath) input.getInput();
     final StringLiteralPath argument = (StringLiteralPath) input.getArguments().get(0);
-
-    final Column idColumn = inputPath.getIdColumn();
     final String valueSetUrl = argument.getValue().asStringValue();
-    
+
     final Column resultColumn = member_of(getCodingColumn(inputPath), valueSetUrl);
-    final Dataset<Row> resultDataset = inputPath.getDataset();
-
-    // TODO: teminolog-cachig: maybe the switcheable version
-    // final Column inputColumn = (isCodeableConcept(inputPath))
-    //                            ? lit(null)
-    //                            : conceptColumn;
-    //
-    // final Dataset<Row> inputDataset = inputPath.getDataset();
-    // log.debug("Input dataset has {} partitions", inputDataset.rdd().getNumPartitions());
-    //
-    // // Prepare the data which will be used within the map operation. All of these things must be
-    // // Serializable.
-    // final TerminologyServiceFactory terminologyServiceFactory =
-    //     checkPresent(input.getContext().getTerminologyServiceFactory());
-    // final String valueSetUri = argument.getValue().getValueAsString();
-    //
-    // final Result result = terminologyServiceFactory.memberOf(inputDataset,
-    //     inputColumn, valueSetUri);
-    //
-    // final Column resultColumn = result.getColumn();
-    // final Dataset<Row> resultDataset = result.getDataset();
-
     // Construct a new result expression.
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, resultDataset, idColumn, inputPath.getEidColumn(),
-            resultColumn,
-            inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
+        .build(expression, inputPath.getDataset(), inputPath.getIdColumn(),
+            inputPath.getEidColumn(), resultColumn, inputPath.isSingular(),
+            inputPath.getCurrentResource(), inputPath.getThisColumn(),
             FHIRDefinedType.BOOLEAN);
   }
 

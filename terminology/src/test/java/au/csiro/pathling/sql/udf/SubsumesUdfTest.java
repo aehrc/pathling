@@ -2,7 +2,7 @@ package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.TerminologyTest;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("ConstantConditions")
-public class SubsumesUdfTest extends TerminologyTest {
+public class SubsumesUdfTest extends AbstractTerminologyTestBase {
 
   private SubsumesUdf subsumesUdf;
   private TerminologyService2 terminologyService2;

@@ -1,17 +1,16 @@
 package au.csiro.pathling.terminology;
 
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.caching.CachingFactories;
 import au.csiro.pathling.config.HttpCacheConf;
 import au.csiro.pathling.config.HttpClientConf;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhir.TerminologyClient2;
 import au.csiro.pathling.utilities.ObjectHolder;
-import au.csiro.pathling.utilities.ObjectHolder.SingletonHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.EqualsAndHashCode;
@@ -26,12 +25,10 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
-import static java.util.Objects.nonNull;
-
 
 /**
- * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService}
- * implemented using {@link TerminologyClient} with given configuration.
+ * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService2}
+ * implemented using {@link TerminologyClient2} with given configuration.
  *
  * @author John Grimes
  * @author Piotr Szul
@@ -47,10 +44,6 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   @Nonnull
   private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService2> terminologyServiceHolder2 = ObjectHolder.singleton(
       DefaultTerminologyServiceFactory::createService2);
-
-  @Nonnull
-  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = ObjectHolder.singleton(
-      DefaultTerminologyServiceFactory::createService);
 
 
   @Nonnull
@@ -70,13 +63,8 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   @Nonnull
   private final TerminologyAuthConfiguration authConfig;
 
-  @Deprecated
-  @Nonnull
-  private transient UUIDFactory uuidFactory = UUID::randomUUID;
-
   public static synchronized void reset() {
     log.info("Resetting terminology services");
-    terminologyServiceHolder.reset();
     terminologyServiceHolder2.reset();
   }
 
@@ -114,29 +102,11 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     this.cacheConfig = cacheConfig;
   }
 
-  @Nonnull
-  @Override
-  public TerminologyService buildService() {
-    //noinspection NullableProblems
-    return terminologyServiceHolder.getOrCreate(this);
-  }
 
   @Nonnull
   @Override
   public TerminologyService2 buildService2() {
     return terminologyServiceHolder2.getOrCreate(this);
-  }
-
-  @Nonnull
-  private TerminologyService createService() {
-    final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
-    //TODO: maybe share the HttpClient 
-    final CloseableHttpClient httpClient = buildHttpClient(clientConfig,
-        cacheConfig);
-    final TerminologyClient terminologyClient = TerminologyClient.build(
-        fhirContext, terminologyServerUrl, verboseRequestLogging, authConfig,
-        httpClient);
-    return new DefaultTerminologyService(fhirContext, terminologyClient, uuidFactory);
   }
 
   @Nonnull
@@ -178,10 +148,5 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
         .setConnectionManagerShared(false)
         .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
         .build();
-  }
-
-  @Deprecated
-  public void setUUIDFactory(UUIDFactory uuidFactory) {
-    this.uuidFactory = uuidFactory;
   }
 }

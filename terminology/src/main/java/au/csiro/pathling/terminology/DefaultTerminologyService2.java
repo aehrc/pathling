@@ -70,14 +70,14 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
 
   @Override
-  public boolean validate(@Nonnull final String url, @Nonnull final Coding coding) {
+  public boolean validateCode(@Nonnull final String codeSystemUrl, @Nonnull final Coding coding) {
 
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return false;
     }
 
     return toBooleanResult(terminologyClient.validateCode(
-        required(UriType::new, url), required(UriType::new, coding.getSystem()),
+        required(UriType::new, codeSystemUrl), required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
         required(CodeType::new, coding.getCode())
     ));

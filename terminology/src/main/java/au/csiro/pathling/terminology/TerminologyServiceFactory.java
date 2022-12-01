@@ -17,26 +17,15 @@
 
 package au.csiro.pathling.terminology;
 
-import au.csiro.pathling.terminology.TerminologyService;
 import java.io.Serializable;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.terminology.TerminologyService2;
 
 /**
- * Represents something that creates a {@link TerminologyService}.
+ * Represents something that creates a {@link TerminologyService2}.
  * <p>
  * Used for code that runs on Spark workers.
  */
 public interface TerminologyServiceFactory extends Serializable {
-  
-  /**
-   * Builds a new instance.
-   *
-   * @return a shiny new TerminologyService instance
-   */
-  @Nonnull
-  @Deprecated
-  TerminologyService buildService();
 
   /**
    * Builds a new instance.

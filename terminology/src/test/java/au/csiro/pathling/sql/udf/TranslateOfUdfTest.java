@@ -4,7 +4,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.TerminologyTest;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +17,7 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class TranslateOfUdfTest extends TerminologyTest {
+public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
 
   private static final String CONCEPT_MAP_A = "uuid:caA";
   private static final String CONCEPT_MAP_B = "uuid:caB";

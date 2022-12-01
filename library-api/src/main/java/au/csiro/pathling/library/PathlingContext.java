@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.library;
 
-import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_ARG_CODINGS;
-import static au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders.COL_INPUT_CODINGS;
 import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_SERVER_URL;
 import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_VERBOSE_LOGGING;
 import static java.util.Objects.nonNull;
@@ -31,7 +29,6 @@ import au.csiro.pathling.config.HttpClientConf;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
-import au.csiro.pathling.sql.SqlStrategy;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
@@ -67,6 +64,9 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 @Slf4j
 public class PathlingContext {
 
+  private static final String COL_INPUT_CODINGS = "inputCodings";
+  private static final String COL_ARG_CODINGS = "argCodings";
+  
   @Nonnull
   @Getter
   private final SparkSession spark;
@@ -93,7 +93,6 @@ public class PathlingContext {
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.terminologyFunctions = TerminologyFunctions.of(terminologyServiceFactory);
-    SqlStrategy.setup(spark);
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
   }
 
