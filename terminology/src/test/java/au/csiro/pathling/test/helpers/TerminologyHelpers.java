@@ -109,9 +109,16 @@ public final class TerminologyHelpers {
       "Chronic sinusitis (disorder)");
   private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");
-  
+
   public static final Coding CD_AUTOMAP_INPUT_DESCRIPTION_ID = new Coding(AUTOMAP_INPUT_URI,
       "101013", null);
+
+  // LOINC
+
+  public static final String LOINC_URI = "http://loinc.org";
+  public static final String LOINC_NAME = "LOINC v2.73";
+  public static final Coding LC_55915_3 = new Coding(LOINC_URI, "55915-3",
+      "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
 
   @Nonnull
   public static Coding newVersionedCoding(@Nonnull final String system, @Nonnull final String code,

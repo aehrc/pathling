@@ -17,14 +17,45 @@
 
 package au.csiro.pathling.test.integration;
 
+import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_63816008;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_720471000168102;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_720471000168102_VER2021;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_72940011000036107;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_403190006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_AUTOMAP_DEFAULT;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_55915_3;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.newVersionedCoding;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedCoding;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
+import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
+import java.util.Collections;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.CodeType;
@@ -32,19 +63,13 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import java.util.*;
-
-import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author Piotr Szul
@@ -244,8 +269,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
     verify(anyRequestedFor(urlPathMatching("/fhir/(.*)"))
         .withHeader("User-Agent", matching("pathling/(.*)")));
   }
-
-
+  
   @Test
   void testLookupStandardPropertiesForKnownAndUnknownSystems() {
     assertEquals(

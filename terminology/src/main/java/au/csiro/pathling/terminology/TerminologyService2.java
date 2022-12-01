@@ -146,7 +146,10 @@ public interface TerminologyService2 {
   }
 
   /**
-   * Looks up the properties and designations of given coding in the terminology server.
+   * Gets additional details about the concept, including designations and properties. Abstracts
+   * the
+   * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * operation.
    *
    * @param coding the coding to lookup.
    * @param property the code of the property to lookup. If not null only the properties with
