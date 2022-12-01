@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function.subsumes;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
@@ -28,8 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -40,14 +38,14 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.Relation;
+import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.assertions.ElementPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
@@ -90,13 +88,6 @@ class SubsumesFunctionTest {
   static final String RES_ID3 = "condition-xyz3";
   static final String RES_ID4 = "condition-xyz4";
   static final String RES_ID5 = "condition-xyz5";
-
-  // coding_large -- subsumes --> coding_medium --> subsumes --> coding_small
-  static final Relation RELATION_LARGE_MEDIUM_SMALL = RelationBuilder.empty()
-      .add(CODING_LARGE, CODING_MEDIUM)
-      .add(CODING_MEDIUM, CODING_SMALL)
-      .add(CODING_LARGE, CODING_SMALL)
-      .build();
 
   static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);

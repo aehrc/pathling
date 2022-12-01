@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
-import au.csiro.pathling.test.TerminologyTest;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -35,7 +35,7 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DefaultTerminologyService2Test extends TerminologyTest {
+public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase {
 
   private static final String VALUE_SET_X = "uuid:valueSetX";
   private static final String VALUE_SET_Y = "uuid:valueSetY";
@@ -79,7 +79,7 @@ public class DefaultTerminologyService2Test extends TerminologyTest {
         isNull(),
         deepEq(new CodeType(CODE_A))
     )).thenReturn(RESULT_TRUE);
-    assertTrue(terminologyService.validate(VALUE_SET_X, CODING_AA));
+    assertTrue(terminologyService.validateCode(VALUE_SET_X, CODING_AA));
   }
 
   @Test
@@ -90,14 +90,14 @@ public class DefaultTerminologyService2Test extends TerminologyTest {
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B))
     )).thenReturn(RESULT_FALSE);
-    assertFalse(terminologyService.validate(VALUE_SET_Y, CODING_BB_VERSION1));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, CODING_BB_VERSION1));
   }
 
   @Test
   public void testValidateInvalidCodings() {
-    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_0));
-    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_1));
-    assertFalse(terminologyService.validate(VALUE_SET_Y, INVALID_CODING_2));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_0));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_1));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_2));
   }
 
   @Test

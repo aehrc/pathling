@@ -17,11 +17,9 @@
 
 package au.csiro.pathling.terminology.mock;
 
-import au.csiro.pathling.utilities.ObjectHolder;
-import au.csiro.pathling.utilities.ObjectHolder.SingletonHolder;
-import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.utilities.ObjectHolder;
 import javax.annotation.Nonnull;
 
 public class MockTerminologyServiceFactory implements TerminologyServiceFactory {
@@ -29,13 +27,7 @@ public class MockTerminologyServiceFactory implements TerminologyServiceFactory 
   private final static ObjectHolder<String, TerminologyService2> service = ObjectHolder.singleton(
       c -> new MockTerminologyService2());
   private static final long serialVersionUID = 7662506865030951736L;
-
-  @Nonnull
-  @Override
-  public TerminologyService buildService() {
-    throw new UnsupportedOperationException();
-  }
-
+  
   @Nonnull
   @Override
   public TerminologyService2 buildService2() {

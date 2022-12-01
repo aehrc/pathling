@@ -17,19 +17,12 @@
 
 package au.csiro.pathling.test.helpers;
 
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.terminology.Relation;
-import au.csiro.pathling.test.fixtures.RelationBuilder;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.hl7.fhir.r4.model.ValueSet;
 
 public final class TerminologyHelpers {
 
@@ -118,49 +111,10 @@ public final class TerminologyHelpers {
   private static final Coding CD_SNOMED_VER_444814009 = snomedVersionedCoding("444814009",
       "Viral sinusitis (disorder)");
 
-  public static final Relation REL_SNOMED_444814009_SUBSUMES_40055000 = RelationBuilder.empty()
-      .add(CD_SNOMED_VER_444814009, CD_SNOMED_VER_40055000).build();
 
   public static final Coding CD_AUTOMAP_INPUT_DESCRIPTION_ID = new Coding(AUTOMAP_INPUT_URI,
       "101013", null);
-
-  @Nonnull
-  public static SimpleCoding snomedSimple(@Nonnull final String code) {
-    return new SimpleCoding(SNOMED_URI, code);
-  }
-
-  @Nonnull
-  public static SimpleCoding testSimple(@Nonnull final String code) {
-    return new SimpleCoding(SNOMED_URI, code);
-  }
-
-  @Nonnull
-  public static SimpleCoding simpleOf(@Nonnull final Coding code) {
-    return new SimpleCoding(code);
-  }
-
-  @Nonnull
-  public static Set<SimpleCoding> setOfSimpleFrom(@Nonnull final Coding... codings) {
-    return Arrays.stream(codings).map(TerminologyHelpers::simpleOf)
-        .collect(Collectors.toUnmodifiableSet());
-  }
-
-  @Nonnull
-  public static Set<SimpleCoding> setOfSimpleFrom(@Nonnull final CodeableConcept... validMembers) {
-    return Arrays.stream(validMembers)
-        .flatMap(codeableConcept -> codeableConcept.getCoding().stream())
-        .map(TerminologyHelpers::simpleOf)
-        .collect(Collectors.toUnmodifiableSet());
-  }
-
-  @Nonnull
-  public static Set<SimpleCoding> setOfSimpleFrom(@Nonnull final ValueSet valueSet) {
-    return valueSet.getExpansion().getContains().stream()
-        .map(contains -> new SimpleCoding(contains.getSystem(), contains.getCode(),
-            contains.getVersion()))
-        .collect(Collectors.toSet());
-  }
-
+  
   @Nonnull
   public static Coding newVersionedCoding(@Nonnull final String system, @Nonnull final String code,
       @Nonnull final String version, @Nonnull final String displayName) {

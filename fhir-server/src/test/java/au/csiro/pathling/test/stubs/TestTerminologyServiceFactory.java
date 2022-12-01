@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.test.stubs;
 
-import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
@@ -29,13 +28,7 @@ public class TestTerminologyServiceFactory implements TerminologyServiceFactory 
 
   public TestTerminologyServiceFactory() {
   }
-
-  @Nonnull
-  @Override
-  public TerminologyService buildService() {
-    return SharedMocks.getOrCreate(TerminologyService.class);
-  }
-
+  
   @Nonnull
   @Override
   public TerminologyService2 buildService2() {

@@ -7,7 +7,7 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
 import scala.collection.mutable.WrappedArray;
 
-public abstract class TerminologyTest {
+public abstract class AbstractTerminologyTestBase {
 
   public static final String SYSTEM_A = "uuid:systemA";
   public static final String CODE_A = "codeA";

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function.memberof;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -171,11 +172,11 @@ class MemberOfFunctionTest {
         .selectOrderedResultWithEid()
         .hasRows(expectedResult);
 
-    verify(terminologyService).validate(eq(MY_VALUE_SET_URL), deepEq(coding1));
-    verify(terminologyService).validate(eq(MY_VALUE_SET_URL), deepEq(coding2));
-    verify(terminologyService).validate(eq(MY_VALUE_SET_URL), deepEq(coding3));
-    verify(terminologyService).validate(eq(MY_VALUE_SET_URL), deepEq(coding4));
-    verify(terminologyService, times(2)).validate(eq(MY_VALUE_SET_URL), deepEq(coding5));
+    verify(terminologyService).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding1));
+    verify(terminologyService).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding2));
+    verify(terminologyService).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding3));
+    verify(terminologyService).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding4));
+    verify(terminologyService, times(2)).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding5));
     verifyNoMoreInteractions(terminologyService);
   }
 
@@ -320,14 +321,11 @@ class MemberOfFunctionTest {
         .selectOrderedResult()
         .hasRows(expectedResult);
 
-    // TODO: Why fails
-    // verify(terminologyService, atLeastOnce()).validate(eq(MY_VALUE_SET_URL), deepEq(coding1));
-    // verify(terminologyService, atLeastOnce()).validate(eq(MY_VALUE_SET_URL), deepEq(coding2));
-    // verify(terminologyService, atLeastOnce()).validate(eq(MY_VALUE_SET_URL), deepEq(coding3));
-    // verify(terminologyService, atLeastOnce()).validate(eq(MY_VALUE_SET_URL), deepEq(coding4));
-    // verify(terminologyService, atLeastOnce()).validate(eq(MY_VALUE_SET_URL), deepEq(coding5));
-    //
-    // verifyNoMoreInteractions(terminologyService);
+    verify(terminologyService, atLeastOnce()).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding1));
+    verify(terminologyService, atLeastOnce()).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding2));
+    verify(terminologyService, atLeastOnce()).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding3));
+    verify(terminologyService, atLeastOnce()).validateCode(eq(MY_VALUE_SET_URL), deepEq(coding4));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test

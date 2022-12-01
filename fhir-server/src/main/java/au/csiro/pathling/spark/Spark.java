@@ -19,7 +19,6 @@ package au.csiro.pathling.spark;
 
 import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.config.Configuration;
-import au.csiro.pathling.sql.SqlStrategy;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -77,7 +76,6 @@ public class Spark {
     sparkListener.ifPresent(l -> spark.sparkContext().addSparkListener(l));
 
     // Configure user defined strategy and functions.
-    SqlStrategy.setup(spark);
     for (final SparkConfigurer configurer : sparkConfigurers) {
       configurer.configure(spark);
     }
