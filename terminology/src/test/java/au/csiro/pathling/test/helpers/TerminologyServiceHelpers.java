@@ -1,6 +1,7 @@
 package au.csiro.pathling.test.helpers;
 
 import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
+import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -15,12 +16,15 @@ import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
@@ -183,10 +187,22 @@ public class TerminologyServiceHelpers {
               Property.of("display", new StringType(displayName))));
       return this;
     }
-    
+
     @Nonnull
     public LookupExpectations withDisplay(@Nonnull final Coding coding) {
       return withDisplay(coding, coding.getDisplay());
+    }
+
+    @SafeVarargs
+    @Nonnull
+    public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
+        @Nonnull final String propertyCode, T... values) {
+      when(mockService.lookup(deepEq(coding), eq(propertyCode), isNull())).thenReturn(
+          Stream.of(values)
+              .map(v -> Property.of(propertyCode, v))
+              .collect(Collectors.toUnmodifiableList())
+      );
+      return this;
     }
   }
 

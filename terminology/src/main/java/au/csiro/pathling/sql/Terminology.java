@@ -1,15 +1,19 @@
 package au.csiro.pathling.sql;
 
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.sql.udf.DisplayUdf;
+import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
 import au.csiro.pathling.sql.udf.TranslateUdf;
 import au.csiro.pathling.sql.udf.MemberOfUdf;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * JAVA API for terminology UDFs
@@ -111,8 +115,7 @@ public interface Terminology {
    * Boolean value, indicating whether the left Coding is subsumed by the right Coding.
    *
    * @param codingA a Column containing a struct representation of a Coding or an array of Codings.
-   * @param codingB a Column containing a struct representation of a Coding or an array of
-   * Codings.
+   * @param codingB a Column containing a struct representation of a Coding or an array of Codings.
    * @return the Column containing the result of the operation (boolean)
    */
   @Nonnull
@@ -124,10 +127,54 @@ public interface Terminology {
    * Takes a Coding column as its input. Returns the Column, which contains the canonical display
    * name associated with the given code.
    *
+   * @param coding a Column containing a struct representation of a Coding
    * @return the Column containing the result of the operation (String)
    */
   @Nonnull
   static Column display(@Nonnull final Column coding) {
     return call_udf(DisplayUdf.FUNCTION_NAME, coding);
+  }
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the values of properties
+   * for this coding with specified names and types. The type of the result column depends on the
+   * types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
+   * Complex types are mapped to their corresponding structs. The allowed property types are: code |
+   * Coding | string | integer | boolean | dateTime | decimal.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve.
+   * @param propertyType the type of the property to retrieve.
+   * @return the Column containing the result of the operation (array of property values)
+   */
+  @Nonnull
+  static Column property(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nonnull final FHIRDefinedType propertyType) {
+    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode));
+  }
+
+  /**
+   * Retrieves properties of a concept.
+   *
+   * @see Terminology#property(Column, String, FHIRDefinedType)
+   */
+  @Nonnull
+  static Column property(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nullable final String propertyType) {
+
+    return property(coding, propertyCode, nonNull(propertyType)
+                                          ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(
+        propertyType)
+                                          : PropertyUdf.DEFAULT_PROPERTY_TYPE);
+  }
+
+  /**
+   * Retrieves properties of a concept.
+   *
+   * @see Terminology#property(Column, String, FHIRDefinedType)
+   */
+  @Nonnull
+  static Column property(@Nonnull final Column coding, @Nonnull final String propertyCode) {
+    return property(coding, propertyCode, PropertyUdf.DEFAULT_PROPERTY_TYPE);
   }
 }

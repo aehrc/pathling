@@ -1,13 +1,17 @@
 package au.csiro.pathling.terminology;
 
+import static au.csiro.pathling.fhir.ParametersUtils.partsToBean;
 import static au.csiro.pathling.fhir.ParametersUtils.toBooleanResult;
 import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
 import static au.csiro.pathling.fhir.ParametersUtils.toMatchParts;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.function.Predicate.not;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 
+import au.csiro.pathling.fhir.ParametersUtils;
+import au.csiro.pathling.fhir.ParametersUtils.PropertyPart;
 import au.csiro.pathling.fhir.TerminologyClient2;
 import java.io.Closeable;
 import java.io.IOException;
@@ -16,14 +20,18 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
@@ -140,12 +148,17 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Nonnull
   private static List<PropertyOrDesignation> toPropertiesAndDesignations(
-      @Nonnull final Parameters parameters, @Nullable final String propertyCode) {
+      @Nonnull final Parameters parameters,
+      @Nullable final String propertyCode) {
 
-    return parameters.getParameter().stream()
-        .filter(not(ParametersParameterComponent::hasPart))
-        .filter(p -> isNull(propertyCode) || propertyCode.equals(p.getName()))
-        .map(p -> Property.of(p.getName(), p.getValue()))
+    final List<PropertyPart> x = ParametersUtils.toPropertiesAndDesignations(
+        parameters).collect(Collectors.toUnmodifiableList());
+    return x.stream()
+        .flatMap(part -> nonNull(part.getSubproperty())
+                         ? part.getSubproperty().stream()
+                         : Stream.of(part))
+        .map(part -> Property.of(part.getCode().getValue(), requireNonNull(part.getValue())))
+        .filter(property -> Objects.isNull(propertyCode) || propertyCode.equals(property.getCode()))
         .collect(Collectors.toUnmodifiableList());
   }
 
