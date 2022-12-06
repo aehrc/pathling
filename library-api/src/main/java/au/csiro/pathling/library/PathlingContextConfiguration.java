@@ -17,18 +17,19 @@
 
 package au.csiro.pathling.library;
 
+import static java.util.Objects.nonNull;
+
+import au.csiro.pathling.config.HttpCacheConfiguration;
+import au.csiro.pathling.config.HttpCacheConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientConfiguration;
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.utilities.Default;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.config.HttpCacheConf;
-import au.csiro.pathling.config.HttpClientConf;
-import au.csiro.pathling.config.TerminologyAuthConfiguration;
-import au.csiro.pathling.utilities.Default;
 import lombok.Builder;
 import lombok.Value;
-
-import static java.util.Objects.nonNull;
 
 @Builder
 @Value
@@ -42,18 +43,18 @@ public class PathlingContextConfiguration {
   public static final Default<Boolean> DEFAULT_TERMINOLOGY_VERBOSE_LOGGING = Default.of(false);
 
   public static final Default<Integer> DEFAULT_MAX_TOTAL_CONNECTIONS = Default.of(
-      HttpClientConf.DEF_MAX_CONNECTIONS_TOTAL);
+      HttpClientConfiguration.DEFAULT_MAX_CONNECTIONS_TOTAL);
   public static final Default<Integer> DEFAULT_MAX_CONNECTIONS_PER_ROUTE = Default.of(
-      HttpClientConf.DEF_MAX_CONNECTIONS_PER_ROUTE);
+      HttpClientConfiguration.DEFAULT_MAX_CONNECTIONS_PER_ROUTE);
   public static final Default<Integer> DEFAULT_SOCKET_TIMEOUT = Default.of(
-      HttpClientConf.DEF_SOCKET_TIMEOUT);
+      HttpClientConfiguration.DEFAULT_SOCKET_TIMEOUT);
 
-  public static final Default<String> DEFAULT_CACHE_STORAGE_TYPE = Default.of(
-      HttpCacheConf.DEF_STORAGE_TYPE);
+  public static final Default<StorageType> DEFAULT_CACHE_STORAGE_TYPE = Default.of(
+      HttpCacheConfiguration.DEFAULT_STORAGE_TYPE);
   public static final Default<Integer> DEFAULT_CACHE_MAX_ENTRIES = Default.of(
-      HttpCacheConf.DEF_MAX_CACHE_ENTRIES);
+      HttpCacheConfiguration.DEFAULT_MAX_CACHE_ENTRIES);
   public static final Default<Long> DEFAULT_CACHE_MAX_OBJECT_SIZE = Default.of(
-      HttpCacheConf.DEF_MAX_OBJECT_SIZE);
+      HttpCacheConfiguration.DEFAULT_MAX_OBJECT_SIZE);
 
   @Nullable
   String fhirVersion;
@@ -90,7 +91,7 @@ public class PathlingContextConfiguration {
 
   @Nullable
   @Builder.Default
-  String cacheStorageType = HttpCacheConf.DEF_STORAGE_TYPE;
+  StorageType cacheStorageType = HttpCacheConfiguration.DEFAULT_STORAGE_TYPE;
 
   @Nullable
   Map<String, String> cacheStorageProperties;
@@ -109,7 +110,7 @@ public class PathlingContextConfiguration {
 
   @Nullable
   Long tokenExpiryTolerance;
-  
+
   @Builder.Default
   boolean mockTerminology = false;
 
@@ -131,24 +132,23 @@ public class PathlingContextConfiguration {
 
 
   @Nonnull
-  HttpClientConf toClientConfig() {
-    final HttpClientConf c = HttpClientConf.defaults();
-    c.setMaxConnectionsTotal(
-        DEFAULT_MAX_TOTAL_CONNECTIONS.resolve(getMaxConnectionsTotal()));
-    c.setMaxConnectionsPerRoute(
+  HttpClientConfiguration toClientConfig() {
+    final HttpClientConfiguration config = HttpClientConfiguration.defaults();
+    config.setMaxConnectionsTotal(DEFAULT_MAX_TOTAL_CONNECTIONS.resolve(getMaxConnectionsTotal()));
+    config.setMaxConnectionsPerRoute(
         DEFAULT_MAX_CONNECTIONS_PER_ROUTE.resolve(getMaxConnectionsPerRoute()));
-    c.setSocketTimeout(DEFAULT_SOCKET_TIMEOUT.resolve(getTerminologySocketTimeout()));
-    return c;
+    config.setSocketTimeout(DEFAULT_SOCKET_TIMEOUT.resolve(getTerminologySocketTimeout()));
+    return config;
   }
 
   @Nonnull
-  HttpCacheConf toCacheConfig() {
-    final HttpCacheConf c = HttpCacheConf.defaults();
-    c.setEnabled(nonNull(getCacheStorageType()));
-    c.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(getCacheStorageType()));
-    c.setMaxCacheEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
-    c.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
-    c.setStorage(getCacheStorageProperties());
-    return c;
+  HttpCacheConfiguration toCacheConfig() {
+    final HttpCacheConfiguration config = HttpCacheConfiguration.defaults();
+    config.setEnabled(nonNull(getCacheStorageType()));
+    config.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(getCacheStorageType()));
+    config.setMaxCacheEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
+    config.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
+    config.setStorage(getCacheStorageProperties());
+    return config;
   }
 }

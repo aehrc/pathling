@@ -29,20 +29,24 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
-import au.csiro.pathling.config.HttpCacheConf;
-import au.csiro.pathling.config.HttpClientConf;
+import au.csiro.pathling.config.HttpCacheConfiguration;
+import au.csiro.pathling.config.HttpCacheConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.test.SchemaAsserts;
-import java.util.List;
-import java.util.Map;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import com.google.common.collect.ImmutableMap;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -295,7 +299,8 @@ public class PathlingContextTest {
         conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), null, "result");
 
     final List<Row> rows = result.select("id", "result").collectAsList();
-    assertEquals(RowFactory.create("foo", WrappedArray.make(new Row[]{CodingEncoding.encode(coding2)})),
+    assertEquals(
+        RowFactory.create("foo", WrappedArray.make(new Row[]{CodingEncoding.encode(coding2)})),
         rows.get(0));
   }
 
@@ -341,8 +346,8 @@ public class PathlingContextTest {
     final PathlingContext pathlingContext = PathlingContext.create(spark, config);
     assertNotNull(pathlingContext);
     final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConf.defaults(),
-        HttpCacheConf.defaults(), TerminologyAuthConfiguration.defaults());
+        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConfiguration.defaults(),
+        HttpCacheConfiguration.defaults(), TerminologyAuthConfiguration.defaults());
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
@@ -362,8 +367,8 @@ public class PathlingContextTest {
     final PathlingContext pathlingContext = PathlingContext.create(spark, config);
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConf.defaults(),
-        HttpCacheConf.disabled(), TerminologyAuthConfiguration.defaults());
+        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConfiguration.defaults(),
+        HttpCacheConfiguration.disabled(), TerminologyAuthConfiguration.defaults());
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
@@ -373,7 +378,7 @@ public class PathlingContextTest {
 
 
   @Test
-  void testBuildContextWithCustomizedTerminology() {
+  void testBuildContextWithCustomizedTerminology() throws IOException {
     final String terminologyServerUrl = "https://r4.ontoserver.csiro.au/fhir";
     final String tokenEndpoint = "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
     final String clientId = "some-client";
@@ -387,8 +392,11 @@ public class PathlingContextTest {
 
     final int cacheMaxEntries = 1233;
     final long cacheMaxObjectSize = 4453L;
-    final String cacheStorgeType = "disk";
-    final Map<String, String> cacheStorageProperties = ImmutableMap.of("cacheDir", "/tmp");
+    final StorageType cacheStorageType = StorageType.DISK;
+    final File tempDirectory = Files.createTempDirectory("pathling-cache").toFile();
+    tempDirectory.deleteOnExit();
+    final Map<String, String> cacheStorageProperties = ImmutableMap.of("cacheDir",
+        tempDirectory.getAbsolutePath());
 
     final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
         .terminologyServerUrl(terminologyServerUrl)
@@ -398,7 +406,7 @@ public class PathlingContextTest {
         .maxConnectionsPerRoute(maxConnectionsPerRoute)
         .cacheMaxEntries(cacheMaxEntries)
         .cacheMaxObjectSize(cacheMaxObjectSize)
-        .cacheStorageType(cacheStorgeType)
+        .cacheStorageType(cacheStorageType)
         .cacheStorageProperties(cacheStorageProperties)
         .tokenEndpoint(tokenEndpoint)
         .clientId(clientId)
@@ -411,15 +419,15 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyServerUrl, true,
-        HttpClientConf.builder()
+        HttpClientConfiguration.builder()
             .socketTimeout(socketTimeout)
             .maxConnectionsTotal(maxConnectionsTotal)
             .maxConnectionsPerRoute(maxConnectionsPerRoute)
             .build(),
-        HttpCacheConf.builder()
+        HttpCacheConfiguration.builder()
             .maxCacheEntries(cacheMaxEntries)
             .maxObjectSize(cacheMaxObjectSize)
-            .storageType(cacheStorgeType)
+            .storageType(cacheStorageType)
             .storage(cacheStorageProperties)
             .build(),
         TerminologyAuthConfiguration.builder()

@@ -25,33 +25,38 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Represents configuration relating to the HTTP client.
+ */
 @Data
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class HttpClientConf implements Serializable {
+public class HttpClientConfiguration implements Serializable {
 
   private static final long serialVersionUID = -1624276800166930462L;
 
-  public static final int DEF_MAX_CONNECTIONS_TOTAL = 32;
-  public static final int DEF_MAX_CONNECTIONS_PER_ROUTE = 16;
-  public static final int DEF_SOCKET_TIMEOUT = 60_000;
+  public static final int DEFAULT_MAX_CONNECTIONS_TOTAL = 32;
+  public static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = 16;
+  public static final int DEFAULT_SOCKET_TIMEOUT = 60_000;
 
   /**
-   * The maximum total number of connections for the client. Also see: {@link
-   * org.apache.http.impl.client.HttpClientBuilder#setMaxConnTotal(int)}
+   * The maximum total number of connections for the client.
+   * <p>
+   * See also: {@link org.apache.http.impl.client.HttpClientBuilder#setMaxConnTotal(int)}
    */
   @Min(0)
   @Builder.Default
-  private int maxConnectionsTotal = DEF_MAX_CONNECTIONS_TOTAL;
+  private int maxConnectionsTotal = DEFAULT_MAX_CONNECTIONS_TOTAL;
 
   /**
-   * The maximum number of connections per route for the client. Also see: {@link
-   * org.apache.http.impl.client.HttpClientBuilder#setMaxConnPerRoute(int)}
+   * The maximum number of connections per route for the client.
+   * <p>
+   * See also: {@link org.apache.http.impl.client.HttpClientBuilder#setMaxConnPerRoute(int)}
    */
   @Min(0)
   @Builder.Default
-  private int maxConnectionsPerRoute = DEF_MAX_CONNECTIONS_PER_ROUTE;
+  private int maxConnectionsPerRoute = DEFAULT_MAX_CONNECTIONS_PER_ROUTE;
 
   /**
    * The maximum period (in milliseconds) that the server should wait for incoming data from the
@@ -59,10 +64,10 @@ public class HttpClientConf implements Serializable {
    */
   @Min(0)
   @Builder.Default
-  private int socketTimeout = DEF_SOCKET_TIMEOUT;
+  private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
 
-  public static HttpClientConf defaults() {
-    return HttpClientConf.builder().build();
+  public static HttpClientConfiguration defaults() {
+    return HttpClientConfiguration.builder().build();
   }
 
 }

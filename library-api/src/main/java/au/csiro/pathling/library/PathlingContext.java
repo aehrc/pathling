@@ -24,8 +24,8 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.config.HttpCacheConf;
-import au.csiro.pathling.config.HttpClientConf;
+import au.csiro.pathling.config.HttpCacheConfiguration;
+import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
@@ -66,7 +66,7 @@ public class PathlingContext {
 
   private static final String COL_INPUT_CODINGS = "inputCodings";
   private static final String COL_ARG_CODINGS = "argCodings";
-  
+
   @Nonnull
   @Getter
   private final SparkSession spark;
@@ -106,8 +106,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using default configuration, and a pre-configured {@link
-   * SparkSession}.
+   * Creates a new {@link PathlingContext} using default configuration, and a pre-configured
+   * {@link SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark) {
@@ -125,8 +125,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession}, {@link
-   * FhirEncoders} and {@link TerminologyServiceFactory} objects.
+   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession},
+   * {@link FhirEncoders} and {@link TerminologyServiceFactory} objects.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark,
@@ -136,8 +136,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
-   * SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -388,19 +388,19 @@ public class PathlingContext {
   }
 
   @Nonnull
-  private static Builder getEncoderBuilder(@Nonnull final PathlingContextConfiguration c) {
-    Builder encoderBuilder = nonNull(c.getFhirVersion())
+  private static Builder getEncoderBuilder(@Nonnull final PathlingContextConfiguration config) {
+    Builder encoderBuilder = nonNull(config.getFhirVersion())
                              ? FhirEncoders.forVersion(
-        FhirVersionEnum.forVersionString(c.getFhirVersion()))
+        FhirVersionEnum.forVersionString(config.getFhirVersion()))
                              : FhirEncoders.forR4();
-    if (nonNull(c.getMaxNestingLevel())) {
-      encoderBuilder = encoderBuilder.withMaxNestingLevel(c.getMaxNestingLevel());
+    if (nonNull(config.getMaxNestingLevel())) {
+      encoderBuilder = encoderBuilder.withMaxNestingLevel(config.getMaxNestingLevel());
     }
-    if (nonNull(c.getExtensionsEnabled())) {
-      encoderBuilder = encoderBuilder.withExtensionsEnabled(c.getExtensionsEnabled());
+    if (nonNull(config.getExtensionsEnabled())) {
+      encoderBuilder = encoderBuilder.withExtensionsEnabled(config.getExtensionsEnabled());
     }
-    if (nonNull(c.getOpenTypesEnabled())) {
-      final Set<String> openTypes = c.getOpenTypesEnabled().stream()
+    if (nonNull(config.getOpenTypesEnabled())) {
+      final Set<String> openTypes = config.getOpenTypesEnabled().stream()
           .collect(Collectors.toUnmodifiableSet());
       encoderBuilder = encoderBuilder.withOpenTypes(openTypes);
     }
@@ -409,24 +409,24 @@ public class PathlingContext {
 
   @Nonnull
   private static TerminologyServiceFactory getTerminologyServiceFactory(
-      @Nonnull final PathlingContextConfiguration c) {
+      @Nonnull final PathlingContextConfiguration config) {
 
-    if (!c.isMockTerminology()) {
+    if (!config.isMockTerminology()) {
       final String resolvedTerminologyServerUrl = DEFAULT_TERMINOLOGY_SERVER_URL.resolve(
-          c.getTerminologyServerUrl());
+          config.getTerminologyServerUrl());
       final boolean verboseRequestLogging = DEFAULT_TERMINOLOGY_VERBOSE_LOGGING.resolve(
-          c.getTerminologyVerboseRequestLogging());
+          config.getTerminologyVerboseRequestLogging());
 
-      final TerminologyAuthConfiguration authConfig = c.toAuthConfig();
-      final HttpClientConf clientConfig = c.toClientConfig();
-      final HttpCacheConf cacheConfig = c.toCacheConfig();
+      final TerminologyAuthConfiguration authConfig = config.toAuthConfig();
+      final HttpClientConfiguration clientConfig = config.toClientConfig();
+      final HttpCacheConfiguration cacheConfig = config.toCacheConfig();
 
       return new DefaultTerminologyServiceFactory(FhirContext.forR4().getVersion().getVersion(),
           resolvedTerminologyServerUrl, verboseRequestLogging, clientConfig, cacheConfig,
           authConfig);
     } else {
       log.warn("Using mock terminology service. NOT connecting to server: {}",
-          c.getTerminologyServerUrl());
+          config.getTerminologyServerUrl());
       return new MockTerminologyServiceFactory();
     }
   }

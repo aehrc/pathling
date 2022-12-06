@@ -17,28 +17,22 @@
 
 package au.csiro.pathling.caching;
 
+import javax.annotation.Nonnull;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.Map;
 
 /**
- * A factory class for creating {@link CachingHttpClientBuilder} instance preconfigured for with
+ * A factory class for creating {@link CachingHttpClientBuilder} instance, pre-configured for with
  * some caching implementation.
  */
 public interface CachingFactory {
 
   /**
-   * Creates a {@link CachingHttpClientBuilder} pre-configures with some concrete caching
-   * implementation.
+   * Creates a {@link CachingHttpClientBuilder}, initialized with the provided {@link CacheConfig}.
    *
-   * @param cacheConfig the cache config to use.
-   * @param storageProperties the additional properties to configure the specific caching
-   * implementation.
-   * @return the pre-configured {@link CachingHttpClientBuilder}.
+   * @param cacheConfig the cache config to use
+   * @return the pre-configured {@link CachingHttpClientBuilder}
    */
   @Nonnull
-  CachingHttpClientBuilder create(@Nonnull CacheConfig cacheConfig,
-      @Nullable Map<String, String> storageProperties);
+  CachingHttpClientBuilder create(@Nonnull CacheConfig cacheConfig);
 }

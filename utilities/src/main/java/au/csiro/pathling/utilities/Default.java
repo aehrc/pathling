@@ -17,18 +17,18 @@
 
 package au.csiro.pathling.utilities;
 
+import static java.util.Objects.isNull;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import static java.util.Objects.isNull;
 
 /**
  * Represents a default value of type T. Simplifies resolution of values where null represents the
  * default, e.g:
  * <pre>{@code
- *    Default<Integer> DEF_VALUE = Default.of(100);
+ *    Default<Integer> DEFAULT_VALUE = Default.of(100);
  *    ...
- *    int value = DEF_VALUE.resolve(valueOrNull);
+ *    int value = DEFAULT_VALUE.resolve(valueOrNull);
  * }</pre>
  *
  * @param <T> the type of the value.
@@ -37,10 +37,10 @@ import static java.util.Objects.isNull;
 public class Default<T> {
 
   @Nonnull
-  private final T defValue;
+  private final T defaultValue;
 
-  private Default(@Nonnull final T defValue) {
-    this.defValue = defValue;
+  private Default(@Nonnull final T defaultValue) {
+    this.defaultValue = defaultValue;
   }
 
   /**
@@ -53,19 +53,20 @@ public class Default<T> {
   @Nonnull
   public T resolve(@Nullable T value) {
     return isNull(value)
-           ? defValue
+           ? defaultValue
            : value;
   }
 
   /**
    * Constructs the default value for given type T.
    *
-   * @param defValue the default value.
+   * @param defaultValue the default value.
    * @param <T> the type of the value.
    * @return the default object.
    */
   @Nonnull
-  public static <T> Default<T> of(@Nonnull final T defValue) {
-    return new Default<>(defValue);
+  public static <T> Default<T> of(@Nonnull final T defaultValue) {
+    return new Default<>(defaultValue);
   }
+
 }
