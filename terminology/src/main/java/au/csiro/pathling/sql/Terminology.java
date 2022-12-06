@@ -148,7 +148,7 @@ public interface Terminology {
    * @return the Column containing the result of the operation (array of property values)
    */
   @Nonnull
-  static Column property(@Nonnull final Column coding, @Nonnull final String propertyCode,
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType) {
     return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode));
   }
@@ -156,25 +156,25 @@ public interface Terminology {
   /**
    * Retrieves properties of a concept.
    *
-   * @see Terminology#property(Column, String, FHIRDefinedType)
+   * @see Terminology#property_of(Column, String, FHIRDefinedType)
    */
   @Nonnull
-  static Column property(@Nonnull final Column coding, @Nonnull final String propertyCode,
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nullable final String propertyType) {
 
-    return property(coding, propertyCode, nonNull(propertyType)
-                                          ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(
-        propertyType)
-                                          : PropertyUdf.DEFAULT_PROPERTY_TYPE);
+    return property_of(coding, propertyCode,
+        nonNull(propertyType)
+        ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
+        : PropertyUdf.DEFAULT_PROPERTY_TYPE);
   }
 
   /**
    * Retrieves properties of a concept.
    *
-   * @see Terminology#property(Column, String, FHIRDefinedType)
+   * @see Terminology#property_of(Column, String, FHIRDefinedType)
    */
   @Nonnull
-  static Column property(@Nonnull final Column coding, @Nonnull final String propertyCode) {
-    return property(coding, propertyCode, PropertyUdf.DEFAULT_PROPERTY_TYPE);
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode) {
+    return property_of(coding, propertyCode, PropertyUdf.DEFAULT_PROPERTY_TYPE);
   }
 }

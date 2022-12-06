@@ -22,6 +22,8 @@ import com.google.common.collect.ImmutableMap;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.commons.lang3.tuple.Pair;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
@@ -177,8 +179,19 @@ public class MockTerminologyService2 implements TerminologyService2 {
     final Coding snomedCoding = new Coding("http://snomed.info/sct", "439319006",
         "Screening for phenothiazine in serum");
 
+    final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
+        null);
+
     if (SystemAndCode.of(snomedCoding).equals(SystemAndCode.of(coding))) {
-      return List.of(Property.of("display", new StringType(snomedCoding.getDisplay())));
+      return List.of(
+          Property.of("display", new StringType(snomedCoding.getDisplay())),
+          Property.of("parent", new CodeType("785673007")),
+          Property.of("parent", new CodeType("74754006"))
+      );
+    } else if (SystemAndCode.of(loincCoding).equals(SystemAndCode.of(coding))) {
+      return List.of(
+          Property.of("inactive", new BooleanType(false))
+      );
     } else {
       return Collections.emptyList();
     }

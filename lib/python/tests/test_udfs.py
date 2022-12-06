@@ -17,7 +17,7 @@ import logging
 import os
 from tempfile import mkdtemp
 
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import StructType, StringType, StructField, BooleanType, Row, ArrayType, \
     IntegerType
 from pytest import fixture
@@ -26,7 +26,8 @@ from pathling import PathlingContext
 from pathling.coding import Coding
 from pathling.etc import SNOMED_URI
 from pathling.etc import find_jar as find_pathling_jar
-from pathling.udfs import member_of, subsumes, subsumed_by, translate, display
+from pathling.udfs import member_of, subsumes, subsumed_by, translate, display, PropertyType, \
+    property_of
 
 PROJECT_DIR = os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
@@ -52,13 +53,9 @@ def spark(request):
         .getOrCreate()
 
     request.addfinalizer(lambda: spark.stop())
+    PathlingContext.create(spark, mock_terminology=True)
 
     return spark
-
-
-@fixture(scope="module")
-def ptl(spark):
-    return PathlingContext.create(spark, mock_terminology=True)
 
 
 CODING_TYPE = StructType([
@@ -87,7 +84,7 @@ def loinc_coding_row(code: str):
 Result = Row("id", "result")
 
 
-def test_member_of(spark: SparkSession, ptl: PathlingContext):
+def test_member_of(spark: SparkSession):
     df = spark.createDataFrame(
             [
                 ("code-1", snomed_coding_row("368529001")),
@@ -125,8 +122,7 @@ def test_member_of(spark: SparkSession, ptl: PathlingContext):
     assert result_df_coding.collect() == [Result("code-1", True)]
 
 
-def test_member_of_array(spark: SparkSession, ptl: PathlingContext):
-    PathlingContext.create(spark, mock_terminology=True)
+def test_member_of_array(spark: SparkSession):
     df = spark.createDataFrame(
             [
                 ("code-1", [snomed_coding_row("368529001"), snomed_coding_row("368529002")]),
@@ -180,7 +176,7 @@ def subsumption_df(spark: SparkSession):
     )
 
 
-def test_subsumes(subsumption_df, ptl: PathlingContext):
+def test_subsumes(subsumption_df):
     result_df = subsumption_df.select("id",
                                       subsumes(subsumption_df["codeA"], "codeB").alias("result"))
     assert result_df.collect() == [
@@ -208,7 +204,7 @@ def test_subsumes(subsumption_df, ptl: PathlingContext):
     ]
 
 
-def test_subsumed_by(subsumption_df, ptl: PathlingContext):
+def test_subsumed_by(subsumption_df):
     result_df = subsumption_df.select("id",
                                       subsumed_by(subsumption_df["codeB"], "codeA").alias("result"))
     assert result_df.collect() == [
@@ -236,7 +232,7 @@ def test_subsumed_by(subsumption_df, ptl: PathlingContext):
     ]
 
 
-def test_translate(spark: SparkSession, ptl: PathlingContext):
+def test_translate(spark: SparkSession):
     df = spark.createDataFrame(
             [
                 ("id-1", snomed_coding_row("368529001")),
@@ -293,8 +289,9 @@ def test_translate(spark: SparkSession, ptl: PathlingContext):
     ];
 
 
-def test_display(spark: SparkSession, ptl: PathlingContext):
-    df = spark.createDataFrame(
+@fixture(scope="module")
+def property_df(spark: SparkSession):
+    return spark.createDataFrame(
             [
                 ("id-1", snomed_coding_row("439319006")),
                 ("id-2", loinc_coding_row("55915-3")),
@@ -304,19 +301,48 @@ def test_display(spark: SparkSession, ptl: PathlingContext):
                                StructField("code", CODING_TYPE)])
     )
 
+
+def test_display(property_df: DataFrame):
     expected_result = [
         Result("id-1", "Screening for phenothiazine in serum"),
         Result("id-2", None),
         Result("id-3", None),
     ]
 
-    result_df = df.select("id", display("code").alias("result"))
+    result_df = property_df.select("id", display("code").alias("result"))
     assert result_df.collect() == expected_result
 
-    result_df = df.select("id", display(df["code"]).alias("result"))
+    result_df = property_df.select("id", display(property_df["code"]).alias("result"))
     assert result_df.collect() == expected_result
 
-    result_df = df.limit(1).select("id", display(Coding(SNOMED_URI, "439319006")).alias("result"))
+    result_df = property_df.limit(1) \
+        .select("id", display(Coding(SNOMED_URI, "439319006")).alias("result"))
     assert result_df.collect() == [
         Result("id-1", "Screening for phenothiazine in serum")
+    ];
+
+
+def test_property_of(property_df: DataFrame):
+    result_df = property_df \
+        .select("id", property_of("code", "parent", PropertyType.CODE).alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", ["785673007", "74754006"]),
+        Result("id-2", []),
+        Result("id-3", None),
+    ]
+
+    result_df = property_df \
+        .select("id",
+                property_of(property_df["code"], "inactive", PropertyType.BOOLEAN).alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", []),
+        Result("id-2", [False]),
+        Result("id-3", None),
+    ]
+
+    result_df = property_df.limit(1) \
+        .select("id",
+                property_of(Coding(SNOMED_URI, "439319006"), "display").alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", ["Screening for phenothiazine in serum"])
     ];

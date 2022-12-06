@@ -5,7 +5,6 @@ import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
 import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.sql.Terminology.translate;
-import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.apache.spark.sql.functions.lit;
@@ -14,15 +13,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.sql.Terminology;
 import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
@@ -38,7 +34,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.xml.crypto.Data;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
@@ -62,7 +57,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.core.parameters.P;
 
 @Tag("UnitTest")
 @SpringBootTest
@@ -535,7 +529,7 @@ public class TerminologyUdsfTest {
         .build();
 
     final Dataset<Row> resultA = ds.select(ds.col("id"),
-        Terminology.property(ds.col("coding"), "property_a", propertyType).alias("values"));
+        Terminology.property_of(ds.col("coding"), "property_a", propertyType).alias("values"));
 
     final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", DataTypes.createArrayType(resultDataType))
@@ -550,7 +544,7 @@ public class TerminologyUdsfTest {
 
     // Test the FHIRDefineType version as well
     final Dataset<Row> resultB = ds.select(ds.col("id"),
-        Terminology.property(ds.col("coding"), "property_b",
+        Terminology.property_of(ds.col("coding"), "property_b",
             FHIRDefinedType.fromCode(propertyType)).alias("values"));
 
     final Dataset<Row> expectedResultB = DatasetBuilder.of(spark).withIdColumn("id")
@@ -570,18 +564,18 @@ public class TerminologyUdsfTest {
     assertEquals(
         "Type: 'instant' is not supported for 'property' udf",
         assertThrows(InvalidUserInputError.class,
-            () -> Terminology.property(lit(null), "display", FHIRDefinedType.INSTANT)).getMessage()
+            () -> Terminology.property_of(lit(null), "display", FHIRDefinedType.INSTANT)).getMessage()
     );
     assertEquals(
         "Type: 'Quantity' is not supported for 'property' udf",
         assertThrows(InvalidUserInputError.class,
-            () -> Terminology.property(lit(null), "display", "Quantity")).getMessage()
+            () -> Terminology.property_of(lit(null), "display", "Quantity")).getMessage()
     );
 
     assertEquals(
         "Unknown FHIRDefinedType code 'NotAFhirType'",
         assertThrows(InvalidUserInputError.class,
-            () -> Terminology.property(lit(null), "display", "NotAFhirType")).getMessage()
+            () -> Terminology.property_of(lit(null), "display", "NotAFhirType")).getMessage()
     );
   }
 }
