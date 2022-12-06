@@ -27,12 +27,12 @@ import org.apache.http.impl.client.cache.CachingHttpClients;
 /**
  * Base class for implementing {@link CachingFactory}.
  */
-public abstract class AbstractCachingFactory implements CachingFactory {
+public abstract class BaseCachingFactory implements CachingFactory {
 
   @Nonnull
   protected final HttpCacheConfiguration config;
 
-  public AbstractCachingFactory(@Nonnull final HttpCacheConfiguration config) {
+  public BaseCachingFactory(@Nonnull final HttpCacheConfiguration config) {
     this.config = config;
   }
 

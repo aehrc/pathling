@@ -22,7 +22,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 import au.csiro.pathling.config.HttpCacheConfiguration;
 import au.csiro.pathling.config.HttpCacheConfiguration.StorageType;
-import java.io.File;
 import javax.annotation.Nonnull;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 
@@ -34,7 +33,7 @@ public final class CachingFactories {
   /**
    * A factory that can build a {@link CachingHttpClientBuilder} that uses an in-memory cache.
    */
-  private static class MemoryCachingFactory extends AbstractCachingFactory {
+  private static class MemoryCachingFactory extends BaseCachingFactory {
 
     public MemoryCachingFactory(@Nonnull final HttpCacheConfiguration config) {
       super(config);
@@ -43,14 +42,14 @@ public final class CachingFactories {
     @Nonnull
     @Override
     protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder) {
-      return builder;
+      return builder.setHttpCacheStorage(new InfinispanInMemoryStorage());
     }
   }
 
   /**
    * A factory that can build a {@link CachingHttpClientBuilder} that uses a disk cache.
    */
-  private static class DiskCachingFactory extends AbstractCachingFactory {
+  private static class DiskCachingFactory extends BaseCachingFactory {
 
     public DiskCachingFactory(@Nonnull final HttpCacheConfiguration config) {
       super(config);
@@ -61,7 +60,7 @@ public final class CachingFactories {
     @Override
     protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder) {
       checkNotNull(config.getStoragePath());
-      return builder.setCacheDir(new File(config.getStoragePath()));
+      return builder.setHttpCacheStorage(new InfinispanPersistentStorage(config.getStoragePath()));
     }
 
   }
