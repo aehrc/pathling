@@ -30,10 +30,10 @@ csv = pc.spark.read.options(header=True).csv(
 )
 
 VIRAL_INFECTION_ECL = """
-<< 64572001|Disease| : (
-  << 370135005|Pathological process| = << 441862004|Infectious process|,
-  << 246075003|Causative agent| = << 49872002|Virus|
-)
+    << 64572001|Disease| : (
+      << 370135005|Pathological process| = << 441862004|Infectious process|,
+      << 246075003|Causative agent| = << 49872002|Virus|
+    )
 """
 
 csv.select(
