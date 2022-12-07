@@ -52,7 +52,7 @@ public class HttpClientCachingConfiguration implements Serializable {
   private static final long serialVersionUID = -3030386957343963899L;
 
   public static final boolean DEFAULT_ENABLED = true;
-  public static final int DEFAULT_MAX_CACHE_ENTRIES = 10_000;
+  public static final int DEFAULT_MAX_CACHE_ENTRIES = 100_000;
   public static final long DEFAULT_MAX_OBJECT_SIZE = 64_000L;
   public static final StorageType DEFAULT_STORAGE_TYPE = StorageType.MEMORY;
 
@@ -64,17 +64,17 @@ public class HttpClientCachingConfiguration implements Serializable {
   private boolean enabled = DEFAULT_ENABLED;
 
   /**
-   * Sets the maximum number of cache entries the cache will retain.
+   * Sets the maximum number of entries the cache will retain.
    * <p>
    * See also: {@link CacheConfig.Builder#setMaxCacheEntries(int)}
    */
   @NotNull
   @Min(0)
   @Builder.Default
-  private int maxCacheEntries = DEFAULT_MAX_CACHE_ENTRIES;
+  private int maxEntries = DEFAULT_MAX_CACHE_ENTRIES;
 
   /**
-   * Sets the maximum number of cache entries the cache will retain.
+   * Sets the maximum size of a cacheable response, in bytes.
    * <p>
    * See also: {@link CacheConfig.Builder#setMaxObjectSize(long)}
    */

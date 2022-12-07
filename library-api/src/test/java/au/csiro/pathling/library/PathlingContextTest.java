@@ -422,7 +422,7 @@ public class PathlingContextTest {
             .maxConnectionsPerRoute(maxConnectionsPerRoute)
             .build(),
         HttpClientCachingConfiguration.builder()
-            .maxCacheEntries(cacheMaxEntries)
+            .maxEntries(cacheMaxEntries)
             .maxObjectSize(cacheMaxObjectSize)
             .storageType(cacheStorageType)
             .storagePath(cacheStoragePath)

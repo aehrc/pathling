@@ -146,7 +146,7 @@ public class PathlingContextConfiguration {
     final boolean enabled = nonNull(getCacheStorageType());
     config.setEnabled(enabled);
     if (enabled) {
-      config.setMaxCacheEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
+      config.setMaxEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
       config.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
       final StorageType storageType = StorageType.fromCode(getCacheStorageType());
       if (storageType == null) {

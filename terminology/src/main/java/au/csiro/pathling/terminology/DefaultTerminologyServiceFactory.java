@@ -129,7 +129,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     final HttpClientBuilder clientBuilder;
     if (cacheConfig.isEnabled()) {
       final CacheConfig httpClientCacheConfig = CacheConfig.custom()
-          .setMaxCacheEntries(cacheConfig.getMaxCacheEntries())
+          .setMaxCacheEntries(cacheConfig.getMaxEntries())
           .setMaxObjectSize(cacheConfig.getMaxObjectSize())
           .build();
       clientBuilder = CachingFactories.of(cacheConfig)
