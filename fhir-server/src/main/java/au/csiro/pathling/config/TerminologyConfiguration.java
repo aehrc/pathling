@@ -71,7 +71,7 @@ public class TerminologyConfiguration {
   private HttpClientConfiguration client;
 
   @NotNull
-  private HttpCacheConfiguration cache;
+  private HttpClientCachingConfiguration cache;
 
   @NotNull
   private TerminologyAuthConfiguration authentication;

@@ -17,14 +17,13 @@
 
 package au.csiro.pathling.config;
 
-import au.csiro.pathling.config.HttpCacheConfiguration.ValidHttpCacheConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration.ValidHttpCacheConfiguration;
 import java.io.Serializable;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.Constraint;
@@ -48,7 +47,7 @@ import org.apache.http.impl.client.cache.CacheConfig;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ValidHttpCacheConfiguration
-public class HttpCacheConfiguration implements Serializable {
+public class HttpClientCachingConfiguration implements Serializable {
 
   private static final long serialVersionUID = -3030386957343963899L;
 
@@ -89,9 +88,6 @@ public class HttpCacheConfiguration implements Serializable {
   private StorageType storageType = DEFAULT_STORAGE_TYPE;
 
   @Nullable
-  private Map<String, String> storage;
-
-  @Nullable
   private String storagePath;
 
   /**
@@ -119,14 +115,24 @@ public class HttpCacheConfiguration implements Serializable {
     public String toString() {
       return code;
     }
+
+    @Nullable
+    public static StorageType fromCode(@Nullable final String code) {
+      for (final StorageType storageType : values()) {
+        if (storageType.code.equals(code)) {
+          return storageType;
+        }
+      }
+      return null;
+    }
   }
 
-  public static HttpCacheConfiguration defaults() {
-    return HttpCacheConfiguration.builder().build();
+  public static HttpClientCachingConfiguration defaults() {
+    return HttpClientCachingConfiguration.builder().build();
   }
 
-  public static HttpCacheConfiguration disabled() {
-    return HttpCacheConfiguration.builder().enabled(false).build();
+  public static HttpClientCachingConfiguration disabled() {
+    return HttpClientCachingConfiguration.builder().enabled(false).build();
   }
 
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
@@ -144,14 +150,14 @@ public class HttpCacheConfiguration implements Serializable {
   }
 
   public static class HttpCacheConfigurationValidator implements
-      ConstraintValidator<ValidHttpCacheConfiguration, HttpCacheConfiguration> {
+      ConstraintValidator<ValidHttpCacheConfiguration, HttpClientCachingConfiguration> {
 
     @Override
     public void initialize(final ValidHttpCacheConfiguration constraintAnnotation) {
     }
 
     @Override
-    public boolean isValid(final HttpCacheConfiguration value,
+    public boolean isValid(final HttpClientCachingConfiguration value,
         final ConstraintValidatorContext context) {
       if (value.getStorageType().equals(StorageType.DISK)) {
         return value.getStoragePath() != null;

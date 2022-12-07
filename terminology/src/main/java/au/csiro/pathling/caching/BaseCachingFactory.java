@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.caching;
 
-import au.csiro.pathling.config.HttpCacheConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import javax.annotation.Nonnull;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
@@ -30,9 +30,9 @@ import org.apache.http.impl.client.cache.CachingHttpClients;
 public abstract class BaseCachingFactory implements CachingFactory {
 
   @Nonnull
-  protected final HttpCacheConfiguration config;
+  protected final HttpClientCachingConfiguration config;
 
-  public BaseCachingFactory(@Nonnull final HttpCacheConfiguration config) {
+  public BaseCachingFactory(@Nonnull final HttpClientCachingConfiguration config) {
     this.config = config;
   }
 

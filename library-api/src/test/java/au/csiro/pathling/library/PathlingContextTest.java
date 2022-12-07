@@ -29,8 +29,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
-import au.csiro.pathling.config.HttpCacheConfiguration;
-import au.csiro.pathling.config.HttpCacheConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -41,7 +41,6 @@ import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SchemaAsserts;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import com.google.common.collect.ImmutableMap;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -347,7 +346,7 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext);
     final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConfiguration.defaults(),
-        HttpCacheConfiguration.defaults(), TerminologyAuthConfiguration.defaults());
+        HttpClientCachingConfiguration.defaults(), TerminologyAuthConfiguration.defaults());
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
@@ -368,14 +367,13 @@ public class PathlingContextTest {
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
         FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConfiguration.defaults(),
-        HttpCacheConfiguration.disabled(), TerminologyAuthConfiguration.defaults());
+        HttpClientCachingConfiguration.disabled(), TerminologyAuthConfiguration.defaults());
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
     final TerminologyService2 terminologyService = actualServiceFactory.buildService2();
     assertNotNull(terminologyService);
   }
-
 
   @Test
   void testBuildContextWithCustomizedTerminology() throws IOException {
@@ -395,8 +393,7 @@ public class PathlingContextTest {
     final StorageType cacheStorageType = StorageType.DISK;
     final File tempDirectory = Files.createTempDirectory("pathling-cache").toFile();
     tempDirectory.deleteOnExit();
-    final Map<String, String> cacheStorageProperties = ImmutableMap.of("cacheDir",
-        tempDirectory.getAbsolutePath());
+    final String cacheStoragePath = tempDirectory.getAbsolutePath();
 
     final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
         .terminologyServerUrl(terminologyServerUrl)
@@ -406,8 +403,8 @@ public class PathlingContextTest {
         .maxConnectionsPerRoute(maxConnectionsPerRoute)
         .cacheMaxEntries(cacheMaxEntries)
         .cacheMaxObjectSize(cacheMaxObjectSize)
-        .cacheStorageType(cacheStorageType)
-        .cacheStorageProperties(cacheStorageProperties)
+        .cacheStorageType(cacheStorageType.toString())
+        .cacheStoragePath(cacheStoragePath)
         .tokenEndpoint(tokenEndpoint)
         .clientId(clientId)
         .clientSecret(clientSecret)
@@ -424,11 +421,11 @@ public class PathlingContextTest {
             .maxConnectionsTotal(maxConnectionsTotal)
             .maxConnectionsPerRoute(maxConnectionsPerRoute)
             .build(),
-        HttpCacheConfiguration.builder()
+        HttpClientCachingConfiguration.builder()
             .maxCacheEntries(cacheMaxEntries)
             .maxObjectSize(cacheMaxObjectSize)
             .storageType(cacheStorageType)
-            .storage(cacheStorageProperties)
+            .storagePath(cacheStoragePath)
             .build(),
         TerminologyAuthConfiguration.builder()
             .enabled(true)

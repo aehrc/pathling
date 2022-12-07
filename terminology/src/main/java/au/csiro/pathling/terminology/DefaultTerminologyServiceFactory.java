@@ -3,7 +3,7 @@ package au.csiro.pathling.terminology;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.caching.CachingFactories;
-import au.csiro.pathling.config.HttpCacheConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -58,7 +58,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private final HttpClientConfiguration clientConfig;
 
   @Nonnull
-  private final HttpCacheConfiguration cacheConfig;
+  private final HttpClientCachingConfiguration cacheConfig;
 
   @Nonnull
   private final TerminologyAuthConfiguration authConfig;
@@ -74,7 +74,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
       @Nullable final Integer socketTimeout,
       final boolean verboseRequestLogging,
       @Nonnull final HttpClientConfiguration clientConfig,
-      @Nonnull final HttpCacheConfiguration cacheConfig,
+      @Nonnull final HttpClientCachingConfiguration cacheConfig,
       @Nonnull final TerminologyAuthConfiguration authConfig) {
 
     // For backwards compatibility with the old version config version
@@ -92,7 +92,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging,
       @Nonnull final HttpClientConfiguration clientConfig,
-      @Nonnull final HttpCacheConfiguration cacheConfig,
+      @Nonnull final HttpClientCachingConfiguration cacheConfig,
       @Nonnull final TerminologyAuthConfiguration authConfig) {
     this.fhirVersion = fhirVersion;
     this.terminologyServerUrl = terminologyServerUrl;
@@ -122,7 +122,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   private static CloseableHttpClient buildHttpClient(
       @Nonnull final HttpClientConfiguration clientConfig,
-      @Nonnull final HttpCacheConfiguration cacheConfig) {
+      @Nonnull final HttpClientCachingConfiguration cacheConfig) {
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
     connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());

@@ -22,7 +22,7 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class HttpCachingConfiguration {
+public class HttpServerCachingConfiguration {
 
   /**
    * A list of values to return within the Vary header.

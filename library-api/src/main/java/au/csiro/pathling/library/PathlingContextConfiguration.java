@@ -17,15 +17,15 @@
 
 package au.csiro.pathling.library;
 
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.config.HttpCacheConfiguration;
-import au.csiro.pathling.config.HttpCacheConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.utilities.Default;
 import java.util.List;
-import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Builder;
@@ -50,11 +50,11 @@ public class PathlingContextConfiguration {
       HttpClientConfiguration.DEFAULT_SOCKET_TIMEOUT);
 
   public static final Default<StorageType> DEFAULT_CACHE_STORAGE_TYPE = Default.of(
-      HttpCacheConfiguration.DEFAULT_STORAGE_TYPE);
+      HttpClientCachingConfiguration.DEFAULT_STORAGE_TYPE);
   public static final Default<Integer> DEFAULT_CACHE_MAX_ENTRIES = Default.of(
-      HttpCacheConfiguration.DEFAULT_MAX_CACHE_ENTRIES);
+      HttpClientCachingConfiguration.DEFAULT_MAX_CACHE_ENTRIES);
   public static final Default<Long> DEFAULT_CACHE_MAX_OBJECT_SIZE = Default.of(
-      HttpCacheConfiguration.DEFAULT_MAX_OBJECT_SIZE);
+      HttpClientCachingConfiguration.DEFAULT_MAX_OBJECT_SIZE);
 
   @Nullable
   String fhirVersion;
@@ -91,10 +91,10 @@ public class PathlingContextConfiguration {
 
   @Nullable
   @Builder.Default
-  StorageType cacheStorageType = HttpCacheConfiguration.DEFAULT_STORAGE_TYPE;
+  String cacheStorageType = HttpClientCachingConfiguration.DEFAULT_STORAGE_TYPE.toString();
 
   @Nullable
-  Map<String, String> cacheStorageProperties;
+  String cacheStoragePath;
 
   @Nullable
   String tokenEndpoint;
@@ -116,7 +116,6 @@ public class PathlingContextConfiguration {
 
   @Nonnull
   TerminologyAuthConfiguration toAuthConfig() {
-
     final TerminologyAuthConfiguration authConfig = TerminologyAuthConfiguration.defaults();
     if (nonNull(getTokenEndpoint()) && nonNull(getClientId()) && nonNull(getClientSecret())) {
       authConfig.setEnabled(true);
@@ -142,13 +141,24 @@ public class PathlingContextConfiguration {
   }
 
   @Nonnull
-  HttpCacheConfiguration toCacheConfig() {
-    final HttpCacheConfiguration config = HttpCacheConfiguration.defaults();
-    config.setEnabled(nonNull(getCacheStorageType()));
-    config.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(getCacheStorageType()));
-    config.setMaxCacheEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
-    config.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
-    config.setStorage(getCacheStorageProperties());
+  HttpClientCachingConfiguration toCacheConfig() {
+    final HttpClientCachingConfiguration config = HttpClientCachingConfiguration.defaults();
+    final boolean enabled = nonNull(getCacheStorageType());
+    config.setEnabled(enabled);
+    if (enabled) {
+      config.setMaxCacheEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
+      config.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
+      final StorageType storageType = StorageType.fromCode(getCacheStorageType());
+      if (storageType == null) {
+        throw new IllegalArgumentException("Invalid cache storage type: " + getCacheStorageType());
+      }
+      config.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(storageType));
+      if (config.getStorageType().equals(StorageType.DISK)) {
+        checkArgument(nonNull(getCacheStoragePath()),
+            "Cache storage path must be specified when cache storage type is disk");
+        config.setStoragePath(getCacheStoragePath());
+      }
+    }
     return config;
   }
 }

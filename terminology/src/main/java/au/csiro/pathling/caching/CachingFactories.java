@@ -20,8 +20,8 @@ package au.csiro.pathling.caching;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.config.HttpCacheConfiguration;
-import au.csiro.pathling.config.HttpCacheConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
 import javax.annotation.Nonnull;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 
@@ -35,7 +35,7 @@ public final class CachingFactories {
    */
   private static class MemoryCachingFactory extends BaseCachingFactory {
 
-    public MemoryCachingFactory(@Nonnull final HttpCacheConfiguration config) {
+    public MemoryCachingFactory(@Nonnull final HttpClientCachingConfiguration config) {
       super(config);
     }
 
@@ -51,9 +51,9 @@ public final class CachingFactories {
    */
   private static class DiskCachingFactory extends BaseCachingFactory {
 
-    public DiskCachingFactory(@Nonnull final HttpCacheConfiguration config) {
+    public DiskCachingFactory(@Nonnull final HttpClientCachingConfiguration config) {
       super(config);
-      check(config.getStorageType().equals(HttpCacheConfiguration.StorageType.DISK));
+      check(config.getStorageType().equals(HttpClientCachingConfiguration.StorageType.DISK));
     }
 
     @Nonnull
@@ -70,13 +70,13 @@ public final class CachingFactories {
   }
 
   /**
-   * Returns a {@link CachingFactory} based upon the {@link HttpCacheConfiguration}.
+   * Returns a {@link CachingFactory} based upon the {@link HttpClientCachingConfiguration}.
    *
    * @param config the configuration for the caching mechanism
    * @return a {@link CachingFactory} for the specified configuration
    */
   @Nonnull
-  public static CachingFactory of(@Nonnull final HttpCacheConfiguration config) {
+  public static CachingFactory of(@Nonnull final HttpClientCachingConfiguration config) {
     if (config.getStorageType().equals(StorageType.MEMORY)) {
       return new MemoryCachingFactory(config);
     } else if (config.getStorageType().equals(StorageType.DISK)) {

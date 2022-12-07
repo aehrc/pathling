@@ -24,7 +24,7 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.config.HttpCacheConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -142,16 +142,15 @@ public class PathlingContext {
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
       @Nullable final PathlingContextConfiguration configuration) {
-    final PathlingContextConfiguration c;
+    final PathlingContextConfiguration config;
     if (configuration == null) {
-      c = PathlingContextConfiguration.builder().build();
+      config = PathlingContextConfiguration.builder().build();
     } else {
-      c = configuration;
+      config = configuration;
     }
 
-    final Builder encoderBuilder = getEncoderBuilder(c);
-    final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
-        c);
+    final Builder encoderBuilder = getEncoderBuilder(config);
+    final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(config);
     return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
   }
 
@@ -419,7 +418,7 @@ public class PathlingContext {
 
       final TerminologyAuthConfiguration authConfig = config.toAuthConfig();
       final HttpClientConfiguration clientConfig = config.toClientConfig();
-      final HttpCacheConfiguration cacheConfig = config.toCacheConfig();
+      final HttpClientCachingConfiguration cacheConfig = config.toCacheConfig();
 
       return new DefaultTerminologyServiceFactory(FhirContext.forR4().getVersion().getVersion(),
           resolvedTerminologyServerUrl, verboseRequestLogging, clientConfig, cacheConfig,
