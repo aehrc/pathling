@@ -21,6 +21,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_2121000032108;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_63816008;
@@ -58,6 +59,7 @@ import java.util.Collections;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
@@ -269,16 +271,16 @@ class TerminologyService2IntegrationTest extends WireMockTest {
     verify(anyRequestedFor(urlPathMatching("/fhir/(.*)"))
         .withHeader("User-Agent", matching("pathling/(.*)")));
   }
-  
+
   @Test
   void testLookupStandardPropertiesForKnownAndUnknownSystems() {
     assertEquals(
         List.of(Property.of("display", new StringType("Left hepatectomy"))),
-        terminologyService.lookup(CD_SNOMED_VER_63816008, "display", null));
+        terminologyService.lookup(CD_SNOMED_VER_63816008, "display"));
 
     assertEquals(
         List.of(Property.of("code", new CodeType("55915-3"))),
-        terminologyService.lookup(LC_55915_3, "code", "en"));
+        terminologyService.lookup(LC_55915_3, "code"));
 
     // TODO: Unexpected: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: [0dbaeea4-1bcc-40c0-b7b1-61fe4b4e188a]: A usable code system with URL uuid:unknown could not be resolved.
 
@@ -292,4 +294,27 @@ class TerminologyService2IntegrationTest extends WireMockTest {
     //     terminologyService.lookup(CD_SNOMED_403190006_VERSION_UNKN, "display", null));
   }
 
+  @Test
+  void testLookupNamedProperties() {
+    assertEquals(
+        List.of(
+            Property.of("parent", new CodeType("283357002")),
+            Property.of("parent", new CodeType("125663008"))
+        ),
+        terminologyService.lookup(CD_SNOMED_284551006, "parent"));
+    assertEquals(
+        List.of(
+            Property.of("inactive", new BooleanType("false"))
+        ),
+        terminologyService.lookup(LC_55915_3, "inactive"));
+  }
+
+  @Test
+  void testLookupSubproperties() {
+    assertEquals(
+        List.of(
+            Property.of("260686004", new CodeType("129304002"))
+            ),
+        terminologyService.lookup(CD_SNOMED_2121000032108, "260686004"));
+  }
 }

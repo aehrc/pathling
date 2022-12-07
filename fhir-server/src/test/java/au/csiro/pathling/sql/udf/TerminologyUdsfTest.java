@@ -560,11 +560,39 @@ public class TerminologyUdsfTest {
   }
 
   @Test
+  public void testPropertyWithDefaultType() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withProperty(CODING_1, "property_a", new StringType("value_a"));
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("coding", CodingEncoding.DATA_TYPE)
+        .withRow("uc-null", null)
+        .withRow("uc-codingA", toRow(CODING_1))
+        .withRow("uc-codingB", toRow(CODING_2))
+        .build();
+
+    final Dataset<Row> resultA = ds.select(ds.col("id"),
+        Terminology.property_of(ds.col("coding"), "property_a").alias("values"));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-codingA", Collections.singletonList("value_a"))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
+  @Test
   void testInputErrorForPropertyOfUnknownType() {
     assertEquals(
         "Type: 'instant' is not supported for 'property' udf",
         assertThrows(InvalidUserInputError.class,
-            () -> Terminology.property_of(lit(null), "display", FHIRDefinedType.INSTANT)).getMessage()
+            () -> Terminology.property_of(lit(null), "display",
+                FHIRDefinedType.INSTANT)).getMessage()
     );
     assertEquals(
         "Type: 'Quantity' is not supported for 'property' udf",

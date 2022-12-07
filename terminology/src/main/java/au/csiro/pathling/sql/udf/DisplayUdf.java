@@ -55,7 +55,7 @@ public class DisplayUdf implements SqlFunction,
     }
     final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        coding, DISPLAY_PROPERTY_CODE, null);
+        coding, DISPLAY_PROPERTY_CODE);
 
     final Optional<Property> maybeDisplayName = result.stream()
         .filter(s -> s instanceof Property)

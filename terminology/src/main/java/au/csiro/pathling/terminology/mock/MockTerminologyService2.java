@@ -173,8 +173,7 @@ public class MockTerminologyService2 implements TerminologyService2 {
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property,
-      @Nullable final String displayLanguage) {
+      @Nullable final String propertyCode) {
 
     final Coding snomedCoding = new Coding("http://snomed.info/sct", "439319006",
         "Screening for phenothiazine in serum");

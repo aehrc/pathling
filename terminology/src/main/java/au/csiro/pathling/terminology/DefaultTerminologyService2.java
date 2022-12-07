@@ -1,13 +1,11 @@
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.fhir.ParametersUtils.partsToBean;
 import static au.csiro.pathling.fhir.ParametersUtils.toBooleanResult;
 import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
 import static au.csiro.pathling.fhir.ParametersUtils.toMatchParts;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
-import static java.util.function.Predicate.not;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 
 import au.csiro.pathling.fhir.ParametersUtils;
@@ -23,15 +21,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
@@ -151,7 +145,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
       @Nonnull final Parameters parameters,
       @Nullable final String propertyCode) {
 
-    final List<PropertyPart> x = ParametersUtils.toPropertiesAndDesignations(
+    final List<PropertyPart> x = ParametersUtils.toProperties(
         parameters).collect(Collectors.toUnmodifiableList());
     return x.stream()
         .flatMap(part -> nonNull(part.getSubproperty())
@@ -165,8 +159,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property,
-      @Nullable final String displayLanguage) {
+      @Nullable final String property) {
 
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return Collections.emptyList();
@@ -176,9 +169,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
         required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
         required(CodeType::new, coding.getCode()),
-        optional(CodeType::new, property),
-        optional(CodeType::new, displayLanguage)
-    ), property);
+        optional(CodeType::new, property)), property);
   }
 
   @Override

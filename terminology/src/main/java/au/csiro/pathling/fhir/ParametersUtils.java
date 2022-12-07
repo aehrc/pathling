@@ -1,3 +1,20 @@
+/*
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.fhir;
 
 import java.beans.PropertyDescriptor;
@@ -6,17 +23,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.terminology.DefaultTerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.PropertyOrDesignation;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
@@ -24,8 +36,6 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
-
-import static java.util.Objects.isNull;
 
 /**
  * Helper functions for dealing with FHIR {@link Parameters} resource.
@@ -145,7 +155,9 @@ public final class ParametersUtils {
            : Stream.empty();
   }
 
-
+  /**
+   * Object representation of the 'property' part from $lookup results.
+   */
   @Data
   @NoArgsConstructor
   @AllArgsConstructor
@@ -172,8 +184,14 @@ public final class ParametersUtils {
     }
   }
 
+  /**
+   * Extracts 'property' parts from the result of '$lookup'
+   *
+   * @param parameters the parameters to convert.
+   * @return the stream of 'property' parts.
+   */
   @Nonnull
-  public static Stream<PropertyPart> toPropertiesAndDesignations(
+  public static Stream<PropertyPart> toProperties(
       @Nonnull final Parameters parameters) {
 
     return parameters.getParameter().stream()

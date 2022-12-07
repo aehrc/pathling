@@ -176,13 +176,13 @@ public class TerminologyServiceHelpers {
     public LookupExpectations(final TerminologyService2 mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
-      when(mockService.lookup(any(), any(), any())).thenReturn(Collections.emptyList());
+      when(mockService.lookup(any(), any())).thenReturn(Collections.emptyList());
     }
 
     @Nonnull
     public LookupExpectations withDisplay(@Nonnull final Coding coding,
         @Nonnull final String displayName) {
-      when(mockService.lookup(codingEq(coding), eq("display"), any()))
+      when(mockService.lookup(codingEq(coding), eq("display")))
           .thenReturn(List.of(
               Property.of("display", new StringType(displayName))));
       return this;
@@ -197,7 +197,7 @@ public class TerminologyServiceHelpers {
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
         @Nonnull final String propertyCode, T... values) {
-      when(mockService.lookup(deepEq(coding), eq(propertyCode), isNull())).thenReturn(
+      when(mockService.lookup(deepEq(coding), eq(propertyCode))).thenReturn(
           Stream.of(values)
               .map(v -> Property.of(propertyCode, v))
               .collect(Collectors.toUnmodifiableList())
