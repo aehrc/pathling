@@ -1,11 +1,27 @@
 package au.csiro.pathling.test;
 
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
+import org.junit.jupiter.params.provider.Arguments;
 import scala.collection.mutable.WrappedArray;
+
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public abstract class AbstractTerminologyTestBase {
 
@@ -17,6 +33,9 @@ public abstract class AbstractTerminologyTestBase {
   public static final String CODE_C = "codeC";
   public static final String SYSTEM_D = "uuid:systemD";
   public static final String CODE_D = "codeD";
+  public static final String SYSTEM_E = "uuid:systemE";
+  public static final String CODE_E = "codeE";
+
 
   public static final Coding CODING_AA = new Coding(SYSTEM_A, CODE_A, "displayAA");
   public static final Coding CODING_AB = new Coding(SYSTEM_A, CODE_B, "displayAB");
@@ -44,6 +63,7 @@ public abstract class AbstractTerminologyTestBase {
   public static final Coding CODING_B = CODING_BB;
   public static final Coding CODING_C = new Coding(SYSTEM_C, CODE_C, "displayCC");
   public static final Coding CODING_D = new Coding(SYSTEM_D, CODE_D, "displayDD");
+  public static final Coding CODING_E = new Coding(SYSTEM_E, CODE_E, "displayEE");
 
   public static final Coding INVALID_CODING_0 = new Coding(null, null, "");
   public static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
@@ -58,5 +78,53 @@ public abstract class AbstractTerminologyTestBase {
   @Nonnull
   public static WrappedArray<Row> encodeMany(Coding... codings) {
     return WrappedArray.make(Stream.of(codings).map(CodingEncoding::encode).toArray(Row[]::new));
+  }
+
+  @Nonnull
+  private static <T> Arguments primitiveArguments(
+      final String fhirType, final DataType sqlType,
+      final Function<T, ? extends Type> constructor,
+      final T[] propertyAValues, final T[] propertyBValues) {
+    return arguments(fhirType, sqlType,
+        Stream.of(propertyAValues).map(constructor).toArray(Type[]::new),
+        Stream.of(propertyBValues).map(constructor).toArray(Type[]::new),
+        propertyAValues,
+        propertyBValues);
+  }
+
+  @Nonnull
+  public static Stream<Arguments> propertyParameters() {
+    return Stream.of(
+        primitiveArguments("string", DataTypes.StringType, StringType::new,
+            new String[]{"string_a"},
+            new String[]{"string_b.0", "string_b.1"}
+        ),
+        primitiveArguments("code", DataTypes.StringType, CodeType::new,
+            new String[]{"code_a"},
+            new String[]{"code_b.0", "code_b.1"}
+        ),
+        primitiveArguments("integer", DataTypes.IntegerType, IntegerType::new,
+            new Integer[]{111},
+            new Integer[]{222, 333}
+        ),
+        primitiveArguments("boolean", DataTypes.BooleanType, BooleanType::new,
+            new Boolean[]{true},
+            new Boolean[]{false, true}
+        ),
+        primitiveArguments("decimal", DecimalCustomCoder.decimalType(), DecimalType::new,
+            new BigDecimal[]{new BigDecimal("1.11")},
+            new BigDecimal[]{new BigDecimal("2.22"), new BigDecimal("3.33")}
+        ),
+        primitiveArguments("dateTime", DataTypes.StringType, DateTimeType::new,
+            new String[]{"1999-01-01"},
+            new String[]{"2222-02-02", "3333-03-03"}
+        ),
+        arguments("Coding", CodingEncoding.DATA_TYPE,
+            new Coding[]{CODING_C},
+            new Coding[]{CODING_D, CODING_E},
+            CodingEncoding.encodeList(List.of(CODING_C)),
+            CodingEncoding.encodeList(List.of(CODING_D, CODING_E))
+        )
+    );
   }
 }

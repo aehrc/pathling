@@ -20,6 +20,7 @@ import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.sql.Terminology;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -60,7 +61,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @Tag("UnitTest")
 @SpringBootTest
-public class TerminologyUdsfTest {
+public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
 
   @Autowired
   private SparkSession spark;
@@ -88,12 +89,6 @@ public class TerminologyUdsfTest {
 
   private final static String CODING_1_VALUE_SET_URI = "uiid:ValueSet_coding1";
   private final static String CODING_2_VALUE_SET_URI = "uiid:ValueSet_coding2";
-
-
-  private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
-  private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
-  private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
-
 
   // helper functions
   private DatasetBuilder codingDatasetBuilder() {
@@ -463,55 +458,8 @@ public class TerminologyUdsfTest {
     DatasetAssert.of(result).hasRows(expectedResult);
   }
 
-  @Nonnull
-  private static <T> Arguments primitiveArguments(final String fhirType, final DataType sqlType,
-      final Function<T, ? extends Type> constructor,
-      final T[] propertyAValues, final T[] propertyBValues) {
-    return arguments(fhirType, sqlType,
-        Stream.of(propertyAValues).map(constructor).toArray(Type[]::new),
-        Stream.of(propertyBValues).map(constructor).toArray(Type[]::new),
-        propertyAValues,
-        propertyBValues);
-  }
-
-  @Nonnull
-  static Stream<Arguments> displayParameters() {
-    return Stream.of(
-        primitiveArguments("string", DataTypes.StringType, StringType::new,
-            new String[]{"string_a"},
-            new String[]{"string_b.0", "string_b.1"}
-        ),
-        primitiveArguments("code", DataTypes.StringType, CodeType::new,
-            new String[]{"code_a"},
-            new String[]{"code_b.0", "code_b.1"}
-        ),
-        primitiveArguments("integer", DataTypes.IntegerType, IntegerType::new,
-            new Integer[]{111},
-            new Integer[]{222, 333}
-        ),
-        primitiveArguments("boolean", DataTypes.BooleanType, BooleanType::new,
-            new Boolean[]{true},
-            new Boolean[]{false, true}
-        ),
-        primitiveArguments("decimal", DecimalCustomCoder.decimalType(), DecimalType::new,
-            new BigDecimal[]{new BigDecimal("1.11")},
-            new BigDecimal[]{new BigDecimal("2.22"), new BigDecimal("3.33")}
-        ),
-        primitiveArguments("dateTime", DataTypes.StringType, DateTimeType::new,
-            new String[]{"1999-01-01"},
-            new String[]{"2222-02-02", "3333-03-03"}
-        ),
-        arguments("Coding", CodingEncoding.DATA_TYPE,
-            new Coding[]{CODING_3},
-            new Coding[]{CODING_4, CODING_5},
-            CodingEncoding.encodeList(List.of(CODING_3)),
-            CodingEncoding.encodeList(List.of(CODING_4, CODING_5))
-        )
-    );
-  }
-
   @ParameterizedTest
-  @MethodSource("displayParameters")
+  @MethodSource("propertyParameters")
   public void testProperty(final String propertyType, final DataType resultDataType,
       final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
       final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {

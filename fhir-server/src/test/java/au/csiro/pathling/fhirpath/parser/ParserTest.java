@@ -87,7 +87,13 @@ public class ParserTest extends AbstractParserTest {
         .withDisplay(CD_SNOMED_195662009)
         .withDisplay(CD_SNOMED_444814009);
   }
-  
+
+  private void setupMockPropertiesFor_195662009_444814009() {
+    TerminologyServiceHelpers.setupLookup(terminologyService2)
+        .withProperty(CD_SNOMED_195662009, "child", CD_SNOMED_40055000, CD_SNOMED_403190006)
+        .withProperty(CD_SNOMED_444814009, "child", CD_SNOMED_284551006);
+  }
+
   @Test
   void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
@@ -470,15 +476,32 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testDisplayFunction() {
-
     setupMockDisplayFor_195662009_444814009();
-
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.display()")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
   }
 
+
+  @Test
+  void testPropertyFunctionWithDefaultType() {
+    setupMockDisplayFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.property('display')")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+  }
+
+  @Test
+  void testPropertyFunctionWithCodingType() {
+    setupMockPropertiesFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.property('child', 'Coding').code")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testPropertyFunctionWithCodingType.csv");
+  }
+  
   @Test
   void testTranslateWithWhereAndTranslate() {
 
