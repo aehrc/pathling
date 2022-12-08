@@ -122,17 +122,17 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   private static CloseableHttpClient buildHttpClient(
       @Nonnull final HttpClientConfiguration clientConfig,
-      @Nonnull final HttpClientCachingConfiguration cacheConfig) {
+      @Nonnull final HttpClientCachingConfiguration pathlingCacheConfig) {
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
     connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
     final HttpClientBuilder clientBuilder;
-    if (cacheConfig.isEnabled()) {
+    if (pathlingCacheConfig.isEnabled()) {
       final CacheConfig httpClientCacheConfig = CacheConfig.custom()
-          .setMaxCacheEntries(cacheConfig.getMaxEntries())
-          .setMaxObjectSize(cacheConfig.getMaxObjectSize())
+          .setMaxCacheEntries(pathlingCacheConfig.getMaxEntries())
+          .setMaxObjectSize(pathlingCacheConfig.getMaxObjectSize())
           .build();
-      clientBuilder = CachingFactories.of(cacheConfig)
+      clientBuilder = CachingFactories.of(pathlingCacheConfig)
           .create(httpClientCacheConfig);
     } else {
       clientBuilder = HttpClients.custom();
