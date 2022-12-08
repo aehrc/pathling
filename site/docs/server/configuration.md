@@ -149,12 +149,27 @@ spark:
   `https://tx.ontoserver.csiro.au/fhir`) The endpoint of the
   [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
   (R4) that the server can use to resolve terminology queries.
-- `pathling.terminology.socketTimeout` - (default: `60000`) The maximum period
-  (in milliseconds) that the server should wait for incoming data from the
-  terminology service.
 - `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
   to `true` will enable additional logging of the details of requests between
   the server and the terminology service.
+- `pathling.terminology.client.maxConnectionsTotal` - (default: `32`) The
+  maximum number of total connections allowed from the client.
+- `pathling.terminology.client.maxConnectionsPerRoute` - (default: `16`) The
+  maximum number of connections allowed from the client, per route.
+- `pathling.terminology.client.socketTimeout` - (default: `60000`) The maximum
+  period (in milliseconds) that the server should wait for incoming data from
+  the terminology service.
+- `pathling.terminology.cache.enabled` - (default: `true`) Enables client-side 
+  caching of terminology responses.
+- `pathling.terminology.cache.maxEntries` - (default: `100000`) The maximum
+  number of responses that will be retained within the terminology cache.
+- `pathling.terminology.cache.maxObjectSize` - (default: `64000`) The maximum
+  size of a response that will be cached, in bytes.
+- `pathling.terminology.cache.storageType` - (default: `memory`) The type of 
+  storage to be used by the terminology cache. Valid values are `memory` and 
+  `disk`.
+- `pathling.terminology.cache.storagePath` - The path at which to store cache
+  data. Required if `pathling.terminology.cache.storageType` is set to `disk`.
 - `pathling.terminology.authentication.enabled` - (default: `false`) Enables
   authentication for requests to the terminology service.
 - `pathling.terminology.authentication.tokenEndpoint`, 

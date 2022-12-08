@@ -3,8 +3,8 @@ package au.csiro.pathling.terminology;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.caching.CachingFactories;
-import au.csiro.pathling.config.HttpCacheConf;
-import au.csiro.pathling.config.HttpClientConf;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient2;
@@ -55,10 +55,10 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private final boolean verboseRequestLogging;
 
   @Nonnull
-  private final HttpClientConf clientConfig;
+  private final HttpClientConfiguration clientConfig;
 
   @Nonnull
-  private final HttpCacheConf cacheConfig;
+  private final HttpClientCachingConfiguration cacheConfig;
 
   @Nonnull
   private final TerminologyAuthConfiguration authConfig;
@@ -73,8 +73,8 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
       @Nonnull final String terminologyServerUrl,
       @Nullable final Integer socketTimeout,
       final boolean verboseRequestLogging,
-      @Nonnull final HttpClientConf clientConfig,
-      @Nonnull final HttpCacheConf cacheConfig,
+      @Nonnull final HttpClientConfiguration clientConfig,
+      @Nonnull final HttpClientCachingConfiguration cacheConfig,
       @Nonnull final TerminologyAuthConfiguration authConfig) {
 
     // For backwards compatibility with the old version config version
@@ -91,8 +91,8 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging,
-      @Nonnull final HttpClientConf clientConfig,
-      @Nonnull final HttpCacheConf cacheConfig,
+      @Nonnull final HttpClientConfiguration clientConfig,
+      @Nonnull final HttpClientCachingConfiguration cacheConfig,
       @Nonnull final TerminologyAuthConfiguration authConfig) {
     this.fhirVersion = fhirVersion;
     this.terminologyServerUrl = terminologyServerUrl;
@@ -121,25 +121,25 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   }
 
   private static CloseableHttpClient buildHttpClient(
-      @Nonnull final HttpClientConf clientConf,
-      @Nonnull final HttpCacheConf cacheConf) {
+      @Nonnull final HttpClientConfiguration clientConfig,
+      @Nonnull final HttpClientCachingConfiguration pathlingCacheConfig) {
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-    connectionManager.setMaxTotal(clientConf.getMaxConnectionsTotal());
-    connectionManager.setDefaultMaxPerRoute(clientConf.getMaxConnectionsPerRoute());
+    connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
+    connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
     final HttpClientBuilder clientBuilder;
-    if (cacheConf.isEnabled()) {
-      final CacheConfig cacheConfig = CacheConfig.custom()
-          .setMaxCacheEntries(cacheConf.getMaxCacheEntries())
-          .setMaxObjectSize(cacheConf.getMaxObjectSize())
+    if (pathlingCacheConfig.isEnabled()) {
+      final CacheConfig httpClientCacheConfig = CacheConfig.custom()
+          .setMaxCacheEntries(pathlingCacheConfig.getMaxEntries())
+          .setMaxObjectSize(pathlingCacheConfig.getMaxObjectSize())
           .build();
-      clientBuilder = CachingFactories.of(cacheConf.getStorageType())
-          .create(cacheConfig, cacheConf.getStorage());
+      clientBuilder = CachingFactories.of(pathlingCacheConfig)
+          .create(httpClientCacheConfig);
     } else {
       clientBuilder = HttpClients.custom();
     }
 
     final RequestConfig defaultRequestConfig = RequestConfig.custom()
-        .setSocketTimeout(clientConf.getSocketTimeout())
+        .setSocketTimeout(clientConfig.getSocketTimeout())
         .build();
 
     return clientBuilder

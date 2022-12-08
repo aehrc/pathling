@@ -27,22 +27,29 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-        f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
 )
 first_3 = csv.limit(3)
 cross_join = first_3.selectExpr(
-        "CODE as LEFT", "DESCRIPTION as LEFT_DESCRIPTION"
+    "CODE as LEFT", "DESCRIPTION as LEFT_DESCRIPTION"
 ).crossJoin(first_3.selectExpr("CODE as RIGHT", "DESCRIPTION as RIGHT_DESCRIPTION"))
 
-result_1 = cross_join.withColumn("SUBSUMES",
-                                 subsumes(to_coding(cross_join.LEFT, "http://snomed.info/sct"),
-                                          to_coding(cross_join.RIGHT, "http://snomed.info/sct")))
+result_1 = cross_join.withColumn(
+    "SUBSUMES",
+    subsumes(
+        to_coding(cross_join.LEFT, "http://snomed.info/sct"),
+        to_coding(cross_join.RIGHT, "http://snomed.info/sct"),
+    ),
+)
 result_2 = result_1.withColumn(
-        "LEFT_IS_ENT", subsumes(
-                # 232208008 |Ear, nose and throat disorder|
-                Coding("http://snomed.info/sct", "232208008"),
-                to_coding(cross_join.LEFT, "http://snomed.info/sct")))
+    "LEFT_IS_ENT",
+    subsumes(
+        # 232208008 |Ear, nose and throat disorder|
+        Coding("http://snomed.info/sct", "232208008"),
+        to_coding(cross_join.LEFT, "http://snomed.info/sct"),
+    ),
+)
 
 result_2.select(
-        "LEFT", "RIGHT", "LEFT_DESCRIPTION", "RIGHT_DESCRIPTION", "SUBSUMES", "LEFT_IS_ENT"
+    "LEFT", "RIGHT", "LEFT_DESCRIPTION", "RIGHT_DESCRIPTION", "SUBSUMES", "LEFT_IS_ENT"
 ).show()

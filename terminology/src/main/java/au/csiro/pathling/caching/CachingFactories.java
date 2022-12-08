@@ -17,40 +17,52 @@
 
 package au.csiro.pathling.caching;
 
-import java.io.File;
+import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.errors.InvalidConfigError;
-import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 
 /**
- * The implementation of standarty types of caching mechanisms.
+ * The implementation of standard types of caching mechanisms.
  */
 public final class CachingFactories {
 
-  public static final String MEMORY_STORAGE = "memory";
-  public static final String DISK_STORAGE = "disk";
+  /**
+   * A factory that can build a {@link CachingHttpClientBuilder} that uses an in-memory cache.
+   */
+  private static class MemoryCachingFactory extends BaseCachingFactory {
 
-  public static final String DISK_CACHE_DIR = "cacheDir";
-
-  private static class MemoryCachingFactory extends AbstractCachingFactoryBase {
+    public MemoryCachingFactory(@Nonnull final HttpClientCachingConfiguration config) {
+      super(config);
+    }
 
     @Nonnull
     @Override
-    protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder,
-        @Nonnull final Config config, @Nonnull final CacheConfig cacheConfig) {
-      return builder;
+    protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder) {
+      return builder.setHttpCacheStorage(new InfinispanInMemoryStorage());
     }
   }
 
-  private static class DiskCachingFactory extends AbstractCachingFactoryBase {
+  /**
+   * A factory that can build a {@link CachingHttpClientBuilder} that uses a disk cache.
+   */
+  private static class DiskCachingFactory extends BaseCachingFactory {
+
+    public DiskCachingFactory(@Nonnull final HttpClientCachingConfiguration config) {
+      super(config);
+      check(config.getStorageType().equals(HttpClientCachingConfiguration.StorageType.DISK));
+    }
 
     @Nonnull
     @Override
-    protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder,
-        @Nonnull final Config config, @Nonnull final CacheConfig cacheConfig) {
-      return builder.setCacheDir(new File(config.required(DISK_CACHE_DIR)));
+    protected CachingHttpClientBuilder configure(@Nonnull final CachingHttpClientBuilder builder) {
+      checkNotNull(config.getStoragePath());
+      return builder.setHttpCacheStorage(new InfinispanPersistentStorage(config.getStoragePath()));
     }
+
   }
 
   private CachingFactories() {
@@ -58,19 +70,20 @@ public final class CachingFactories {
   }
 
   /**
-   * Creates a {@link CachingFactory} for specified storage type.
+   * Returns a {@link CachingFactory} based upon the {@link HttpClientCachingConfiguration}.
    *
-   * @param storageType the type of caching storage.
-   * @return the {@link CachingFactory} for specified storage type.
+   * @param config the configuration for the caching mechanism
+   * @return a {@link CachingFactory} for the specified configuration
    */
   @Nonnull
-  public static CachingFactory of(@Nonnull final String storageType) {
-    if (MEMORY_STORAGE.equals(storageType)) {
-      return new MemoryCachingFactory();
-    } else if (DISK_STORAGE.equals(storageType)) {
-      return new DiskCachingFactory();
+  public static CachingFactory of(@Nonnull final HttpClientCachingConfiguration config) {
+    if (config.getStorageType().equals(StorageType.MEMORY)) {
+      return new MemoryCachingFactory(config);
+    } else if (config.getStorageType().equals(StorageType.DISK)) {
+      return new DiskCachingFactory(config);
     } else {
-      throw new InvalidConfigError("Cannot configure cache with storageType: " + storageType);
+      throw new AssertionError(
+          "HTTP cache configuration encountered with invalid storage type: " + config);
     }
   }
 

@@ -31,19 +31,26 @@ process", and a causative agent of "Virus".
 
 ```python
 from pathling import PathlingContext
-from pathling.functions import to_coding, to_ecl_value_set
+from pathling.functions import to_snomed_coding, to_ecl_value_set
+from pathling.udfs import member_of
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
-result = pc.member_of(csv, to_coding(csv.CODE, 'http://snomed.info/sct'),
-                      to_ecl_value_set("""
-<< 64572001|Disease| : (
-  << 370135005|Pathological process| = << 441862004|Infectious process|,
-  << 246075003|Causative agent| = << 49872002|Virus|
-)
-                      """), 'VIRAL_INFECTION')
-result.select('CODE', 'DESCRIPTION', 'VIRAL_INFECTION').show()
+VIRAL_INFECTION_ECL = """
+    << 64572001|Disease| : (
+      << 370135005|Pathological process| = << 441862004|Infectious process|,
+      << 246075003|Causative agent| = << 49872002|Virus|
+    )
+"""
+
+csv.select(
+    "CODE",
+    "DESCRIPTION",
+    member_of(to_snomed_coding(csv.CODE), to_ecl_value_set(VIRAL_INFECTION_ECL)).alias(
+        "VIRAL_INFECTION"
+    ),
+).show()
 ```
 
 </TabItem>
@@ -53,20 +60,25 @@ result.select('CODE', 'DESCRIPTION', 'VIRAL_INFECTION').show()
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 
 val pc = PathlingContext.create()
-val csv = spark.read.csv("conditions.csv")
+val csv = pc.getSpark.read.csv("conditions.csv")
 
-val result = pc.memberOf(csv, toCoding(csv.col("CODE"), "http://snomed.info/sct"),
-    toEclValueSet(
-        """
-        << 64572001|Disease| : (
-          << 370135005|Pathological process| = << 441862004|Infectious process|,
-          << 246075003|Causative agent| = << 49872002|Virus|
-        )
-    """), "VIRAL_INFECTION")
-result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show()
+val VIRAL_INFECTION_ECL = """
+    << 64572001|Disease| : (
+      << 370135005|Pathological process| = << 441862004|Infectious process|,
+      << 246075003|Causative agent| = << 49872002|Virus|
+    )
+"""
+
+csv.select(
+    csv.col("CODE"),
+    csv.col("DESCRIPTION"),
+    member_of(toCoding(csv.col("CODE"), "http://snomed.info/sct"),
+        toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
+).show()
 ```
 
 </TabItem>
@@ -76,6 +88,7 @@ result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show()
 
 ```java
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+import static au.csiro.pathling.sql.Terminology.*;
 
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
@@ -85,13 +98,20 @@ class MyApp {
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+        
+        String VIRAL_INFECTION_ECL = """
+            << 64572001|Disease| : (
+              << 370135005|Pathological process| = << 441862004|Infectious process|,
+              << 246075003|Causative agent| = << 49872002|Virus|
+            )
+        """;
 
-        Dataset<Row> result = pc.memberOf(csv, toCoding(csv.col("code"), SNOMED_URI),
-                toEclValueSet("<< 64572001|Disease| : ("
-                        + "<< 370135005|Pathological process| = << 441862004|Infectious process|,"
-                        + "<< 246075003|Causative agent| = << 49872002|Virus|"
-                        + ")"), "VIRAL_INFECTION");
-        result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show();
+        csv.select(
+                csv.col("CODE"),
+                csv.col("DESCRIPTION"),
+                member_of(toSnomedCoding(csv.col("CODE")),
+                        toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
+        ).show();
     }
 }
 
@@ -128,17 +148,23 @@ produce multiple results for each input coding.
 
 ```python
 from pathling import PathlingContext
-from pathling.functions import to_coding
+from pathling.functions import to_snomed_coding
+from pathling.udfs import translate
+from pyspark.sql.functions import explode_outer
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
-result = pc.translate(csv, to_coding(csv.CODE, 'http://snomed.info/sct'),
-                      'http://snomed.info/sct/900000000000207008?fhir_cm='
-                      '900000000000497000',
-                      output_column_name='READ_CODE')
-result = result.withColumn('READ_CODE', result.READ_CODE.code)
-result.select('CODE', 'DESCRIPTION', 'READ_CODE').show()
+translate_result = csv.withColumn(
+    "READ_CODES",
+    translate(
+        to_snomed_coding(csv.CODE),
+        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+    ).code,
+)
+translate_result.select(
+    "CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")
+).show()
 ```
 
 </TabItem>
@@ -148,15 +174,24 @@ result.select('CODE', 'DESCRIPTION', 'READ_CODE').show()
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
+import org.apache.spark.sql.functions.explode_outer
 
 val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
 
-val result = pc.translate(csv, toCoding(csv.col("CODE"), SNOMED_URI),
-    "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
-    false, "equivalent", "READ_CODE")
-result.select("CODE", "DESCRIPTION", "READ_CODE").show()
+val translate_result = csv.withColumn(
+    "READ_CODES",
+    translate(
+        toCoding(csv.col("CODE"), "https://snomed.info/sct"),
+        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+        false, null
+    ).getField("code")
+)
+translate_result.select(
+    csv.col("CODE"), csv.col("DESCRIPTION"), explode_outer(translate_result.col("READ_CODES")).alias("READ_CODE")
+).show()
 ```
 
 </TabItem>
@@ -165,7 +200,9 @@ result.select("CODE", "DESCRIPTION", "READ_CODE").show()
 <JavaInstallation/>
 
 ```java
+import static au.csiro.pathling.sql.Terminology.*;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+import static org.apache.spark.sql.functions.explode_outer;
 
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
@@ -176,10 +213,18 @@ class MyApp {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
-        Dataset<Row> result = pc.translate(csv, toCoding(csv.col("CODE"), SNOMED_URI),
-                "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
-                false, "equivalent", "READ_CODE");
-        result.select("CODE", "DESCRIPTION", "READ_CODE").show();
+        val translate_result = csv.withColumn(
+                "READ_CODES",
+                translate(
+                        toCoding(csv.col("CODE"), "https://snomed.info/sct"),
+                        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+                        false, null
+                ).getField("code")
+        );
+        translate_result.select(
+                csv.col("CODE"), csv.col("DESCRIPTION"), 
+                explode_outer(translate_result.col("READ_CODES")).alias("READ_CODE")
+        ).show();
     }
 }
 
@@ -221,20 +266,20 @@ whether a code is "subsumed by" another code.
 ```python
 from pathling import PathlingContext
 from pathling.coding import Coding
-from pathling.functions import to_coding
+from pathling.functions import to_snomed_coding
+from pathling.udfs import subsumes
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
 # 232208008 |Ear, nose and throat disorder|
 left_coding = Coding('http://snomed.info/sct', '232208008')
-right_coding_column = to_coding(csv.CODE, 'http://snomed.info/sct')
+right_coding_column = to_snomed_coding(csv.CODE)
 
-result = pc.subsumes(csv, 'SUBSUMES',
-                     left_coding=left_coding,
-                     right_coding_column=right_coding_column)
-
-result.select('CODE', 'DESCRIPTION', 'IS_ENT').show()
+csv.select(
+    'CODE', 'DESCRIPTION',
+    subsumes(left_coding, right_coding_column).alias('SUBSUMES')
+).show()
 ```
 
 </TabItem>
@@ -244,23 +289,28 @@ result.select('CODE', 'DESCRIPTION', 'IS_ENT').show()
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding
 
 val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
 
-val result = pc.subsumes(csv,
+csv.select(
+    csv.col("CODE"),
     // 232208008 |Ear, nose and throat disorder|
-    CodingEncoding.toStruct(
-        lit(null),
-        lit(SNOMED_URI),
-        lit(null),
-        lit("232208008"),
-        lit(null),
-        lit(null)
-    ), toCoding(csv.col("CODE"), SNOMED_URI), "IS_ENT")
-result.select("CODE", "DESCRIPTION", "IS_ENT").show()
+    subsumes(
+        CodingEncoding.toStruct(
+            lit(null),
+            lit(SNOMED_URI),
+            lit(null),
+            lit("232208008"),
+            lit(null),
+            lit(null)
+        ), 
+        toSnomedCoding(csv.col("CODE"))
+    ).alias("IS_ENT")
+).show()
 ```
 
 </TabItem>
@@ -269,6 +319,7 @@ result.select("CODE", "DESCRIPTION", "IS_ENT").show()
 <JavaInstallation/>
 
 ```java
+import static au.csiro.pathling.sql.Terminology.*;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
 
 import au.csiro.pathling.library.PathlingContext;
@@ -280,17 +331,21 @@ class MyApp {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
-        Dataset<Row> result = pc.subsumes(csv,
+        csv.select(
+                csv.col("CODE"),
                 // 232208008 |Ear, nose and throat disorder|
-                CodingEncoding.toStruct(
-                        lit(null),
-                        lit(SNOMED_URI),
-                        lit(null),
-                        lit("232208008"),
-                        lit(null),
-                        lit(null)
-                ), toCoding(csv.col("CODE"), SNOMED_URI), "IS_ENT");
-        result.select("CODE", "DESCRIPTION", "IS_ENT").show();
+                subsumes(
+                        CodingEncoding.toStruct(
+                                lit(null),
+                                lit(SNOMED_URI),
+                                lit(null),
+                                lit("232208008"),
+                                lit(null),
+                                lit(null)
+                        ),
+                        toSnomedCoding(csv.col("CODE"))
+                ).alias("IS_ENT")
+        ).show();
     }
 }
 

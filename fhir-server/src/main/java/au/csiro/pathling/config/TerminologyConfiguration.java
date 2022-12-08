@@ -59,7 +59,7 @@ public class TerminologyConfiguration {
   public Integer getSocketTimeout() {
     return socketTimeout;
   }
-  
+
   /**
    * Setting this option to {@code true} will enable additional logging of the details of requests
    * between the server and the terminology service.
@@ -68,10 +68,10 @@ public class TerminologyConfiguration {
   private boolean verboseLogging;
 
   @NotNull
-  private HttpClientConf client;
+  private HttpClientConfiguration client;
 
   @NotNull
-  private HttpCacheConf cache;
+  private HttpClientCachingConfiguration cache;
 
   @NotNull
   private TerminologyAuthConfiguration authentication;

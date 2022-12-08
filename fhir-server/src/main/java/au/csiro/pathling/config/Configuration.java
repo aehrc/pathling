@@ -84,7 +84,7 @@ public class Configuration {
   private AuthorizationConfiguration auth;
 
   @NotNull
-  private HttpCachingConfiguration httpCaching;
+  private HttpServerCachingConfiguration httpCaching;
 
   @NotNull
   private CorsConfiguration cors;
