@@ -149,9 +149,6 @@ public class PathlingContextConfiguration {
       config.setMaxEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
       config.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
       final StorageType storageType = StorageType.fromCode(getCacheStorageType());
-      if (storageType == null) {
-        throw new IllegalArgumentException("Invalid cache storage type: " + getCacheStorageType());
-      }
       config.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(storageType));
       if (config.getStorageType().equals(StorageType.DISK)) {
         checkArgument(nonNull(getCacheStoragePath()),

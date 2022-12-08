@@ -116,14 +116,14 @@ public class HttpClientCachingConfiguration implements Serializable {
       return code;
     }
 
-    @Nullable
-    public static StorageType fromCode(@Nullable final String code) {
+    @Nonnull
+    public static StorageType fromCode(@Nonnull final String code) {
       for (final StorageType storageType : values()) {
         if (storageType.code.equals(code)) {
           return storageType;
         }
       }
-      return null;
+      throw new IllegalArgumentException("Unknown storage type: " + code);
     }
   }
 
