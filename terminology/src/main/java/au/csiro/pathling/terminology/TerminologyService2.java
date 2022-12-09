@@ -152,13 +152,11 @@ public interface TerminologyService2 {
    * operation.
    *
    * @param coding the coding to lookup.
-   * @param property the code of the property to lookup. If not null only the properties with
-   * matching names are returned.
-   * @param displayLanguage the language to use for narrowing down designations.
+   * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
+   * with matching codes are returned.
    * @return the list of properties and/or designations.
    */
   @Nonnull
-  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String property,
-      @Nullable String displayLanguage);
+  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode);
 
 }

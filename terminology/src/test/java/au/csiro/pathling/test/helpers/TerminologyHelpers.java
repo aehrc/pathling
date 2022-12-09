@@ -65,6 +65,8 @@ public final class TerminologyHelpers {
   public static final Coding CD_SNOMED_284551006 = snomedCoding("284551006",
       "Laceration of foot");
 
+  public static final Coding CD_SNOMED_2121000032108 = snomedCoding("2121000032108",
+      "Laparoscopic-assisted partial hepatectomy");
 
   public static final Coding CD_SNOMED_444814009 = snomedCoding("444814009",
       "Viral sinusitis (disorder)");

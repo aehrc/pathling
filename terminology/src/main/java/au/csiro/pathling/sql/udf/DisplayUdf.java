@@ -25,9 +25,9 @@ import org.hl7.fhir.r4.model.Coding;
 public class DisplayUdf implements SqlFunction,
     SqlFunction1<Row, String> {
 
-  public static final String DISPLAY_PROPERTY_CODE = "display";
   private static final long serialVersionUID = 7605853352299165569L;
-
+  
+  public static final String DISPLAY_PROPERTY_CODE = "display";
   public static final String FUNCTION_NAME = "display";
   public static final DataType RETURN_TYPE = DataTypes.StringType;
 
@@ -55,7 +55,7 @@ public class DisplayUdf implements SqlFunction,
     }
     final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        coding, DISPLAY_PROPERTY_CODE, null);
+        coding, DISPLAY_PROPERTY_CODE);
 
     final Optional<Property> maybeDisplayName = result.stream()
         .filter(s -> s instanceof Property)

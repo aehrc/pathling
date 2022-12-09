@@ -142,7 +142,6 @@ class DisplayFunctionTest {
         .hasFhirType(FHIRDefinedType.STRING)
         .isNotSingular()
         .selectOrderedResultWithEid()
-        .debugAllRows()
         .hasRows(expectedResult);
   }
 

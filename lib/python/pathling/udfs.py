@@ -50,6 +50,19 @@ def _invoke_function(name: str, *args: Any) -> Column:
     return Column(jf(*args))
 
 
+class PropertyType:
+    """
+    Allowed property types.
+    """
+    STRING = "string"
+    INTEGER = "integer"
+    BOOLEAN = "boolean"
+    DECIMAL = "decimal"
+    DATETIME = "dateTime"
+    CODE = "code"
+    CODING = "Coding"
+
+
 def member_of(coding: CodingArg, value_set_uri: str) -> Column:
     """
     Takes a Coding or array of Codings column as its input. Returns the column which contains a 
@@ -123,3 +136,22 @@ def display(coding: CodingArg) -> Column:
     :return: a Column containing the result of the operation (String).
     """
     return _invoke_function("display", _coding_to_java_column(coding))
+
+
+def property_of(coding: CodingArg, property_code: str,
+                property_type: str = PropertyType.STRING) -> Column:
+    """
+    Takes a Coding column as its input. Returns the Column, which contains the values of properties
+    for this coding with specified names and types. The type of the result column depends on the
+    types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
+    Complex types are mapped to their corresponding structs. The allowed property types are: code |
+    Coding | string | integer | boolean | dateTime | decimal. 
+    See also :class:`PropertyType`.
+    
+    :param coding: a Column containing a struct representation of a Coding
+    :param property_code: the code of the property to retrieve.
+    :param property_type: the type of the property to retrieve.
+    :return: the Column containing the result of the operation (array of property values)
+    """
+    return _invoke_function("property_of", _coding_to_java_column(coding), property_code,
+                            property_type)

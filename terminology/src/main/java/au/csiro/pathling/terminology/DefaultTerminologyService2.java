@@ -5,9 +5,11 @@ import static au.csiro.pathling.fhir.ParametersUtils.toMatchParts;
 import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static java.util.function.Predicate.not;
+import static java.util.Objects.requireNonNull;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 
+import au.csiro.pathling.fhir.ParametersUtils;
+import au.csiro.pathling.fhir.ParametersUtils.PropertyPart;
 import au.csiro.pathling.fhir.TerminologyClient2;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.io.Closeable;
@@ -17,13 +19,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
@@ -152,32 +154,37 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Nonnull
   private static List<PropertyOrDesignation> toPropertiesAndDesignations(
-      @Nonnull final Parameters parameters, @Nullable final String propertyCode) {
+      @Nonnull final Parameters parameters,
+      @Nullable final String propertyCode) {
 
-    return parameters.getParameter().stream()
-        .filter(not(ParametersParameterComponent::hasPart))
-        .filter(p -> isNull(propertyCode) || propertyCode.equals(p.getName()))
-        .map(p -> Property.of(p.getName(), p.getValue()))
+    final List<PropertyPart> x = ParametersUtils.toProperties(
+        parameters).collect(Collectors.toUnmodifiableList());
+    return x.stream()
+        .flatMap(part -> nonNull(part.getSubproperty())
+                         ? part.getSubproperty().stream()
+                         : Stream.of(part))
+        .map(part -> Property.of(part.getCode().getValue(), requireNonNull(part.getValue())))
+        .filter(property -> Objects.isNull(propertyCode) || propertyCode.equals(property.getCode()))
         .collect(Collectors.toUnmodifiableList());
   }
 
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property,
-      @Nullable final String displayLanguage) {
+      @Nullable final String property) {
 
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return Collections.emptyList();
     }
-
-    return toPropertiesAndDesignations(terminologyClient.lookup(
-        required(UriType::new, coding.getSystem()),
-        optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode()),
-        optional(CodeType::new, property),
-        optional(CodeType::new, displayLanguage)
-    ), property);
+    try {
+      return toPropertiesAndDesignations(terminologyClient.lookup(
+          required(UriType::new, coding.getSystem()),
+          optional(StringType::new, coding.getVersion()),
+          required(CodeType::new, coding.getCode()),
+          optional(CodeType::new, property)), property);
+    } catch (final BaseServerResponseException e) {
+      return handleError(e, Collections.emptyList());
+    }
   }
 
   @Override

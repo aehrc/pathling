@@ -1,3 +1,20 @@
+/*
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.fhir;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
@@ -81,8 +98,7 @@ public interface TerminologyClient2 {
       @Nonnull @OperationParam(name = "system") UriType system,
       @Nullable @OperationParam(name = "version") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code,
-      @Nullable @OperationParam(name = "property") CodeType property,
-      @Nullable @OperationParam(name = "displayLanguage") CodeType displayLanguage
+      @Nullable @OperationParam(name = "property") CodeType property
   );
 
 
@@ -97,7 +113,7 @@ public interface TerminologyClient2 {
    * @param httpClient the {@link HttpClient} instance to use for HTTP request.
    * @return the new instance of {@link TerminologyClient2}.
    */
-  
+
   static TerminologyClient2 build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
@@ -215,8 +231,7 @@ class TerminologyClient2Impl implements TerminologyClient2 {
   @Override
   public Parameters lookup(@Nonnull final UriType system,
       @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final CodeType property,
-      @Nullable final CodeType displayLanguage) {
+      @Nullable final CodeType property) {
     final Parameters params = new Parameters();
     params.addParameter().setName("system").setValue(system);
     params.addParameter().setName("code").setValue(code);
@@ -225,9 +240,6 @@ class TerminologyClient2Impl implements TerminologyClient2 {
     }
     if (property != null) {
       params.addParameter().setName("property").setValue(property);
-    }
-    if (displayLanguage != null) {
-      params.addParameter().setName("displayLanguage").setValue(displayLanguage);
     }
     return fhirClient.operation()
         .onType(CodeSystem.class)
