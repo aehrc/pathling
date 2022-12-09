@@ -254,6 +254,50 @@ function, for the purpose of disambiguating polymorphic resource references.
 
 See also: [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 
+## property
+
+```
+collection<Coding> -> property(code: string, type = 'string') : collection<String|Integer|DateTime|Decimal|Coding>
+```
+
+When invoked on a [Coding](./data-types#coding), returns any matching property
+values, using the specified `name` and `type` parameters.
+
+The `type` parameter has these possible values:
+
+- `string` (default)
+- `code`
+- `Coding`
+- `integer`
+- `boolean`
+- `DateTime`
+
+Both the `code` and the `type` of the property must be present within a 
+[lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html) response in 
+order for it to be returned by this function. If there are no matches, the 
+function will return an empty collection.
+
+See [Properties](https://www.hl7.org/fhir/codesystem.html#properties)
+in the FHIR specification for more information.
+
+Example:
+
+```
+Condition.code.coding.property('parent', 'code')
+```
+
+:::note
+The `property` function is a terminology function, which means that it requires
+a configured
+[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
+[Configuration](/docs/server/configuration#terminology-service) for details.
+:::
+
+:::note
+The `property` function is not within the FHIRPath specification, and is
+currently unique to the Pathling implementation.
+:::
+
 ## resolve
 
 ```
@@ -394,7 +438,7 @@ unique to the Pathling implementation.
 collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false, equivalence = 'equivalent', target?: string) : collection<Coding>
 ```
 
-When invoked on a [Coding](./data-types#coding)-valued element, returns any
+When invoked on a [Coding](./data-types#coding), returns any
 matching concepts using the ConceptMap specified using `conceptMapUrl`.
 
 The `reverse` parameter controls the direction to traverse the map - `false`
