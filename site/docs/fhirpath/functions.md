@@ -94,6 +94,33 @@ Patient.name.given.count()
 
 See also: [count](https://hl7.org/fhirpath/#count-integer)
 
+## display
+
+```
+collection<Coding> -> display() : collection<String>
+```
+
+When invoked on a [Coding](./data-types#coding), returns the preferred display 
+term, according to the terminology server.
+
+Example:
+
+```
+Condition.code.display()
+```
+
+:::note
+The `display` function is a terminology function, which means that it requires
+a configured
+[terminology service](https://hl7.org/fhir/R4/terminology-service.html). See
+[Configuration](/docs/server/configuration#terminology-service) for details.
+:::
+
+:::note
+The `display` function is not within the FHIRPath specification, and is
+currently unique to the Pathling implementation.
+:::
+
 ## empty
 
 ```
