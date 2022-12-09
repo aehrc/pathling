@@ -19,18 +19,27 @@ import os
 
 from pathling import PathlingContext
 from pathling.functions import to_snomed_coding
-from pathling.udfs import property_of, PropertyType
+from pathling.udfs import property_of, display, PropertyType
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-        f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
 )
 
-# Obtain parents of the codes
-
-result = csv.withColumn("PARENT",
-                        property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE))
-result.select("CODE", "DESCRIPTION", "PARENT").show()
+# Get the parent codes for each code in the dataset.
+parents = csv.withColumn(
+    "PARENTS",
+    property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE),
+)
+# Split each parent code into a separate row.
+exploded_parents = parents.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+)
+# Retrieve the preferred term for each parent code.
+with_displays = exploded_parents.withColumn(
+    "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
+)
+with_displays.show()
