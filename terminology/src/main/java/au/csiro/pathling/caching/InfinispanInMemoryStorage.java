@@ -15,31 +15,25 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.config;
+package au.csiro.pathling.caching;
 
-import java.util.List;
-import javax.validation.constraints.NotNull;
-import lombok.Data;
+import org.apache.http.client.cache.HttpCacheStorage;
+import org.infinispan.configuration.cache.ConfigurationBuilder;
+import org.infinispan.manager.DefaultCacheManager;
 
-@Data
-public class HttpCachingConfiguration {
+/**
+ * An abstract {@link HttpCacheStorage} implementation that uses embedded Infinispan with in-memory
+ * storage.
+ *
+ * @author John Grimes
+ */
+public class InfinispanInMemoryStorage extends InfinispanStorage {
 
-  /**
-   * A list of values to return within the Vary header.
-   */
-  @NotNull
-  private List<String> vary;
-
-  /**
-   * A list of values to return within the Cache-Control header, for cacheable responses.
-   */
-  @NotNull
-  private List<String> cacheableControl;
-
-  /**
-   * A list of values to return within the Cache-Control header, for uncacheable responses.
-   */
-  @NotNull
-  private List<String> uncacheableControl;
+  public InfinispanInMemoryStorage() {
+    super();
+    cacheManager = new DefaultCacheManager();
+    cacheManager.defineConfiguration(CACHE_NAME, new ConfigurationBuilder().build());
+    cache = cacheManager.getCache(CACHE_NAME);
+  }
 
 }

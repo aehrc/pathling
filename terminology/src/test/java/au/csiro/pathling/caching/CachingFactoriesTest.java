@@ -2,44 +2,55 @@ package au.csiro.pathling.caching;
 
 import static org.apache.commons.lang.reflect.FieldUtils.readField;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.errors.InvalidConfigError;
-import com.google.common.collect.ImmutableMap;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
 import java.io.File;
+import java.nio.file.Files;
 import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
 import org.junit.jupiter.api.Test;
 
 public class CachingFactoriesTest {
 
-  private static final CacheConfig CACHE_CONFIG = CacheConfig.custom().setMaxCacheEntries(100000)
+  private static final CacheConfig HTTP_CLIENT_CACHE_CONFIG = CacheConfig.custom()
+      .setMaxCacheEntries(100000)
       .build();
 
   @Test
+  @SuppressWarnings("resource")
   public void testMemoryStorageFactory() throws Exception {
-    final CachingHttpClientBuilder clientBuilder = CachingFactories.of(
-        CachingFactories.MEMORY_STORAGE).create(CACHE_CONFIG, null);
-    assertEquals(CACHE_CONFIG, readField(clientBuilder, "cacheConfig", true));
-    assertNull(readField(clientBuilder, "cacheDir", true));
+    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.defaults();
+    cacheConfig.setStorageType(StorageType.MEMORY);
+    final CachingHttpClientBuilder clientBuilder = CachingFactories.of(cacheConfig)
+        .create(HTTP_CLIENT_CACHE_CONFIG);
+    assertEquals(HTTP_CLIENT_CACHE_CONFIG, readField(clientBuilder, "cacheConfig", true));
+    assertInstanceOf(InfinispanInMemoryStorage.class, readField(clientBuilder, "storage", true));
   }
 
 
   @Test
-  public void testDistStorageFactory() throws Exception {
-    final CachingHttpClientBuilder clientBuilder = CachingFactories.of(
-            CachingFactories.DISK_STORAGE)
-        .create(CACHE_CONFIG, ImmutableMap.of(CachingFactories.DISK_CACHE_DIR, "myCacheDir"));
-    assertEquals(CACHE_CONFIG, readField(clientBuilder, "cacheConfig", true));
-    assertEquals(new File("myCacheDir"), readField(clientBuilder, "cacheDir", true));
+  @SuppressWarnings("resource")
+  public void testDiskStorageFactory() throws Exception {
+    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.defaults();
+    cacheConfig.setStorageType(StorageType.DISK);
+    final File tempDirectory = Files.createTempDirectory("pathling-cache").toFile();
+    tempDirectory.deleteOnExit();
+    cacheConfig.setStoragePath(tempDirectory.getAbsolutePath());
+    final CachingHttpClientBuilder clientBuilder = CachingFactories.of(cacheConfig)
+        .create(HTTP_CLIENT_CACHE_CONFIG);
+    assertEquals(HTTP_CLIENT_CACHE_CONFIG, readField(clientBuilder, "cacheConfig", true));
+    assertInstanceOf(InfinispanPersistentStorage.class, readField(clientBuilder, "storage", true));
   }
 
   @Test
-  public void testDistStoragFactoryRequiresCondig() {
-    final InvalidConfigError ex = assertThrows(InvalidConfigError.class, () -> CachingFactories.of(
-        CachingFactories.DISK_STORAGE).create(CACHE_CONFIG, null));
-    assertEquals("Required config property missing: cacheDir", ex.getMessage());
+  public void testDiskStorageFactoryRequiresStoragePath() {
+    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.defaults();
+    cacheConfig.setStorageType(StorageType.DISK);
+    assertThrows(NullPointerException.class,
+        () -> CachingFactories.of(cacheConfig).create(HTTP_CLIENT_CACHE_CONFIG));
   }
 
 }

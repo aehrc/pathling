@@ -19,7 +19,6 @@ import os
 
 from pathling import PathlingContext
 from pathling.functions import to_snomed_coding, to_ecl_value_set
-
 from pathling.udfs import member_of
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -27,17 +26,20 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-        f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
 )
 
 VIRAL_INFECTION_ECL = """
-                << 64572001|Disease| : (
-                  << 370135005|Pathological process| = << 441862004|Infectious process|,
-                  << 246075003|Causative agent| = << 49872002|Virus|
-                )
+    << 64572001|Disease| : (
+      << 370135005|Pathological process| = << 441862004|Infectious process|,
+      << 246075003|Causative agent| = << 49872002|Virus|
+    )
 """
 
-csv.select("CODE", "DESCRIPTION",
-           member_of(to_snomed_coding(csv.CODE), to_ecl_value_set(VIRAL_INFECTION_ECL)).alias(
-               "VIRAL_INFECTION")
-           ).show()
+csv.select(
+    "CODE",
+    "DESCRIPTION",
+    member_of(to_snomed_coding(csv.CODE), to_ecl_value_set(VIRAL_INFECTION_ECL)).alias(
+        "VIRAL_INFECTION"
+    ),
+).show()

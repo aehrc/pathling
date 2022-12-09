@@ -1,21 +1,23 @@
 #  Copyright 2022 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-# noinspection PyPackageRequirements
 from typing import Optional, Sequence
 
+from deprecated import deprecated
+
+# noinspection PyPackageRequirements
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
 
@@ -23,11 +25,14 @@ from pathling.coding import Coding
 from pathling.etc import find_jar
 from pathling.fhir import MimeType
 
-from deprecated import deprecated
-
 __all__ = ["PathlingContext"]
 
 EQ_EQUIVALENT = "equivalent"
+
+
+class StorageType:
+    MEMORY: str = "memory"
+    DISK: str = "disk"
 
 
 # noinspection PyProtectedMember
@@ -52,30 +57,32 @@ class PathlingContext:
 
     @classmethod
     def create(
-            cls,
-            spark: Optional[SparkSession] = None,
-            fhir_version: Optional[str] = None,
-            max_nesting_level: Optional[int] = None,
-            enable_extensions: Optional[bool] = None,
-            enabled_open_types: Optional[Sequence[str]] = None,
-            terminology_server_url: Optional[str] = None,
-            terminology_socket_timeout: Optional[int] = None,
-            terminology_verbose_request_logging: Optional[bool] = None,
-            max_connections_total: Optional[int] = None,
-            max_connections_per_route: Optional[int] = None,
-            cache_storge_type: Optional[str] = "memory",
-            cache_max_entries: Optional[int] = None,
-            cache_max_object_size: Optional[int] = None,
-            cache_storage_properties: Optional[dict] = None,
-            token_endpoint: Optional[str] = None,
-            client_id: Optional[str] = None,
-            client_secret: Optional[str] = None,
-            scope: Optional[str] = None,
-            token_expiry_tolerance: Optional[int] = None,
-            mock_terminology: bool = False
+        cls,
+        spark: Optional[SparkSession] = None,
+        fhir_version: Optional[str] = None,
+        max_nesting_level: Optional[int] = None,
+        enable_extensions: Optional[bool] = None,
+        enabled_open_types: Optional[Sequence[str]] = None,
+        terminology_server_url: Optional[str] = None,
+        terminology_socket_timeout: Optional[int] = None,
+        terminology_verbose_request_logging: Optional[bool] = None,
+        max_connections_total: Optional[int] = None,
+        max_connections_per_route: Optional[int] = None,
+        cache_max_entries: Optional[int] = None,
+        cache_max_object_size: Optional[int] = None,
+        cache_storage_type: Optional[str] = StorageType.MEMORY,
+        cache_storage_path: Optional[str] = None,
+        token_endpoint: Optional[str] = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        scope: Optional[str] = None,
+        token_expiry_tolerance: Optional[int] = None,
+        mock_terminology: bool = False,
     ) -> "PathlingContext":
         """
-        Creates a :class:`PathlingContext` with the given configuration options.
+        Creates a :class:`PathlingContext` with the given configuration options. This should only
+        be done once within a SparkSession - subsequent calls with different configuration may
+        produce an error.
 
         If no SparkSession is provided, and there is not one already present in this process - a
         new SparkSession will be created.
@@ -104,13 +111,13 @@ class PathlingContext:
         :param terminology_verbose_request_logging: enables verbose logging of terminology server
         requests
         :param max_connections_total: the maximum total number of connections for  http services.
-        :param max_connections_per_route: the maximum number of connections per route for  
-        :param cache_storge_type: the type of cache storage to use for http service. By default, 
+        :param max_connections_per_route: the maximum number of connections per route for
+        :param cache_max_entries: the maximum number of cached entries.
+        :param cache_max_object_size: the maximum size of cacheable responses, in bytes.
+        :param cache_storage_type: the type of cache storage to use for http service. By default,
         uses transient in-memory cache. 'None' disables caching all together.
-        :param cache_max_entries: the maximum nunber of cached entries.
-        :param cache_max_object_size:  the maximum size of cacheable responses in bytes.
-        :param cache_storage_properties: additional configuration properties for the cache 
-        storage. The supported properties depend on the selected storage type.
+        :param cache_storage_path: the path on disk where the cache is stored when the storage
+        type is 'disk'.
         :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
         :param client_id: a client ID for use with the client credentials grant
         :param client_secret: a client secret for use with the client credentials grant
@@ -120,39 +127,39 @@ class PathlingContext:
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
         spark = (
-                spark
-                or SparkSession.getActiveSession()
-                or SparkSession.builder.config("spark.jars", find_jar()).getOrCreate()
+            spark
+            or SparkSession.getActiveSession()
+            or SparkSession.builder.config("spark.jars", find_jar()).getOrCreate()
         )
         jvm = spark._jvm
 
         # Build a Java configuration object from the provided parameters.
         config = (
             jvm.au.csiro.pathling.library.PathlingContextConfiguration.builder()
-                .fhirVersion(fhir_version)
-                .maxNestingLevel(max_nesting_level)
-                .extensionsEnabled(enable_extensions)
-                .openTypesEnabled(enabled_open_types)
-                .terminologyServerUrl(terminology_server_url)
-                .terminologySocketTimeout(terminology_socket_timeout)
-                .terminologyVerboseRequestLogging(terminology_verbose_request_logging)
-                .maxConnectionsTotal(max_connections_total)
-                .maxConnectionsPerRoute(max_connections_per_route)
-                .cacheStorageType(cache_storge_type)
-                .cacheMaxEntries(cache_max_entries)
-                .cacheMaxObjectSize(cache_max_object_size)
-                .cacheStorageProperties(cache_storage_properties)
-                .tokenEndpoint(token_endpoint)
-                .clientId(client_id)
-                .clientSecret(client_secret)
-                .scope(scope)
-                .tokenExpiryTolerance(token_expiry_tolerance)
-                .mockTerminology(mock_terminology)
-                .build()
+            .fhirVersion(fhir_version)
+            .maxNestingLevel(max_nesting_level)
+            .extensionsEnabled(enable_extensions)
+            .openTypesEnabled(enabled_open_types)
+            .terminologyServerUrl(terminology_server_url)
+            .terminologySocketTimeout(terminology_socket_timeout)
+            .terminologyVerboseRequestLogging(terminology_verbose_request_logging)
+            .maxConnectionsTotal(max_connections_total)
+            .maxConnectionsPerRoute(max_connections_per_route)
+            .cacheMaxEntries(cache_max_entries)
+            .cacheMaxObjectSize(cache_max_object_size)
+            .cacheStorageType(cache_storage_type)
+            .cacheStoragePath(cache_storage_path)
+            .tokenEndpoint(token_endpoint)
+            .clientId(client_id)
+            .clientSecret(client_secret)
+            .scope(scope)
+            .tokenExpiryTolerance(token_expiry_tolerance)
+            .mockTerminology(mock_terminology)
+            .build()
         )
 
         jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
-                spark._jsparkSession, config
+            spark._jsparkSession, config
         )
         return PathlingContext(spark, jpc)
 
@@ -164,19 +171,19 @@ class PathlingContext:
         #
         # Before Spark v3.3 Dataframes were constructs with SQLContext, which was available
         # in `_wrapped` attribute of SparkSession.
-        # Since v3.3 Dataframes are constructed with SparkSession instance direclty.
+        # Since v3.3 Dataframes are constructed with SparkSession instance directly.
         #
         return DataFrame(
-                jdf,
-                self._spark._wrapped if hasattr(self._spark, "_wrapped") else self._spark,
+            jdf,
+            self._spark._wrapped if hasattr(self._spark, "_wrapped") else self._spark,
         )
 
     def encode(
-            self,
-            df: DataFrame,
-            resource_name: str,
-            input_type: Optional[str] = None,
-            column: Optional[str] = None,
+        self,
+        df: DataFrame,
+        resource_name: str,
+        input_type: Optional[MimeType] = None,
+        column: Optional[str] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR resources  in the given column and
@@ -194,17 +201,17 @@ class PathlingContext:
         """
 
         return self._wrap_df(
-                self._jpc.encode(
-                        df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
-                )
+            self._jpc.encode(
+                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
+            )
         )
 
     def encode_bundle(
-            self,
-            df: DataFrame,
-            resource_name: str,
-            input_type: Optional[str] = None,
-            column: Optional[str] = None,
+        self,
+        df: DataFrame,
+        resource_name: str,
+        input_type: Optional[MimeType] = None,
+        column: Optional[str] = None,
     ) -> DataFrame:
         """
         Takes a dataframe with a string representations of FHIR bundles  in the given column and
@@ -220,13 +227,20 @@ class PathlingContext:
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
             columns
         """
-        return self._wrap_df(self._jpc.encodeBundle(df._jdf, resource_name,
-                                                    input_type or MimeType.FHIR_JSON,
-                                                    column))
+        return self._wrap_df(
+            self._jpc.encodeBundle(
+                df._jdf, resource_name, input_type or MimeType.FHIR_JSON, column
+            )
+        )
 
     @deprecated(reason="You should use the 'udfs.member_of' UDF instead")
-    def member_of(self, df: DataFrame, coding_column: Column, value_set_uri: str,
-                  output_column_name: str):
+    def member_of(
+        self,
+        df: DataFrame,
+        coding_column: Column,
+        value_set_uri: str,
+        output_column_name: str,
+    ):
         """
         Takes a dataframe with a Coding column as input. A new column is created which contains a
         Boolean value, indicating whether the input Coding is a member of the specified FHIR
@@ -239,56 +253,60 @@ class PathlingContext:
         :return: A new dataframe with an additional column containing the result of the operation.
         """
         return self._wrap_df(
-                self._jpc.memberOf(
-                        df._jdf, coding_column._jc, value_set_uri, output_column_name
-                )
+            self._jpc.memberOf(
+                df._jdf, coding_column._jc, value_set_uri, output_column_name
+            )
         )
 
     @deprecated(reason="You should use the 'udfs.translate' UDF instead")
     def translate(
-            self,
-            df: DataFrame,
-            coding_column: Column,
-            concept_map_uri: str,
-            reverse: Optional[bool] = False,
-            equivalence: Optional[str] = EQ_EQUIVALENT,
-            target: Optional[str] = None,
-            output_column_name: Optional[str] = "result",
+        self,
+        df: DataFrame,
+        coding_column: Column,
+        concept_map_uri: str,
+        reverse: Optional[bool] = False,
+        equivalence: Optional[str] = EQ_EQUIVALENT,
+        target: Optional[str] = None,
+        output_column_name: Optional[str] = "result",
     ):
         """
-        Takes a dataframe with a Coding column as input. A new column is created which contains 
-        the array of Codings value with translation targets from the specified FHIR ConceptMap. 
+        Takes a dataframe with a Coding column as input. A new column is created which contains
+        the array of Codings value with translation targets from the specified FHIR ConceptMap.
         There may be more than one target concept for each input concept.
 
         :param df: a DataFrame containing the input data
         :param coding_column: a Column containing a struct representation of a Coding
         :param concept_map_uri: an identifier for a FHIR ConceptMap
-        :param reverse: the direction to traverse the map - false results in "source to target" 
+        :param reverse: the direction to traverse the map - false results in "source to target"
             mappings, while true results in "target to source"
         :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
-        :param target: identifies the value set in which a translation is sought.  If there's no 
+        :param target: identifies the value set in which a translation is sought.  If there's no
             target specified, the server should return all known translations.
         :param output_column_name: the name of the result column
         :return: A new dataframe with an additional column containing the result of the operation.
         """
         return self._wrap_df(
-                self._jpc.translate(
-                        df._jdf,
-                        coding_column._jc,
-                        concept_map_uri,
-                        reverse,
-                        equivalence,
-                        target,
-                        output_column_name,
-                )
+            self._jpc.translate(
+                df._jdf,
+                coding_column._jc,
+                concept_map_uri,
+                reverse,
+                equivalence,
+                target,
+                output_column_name,
+            )
         )
 
     @deprecated(reason="You should use the 'udfs.subsumes' UDF instead")
-    def subsumes(self, df: DataFrame, output_column_name: str,
-                 left_coding_column: Optional[Column] = None,
-                 right_coding_column: Optional[Column] = None,
-                 left_coding: Optional[Coding] = None,
-                 right_coding: Optional[Coding] = None):
+    def subsumes(
+        self,
+        df: DataFrame,
+        output_column_name: str,
+        left_coding_column: Optional[Column] = None,
+        right_coding_column: Optional[Column] = None,
+        left_coding: Optional[Coding] = None,
+        right_coding: Optional[Coding] = None,
+    ):
         """
         Takes a dataframe with two Coding columns. A new column is created which contains a
         Boolean value, indicating whether the left Coding subsumes the right Coding.
@@ -304,18 +322,18 @@ class PathlingContext:
         :return: A new dataframe with an additional column containing the result of the operation.
         """
         if (left_coding_column is None and left_coding is None) or (
-                right_coding_column is None and right_coding is None
+            right_coding_column is None and right_coding is None
         ):
             raise ValueError(
-                    "Must provide either left_coding_column or left_coding, and either "
-                    "right_coding_column or right_coding"
+                "Must provide either left_coding_column or left_coding, and either "
+                "right_coding_column or right_coding"
             )
         left_column = left_coding.to_literal() if left_coding else left_coding_column
         right_column = (
             right_coding.to_literal() if right_coding else right_coding_column
         )
         return self._wrap_df(
-                self._jpc.subsumes(
-                        df._jdf, left_column._jc, right_column._jc, output_column_name
-                )
+            self._jpc.subsumes(
+                df._jdf, left_column._jc, right_column._jc, output_column_name
+            )
         )

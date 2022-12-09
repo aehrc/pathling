@@ -15,24 +15,31 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.caching;
+package au.csiro.pathling.config;
 
-import javax.annotation.Nonnull;
-import org.apache.http.impl.client.cache.CacheConfig;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import java.util.List;
+import javax.validation.constraints.NotNull;
+import lombok.Data;
 
-/**
- * A factory class for creating {@link CachingHttpClientBuilder} instance, pre-configured for with
- * some caching implementation.
- */
-public interface CachingFactory {
+@Data
+public class HttpServerCachingConfiguration {
 
   /**
-   * Creates a {@link CachingHttpClientBuilder}, initialized with the provided {@link CacheConfig}.
-   *
-   * @param cacheConfig the cache config to use
-   * @return the pre-configured {@link CachingHttpClientBuilder}
+   * A list of values to return within the Vary header.
    */
-  @Nonnull
-  CachingHttpClientBuilder create(@Nonnull CacheConfig cacheConfig);
+  @NotNull
+  private List<String> vary;
+
+  /**
+   * A list of values to return within the Cache-Control header, for cacheable responses.
+   */
+  @NotNull
+  private List<String> cacheableControl;
+
+  /**
+   * A list of values to return within the Cache-Control header, for uncacheable responses.
+   */
+  @NotNull
+  private List<String> uncacheableControl;
+
 }

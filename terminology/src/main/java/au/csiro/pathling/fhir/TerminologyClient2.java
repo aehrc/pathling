@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhir;
 
+import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
@@ -25,6 +27,8 @@ import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.http.client.HttpClient;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeSystem;
@@ -36,10 +40,6 @@ import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
 /**
  * The client interface to FHIR terminology operations.
@@ -49,7 +49,8 @@ public interface TerminologyClient2 {
   Logger log = LoggerFactory.getLogger(TerminologyClient2.class);
 
   /**
-   * See: <a href="https://www.hl7.org/fhir/R4/operation-codesystem-validate-code.html">CodeSystem/$validate-code</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-codesystem-validate-code.html">CodeSystem/$validate-code</a>
    */
   @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
   @Nonnull
@@ -61,7 +62,8 @@ public interface TerminologyClient2 {
   );
 
   /**
-   * See: <a href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
   @Operation(name = "$translate", type = CodeSystem.class, idempotent = true)
   @Nonnull
@@ -75,7 +77,8 @@ public interface TerminologyClient2 {
   );
 
   /**
-   * See: <a href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    */
   @Operation(name = "$subsumes", type = CodeSystem.class, idempotent = true)
   @Nonnull
@@ -124,17 +127,17 @@ public interface TerminologyClient2 {
 
     genericClient.registerInterceptor(new UserAgentInterceptor());
 
-    final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
-    loggingInterceptor.setLogger(log);
-    loggingInterceptor.setLogRequestSummary(true);
-    loggingInterceptor.setLogResponseSummary(true);
-    loggingInterceptor.setLogRequestHeaders(false);
-    loggingInterceptor.setLogResponseHeaders(false);
     if (verboseRequestLogging) {
+      final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
+      loggingInterceptor.setLogger(log);
+      loggingInterceptor.setLogRequestSummary(true);
+      loggingInterceptor.setLogResponseSummary(true);
+      loggingInterceptor.setLogRequestHeaders(false);
+      loggingInterceptor.setLogResponseHeaders(false);
       loggingInterceptor.setLogRequestBody(true);
       loggingInterceptor.setLogResponseBody(true);
+      genericClient.registerInterceptor(loggingInterceptor);
     }
-    genericClient.registerInterceptor(loggingInterceptor);
 
     if (authConfig.isEnabled()) {
       checkNotNull(authConfig.getTokenEndpoint());

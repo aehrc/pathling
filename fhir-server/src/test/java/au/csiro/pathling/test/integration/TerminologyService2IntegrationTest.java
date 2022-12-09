@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.test.integration;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertMatches;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
@@ -45,15 +44,12 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Collections;
 import java.util.List;
@@ -71,7 +67,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
 /**
  * @author Piotr Szul
@@ -98,12 +93,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;
-
-  // we do not need to access the resources here
-  @SuppressWarnings("unused")
-  @MockBean
-  private Database database;
-
+  
   private TerminologyService2 terminologyService;
 
   @BeforeEach
@@ -164,7 +154,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   }
 
   @Test
-  void testTranslatesWithTargetAndMulitpleResults() {
+  void testTranslatesWithTargetAndMultipleResults() {
 
     final Coding input = new Coding(AUTOMAP_INPUT_URI, "shortness of breath", null);
     final String target = "http://snomed.info/sct?fhir_vs=ecl/(%3C%3C%2064572001%20%7CDisease%7C%20OR%20%3C%3C%20404684003%20%7CClinical%20finding%7C)";
@@ -189,18 +179,10 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   }
 
   @Test
-  void testFailsForUnknownConceptMap() {
-
-    final ResourceNotFoundException error = assertThrows(ResourceNotFoundException.class,
-        () -> terminologyService.translate(CD_SNOMED_72940011000036107,
-            "http://snomed.info/sct?fhir_cm=xxxx", false,
-            null));
-
-    assertMatches(
-        "HTTP 404 Not Found: "
-            + "\\[.+\\]: "
-            + "Unable to find ConceptMap with URI http://snomed\\.info/sct\\?fhir_cm=xxxx",
-        error.getMessage());
+  void testReturnsNoResultsForUnknownConceptMap() {
+    final List<Translation> result = terminologyService.translate(CD_SNOMED_72940011000036107,
+        "http://snomed.info/sct?fhir_cm=xxxx", false, null);
+    assertTrue(result.isEmpty());
   }
 
   @Test
@@ -230,12 +212,10 @@ class TerminologyService2IntegrationTest extends WireMockTest {
             UNKNOWN_SYSTEM_CODING)
     );
 
-    // TODO: This throws an 404 exception because the specific version of a known system cannot be found. 
-    // Why it's not treated the same as an unknown system (like in translate?)
-    // assertFalse(
-    //     terminologyService.validate("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
-    //         CD_SNOMED_403190006_VERSION_UNKN)
-    // );
+    assertFalse(
+        terminologyService.validateCode("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+            CD_SNOMED_403190006_VERSION_UNKN)
+    );
   }
 
   @Test
@@ -253,11 +233,9 @@ class TerminologyService2IntegrationTest extends WireMockTest {
         terminologyService.subsumes(CD_SNOMED_107963000, UNKNOWN_SYSTEM_CODING)
     );
 
-    // TODO: This throws an 404 exception because the specific version of a known system cannot be found. 
-    // Whey it's not treated the same as an unknown system (like with translate)
-    // assertEquals(ConceptSubsumptionOutcome.NOTSUBSUMED,
-    //     terminologyService.subsumes(CD_SNOMED_107963000, CD_SNOMED_403190006_VERSION_UNKN)
-    // );
+    assertEquals(ConceptSubsumptionOutcome.NOTSUBSUMED,
+        terminologyService.subsumes(CD_SNOMED_107963000, CD_SNOMED_403190006_VERSION_UNKN)
+    );
 
     // TODO: This is the same coding but with different version and we cannot test for it
     // assertEquals(ConceptSubsumptionOutcome.EQUIVALENT,

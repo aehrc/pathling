@@ -1,8 +1,8 @@
 package au.csiro.pathling.terminology;
 
 import static au.csiro.pathling.fhir.ParametersUtils.toBooleanResult;
-import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
 import static au.csiro.pathling.fhir.ParametersUtils.toMatchParts;
+import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
@@ -11,6 +11,7 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUB
 import au.csiro.pathling.fhir.ParametersUtils;
 import au.csiro.pathling.fhir.ParametersUtils.PropertyPart;
 import au.csiro.pathling.fhir.TerminologyClient2;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
@@ -43,14 +44,14 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
   private final Closeable toClose;
 
   public DefaultTerminologyService2(@Nonnull final TerminologyClient2 terminologyClient,
-      @Nullable Closeable toClose) {
+      @Nullable final Closeable toClose) {
     this.terminologyClient = terminologyClient;
     this.toClose = toClose;
   }
 
   @Nullable
   private static <T> T optional(@Nonnull final Function<String, T> converter,
-      @Nullable String value) {
+      @Nullable final String value) {
     return value != null
            ? converter.apply(value)
            : null;
@@ -58,7 +59,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Nonnull
   private static <T> T required(@Nonnull final Function<String, T> converter,
-      @Nullable String value) {
+      @Nullable final String value) {
     return converter.apply(Objects.requireNonNull(value));
   }
 
@@ -73,16 +74,19 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
 
   @Override
   public boolean validateCode(@Nonnull final String codeSystemUrl, @Nonnull final Coding coding) {
-
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return false;
     }
 
-    return toBooleanResult(terminologyClient.validateCode(
-        required(UriType::new, codeSystemUrl), required(UriType::new, coding.getSystem()),
-        optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode())
-    ));
+    try {
+      return toBooleanResult(terminologyClient.validateCode(
+          required(UriType::new, codeSystemUrl), required(UriType::new, coding.getSystem()),
+          optional(StringType::new, coding.getVersion()),
+          required(CodeType::new, coding.getCode())
+      ));
+    } catch (final BaseServerResponseException e) {
+      return handleError(e, false);
+    }
   }
 
   @Nonnull
@@ -96,14 +100,18 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
       return Collections.emptyList();
     }
 
-    return toTranslations(terminologyClient.translate(
-        required(UriType::new, conceptMapUrl),
-        required(UriType::new, coding.getSystem()),
-        optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode()),
-        new BooleanType(reverse),
-        optional(UriType::new, target)
-    ));
+    try {
+      return toTranslations(terminologyClient.translate(
+          required(UriType::new, conceptMapUrl),
+          required(UriType::new, coding.getSystem()),
+          optional(StringType::new, coding.getVersion()),
+          required(CodeType::new, coding.getCode()),
+          new BooleanType(reverse),
+          optional(UriType::new, target)
+      ));
+    } catch (final BaseServerResponseException e) {
+      return handleError(e, Collections.emptyList());
+    }
   }
 
   @Nonnull
@@ -131,12 +139,16 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
                                    : codingB.getVersion();
 
     // TODO: optimize not call the client if not needed (when codings are equal)
-    return toSubsumptionOutcome(terminologyClient.subsumes(
-        required(CodeType::new, codingA.getCode()),
-        required(CodeType::new, codingB.getCode()),
-        required(UriType::new, resolvedSystem),
-        optional(StringType::new, resolvedVersion)
-    ));
+    try {
+      return toSubsumptionOutcome(terminologyClient.subsumes(
+          required(CodeType::new, codingA.getCode()),
+          required(CodeType::new, codingB.getCode()),
+          required(UriType::new, resolvedSystem),
+          optional(StringType::new, resolvedVersion)
+      ));
+    } catch (final BaseServerResponseException e) {
+      return handleError(e, NOTSUBSUMED);
+    }
   }
 
 
@@ -176,6 +188,21 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
   public void close() throws IOException {
     if (nonNull(toClose)) {
       toClose.close();
+    }
+  }
+
+  /**
+   * This method allows us to be tolerant to invalid inputs to terminology operations (which produce
+   * a 400-series error from the terminology server. A result can be provided which will be returned
+   * in the event of such an error.
+   */
+  @Nullable
+  private static <T> T handleError(@Nonnull final BaseServerResponseException e,
+      @Nullable final T invalidInputReturnValue) {
+    if (e.getStatusCode() / 100 == 4) {
+      return invalidInputReturnValue;
+    } else {
+      throw e;
     }
   }
 }
