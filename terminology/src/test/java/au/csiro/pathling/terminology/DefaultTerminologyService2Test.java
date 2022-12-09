@@ -44,6 +44,7 @@ import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
@@ -335,5 +336,14 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
     // does not include grouping property in the results
     assertEquals(Collections.emptyList(),
         terminologyService.lookup(CODING_C, "group_C"));
+  }
+
+  @Test
+  public void testLookupHandles404Exceptions() {
+    when(terminologClient.lookup(any(), any(), any(), any()
+    )).thenThrow(BaseServerResponseException.newInstance(404, "Resource Not Found"));
+
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(CODING_C, "property_A"));
   }
 }

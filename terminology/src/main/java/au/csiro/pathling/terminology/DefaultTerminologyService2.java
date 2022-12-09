@@ -176,12 +176,15 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return Collections.emptyList();
     }
-
-    return toPropertiesAndDesignations(terminologyClient.lookup(
-        required(UriType::new, coding.getSystem()),
-        optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode()),
-        optional(CodeType::new, property)), property);
+    try {
+      return toPropertiesAndDesignations(terminologyClient.lookup(
+          required(UriType::new, coding.getSystem()),
+          optional(StringType::new, coding.getVersion()),
+          required(CodeType::new, coding.getCode()),
+          optional(CodeType::new, property)), property);
+    } catch (final BaseServerResponseException e) {
+      return handleError(e, Collections.emptyList());
+    }
   }
 
   @Override
