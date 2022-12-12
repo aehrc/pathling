@@ -35,7 +35,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -74,7 +74,7 @@ class DisplayFunctionTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  TerminologyService2 terminologyService;
+  TerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
@@ -164,7 +164,7 @@ class DisplayFunctionTest {
         "Attempt to call terminology function display when terminology service has not been configured",
         error.getMessage());
   }
-  
+
   @Test
   void inputMustNotContainArguments() {
     final ElementPath input = new ElementPathBuilder(spark).build();

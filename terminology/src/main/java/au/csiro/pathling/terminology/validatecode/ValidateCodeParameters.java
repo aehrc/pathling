@@ -15,24 +15,25 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.test.stubs;
+package au.csiro.pathling.terminology.validatecode;
 
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.SharedMocks;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.TerminologyParameters;
+import lombok.Value;
 
-public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
+/**
+ * Represents the input parameters to the validate-code operation.
+ *
+ * @author John Grimes
+ * @see <a
+ * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+ */
+@Value
+public class ValidateCodeParameters implements TerminologyParameters {
 
-  private static final long serialVersionUID = -8229464411116137820L;
+  private static final long serialVersionUID = -4527968941195449678L;
 
-  public TestTerminologyServiceFactory() {
-  }
-
-  @Nonnull
-  @Override
-  public TerminologyService build() {
-    return SharedMocks.getOrCreate(TerminologyService.class);
-  }
+  String valueSetUrl;
+  ImmutableCoding coding;
 
 }

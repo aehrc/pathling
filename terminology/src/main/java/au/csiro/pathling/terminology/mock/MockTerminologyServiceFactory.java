@@ -17,20 +17,20 @@
 
 package au.csiro.pathling.terminology.mock;
 
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.utilities.ObjectHolder;
 import javax.annotation.Nonnull;
 
 public class MockTerminologyServiceFactory implements TerminologyServiceFactory {
 
-  private final static ObjectHolder<String, TerminologyService2> service = ObjectHolder.singleton(
-      c -> new MockTerminologyService2());
+  private final static ObjectHolder<String, TerminologyService> service = ObjectHolder.singleton(
+      c -> new MockTerminologyService());
   private static final long serialVersionUID = 7662506865030951736L;
-  
+
   @Nonnull
   @Override
-  public TerminologyService2 buildService2() {
+  public TerminologyService build() {
     return service.getOrCreate("mock");
   }
 }

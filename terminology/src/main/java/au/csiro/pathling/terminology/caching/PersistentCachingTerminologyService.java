@@ -15,47 +15,67 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.caching;
+package au.csiro.pathling.terminology.caching;
 
+import static java.util.Objects.requireNonNull;
+
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.fhir.TerminologyClient;
+import java.io.Closeable;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
-import org.apache.http.client.cache.HttpCacheStorage;
+import javax.annotation.Nullable;
+import org.infinispan.Cache;
 import org.infinispan.commons.marshall.JavaSerializationMarshaller;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
+import org.infinispan.manager.EmbeddedCacheManager;
 
 /**
- * An abstract {@link HttpCacheStorage} implementation that uses embedded Infinispan with persistent
- * storage. Requires a storage path, which it uses to store cache data and indexes.
+ * A terminology service that uses embedded Infinispan to cache results on disk. Requires
+ * configuration that includes a storage location, which is where cache data and indexes will be
+ * stored.
  *
  * @author John Grimes
  */
-public class InfinispanPersistentStorage extends InfinispanStorage {
+public class PersistentCachingTerminologyService extends CachingTerminologyService {
 
   private static final String DATA_DIRECTORY = "data";
   private static final String INDEX_DIRECTORY = "index";
 
-  public InfinispanPersistentStorage(@Nonnull final String storagePath) {
+  public PersistentCachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+      @Nullable final Closeable toClose,
+      @Nonnull final HttpClientCachingConfiguration configuration) {
+    super(terminologyClient, toClose, configuration);
+  }
+
+  @Override
+  protected EmbeddedCacheManager buildCacheManager() {
     final GlobalConfigurationBuilder globalConfigBuilder = new GlobalConfigurationBuilder();
     globalConfigBuilder.serialization()
         .marshaller(new JavaSerializationMarshaller())
         .allowList()
         .addRegexp(".*");
     final GlobalConfiguration globalConfig = globalConfigBuilder.build();
-    final String dataLocation = Path.of(storagePath, DATA_DIRECTORY).toString();
-    final String indexLocation = Path.of(storagePath, INDEX_DIRECTORY).toString();
+    return new DefaultCacheManager(globalConfig);
+  }
 
-    cacheManager = new DefaultCacheManager(globalConfig);
-    cacheManager.defineConfiguration(CACHE_NAME,
+  @Override
+  protected Cache<Integer, ?> buildCache(@Nonnull final EmbeddedCacheManager cacheManager,
+      @Nonnull final String cacheName) {
+    final String storagePath = configuration.getStoragePath();
+    final String dataLocation = Path.of(requireNonNull(storagePath), DATA_DIRECTORY).toString();
+    final String indexLocation = Path.of(storagePath, INDEX_DIRECTORY).toString();
+    cacheManager.defineConfiguration(cacheName,
         new ConfigurationBuilder()
             .persistence()
             .addSoftIndexFileStore()
             .dataLocation(dataLocation)
             .indexLocation(indexLocation)
             .build());
-    cache = cacheManager.getCache(CACHE_NAME);
+    return cacheManager.getCache(cacheName);
   }
 
 }

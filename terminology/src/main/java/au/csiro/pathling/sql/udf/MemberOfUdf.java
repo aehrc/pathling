@@ -20,7 +20,7 @@ package au.csiro.pathling.sql.udf;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.decodeOneOrMany;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.validCodings;
 
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -69,7 +69,7 @@ public class MemberOfUdf implements SqlFunction,
     if (url == null || codings == null) {
       return null;
     }
-    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
+    final TerminologyService terminologyService = terminologyServiceFactory.build();
     return validCodings(codings)
         .anyMatch(coding -> terminologyService.validateCode(url, coding));
   }

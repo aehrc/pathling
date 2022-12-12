@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.terminology;
 
-import au.csiro.pathling.sql.Terminology;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -49,44 +48,6 @@ public interface TerminologyFunctions {
   @Nonnull
   static TerminologyFunctions of(
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
-    return new TerminologyFunctionsImpl();
-  }
-}
-
-class TerminologyFunctionsImpl implements TerminologyFunctions {
-
-  TerminologyFunctionsImpl() {
-  }
-
-  @Nonnull
-  @Override
-  public Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
-      @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName) {
-    return dataset.withColumn(outputColumnName, Terminology.member_of(codingArrayCol, valueSetUri));
-  }
-
-  @Nonnull
-  @Override
-  public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
-      @Nonnull final String conceptMapUrl, final boolean reverse,
-      @Nonnull final String equivalence,
-      @Nullable final String target,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
-    return dataset.withColumn(outputColumnName,
-        Terminology.translate(codingArrayCol, conceptMapUrl, reverse, equivalence, target));
-  }
-
-  @Override
-  @Nonnull
-  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
-      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB
-      , @Nonnull final String outputColumnName,
-      final boolean inverted) {
-    return idAndCodingSet.withColumn(outputColumnName,
-        inverted
-        ? Terminology.subsumed_by(codingArrayA, codingArrayB)
-        : Terminology.subsumes(codingArrayA, codingArrayB));
-
+    return new DefaultTerminologyFunctions();
   }
 }

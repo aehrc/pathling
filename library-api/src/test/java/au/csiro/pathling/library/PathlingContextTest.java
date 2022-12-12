@@ -36,8 +36,8 @@ import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SchemaAsserts;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -89,16 +89,16 @@ public class PathlingContextTest {
   }
 
   private TerminologyServiceFactory terminologyServiceFactory;
-  private TerminologyService2 terminologyService;
+  private TerminologyService terminologyService;
 
   @BeforeEach
   public void setUp() {
     // setup terminology mocks
     terminologyServiceFactory = mock(
         TerminologyServiceFactory.class, withSettings().serializable());
-    terminologyService = mock(TerminologyService2.class,
+    terminologyService = mock(TerminologyService.class,
         withSettings().serializable());
-    when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService);
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
 
     DefaultTerminologyServiceFactory.reset();
   }
@@ -350,7 +350,7 @@ public class PathlingContextTest {
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
-    final TerminologyService2 terminologyService = actualServiceFactory.buildService2();
+    final TerminologyService terminologyService = actualServiceFactory.build();
     assertNotNull(terminologyService);
   }
 
@@ -371,7 +371,7 @@ public class PathlingContextTest {
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
-    final TerminologyService2 terminologyService = actualServiceFactory.buildService2();
+    final TerminologyService terminologyService = actualServiceFactory.build();
     assertNotNull(terminologyService);
   }
 
@@ -439,7 +439,7 @@ public class PathlingContextTest {
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
-    final TerminologyService2 terminologyService = actualServiceFactory.buildService2();
+    final TerminologyService terminologyService = actualServiceFactory.build();
     assertNotNull(terminologyService);
   }
 

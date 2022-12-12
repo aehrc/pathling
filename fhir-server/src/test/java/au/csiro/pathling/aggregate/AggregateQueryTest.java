@@ -269,7 +269,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
 
     final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
 
-    TerminologyServiceHelpers.setupValidate(terminologyService2)
+    TerminologyServiceHelpers.setupValidate(terminologyService)
         .withValueSet(valueSetUrl,
             CD_SNOMED_403190006, CD_SNOMED_284551006);
 
@@ -519,7 +519,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     // Not a real subsumption - just works for this use case.
     // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
 
-    TerminologyServiceHelpers.setupSubsumes(terminologyService2)
+    TerminologyServiceHelpers.setupSubsumes(terminologyService)
         .withSubsumes(CD_SNOMED_284551006,
             TerminologyHelpers.CD_SNOMED_40055000);
 

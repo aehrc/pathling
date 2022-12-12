@@ -45,9 +45,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Collections;
@@ -72,7 +72,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Tag("Tranche2")
 @Slf4j
-class TerminologyService2IntegrationTest extends WireMockTest {
+class TerminologyServiceIntegrationTest extends WireMockTest {
 
   private static final String SNOMED_VERSION_UNKN = "http://snomed.info/sct/32506021000036107/version/19000101";
   private final static Coding CD_SNOMED_403190006_VERSION_UNKN = newVersionedCoding(
@@ -91,14 +91,14 @@ class TerminologyService2IntegrationTest extends WireMockTest {
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;
-  
-  private TerminologyService2 terminologyService;
+
+  private TerminologyService terminologyService;
 
   @BeforeEach
   @Override
   void setUp() {
     super.setUp();
-    terminologyService = terminologyServiceFactory.buildService2();
+    terminologyService = terminologyServiceFactory.build();
     if (isRecordMode()) {
       wireMockServer.resetAll();
       log.warn("Proxying all request to: {}", recordingTxServerUrl);
@@ -247,7 +247,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
     verify(anyRequestedFor(urlPathMatching("/fhir/(.*)"))
         .withHeader("User-Agent", matching("pathling/(.*)")));
   }
-  
+
   @Test
   void testLookupStandardPropertiesForKnownAndUnknownSystems() {
     assertEquals(

@@ -15,24 +15,26 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.test.stubs;
+package au.csiro.pathling.terminology.lookup;
 
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.SharedMocks;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.TerminologyParameters;
+import lombok.Value;
 
-public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
+/**
+ * Represents the input parameters to the lookup operation.
+ *
+ * @author John Grimes
+ * @see <a
+ * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+ */
+@Value
+public class LookupParameters implements TerminologyParameters {
 
-  private static final long serialVersionUID = -8229464411116137820L;
+  private static final long serialVersionUID = 3514974005203890618L;
 
-  public TestTerminologyServiceFactory() {
-  }
-
-  @Nonnull
-  @Override
-  public TerminologyService build() {
-    return SharedMocks.getOrCreate(TerminologyService.class);
-  }
+  ImmutableCoding coding;
+  String property;
+  String displayLanguage;
 
 }

@@ -17,16 +17,12 @@
 
 package au.csiro.pathling.terminology.mock;
 
-import au.csiro.pathling.terminology.TerminologyService2;
+import static java.util.Objects.isNull;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
+
+import au.csiro.pathling.terminology.TerminologyService;
 import com.google.common.collect.ImmutableMap;
-import lombok.AllArgsConstructor;
-import lombok.Value;
-import org.apache.commons.lang3.tuple.Pair;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,12 +31,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.AllArgsConstructor;
+import lombok.Value;
+import org.apache.commons.lang3.tuple.Pair;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
-import static java.util.Objects.isNull;
-import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
-import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
-
-public class MockTerminologyService2 implements TerminologyService2 {
+public class MockTerminologyService implements TerminologyService {
 
   @Value
   @AllArgsConstructor
@@ -102,7 +102,7 @@ public class MockTerminologyService2 implements TerminologyService2 {
   private final Map<String, ConceptMap> conceptMap = new HashMap<>();
   private final Set<Pair<SystemAndCode, SystemAndCode>> subsumes = new HashSet<>();
 
-  public MockTerminologyService2() {
+  public MockTerminologyService() {
     valueSets.put("http://snomed.info/sct?fhir_vs=refset/723264001",
         new ValueSet(new Coding("http://snomed.info/sct", "368529001", null)));
     valueSets.put("http://loinc.org/vs/LP14885-5",
@@ -184,4 +184,3 @@ public class MockTerminologyService2 implements TerminologyService2 {
     }
   }
 }
-

@@ -5,19 +5,14 @@ import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
 import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.sql.Terminology.translate;
-import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.apache.spark.sql.functions.lit;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -36,7 +31,6 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -51,7 +45,7 @@ public class TerminologyUdsfTest {
   private SparkSession spark;
 
   @Autowired
-  TerminologyService2 terminologyService;
+  TerminologyService terminologyService;
 
   @Autowired
   IParser jsonParser;
@@ -114,7 +108,7 @@ public class TerminologyUdsfTest {
         .withDisplay(CODING_1)
         .withDisplay(CODING_2);
   }
-  
+
   @Test
   public void testValidateCoding() {
     setupValidateCodingExpectations();
@@ -449,4 +443,3 @@ public class TerminologyUdsfTest {
     DatasetAssert.of(result).hasRows(expectedResult);
   }
 }
- 

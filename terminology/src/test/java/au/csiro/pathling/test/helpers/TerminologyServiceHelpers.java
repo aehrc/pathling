@@ -2,6 +2,10 @@ package au.csiro.pathling.test.helpers;
 
 import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,9 +14,9 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -26,11 +30,6 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
 
 public class TerminologyServiceHelpers {
 
@@ -47,9 +46,9 @@ public class TerminologyServiceHelpers {
   public static class ValidateExpectations {
 
     @Nonnull
-    private final TerminologyService2 mockService;
+    private final TerminologyService mockService;
 
-    ValidateExpectations(@Nonnull final TerminologyService2 mockService) {
+    ValidateExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       when(mockService.validateCode(any(), any())).thenReturn(false);
@@ -79,9 +78,9 @@ public class TerminologyServiceHelpers {
   public static class TranslateExpectations {
 
     @Nonnull
-    private final TerminologyService2 mockService;
+    private final TerminologyService mockService;
 
-    TranslateExpectations(@Nonnull final TerminologyService2 mockService) {
+    TranslateExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       when(mockService.translate(any(), any(), anyBoolean(), isNull())).thenReturn(
@@ -132,7 +131,7 @@ public class TerminologyServiceHelpers {
   public static class SubsumesExpectations {
 
     @Nonnull
-    private final TerminologyService2 mockService;
+    private final TerminologyService mockService;
 
     private static class DefaultAnswer implements Answer<ConceptSubsumptionOutcome> {
 
@@ -149,7 +148,7 @@ public class TerminologyServiceHelpers {
       }
     }
 
-    public SubsumesExpectations(@Nonnull final TerminologyService2 mockService) {
+    public SubsumesExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       doAnswer(new DefaultAnswer()).when(mockService).subsumes(any(), any());
@@ -167,9 +166,9 @@ public class TerminologyServiceHelpers {
 
   public static class LookupExpectations {
 
-    private final TerminologyService2 mockService;
+    private final TerminologyService mockService;
 
-    public LookupExpectations(final TerminologyService2 mockService) {
+    public LookupExpectations(final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       when(mockService.lookup(any(), any(), any())).thenReturn(Collections.emptyList());
@@ -183,7 +182,7 @@ public class TerminologyServiceHelpers {
               Property.of("display", new StringType(displayName))));
       return this;
     }
-    
+
     @Nonnull
     public LookupExpectations withDisplay(@Nonnull final Coding coding) {
       return withDisplay(coding, coding.getDisplay());
@@ -191,25 +190,25 @@ public class TerminologyServiceHelpers {
   }
 
   @Nonnull
-  public static ValidateExpectations setupValidate(@Nonnull final TerminologyService2 mockService) {
+  public static ValidateExpectations setupValidate(@Nonnull final TerminologyService mockService) {
     return new ValidateExpectations(mockService);
   }
 
 
   @Nonnull
   public static TranslateExpectations setupTranslate(
-      @Nonnull final TerminologyService2 mockService) {
+      @Nonnull final TerminologyService mockService) {
     return new TranslateExpectations(mockService);
   }
 
 
   @Nonnull
   public static SubsumesExpectations setupSubsumes(
-      @Nonnull final TerminologyService2 mockService) {
+      @Nonnull final TerminologyService mockService) {
     return new SubsumesExpectations(mockService);
   }
 
-  public static LookupExpectations setupLookup(@Nonnull final TerminologyService2 mockService) {
+  public static LookupExpectations setupLookup(@Nonnull final TerminologyService mockService) {
     return new LookupExpectations(mockService);
   }
 

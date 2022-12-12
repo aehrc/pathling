@@ -70,7 +70,7 @@ public class ParserTest extends AbstractParserTest {
 
   private TranslateExpectations setupMockTranslationFor_195662009_444814009(
       final String conceptMapUrl) {
-    return TerminologyServiceHelpers.setupTranslate(terminologyService2)
+    return TerminologyServiceHelpers.setupTranslate(terminologyService)
         .withMockTranslations(CD_SNOMED_195662009,
             conceptMapUrl, "uuid:test-system", 3)
         .withMockTranslations(CD_SNOMED_444814009,
@@ -83,11 +83,11 @@ public class ParserTest extends AbstractParserTest {
   }
 
   private void setupMockDisplayFor_195662009_444814009() {
-    TerminologyServiceHelpers.setupLookup(terminologyService2)
+    TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDisplay(CD_SNOMED_195662009)
         .withDisplay(CD_SNOMED_444814009);
   }
-  
+
   @Test
   void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
@@ -273,7 +273,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testSubsumesAndSubsumedBy() {
 
-    setupSubsumes(terminologyService2);
+    setupSubsumes(terminologyService);
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
     // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
@@ -297,7 +297,7 @@ public class ParserTest extends AbstractParserTest {
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
-    setupSubsumes(terminologyService2).withSubsumes(
+    setupSubsumes(terminologyService).withSubsumes(
         CD_SNOMED_444814009, CD_SNOMED_40055000);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
@@ -333,7 +333,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testWhereWithSubsumes() {
 
-    setupSubsumes(terminologyService2).withSubsumes(CD_SNOMED_284551006, CD_SNOMED_40055000);
+    setupSubsumes(terminologyService).withSubsumes(CD_SNOMED_284551006, CD_SNOMED_40055000);
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
@@ -348,7 +348,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testWhereWithMemberOf() {
 
-    TerminologyServiceHelpers.setupValidate(terminologyService2)
+    TerminologyServiceHelpers.setupValidate(terminologyService)
         .withValueSet("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
             CD_SNOMED_403190006, CD_SNOMED_284551006);
     assertThatResultOf(

@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
@@ -82,7 +82,7 @@ class SearchExecutorTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  TerminologyService2 terminologyService2;
+  TerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
@@ -102,7 +102,7 @@ class SearchExecutorTest {
     final ValueSet valueSet = (ValueSet) jsonParser.parseResource(getResourceAsStream(
         "txResponses/SearchExecutorTest/simpleSearchWithMemberOf.ValueSet.json"));
 
-    TerminologyServiceHelpers.setupValidate(terminologyService2)
+    TerminologyServiceHelpers.setupValidate(terminologyService)
         .fromValueSet(
             "http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009",
             valueSet);

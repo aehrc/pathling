@@ -12,7 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
@@ -26,17 +26,17 @@ public class MemberOfUdfTest extends AbstractTerminologyTestBase {
   private static final String VALUE_SET_URL_AB = "uuid:vsAB";
 
   private MemberOfUdf memberUdf;
-  private TerminologyService2 terminologyService2;
-  
+  private TerminologyService terminologyService;
+
   @BeforeEach
   void setUp() {
-    terminologyService2 = mock(TerminologyService2.class);
+    terminologyService = mock(TerminologyService.class);
     final TerminologyServiceFactory terminologyServiceFactory = mock(
         TerminologyServiceFactory.class);
-    when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService2);
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
     memberUdf = new MemberOfUdf(terminologyServiceFactory);
 
-    TerminologyServiceHelpers.setupValidate(terminologyService2)
+    TerminologyServiceHelpers.setupValidate(terminologyService)
         .withValueSet(VALUE_SET_URL_A, CODING_A)
         .withValueSet(VALUE_SET_URL_AB, CODING_A, CODING_B);
   }
@@ -56,13 +56,13 @@ public class MemberOfUdfTest extends AbstractTerminologyTestBase {
     assertFalse(
         memberUdf.call(encodeMany(INVALID_CODING_0, INVALID_CODING_1, INVALID_CODING_2, null),
             VALUE_SET_URL_A));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
   void testInvalidCoding() {
     assertFalse(memberUdf.call(encode(INVALID_CODING_0), VALUE_SET_URL_A));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
@@ -91,7 +91,7 @@ public class MemberOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testEarlyExitWhenMatchingCodingFound() {
     assertTrue(memberUdf.call(encodeMany(CODING_A, CODING_B), VALUE_SET_URL_AB));
-    verify(terminologyService2).validateCode(eq(VALUE_SET_URL_AB), deepEq(CODING_A));
-    verifyNoMoreInteractions(terminologyService2);
+    verify(terminologyService).validateCode(eq(VALUE_SET_URL_AB), deepEq(CODING_A));
+    verifyNoMoreInteractions(terminologyService);
   }
 }

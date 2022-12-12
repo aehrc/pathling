@@ -15,24 +15,8 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.test.stubs;
+package au.csiro.pathling.terminology;
 
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.SharedMocks;
-import javax.annotation.Nonnull;
-
-public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
-
-  private static final long serialVersionUID = -8229464411116137820L;
-
-  public TestTerminologyServiceFactory() {
-  }
-
-  @Nonnull
-  @Override
-  public TerminologyService build() {
-    return SharedMocks.getOrCreate(TerminologyService.class);
-  }
+public class ResponseNotModifiedError extends Exception {
 
 }

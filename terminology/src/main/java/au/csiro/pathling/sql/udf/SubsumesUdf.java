@@ -23,7 +23,7 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVA
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
 
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -78,7 +78,7 @@ public class SubsumesUdf implements SqlFunction,
                                      ? inverted
                                      : PARAM_INVERTED_DEFAULT;
 
-    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
+    final TerminologyService terminologyService = terminologyServiceFactory.build();
 
     // does any of the input codings subsume any of the output codings (within the same system)
     final List<Coding> validCodingsB = validCodings(codingsB)

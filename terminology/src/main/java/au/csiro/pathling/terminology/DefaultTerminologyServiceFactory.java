@@ -2,12 +2,14 @@ package au.csiro.pathling.terminology;
 
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.caching.CachingFactories;
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyClient2;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.terminology.caching.InMemoryCachingTerminologyService;
+import au.csiro.pathling.terminology.caching.PersistentCachingTerminologyService;
 import au.csiro.pathling.utilities.ObjectHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
@@ -20,15 +22,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.client.cache.CacheConfig;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 
 /**
- * Default implementation of {@link TerminologyServiceFactory} providing {@link TerminologyService2}
- * implemented using {@link TerminologyClient2} with given configuration.
+ * Default implementation of {@link TerminologyServiceFactory}, providing the appropriate
+ * implementation of {@link TerminologyService} based upon the given configuration.
  *
  * @author John Grimes
  * @author Piotr Szul
@@ -42,8 +42,8 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private static final long serialVersionUID = 2837933007972812597L;
 
   @Nonnull
-  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService2> terminologyServiceHolder2 = ObjectHolder.singleton(
-      DefaultTerminologyServiceFactory::createService2);
+  private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = ObjectHolder.singleton(
+      DefaultTerminologyServiceFactory::createService);
 
 
   @Nonnull
@@ -65,7 +65,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   public static synchronized void reset() {
     log.info("Resetting terminology services");
-    terminologyServiceHolder2.reset();
+    terminologyServiceHolder.reset();
   }
 
   @Deprecated
@@ -105,48 +105,47 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   @Nonnull
   @Override
-  public TerminologyService2 buildService2() {
-    return terminologyServiceHolder2.getOrCreate(this);
+  public TerminologyService build() {
+    return terminologyServiceHolder.getOrCreate(this);
   }
 
   @Nonnull
-  private DefaultTerminologyService2 createService2() {
+  private TerminologyService createService() {
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
-    final CloseableHttpClient httpClient = buildHttpClient(clientConfig,
-        cacheConfig);
-    final TerminologyClient2 terminologyClient = TerminologyClient2.build(
-        fhirContext, terminologyServerUrl, verboseRequestLogging, authConfig,
-        httpClient);
-    return new DefaultTerminologyService2(terminologyClient, httpClient);
+    final CloseableHttpClient httpClient = buildHttpClient(clientConfig);
+    final TerminologyClient terminologyClient = TerminologyClient.build(fhirContext,
+        terminologyServerUrl, verboseRequestLogging, authConfig, httpClient);
+
+    if (cacheConfig.isEnabled() && cacheConfig.getStorageType().equals(StorageType.DISK)) {
+      // If caching is enabled and storage type is disk, use a persistent caching terminology 
+      // service implementation.
+      return new PersistentCachingTerminologyService(terminologyClient, httpClient, cacheConfig);
+    } else if (cacheConfig.isEnabled() && cacheConfig.getStorageType().equals(StorageType.MEMORY)) {
+      // If caching is enabled and storage type is memory, use an in-memory caching terminology
+      // service implementation.
+      return new InMemoryCachingTerminologyService(terminologyClient, httpClient, cacheConfig);
+    } else {
+      // If caching is disabled, use a terminology service implementation that does not cache.
+      return new DefaultTerminologyService(terminologyClient, httpClient);
+    }
   }
 
   private static CloseableHttpClient buildHttpClient(
-      @Nonnull final HttpClientConfiguration clientConfig,
-      @Nonnull final HttpClientCachingConfiguration pathlingCacheConfig) {
+      @Nonnull final HttpClientConfiguration clientConfig) {
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
     connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
-    final HttpClientBuilder clientBuilder;
-    if (pathlingCacheConfig.isEnabled()) {
-      final CacheConfig httpClientCacheConfig = CacheConfig.custom()
-          .setMaxCacheEntries(pathlingCacheConfig.getMaxEntries())
-          .setMaxObjectSize(pathlingCacheConfig.getMaxObjectSize())
-          .build();
-      clientBuilder = CachingFactories.of(pathlingCacheConfig)
-          .create(httpClientCacheConfig);
-    } else {
-      clientBuilder = HttpClients.custom();
-    }
 
     final RequestConfig defaultRequestConfig = RequestConfig.custom()
         .setSocketTimeout(clientConfig.getSocketTimeout())
         .build();
 
-    return clientBuilder
+    return HttpClients.custom()
         .setDefaultRequestConfig(defaultRequestConfig)
         .setConnectionManager(connectionManager)
         .setConnectionManagerShared(false)
         .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
         .build();
   }
+
 }

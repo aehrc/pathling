@@ -10,13 +10,13 @@ import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.http.client.HttpClient;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
-import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
@@ -27,13 +27,13 @@ import org.slf4j.LoggerFactory;
 /**
  * The client interface to FHIR terminology operations.
  */
-public interface TerminologyClient2 {
+public interface TerminologyClient {
 
-  Logger log = LoggerFactory.getLogger(TerminologyClient2.class);
+  Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
   /**
    * @see <a
-   * href="https://www.hl7.org/fhir/R4/operation-codesystem-validate-code.html">CodeSystem/$validate-code</a>
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
   @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
   @Nonnull
@@ -43,6 +43,16 @@ public interface TerminologyClient2 {
       @Nullable @OperationParam(name = "systemVersion") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code
   );
+
+  /**
+   * Builds a validate code operation that can be customized and executed later.
+   *
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   */
+  IOperationUntypedWithInput<Parameters> buildValidateCode(@Nonnull UriType url,
+      @Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code);
 
   /**
    * @see <a
@@ -60,6 +70,18 @@ public interface TerminologyClient2 {
   );
 
   /**
+   * Builds a translate operation that can be customized and executed later.
+   *
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildTranslate(@Nonnull UriType url,
+      @Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable BooleanType reverse,
+      @Nullable UriType target);
+
+  /**
    * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    */
@@ -73,7 +95,18 @@ public interface TerminologyClient2 {
   );
 
   /**
-   * See: <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * Builds a subsumes operation that can be customized and executed later.
+   *
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildSubsumes(@Nonnull CodeType codeA,
+      @Nonnull CodeType codeB, @Nonnull UriType system, @Nullable StringType version);
+
+  /**
+   * See: <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
   @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
   @Nonnull
@@ -85,6 +118,16 @@ public interface TerminologyClient2 {
       @Nullable @OperationParam(name = "displayLanguage") CodeType displayLanguage
   );
 
+  /**
+   * Builds a lookup operation that can be customized and executed later.
+   * <p>
+   * See: <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property,
+      @Nullable CodeType displayLanguage);
 
   /**
    * Builds a new terminology client.
@@ -95,10 +138,10 @@ public interface TerminologyClient2 {
    * responses.
    * @param authConfig the authentication to use for the server.
    * @param httpClient the {@link HttpClient} instance to use for HTTP request.
-   * @return the new instance of {@link TerminologyClient2}.
+   * @return the new instance of {@link TerminologyClient}.
    */
-  
-  static TerminologyClient2 build(@Nonnull final FhirContext fhirContext,
+
+  static TerminologyClient build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
       @Nonnull final HttpClient httpClient) {
@@ -132,109 +175,6 @@ public interface TerminologyClient2 {
           authConfig.getScope(), authConfig.getTokenExpiryTolerance());
       genericClient.registerInterceptor(clientAuthInterceptor);
     }
-    return new TerminologyClient2Impl(genericClient);
+    return new DefaultTerminologyClient(genericClient);
   }
-}
-
-class TerminologyClient2Impl implements TerminologyClient2 {
-
-  @Nonnull
-  final IGenericClient fhirClient;
-
-  TerminologyClient2Impl(@Nonnull final IGenericClient fhirClient) {
-    this.fhirClient = fhirClient;
-  }
-
-  @Nonnull
-  @Override
-  public Parameters validateCode(@Nonnull final UriType url, @Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("url").setValue(url);
-    params.addParameter().setName("system").setValue(system);
-    params.addParameter().setName("code").setValue(code);
-    if (version != null) {
-      params.addParameter().setName("systemVersion").setValue(version);
-    }
-
-    return fhirClient.operation()
-        .onType(ValueSet.class)
-        .named("$validate-code")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
-  }
-
-  @Nonnull
-  @Override
-  public Parameters translate(@Nonnull final UriType url, @Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final BooleanType reverse,
-      @Nullable final UriType target) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("url").setValue(url);
-    params.addParameter().setName("system").setValue(system);
-    params.addParameter().setName("code").setValue(code);
-    if (version != null) {
-      params.addParameter().setName("version").setValue(version);
-    }
-    if (reverse != null) {
-      params.addParameter().setName("reverse").setValue(reverse);
-    }
-    if (target != null) {
-      params.addParameter().setName("target").setValue(target);
-    }
-    return fhirClient.operation()
-        .onType(ConceptMap.class)
-        .named("$translate")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
-  }
-
-  @Nonnull
-  @Override
-  public Parameters subsumes(@Nonnull final CodeType codeA, @Nonnull final CodeType codeB,
-      @Nonnull final UriType system, @Nullable final StringType version) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("codeA").setValue(codeA);
-    params.addParameter().setName("codeB").setValue(codeB);
-    params.addParameter().setName("system").setValue(system);
-    if (version != null) {
-      params.addParameter().setName("version").setValue(version);
-    }
-    return fhirClient.operation()
-        .onType(CodeSystem.class)
-        .named("$subsumes")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
-  }
-
-  @Nonnull
-  @Override
-  public Parameters lookup(@Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final CodeType property,
-      @Nullable final CodeType displayLanguage) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("system").setValue(system);
-    params.addParameter().setName("code").setValue(code);
-    if (version != null) {
-      params.addParameter().setName("version").setValue(version);
-    }
-    if (property != null) {
-      params.addParameter().setName("property").setValue(property);
-    }
-    if (displayLanguage != null) {
-      params.addParameter().setName("displayLanguage").setValue(displayLanguage);
-    }
-    return fhirClient.operation()
-        .onType(CodeSystem.class)
-        .named("$lookup")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
-  }
-
 }

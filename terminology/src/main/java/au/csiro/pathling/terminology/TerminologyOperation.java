@@ -17,25 +17,27 @@
 
 package au.csiro.pathling.terminology;
 
-import java.io.Serializable;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 
-/**
- * Represents something that creates a {@link TerminologyService}.
- * <p>
- * Used for code that runs on Spark workers, providing a {@link Serializable} class that is capable
- * of building a service that can be used on the worker.
- *
- * @author John Grimes
- * @author Piotr Szul
- */
-public interface TerminologyServiceFactory extends Serializable {
 
-  /**
-   * Builds a new instance.
-   *
-   * @return a shiny new TerminologyService instance
-   */
-  @Nonnull
-  TerminologyService build();
+/**
+ * An abstraction of a terminology operation that describes how to validate, execute and extract a
+ * result from the response.
+ *
+ * @param <ResponseType> The type of the response returned by the terminology client
+ * @param <ResultType> The type of the final result that is extracted from the response
+ * @author John Grimes
+ */
+public interface TerminologyOperation<ResponseType, ResultType> {
+
+  Optional<ResultType> validate();
+
+  IOperationUntypedWithInput<ResponseType> buildRequest();
+
+  ResultType extractResult(@Nonnull final ResponseType response);
+
+  ResultType invalidRequestFallback();
+
 }

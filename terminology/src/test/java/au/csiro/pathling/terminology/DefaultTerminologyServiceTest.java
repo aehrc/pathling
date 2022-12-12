@@ -19,9 +19,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhir.TerminologyClient2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +37,7 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase {
+public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
   private static final String VALUE_SET_X = "uuid:valueSetX";
   private static final String VALUE_SET_Y = "uuid:valueSetY";
@@ -63,13 +63,13 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
   }
 
 
-  private TerminologyClient2 terminologClient;
-  private DefaultTerminologyService2 terminologyService;
+  private TerminologyClient terminologClient;
+  private DefaultTerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
-    terminologClient = mock(TerminologyClient2.class);
-    terminologyService = new DefaultTerminologyService2(
+    terminologClient = mock(TerminologyClient.class);
+    terminologyService = new DefaultTerminologyService(
         terminologClient, null);
   }
 
@@ -268,7 +268,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         deepEq(new CodeType(CODE_B)),
         deepEq(new CodeType("code")),
         deepEq(new CodeType("en")))).thenReturn(standardProperties(CODING_BB_VERSION1));
-    
+
     assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
         terminologyService.lookup(CODING_AA, "display", null));
 
@@ -277,5 +277,3 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
   }
 
 }
-
-

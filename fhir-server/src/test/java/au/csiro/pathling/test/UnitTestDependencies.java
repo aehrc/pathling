@@ -22,10 +22,10 @@ import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.spark.SparkConfigurer;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -85,12 +85,12 @@ class UnitTestDependencies {
   static FhirEncoders fhirEncoders() {
     return FhirEncoders.forR4().getOrCreate();
   }
-  
+
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static TerminologyService2 terminologyService2() {
-    return SharedMocks.getOrCreate(TerminologyService2.class);
+  static TerminologyService terminologyService() {
+    return SharedMocks.getOrCreate(TerminologyService.class);
   }
 
   @Bean

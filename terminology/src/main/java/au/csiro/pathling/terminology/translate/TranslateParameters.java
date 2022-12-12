@@ -15,24 +15,27 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.test.stubs;
+package au.csiro.pathling.terminology.translate;
 
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.SharedMocks;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.TerminologyParameters;
+import lombok.Value;
 
-public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
+/**
+ * Represents the input parameters to the translate operation.
+ *
+ * @author John Grimes
+ * @see <a
+ * href="https://www.hl7.org/fhir/R4/codesystem-operation-translate.html">CodeSystem/$translate</a>
+ */
+@Value
+public class TranslateParameters implements TerminologyParameters {
 
-  private static final long serialVersionUID = -8229464411116137820L;
+  private static final long serialVersionUID = 3514974005203890618L;
 
-  public TestTerminologyServiceFactory() {
-  }
-
-  @Nonnull
-  @Override
-  public TerminologyService build() {
-    return SharedMocks.getOrCreate(TerminologyService.class);
-  }
+  ImmutableCoding coding;
+  String conceptMapUrl;
+  boolean reverse;
+  String target;
 
 }

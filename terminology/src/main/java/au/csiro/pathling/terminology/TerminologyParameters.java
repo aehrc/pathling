@@ -18,24 +18,32 @@
 package au.csiro.pathling.terminology;
 
 import java.io.Serializable;
+import java.util.Objects;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
- * Represents something that creates a {@link TerminologyService}.
+ * Represents parameters that are passed to a terminology operation.
  * <p>
- * Used for code that runs on Spark workers, providing a {@link Serializable} class that is capable
- * of building a service that can be used on the worker.
+ * Must be {@link Serializable} so that it can be used as a cache key.
  *
  * @author John Grimes
- * @author Piotr Szul
  */
-public interface TerminologyServiceFactory extends Serializable {
+public interface TerminologyParameters extends Serializable {
 
-  /**
-   * Builds a new instance.
-   *
-   * @return a shiny new TerminologyService instance
-   */
+  @Nullable
+  static <T> T optional(@Nonnull final Function<String, T> converter,
+      @Nullable final String value) {
+    return value != null
+           ? converter.apply(value)
+           : null;
+  }
+
   @Nonnull
-  TerminologyService build();
+  static <T> T required(@Nonnull final Function<String, T> converter,
+      @Nullable final String value) {
+    return converter.apply(Objects.requireNonNull(value));
+  }
+
 }
