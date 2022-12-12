@@ -20,6 +20,7 @@ package au.csiro.pathling.test.integration;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_1900000000000003001;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_2121000032108;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
@@ -33,7 +34,7 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_AUTOMAP_DEFAU
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_55915_3;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.newVersionedCoding;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedCoding;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
@@ -46,7 +47,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService2.Designation;
 import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -65,8 +68,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
  * @author Piotr Szul
@@ -74,6 +80,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 @Tag("Tranche2")
 @Slf4j
+@ActiveProfiles({"core", "server", "integration-test"})
 class TerminologyService2IntegrationTest extends WireMockTest {
 
   private static final String SNOMED_VERSION_UNKN = "http://snomed.info/sct/32506021000036107/version/19000101";
@@ -91,9 +98,15 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   @Autowired
   private TerminologyServiceFactory terminologyServiceFactory;
 
+
+  // Mocking the Database bean to avoid lengthy initialization
+  @SuppressWarnings("unused")
+  @MockBean
+  private Database database;
+
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;
-  
+
   private TerminologyService2 terminologyService;
 
   @BeforeEach
@@ -292,7 +305,27 @@ class TerminologyService2IntegrationTest extends WireMockTest {
     assertEquals(
         List.of(
             Property.of("260686004", new CodeType("129304002"))
-            ),
+        ),
         terminologyService.lookup(CD_SNOMED_2121000032108, "260686004"));
+  }
+
+  @Test
+  void testLookupDesignations() {
+    assertEquals(
+        List.of(
+            Designation.of(
+                new Coding("http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+                    "preferredForLanguage", "Preferred For Language"),
+                "en-x-sctlang-32570271-00003610-6",
+                "Laceration of foot"),
+            Designation.of(
+                new Coding("http://terminology.hl7.org/CodeSystem/designation-usage", "display",
+                    null),
+                "en",
+                "Laceration of foot"),
+            Designation.of(CD_SNOMED_1900000000000003001, "en", "Laceration of foot (disorder)")
+
+        ),
+        terminologyService.lookup(CD_SNOMED_284551006, "designation"));
   }
 }

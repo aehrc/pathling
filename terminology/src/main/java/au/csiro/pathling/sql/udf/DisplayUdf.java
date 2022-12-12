@@ -26,7 +26,7 @@ public class DisplayUdf implements SqlFunction,
     SqlFunction1<Row, String> {
 
   private static final long serialVersionUID = 7605853352299165569L;
-  
+
   public static final String DISPLAY_PROPERTY_CODE = "display";
   public static final String FUNCTION_NAME = "display";
   public static final DataType RETURN_TYPE = DataTypes.StringType;
@@ -69,8 +69,6 @@ public class DisplayUdf implements SqlFunction,
   @Nullable
   @Override
   public String call(@Nullable final Row codingRow) {
-    return doCall(nonNull(codingRow)
-                  ? decode(codingRow)
-                  : null);
+    return doCall(decode(codingRow));
   }
 }

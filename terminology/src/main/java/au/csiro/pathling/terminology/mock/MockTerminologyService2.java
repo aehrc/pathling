@@ -181,15 +181,30 @@ public class MockTerminologyService2 implements TerminologyService2 {
     final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         null);
 
+    final Coding useDisplay = new Coding("http://terminology.hl7.org/CodeSystem/designation-usage",
+        "display", null);
+
+    final Coding useFullySpecifiedName = new Coding("http://snomed.info/sct", "900000000000003001",
+        "Fully specified name");
+
     if (SystemAndCode.of(snomedCoding).equals(SystemAndCode.of(coding))) {
       return List.of(
           Property.of("display", new StringType(snomedCoding.getDisplay())),
           Property.of("parent", new CodeType("785673007")),
-          Property.of("parent", new CodeType("74754006"))
+          Property.of("parent", new CodeType("74754006")),
+          Designation.of(useDisplay, "en", "Screening for phenothiazine in serum"),
+          Designation.of(useFullySpecifiedName, "en",
+              "Screening for phenothiazine in serum (procedure)")
       );
     } else if (SystemAndCode.of(loincCoding).equals(SystemAndCode.of(coding))) {
       return List.of(
-          Property.of("inactive", new BooleanType(false))
+          Property.of("inactive", new BooleanType(false)),
+          Designation.of(useDisplay, "en",
+              "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis"),
+          Designation.of(useDisplay, "fr-FR",
+              "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien"),
+          Designation.of(useFullySpecifiedName, "fr-FR",
+              "Beta 2 globulin:MCnc:Pt:CSF:Qn:Electrophoresis")
       );
     } else {
       return Collections.emptyList();

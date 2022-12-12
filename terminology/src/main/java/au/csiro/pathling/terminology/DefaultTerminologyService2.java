@@ -157,9 +157,23 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
       @Nonnull final Parameters parameters,
       @Nullable final String propertyCode) {
 
-    final List<PropertyPart> x = ParametersUtils.toProperties(
-        parameters).collect(Collectors.toUnmodifiableList());
-    return x.stream()
+    return (Designation.PROPERTY_CODE.equals(propertyCode))
+           ? toDesignations(parameters)
+           : toProperties(parameters, propertyCode);
+  }
+
+  @Nonnull
+  private static List<PropertyOrDesignation> toDesignations(Parameters parameters) {
+    return ParametersUtils.toDesignations(parameters)
+        .map(part -> Designation.of(part.getUse(), part.getLanguage().getCode(),
+            part.getValue().getValue()))
+        .collect(Collectors.toUnmodifiableList());
+  }
+
+  @Nonnull
+  private static List<PropertyOrDesignation> toProperties(
+      @Nonnull Parameters parameters, @Nullable String propertyCode) {
+    return ParametersUtils.toProperties(parameters)
         .flatMap(part -> nonNull(part.getSubproperty())
                          ? part.getSubproperty().stream()
                          : Stream.of(part))

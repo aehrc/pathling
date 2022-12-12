@@ -146,6 +146,54 @@ public interface TerminologyService2 {
   }
 
   /**
+   * The representation of a designation of a concept.
+   */
+  @Value(staticConstructor = "of")
+  class Designation implements PropertyOrDesignation {
+
+    /**
+     * The code of the designation properties
+     */
+    public static final String PROPERTY_CODE = "designation";
+
+    @Nonnull
+    Coding use;
+
+    @Nonnull
+    String language;
+
+    @Nonnull
+    String value;
+
+    @Override
+    public int hashCode() {
+      // not supported for now because it's not possible to satisfy the hashCode/equals contract
+      // without some form of deepHash corresponding to equalsDeep()
+      throw new UnsupportedOperationException("hashCode not implemented.");
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      Designation that = (Designation) o;
+
+      if (!use.equalsDeep(that.use)) {
+        return false;
+      }
+      if (!language.equals(that.language)) {
+        return false;
+      }
+      return value.equals(that.value);
+    }
+  }
+
+  /**
    * Gets additional details about the concept, including designations and properties. Abstracts
    * the
    * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>

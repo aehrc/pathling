@@ -1,5 +1,7 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn;
+import static au.csiro.pathling.sql.Terminology.designation;
 import static au.csiro.pathling.sql.Terminology.display;
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
@@ -11,10 +13,9 @@ import static org.apache.spark.sql.functions.lit;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.sql.Terminology;
@@ -26,7 +27,6 @@ import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.parser.IParser;
-import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -35,26 +35,21 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.DateTimeType;
-import org.hl7.fhir.r4.model.DecimalType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -90,6 +85,13 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
   private final static String CODING_1_VALUE_SET_URI = "uiid:ValueSet_coding1";
   private final static String CODING_2_VALUE_SET_URI = "uiid:ValueSet_coding2";
 
+  private static final Coding USE_A = new Coding("uuid:use", "useA", "Use A");
+  private static final Coding USE_B = new Coding("uuid:use", "useB", "Use B");
+
+
+  private static final String LANGUAGE_X = "languageX";
+  private static final String LANGUAGE_Y = "languageY";
+
   // helper functions
   private DatasetBuilder codingDatasetBuilder() {
     return DatasetBuilder.of(spark)
@@ -123,6 +125,15 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDisplay(CODING_1)
         .withDisplay(CODING_2);
+  }
+
+  private void setupDesignationExpectations() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDesignation(CODING_1, USE_A, LANGUAGE_X, "designation_A_X")
+        .withDesignation(CODING_1, USE_A, LANGUAGE_Y, "designation_A_Y")
+        .withDesignation(CODING_2, USE_B, LANGUAGE_X, "designation_B_X.1", "designation_B_X.2")
+        .withDesignation(CODING_2, USE_B, LANGUAGE_Y, "designation_B_Y")
+        .done();
   }
 
   @Test
@@ -554,5 +565,82 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
             () -> Terminology.property_of(lit(null), "display", "NotAFhirType")).getMessage()
     );
   }
+
+
+  @Nonnull
+  private Dataset<Row> callWithDesignationTestData(@Nonnull final Function<Column, Column> call) {
+    setupDesignationExpectations();
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("coding", CodingEncoding.DATA_TYPE)
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", toRow(INVALID_CODING_0))
+        .withRow("uc-codingA", toRow(CODING_1))
+        .withRow("uc-codingB", toRow(CODING_2))
+        .build();
+
+    return ds.select(ds.col("id"),
+        call.apply(ds.col("coding")).alias("values"));
+  }
+
+  @Test
+  public void testDesignationWithLanguage() {
+
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding, USE_A, LANGUAGE_X));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", Collections.singletonList("designation_A_X"))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
+
+  @Test
+  public void testDesignationWithNullLanguageAndUseColumn() {
+
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding,
+            toLiteralColumn(USE_B),
+            null));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", Collections.emptyList())
+        .withRow("uc-codingB", List.of("designation_B_X.1", "designation_B_X.2", "designation_B_Y"))
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
+
+  @Test
+  public void testDesignationWithNoLanguageAndAlternativeDisplayName() {
+
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding, USE_A.copy().setDisplay("Alternative Display A")));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", List.of("designation_A_X", "designation_A_Y"))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
 }
  

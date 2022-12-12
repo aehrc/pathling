@@ -34,12 +34,15 @@ import org.hl7.fhir.r4.model.StringType;
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
   public TerminologyUdfRegistrar(@Nonnull TerminologyServiceFactory tsf) {
-    super(List.of(new DisplayUdf(tsf)),
+    super(List.of(
+            new DisplayUdf(tsf)),
         ImmutableList.<SqlFunction2<?, ?, ?>>builder()
             .add(new MemberOfUdf(tsf))
             .addAll(PropertyUdf.createAll(tsf))
             .build(),
-        List.of(new SubsumesUdf(tsf)),
+        List.of(
+            new SubsumesUdf(tsf),
+            new DesignationUdf(tsf)),
         Collections.emptyList(),
         List.of(new TranslateUdf(tsf)));
   }

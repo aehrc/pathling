@@ -155,3 +155,22 @@ def property_of(coding: CodingArg, property_code: str,
     """
     return _invoke_function("property_of", _coding_to_java_column(coding), property_code,
                             property_type)
+
+
+def designation(coding: CodingArg, use: CodingArg,
+                language: Optional[str] = None) -> Column:
+    """
+    Takes a Coding column as its input. Returns the Column, which contains the values of
+    designations (strings) for this coding for the specified use and language. If the language is
+    not provided (is null) then all designations with the specified type are returned regardless of
+    their language.
+    
+    :param coding: a Column containing a struct representation of a Coding
+    :param use: the code with the use of the designations
+    :param language: the language of the designations
+    :return: the Column containing the result of the operation (array of strings with designation 
+    values)
+    """
+    return _invoke_function("designation", _coding_to_java_column(coding),
+                            _coding_to_java_column(use),
+                            language)

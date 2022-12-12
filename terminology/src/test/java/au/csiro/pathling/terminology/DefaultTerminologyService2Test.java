@@ -38,6 +38,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient2;
+import au.csiro.pathling.terminology.TerminologyService2.Designation;
 import au.csiro.pathling.terminology.TerminologyService2.Property;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
@@ -66,8 +67,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
   private static final String CONCEPT_MAP_1 = "uuid:conceptMap1";
 
   private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
-
-
+  
   public static final Coding USE_PREFFERED_FOR_LANG = new Coding(
       "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
       "preferredForLanguage", "Preferred For Language"
@@ -338,6 +338,49 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         terminologyService.lookup(CODING_C, "group_C"));
   }
 
+
+  @Test
+  public void testLooksUpDesignations() {
+    final Parameters response = standardProperties(CODING_A)
+        .withProperty("property_A", "value_A")
+        .withDesignation("lang_X", CODING_D, "designation_D_X")
+        .withDesignation("lang_Y", CODING_E, "designation_E_Y")
+        .build();
+
+    when(terminologClient.lookup(
+        deepEq(new UriType(SYSTEM_A)),
+        isNull(),
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType("designation"))
+    )).thenReturn(response);
+
+    assertEquals(List.of(
+            Designation.of(CODING_D, "lang_X", "designation_D_X"),
+            Designation.of(CODING_E, "lang_Y", "designation_E_Y")
+        ),
+        terminologyService.lookup(CODING_A, Designation.PROPERTY_CODE));
+  }
+
+  @Test
+  public void testLooksUpDesignationsForVersionedCodingAndUse() {
+    final Parameters response = standardProperties(CODING_BB_VERSION1)
+        .withProperty("property_A", "value_A")
+        .withDesignation("lang_Z", CODING_AB_VERSION2, "designation_AB2_Z")
+        .build();
+
+    when(terminologClient.lookup(
+        deepEq(new UriType(SYSTEM_B)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new CodeType("designation"))
+    )).thenReturn(response);
+
+    assertEquals(List.of(
+            Designation.of(CODING_AB_VERSION2, "lang_Z", "designation_AB2_Z")
+        ),
+        terminologyService.lookup(CODING_BB_VERSION1, Designation.PROPERTY_CODE));
+  }
+  
   @Test
   public void testLookupHandles404Exceptions() {
     when(terminologClient.lookup(any(), any(), any(), any()
