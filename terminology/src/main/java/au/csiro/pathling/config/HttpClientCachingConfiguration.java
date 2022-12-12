@@ -24,6 +24,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.Constraint;
@@ -107,8 +108,12 @@ public class HttpClientCachingConfiguration implements Serializable {
     @Nonnull
     private final String code;
 
-    StorageType(@Nonnull final String code) {
-      this.code = code;
+    // NOTE: Not using @Nonnull annotation here on purpose to avoid warning:
+    // "Constraints on the parameters of constructors of non-static inner classes are not supported 
+    // if those parameters have a generic type due to JDK bug JDK-5087240."
+    // and a lengthy stack trace.
+    StorageType(final String code) {
+      this.code = Objects.requireNonNull(code);
     }
 
     @Override
