@@ -32,6 +32,11 @@ public interface TerminologyClient {
   Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
   /**
+   * @param url the URL of the value set to validate against
+   * @param system the system of the code to validate
+   * @param version the version of the code system to validate against
+   * @param code the code to validate
+   * @return a {@link Parameters} resource
    * @see <a
    * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
@@ -47,6 +52,11 @@ public interface TerminologyClient {
   /**
    * Builds a validate code operation that can be customized and executed later.
    *
+   * @param url the URL of the value set to validate against
+   * @param system the system of the code to validate
+   * @param version the version of the code system to validate against
+   * @param code the code to validate
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
    * @see <a
    * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
@@ -55,6 +65,13 @@ public interface TerminologyClient {
       @Nullable StringType version, @Nonnull CodeType code);
 
   /**
+   * @param url the URL of the concept map to use for translation
+   * @param system the system of the code to translate
+   * @param version the version of the code system to translate from
+   * @param code the code to translate
+   * @param reverse if true, the translation will be reversed
+   * @param target the URL of the value set within which the translation is sought
+   * @return a {@link Parameters} resource
    * @see <a
    * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
@@ -66,12 +83,19 @@ public interface TerminologyClient {
       @Nullable @OperationParam(name = "version") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code,
       @Nullable @OperationParam(name = "reverse") BooleanType reverse,
-      @Nullable @OperationParam(name = "system") UriType target
+      @Nullable @OperationParam(name = "target") UriType target
   );
 
   /**
    * Builds a translate operation that can be customized and executed later.
    *
+   * @param url the URL of the concept map to use for translation
+   * @param system the system of the code to translate
+   * @param version the version of the code system to translate from
+   * @param code the code to translate
+   * @param reverse if true, the translation will be reversed
+   * @param target the URL of the value set within which the translation is sought
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
    * @see <a
    * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
@@ -82,6 +106,11 @@ public interface TerminologyClient {
       @Nullable UriType target);
 
   /**
+   * @param codeA the code that will be tested to check if it subsumes codeB
+   * @param codeB the code that will be tested to check if it is subsumed by codeA
+   * @param system the system of the codes being tested
+   * @param version the version of the code system that the codes are from
+   * @return a {@link Parameters} resource
    * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    */
@@ -97,6 +126,11 @@ public interface TerminologyClient {
   /**
    * Builds a subsumes operation that can be customized and executed later.
    *
+   * @param codeA the code that will be tested to check if it subsumes codeB
+   * @param codeB the code that will be tested to check if it is subsumed by codeA
+   * @param system the system of the codes being tested
+   * @param version the version of the code system that the codes are from
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
    * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    */
@@ -105,7 +139,13 @@ public interface TerminologyClient {
       @Nonnull CodeType codeB, @Nonnull UriType system, @Nullable StringType version);
 
   /**
-   * See: <a
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @param displayLanguage the requested language for display
+   * @return a {@link Parameters} resource
+   * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
   @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
@@ -120,8 +160,14 @@ public interface TerminologyClient {
 
   /**
    * Builds a lookup operation that can be customized and executed later.
-   * <p>
-   * See: <a
+   *
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @param displayLanguage the requested language for display
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
   @Nonnull
@@ -140,7 +186,6 @@ public interface TerminologyClient {
    * @param httpClient the {@link HttpClient} instance to use for HTTP request.
    * @return the new instance of {@link TerminologyClient}.
    */
-
   static TerminologyClient build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
@@ -177,4 +222,5 @@ public interface TerminologyClient {
     }
     return new DefaultTerminologyClient(genericClient);
   }
+
 }

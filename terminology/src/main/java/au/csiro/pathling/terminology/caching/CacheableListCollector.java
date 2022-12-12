@@ -30,7 +30,7 @@ import java.util.stream.Collector;
 /**
  * A collector that collects a stream of items into a list.
  * <p>
- * This is the same as {@link java.util.stream.Collectors.toList()} except that it returns an
+ * This is the same as {@link java.util.stream.Collectors#toList()} except that it returns an
  * {@link ArrayList} instead of a generic {@link java.util.List}.
  * <p>
  * We need this because the list implementation needs to be constrained to ensure that it is

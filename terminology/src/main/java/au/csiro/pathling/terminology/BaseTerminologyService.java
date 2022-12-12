@@ -49,10 +49,15 @@ public abstract class BaseTerminologyService implements TerminologyService, Clos
    * This method allows us to be tolerant to invalid inputs to terminology operations, which produce
    * 400-series errors from the terminology server. A result can be provided which will be returned
    * in the event of such an error.
+   *
+   * @param <ResultType> the type of the result
+   * @param e the exception that was thrown
+   * @param invalidInputReturnValue the value to return in the event of an invalid input
+   * @return the result, which may be the fallback
    */
   @Nullable
-  public static <T> T handleError(@Nonnull final BaseServerResponseException e,
-      @Nullable final T invalidInputReturnValue) {
+  public static <ResultType> ResultType handleError(@Nonnull final BaseServerResponseException e,
+      @Nullable final ResultType invalidInputReturnValue) {
     if (e.getStatusCode() / 100 == 4) {
       return invalidInputReturnValue;
     } else {

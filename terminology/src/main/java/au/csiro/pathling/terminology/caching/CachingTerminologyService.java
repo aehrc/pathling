@@ -187,12 +187,11 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param operation A {@link TerminologyOperation} that provides the behavior specific to the type
    * of operation
    * @param cached A previously cached value
-   * @param <ParametersType> The type of the parameters that are input to the operation
    * @param <ResponseType> The type of the response returned by the terminology client
    * @param <ResultType> The type of the final result that is extracted from the response
    * @return The operation result
    */
-  private static <ParametersType extends TerminologyParameters, ResponseType, ResultType extends Serializable> TerminologyResult<ResultType> fetch(
+  private static <ResponseType, ResultType extends Serializable> TerminologyResult<ResultType> fetch(
       @Nonnull final TerminologyOperation<ResponseType, ResultType> operation,
       @Nonnull final Optional<TerminologyResult<ResultType>> cached) {
     final Optional<ResultType> invalidResult = operation.validate();
@@ -236,13 +235,14 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   }
 
   /**
-   * Builds a new {@link EmbeddedCacheManager} instance appropriate for the specific
-   * implementation.
+   * @return a new {@link EmbeddedCacheManager} instance appropriate for the specific implementation
    */
   protected abstract EmbeddedCacheManager buildCacheManager();
 
   /**
-   * Builds a new {@link Cache} instance appropriate for the specific implementation.
+   * @param cacheManager the {@link EmbeddedCacheManager} to use to construct the cache
+   * @param cacheName a name for the cache
+   * @return a new {@link Cache} instance appropriate for the specific implementation
    */
   protected abstract Cache<Integer, ?> buildCache(@Nonnull final EmbeddedCacheManager cacheManager,
       @Nonnull final String cacheName);
