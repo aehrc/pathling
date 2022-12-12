@@ -32,12 +32,16 @@ import javax.annotation.Nonnull;
  */
 public interface TerminologyOperation<ResponseType, ResultType> {
 
+  @Nonnull
   Optional<ResultType> validate();
 
+  @Nonnull
   IOperationUntypedWithInput<ResponseType> buildRequest();
 
+  @Nonnull
   ResultType extractResult(@Nonnull final ResponseType response);
 
+  @Nonnull
   ResultType invalidRequestFallback();
 
 }

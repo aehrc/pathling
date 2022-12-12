@@ -56,6 +56,7 @@ public class ValidateCodeExecutor implements
   }
 
   @Override
+  @Nonnull
   public Optional<Boolean> validate() {
     final ImmutableCoding coding = parameters.getCoding();
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
@@ -66,6 +67,7 @@ public class ValidateCodeExecutor implements
   }
 
   @Override
+  @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final String codeSystemUrl = parameters.getValueSetUrl();
     final ImmutableCoding coding = parameters.getCoding();
@@ -77,11 +79,13 @@ public class ValidateCodeExecutor implements
   }
 
   @Override
+  @Nonnull
   public Boolean extractResult(@Nonnull final Parameters response) {
     return toBooleanResult(response);
   }
 
   @Override
+  @Nonnull
   public Boolean invalidRequestFallback() {
     return false;
   }

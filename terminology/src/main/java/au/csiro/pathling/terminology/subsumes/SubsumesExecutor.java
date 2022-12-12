@@ -57,6 +57,7 @@ public class SubsumesExecutor implements
   }
 
   @Override
+  @Nonnull
   public Optional<ConceptSubsumptionOutcome> validate() {
     final ImmutableCoding codingA = parameters.getCodingA();
     final ImmutableCoding codingB = parameters.getCodingB();
@@ -79,6 +80,7 @@ public class SubsumesExecutor implements
   }
 
   @Override
+  @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final ImmutableCoding codingA = parameters.getCodingA();
     final ImmutableCoding codingB = parameters.getCodingB();
@@ -97,11 +99,13 @@ public class SubsumesExecutor implements
   }
 
   @Override
+  @Nonnull
   public ConceptSubsumptionOutcome extractResult(@Nonnull final Parameters response) {
     return toSubsumptionOutcome(response);
   }
 
   @Override
+  @Nonnull
   public ConceptSubsumptionOutcome invalidRequestFallback() {
     return NOTSUBSUMED;
   }

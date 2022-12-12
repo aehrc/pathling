@@ -61,6 +61,7 @@ public class TranslateExecutor implements
   }
 
   @Override
+  @Nonnull
   public Optional<ArrayList<Translation>> validate() {
     final ImmutableCoding coding = parameters.getCoding();
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
@@ -71,6 +72,7 @@ public class TranslateExecutor implements
   }
 
   @Override
+  @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final String conceptMapUrl = parameters.getConceptMapUrl();
     final ImmutableCoding coding = parameters.getCoding();
@@ -86,11 +88,13 @@ public class TranslateExecutor implements
   }
 
   @Override
+  @Nonnull
   public ArrayList<Translation> extractResult(@Nonnull final Parameters response) {
     return toTranslations(response);
   }
 
   @Override
+  @Nonnull
   public ArrayList<Translation> invalidRequestFallback() {
     return new ArrayList<>();
   }

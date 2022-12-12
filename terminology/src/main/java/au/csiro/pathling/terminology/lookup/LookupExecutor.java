@@ -61,6 +61,7 @@ public class LookupExecutor implements
   }
 
   @Override
+  @Nonnull
   public Optional<ArrayList<PropertyOrDesignation>> validate() {
     final ImmutableCoding coding = parameters.getCoding();
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
@@ -71,6 +72,7 @@ public class LookupExecutor implements
   }
 
   @Override
+  @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final ImmutableCoding coding = parameters.getCoding();
     final String property = parameters.getProperty();
@@ -85,11 +87,13 @@ public class LookupExecutor implements
   }
 
   @Override
+  @Nonnull
   public ArrayList<PropertyOrDesignation> extractResult(@Nonnull final Parameters response) {
     return toPropertiesAndDesignations(response, parameters.getProperty());
   }
 
   @Override
+  @Nonnull
   public ArrayList<PropertyOrDesignation> invalidRequestFallback() {
     return new ArrayList<>();
   }
