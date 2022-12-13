@@ -102,9 +102,8 @@ public final class TerminologyHelpers {
       "Laceration of foot");
 
 
-  public static final Coding CD_SNOMED_1900000000000003001 = snomedCoding("900000000000003001",
+  public static final Coding CD_SNOMED_900000000000003001 = snomedCoding("900000000000003001",
       "Fully specified name");
-
 
 
   public static final Coding CD_AST_VIC = new Coding(AST_URI, "VIC", "Victoria");
@@ -125,6 +124,12 @@ public final class TerminologyHelpers {
   public static final String LOINC_NAME = "LOINC v2.73";
   public static final Coding LC_55915_3 = new Coding(LOINC_URI, "55915-3",
       "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
+
+  // Others
+
+  public static final Coding HL7_USE_DISPLAY = new Coding(
+      "http://terminology.hl7.org/CodeSystem/designation-usage",
+      "display", null);
 
   @Nonnull
   public static Coding newVersionedCoding(@Nonnull final String system, @Nonnull final String code,

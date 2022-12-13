@@ -20,7 +20,7 @@ package au.csiro.pathling.test.integration;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_1900000000000003001;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000000000003001;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_2121000032108;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
@@ -68,7 +68,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -323,7 +322,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
                     null),
                 "en",
                 "Laceration of foot"),
-            Designation.of(CD_SNOMED_1900000000000003001, "en", "Laceration of foot (disorder)")
+            Designation.of(CD_SNOMED_900000000000003001, "en", "Laceration of foot (disorder)")
 
         ),
         terminologyService.lookup(CD_SNOMED_284551006, "designation"));

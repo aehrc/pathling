@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Helper class for dealing with optional arguments.
@@ -49,22 +50,31 @@ public class Arguments {
   @Nullable
   public <T extends Type> T getNullableValue(final int index,
       @Nonnull final Class<T> valueClass) {
-    final LiteralPath<?> literalPath;
-    try {
-      literalPath = (LiteralPath<?>) arguments.get(index);
-    } catch (final IndexOutOfBoundsException e) {
-      return null;
-    }
-    return valueClass.cast(literalPath.getValue());
+    return index < arguments.size()
+           ? valueClass.cast(((LiteralPath<?>) arguments.get(index)).getValue())
+           : null;
+  }
+
+  /**
+   * Gets the value of an optional literal argument that does not have a default value.
+   *
+   * @param index the 0-based index of the argument.
+   * @param <T> the Java type of the argument value.
+   * @return the java value of the requested argument.
+   */
+  @Nonnull
+  public <T extends Type> Optional<T> getOptionalValue(final int index,
+      @Nonnull final Class<T> valueClass) {
+    return Optional.ofNullable(getNullableValue(index, valueClass));
   }
 
   /**
    * Gets the value of the required literal argument.
    *
-   * @param index the 0-based index of the argument
-   * @param valueClass the expected Java  class of the argument value
-   * @param <T> the HAPI type of the argument value
-   * @return the java value of the requested argument
+   * @param index the 0-based index of the argument.
+   * @param valueClass the expected Java  class of the argument value.
+   * @param <T> the HAPI type of the argument value.
+   * @return the java value of the requested argument.
    */
   @Nonnull
   public <T extends Type> T getValue(final int index, @Nonnull final Class<T> valueClass) {
