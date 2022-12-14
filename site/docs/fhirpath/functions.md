@@ -121,6 +121,19 @@ Example:
 Condition.code.coding.designation(http://snomed.info/sct|900000000000013009)
 ```
 
+:::note
+The `designation` function is a terminology function, which means that it
+requires a
+configured [terminology service](https://hl7.org/fhir/R4/terminology-service.html).
+See [Configuration](/docs/server/configuration#terminology-service) for
+details.
+:::
+
+:::note
+The `designation` function is not within the FHIRPath specification, and is
+currently unique to the Pathling implementation.
+:::
+
 ## display
 
 ```
