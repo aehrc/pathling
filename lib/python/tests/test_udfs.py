@@ -355,7 +355,22 @@ USE_DISPLAY = Coding("http://terminology.hl7.org/CodeSystem/designation-usage",
 
 def test_designation(property_df: DataFrame):
     result_df = property_df \
+        .select("id", designation("code").alias("result"))
+
+    assert result_df.collect() == [
+        Result("id-1", ["Screening for phenothiazine in serum",
+                        "Screening for phenothiazine in serum (procedure)"]),
+        Result("id-2",
+               ["Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+                "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien",
+                "Beta 2 globulin:MCnc:Pt:CSF:Qn:Electrophoresis"]),
+
+        Result("id-3", None),
+    ]
+
+    result_df = property_df \
         .select("id", designation("code", USE_DISPLAY).alias("result"))
+
     assert result_df.collect() == [
         Result("id-1", ["Screening for phenothiazine in serum"]),
         Result("id-2",

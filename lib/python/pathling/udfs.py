@@ -20,15 +20,21 @@ from typing import (
     Union
 )
 
+from py4j.java_gateway import JavaObject
 from pyspark import SparkContext
 from pyspark.sql.column import Column, _to_java_column
+from pyspark.sql.functions import lit
+
 from pathling.coding import Coding
 
 CodingArg = Union[Column, str, Coding]
 
 
-def _coding_to_java_column(coding: CodingArg) -> Any:
-    return _to_java_column(coding.to_literal() if Coding == type(coding) else coding)
+def _coding_to_java_column(coding: Optional[CodingArg]) -> JavaObject:
+    if coding is None:
+        return _to_java_column(lit(None))
+    else:
+        return _to_java_column(coding.to_literal() if isinstance(coding, Coding) else coding)
 
 
 def _get_jvm_function(name: str, sc: SparkContext) -> Callable:
@@ -157,7 +163,7 @@ def property_of(coding: CodingArg, property_code: str,
                             property_type)
 
 
-def designation(coding: CodingArg, use: CodingArg,
+def designation(coding: CodingArg, use: Optional[CodingArg] = None,
                 language: Optional[str] = None) -> Column:
     """
     Takes a Coding column as its input. Returns the Column, which contains the values of
