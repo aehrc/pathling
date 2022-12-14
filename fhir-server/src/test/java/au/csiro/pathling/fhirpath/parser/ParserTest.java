@@ -518,6 +518,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testDesignationFunctionWithLanguage() {
+    
     setupMockPropertiesFor_195662009_444814009();
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.designation(http://snomed.info/sct|900000000000003001, 'en')")
@@ -532,7 +533,6 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.designation(http://terminology.hl7.org/CodeSystem/designation-usage|display)")
         .selectOrderedResult()
-        .debugAllRows()
         .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithNoLanguage.csv");
   }
 

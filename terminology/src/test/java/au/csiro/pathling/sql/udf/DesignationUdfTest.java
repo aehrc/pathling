@@ -56,11 +56,6 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
     verifyNoMoreInteractions(terminologyService2);
   }
 
-  @Test
-  public void testReturnsNullWhenNullUse() {
-    assertNull(designationUdf.call(encode(CODING_A), null, null));
-    verifyNoMoreInteractions(terminologyService2);
-  }
 
   @Test
   public void testResultEmptyWhenInvalidUse() {
@@ -84,10 +79,12 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   @Test
   public void testReturnsCorrectDesignationsWithUseAndLanguage() {
     setupLookup(terminologyService2)
+        .withDesignation(CODING_A, CODING_C, null, "A_C_??")
         .withDesignation(CODING_A, CODING_C, "en", "A_C_en")
         .withDesignation(CODING_A, CODING_D, "en", "A_D_en")
-        .withDesignation(CODING_BB_VERSION1, CODING_E, "fr", "BB1_E_fr.0", "BB1_E_fr.1")
         .withDesignation(CODING_BB_VERSION1, CODING_E, "en", "BB1_E_en.0", "BB1_E_en.1")
+        .withDesignation(CODING_BB_VERSION1, CODING_E, "fr", "BB1_E_fr.0", "BB1_E_fr.1")
+        .withDesignation(CODING_BB_VERSION1, null, "fr", "BB1_?_fr")
         .done();
 
     assertArrayEquals(new String[]{"A_C_en"},
@@ -98,15 +95,23 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  public void testReturnsCorrectDesignationsUseOnly() {
+  public void testReturnsCorrectDesignationsWithNoUseOrNoLanguage() {
     setupLookup(terminologyService2)
-        .withDesignation(CODING_AA_VERSION1, CODING_D, "en", "AA1_D_en.0", "AA1_D_en.1")
+        .withDesignation(CODING_AA_VERSION1, null, "en", "AA1_?_en")
+        .withDesignation(CODING_AA_VERSION1, CODING_D, "en", "AA1_D_en")
         .withDesignation(CODING_AA_VERSION1, CODING_E, "en", "AA1_E_en")
-        .withDesignation(CODING_AA_VERSION1, CODING_E, "fr", "AA1_E_fr.0", "AA1_E_fr.1")
+        .withDesignation(CODING_AA_VERSION1, CODING_E, "fr", "AA1_E_fr")
+        .withDesignation(CODING_AA_VERSION1, CODING_E, null, "AA1_E_??")
+        .withDesignation(CODING_AA_VERSION1, null, null, "AA1_?_??")
         .done();
 
-    assertArrayEquals(new String[]{"AA1_E_en", "AA1_E_fr.0", "AA1_E_fr.1"},
+    assertArrayEquals(new String[]{"AA1_E_en", "AA1_E_fr", "AA1_E_??"},
         designationUdf.call(encode(CODING_AA_VERSION1), encode(CODING_E), null));
+    assertArrayEquals(new String[]{"AA1_?_en", "AA1_D_en", "AA1_E_en"},
+        designationUdf.call(encode(CODING_AA_VERSION1), null, "en"));
+    assertArrayEquals(
+        new String[]{"AA1_?_en", "AA1_D_en", "AA1_E_en", "AA1_E_fr", "AA1_E_??", "AA1_?_??"},
+        designationUdf.call(encode(CODING_AA_VERSION1), null, null));
   }
 
 }

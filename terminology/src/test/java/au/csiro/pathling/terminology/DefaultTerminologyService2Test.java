@@ -44,6 +44,7 @@ import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -67,7 +68,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
   private static final String CONCEPT_MAP_1 = "uuid:conceptMap1";
 
   private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
-  
+
   public static final Coding USE_PREFFERED_FOR_LANG = new Coding(
       "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
       "preferredForLanguage", "Preferred For Language"
@@ -293,7 +294,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         .withProperty("property_A", new BooleanType(true))
         // adding some unexpected elemnts to make they are excluded
         .withProperty("property_B", "string_value_b")
-        .withDesignation("en", USE_PREFFERED_FOR_LANG, "Coding BB")
+        .withDesignation("Coding BB", USE_PREFFERED_FOR_LANG, "en")
         .build();
 
     when(terminologClient.lookup(
@@ -337,14 +338,16 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
     assertEquals(Collections.emptyList(),
         terminologyService.lookup(CODING_C, "group_C"));
   }
-
-
+  
   @Test
   public void testLooksUpDesignations() {
     final Parameters response = standardProperties(CODING_A)
         .withProperty("property_A", "value_A")
-        .withDesignation("lang_X", CODING_D, "designation_D_X")
-        .withDesignation("lang_Y", CODING_E, "designation_E_Y")
+        .withDesignation("designation_D_X", CODING_D, "lang_X")
+        .withDesignation("designation_E_Y", CODING_E, "lang_Y")
+        .withDesignation("designation_E_?", Optional.of(CODING_E), Optional.empty())
+        .withDesignation("designation_?_Z", Optional.empty(), Optional.of("lang_Z"))
+        .withDesignation("designation_?_?", Optional.empty(), Optional.empty())
         .build();
 
     when(terminologClient.lookup(
@@ -356,7 +359,10 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
 
     assertEquals(List.of(
             Designation.of(CODING_D, "lang_X", "designation_D_X"),
-            Designation.of(CODING_E, "lang_Y", "designation_E_Y")
+            Designation.of(CODING_E, "lang_Y", "designation_E_Y"),
+            Designation.of(CODING_E, null, "designation_E_?"),
+            Designation.of(null, "lang_Z", "designation_?_Z"),
+            Designation.of(null, null, "designation_?_?")
         ),
         terminologyService.lookup(CODING_A, Designation.PROPERTY_CODE));
   }
@@ -365,7 +371,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
   public void testLooksUpDesignationsForVersionedCodingAndUse() {
     final Parameters response = standardProperties(CODING_BB_VERSION1)
         .withProperty("property_A", "value_A")
-        .withDesignation("lang_Z", CODING_AB_VERSION2, "designation_AB2_Z")
+        .withDesignation("designation_AB2_Z", CODING_AB_VERSION2, "lang_Z")
         .build();
 
     when(terminologClient.lookup(
@@ -380,7 +386,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         ),
         terminologyService.lookup(CODING_BB_VERSION1, Designation.PROPERTY_CODE));
   }
-  
+
   @Test
   public void testLookupHandles404Exceptions() {
     when(terminologClient.lookup(any(), any(), any(), any()

@@ -34,6 +34,7 @@ import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -214,8 +215,8 @@ public class TerminologyServiceHelpers {
     }
 
     public LookupExpectations withDesignation(@Nonnull final Coding coding,
-        @Nonnull final Coding use,
-        @Nonnull final String language, @Nonnull final String... designations) {
+        @Nullable final Coding use,
+        @Nullable final String language, @Nonnull final String... designations) {
 
       final List<PropertyOrDesignation> currentDesignations = designationsOfCoding.computeIfAbsent(
           ImmutableCoding.of(coding),

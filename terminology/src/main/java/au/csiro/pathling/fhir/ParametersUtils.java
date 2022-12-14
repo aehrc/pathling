@@ -211,10 +211,10 @@ public final class ParametersUtils {
   @AllArgsConstructor
   public static class DesignationPart {
 
-    @Nonnull
+    @Nullable
     CodeType language;
 
-    @Nonnull
+    @Nullable
     Coding use;
 
     @Nonnull

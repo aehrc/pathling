@@ -4,6 +4,7 @@ import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.decode;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.isValidCoding;
 import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.terminology.TerminologyService2;
 import au.csiro.pathling.terminology.TerminologyService2.Designation;
@@ -51,10 +52,10 @@ public class DesignationUdf implements SqlFunction,
   @Nullable
   protected String[] doCall(@Nullable final Coding coding,
       @Nullable final Coding use, @Nullable final String language) {
-    if (coding == null || use == null) {
+    if (coding == null) {
       return null;
     }
-    if (!isValidCoding(coding) || !isValidCoding(use)) {
+    if (!isValidCoding(coding) || (nonNull(use) && !isValidCoding(use))) {
       return EMPTY_RESULT;
     }
     final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
@@ -62,7 +63,7 @@ public class DesignationUdf implements SqlFunction,
         .filter(Designation.class::isInstance)
         .map(Designation.class::cast)
         .filter(designation -> isNull(language) || language.equals(designation.getLanguage()))
-        .filter(designation -> codingEquals(use, designation.getUse()))
+        .filter(designation -> isNull(use) || codingEquals(use, designation.getUse()))
         .map(Designation::getValue)
         .toArray(String[]::new);
   }

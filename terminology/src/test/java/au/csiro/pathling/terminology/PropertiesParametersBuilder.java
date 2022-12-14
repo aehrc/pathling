@@ -21,6 +21,11 @@ import org.hl7.fhir.r4.model.*;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import java.util.Optional;
+
+import static java.util.Objects.nonNull;
 
 @SuppressWarnings({"unused", "SameParameterValue"})
 class PropertiesParametersBuilder {
@@ -83,14 +88,22 @@ class PropertiesParametersBuilder {
     return withSubProperty(code, new StringType(stringValue));
   }
 
-  PropertiesParametersBuilder withDesignation(@Nonnull final String languageCode,
-      @Nonnull final Coding use,
-      @Nonnull final String value) {
-    final Parameters.ParametersParameterComponent component = parameters.addParameter();
-    component.setName("designation");
-    component.addPart().setName("language").setValue(new CodeType(languageCode));
-    component.addPart().setName("use").setValue(use);
+  @Nonnull
+  PropertiesParametersBuilder withDesignation(@Nonnull final String value,
+      @Nonnull final Coding use, @Nonnull final String languageCode) {
+    return withDesignation(value, Optional.of(use), Optional.of(languageCode));
+  }
+
+  @Nonnull
+  PropertiesParametersBuilder withDesignation(@Nonnull final String value,
+      @Nonnull final Optional<Coding> maybeUse, @Nonnull final Optional<String> maybeLanguageCode) {
+    final Parameters.ParametersParameterComponent component = parameters
+        .addParameter().setName("designation");
+
     component.addPart().setName("value").setValue(new StringType(value));
+    maybeUse.ifPresent(use -> component.addPart().setName("use").setValue(use));
+    maybeLanguageCode.ifPresent(languageCode ->
+        component.addPart().setName("language").setValue(new CodeType(languageCode)));
     return this;
   }
 

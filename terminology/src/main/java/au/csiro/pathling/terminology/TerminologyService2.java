@@ -17,14 +17,20 @@
 
 package au.csiro.pathling.terminology;
 
+import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import static java.util.Objects.nonNull;
 
 /**
  * Abstraction layer for the terminology related operations.
@@ -156,10 +162,10 @@ public interface TerminologyService2 {
      */
     public static final String PROPERTY_CODE = "designation";
 
-    @Nonnull
+    @Nullable
     Coding use;
 
-    @Nonnull
+    @Nullable
     String language;
 
     @Nonnull
@@ -183,13 +189,22 @@ public interface TerminologyService2 {
 
       Designation that = (Designation) o;
 
-      if (!use.equalsDeep(that.use)) {
+      if (use != null
+          ? !use.equalsDeep(that.use)
+          : that.use != null) {
         return false;
       }
-      if (!language.equals(that.language)) {
+      if (!Objects.equals(language, that.language)) {
         return false;
       }
       return value.equals(that.value);
+    }
+
+    @Nonnull
+    public static Designation ofPart(@Nonnull final DesignationPart part) {
+      return of(part.getUse(),
+          Optional.ofNullable(part.getLanguage()).map(StringType::getValue).orElse(null),
+          part.getValue().getValue());
     }
   }
 

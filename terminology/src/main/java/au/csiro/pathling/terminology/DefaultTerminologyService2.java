@@ -165,8 +165,7 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
   @Nonnull
   private static List<PropertyOrDesignation> toDesignations(Parameters parameters) {
     return ParametersUtils.toDesignations(parameters)
-        .map(part -> Designation.of(part.getUse(), part.getLanguage().getCode(),
-            part.getValue().getValue()))
+        .map(Designation::ofPart)
         .collect(Collectors.toUnmodifiableList());
   }
 

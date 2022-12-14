@@ -642,5 +642,24 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
         .hasRows(expectedResultA);
   }
 
+  @Test
+  public void testDesignationWithNoUse() {
+
+    //noinspection Convert2MethodRef
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", List.of("designation_A_X", "designation_A_Y"))
+        .withRow("uc-codingB", List.of("designation_B_X.1", "designation_B_X.2", "designation_B_Y"))
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
 }
  

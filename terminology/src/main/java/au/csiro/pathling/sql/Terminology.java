@@ -206,7 +206,7 @@ public interface Terminology {
    * @see Terminology#designation(Column, Column, String)
    */
   @Nonnull
-  static Column designation(@Nonnull final Column coding, @Nonnull final Coding use,
+  static Column designation(@Nonnull final Column coding, @Nullable final Coding use,
       @Nullable final String language) {
     return designation(coding, toLiteralColumn(use), language);
   }
@@ -217,8 +217,18 @@ public interface Terminology {
    * @see Terminology#designation(Column, Coding, String)
    */
   @Nonnull
-  static Column designation(@Nonnull final Column coding, @Nonnull final Coding use) {
+  static Column designation(@Nonnull final Column coding, @Nullable final Coding use) {
     return designation(coding, use, null);
   }
 
+  /**
+   * Retrieves designations of a concept for all languages and uses.
+   *
+   * @see Terminology#designation(Column, Coding, String)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding) {
+    return designation(coding, null);
+  }
 }
+
