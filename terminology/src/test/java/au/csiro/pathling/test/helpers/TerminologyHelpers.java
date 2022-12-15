@@ -20,7 +20,6 @@ package au.csiro.pathling.test.helpers;
 import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 
@@ -103,6 +102,10 @@ public final class TerminologyHelpers {
       "Laceration of foot");
 
 
+  public static final Coding CD_SNOMED_900000000000003001 = snomedCoding("900000000000003001",
+      "Fully specified name");
+
+
   public static final Coding CD_AST_VIC = new Coding(AST_URI, "VIC", "Victoria");
 
   // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
@@ -121,6 +124,12 @@ public final class TerminologyHelpers {
   public static final String LOINC_NAME = "LOINC v2.73";
   public static final Coding LC_55915_3 = new Coding(LOINC_URI, "55915-3",
       "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
+
+  // Others
+
+  public static final Coding HL7_USE_DISPLAY = new Coding(
+      "http://terminology.hl7.org/CodeSystem/designation-usage",
+      "display", null);
 
   @Nonnull
   public static Coding newVersionedCoding(@Nonnull final String system, @Nonnull final String code,
@@ -153,22 +162,6 @@ public final class TerminologyHelpers {
   public static Coding mockCoding(@Nonnull final String system, @Nonnull final String code,
       final int index) {
     return new Coding(system, code + "-" + index, "Display-" + index);
-  }
-
-  public static boolean codingEquals(@Nullable final Coding left,
-      @Nullable final Coding right) {
-    if (left == null) {
-      return right == null;
-    } else {
-      return right != null &&
-          (left.hasSystem()
-           ? left.getSystem().equals(right.getSystem())
-           : !right.hasSystem()) &&
-          (left.hasCode()
-           ? left.getCode().equals(right.getCode())
-           : !right.hasCode()) &&
-          (!left.hasVersion() || left.getVersion().equals(right.getVersion()));
-    }
   }
 
 }

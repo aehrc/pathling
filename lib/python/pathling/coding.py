@@ -12,8 +12,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Optional
 
 from pyspark.sql.functions import lit, struct
+
+from pathling.functions import SNOMED_URI
 
 
 class Coding:
@@ -22,8 +25,9 @@ class Coding:
     See: https://hl7.org/fhir/R4/datatypes.html#Coding
     """
 
-    def __init__(self, system: str, code: str, version: str = None, display: str = None,
-                 user_selected: bool = None):
+    def __init__(self, system: str, code: str, version: Optional[str] = None,
+                 display: Optional[str] = None,
+                 user_selected: Optional[bool] = None):
         """
         :param system: a URI that identifies the code system
         :param code: the code
@@ -52,3 +56,17 @@ class Coding:
         user_selected_column = lit(self.user_selected).alias('userSelected')
         return struct(id_column, system_column, version_column, code_column, display_column,
                       user_selected_column)
+
+    @classmethod
+    def of_snomed(cls, code: str, version: Optional[str] = None,
+                  display: Optional[str] = None,
+                  user_selected: Optional[bool] = None) -> "Coding":
+        """
+        Creates a SNOMED Coding.
+        :param code: the code
+        :param version: a URI that identifies the version of the code system
+        :param display: the display text for the Coding
+        :param user_selected: an indicator of whether the Coding was chosen directly by the user
+        :return: a SNOMED coding with given arguments.
+        """
+        return Coding(SNOMED_URI, code, version, display, user_selected)

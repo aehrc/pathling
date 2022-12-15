@@ -18,16 +18,17 @@ import os
 from tempfile import mkdtemp
 
 from pyspark.sql import SparkSession, DataFrame
+from pyspark.sql.functions import lit
 from pyspark.sql.types import StructType, StringType, StructField, BooleanType, Row, ArrayType, \
     IntegerType
 from pytest import fixture
 
 from pathling import PathlingContext
 from pathling.coding import Coding
-from pathling.etc import SNOMED_URI
+from pathling.functions import SNOMED_URI, to_snomed_coding
 from pathling.etc import find_jar as find_pathling_jar
 from pathling.udfs import member_of, subsumes, subsumed_by, translate, display, PropertyType, \
-    property_of
+    property_of, designation
 
 PROJECT_DIR = os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
@@ -346,3 +347,50 @@ def test_property_of(property_df: DataFrame):
     assert result_df.collect() == [
         Result("id-1", ["Screening for phenothiazine in serum"])
     ];
+
+
+USE_DISPLAY = Coding("http://terminology.hl7.org/CodeSystem/designation-usage",
+                     "display")
+
+
+def test_designation(property_df: DataFrame):
+    result_df = property_df \
+        .select("id", designation("code").alias("result"))
+
+    assert result_df.collect() == [
+        Result("id-1", ["Screening for phenothiazine in serum",
+                        "Screening for phenothiazine in serum (procedure)"]),
+        Result("id-2",
+               ["Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+                "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien",
+                "Beta 2 globulin:MCnc:Pt:CSF:Qn:Electrophoresis"]),
+
+        Result("id-3", None),
+    ]
+
+    result_df = property_df \
+        .select("id", designation("code", USE_DISPLAY).alias("result"))
+
+    assert result_df.collect() == [
+        Result("id-1", ["Screening for phenothiazine in serum"]),
+        Result("id-2",
+               ["Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+                "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien"]),
+        Result("id-3", None),
+    ]
+
+    result_df = property_df \
+        .select("id", designation(property_df["code"], USE_DISPLAY, "fr-FR").alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", []),
+        Result("id-2", ["Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien"]),
+        Result("id-3", None),
+    ]
+
+    result_df = property_df.limit(1) \
+        .select("id", designation(Coding(SNOMED_URI, "439319006"),
+                                  to_snomed_coding(lit("900000000000003001")),
+                                  "en").alias("result"))
+    assert result_df.collect() == [
+        Result("id-1", ["Screening for phenothiazine in serum (procedure)"])
+    ]

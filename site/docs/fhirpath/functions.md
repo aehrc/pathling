@@ -94,6 +94,46 @@ Patient.name.given.count()
 
 See also: [count](https://hl7.org/fhirpath/#count-integer)
 
+## designation
+
+```
+collection<Coding -> designation(use: Coding, language: String) : collection<String>
+```
+
+When invoked on a collection of [Coding](./data-types#coding) elements, returns
+a collection of designation values from
+the [lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html)
+operation. This can be used to retrieve synonyms, language translations and more 
+from the underlying terminology.
+
+If the `use` parameter is specified, designation values are filtered to only
+those with a matching use. If the `language` parameter is specified, designation
+values are filtered to only those with a matching language. If both are
+specified, designation values must match both the specified use and language.
+
+See [Display, Definition and Designations](https://www.hl7.org/fhir/codesystem.html#designations)
+in the FHIR specification for more information.
+
+Example:
+
+```
+// Retrieve SNOMED CT synonyms.
+Condition.code.coding.designation(http://snomed.info/sct|900000000000013009)
+```
+
+:::note
+The `designation` function is a terminology function, which means that it
+requires a
+configured [terminology service](https://hl7.org/fhir/R4/terminology-service.html).
+See [Configuration](/docs/server/configuration#terminology-service) for
+details.
+:::
+
+:::note
+The `designation` function is not within the FHIRPath specification, and is
+currently unique to the Pathling implementation.
+:::
+
 ## display
 
 ```
@@ -156,11 +196,11 @@ See also: [exists](https://hl7.org/fhirpath/#existscriteria-expression-boolean)
 ## extension
 
 ```
-[any] -> extension(url: string) : collection
+[any] -> extension(url: String) : collection
 ```
 
 Will filter the input collection for items named `extension` with the given url.
-This is a syntactical shortcut for `.extension.where(url = string)`, but is
+This is a syntactical shortcut for `.extension.where(url = [String])`, but is
 simpler to write. Will return an empty collection if the input collection is
 empty or the url is empty.
 
@@ -284,7 +324,7 @@ See also: [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 ## property
 
 ```
-collection<Coding> -> property(code: string, type = 'string') : collection<String|Integer|DateTime|Decimal|Coding>
+collection<Coding> -> property(code: String, type = 'string') : collection<String|Integer|DateTime|Decimal|Coding>
 ```
 
 When invoked on a [Coding](./data-types#coding), returns any matching property
@@ -462,7 +502,7 @@ unique to the Pathling implementation.
 ## translate
 
 ```
-collection<Coding|CodeableConcept> -> translate(conceptMapUrl: string, reverse = false, equivalence = 'equivalent', target?: string) : collection<Coding>
+collection<Coding|CodeableConcept> -> translate(conceptMapUrl: String, reverse: Boolean = false, equivalence: String = 'equivalent', target?: String) : collection<Coding>
 ```
 
 When invoked on a [Coding](./data-types#coding), returns any

@@ -1,18 +1,21 @@
 package au.csiro.pathling.sql;
 
+import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.sql.udf.DesignationUdf;
 import au.csiro.pathling.sql.udf.DisplayUdf;
+import au.csiro.pathling.sql.udf.MemberOfUdf;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
 import au.csiro.pathling.sql.udf.TranslateUdf;
-import au.csiro.pathling.sql.udf.MemberOfUdf;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -177,4 +180,55 @@ public interface Terminology {
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode) {
     return property_of(coding, propertyCode, PropertyUdf.DEFAULT_PROPERTY_TYPE);
   }
+
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the values of
+   * designations (strings) for this coding for the specified use and language. If the language is
+   * not provided (is null) then all designations with the specified type are returned regardless of
+   * their language.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param use a Column containing use the code with the use of the designations
+   * @param language the language of the designations
+   * @return the Column containing the result of the operation (array of strings with designation
+   * values)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding, @Nonnull final Column use,
+      @Nullable final String language) {
+    return call_udf(DesignationUdf.FUNCTION_NAME, coding, use, lit(language));
+  }
+
+  /**
+   * Retrieves designations of a concept.
+   *
+   * @see Terminology#designation(Column, Column, String)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding, @Nullable final Coding use,
+      @Nullable final String language) {
+    return designation(coding, toLiteralColumn(use), language);
+  }
+
+  /**
+   * Retrieves designations of a concept for all languages.
+   *
+   * @see Terminology#designation(Column, Coding, String)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding, @Nullable final Coding use) {
+    return designation(coding, use, null);
+  }
+
+  /**
+   * Retrieves designations of a concept for all languages and uses.
+   *
+   * @see Terminology#designation(Column, Coding, String)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding) {
+    return designation(coding, null);
+  }
 }
+

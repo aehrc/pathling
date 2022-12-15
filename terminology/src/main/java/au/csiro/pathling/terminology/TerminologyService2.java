@@ -17,14 +17,20 @@
 
 package au.csiro.pathling.terminology;
 
+import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import static java.util.Objects.nonNull;
 
 /**
  * Abstraction layer for the terminology related operations.
@@ -143,6 +149,63 @@ public interface TerminologyService2 {
       return value.equalsDeep(property.value);
     }
 
+  }
+
+  /**
+   * The representation of a designation of a concept.
+   */
+  @Value(staticConstructor = "of")
+  class Designation implements PropertyOrDesignation {
+
+    /**
+     * The code of the designation properties
+     */
+    public static final String PROPERTY_CODE = "designation";
+
+    @Nullable
+    Coding use;
+
+    @Nullable
+    String language;
+
+    @Nonnull
+    String value;
+
+    @Override
+    public int hashCode() {
+      // not supported for now because it's not possible to satisfy the hashCode/equals contract
+      // without some form of deepHash corresponding to equalsDeep()
+      throw new UnsupportedOperationException("hashCode not implemented.");
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      Designation that = (Designation) o;
+
+      if (use != null
+          ? !use.equalsDeep(that.use)
+          : that.use != null) {
+        return false;
+      }
+      if (!Objects.equals(language, that.language)) {
+        return false;
+      }
+      return value.equals(that.value);
+    }
+
+    @Nonnull
+    public static Designation ofPart(@Nonnull final DesignationPart part) {
+      return of(part.getUse(),
+          Optional.ofNullable(part.getLanguage()).map(StringType::getValue).orElse(null),
+          part.getValue().getValue());
+    }
   }
 
   /**

@@ -2,7 +2,7 @@ package au.csiro.pathling.test.helpers;
 
 import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,11 +11,17 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService2.Designation;
 import au.csiro.pathling.terminology.TerminologyService2.Property;
+import au.csiro.pathling.terminology.TerminologyService2.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -28,6 +34,7 @@ import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
+import org.junit.jupiter.api.BeforeEach;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -172,6 +179,8 @@ public class TerminologyServiceHelpers {
   public static class LookupExpectations {
 
     private final TerminologyService2 mockService;
+    private final Map<ImmutableCoding, List<PropertyOrDesignation>> designationsOfCoding = new HashMap<>();
+
 
     public LookupExpectations(final TerminologyService2 mockService) {
       this.mockService = mockService;
@@ -203,6 +212,24 @@ public class TerminologyServiceHelpers {
               .collect(Collectors.toUnmodifiableList())
       );
       return this;
+    }
+
+    public LookupExpectations withDesignation(@Nonnull final Coding coding,
+        @Nullable final Coding use,
+        @Nullable final String language, @Nonnull final String... designations) {
+
+      final List<PropertyOrDesignation> currentDesignations = designationsOfCoding.computeIfAbsent(
+          ImmutableCoding.of(coding),
+          c -> new ArrayList<>());
+      Stream.of(designations).forEach(
+          designation -> currentDesignations.add(Designation.of(use, language, designation)));
+      return this;
+    }
+
+    public void done() {
+      designationsOfCoding.forEach((coding, designations) -> when(
+          mockService.lookup(deepEq(coding.toCoding()), eq("designation")))
+          .thenReturn(designations));
     }
   }
 

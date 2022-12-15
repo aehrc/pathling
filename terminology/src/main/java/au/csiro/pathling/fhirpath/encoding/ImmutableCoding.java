@@ -62,7 +62,7 @@ public class ImmutableCoding implements Serializable {
         ? new BooleanType(userSelected)
         : null);
   }
-
+  
   /**
    * Conversion from a fhir Coding.
    *

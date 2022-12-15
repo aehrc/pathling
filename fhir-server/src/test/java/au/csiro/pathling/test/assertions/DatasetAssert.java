@@ -21,6 +21,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstC
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.StorageConfiguration;
@@ -96,11 +97,14 @@ public class DatasetAssert {
   @Nonnull
   private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
     final List<Row> actualRows = dataset.collectAsList();
-    assertTrue(actualRows.containsAll(expected),
-        String.format("exp: %s\nact: %s", expected, actualRows));
-    assertTrue(expected.containsAll(actualRows),
-        String.format("exp: %s\nact: %s", expected, actualRows));
     assertEquals(expected.size(), actualRows.size());
+
+    if (!actualRows.containsAll(expected)) {
+      return Assertions.fail("Some rows are missing.", expected, actualRows);
+    }
+    if (!expected.containsAll(actualRows)) {
+      return Assertions.fail("Unexpected rows found.", expected, actualRows);
+    }
     return this;
   }
 

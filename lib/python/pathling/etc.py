@@ -18,8 +18,6 @@ import os
 
 import pkg_resources
 
-SNOMED_URI = "http://snomed.info/sct"
-
 
 def find_jar(verbose: bool = False) -> str:
     """Gets the path to the pathling encoders jar bundled with the

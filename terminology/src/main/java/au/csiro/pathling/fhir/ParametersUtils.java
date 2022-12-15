@@ -34,6 +34,7 @@ import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
@@ -41,6 +42,9 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
  * Helper functions for dealing with FHIR {@link Parameters} resource.
  */
 public final class ParametersUtils {
+
+  public static final String PROPERTY_PART_NAME = "property";
+  public static final String DESIGNATION_PART_NAME = "designation";
 
   private ParametersUtils() {
     // Utility class
@@ -177,7 +181,7 @@ public final class ParametersUtils {
   private static PropertyPart toProperty(@Nonnull final ParametersParameterComponent component) {
     if (!component.hasPart()) {
       return new PropertyPart(new CodeType(component.getName()), component.getValue(), null);
-    } else if ("property".equals(component.getName())) {
+    } else if (PROPERTY_PART_NAME.equals(component.getName())) {
       return partsToBean(component, PropertyPart::new);
     } else {
       return null;
@@ -199,4 +203,35 @@ public final class ParametersUtils {
         .filter(Objects::nonNull);
   }
 
+  /**
+   * Object representation of the 'designation' part from $lookup results.
+   */
+  @Data
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class DesignationPart {
+
+    @Nullable
+    CodeType language;
+
+    @Nullable
+    Coding use;
+
+    @Nonnull
+    StringType value;
+  }
+
+  /**
+   * Extracts 'designation' parts from the result of '$lookup'
+   *
+   * @param parameters the parameters to convert.
+   * @return the stream of 'designation' parts.
+   */
+  @Nonnull
+  public static Stream<DesignationPart> toDesignations(
+      @Nonnull final Parameters parameters) {
+    return parameters.getParameter().stream()
+        .filter(c -> c.hasPart() && DESIGNATION_PART_NAME.equals(c.getName()))
+        .map(c -> partsToBean(c, DesignationPart::new));
+  }
 }

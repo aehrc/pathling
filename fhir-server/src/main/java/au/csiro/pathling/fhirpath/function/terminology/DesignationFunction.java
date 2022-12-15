@@ -17,38 +17,40 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.property_of;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
-
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
+import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.sql.udf.PropertyUdf;
-import java.util.List;
-import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Optional;
+
+import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.sql.Terminology.designation;
+import static au.csiro.pathling.sql.Terminology.property_of;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 /**
- * This function returns the value of a property for a Coding.
+ * This function returns the designations of a Coding.
  *
  * @author Piotr Szul
- * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#property">property</a>
+ * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#designation">designation</a>
  */
-public class PropertyFunction implements NamedFunction {
+public class DesignationFunction implements NamedFunction {
 
-  private static final String NAME = "property";
+  private static final String NAME = "designation";
 
   @Nonnull
   @Override
@@ -59,35 +61,23 @@ public class PropertyFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     final Arguments arguments = Arguments.of(input);
-    final String propertyCode = arguments.getValue(0, StringType.class).asStringValue();
-    final String propertyTypeAsString = arguments.getValueOr(1,
-        new StringType(PropertyUdf.DEFAULT_PROPERTY_TYPE.toCode())).asStringValue();
-
-    final FHIRDefinedType propertyType = wrapInUserInputError(FHIRDefinedType::fromCode).apply(
-        propertyTypeAsString);
+    @Nullable final Coding use = arguments.getOptionalValue(0, Coding.class).orElse(null);
+    @Nullable final String languageCode = arguments.getOptionalValue(1, StringType.class)
+        .map(StringType::getValue)
+        .orElse(null);
 
     final Dataset<Row> dataset = inputPath.getDataset();
-    final Column propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
-        propertyType);
+    final Column designations = designation(inputPath.getValueColumn(), use, languageCode);
 
-    // // The result is an array of property values per each input element, which we now
+    // // The result is an array of designations per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
     final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
     final Dataset<Row> resultDataset = inputPath
-        .explodeArray(dataset, propertyValues, valueAndEidColumns);
-
-    if (FHIRDefinedType.CODING.equals(propertyType)) {
-      // Special case for CODING properties: we use the Coding definition form 
-      // the input path so that the results can be further traversed.
-      return inputPath.copy(expression, resultDataset, inputPath.getIdColumn(),
-          Optional.of(valueAndEidColumns.getRight()),
-          valueAndEidColumns.getLeft(), inputPath.isSingular(), inputPath.getThisColumn());
-    } else {
-      return ElementPath.build(expression, resultDataset, inputPath.getIdColumn(),
-          Optional.of(valueAndEidColumns.getRight()),
-          valueAndEidColumns.getLeft(), inputPath.isSingular(), inputPath.getCurrentResource(),
-          inputPath.getThisColumn(), propertyType);
-    }
+        .explodeArray(dataset, designations, valueAndEidColumns);
+    return ElementPath.build(expression, resultDataset, inputPath.getIdColumn(),
+        Optional.of(valueAndEidColumns.getRight()),
+        valueAndEidColumns.getLeft(), inputPath.isSingular(), inputPath.getCurrentResource(),
+        inputPath.getThisColumn(), FHIRDefinedType.STRING);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
@@ -99,13 +89,13 @@ public class PropertyFunction implements NamedFunction {
     final FhirPath inputPath = input.getInput();
     checkUserInput(inputPath instanceof ElementPath
             && (((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
-        "Input to property function must be Coding but is: " + inputPath.getExpression());
+        "Input to " + NAME + " function must be Coding but is: " + inputPath.getExpression());
 
     final List<FhirPath> arguments = input.getArguments();
-    checkUserInput(arguments.size() >= 1 && arguments.size() <= 2,
-        NAME + " function accepts one required and one optional arguments");
-    checkUserInput(arguments.get(0) instanceof StringLiteralPath,
-        String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 1));
+    checkUserInput(arguments.size() <= 2,
+        NAME + " function accepts two optional arguments");
+    checkUserInput(arguments.isEmpty() || arguments.get(0) instanceof CodingLiteralPath,
+        String.format("Function `%s` expects `%s` as argument %s", NAME, "Coding literal", 1));
     checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 2));
   }

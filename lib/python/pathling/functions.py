@@ -19,7 +19,7 @@ from typing import Optional
 from pyspark.sql import Column
 from pyspark.sql.functions import lit, struct
 
-from pathling.etc import SNOMED_URI
+SNOMED_URI = "http://snomed.info/sct"
 
 
 def to_coding(coding_column: Column, system: str, version: Optional[str] = None) -> Column:

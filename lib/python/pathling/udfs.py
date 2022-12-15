@@ -20,15 +20,21 @@ from typing import (
     Union
 )
 
+from py4j.java_gateway import JavaObject
 from pyspark import SparkContext
 from pyspark.sql.column import Column, _to_java_column
+from pyspark.sql.functions import lit
+
 from pathling.coding import Coding
 
 CodingArg = Union[Column, str, Coding]
 
 
-def _coding_to_java_column(coding: CodingArg) -> Any:
-    return _to_java_column(coding.to_literal() if Coding == type(coding) else coding)
+def _coding_to_java_column(coding: Optional[CodingArg]) -> JavaObject:
+    if coding is None:
+        return _to_java_column(lit(None))
+    else:
+        return _to_java_column(coding.to_literal() if isinstance(coding, Coding) else coding)
 
 
 def _get_jvm_function(name: str, sc: SparkContext) -> Callable:
@@ -155,3 +161,22 @@ def property_of(coding: CodingArg, property_code: str,
     """
     return _invoke_function("property_of", _coding_to_java_column(coding), property_code,
                             property_type)
+
+
+def designation(coding: CodingArg, use: Optional[CodingArg] = None,
+                language: Optional[str] = None) -> Column:
+    """
+    Takes a Coding column as its input. Returns the Column, which contains the values of
+    designations (strings) for this coding for the specified use and language. If the language is
+    not provided (is null) then all designations with the specified type are returned regardless of
+    their language.
+    
+    :param coding: a Column containing a struct representation of a Coding
+    :param use: the code with the use of the designations
+    :param language: the language of the designations
+    :return: the Column containing the result of the operation (array of strings with designation 
+    values)
+    """
+    return _invoke_function("designation", _coding_to_java_column(coding),
+                            _coding_to_java_column(use),
+                            language)
