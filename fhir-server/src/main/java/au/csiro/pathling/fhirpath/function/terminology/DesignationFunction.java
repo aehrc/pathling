@@ -61,7 +61,7 @@ public class DesignationFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     final Arguments arguments = Arguments.of(input);
-    final Coding use = arguments.getValue(0, Coding.class);
+    @Nullable final Coding use = arguments.getOptionalValue(0, Coding.class).orElse(null);
     @Nullable final String languageCode = arguments.getOptionalValue(1, StringType.class)
         .map(StringType::getValue)
         .orElse(null);
@@ -92,9 +92,9 @@ public class DesignationFunction implements NamedFunction {
         "Input to " + NAME + " function must be Coding but is: " + inputPath.getExpression());
 
     final List<FhirPath> arguments = input.getArguments();
-    checkUserInput(arguments.size() >= 1 && arguments.size() <= 2,
-        NAME + " function accepts one required and one optional argument");
-    checkUserInput(arguments.get(0) instanceof CodingLiteralPath,
+    checkUserInput(arguments.size() <= 2,
+        NAME + " function accepts two optional arguments");
+    checkUserInput(arguments.isEmpty() || arguments.get(0) instanceof CodingLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "Coding literal", 1));
     checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 2));

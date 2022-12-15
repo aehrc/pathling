@@ -37,6 +37,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
+import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService2;
@@ -53,6 +54,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -60,6 +63,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -90,12 +94,19 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
     reset(terminologyService);
   }
 
-  private void checkDesignationsOfCoding(final Coding use,
-      final Optional<String> maybeLanguage,
-      final Dataset<Row> expectedResult) {
+
+  private void checkDesignationsOfCoding(
+      @Nonnull final Optional<Coding> maybeUse,
+      @Nonnull final Optional<String> maybeLanguage,
+      @Nonnull final Dataset<Row> expectedResult) {
+
+    assertTrue(maybeLanguage.isEmpty() || maybeUse.isPresent(),
+        "'use' is required when 'language' is provided.");
+
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDesignation(CODING_A, CODING_C, "en", "A_C_en")
         .withDesignation(CODING_A, CODING_D, "en", "A_D_en")
+        .withDesignation(CODING_A, null, null, "A_?_??")
         .withDesignation(CODING_B, CODING_D, "en", "B_D_en")
         .withDesignation(CODING_B, CODING_D, "fr", "B_D_fr.0", "B_D_fr.1")
         .done();
@@ -129,15 +140,15 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
-    final String useLiteral = CodingLiteral.toLiteral(use);
-    final CodingLiteralPath useArgument = CodingLiteralPath.fromString(useLiteral, inputExpression);
+    final Optional<String> maybeUseLiteral = maybeUse.map(CodingLiteral::toLiteral);
+    final Optional<String> maybeLanguageLiteral = maybeLanguage.map(lang -> "'" + lang + "'");
 
-    final List<FhirPath> arguments = maybeLanguage
-        .map(language -> {
-          final StringLiteralPath propertyTypeArgument = StringLiteralPath
-              .fromString("'" + language + "'", inputExpression);
-          return List.<FhirPath>of(useArgument, propertyTypeArgument);
-        }).orElse(List.of(useArgument));
+    final List<FhirPath> arguments = Stream.of(
+        maybeUseLiteral
+            .map(useLiteral -> CodingLiteralPath.fromString(useLiteral, inputExpression)),
+        maybeLanguageLiteral.map(
+            languageLiteral -> StringLiteralPath.fromString(languageLiteral, inputExpression))
+    ).flatMap(Optional::stream).collect(Collectors.toUnmodifiableList());
 
     final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
         arguments);
@@ -145,11 +156,9 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
     // Invoke the function.
     final FhirPath result = NamedFunction.getInstance("designation").invoke(propertyInput);
 
-    final String expectedExpression = maybeLanguage
-        .map(language -> String.format("Encounter.class.designation(%s, '%s')", useLiteral,
-            language))
-        .orElse(String.format("Encounter.class.designation(%s)", useLiteral));
-
+    final String expectedExpression = String.format("Encounter.class.designation(%s)",
+        Stream.of(maybeUseLiteral, maybeLanguageLiteral)
+            .flatMap(Optional::stream).collect(Collectors.joining(", ")));
     // Check the result.
     assertThat(result)
         .hasExpression(expectedExpression)
@@ -172,7 +181,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
         .withRow("encounter-2", makeEid(0, 0), null)
         .withRow("encounter-3", null, null)
         .build();
-    checkDesignationsOfCoding(CODING_C, Optional.of("en"),
+    checkDesignationsOfCoding(Optional.of(CODING_C), Optional.of("en"),
         expectedResult);
   }
 
@@ -189,7 +198,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
         .withRow("encounter-2", makeEid(0, 1), "B_D_fr.1")
         .withRow("encounter-3", null, null)
         .build();
-    checkDesignationsOfCoding(CODING_D, Optional.of("fr"),
+    checkDesignationsOfCoding(Optional.of(CODING_D), Optional.of("fr"),
         expectedResult);
   }
 
@@ -208,10 +217,30 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
         .withRow("encounter-2", makeEid(0, 2), "B_D_fr.1")
         .withRow("encounter-3", null, null)
         .build();
-    checkDesignationsOfCoding(CODING_D, Optional.empty(),
+    checkDesignationsOfCoding(Optional.of(CODING_D), Optional.empty(),
         expectedResult);
   }
+  
+  @Test
+  public void designationWithDefaultLanguageAndUse() {
 
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("encounter-1", makeEid(0, 0), "A_C_en")
+        .withRow("encounter-1", makeEid(0, 1), "A_D_en")
+        .withRow("encounter-1", makeEid(0, 2), "A_?_??")
+        .withRow("encounter-1", makeEid(1, 0), null)
+        .withRow("encounter-2", makeEid(0, 0), "B_D_en")
+        .withRow("encounter-2", makeEid(0, 1), "B_D_fr.0")
+        .withRow("encounter-2", makeEid(0, 2), "B_D_fr.1")
+        .withRow("encounter-3", null, null)
+        .build();
+    checkDesignationsOfCoding(Optional.empty(), Optional.empty(),
+        expectedResult);
+  }
+  
   @Test
   void throwsErrorIfInputTypeIsUnsupported() {
     final FhirPath mockContext = new ElementPathBuilder(spark).build();
@@ -261,13 +290,6 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
   }
 
   @Test
-  void throwsErrorIfNoArguments() {
-    assertThrowsErrorForArguments(
-        "designation function accepts one required and one optional argument",
-        input -> Collections.emptyList());
-  }
-
-  @Test
   void throwsErrorIfFirstArgumentIsNotCoding() {
     assertThrowsErrorForArguments("Function `designation` expects `Coding literal` as argument 1",
         input -> Collections.singletonList(
@@ -286,7 +308,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
   @Test
   void throwsErrorIfTooManyArguments() {
     assertThrowsErrorForArguments(
-        "designation function accepts one required and one optional argument",
+        "designation function accepts two optional arguments",
         input -> Arrays.asList(
             CodingLiteralPath.fromString("system|code", input),
             StringLiteralPath.fromString("'false'", input),
