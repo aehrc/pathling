@@ -486,6 +486,118 @@ Results in:
 | 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
 | 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
 
+### Retrieving designations
+
+Some terminologies contain additional display terms for codes. These can be used
+for language translations, synonyms, and more. You can query these terms using the `designation` function.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+<PythonInstallation/>
+
+```python
+from pathling import PathlingContext
+from pathling.functions import to_snomed_coding
+from pathling.coding import Coding
+from pathling.udfs import designation
+
+pc = PathlingContext.create()
+csv = pc.spark.read.csv("conditions.csv")
+
+# Get the synonyms for each code in the dataset.
+synonyms = csv.withColumn(
+    "SYNONYMS",
+    designation(to_snomed_coding(csv.CODE), Coding.of_snomed("900000000000013009")),
+)
+# Split each synonyms into a separate row.
+exploded_synonyms = synonyms.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+)
+exploded_synonyms.show()
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+<ScalaInstallation/>
+
+```scala
+import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
+import au.csiro.pathling.library.TerminologyHelpers._
+import org.hl7.fhir.r4.model.Coding
+
+val pc = PathlingContext.create()
+val csv = spark.read.csv("conditions.csv")
+
+// Get the synonyms for each code in the dataset.
+val synonyms = csv.withColumn(
+    "SYNONYMS",
+    designation(toSnomedCoding(csv.col("CODE")),
+        new Coding("http://snomed.info/sct", "900000000000013009", null))
+)
+// Split each synonym into a separate row.
+val exploded_synonyms = synonyms.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+)
+exploded_synonyms.show()
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+<JavaInstallation/>
+
+```java
+import static au.csiro.pathling.sql.Terminology.*;
+import static au.csiro.pathling.library.TerminologyHelpers.*;
+
+import au.csiro.pathling.library.PathlingContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
+class MyApp {
+
+    public static void main(String[] args) {
+        PathlingContext pc = PathlingContext.create();
+        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+
+        // Get the synonyms for each code in the dataset.
+        Dataset<Row> synonyms = csv.withColumn(
+                "SYNONYMS",
+                designation(toSnomedCoding(csv.col("CODE")),
+                        new Coding("http://snomed.info/sct",
+                                "900000000000013009", null))
+        );
+        // Split each synonym into a separate row.
+        Dataset<Row> exploded_synonyms = synonyms.selectExpr(
+                "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+        );
+        exploded_synonyms.show();
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Results in:
+
+| CODE      | DESCRIPTION                          | SYNONYM                                    |
+|-----------|--------------------------------------|--------------------------------------------|
+| 65363002  | Otitis media                         | OM - Otitis media                          |
+| 16114001  | Fracture of ankle                    | Ankle fracture                             |
+| 16114001  | Fracture of ankle                    | Fracture of distal end of tibia and fibula |
+| 444814009 | Viral sinusitis (disorder)           | NULL                                       |
+| 444814009 | Viral sinusitis (disorder)           | NULL                                       |
+| 43878008  | Streptococcal sore throat (disorder) | Septic sore throat                         |
+| 43878008  | Streptococcal sore throat (disorder) | Strep throat                               |
+| 43878008  | Streptococcal sore throat (disorder) | Strept throat                              |
+| 43878008  | Streptococcal sore throat (disorder) | Streptococcal angina                       |
+| 43878008  | Streptococcal sore throat (disorder) | Streptococcal pharyngitis                  |
+
 ### Authentication
 
 Pathling can be configured to connect to a protected terminology server by
