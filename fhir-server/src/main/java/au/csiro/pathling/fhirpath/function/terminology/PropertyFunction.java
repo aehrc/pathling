@@ -17,32 +17,28 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
+import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.sql.Terminology.property_of;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
-import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.udf.PropertyUdf;
+import java.util.List;
+import java.util.Optional;
+import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
-import javax.annotation.Nonnull;
-
-import java.util.List;
-import java.util.Optional;
-
-import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.display;
-import static au.csiro.pathling.sql.Terminology.property_of;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 
 /**
  * This function returns the value of a property for a Coding.
