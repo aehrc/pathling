@@ -133,17 +133,15 @@ class DefaultTerminologyClient implements TerminologyClient {
   @Override
   public Parameters lookup(@Nonnull final UriType system,
       @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final CodeType property,
-      @Nullable final CodeType displayLanguage) {
-    return buildLookup(system, version, code, property, displayLanguage).execute();
+      @Nullable final CodeType property) {
+    return buildLookup(system, version, code, property).execute();
   }
 
   @Nonnull
   @Override
   public IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull final UriType system,
       @Nullable final StringType version,
-      @Nonnull final CodeType code, @Nullable final CodeType property,
-      @Nullable final CodeType displayLanguage) {
+      @Nonnull final CodeType code, @Nullable final CodeType property) {
     final Parameters params = new Parameters();
     params.addParameter().setName("system").setValue(system);
     params.addParameter().setName("code").setValue(code);
@@ -153,14 +151,11 @@ class DefaultTerminologyClient implements TerminologyClient {
     if (property != null) {
       params.addParameter().setName("property").setValue(property);
     }
-    if (displayLanguage != null) {
-      params.addParameter().setName("displayLanguage").setValue(displayLanguage);
-    }
     return fhirClient.operation()
         .onType(CodeSystem.class)
         .named("$lookup")
         .withParameters(params)
         .useHttpGet();
   }
-  
+
 }

@@ -30,6 +30,8 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_40055000;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000000000003001;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.HL7_USE_DISPLAY;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.mockCoding;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
 import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
@@ -86,6 +88,23 @@ public class ParserTest extends AbstractParserTest {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDisplay(CD_SNOMED_195662009)
         .withDisplay(CD_SNOMED_444814009);
+  }
+
+  private void setupMockPropertiesFor_195662009_444814009() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withProperty(CD_SNOMED_195662009, "child", CD_SNOMED_40055000, CD_SNOMED_403190006)
+        .withProperty(CD_SNOMED_444814009, "child", CD_SNOMED_284551006)
+        .withDesignation(CD_SNOMED_195662009, CD_SNOMED_900000000000003001, "en",
+            "Acute viral pharyngitis : disorder")
+        .withDesignation(CD_SNOMED_444814009, CD_SNOMED_900000000000003001, "en",
+            "Viral sinusitis : disorder")
+        .withDesignation(CD_SNOMED_195662009, HL7_USE_DISPLAY, "en",
+            "Acute viral pharyngitis")
+        .withDesignation(CD_SNOMED_444814009, HL7_USE_DISPLAY, "en",
+            "Viral sinusitis")
+        .withDesignation(CD_SNOMED_444814009, HL7_USE_DISPLAY, "pl",
+            "Wirusowe zapalenie zatok")
+        .done();
   }
 
   @Test
@@ -470,13 +489,51 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testDisplayFunction() {
-
     setupMockDisplayFor_195662009_444814009();
-
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.display()")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+  }
+
+
+  @Test
+  void testPropertyFunctionWithDefaultType() {
+    setupMockDisplayFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.property('display')")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+  }
+
+  @Test
+  void testPropertyFunctionWithCodingType() {
+    setupMockPropertiesFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.property('child', 'Coding').code")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testPropertyFunctionWithCodingType.csv");
+  }
+
+
+  @Test
+  void testDesignationFunctionWithLanguage() {
+    
+    setupMockPropertiesFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.designation(http://snomed.info/sct|900000000000003001, 'en')")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithLanguage.csv");
+  }
+
+  @Test
+  void testDesignationFunctionWithNoLanguage() {
+
+    setupMockPropertiesFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.designation(http://terminology.hl7.org/CodeSystem/designation-usage|display)")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithNoLanguage.csv");
   }
 
   @Test

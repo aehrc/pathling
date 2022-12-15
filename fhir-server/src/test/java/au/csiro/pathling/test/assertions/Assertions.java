@@ -18,7 +18,6 @@
 package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -33,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.opentest4j.AssertionFailedError;
 
 @Slf4j
 public abstract class Assertions {
@@ -63,10 +63,12 @@ public abstract class Assertions {
     return new DatasetAssert(rowDataset);
   }
 
+  @SuppressWarnings("unused")
   public static void assertMatches(@Nonnull final String expectedRegex,
       @Nonnull final String actualString) {
     if (!Pattern.matches(expectedRegex, actualString)) {
-      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex));
+      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex),
+          actualString, expectedRegex);
     }
   }
 
@@ -81,4 +83,7 @@ public abstract class Assertions {
         .hasRowsUnordered(expectedDataset);
   }
 
+  public static <T> T fail(String message, Object expected, Object actual) {
+    throw new AssertionFailedError(message, expected, actual);
+  }
 }

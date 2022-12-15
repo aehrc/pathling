@@ -2,7 +2,6 @@ package au.csiro.pathling.sql.udf;
 
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.decode;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.isValidCoding;
-import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Property;
@@ -25,9 +24,9 @@ import org.hl7.fhir.r4.model.Coding;
 public class DisplayUdf implements SqlFunction,
     SqlFunction1<Row, String> {
 
-  public static final String DISPLAY_PROPERTY_CODE = "display";
   private static final long serialVersionUID = 7605853352299165569L;
 
+  public static final String DISPLAY_PROPERTY_CODE = "display";
   public static final String FUNCTION_NAME = "display";
   public static final DataType RETURN_TYPE = DataTypes.StringType;
 
@@ -55,7 +54,7 @@ public class DisplayUdf implements SqlFunction,
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        coding, DISPLAY_PROPERTY_CODE, null);
+        coding, DISPLAY_PROPERTY_CODE);
 
     final Optional<Property> maybeDisplayName = result.stream()
         .filter(s -> s instanceof Property)
@@ -69,8 +68,6 @@ public class DisplayUdf implements SqlFunction,
   @Nullable
   @Override
   public String call(@Nullable final Row codingRow) {
-    return doCall(nonNull(codingRow)
-                  ? decode(codingRow)
-                  : null);
+    return doCall(decode(codingRow));
   }
 }

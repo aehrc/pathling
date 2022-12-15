@@ -18,6 +18,7 @@
 package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import com.google.common.collect.ImmutableList;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -28,10 +29,16 @@ import org.apache.spark.sql.SparkSession;
  */
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
-  public TerminologyUdfRegistrar(@Nonnull TerminologyServiceFactory tsf) {
-    super(List.of(new DisplayUdf(tsf)),
-        List.of(new MemberOfUdf(tsf)),
-        List.of(new SubsumesUdf(tsf)),
+  public TerminologyUdfRegistrar(@Nonnull final TerminologyServiceFactory tsf) {
+    super(List.of(
+            new DisplayUdf(tsf)),
+        ImmutableList.<SqlFunction2<?, ?, ?>>builder()
+            .add(new MemberOfUdf(tsf))
+            .addAll(PropertyUdf.createAll(tsf))
+            .build(),
+        List.of(
+            new SubsumesUdf(tsf),
+            new DesignationUdf(tsf)),
         Collections.emptyList(),
         List.of(new TranslateUdf(tsf)));
   }

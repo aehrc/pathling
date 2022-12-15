@@ -25,7 +25,7 @@ import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 import java.io.Serializable;
 
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 
 public final class FhirMatchers {
 

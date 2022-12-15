@@ -24,7 +24,9 @@ import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansT
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.function.terminology.DesignationFunction;
 import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
+import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
 import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +42,7 @@ import javax.annotation.Nonnull;
 public interface NamedFunction {
 
   /**
-   * Mapping of function names to instances of those functions.
+   * Mapping of function names to the instances of those functions.
    */
   Map<String, NamedFunction> NAME_TO_INSTANCE = new ImmutableMap.Builder<String, NamedFunction>()
       .put("count", new CountFunction())
@@ -65,6 +67,8 @@ public interface NamedFunction {
       .put("until", new UntilFunction())
       .put("exists", new ExistsFunction())
       .put("display", new DisplayFunction())
+      .put("property", new PropertyFunction())
+      .put("designation", new DesignationFunction())
       .build();
 
   /**

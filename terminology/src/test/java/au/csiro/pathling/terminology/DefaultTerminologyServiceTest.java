@@ -1,9 +1,26 @@
+/*
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.terminology;
 
-
+import static au.csiro.pathling.terminology.PropertiesParametersBuilder.standardProperties;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_EQUIVALENT;
-import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMEDBY;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMED_BY;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMES;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.RESULT_FALSE;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.RESULT_TRUE;
@@ -14,6 +31,7 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUM
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -21,16 +39,20 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
@@ -49,12 +71,17 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
   private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
 
+  public static final Coding USE_PREFERRED_FOR_LANG = new Coding(
+      "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+      "preferredForLanguage", "Preferred For Language"
+  );
+
   @Nonnull
   private static Parameters translation(@Nonnull final Translation... entries) {
     final Parameters translateResponse = new Parameters()
         .setParameter("result", true);
 
-    for (Translation entry : entries) {
+    for (final Translation entry : entries) {
       final ParametersParameterComponent matchParameter1 = translateResponse.addParameter()
           .setName("match");
       matchParameter1.addPart().setName("equivalence")
@@ -137,7 +164,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   @Test
   public void testSubsumesRightVersion() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
-        OUTCOME_SUBSUMEDBY);
+        OUTCOME_SUBSUMED_BY);
     when(terminologyClient.buildSubsumes(
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType(CODE_B)),
@@ -252,48 +279,146 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   @Test
   public void testLooksUpInvalidCoding() {
     assertEquals(Collections.emptyList(),
-        terminologyService.lookup(INVALID_CODING_0, null, null));
+        terminologyService.lookup(INVALID_CODING_0, null));
     assertEquals(Collections.emptyList(),
-        terminologyService.lookup(INVALID_CODING_1, "display", null));
+        terminologyService.lookup(INVALID_CODING_1, "display"));
     assertEquals(Collections.emptyList(),
-        terminologyService.lookup(INVALID_CODING_2, "designation", "en"));
+        terminologyService.lookup(INVALID_CODING_2, "designation"));
     verifyNoMoreInteractions(terminologyClient);
-  }
-
-  @Nonnull
-  private static Parameters standardProperties(@Nonnull final Coding coding) {
-    return new Parameters()
-        .addParameter("display", coding.getDisplay())
-        .addParameter("code", new CodeType(coding.getCode()))
-        .addParameter("name", "My Test Coding System");
   }
 
   @Test
   public void testLooksUpStandardProperty() {
 
-    final IOperationUntypedWithInput<Parameters> request1 = mockRequest(
-        standardProperties(CODING_A));
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        standardProperties(CODING_A).build());
     when(terminologyClient.buildLookup(
         deepEq(new UriType(SYSTEM_A)),
         isNull(),
         deepEq(new CodeType(CODE_A)),
-        deepEq(new CodeType("display")),
-        isNull())).thenReturn(request1);
+        deepEq(new CodeType("display"))))
+        .thenReturn(request);
 
-    final IOperationUntypedWithInput<Parameters> request2 = mockRequest(
-        standardProperties(CODING_BB_VERSION1));
+    assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
+        terminologyService.lookup(CODING_AA, "display"));
+  }
+
+  @Test
+  public void testLooksNamedProperties() {
+    final Parameters response = standardProperties(CODING_BB_VERSION1)
+        .withProperty("property_A", "string_value_a")
+        .withProperty("property_A", new IntegerType(333))
+        .withProperty("property_A", new CodeType("code_value_a"))
+        .withProperty("property_A", new BooleanType(true))
+        // Adding some unexpected elements to make they are excluded.
+        .withProperty("property_B", "string_value_b")
+        .withDesignation("Coding BB", USE_PREFERRED_FOR_LANG, "en")
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(response);
     when(terminologyClient.buildLookup(
         deepEq(new UriType(SYSTEM_B)),
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B)),
-        deepEq(new CodeType("code")),
-        deepEq(new CodeType("en")))).thenReturn(request2);
+        deepEq(new CodeType("property_A"))
+    )).thenReturn(request);
 
-    assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
-        terminologyService.lookup(CODING_AA, "display", null));
+    assertEquals(List.of(
+            Property.of("property_A", new StringType("string_value_a")),
+            Property.of("property_A", new IntegerType(333)),
+            Property.of("property_A", new CodeType("code_value_a")),
+            Property.of("property_A", new BooleanType(true))
+        ),
+        terminologyService.lookup(CODING_BB_VERSION1, "property_A"));
+  }
 
-    assertEquals(List.of(Property.of("code", new CodeType(CODING_BB_VERSION1.getCode()))),
-        terminologyService.lookup(CODING_BB_VERSION1, "code", "en"));
+  @Test
+  public void testLookupSubProperties() {
+    final Parameters response = standardProperties(CODING_C)
+        .withPropertyGroup("group_C")
+        .withSubProperty("property_C", new StringType("string_value_c"))
+        .withSubProperty("property_C", new CodeType("code_value_c"))
+        .withSubProperty("property_D", new StringType("string_value_D"))
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_C)),
+        isNull(),
+        deepEq(new CodeType(CODE_C)),
+        any()
+    )).thenReturn(request);
+
+    assertEquals(List.of(
+            Property.of("property_C", new StringType("string_value_c")),
+            Property.of("property_C", new CodeType("code_value_c"))
+        ),
+        terminologyService.lookup(CODING_C, "property_C"));
+    // Does not include grouping property in the results.
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(CODING_C, "group_C"));
+  }
+
+  @Test
+  public void testLookupDesignations() {
+    final Parameters response = standardProperties(CODING_A)
+        .withProperty("property_A", "value_A")
+        .withDesignation("designation_D_X", CODING_D, "lang_X")
+        .withDesignation("designation_E_Y", CODING_E, "lang_Y")
+        .withDesignation("designation_E_?", Optional.of(CODING_E), Optional.empty())
+        .withDesignation("designation_?_Z", Optional.empty(), Optional.of("lang_Z"))
+        .withDesignation("designation_?_?", Optional.empty(), Optional.empty())
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_A)),
+        isNull(),
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType("designation"))
+    )).thenReturn(request);
+
+    assertEquals(List.of(
+            Designation.of(CODING_D, "lang_X", "designation_D_X"),
+            Designation.of(CODING_E, "lang_Y", "designation_E_Y"),
+            Designation.of(CODING_E, null, "designation_E_?"),
+            Designation.of(null, "lang_Z", "designation_?_Z"),
+            Designation.of(null, null, "designation_?_?")
+        ),
+        terminologyService.lookup(CODING_A, Designation.PROPERTY_CODE));
+  }
+
+  @Test
+  public void testLooksUpDesignationsForVersionedCodingAndUse() {
+    final Parameters response = standardProperties(CODING_BB_VERSION1)
+        .withProperty("property_A", "value_A")
+        .withDesignation("designation_AB2_Z", CODING_AB_VERSION2, "lang_Z")
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_B)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new CodeType("designation"))
+    )).thenReturn(request);
+
+    assertEquals(List.of(
+            Designation.of(CODING_AB_VERSION2, "lang_Z", "designation_AB2_Z")
+        ),
+        terminologyService.lookup(CODING_BB_VERSION1, Designation.PROPERTY_CODE));
+  }
+
+  @Test
+  public void testLookupHandles404Exceptions() {
+    when(terminologyClient.buildLookup(any(), any(), any(), any()
+    )).thenThrow(BaseServerResponseException.newInstance(404, "Resource Not Found"));
+
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(CODING_C, "property_A"));
   }
 
   @SuppressWarnings("unchecked")
@@ -304,5 +429,4 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
     when(request.execute()).thenReturn(response);
     return request;
   }
-
 }

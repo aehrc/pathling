@@ -137,9 +137,8 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property, @Nullable final String displayLanguage) {
-    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property,
-        displayLanguage);
+      @Nullable final String property) {
+    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return getFromCache(lookupCache, parameters, executor);
   }

@@ -1,3 +1,20 @@
+/*
+ * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.fhir;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
@@ -143,7 +160,6 @@ public interface TerminologyClient {
    * @param version the version of the code system
    * @param code the code to lookup
    * @param property the property or properties to be returned in the response
-   * @param displayLanguage the requested language for display
    * @return a {@link Parameters} resource
    * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
@@ -154,8 +170,7 @@ public interface TerminologyClient {
       @Nonnull @OperationParam(name = "system") UriType system,
       @Nullable @OperationParam(name = "version") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code,
-      @Nullable @OperationParam(name = "property") CodeType property,
-      @Nullable @OperationParam(name = "displayLanguage") CodeType displayLanguage
+      @Nullable @OperationParam(name = "property") CodeType property
   );
 
   /**
@@ -165,15 +180,13 @@ public interface TerminologyClient {
    * @param version the version of the code system
    * @param code the code to lookup
    * @param property the property or properties to be returned in the response
-   * @param displayLanguage the requested language for display
    * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
    * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
   @Nonnull
   IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,
-      @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property,
-      @Nullable CodeType displayLanguage);
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property);
 
   /**
    * Builds a new terminology client.

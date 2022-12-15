@@ -1,5 +1,7 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn;
+import static au.csiro.pathling.sql.Terminology.designation;
 import static au.csiro.pathling.sql.Terminology.display;
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
@@ -9,10 +11,15 @@ import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 import static org.apache.spark.sql.functions.lit;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.sql.Terminology;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -21,25 +28,33 @@ import ca.uhn.fhir.parser.IParser;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @Tag("UnitTest")
 @SpringBootTest
-public class TerminologyUdsfTest {
+public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
   @Autowired
   private SparkSession spark;
@@ -68,11 +83,12 @@ public class TerminologyUdsfTest {
   private final static String CODING_1_VALUE_SET_URI = "uiid:ValueSet_coding1";
   private final static String CODING_2_VALUE_SET_URI = "uiid:ValueSet_coding2";
 
+  private static final Coding USE_A = new Coding("uuid:use", "useA", "Use A");
+  private static final Coding USE_B = new Coding("uuid:use", "useB", "Use B");
 
-  private static final Coding INVALID_CODING_0 = new Coding(null, null, "");
-  private static final Coding INVALID_CODING_1 = new Coding("uiid:system", null, "");
-  private static final Coding INVALID_CODING_2 = new Coding(null, "someCode", "");
 
+  private static final String LANGUAGE_X = "languageX";
+  private static final String LANGUAGE_Y = "languageY";
 
   // helper functions
   private DatasetBuilder codingDatasetBuilder() {
@@ -107,6 +123,15 @@ public class TerminologyUdsfTest {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDisplay(CODING_1)
         .withDisplay(CODING_2);
+  }
+
+  private void setupDesignationExpectations() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDesignation(CODING_1, USE_A, LANGUAGE_X, "designation_A_X")
+        .withDesignation(CODING_1, USE_A, LANGUAGE_Y, "designation_A_Y")
+        .withDesignation(CODING_2, USE_B, LANGUAGE_X, "designation_B_X.1", "designation_B_X.2")
+        .withDesignation(CODING_2, USE_B, LANGUAGE_Y, "designation_B_Y")
+        .done();
   }
 
   @Test
@@ -372,7 +397,6 @@ public class TerminologyUdsfTest {
     DatasetAssert.of(resultSwapped).hasRows(expectedResultSwapped);
   }
 
-
   @Test
   public void testSubsumedBy() {
 
@@ -442,4 +466,197 @@ public class TerminologyUdsfTest {
         .build();
     DatasetAssert.of(result).hasRows(expectedResult);
   }
+
+  @ParameterizedTest
+  @MethodSource("propertyParameters")
+  public void testProperty(final String propertyType, final DataType resultDataType,
+      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
+      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withProperty(CODING_1, "property_a", propertyAFhirValues)
+        .withProperty(CODING_2, "property_b", propertyBFhirValues);
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("coding", CodingEncoding.DATA_TYPE)
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", toRow(INVALID_CODING_0))
+        .withRow("uc-codingA", toRow(CODING_1))
+        .withRow("uc-codingB", toRow(CODING_2))
+        .build();
+
+    final Dataset<Row> resultA = ds.select(ds.col("id"),
+        Terminology.property_of(ds.col("coding"), "property_a", propertyType).alias("values"));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(resultDataType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", null)
+        .withRow("uc-codingA", Arrays.asList(propertyASqlValues))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+
+    // Test the FHIRDefineType version as well
+    final Dataset<Row> resultB = ds.select(ds.col("id"),
+        Terminology.property_of(ds.col("coding"), "property_b",
+            FHIRDefinedType.fromCode(propertyType)).alias("values"));
+
+    final Dataset<Row> expectedResultB = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(resultDataType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", null)
+        .withRow("uc-codingA", Collections.emptyList())
+        .withRow("uc-codingB", Arrays.asList(propertyBSqlValues))
+        .build();
+
+    DatasetAssert.of(resultB)
+        .hasRows(expectedResultB);
+  }
+
+  @Test
+  public void testPropertyWithDefaultType() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withProperty(CODING_1, "property_a", new StringType("value_a"));
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("coding", CodingEncoding.DATA_TYPE)
+        .withRow("uc-null", null)
+        .withRow("uc-codingA", toRow(CODING_1))
+        .withRow("uc-codingB", toRow(CODING_2))
+        .build();
+
+    final Dataset<Row> resultA = ds.select(ds.col("id"),
+        Terminology.property_of(ds.col("coding"), "property_a").alias("values"));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-codingA", Collections.singletonList("value_a"))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
+  @Test
+  void testInputErrorForPropertyOfUnknownType() {
+    assertEquals(
+        "Type: 'instant' is not supported for 'property' udf",
+        assertThrows(InvalidUserInputError.class,
+            () -> Terminology.property_of(lit(null), "display",
+                FHIRDefinedType.INSTANT)).getMessage()
+    );
+    assertEquals(
+        "Type: 'Quantity' is not supported for 'property' udf",
+        assertThrows(InvalidUserInputError.class,
+            () -> Terminology.property_of(lit(null), "display", "Quantity")).getMessage()
+    );
+
+    assertEquals(
+        "Unknown FHIRDefinedType code 'NotAFhirType'",
+        assertThrows(InvalidUserInputError.class,
+            () -> Terminology.property_of(lit(null), "display", "NotAFhirType")).getMessage()
+    );
+  }
+
+
+  @Nonnull
+  private Dataset<Row> callWithDesignationTestData(@Nonnull final Function<Column, Column> call) {
+    setupDesignationExpectations();
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("coding", CodingEncoding.DATA_TYPE)
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", toRow(INVALID_CODING_0))
+        .withRow("uc-codingA", toRow(CODING_1))
+        .withRow("uc-codingB", toRow(CODING_2))
+        .build();
+
+    return ds.select(ds.col("id"),
+        call.apply(ds.col("coding")).alias("values"));
+  }
+
+  @Test
+  public void testDesignationWithLanguage() {
+
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding, USE_A, LANGUAGE_X));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", Collections.singletonList("designation_A_X"))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
+
+  @Test
+  public void testDesignationWithNullLanguageAndUseColumn() {
+
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding,
+            toLiteralColumn(USE_B),
+            null));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", Collections.emptyList())
+        .withRow("uc-codingB", List.of("designation_B_X.1", "designation_B_X.2", "designation_B_Y"))
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
+
+  @Test
+  public void testDesignationWithNoLanguageAndAlternativeDisplayName() {
+
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding, USE_A.copy().setDisplay("Alternative Display A")));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", List.of("designation_A_X", "designation_A_Y"))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
+  @Test
+  public void testDesignationWithNoUse() {
+
+    //noinspection Convert2MethodRef
+    final Dataset<Row> resultA = callWithDesignationTestData(
+        coding -> designation(coding));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", Collections.emptyList())
+        .withRow("uc-codingA", List.of("designation_A_X", "designation_A_Y"))
+        .withRow("uc-codingB", List.of("designation_B_X.1", "designation_B_X.2", "designation_B_Y"))
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+  }
+
 }

@@ -18,23 +18,26 @@
 package au.csiro.pathling.terminology.lookup;
 
 import static java.util.Objects.isNull;
-import static java.util.function.Predicate.not;
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.fhir.ParametersUtils;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyOperation;
 import au.csiro.pathling.terminology.TerminologyParameters;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.caching.CacheableListCollector;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Parameters;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 
@@ -76,13 +79,11 @@ public class LookupExecutor implements
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final ImmutableCoding coding = parameters.getCoding();
     final String property = parameters.getProperty();
-    final String displayLanguage = parameters.getDisplayLanguage();
     return terminologyClient.buildLookup(
         TerminologyParameters.required(UriType::new, coding.getSystem()),
         TerminologyParameters.optional(StringType::new, coding.getVersion()),
         TerminologyParameters.required(CodeType::new, coding.getCode()),
-        TerminologyParameters.optional(CodeType::new, property),
-        TerminologyParameters.optional(CodeType::new, displayLanguage)
+        TerminologyParameters.optional(CodeType::new, property)
     );
   }
 
@@ -100,11 +101,31 @@ public class LookupExecutor implements
 
   @Nonnull
   private static ArrayList<PropertyOrDesignation> toPropertiesAndDesignations(
+      @Nonnull final Parameters parameters,
+      @Nullable final String propertyCode) {
+
+    return (Designation.PROPERTY_CODE.equals(propertyCode))
+           ? toDesignations(parameters)
+           : toProperties(parameters, propertyCode);
+  }
+
+  @Nonnull
+  private static ArrayList<PropertyOrDesignation> toDesignations(
+      @Nonnull final Parameters parameters) {
+    return ParametersUtils.toDesignations(parameters)
+        .map(Designation::ofPart)
+        .collect(new CacheableListCollector<>());
+  }
+
+  @Nonnull
+  private static ArrayList<PropertyOrDesignation> toProperties(
       @Nonnull final Parameters parameters, @Nullable final String propertyCode) {
-    return parameters.getParameter().stream()
-        .filter(not(ParametersParameterComponent::hasPart))
-        .filter(p -> isNull(propertyCode) || propertyCode.equals(p.getName()))
-        .map(p -> Property.of(p.getName(), p.getValue()))
+    return ParametersUtils.toProperties(parameters)
+        .flatMap(part -> nonNull(part.getSubproperty())
+                         ? part.getSubproperty().stream()
+                         : Stream.of(part))
+        .map(part -> Property.of(part.getCode().getValue(), requireNonNull(part.getValue())))
+        .filter(property -> isNull(propertyCode) || propertyCode.equals(property.getCode()))
         .collect(new CacheableListCollector<>());
   }
 

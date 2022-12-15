@@ -1,7 +1,8 @@
 package au.csiro.pathling.test.helpers;
 
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.codingEquals;
+import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
@@ -14,17 +15,26 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
@@ -40,7 +50,7 @@ public class TerminologyServiceHelpers {
       EQUIVALENT.toCode());
   public final static Parameters OUTCOME_SUBSUMES = new Parameters().setParameter("outcome",
       SUBSUMES.toCode());
-  public final static Parameters OUTCOME_SUBSUMEDBY = new Parameters().setParameter("outcome",
+  public final static Parameters OUTCOME_SUBSUMED_BY = new Parameters().setParameter("outcome",
       SUBSUMEDBY.toCode());
 
   public static class ValidateExpectations {
@@ -57,7 +67,7 @@ public class TerminologyServiceHelpers {
     @Nonnull
     public ValidateExpectations withValueSet(@Nonnull final String valueSetUrl,
         @Nonnull final Coding... codings) {
-      for (Coding coding : codings) {
+      for (final Coding coding : codings) {
         when(mockService.validateCode(eq(valueSetUrl), codingEq(coding))).thenReturn(true);
       }
       return this;
@@ -166,18 +176,20 @@ public class TerminologyServiceHelpers {
 
   public static class LookupExpectations {
 
+    private final Map<ImmutableCoding, List<PropertyOrDesignation>> designationsOfCoding = new HashMap<>();
+
     private final TerminologyService mockService;
 
     public LookupExpectations(final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
-      when(mockService.lookup(any(), any(), any())).thenReturn(Collections.emptyList());
+      when(mockService.lookup(any(), any())).thenReturn(Collections.emptyList());
     }
 
     @Nonnull
     public LookupExpectations withDisplay(@Nonnull final Coding coding,
         @Nonnull final String displayName) {
-      when(mockService.lookup(codingEq(coding), eq("display"), any()))
+      when(mockService.lookup(codingEq(coding), eq("display")))
           .thenReturn(List.of(
               Property.of("display", new StringType(displayName))));
       return this;
@@ -186,6 +198,36 @@ public class TerminologyServiceHelpers {
     @Nonnull
     public LookupExpectations withDisplay(@Nonnull final Coding coding) {
       return withDisplay(coding, coding.getDisplay());
+    }
+
+    @SafeVarargs
+    @Nonnull
+    public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
+        @Nonnull final String propertyCode, final T... values) {
+      when(mockService.lookup(deepEq(coding), eq(propertyCode))).thenReturn(
+          Stream.of(values)
+              .map(v -> Property.of(propertyCode, v))
+              .collect(Collectors.toUnmodifiableList())
+      );
+      return this;
+    }
+
+    public LookupExpectations withDesignation(@Nonnull final Coding coding,
+        @Nullable final Coding use,
+        @Nullable final String language, @Nonnull final String... designations) {
+
+      final List<PropertyOrDesignation> currentDesignations = designationsOfCoding.computeIfAbsent(
+          ImmutableCoding.of(coding),
+          c -> new ArrayList<>());
+      Stream.of(designations).forEach(
+          designation -> currentDesignations.add(Designation.of(use, language, designation)));
+      return this;
+    }
+
+    public void done() {
+      designationsOfCoding.forEach((coding, designations) -> when(
+          mockService.lookup(deepEq(coding.toCoding()), eq("designation")))
+          .thenReturn(designations));
     }
   }
 

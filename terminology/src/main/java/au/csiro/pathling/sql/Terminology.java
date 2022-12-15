@@ -1,15 +1,22 @@
 package au.csiro.pathling.sql;
 
+import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn;
+import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.sql.udf.DesignationUdf;
 import au.csiro.pathling.sql.udf.DisplayUdf;
+import au.csiro.pathling.sql.udf.MemberOfUdf;
+import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
 import au.csiro.pathling.sql.udf.TranslateUdf;
-import au.csiro.pathling.sql.udf.MemberOfUdf;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * JAVA API for terminology UDFs
@@ -46,7 +53,7 @@ public interface Terminology {
     return call_udf(MemberOfUdf.FUNCTION_NAME, coding, valueSetUrl);
   }
 
-  // TODO: consider the order of target and equivaleces
+  // TODO: consider the order of target and equivalences
   // TODO: consider other forms of passing equivalences (i.e collection of enum types)
   // TODO: add overloaded methods for default arguments.
 
@@ -67,7 +74,7 @@ public interface Terminology {
    */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse, @Nullable final String equivalences, @Nullable final String target) {
+      final boolean reverse, @Nullable final String equivalences, @Nullable final String target) {
     return call_udf(TranslateUdf.FUNCTION_NAME, coding, lit(conceptMapUri), lit(reverse),
         lit(equivalences), lit(target));
   }
@@ -87,7 +94,7 @@ public interface Terminology {
    */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse, @Nullable final String equivalences) {
+      final boolean reverse, @Nullable final String equivalences) {
     return translate(coding, conceptMapUri, reverse, equivalences, null);
   }
 
@@ -111,8 +118,7 @@ public interface Terminology {
    * Boolean value, indicating whether the left Coding is subsumed by the right Coding.
    *
    * @param codingA a Column containing a struct representation of a Coding or an array of Codings.
-   * @param codingB a Column containing a struct representation of a Coding or an array of
-   * Codings.
+   * @param codingB a Column containing a struct representation of a Coding or an array of Codings.
    * @return the Column containing the result of the operation (boolean)
    */
   @Nonnull
@@ -124,10 +130,104 @@ public interface Terminology {
    * Takes a Coding column as its input. Returns the Column, which contains the canonical display
    * name associated with the given code.
    *
+   * @param coding a Column containing a struct representation of a Coding
    * @return the Column containing the result of the operation (String)
    */
   @Nonnull
   static Column display(@Nonnull final Column coding) {
     return call_udf(DisplayUdf.FUNCTION_NAME, coding);
+  }
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the values of properties
+   * for this coding with specified names and types. The type of the result column depends on the
+   * types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
+   * Complex types are mapped to their corresponding structs. The allowed property types are: code |
+   * Coding | string | integer | boolean | dateTime | decimal.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve.
+   * @param propertyType the type of the property to retrieve.
+   * @return the Column containing the result of the operation (array of property values)
+   */
+  @Nonnull
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nonnull final FHIRDefinedType propertyType) {
+    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode));
+  }
+
+  /**
+   * Retrieves properties of a concept.
+   *
+   * @see Terminology#property_of(Column, String, FHIRDefinedType)
+   */
+  @Nonnull
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nullable final String propertyType) {
+
+    return property_of(coding, propertyCode,
+        nonNull(propertyType)
+        ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
+        : PropertyUdf.DEFAULT_PROPERTY_TYPE);
+  }
+
+  /**
+   * Retrieves properties of a concept.
+   *
+   * @see Terminology#property_of(Column, String, FHIRDefinedType)
+   */
+  @Nonnull
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode) {
+    return property_of(coding, propertyCode, PropertyUdf.DEFAULT_PROPERTY_TYPE);
+  }
+
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the values of
+   * designations (strings) for this coding for the specified use and language. If the language is
+   * not provided (is null) then all designations with the specified type are returned regardless of
+   * their language.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param use a Column containing use the code with the use of the designations
+   * @param language the language of the designations
+   * @return the Column containing the result of the operation (array of strings with designation
+   * values)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding, @Nonnull final Column use,
+      @Nullable final String language) {
+    return call_udf(DesignationUdf.FUNCTION_NAME, coding, use, lit(language));
+  }
+
+  /**
+   * Retrieves designations of a concept.
+   *
+   * @see Terminology#designation(Column, Column, String)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding, @Nullable final Coding use,
+      @Nullable final String language) {
+    return designation(coding, toLiteralColumn(use), language);
+  }
+
+  /**
+   * Retrieves designations of a concept for all languages.
+   *
+   * @see Terminology#designation(Column, Coding, String)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding, @Nullable final Coding use) {
+    return designation(coding, use, null);
+  }
+
+  /**
+   * Retrieves designations of a concept for all languages and uses.
+   *
+   * @see Terminology#designation(Column, Coding, String)
+   */
+  @Nonnull
+  static Column designation(@Nonnull final Column coding) {
+    return designation(coding, null);
   }
 }

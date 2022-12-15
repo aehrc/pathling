@@ -35,6 +35,5 @@ public class LookupParameters implements TerminologyParameters {
 
   ImmutableCoding coding;
   String property;
-  String displayLanguage;
 
 }

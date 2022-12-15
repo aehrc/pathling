@@ -28,20 +28,18 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
-import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.utilities.Strings;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.utilities.Strings;
-import lombok.Builder;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -49,7 +47,6 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.Type;
 
 /**
  * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set Codings
@@ -75,79 +72,6 @@ public class TranslateFunction implements NamedFunction {
 
   private static final String DEFAULT_EQUIVALENCE = "equivalent";
 
-
-  /**
-   * Helper class for dealing with optional arguments.
-   */
-  private static class Arguments {
-
-    @Nonnull
-    private final List<FhirPath> arguments;
-
-    private Arguments(@Nonnull final List<FhirPath> arguments) {
-      this.arguments = arguments;
-    }
-
-    /**
-     * Gets the value of an optional literal argument or the default value it the argument is
-     * missing.
-     *
-     * @param index the 0-based index of the argument.
-     * @param defaultValue the default value.
-     * @param <T> the Java type of the argument value.
-     * @return the java value of the requested argument.
-     */
-    @SuppressWarnings("unchecked")
-    @Nonnull
-    private <T extends Type> T getValueOr(final int index, @Nonnull final T defaultValue) {
-      return (index < arguments.size())
-             ? getValue(index, (Class<T>) defaultValue.getClass())
-             : defaultValue;
-    }
-
-    /**
-     * Gets the value of an optional literal argument that does not have a default value.
-     *
-     * @param index the 0-based index of the argument.
-     * @param <T> the Java type of the argument value.
-     * @return the java value of the requested argument.
-     */
-    @Nullable
-    private <T extends Type> T getNullableValue(final int index,
-        @Nonnull final Class<T> valueClass) {
-      final LiteralPath<?> literalPath;
-      try {
-        literalPath = (LiteralPath<?>) arguments.get(index);
-      } catch (final IndexOutOfBoundsException e) {
-        return null;
-      }
-      return valueClass.cast(literalPath.getValue());
-    }
-
-    /**
-     * Gets the value of the required literal argument.
-     *
-     * @param index the 0-based index of the argument
-     * @param valueClass the expected Java  class of the argument value
-     * @param <T> the HAPI type of the argument value
-     * @return the java value of the requested argument
-     */
-    @Nonnull
-    public <T extends Type> T getValue(final int index, @Nonnull final Class<T> valueClass) {
-      return Objects.requireNonNull(getNullableValue(index, valueClass));
-    }
-
-    /**
-     * Construct Arguments for given {@link NamedFunctionInput}
-     *
-     * @param input the function input.
-     * @return the Arguments for the input.
-     */
-    @Nonnull
-    public static Arguments of(@Nonnull final NamedFunctionInput input) {
-      return new Arguments(input.getArguments());
-    }
-  }
 
   @Nonnull
   @Override
