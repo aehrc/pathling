@@ -32,6 +32,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * @author John Grimes
@@ -58,37 +59,30 @@ public class UntypedResourcePathBuilder {
   @Nullable
   private Column thisColumn;
 
-  @Nonnull
-  private Column typeColumn;
-
   public UntypedResourcePathBuilder(@Nonnull final SparkSession spark) {
     expression = "";
     eidColumn = Optional.empty();
     dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
-        .withColumn(DataTypes.StringType)
         .build();
     idColumn = col(dataset.columns()[0]);
     valueColumn = col(dataset.columns()[1]);
-    typeColumn = col(dataset.columns()[2]);
     singular = false;
   }
 
   @Nonnull
-  public UntypedResourcePathBuilder idTypeAndValueColumns() {
+  public UntypedResourcePathBuilder idAndValueColumns() {
     idColumn = functions.col(dataset.columns()[0]);
-    typeColumn = functions.col(dataset.columns()[1]);
-    valueColumn = functions.col(dataset.columns()[2]);
+    valueColumn = functions.col(dataset.columns()[1]);
     return this;
   }
 
   @Nonnull
-  public UntypedResourcePathBuilder idEidTypeAndValueColumns() {
+  public UntypedResourcePathBuilder idEidAndValueColumns() {
     idColumn = functions.col(dataset.columns()[0]);
     eidColumn = Optional.of(functions.col(dataset.columns()[1]));
-    typeColumn = functions.col(dataset.columns()[2]);
-    valueColumn = functions.col(dataset.columns()[3]);
+    valueColumn = functions.col(dataset.columns()[2]);
     return this;
   }
 
@@ -123,20 +117,17 @@ public class UntypedResourcePathBuilder {
   }
 
   @Nonnull
-  public UntypedResourcePathBuilder typeColumn(@Nonnull final Column typeColumn) {
-    this.typeColumn = typeColumn;
-    return this;
-  }
-
-  @Nonnull
   public UntypedResourcePath build() {
     final ReferencePath referencePath = mock(ReferencePath.class);
+    when(referencePath.getIdColumn()).thenReturn(idColumn);
+    when(referencePath.getEidColumn()).thenReturn(eidColumn);
     when(referencePath.getValueColumn()).thenReturn(valueColumn);
+    when(referencePath.getDataset()).thenReturn(dataset);
     when(referencePath.isSingular()).thenReturn(singular);
+    when(referencePath.getCurrentResource()).thenReturn(Optional.empty());
     when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
-    return UntypedResourcePath
-        .build(referencePath, expression, dataset, idColumn, eidColumn,
-            typeColumn);
+    when(referencePath.getFhirType()).thenReturn(FHIRDefinedType.REFERENCE);
+    return UntypedResourcePath.build(referencePath, expression);
   }
 
 }

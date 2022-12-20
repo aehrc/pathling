@@ -47,6 +47,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
@@ -89,6 +90,7 @@ public class SearchDevBenchmark {
     Database database;
 
     @Bean
+    @ConditionalOnMissingBean
     public static Database database(@Nonnull final Configuration configuration,
         @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
         @Nonnull final ThreadPoolTaskExecutor executor) {

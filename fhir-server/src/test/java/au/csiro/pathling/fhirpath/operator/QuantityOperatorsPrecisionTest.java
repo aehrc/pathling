@@ -42,7 +42,6 @@ import org.apache.spark.sql.SparkSession;
 import org.fhir.ucum.Prefix;
 import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,7 +85,7 @@ public class QuantityOperatorsPrecisionTest {
       "Zmol",
       "Emol", "Pmol", "Tmol");
 
-  
+
   @Nonnull
   private static String unitToRowId(@Nonnull final String unit) {
     return "unit-" + unit;
