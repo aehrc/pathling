@@ -854,4 +854,14 @@ public class ParserTest extends AbstractParserTest {
     assertEquals("No such child: " + expression, error.getMessage());
   }
 
+  @Test
+  void testResolutionOfExtensionReference() {
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
+            + ".valueReference.resolve().ofType(Goal).description.text")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .saveAllRowsToCsv(spark, "responses/ParserTest", "testResolutionOfExtensionReference");
+  }
+
 }
