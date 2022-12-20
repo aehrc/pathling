@@ -38,6 +38,7 @@ import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.DatePath;
@@ -518,7 +519,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testDesignationFunctionWithLanguage() {
-    
+
     setupMockPropertiesFor_195662009_444814009();
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.designation(http://snomed.info/sct|900000000000003001, 'en')")
@@ -856,12 +857,15 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testResolutionOfExtensionReference() {
+    mockEmptyResource(database, spark, fhirEncoders,
+        FhirServer.supportedResourceTypes().toArray(new ResourceType[0]));
+    mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
     assertThatResultOf(
         "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
             + ".valueReference.resolve().ofType(Goal).description.text")
         .isElementPath(StringPath.class)
         .selectResult()
-        .saveAllRowsToCsv(spark, "responses/ParserTest", "testResolutionOfExtensionReference");
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.csv");
   }
 
 }
