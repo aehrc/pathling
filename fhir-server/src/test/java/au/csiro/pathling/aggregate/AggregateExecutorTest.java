@@ -127,8 +127,4 @@ abstract class AggregateExecutorTest {
     TestHelpers.mockResource(database, spark, resourceTypes);
   }
 
-  void mockEmptyResource(final ResourceType... resourceType) {
-    TestHelpers.mockEmptyResource(database, spark, fhirEncoders, resourceType);
-  }
-
 }

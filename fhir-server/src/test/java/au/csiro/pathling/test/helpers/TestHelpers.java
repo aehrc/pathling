@@ -63,7 +63,7 @@ public abstract class TestHelpers {
       when(database.read(resourceType)).thenReturn(dataset);
     }
   }
-  
+
   public static void mockResource(@Nonnull final Database database,
       @Nonnull final SparkSession spark, final int numPartitions,
       @Nonnull final ResourceType... resourceTypes) {
@@ -79,16 +79,6 @@ public abstract class TestHelpers {
       @Nonnull final String parquetPath) {
     final Dataset<Row> dataset = getDatasetFromParquetFile(spark, parquetPath);
     when(database.read(resourceType)).thenReturn(dataset);
-  }
-
-  public static void mockEmptyResource(@Nonnull final Database database,
-      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final ResourceType... resourceTypes) {
-    for (final ResourceType resourceType : resourceTypes) {
-      final Dataset<Row> dataset = QueryHelpers.createEmptyDataset(spark, fhirEncoders,
-          resourceType);
-      when(database.read(resourceType)).thenReturn(dataset);
-    }
   }
 
   public static void mockAllEmptyResources(@Nonnull final Database database,

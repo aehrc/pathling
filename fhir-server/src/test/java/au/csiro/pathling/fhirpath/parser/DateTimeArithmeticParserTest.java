@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
-
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -41,8 +39,6 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
         .build();
     parser = new Parser(parserContext);
 
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
-
     assertThatResultOf("(period.start + 20 minutes) > period.end")
         .isElementPath(BooleanPath.class)
         .selectResult()
@@ -61,8 +57,6 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
     parser = new Parser(parserContext);
-
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
 
     assertThatResultOf("period.start > (subject.resolve().ofType(Patient).birthDate + 60 years)")
         .isElementPath(BooleanPath.class)
