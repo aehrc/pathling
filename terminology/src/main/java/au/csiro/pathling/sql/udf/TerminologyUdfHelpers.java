@@ -18,23 +18,17 @@
 package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.utilities.Strings;
 import org.apache.hadoop.shaded.org.apache.curator.shaded.com.google.common.collect.Streams;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.WrappedArray;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collection;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static java.util.function.Function.identity;
 
 /**
  * Helper functions for terminology UDFs.
@@ -96,22 +90,4 @@ public final class TerminologyUdfHelpers {
     return codings.filter(TerminologyUdfHelpers::isValidCoding);
   }
 
-  @Nullable
-  public static Collection<ConceptMapEquivalence> parseCsvEquivalences(
-      @Nullable final String equivalencesCsv) {
-    return isNull(equivalencesCsv)
-           ? null
-           : equivalenceCodesToEnum(Strings.parseCsvList(equivalencesCsv, identity()));
-  }
-
-  @Nullable
-  public static Collection<ConceptMapEquivalence> equivalenceCodesToEnum(
-      @Nullable final Collection<String> equivalenceCodes) {
-    return isNull(equivalenceCodes)
-           ? null
-           : equivalenceCodes.stream()
-               .map(TranslateUdf::checkValidEquivalenceCode)
-               .map(ConceptMapEquivalence::fromCode)
-               .collect(Collectors.toUnmodifiableSet());
-  }
 }

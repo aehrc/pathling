@@ -26,7 +26,7 @@ import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.parseCsvEquivalences;
+import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
 
 @Deprecated
 public interface TerminologyFunctions {

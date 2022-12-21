@@ -4,7 +4,6 @@ import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn
 import static au.csiro.pathling.sql.Terminology.designation;
 import static au.csiro.pathling.sql.Terminology.display;
 import static au.csiro.pathling.sql.Terminology.member_of;
-import static au.csiro.pathling.sql.Terminology.py_translate;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
 import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.sql.Terminology.translate;
@@ -14,8 +13,6 @@ import static org.apache.spark.sql.functions.lit;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
@@ -329,11 +326,11 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
-        py_translate(
+        translate(
             ds.col("codings"),
             "someUrl",
             false,
-            List.of(RELATEDTO.toCode()), null));
+            List.of(RELATEDTO), null));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)

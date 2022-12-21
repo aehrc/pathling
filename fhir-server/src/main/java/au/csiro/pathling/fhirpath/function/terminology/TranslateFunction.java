@@ -21,7 +21,7 @@ import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.translate;
-import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.parseCsvEquivalences;
+import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;

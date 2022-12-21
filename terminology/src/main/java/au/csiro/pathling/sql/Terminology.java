@@ -1,22 +1,19 @@
 package au.csiro.pathling.sql;
 
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn;
-import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.equivalenceCodesToEnum;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 import static java.util.Objects.nonNull;
+import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.array;
-
 
 import au.csiro.pathling.sql.udf.DesignationUdf;
 import au.csiro.pathling.sql.udf.DisplayUdf;
 import au.csiro.pathling.sql.udf.MemberOfUdf;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
-import au.csiro.pathling.sql.udf.TerminologyUdfHelpers;
 import au.csiro.pathling.sql.udf.TranslateUdf;
+import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -24,9 +21,6 @@ import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * JAVA API for terminology UDFs
@@ -104,22 +98,7 @@ public interface Terminology {
       boolean reverse, @Nullable final Collection<ConceptMapEquivalence> equivalences) {
     return translate(coding, conceptMapUri, reverse, equivalences, null);
   }
-
-  /**
-   * Translates coding using a concept map. Allows passing equivalenceCodes as a collection of
-   * strings to support the python API.
-   *
-   * @see Terminology#translate(Column, String, boolean, Collection, String)
-   */
-  @Nonnull
-  static Column py_translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse,
-      @Nullable final Collection<String> equivalenceCodes,
-      @Nullable final String target) {
-    return translate(coding, conceptMapUri, reverse, equivalenceCodesToEnum(equivalenceCodes),
-        target);
-  }
-
+  
   /**
    * Takes two Coding or array of Codings columns as its input. Returns the Column, which contains a
    * Boolean value, indicating whether the left Coding subsumes the right Coding.
