@@ -856,4 +856,15 @@ public class ParserTest extends AbstractParserTest {
         .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.csv");
   }
 
+  @Test
+  void testResolutionOfExtensionReferenceWithWrongType() {
+    mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
+            + ".valueReference.resolve().ofType(Condition).id")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReferenceWithWrongType.csv");
+  }
+
 }
