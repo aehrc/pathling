@@ -4,6 +4,7 @@ import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn
 import static au.csiro.pathling.sql.Terminology.designation;
 import static au.csiro.pathling.sql.Terminology.display;
 import static au.csiro.pathling.sql.Terminology.member_of;
+import static au.csiro.pathling.sql.Terminology.py_translate;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
 import static au.csiro.pathling.sql.Terminology.subsumes;
 import static au.csiro.pathling.sql.Terminology.translate;
@@ -301,7 +302,7 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
             ds.col("code"),
             "someUrl",
             false,
-            "relatedto"));
+            List.of(RELATEDTO)));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
@@ -328,11 +329,11 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
-        translate(
+        py_translate(
             ds.col("codings"),
             "someUrl",
             false,
-            "relatedto"));
+            List.of(RELATEDTO.toCode()), null));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)

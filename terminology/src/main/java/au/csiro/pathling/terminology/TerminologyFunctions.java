@@ -26,6 +26,8 @@ import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.parseCsvEquivalences;
+
 @Deprecated
 public interface TerminologyFunctions {
 
@@ -37,7 +39,7 @@ public interface TerminologyFunctions {
 
   @Nonnull
   Dataset<Row> translate(@Nonnull final Column codingArrayCol, @Nonnull final String conceptMapUrl,
-      final boolean reverse, @Nonnull final String equivalence, @Nullable final String target,
+      final boolean reverse, @Nonnull final String equivalencesCsv, @Nullable final String target,
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName);
 
@@ -70,11 +72,12 @@ class TerminologyFunctionsImpl implements TerminologyFunctions {
   @Override
   public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
       @Nonnull final String conceptMapUrl, final boolean reverse,
-      @Nonnull final String equivalence,
+      @Nonnull final String equivalencesCsv,
       @Nullable final String target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
     return dataset.withColumn(outputColumnName,
-        Terminology.translate(codingArrayCol, conceptMapUrl, reverse, equivalence, target));
+        Terminology.translate(codingArrayCol, conceptMapUrl, reverse,
+            parseCsvEquivalences(equivalencesCsv), target));
   }
 
   @Override

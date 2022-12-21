@@ -21,8 +21,8 @@ import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.translate;
+import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.parseCsvEquivalences;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
@@ -34,10 +34,8 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.utilities.Strings;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -45,7 +43,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.StringType;
 
 /**
@@ -92,16 +89,15 @@ public class TranslateFunction implements NamedFunction {
     final String conceptMapUrl = arguments.getValue(0, StringType.class).asStringValue();
     final boolean reverse = arguments.getValueOr(1, new BooleanType(DEFAULT_REVERSE))
         .booleanValue();
-    final String equivalence = validateEquivalences(
-        arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
-            .asStringValue());
+    final String equivalencesCsv = arguments.getValueOr(2, new StringType(DEFAULT_EQUIVALENCE))
+        .asStringValue();
     @Nullable final String target = Optional.ofNullable(
             arguments.getNullableValue(3, StringType.class))
         .map(StringType::asStringValue)
         .orElse(null);
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column translatedCodings = translate(getCodingColumn(inputPath), conceptMapUrl, reverse,
-        equivalence, target);
+        parseCsvEquivalences(equivalencesCsv), target);
 
     // // The result is an array of translations per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
@@ -136,13 +132,5 @@ public class TranslateFunction implements NamedFunction {
     checkUserInput(arguments.size() <= 2 || arguments.get(2) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 3));
   }
-
-  @Nonnull
-  private String validateEquivalences(@Nonnull final String equivalencesCsv) {
-    return Strings.parseCsvList(equivalencesCsv,
-            wrapInUserInputError(
-                ConceptMapEquivalence::fromCode)).stream()
-        .map(ConceptMapEquivalence::toCode)
-        .collect(Collectors.joining(","));
-  }
+  
 }

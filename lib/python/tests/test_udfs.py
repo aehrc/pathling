@@ -28,6 +28,7 @@ from pathling.coding import Coding
 from pathling.functions import SNOMED_URI, to_snomed_coding
 from pathling.etc import find_jar as find_pathling_jar
 from pathling.udfs import member_of, subsumes, subsumed_by, translate, display, PropertyType, \
+    Equivalence, \
     property_of, designation
 
 PROJECT_DIR = os.path.abspath(
@@ -255,7 +256,7 @@ def test_translate(spark: SparkSession):
 
     result_df = df.select("id", translate(
             "code", "http://snomed.info/sct?fhir_cm=100",
-            equivalences="equivalent,relatedto").alias("result"))
+            equivalences={Equivalence.EQUIVALENT, Equivalence.RELATEDTO}).alias("result"))
     assert result_df.collect() == [
         Result("id-1", [snomed_coding_row("368529002"), loinc_coding_row("55916-3")]),
         Result("id-2", []),
@@ -264,7 +265,7 @@ def test_translate(spark: SparkSession):
 
     result_df = df.select("id", translate(
             "code", "http://snomed.info/sct?fhir_cm=100",
-            equivalences="equivalent,relatedto", target=LOINC_URI).alias("result"))
+            equivalences={"equivalent", "relatedto"}, target=LOINC_URI).alias("result"))
     assert result_df.collect() == [
         Result("id-1", [loinc_coding_row("55916-3")]),
         Result("id-2", []),
@@ -273,7 +274,7 @@ def test_translate(spark: SparkSession):
 
     result_df = df.select("id", translate(
             "code", "http://snomed.info/sct?fhir_cm=200",
-            equivalences="equivalent,relatedto").alias("result"))
+            equivalences=[Equivalence.EQUIVALENT, Equivalence.RELATEDTO]).alias("result"))
     assert result_df.collect() == [
         Result("id-1", []),
         Result("id-2", []),
@@ -283,7 +284,7 @@ def test_translate(spark: SparkSession):
     result_df = df.limit(1).select("id", translate(
             Coding(LOINC_URI, "55915-3"), "http://snomed.info/sct?fhir_cm=200",
             reverse=True,
-            equivalences="relatedto").alias("result"))
+            equivalences=Equivalence.RELATEDTO).alias("result"))
 
     assert result_df.collect() == [
         Result("id-1", [snomed_coding_row("368529002")]),

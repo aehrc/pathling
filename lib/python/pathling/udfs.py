@@ -17,7 +17,8 @@ from typing import (
     Any,
     Callable,
     Optional,
-    Union
+    Union,
+    Collection
 )
 
 from py4j.java_gateway import JavaObject
@@ -28,6 +29,7 @@ from pyspark.sql.functions import lit
 from pathling.coding import Coding
 
 CodingArg = Union[Column, str, Coding]
+EquivalenceArg = Union[str, Collection[str]]
 
 
 def _coding_to_java_column(coding: Optional[CodingArg]) -> JavaObject:
@@ -56,6 +58,13 @@ def _invoke_function(name: str, *args: Any) -> Column:
     return Column(jf(*args))
 
 
+def _ensure_collection(collection_or_value: Optional[Union[Any, Collection[Any]]]) -> Optional[
+    Collection[Any]]:
+    return collection_or_value if isinstance(collection_or_value, Collection) and not isinstance(
+            collection_or_value, str) else [
+        collection_or_value] if collection_or_value is not None else None
+
+
 class PropertyType:
     """
     Allowed property types.
@@ -67,6 +76,22 @@ class PropertyType:
     DATETIME = "dateTime"
     CODE = "code"
     CODING = "Coding"
+
+
+class Equivalence:
+    """
+    Concept Map Equivalences
+    """
+    RELATEDTO = "relatedto"
+    EQUIVALENT = "equivalent"
+    EQUAL = "equal"
+    WIDER = "wider"
+    SUBSUMES = "subsumes"
+    NARROWER = "narrower"
+    SPECIALIZES = "specializes"
+    INEXACT = "inexact"
+    UNMATCHED = "unmatched"
+    DISJOINT = "disjoint"
 
 
 def member_of(coding: CodingArg, value_set_uri: str) -> Column:
@@ -84,24 +109,27 @@ def member_of(coding: CodingArg, value_set_uri: str) -> Column:
 
 
 def translate(coding: CodingArg, concept_map_uri: str,
-              reverse: bool = False, equivalences: Optional[str] = None,
+              reverse: bool = False, equivalences: Optional[EquivalenceArg] = None,
               target: Optional[str] = None) -> Column:
     """
     Takes a Coding column as input.  Returns the Column which contains an array of 
     Coding value with translation targets from the specified FHIR ConceptMap. There 
-    may be more than one target concept for each input concept.
+    may be more than one target concept for each input concept. Only the translation with 
+    the specified equivalences are returned.
+    See also :class:`Equivalence`.
     
     :param coding: a Column containing a struct representation of a Coding
     :param concept_map_uri: an identifier for a FHIR ConceptMap
     :param reverse: the direction to traverse the map - false results in "source to target" 
         mappings, while true results in "target to source"
-    :param equivalences: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
+    :param equivalences: a value of a collection of values from the ConceptMapEquivalence ValueSet
     :param target: identifies the value set in which a translation is sought.  If there's no 
         target specified, the server should return all known translations.
     :return: a Column containing the result of the operation (an array of Coding structs).
     """
-    return _invoke_function("translate", _coding_to_java_column(coding), concept_map_uri, reverse,
-                            equivalences, target)
+    return _invoke_function("py_translate", _coding_to_java_column(coding), concept_map_uri,
+                            reverse,
+                            _ensure_collection(equivalences), target)
 
 
 def subsumes(left_coding: CodingArg, right_coding: CodingArg) -> Column:

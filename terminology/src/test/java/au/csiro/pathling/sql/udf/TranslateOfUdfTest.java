@@ -9,6 +9,7 @@ import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import scala.collection.mutable.WrappedArray;
 
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
@@ -26,7 +27,12 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
 
   private TranslateUdf translateUdf;
   private TerminologyService2 terminologyService2;
-  
+
+  @SafeVarargs
+  private static <T> WrappedArray<T> newWrappedArray(T... args) {
+    return WrappedArray.make(args);
+  }
+
   @BeforeEach
   void setUp() {
     terminologyService2 = mock(TerminologyService2.class);
@@ -71,7 +77,7 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
     assertArrayEquals(asArray(CODING_BB, CODING_AB, CODING_BA),
         translateUdf.call(encodeMany(null, INVALID_CODING_1, INVALID_CODING_0, INVALID_CODING_2,
                 CODING_AA_VERSION1, CODING_AB_VERSION1), CONCEPT_MAP_B, true,
-            "narrower, relatedto", SYSTEM_B));
+            newWrappedArray("narrower", "relatedto"), SYSTEM_B));
   }
 
   @Test
@@ -85,8 +91,28 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testThrowsInputErrorWhenInvalidEquivalence() {
     final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
-        () -> translateUdf.call(encode(CODING_AA), CONCEPT_MAP_B, true, "invalid", null));
+        () -> translateUdf.call(encode(CODING_AA), CONCEPT_MAP_B, true,
+            newWrappedArray("invalid"),
+            null));
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
+    verifyNoMoreInteractions(terminologyService2);
+  }
+
+  @Test
+  void testToleratesNullAndBlankEquivalencesAndEmptyEquivalencesList() {
+
+    TerminologyServiceHelpers.setupTranslate(terminologyService2)
+        .withTranslations(CODING_AA, CONCEPT_MAP_A,
+            Translation.of(EQUIVALENT, CODING_BB),
+            Translation.of(RELATEDTO, CODING_AB));
+
+    assertArrayEquals(NO_TRANSLATIONS,
+        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, newWrappedArray("", null),
+            null));
+
+    assertArrayEquals(NO_TRANSLATIONS,
+        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, newWrappedArray(),
+            null));
     verifyNoMoreInteractions(terminologyService2);
   }
 
