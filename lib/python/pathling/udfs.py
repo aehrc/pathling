@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Any, Callable, Optional, Union
+from typing import Any, Optional, Union, Collection
 
 from py4j.java_gateway import JavaObject
 from pyspark import SparkContext
@@ -23,6 +23,7 @@ from pyspark.sql.functions import lit
 from pathling.coding import Coding
 
 CodingArg = Union[Column, str, Coding]
+EquivalenceArg = Union[str, Collection[str]]
 
 
 def _coding_to_java_column(coding: Optional[CodingArg]) -> JavaObject:
@@ -34,23 +35,44 @@ def _coding_to_java_column(coding: Optional[CodingArg]) -> JavaObject:
         )
 
 
-def _get_jvm_function(name: str, sc: SparkContext) -> Callable:
+def _ensure_collection(
+    collection_or_value: Optional[Union[Any, Collection[Any]]]
+) -> Optional[Collection[Any]]:
+    return (
+        collection_or_value
+        if isinstance(collection_or_value, Collection)
+        and not isinstance(collection_or_value, str)
+        else [collection_or_value]
+        if collection_or_value is not None
+        else None
+    )
+
+
+def _get_jvm() -> JavaObject:
     """
-    Retrieves JVM function identified by name from
-    Java gateway associated with sc.
+    Gets the py4j JVM associated with this process.
     """
+    sc = SparkContext._active_spark_context
+    assert sc is not None
     assert sc._jvm is not None
-    return getattr(sc._jvm.au.csiro.pathling.sql.Terminology, name)
+    return sc._jvm
 
 
-def _invoke_function(name: str, *args: Any) -> Column:
+def _invoke_udf(name: str, *args: Any) -> Column:
     """
-    Invokes JVM function identified by name with args
+    Invokes a Terminology UDF function identified by name with args
     and wraps the result with :class:`~pyspark.sql.Column`.
     """
-    assert SparkContext._active_spark_context is not None
-    jf = _get_jvm_function(name, SparkContext._active_spark_context)
+    jf = getattr(_get_jvm().au.csiro.pathling.sql.Terminology, name)
     return Column(jf(*args))
+
+
+def _invoke_support_function(name: str, *args: Any) -> Any:
+    """
+    Invokes a Terminology supporting function identified by name with args
+    """
+    jf = getattr(_get_jvm().au.csiro.pathling.sql.TerminologySupport, name)
+    return jf(*args)
 
 
 class PropertyType:
@@ -67,6 +89,23 @@ class PropertyType:
     CODING = "Coding"
 
 
+class Equivalence:
+    """
+    Concept Map Equivalences
+    """
+
+    RELATEDTO = "relatedto"
+    EQUIVALENT = "equivalent"
+    EQUAL = "equal"
+    WIDER = "wider"
+    SUBSUMES = "subsumes"
+    NARROWER = "narrower"
+    SPECIALIZES = "specializes"
+    INEXACT = "inexact"
+    UNMATCHED = "unmatched"
+    DISJOINT = "disjoint"
+
+
 def member_of(coding: CodingArg, value_set_uri: str) -> Column:
     """
     Takes a Coding or array of Codings column as its input. Returns the column which contains a
@@ -78,36 +117,39 @@ def member_of(coding: CodingArg, value_set_uri: str) -> Column:
     :param value_set_uri: an identifier for a FHIR ValueSet
     :return: a Column containing the result of the operation.
     """
-    return _invoke_function("member_of", _coding_to_java_column(coding), value_set_uri)
+    return _invoke_udf("member_of", _coding_to_java_column(coding), value_set_uri)
 
 
 def translate(
     coding: CodingArg,
     concept_map_uri: str,
     reverse: bool = False,
-    equivalences: Optional[str] = None,
+    equivalences: Optional[EquivalenceArg] = None,
     target: Optional[str] = None,
 ) -> Column:
     """
     Takes a Coding column as input.  Returns the Column which contains an array of
     Coding value with translation targets from the specified FHIR ConceptMap. There
-    may be more than one target concept for each input concept.
-
+    may be more than one target concept for each input concept. Only the translation with
+    the specified equivalences are returned.
+    See also :class:`Equivalence`.
     :param coding: a Column containing a struct representation of a Coding
     :param concept_map_uri: an identifier for a FHIR ConceptMap
     :param reverse: the direction to traverse the map - false results in "source to target"
         mappings, while true results in "target to source"
-    :param equivalences: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
+    :param equivalences: a value of a collection of values from the ConceptMapEquivalence ValueSet
     :param target: identifies the value set in which a translation is sought.  If there's no
         target specified, the server should return all known translations.
     :return: a Column containing the result of the operation (an array of Coding structs).
     """
-    return _invoke_function(
+    return _invoke_udf(
         "translate",
         _coding_to_java_column(coding),
         concept_map_uri,
         reverse,
-        equivalences,
+        _invoke_support_function(
+            "equivalenceCodesToEnum", _ensure_collection(equivalences)
+        ),
         target,
     )
 
@@ -123,7 +165,7 @@ def subsumes(left_coding: CodingArg, right_coding: CodingArg) -> Column:
         Codings.
     :return: a Column containing the result of the operation (boolean).
     """
-    return _invoke_function(
+    return _invoke_udf(
         "subsumes",
         _coding_to_java_column(left_coding),
         _coding_to_java_column(right_coding),
@@ -141,7 +183,7 @@ def subsumed_by(left_coding: CodingArg, right_coding: CodingArg) -> Column:
         Codings.
     :return: a Column containing the result of the operation (boolean).
     """
-    return _invoke_function(
+    return _invoke_udf(
         "subsumed_by",
         _coding_to_java_column(left_coding),
         _coding_to_java_column(right_coding),
@@ -155,7 +197,7 @@ def display(coding: CodingArg) -> Column:
     :param coding: a Column containing a struct representation of a Coding.
     :return: a Column containing the result of the operation (String).
     """
-    return _invoke_function("display", _coding_to_java_column(coding))
+    return _invoke_udf("display", _coding_to_java_column(coding))
 
 
 def property_of(
@@ -174,7 +216,7 @@ def property_of(
     :param property_type: the type of the property to retrieve.
     :return: the Column containing the result of the operation (array of property values)
     """
-    return _invoke_function(
+    return _invoke_udf(
         "property_of", _coding_to_java_column(coding), property_code, property_type
     )
 
@@ -194,7 +236,7 @@ def designation(
     :return: the Column containing the result of the operation (array of strings with designation
     values)
     """
-    return _invoke_function(
+    return _invoke_udf(
         "designation",
         _coding_to_java_column(coding),
         _coding_to_java_column(use),

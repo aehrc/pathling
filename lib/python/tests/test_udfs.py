@@ -41,6 +41,7 @@ from pathling.udfs import (
     translate,
     display,
     PropertyType,
+    Equivalence,
     property_of,
     designation,
 )
@@ -314,7 +315,7 @@ def test_translate(spark: SparkSession):
         translate(
             "code",
             "http://snomed.info/sct?fhir_cm=100",
-            equivalences="equivalent,relatedto",
+            equivalences={Equivalence.EQUIVALENT, Equivalence.RELATEDTO},
         ).alias("result"),
     )
     assert result_df.collect() == [
@@ -328,7 +329,7 @@ def test_translate(spark: SparkSession):
         translate(
             "code",
             "http://snomed.info/sct?fhir_cm=100",
-            equivalences="equivalent,relatedto",
+            equivalences={"equivalent", "relatedto"},
             target=LOINC_URI,
         ).alias("result"),
     )
@@ -343,7 +344,7 @@ def test_translate(spark: SparkSession):
         translate(
             "code",
             "http://snomed.info/sct?fhir_cm=200",
-            equivalences="equivalent,relatedto",
+            equivalences=[Equivalence.EQUIVALENT, Equivalence.RELATEDTO],
         ).alias("result"),
     )
     assert result_df.collect() == [
@@ -358,7 +359,7 @@ def test_translate(spark: SparkSession):
             Coding(LOINC_URI, "55915-3"),
             "http://snomed.info/sct?fhir_cm=200",
             reverse=True,
-            equivalences="relatedto",
+            equivalences=Equivalence.RELATEDTO,
         ).alias("result"),
     )
 

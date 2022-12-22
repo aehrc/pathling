@@ -218,6 +218,16 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
 
   @Test
+  public void testSubsumesEqualCodingsLocally() {
+    assertEquals(SUBSUMES, terminologyService.subsumes(CODING_B, CODING_B));
+    assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AA, CODING_AA_VERSION1));
+    assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AB_VERSION1, CODING_AB));
+    assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AB_VERSION2, CODING_AB_VERSION2));
+    verifyNoMoreInteractions(terminologyClient);
+  }
+
+
+  @Test
   public void testTranslatesVersionedCodingWithDefaults() {
     final IOperationUntypedWithInput<Parameters> request = mockRequest(
         RESULT_FALSE);

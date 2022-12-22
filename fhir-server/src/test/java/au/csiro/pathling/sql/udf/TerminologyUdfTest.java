@@ -299,7 +299,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
             ds.col("code"),
             "someUrl",
             false,
-            "relatedto"));
+            List.of(RELATEDTO)));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
@@ -330,7 +330,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
             ds.col("codings"),
             "someUrl",
             false,
-            "relatedto"));
+            List.of(RELATEDTO), null));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
