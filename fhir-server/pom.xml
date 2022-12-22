@@ -37,7 +37,7 @@
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
     <jmh.version>1.35</jmh.version>
-    <pathling.dockerBaseImage>openjdk:11-jre-slim</pathling.dockerBaseImage>
+    <pathling.dockerBaseImage>amazoncorretto:11</pathling.dockerBaseImage>
   </properties>
 
   <dependencies>
