@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
@@ -51,6 +52,27 @@ public interface TerminologyService {
 
     @Nonnull
     Coding concept;
+
+    @Override
+    public boolean equals(final Object o) {
+      // We override this method because Coding does not have a sane equals method.
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final Translation that = (Translation) o;
+      return equivalence == that.equivalence && ImmutableCoding.of(concept)
+          .equals(ImmutableCoding.of(that.concept));
+    }
+
+    @Override
+    public int hashCode() {
+      // We override this method because Coding does not have a sane hashCode method.
+      return Objects.hash(equivalence, ImmutableCoding.of(concept));
+    }
+
   }
 
   /**

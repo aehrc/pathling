@@ -61,7 +61,6 @@ import org.infinispan.manager.EmbeddedCacheManager;
  */
 public abstract class CachingTerminologyService extends BaseTerminologyService {
 
-  public static final long INDEFINITE_EXPIRY_PERIOD = Long.MAX_VALUE;
   public static final String VALIDATE_CODE_CACHE_NAME = "validate-code";
   public static final String SUBSUMES_CACHE_NAME = "subsumes";
   public static final String TRANSLATE_CACHE_NAME = "translate";
@@ -156,7 +155,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param <ResultType> The type of the final result that is extracted from the response
    * @return The operation result
    */
-  private static <ParametersType extends TerminologyParameters, ResponseType, ResultType extends Serializable> ResultType getFromCache(
+  private <ParametersType extends TerminologyParameters, ResponseType, ResultType extends Serializable> ResultType getFromCache(
       @Nonnull final Cache<Integer, TerminologyResult<ResultType>> cache,
       @Nonnull final ParametersType parameters,
       @Nonnull final TerminologyOperation<ResponseType, ResultType> operation
@@ -190,19 +189,23 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
    * @param <ResultType> The type of the final result that is extracted from the response
    * @return The operation result
    */
-  private static <ResponseType, ResultType extends Serializable> TerminologyResult<ResultType> fetch(
+  private <ResponseType, ResultType extends Serializable> TerminologyResult<ResultType> fetch(
       @Nonnull final TerminologyOperation<ResponseType, ResultType> operation,
       @Nonnull final Optional<TerminologyResult<ResultType>> cached) {
     final Optional<ResultType> invalidResult = operation.validate();
     if (invalidResult.isPresent()) {
-      return new TerminologyResult<>(
-          invalidResult.get(), null, INDEFINITE_EXPIRY_PERIOD, false);
+      // If the parameters fail validation, cache the invalid result forever.
+      return new TerminologyResult<>(invalidResult.get(), null, null, false);
     }
 
     final IOperationUntypedWithInput<ResponseType> request = operation.buildRequest();
 
+    // Add an If-None-Match header if the cached result is accompanied by an ETag.
     cached.flatMap(c -> Optional.ofNullable(c.getETag()))
         .ifPresent(eTag -> request.withAdditionalHeader(IF_NONE_MATCH_HEADER_NAME, eTag));
+
+    // We use a default expiry if the server does not provide one.
+    final long defaultExpires = secondsFromNow(configuration.getDefaultExpiry());
 
     try {
       final MethodOutcome outcome = request.returnMethodOutcome().execute();
@@ -213,8 +216,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       final Optional<String> newETag = getSingularHeader(outcome, ETAG_HEADER_NAME);
       final Optional<Long> expires = getExpires(outcome);
       return new TerminologyResult<>(
-          result, newETag.orElse(null), expires.orElse(null),
-          false);
+          result, newETag.orElse(null), expires.orElse(defaultExpires), false);
 
     } catch (final NotModifiedException e) {
       // If the response was 304 Not Modified, use the data from the cached response and update 
@@ -226,9 +228,13 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
           expires.orElse(previous.getExpires()), false);
 
     } catch (final BaseServerResponseException e) {
-      // If the terminology server rejects the request as invalid, use false as the result.
+      // If the terminology server rejects the request as invalid, cache the invalid result for the 
+      // amount of time instructed by the server. If there is no such instruction, cache it for the 
+      // configured default expiry.
+      final long expires = getExpires(e.getResponseHeaders()).orElse(
+          defaultExpires);
       final TerminologyResult<ResultType> fallback = new TerminologyResult<>(
-          operation.invalidRequestFallback(), null, INDEFINITE_EXPIRY_PERIOD, false);
+          operation.invalidRequestFallback(), null, expires, false);
       return handleError(e, fallback);
     }
   }
@@ -273,7 +279,11 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
         .stream().findFirst()
         .map(CacheControl::valueOf)
         .map(CacheControl::getMaxAge);
-    return maxAge.map(a -> Instant.now().plusSeconds(a).toEpochMilli());
+    return maxAge.map(CachingTerminologyService::secondsFromNow);
+  }
+
+  private static long secondsFromNow(final int seconds) {
+    return Instant.now().plusSeconds(seconds).toEpochMilli();
   }
 
 }

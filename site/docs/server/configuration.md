@@ -170,6 +170,9 @@ spark:
   `disk`.
 - `pathling.terminology.cache.storagePath` - The path at which to store cache
   data. Required if `pathling.terminology.cache.storageType` is set to `disk`.
+- `pathling.terminology.cache.defaultExpiry` - (default: `600`) The amount
+  of time (in seconds) that a response from the terminology server should be 
+  cached if the server does not specify an expiry.
 - `pathling.terminology.authentication.enabled` - (default: `false`) Enables
   authentication for requests to the terminology service.
 - `pathling.terminology.authentication.tokenEndpoint`, 

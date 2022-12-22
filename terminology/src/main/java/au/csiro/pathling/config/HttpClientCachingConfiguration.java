@@ -56,6 +56,7 @@ public class HttpClientCachingConfiguration implements Serializable {
   public static final int DEFAULT_MAX_CACHE_ENTRIES = 100_000;
   public static final long DEFAULT_MAX_OBJECT_SIZE = 64_000L;
   public static final StorageType DEFAULT_STORAGE_TYPE = StorageType.MEMORY;
+  public static final int DEFAULT_EXPIRY = 600;
 
   /**
    * Enables client side caching of REST requests.
@@ -76,20 +77,37 @@ public class HttpClientCachingConfiguration implements Serializable {
 
   /**
    * Sets the maximum size of a cacheable response, in bytes.
-   * <p>
-   * See also: {@link CacheConfig.Builder#setMaxObjectSize(long)}
+   *
+   * @see CacheConfig.Builder#setMaxObjectSize(long)
    */
   @Min(0)
   @NotNull
   @Builder.Default
   private long maxObjectSize = DEFAULT_MAX_OBJECT_SIZE;
 
+  /**
+   * The type of storage to use for the cache.
+   *
+   * @see StorageType
+   */
   @NotNull
   @Builder.Default
   private StorageType storageType = DEFAULT_STORAGE_TYPE;
 
+  /**
+   * The path on disk to use for the cache, required when {@link StorageType#DISK} is specified.
+   */
   @Nullable
   private String storagePath;
+
+  /**
+   * The default expiry time for cache entries (in seconds), used when the server does not provide
+   * an expiry value.
+   */
+  @Min(0)
+  @NotNull
+  @Builder.Default
+  private int defaultExpiry = DEFAULT_EXPIRY;
 
   /**
    * Represents the type of storage used by the cache.
