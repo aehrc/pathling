@@ -3,6 +3,7 @@ package au.csiro.pathling.sql;
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.toLiteralColumn;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 import static java.util.Objects.nonNull;
+import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
 
@@ -12,11 +13,14 @@ import au.csiro.pathling.sql.udf.MemberOfUdf;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
 import au.csiro.pathling.sql.udf.TranslateUdf;
+import java.util.Collection;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 
 /**
  * JAVA API for terminology UDFs
@@ -53,10 +57,6 @@ public interface Terminology {
     return call_udf(MemberOfUdf.FUNCTION_NAME, coding, valueSetUrl);
   }
 
-  // TODO: consider the order of target and equivaleces
-  // TODO: consider other forms of passing equivalences (i.e collection of enum types)
-  // TODO: add overloaded methods for default arguments.
-
   /**
    * Takes a Coding or an array of Codings column as its input.  Returns the Column which contains
    * an array of Coding value with translation targets from the specified FHIR ConceptMap. There may
@@ -67,38 +67,38 @@ public interface Terminology {
    * @param conceptMapUri an identifier for a FHIR ConceptMap.
    * @param reverse the direction to traverse the map - false results in "source to target"
    * mappings, while true results in "target to source".
-   * @param equivalences a comma-delimited set of values from the ConceptMapEquivalence ValueSet.
+   * @param equivalences a collection of translation equivalences (ConceptMapEquivalence) to include
+   * it the result.
    * @param target identifies the value set in which a translation is sought.  If there's no target
    * specified, the server should return all known translations.
    * @return the Column containing the result of the operation (an array of Coding structs).
    */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse, @Nullable final String equivalences, @Nullable final String target) {
-    return call_udf(TranslateUdf.FUNCTION_NAME, coding, lit(conceptMapUri), lit(reverse),
-        lit(equivalences), lit(target));
+      boolean reverse,
+      @Nullable final Collection<ConceptMapEquivalence> equivalences,
+      @Nullable final String target) {
+    return call_udf(TranslateUdf.FUNCTION_NAME, coding, lit(conceptMapUri),
+        lit(reverse),
+        nonNull(equivalences)
+        ? array(
+            equivalences.stream().distinct().map(ConceptMapEquivalence::toCode).map(functions::lit)
+                .toArray(Column[]::new))
+        : lit(null),
+        lit(target));
   }
 
   /**
-   * Takes a Coding or an array of Codings column as its input.  Returns the Column which contains
-   * an array of Coding value with translation targets from the specified FHIR ConceptMap. There may
-   * be more than one target concept for each input concept.
+   * Translates coding using a concept map.
    *
-   * @param coding a Column containing the struct representation of a Coding or an array of such
-   * structs.
-   * @param conceptMapUri an identifier for a FHIR ConceptMap.
-   * @param reverse the direction to traverse the map - false results in "source to target"
-   * mappings, while true results in "target to source".
-   * @param equivalences a comma-delimited set of values from the ConceptMapEquivalence ValueSet.
-   * @return the Column containing the result of the operation (an array of Coding structs).
+   * @see Terminology#translate(Column, String, boolean, Collection, String)
    */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse, @Nullable final String equivalences) {
+      boolean reverse, @Nullable final Collection<ConceptMapEquivalence> equivalences) {
     return translate(coding, conceptMapUri, reverse, equivalences, null);
   }
-
-
+  
   /**
    * Takes two Coding or array of Codings columns as its input. Returns the Column, which contains a
    * Boolean value, indicating whether the left Coding subsumes the right Coding.

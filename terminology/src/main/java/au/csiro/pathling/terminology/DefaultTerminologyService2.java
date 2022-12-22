@@ -3,10 +3,12 @@ package au.csiro.pathling.terminology;
 import static au.csiro.pathling.fhir.ParametersUtils.toBooleanResult;
 import static au.csiro.pathling.fhir.ParametersUtils.toMatchParts;
 import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
 
 import au.csiro.pathling.fhir.ParametersUtils;
 import au.csiro.pathling.fhir.ParametersUtils.PropertyPart;
@@ -30,6 +32,7 @@ import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
+import org.hl7.fhir.r4.utils.CodingUtilities;
 
 /**
  * The default implementation of the TerminologyServiceFactory2 accessing the REST interface of FHIR
@@ -127,18 +130,22 @@ public class DefaultTerminologyService2 implements TerminologyService2, Closeabl
       return NOTSUBSUMED;
     }
 
-    final String resolvedSystem = codingA.getSystem();
     // TODO: Check how that should work with versions (e.g. how should we treat the case of null version with non null version)
     // if both version are present then ten need to be equal
     if (!(codingA.getVersion() == null || codingB.getVersion() == null || codingA.getVersion()
         .equals(codingB.getVersion()))) {
       return NOTSUBSUMED;
     }
+    
+    if (codingEquals(codingA, codingB)) {
+      return SUBSUMES;
+    }
+    
+    final String resolvedSystem = codingA.getSystem();
     final String resolvedVersion = codingA.getVersion() != null
                                    ? codingA.getVersion()
                                    : codingB.getVersion();
-
-    // TODO: optimize not call the client if not needed (when codings are equal)
+    
     try {
       return toSubsumptionOutcome(terminologyClient.subsumes(
           required(CodeType::new, codingA.getCode()),
