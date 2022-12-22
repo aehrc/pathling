@@ -67,6 +67,8 @@ public class LookupExecutor implements
   @Nonnull
   public Optional<ArrayList<PropertyOrDesignation>> validate() {
     final ImmutableCoding coding = parameters.getCoding();
+
+    // If the system or the code of the coding is null, the result is an empty list.
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return Optional.of(new ArrayList<>());
     } else {
@@ -79,6 +81,7 @@ public class LookupExecutor implements
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final ImmutableCoding coding = parameters.getCoding();
     final String property = parameters.getProperty();
+   
     return terminologyClient.buildLookup(
         TerminologyParameters.required(UriType::new, coding.getSystem()),
         TerminologyParameters.optional(StringType::new, coding.getVersion()),

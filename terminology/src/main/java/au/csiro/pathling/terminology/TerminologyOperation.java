@@ -32,15 +32,37 @@ import javax.annotation.Nonnull;
  */
 public interface TerminologyOperation<ResponseType, ResultType> {
 
+  /**
+   * Validates the parameters for this operation.
+   *
+   * @return An empty {@link Optional} if the parameters are valid, or an {@link Optional}
+   * containing the result to be returned to the user if the parameters are invalid.
+   */
   @Nonnull
   Optional<ResultType> validate();
 
+  /**
+   * Builds a request for this operation, ready to send to the terminology server.
+   *
+   * @return A request for this operation that has not been executed yet, and can still be modified
+   * (e.g. headers)
+   */
   @Nonnull
   IOperationUntypedWithInput<ResponseType> buildRequest();
 
+  /**
+   * Extracts the result from the response from the terminology server.
+   *
+   * @param response the response from the terminology server
+   * @return the extracted result
+   */
   @Nonnull
   ResultType extractResult(@Nonnull final ResponseType response);
 
+  /**
+   * @return the result that should be returned to the user if the terminology server returns a 400
+   * series response
+   */
   @Nonnull
   ResultType invalidRequestFallback();
 

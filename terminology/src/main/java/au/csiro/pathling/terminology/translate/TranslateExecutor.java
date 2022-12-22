@@ -64,6 +64,8 @@ public class TranslateExecutor implements
   @Nonnull
   public Optional<ArrayList<Translation>> validate() {
     final ImmutableCoding coding = parameters.getCoding();
+
+    // If the system or the code of the coding is null, the result is an empty list.
     if (isNull(coding.getSystem()) || isNull(coding.getCode())) {
       return Optional.of(new ArrayList<>());
     } else {
@@ -78,11 +80,13 @@ public class TranslateExecutor implements
     final ImmutableCoding coding = parameters.getCoding();
     final boolean reverse = parameters.isReverse();
     final String target = parameters.getTarget();
+   
     return terminologyClient.buildTranslate(
         required(UriType::new, conceptMapUrl),
         required(UriType::new, coding.getSystem()),
         optional(StringType::new, coding.getVersion()),
-        required(CodeType::new, coding.getCode()), new BooleanType(reverse),
+        required(CodeType::new, coding.getCode()),
+        new BooleanType(reverse),
         optional(UriType::new, target)
     );
   }

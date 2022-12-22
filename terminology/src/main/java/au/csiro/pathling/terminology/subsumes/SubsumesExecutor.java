@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.subsumes;
 
 import static au.csiro.pathling.fhir.ParametersUtils.toSubsumptionOutcome;
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.terminology.TerminologyParameters.required;
 import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
 
@@ -61,19 +62,26 @@ public class SubsumesExecutor implements
   public Optional<ConceptSubsumptionOutcome> validate() {
     final ImmutableCoding codingA = parameters.getCodingA();
     final ImmutableCoding codingB = parameters.getCodingB();
+
+    // If either of the systems are null, or they don't match, the result is not subsumed.
     if (codingA.getSystem() == null || !codingA.getSystem().equals(codingB.getSystem())) {
       return Optional.of(NOTSUBSUMED);
     }
 
+    // If either code is null, the result is not subsumed.
     if (codingA.getCode() == null || codingB.getCode() == null) {
       return Optional.of(NOTSUBSUMED);
     }
 
-    // TODO: Check how that should work with versions (e.g. how should we treat the case of null version with non null version)
-    // if both version are present then ten need to be equal
+    // If both versions are present, they must be equal.
     if (!(codingA.getVersion() == null || codingB.getVersion() == null || codingA.getVersion()
         .equals(codingB.getVersion()))) {
       return Optional.of(NOTSUBSUMED);
+    }
+
+    // If both codings are obviously equal, we don't need to consult the terminology server.
+    if (codingEquals(codingA.toCoding(), codingB.toCoding())) {
+      return Optional.of(ConceptSubsumptionOutcome.SUBSUMES);
     }
 
     return Optional.empty();
@@ -89,7 +97,6 @@ public class SubsumesExecutor implements
                                    ? codingA.getVersion()
                                    : codingB.getVersion();
 
-    // TODO: optimize not call the client if not needed (when codings are equal)
     return terminologyClient.buildSubsumes(
         required(CodeType::new, codingA.getCode()),
         required(CodeType::new, codingB.getCode()),
