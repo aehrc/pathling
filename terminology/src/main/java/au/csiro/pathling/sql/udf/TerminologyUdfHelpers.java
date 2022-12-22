@@ -21,7 +21,6 @@ import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import org.apache.hadoop.shaded.org.apache.curator.shaded.com.google.common.collect.Streams;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Parameters;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.WrappedArray;
 import javax.annotation.Nonnull;
@@ -39,7 +38,7 @@ public final class TerminologyUdfHelpers {
   private TerminologyUdfHelpers() {
     // Utility class
   }
-  
+
   @Nullable
   static Row[] encodeMany(@Nullable final Stream<Coding> codings) {
     return codings != null
@@ -90,4 +89,5 @@ public final class TerminologyUdfHelpers {
   public static Stream<Coding> validCodings(@Nonnull final Stream<Coding> codings) {
     return codings.filter(TerminologyUdfHelpers::isValidCoding);
   }
+
 }

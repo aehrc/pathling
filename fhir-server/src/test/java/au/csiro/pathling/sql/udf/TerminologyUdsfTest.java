@@ -13,8 +13,6 @@ import static org.apache.spark.sql.functions.lit;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
@@ -301,7 +299,7 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
             ds.col("code"),
             "someUrl",
             false,
-            "relatedto"));
+            List.of(RELATEDTO)));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
@@ -332,7 +330,7 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
             ds.col("codings"),
             "someUrl",
             false,
-            "relatedto"));
+            List.of(RELATEDTO), null));
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
