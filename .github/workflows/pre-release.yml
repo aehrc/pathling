@@ -4,11 +4,11 @@ name: Deploy pre-release Docker image
 
 on:
   workflow_run:
-    workflows: [ "Test" ]
+    workflows: ["Test"]
     types:
       - completed
     branches:
-      - 'release/*'
+      - "release/*"
 
 jobs:
   deploy-docker:
@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-java@v2
         with:
           java-version: 11
-          distribution: 'zulu'
+          distribution: "zulu"
       - name: Cache local Maven repository
         uses: actions/cache@v3
         with:
@@ -39,7 +39,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Run the deploy goal with Maven
         run: |
-          TAG=$(echo '${{ github.ref }}' | sed 's/refs\/heads\/release\///')
+          TAG=$(echo '${{ github.head_ref }}' | sed 's/refs\/heads\/release\///')
           mvn --batch-mode deploy \
           -pl fhir-server -am \
           -PdockerPreRelease \
