@@ -69,7 +69,6 @@ class PathlingContext:
         max_connections_total: Optional[int] = None,
         max_connections_per_route: Optional[int] = None,
         cache_max_entries: Optional[int] = None,
-        cache_max_object_size: Optional[int] = None,
         cache_storage_type: Optional[str] = StorageType.MEMORY,
         cache_storage_path: Optional[str] = None,
         token_endpoint: Optional[str] = None,
@@ -113,7 +112,6 @@ class PathlingContext:
         :param max_connections_total: the maximum total number of connections for  http services.
         :param max_connections_per_route: the maximum number of connections per route for
         :param cache_max_entries: the maximum number of cached entries.
-        :param cache_max_object_size: the maximum size of cacheable responses, in bytes.
         :param cache_storage_type: the type of cache storage to use for http service. By default,
         uses transient in-memory cache. 'None' disables caching all together.
         :param cache_storage_path: the path on disk where the cache is stored when the storage
@@ -146,7 +144,6 @@ class PathlingContext:
             .maxConnectionsTotal(max_connections_total)
             .maxConnectionsPerRoute(max_connections_per_route)
             .cacheMaxEntries(cache_max_entries)
-            .cacheMaxObjectSize(cache_max_object_size)
             .cacheStorageType(cache_storage_type)
             .cacheStoragePath(cache_storage_path)
             .tokenEndpoint(token_endpoint)

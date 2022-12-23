@@ -54,7 +54,6 @@ public class HttpClientCachingConfiguration implements Serializable {
   public static final boolean DEFAULT_ENABLED = true;
   public static final StorageType DEFAULT_STORAGE_TYPE = StorageType.MEMORY;
   public static final int DEFAULT_MAX_ENTRIES = 50_000;
-  public static final String DEFAULT_MAX_SIZE = "100MB";
   public static final int DEFAULT_EXPIRY = 600;
 
   /**
@@ -74,21 +73,12 @@ public class HttpClientCachingConfiguration implements Serializable {
   private StorageType storageType = DEFAULT_STORAGE_TYPE;
 
   /**
-   * Sets the maximum number of entries that will be held in memory. Only applicable when using
-   * {@link StorageType#MEMORY}.
+   * Sets the maximum number of entries that will be held in memory.
    */
   @NotNull
   @Min(0)
   @Builder.Default
   private int maxEntries = DEFAULT_MAX_ENTRIES;
-
-  /**
-   * Sets the maximum amount of memory that the cache will occupy. Only applicable when using
-   * {@link StorageType#DISK}.
-   */
-  @NotNull
-  @Builder.Default
-  private String maxSize = DEFAULT_MAX_SIZE;
 
   /**
    * The path on disk to use for the cache, required when {@link StorageType#DISK} is specified.

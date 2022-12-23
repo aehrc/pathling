@@ -73,7 +73,7 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
 
     final Configuration cacheConfig = new ConfigurationBuilder()
         .memory()
-        .maxSize(configuration.getMaxSize())
+        .maxCount(configuration.getMaxEntries())
         .whenFull(EvictionStrategy.REMOVE)
         .persistence()
         .addSoftIndexFileStore()

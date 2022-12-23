@@ -167,9 +167,6 @@ spark:
 - `pathling.terminology.cache.maxEntries` - (default: `50000`) Sets the maximum
   number of entries that will be held in memory. Only applicable when using
   the `memory` storage type.
-- `pathling.terminology.cache.maxSize` - (default: `100MB`) Sets the maximum 
-  amount of memory that the cache will occupy. Only applicable when using
-  the `disk` storage type.
 - `pathling.terminology.cache.storagePath` - The path at which to store cache
   data. Required if `pathling.terminology.cache.storageType` is set to `disk`.
 - `pathling.terminology.cache.defaultExpiry` - (default: `600`) The amount

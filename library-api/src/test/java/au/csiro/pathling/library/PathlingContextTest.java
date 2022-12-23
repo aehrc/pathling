@@ -402,7 +402,6 @@ public class PathlingContextTest {
         .maxConnectionsTotal(maxConnectionsTotal)
         .maxConnectionsPerRoute(maxConnectionsPerRoute)
         .cacheMaxEntries(cacheMaxEntries)
-        .cacheMaxSize(cacheMaxSize)
         .cacheStorageType(cacheStorageType.toString())
         .cacheStoragePath(cacheStoragePath)
         .tokenEndpoint(tokenEndpoint)
@@ -423,7 +422,6 @@ public class PathlingContextTest {
             .build(),
         HttpClientCachingConfiguration.builder()
             .maxEntries(cacheMaxEntries)
-            .maxSize(cacheMaxSize)
             .storageType(cacheStorageType)
             .storagePath(cacheStoragePath)
             .build(),

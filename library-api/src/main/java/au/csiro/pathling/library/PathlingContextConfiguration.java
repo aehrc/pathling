@@ -53,8 +53,6 @@ public class PathlingContextConfiguration {
       HttpClientCachingConfiguration.DEFAULT_STORAGE_TYPE);
   public static final Default<Integer> DEFAULT_CACHE_MAX_ENTRIES = Default.of(
       HttpClientCachingConfiguration.DEFAULT_MAX_ENTRIES);
-  public static final Default<String> DEFAULT_CACHE_MAX_SIZE = Default.of(
-      HttpClientCachingConfiguration.DEFAULT_MAX_SIZE);
 
   @Nullable
   String fhirVersion;
@@ -89,9 +87,6 @@ public class PathlingContextConfiguration {
 
   @Nullable
   Integer cacheMaxEntries;
-
-  @Nullable
-  String cacheMaxSize;
 
   @Nullable
   String cacheStoragePath;
@@ -147,7 +142,6 @@ public class PathlingContextConfiguration {
     config.setEnabled(enabled);
     if (enabled) {
       config.setMaxEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
-      config.setMaxSize(DEFAULT_CACHE_MAX_SIZE.resolve(getCacheMaxSize()));
       final StorageType storageType = StorageType.fromCode(getCacheStorageType());
       config.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(storageType));
       if (config.getStorageType().equals(StorageType.DISK)) {
