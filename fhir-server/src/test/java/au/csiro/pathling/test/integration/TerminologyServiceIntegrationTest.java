@@ -47,11 +47,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Designation;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Collections;
@@ -80,7 +80,7 @@ import org.springframework.test.context.ActiveProfiles;
 @Tag("Tranche2")
 @Slf4j
 @ActiveProfiles({"core", "server", "integration-test"})
-class TerminologyService2IntegrationTest extends WireMockTest {
+class TerminologyServiceIntegrationTest extends WireMockTest {
 
   private static final String SNOMED_VERSION_UNKN = "http://snomed.info/sct/32506021000036107/version/19000101";
   private final static Coding CD_SNOMED_403190006_VERSION_UNKN = newVersionedCoding(
@@ -106,13 +106,13 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;
 
-  private TerminologyService2 terminologyService;
+  private TerminologyService terminologyService;
 
   @BeforeEach
   @Override
   void setUp() {
     super.setUp();
-    terminologyService = terminologyServiceFactory.buildService2();
+    terminologyService = terminologyServiceFactory.build();
     if (isRecordMode()) {
       wireMockServer.resetAll();
       log.warn("Proxying all request to: {}", recordingTxServerUrl);
@@ -134,7 +134,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   @Test
   void testCorrectlyTranslatesKnownAndUnknownSystems() {
 
-    List<Translation> result = terminologyService.translate(
+    final List<Translation> result = terminologyService.translate(
         CD_SNOMED_72940011000036107, CM_HIST_ASSOCIATIONS, false, null);
 
     assertEquals(1, result.size());
@@ -157,7 +157,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   @Test
   void testCorrectlyTranslatesInReverse() {
 
-    List<Translation> result = terminologyService.translate(
+    final List<Translation> result = terminologyService.translate(
         CD_SNOMED_720471000168102_VER2021, CM_HIST_ASSOCIATIONS, true, null);
 
     assertEquals(1, result.size());
@@ -171,7 +171,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
     final Coding input = new Coding(AUTOMAP_INPUT_URI, "shortness of breath", null);
     final String target = "http://snomed.info/sct?fhir_vs=ecl/(%3C%3C%2064572001%20%7CDisease%7C%20OR%20%3C%3C%20404684003%20%7CClinical%20finding%7C)";
 
-    List<Translation> result = terminologyService.translate(
+    final List<Translation> result = terminologyService.translate(
         input, CM_AUTOMAP_DEFAULT, false, target);
     // TODO: Why this one has xsct? But this version cannot be used in input codings?
     final String version = "http://snomed.info/xsct/32506021000036107/version/20220930";
@@ -300,7 +300,7 @@ class TerminologyService2IntegrationTest extends WireMockTest {
   }
 
   @Test
-  void testLookupSubproperties() {
+  void testLookupSubProperties() {
     assertEquals(
         List.of(
             Property.of("260686004", new CodeType("129304002"))

@@ -1,8 +1,12 @@
 package au.csiro.pathling.test.helpers;
 
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.test.helpers.FhirMatchers.codingEq;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
-import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -12,11 +16,11 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Designation;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.PropertyOrDesignation;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,14 +38,8 @@ import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
-import org.junit.jupiter.api.BeforeEach;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
-import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
 
 public class TerminologyServiceHelpers {
 
@@ -52,15 +50,15 @@ public class TerminologyServiceHelpers {
       EQUIVALENT.toCode());
   public final static Parameters OUTCOME_SUBSUMES = new Parameters().setParameter("outcome",
       SUBSUMES.toCode());
-  public final static Parameters OUTCOME_SUBSUMEDBY = new Parameters().setParameter("outcome",
+  public final static Parameters OUTCOME_SUBSUMED_BY = new Parameters().setParameter("outcome",
       SUBSUMEDBY.toCode());
 
   public static class ValidateExpectations {
 
     @Nonnull
-    private final TerminologyService2 mockService;
+    private final TerminologyService mockService;
 
-    ValidateExpectations(@Nonnull final TerminologyService2 mockService) {
+    ValidateExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       when(mockService.validateCode(any(), any())).thenReturn(false);
@@ -69,7 +67,7 @@ public class TerminologyServiceHelpers {
     @Nonnull
     public ValidateExpectations withValueSet(@Nonnull final String valueSetUrl,
         @Nonnull final Coding... codings) {
-      for (Coding coding : codings) {
+      for (final Coding coding : codings) {
         when(mockService.validateCode(eq(valueSetUrl), codingEq(coding))).thenReturn(true);
       }
       return this;
@@ -90,9 +88,9 @@ public class TerminologyServiceHelpers {
   public static class TranslateExpectations {
 
     @Nonnull
-    private final TerminologyService2 mockService;
+    private final TerminologyService mockService;
 
-    TranslateExpectations(@Nonnull final TerminologyService2 mockService) {
+    TranslateExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       when(mockService.translate(any(), any(), anyBoolean(), isNull())).thenReturn(
@@ -143,7 +141,7 @@ public class TerminologyServiceHelpers {
   public static class SubsumesExpectations {
 
     @Nonnull
-    private final TerminologyService2 mockService;
+    private final TerminologyService mockService;
 
     private static class DefaultAnswer implements Answer<ConceptSubsumptionOutcome> {
 
@@ -160,7 +158,7 @@ public class TerminologyServiceHelpers {
       }
     }
 
-    public SubsumesExpectations(@Nonnull final TerminologyService2 mockService) {
+    public SubsumesExpectations(@Nonnull final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       doAnswer(new DefaultAnswer()).when(mockService).subsumes(any(), any());
@@ -178,11 +176,11 @@ public class TerminologyServiceHelpers {
 
   public static class LookupExpectations {
 
-    private final TerminologyService2 mockService;
     private final Map<ImmutableCoding, List<PropertyOrDesignation>> designationsOfCoding = new HashMap<>();
 
+    private final TerminologyService mockService;
 
-    public LookupExpectations(final TerminologyService2 mockService) {
+    public LookupExpectations(final TerminologyService mockService) {
       this.mockService = mockService;
       clearInvocations(mockService);
       when(mockService.lookup(any(), any())).thenReturn(Collections.emptyList());
@@ -205,7 +203,7 @@ public class TerminologyServiceHelpers {
     @SafeVarargs
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
-        @Nonnull final String propertyCode, T... values) {
+        @Nonnull final String propertyCode, final T... values) {
       when(mockService.lookup(deepEq(coding), eq(propertyCode))).thenReturn(
           Stream.of(values)
               .map(v -> Property.of(propertyCode, v))
@@ -234,25 +232,25 @@ public class TerminologyServiceHelpers {
   }
 
   @Nonnull
-  public static ValidateExpectations setupValidate(@Nonnull final TerminologyService2 mockService) {
+  public static ValidateExpectations setupValidate(@Nonnull final TerminologyService mockService) {
     return new ValidateExpectations(mockService);
   }
 
 
   @Nonnull
   public static TranslateExpectations setupTranslate(
-      @Nonnull final TerminologyService2 mockService) {
+      @Nonnull final TerminologyService mockService) {
     return new TranslateExpectations(mockService);
   }
 
 
   @Nonnull
   public static SubsumesExpectations setupSubsumes(
-      @Nonnull final TerminologyService2 mockService) {
+      @Nonnull final TerminologyService mockService) {
     return new SubsumesExpectations(mockService);
   }
 
-  public static LookupExpectations setupLookup(@Nonnull final TerminologyService2 mockService) {
+  public static LookupExpectations setupLookup(@Nonnull final TerminologyService mockService) {
     return new LookupExpectations(mockService);
   }
 

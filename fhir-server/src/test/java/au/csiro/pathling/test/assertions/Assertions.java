@@ -56,6 +56,7 @@ public abstract class Assertions {
     return new DatasetAssert(rowDataset);
   }
 
+  @SuppressWarnings("unused")
   public static void assertMatches(@Nonnull final String expectedRegex,
       @Nonnull final String actualString) {
     if (!Pattern.matches(expectedRegex, actualString)) {

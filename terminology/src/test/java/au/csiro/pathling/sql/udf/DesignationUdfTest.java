@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,21 +39,21 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   private static final String[] EMPTY = new String[0];
 
   private DesignationUdf designationUdf;
-  private TerminologyService2 terminologyService2;
+  private TerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
-    terminologyService2 = mock(TerminologyService2.class);
+    terminologyService = mock(TerminologyService.class);
     final TerminologyServiceFactory terminologyServiceFactory = mock(
         TerminologyServiceFactory.class);
-    when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService2);
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
     designationUdf = new DesignationUdf(terminologyServiceFactory);
   }
 
   @Test
   public void testReturnsNullWhenNullCoding() {
     assertNull(designationUdf.call(null, encode(CODING_D), null));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
 
@@ -62,7 +62,7 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_A), encode(INVALID_CODING_0), null));
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_B), encode(INVALID_CODING_1), "en"));
     assertArrayEquals(EMPTY, designationUdf.call(encode(CODING_C), encode(INVALID_CODING_2), "fr"));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
@@ -71,14 +71,14 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
     assertArrayEquals(EMPTY,
         designationUdf.call(encode(CODING_BB_VERSION1), encode(CODING_E), "en"));
 
-    verify(terminologyService2).lookup(deepEq(CODING_A), eq("designation"));
-    verify(terminologyService2).lookup(deepEq(CODING_BB_VERSION1), eq("designation"));
-    verifyNoMoreInteractions(terminologyService2);
+    verify(terminologyService).lookup(deepEq(CODING_A), eq("designation"));
+    verify(terminologyService).lookup(deepEq(CODING_BB_VERSION1), eq("designation"));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
   public void testReturnsCorrectDesignationsWithUseAndLanguage() {
-    setupLookup(terminologyService2)
+    setupLookup(terminologyService)
         .withDesignation(CODING_A, CODING_C, null, "A_C_??")
         .withDesignation(CODING_A, CODING_C, "en", "A_C_en")
         .withDesignation(CODING_A, CODING_D, "en", "A_D_en")
@@ -96,7 +96,7 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
 
   @Test
   public void testReturnsCorrectDesignationsWithNoUseOrNoLanguage() {
-    setupLookup(terminologyService2)
+    setupLookup(terminologyService)
         .withDesignation(CODING_AA_VERSION1, null, "en", "AA1_?_en")
         .withDesignation(CODING_AA_VERSION1, CODING_D, "en", "AA1_D_en")
         .withDesignation(CODING_AA_VERSION1, CODING_E, "en", "AA1_E_en")
@@ -115,5 +115,3 @@ public class DesignationUdfTest extends AbstractTerminologyTestBase {
   }
 
 }
-
- 

@@ -17,8 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.sql.Terminology;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.assertions.DatasetAssert;
@@ -54,13 +54,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @Tag("UnitTest")
 @SpringBootTest
-public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
+public class TerminologyUdfTest extends AbstractTerminologyTestBase {
 
   @Autowired
   private SparkSession spark;
 
   @Autowired
-  TerminologyService2 terminologyService;
+  TerminologyService terminologyService;
 
   @Autowired
   IParser jsonParser;
@@ -660,4 +660,3 @@ public class TerminologyUdsfTest extends AbstractTerminologyTestBase {
   }
 
 }
- 

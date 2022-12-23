@@ -38,7 +38,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.http.impl.client.cache.CacheConfig;
 
 /**
  * Represents configuration relating to HTTP client caching.
@@ -53,9 +52,9 @@ public class HttpClientCachingConfiguration implements Serializable {
   private static final long serialVersionUID = -3030386957343963899L;
 
   public static final boolean DEFAULT_ENABLED = true;
-  public static final int DEFAULT_MAX_CACHE_ENTRIES = 100_000;
-  public static final long DEFAULT_MAX_OBJECT_SIZE = 64_000L;
   public static final StorageType DEFAULT_STORAGE_TYPE = StorageType.MEMORY;
+  public static final int DEFAULT_MAX_ENTRIES = 50_000;
+  public static final int DEFAULT_EXPIRY = 600;
 
   /**
    * Enables client side caching of REST requests.
@@ -65,31 +64,36 @@ public class HttpClientCachingConfiguration implements Serializable {
   private boolean enabled = DEFAULT_ENABLED;
 
   /**
-   * Sets the maximum number of entries the cache will retain.
-   * <p>
-   * See also: {@link CacheConfig.Builder#setMaxCacheEntries(int)}
+   * The type of storage to use for the cache.
+   *
+   * @see StorageType
    */
-  @NotNull
-  @Min(0)
-  @Builder.Default
-  private int maxEntries = DEFAULT_MAX_CACHE_ENTRIES;
-
-  /**
-   * Sets the maximum size of a cacheable response, in bytes.
-   * <p>
-   * See also: {@link CacheConfig.Builder#setMaxObjectSize(long)}
-   */
-  @Min(0)
-  @NotNull
-  @Builder.Default
-  private long maxObjectSize = DEFAULT_MAX_OBJECT_SIZE;
-
   @NotNull
   @Builder.Default
   private StorageType storageType = DEFAULT_STORAGE_TYPE;
 
+  /**
+   * Sets the maximum number of entries that will be held in memory.
+   */
+  @NotNull
+  @Min(0)
+  @Builder.Default
+  private int maxEntries = DEFAULT_MAX_ENTRIES;
+
+  /**
+   * The path on disk to use for the cache, required when {@link StorageType#DISK} is specified.
+   */
   @Nullable
   private String storagePath;
+
+  /**
+   * The default expiry time for cache entries (in seconds), used when the server does not provide
+   * an expiry value.
+   */
+  @Min(0)
+  @NotNull
+  @Builder.Default
+  private int defaultExpiry = DEFAULT_EXPIRY;
 
   /**
    * Represents the type of storage used by the cache.

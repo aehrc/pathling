@@ -1,12 +1,5 @@
 package au.csiro.pathling.sql.udf;
 
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.AbstractTerminologyTestBase;
-import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -15,20 +8,27 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 @SuppressWarnings("ConstantConditions")
 public class SubsumesUdfTest extends AbstractTerminologyTestBase {
 
   private SubsumesUdf subsumesUdf;
-  private TerminologyService2 terminologyService2;
+  private TerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
-    terminologyService2 = mock(TerminologyService2.class);
+    terminologyService = mock(TerminologyService.class);
     final TerminologyServiceFactory terminologyServiceFactory = mock(
         TerminologyServiceFactory.class);
-    when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService2);
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
 
-    TerminologyServiceHelpers.setupSubsumes(terminologyService2)
+    TerminologyServiceHelpers.setupSubsumes(terminologyService)
         .withSubsumes(CODING_AA, CODING_AB)
         .withSubsumes(CODING_BA, CODING_BB);
     subsumesUdf = new SubsumesUdf(terminologyServiceFactory);
@@ -39,7 +39,7 @@ public class SubsumesUdfTest extends AbstractTerminologyTestBase {
     assertNull(subsumesUdf.call(null, null, null));
     assertNull(subsumesUdf.call(encode(CODING_A), null, true));
     assertNull(subsumesUdf.call(null, encode(CODING_B), false));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
@@ -47,7 +47,7 @@ public class SubsumesUdfTest extends AbstractTerminologyTestBase {
     assertFalse(subsumesUdf.call(encode(INVALID_CODING_0), encode(INVALID_CODING_1), null));
     assertFalse(subsumesUdf.call(encode(INVALID_CODING_1), encode(INVALID_CODING_2), false));
     assertFalse(subsumesUdf.call(encode(INVALID_CODING_2), encode(INVALID_CODING_0), true));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
@@ -56,7 +56,7 @@ public class SubsumesUdfTest extends AbstractTerminologyTestBase {
         encodeMany(null, INVALID_CODING_1, INVALID_CODING_2), false));
     assertFalse(subsumesUdf.call(encodeMany(null, INVALID_CODING_1, INVALID_CODING_2),
         encodeMany(null, INVALID_CODING_0), true));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
 

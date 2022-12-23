@@ -20,7 +20,7 @@ package au.csiro.pathling.terminology;
 import static au.csiro.pathling.terminology.PropertiesParametersBuilder.standardProperties;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_EQUIVALENT;
-import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMEDBY;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMED_BY;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMES;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.RESULT_FALSE;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.RESULT_TRUE;
@@ -32,21 +32,23 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhir.TerminologyClient2;
-import au.csiro.pathling.terminology.TerminologyService2.Designation;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
@@ -59,7 +61,7 @@ import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase {
+public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
   private static final String VALUE_SET_X = "uuid:valueSetX";
   private static final String VALUE_SET_Y = "uuid:valueSetY";
@@ -69,7 +71,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
 
   private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
 
-  public static final Coding USE_PREFFERED_FOR_LANG = new Coding(
+  public static final Coding USE_PREFERRED_FOR_LANG = new Coding(
       "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
       "preferredForLanguage", "Preferred For Language"
   );
@@ -79,7 +81,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
     final Parameters translateResponse = new Parameters()
         .setParameter("result", true);
 
-    for (Translation entry : entries) {
+    for (final Translation entry : entries) {
       final ParametersParameterComponent matchParameter1 = translateResponse.addParameter()
           .setName("match");
       matchParameter1.addPart().setName("equivalence")
@@ -90,35 +92,39 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
   }
 
 
-  private TerminologyClient2 terminologClient;
-  private DefaultTerminologyService2 terminologyService;
+  private TerminologyClient terminologyClient;
+  private DefaultTerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
-    terminologClient = mock(TerminologyClient2.class);
-    terminologyService = new DefaultTerminologyService2(
-        terminologClient, null);
+    terminologyClient = mock(TerminologyClient.class);
+    terminologyService = new DefaultTerminologyService(
+        terminologyClient, null);
   }
 
   @Test
   public void testValidateCodingTrue() {
-    when(terminologClient.validateCode(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        RESULT_TRUE);
+    when(terminologyClient.buildValidateCode(
         deepEq(new UriType(VALUE_SET_X)),
         deepEq(new UriType(SYSTEM_A)),
         isNull(),
         deepEq(new CodeType(CODE_A))
-    )).thenReturn(RESULT_TRUE);
+    )).thenReturn(request);
     assertTrue(terminologyService.validateCode(VALUE_SET_X, CODING_AA));
   }
 
   @Test
   public void testValidateVersionedCodingFalse() {
-    when(terminologClient.validateCode(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        RESULT_FALSE);
+    when(terminologyClient.buildValidateCode(
         deepEq(new UriType(VALUE_SET_Y)),
         deepEq(new UriType(SYSTEM_B)),
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B))
-    )).thenReturn(RESULT_FALSE);
+    )).thenReturn(request);
     assertFalse(terminologyService.validateCode(VALUE_SET_Y, CODING_BB_VERSION1));
   }
 
@@ -131,58 +137,66 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
 
   @Test
   public void testSubsumesNoVersion() {
-    when(terminologClient.subsumes(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_SUBSUMES);
+    when(terminologyClient.buildSubsumes(
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType(CODE_B)),
         deepEq(new UriType(SYSTEM_A)),
         isNull()
-    )).thenReturn(OUTCOME_SUBSUMES);
+    )).thenReturn(request);
     assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AA, CODING_AB));
   }
 
   @Test
   public void testSubsumesLeftVersion() {
-    when(terminologClient.subsumes(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_EQUIVALENT);
+    when(terminologyClient.buildSubsumes(
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType(CODE_B)),
         deepEq(new UriType(SYSTEM_A)),
         deepEq(new StringType(VERSION_1))
-    )).thenReturn(OUTCOME_EQUIVALENT);
+    )).thenReturn(request);
     assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AA_VERSION1, CODING_AB));
   }
 
   @Test
   public void testSubsumesRightVersion() {
-    when(terminologClient.subsumes(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_SUBSUMED_BY);
+    when(terminologyClient.buildSubsumes(
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType(CODE_B)),
         deepEq(new UriType(SYSTEM_A)),
         deepEq(new StringType(VERSION_2))
-    )).thenReturn(OUTCOME_SUBSUMEDBY);
+    )).thenReturn(request);
     assertEquals(SUBSUMEDBY, terminologyService.subsumes(CODING_AA, CODING_AB_VERSION2));
   }
 
   @Test
   public void testSubsumesBothVersionTheSame() {
-    when(terminologClient.subsumes(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_EQUIVALENT);
+    when(terminologyClient.buildSubsumes(
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType(CODE_B)),
         deepEq(new UriType(SYSTEM_A)),
         deepEq(new StringType(VERSION_1))
-    )).thenReturn(OUTCOME_EQUIVALENT);
+    )).thenReturn(request);
     assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AA_VERSION1, CODING_AB_VERSION1));
   }
 
   @Test
   public void testSubsumesDifferentVersions() {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA_VERSION1, CODING_AB_VERSION2));
-    verifyNoMoreInteractions(terminologClient);
+    verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
   public void testSubsumesDifferentSystems() {
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA, CODING_BB_VERSION1));
-    verifyNoMoreInteractions(terminologClient);
+    verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
@@ -199,7 +213,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, INVALID_CODING_1));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, INVALID_CODING_2));
     assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, INVALID_CODING_0));
-    verifyNoMoreInteractions(terminologClient);
+    verifyNoMoreInteractions(terminologyClient);
   }
 
 
@@ -209,21 +223,22 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
     assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AA, CODING_AA_VERSION1));
     assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AB_VERSION1, CODING_AB));
     assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AB_VERSION2, CODING_AB_VERSION2));
-    verifyNoMoreInteractions(terminologClient);
+    verifyNoMoreInteractions(terminologyClient);
   }
-  
-  
+
+
   @Test
   public void testTranslatesVersionedCodingWithDefaults() {
-
-    when(terminologClient.translate(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        RESULT_FALSE);
+    when(terminologyClient.buildTranslate(
         deepEq(new UriType(CONCEPT_MAP_0)),
         deepEq(new UriType(SYSTEM_A)),
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_A)),
         deepEq(new BooleanType(false)),
         isNull()
-    )).thenReturn(RESULT_FALSE);
+    )).thenReturn(request);
 
     assertEquals(EMPTY_TRANSLATION,
         terminologyService.translate(CODING_AA_VERSION1, CONCEPT_MAP_0, false, null));
@@ -238,15 +253,16 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         Translation.of(ConceptMapEquivalence.SUBSUMES, CODING_AA_VERSION1),
         Translation.of(ConceptMapEquivalence.NARROWER, CODING_AB_VERSION1)
     );
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(translationResponse);
 
-    when(terminologClient.translate(
+    when(terminologyClient.buildTranslate(
         deepEq(new UriType(CONCEPT_MAP_1)),
         deepEq(new UriType(SYSTEM_B)),
         isNull(),
         deepEq(new CodeType(CODE_B)),
         deepEq(new BooleanType(true)),
         deepEq(new UriType(SYSTEM_A))
-    )).thenReturn(translationResponse);
+    )).thenReturn(request);
 
     assertEquals(
         List.of(
@@ -267,7 +283,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         terminologyService.translate(INVALID_CODING_1, CONCEPT_MAP_0, true, null));
     assertEquals(EMPTY_TRANSLATION,
         terminologyService.translate(INVALID_CODING_2, CONCEPT_MAP_0, false, SYSTEM_B));
-    verifyNoMoreInteractions(terminologClient);
+    verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
@@ -278,18 +294,20 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         terminologyService.lookup(INVALID_CODING_1, "display"));
     assertEquals(Collections.emptyList(),
         terminologyService.lookup(INVALID_CODING_2, "designation"));
-    verifyNoMoreInteractions(terminologClient);
+    verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
   public void testLooksUpStandardProperty() {
 
-    when(terminologClient.lookup(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        standardProperties(CODING_A).build());
+    when(terminologyClient.buildLookup(
         deepEq(new UriType(SYSTEM_A)),
         isNull(),
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType("display"))))
-        .thenReturn(standardProperties(CODING_A).build());
+        .thenReturn(request);
 
     assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
         terminologyService.lookup(CODING_AA, "display"));
@@ -302,17 +320,18 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         .withProperty("property_A", new IntegerType(333))
         .withProperty("property_A", new CodeType("code_value_a"))
         .withProperty("property_A", new BooleanType(true))
-        // adding some unexpected elemnts to make they are excluded
+        // Adding some unexpected elements to make they are excluded.
         .withProperty("property_B", "string_value_b")
-        .withDesignation("Coding BB", USE_PREFFERED_FOR_LANG, "en")
+        .withDesignation("Coding BB", USE_PREFERRED_FOR_LANG, "en")
         .build();
 
-    when(terminologClient.lookup(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(response);
+    when(terminologyClient.buildLookup(
         deepEq(new UriType(SYSTEM_B)),
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B)),
         deepEq(new CodeType("property_A"))
-    )).thenReturn(response);
+    )).thenReturn(request);
 
     assertEquals(List.of(
             Property.of("property_A", new StringType("string_value_a")),
@@ -324,7 +343,7 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
   }
 
   @Test
-  public void testLooksUpSupProperties() {
+  public void testLookupSubProperties() {
     final Parameters response = standardProperties(CODING_C)
         .withPropertyGroup("group_C")
         .withSubProperty("property_C", new StringType("string_value_c"))
@@ -332,25 +351,27 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         .withSubProperty("property_D", new StringType("string_value_D"))
         .build();
 
-    when(terminologClient.lookup(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
         deepEq(new UriType(SYSTEM_C)),
         isNull(),
         deepEq(new CodeType(CODE_C)),
         any()
-    )).thenReturn(response);
+    )).thenReturn(request);
 
     assertEquals(List.of(
             Property.of("property_C", new StringType("string_value_c")),
             Property.of("property_C", new CodeType("code_value_c"))
         ),
         terminologyService.lookup(CODING_C, "property_C"));
-    // does not include grouping property in the results
+    // Does not include grouping property in the results.
     assertEquals(Collections.emptyList(),
         terminologyService.lookup(CODING_C, "group_C"));
   }
-  
+
   @Test
-  public void testLooksUpDesignations() {
+  public void testLookupDesignations() {
     final Parameters response = standardProperties(CODING_A)
         .withProperty("property_A", "value_A")
         .withDesignation("designation_D_X", CODING_D, "lang_X")
@@ -360,12 +381,14 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         .withDesignation("designation_?_?", Optional.empty(), Optional.empty())
         .build();
 
-    when(terminologClient.lookup(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
         deepEq(new UriType(SYSTEM_A)),
         isNull(),
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType("designation"))
-    )).thenReturn(response);
+    )).thenReturn(request);
 
     assertEquals(List.of(
             Designation.of(CODING_D, "lang_X", "designation_D_X"),
@@ -384,12 +407,14 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
         .withDesignation("designation_AB2_Z", CODING_AB_VERSION2, "lang_Z")
         .build();
 
-    when(terminologClient.lookup(
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
         deepEq(new UriType(SYSTEM_B)),
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B)),
         deepEq(new CodeType("designation"))
-    )).thenReturn(response);
+    )).thenReturn(request);
 
     assertEquals(List.of(
             Designation.of(CODING_AB_VERSION2, "lang_Z", "designation_AB2_Z")
@@ -399,10 +424,19 @@ public class DefaultTerminologyService2Test extends AbstractTerminologyTestBase 
 
   @Test
   public void testLookupHandles404Exceptions() {
-    when(terminologClient.lookup(any(), any(), any(), any()
+    when(terminologyClient.buildLookup(any(), any(), any(), any()
     )).thenThrow(BaseServerResponseException.newInstance(404, "Resource Not Found"));
 
     assertEquals(Collections.emptyList(),
         terminologyService.lookup(CODING_C, "property_A"));
+  }
+
+  @SuppressWarnings("unchecked")
+  <ResponseType> IOperationUntypedWithInput<ResponseType> mockRequest(final ResponseType response) {
+    final IOperationUntypedWithInput<ResponseType> request = (IOperationUntypedWithInput<ResponseType>) mock(
+        IOperationUntypedWithInput.class);
+    when(request.withAdditionalHeader(anyString(), anyString())).thenReturn(request);
+    when(request.execute()).thenReturn(response);
+    return request;
   }
 }

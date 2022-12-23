@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath;
 
-import org.hl7.fhir.r4.model.Coding;
 import javax.annotation.Nullable;
+import org.hl7.fhir.r4.model.Coding;
 
 /**
  * Helper functions for codings.

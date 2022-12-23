@@ -18,22 +18,18 @@
 package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import com.google.common.collect.ImmutableList;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
-import com.google.common.collect.ImmutableList;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.CodeType;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.StringType;
 
 /**
  * The {@link SqlFunctionRegistrar} for terminology UDFs.
  */
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
-  public TerminologyUdfRegistrar(@Nonnull TerminologyServiceFactory tsf) {
+  public TerminologyUdfRegistrar(@Nonnull final TerminologyServiceFactory tsf) {
     super(List.of(
             new DisplayUdf(tsf)),
         ImmutableList.<SqlFunction2<?, ?, ?>>builder()

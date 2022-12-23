@@ -15,24 +15,25 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.caching;
+package au.csiro.pathling.terminology.subsumes;
 
-import javax.annotation.Nonnull;
-import org.apache.http.impl.client.cache.CacheConfig;
-import org.apache.http.impl.client.cache.CachingHttpClientBuilder;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.TerminologyParameters;
+import lombok.Value;
 
 /**
- * A factory class for creating {@link CachingHttpClientBuilder} instance, pre-configured for with
- * some caching implementation.
+ * Represents the input parameters to the subsumes operation.
+ *
+ * @author John Grimes
+ * @see <a
+ * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
  */
-public interface CachingFactory {
+@Value
+public class SubsumesParameters implements TerminologyParameters {
 
-  /**
-   * Creates a {@link CachingHttpClientBuilder}, initialized with the provided {@link CacheConfig}.
-   *
-   * @param cacheConfig the cache config to use
-   * @return the pre-configured {@link CachingHttpClientBuilder}
-   */
-  @Nonnull
-  CachingHttpClientBuilder create(@Nonnull CacheConfig cacheConfig);
+  private static final long serialVersionUID = 4690140629959363634L;
+
+  ImmutableCoding codingA;
+  ImmutableCoding codingB;
+
 }

@@ -6,8 +6,8 @@ import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.isValidCoding;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Designation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -58,7 +58,7 @@ public class DesignationUdf implements SqlFunction,
     if (!isValidCoding(coding) || (nonNull(use) && !isValidCoding(use))) {
       return EMPTY_RESULT;
     }
-    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
+    final TerminologyService terminologyService = terminologyServiceFactory.build();
     return terminologyService.lookup(coding, DESIGNATION_PROPERTY_CODE).stream()
         .filter(Designation.class::isInstance)
         .map(Designation.class::cast)

@@ -27,7 +27,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-        f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
 )
 
 # Obtain display name for snomed codes
@@ -35,6 +35,9 @@ csv = pc.spark.read.options(header=True).csv(
 SNOMED_FULLY_SPECIFIED_NAME = Coding.of_snomed("900000000000003001")
 
 result = csv.withColumn(
-        "FULL_NAME",
-        designation(to_snomed_coding(csv.CODE), SNOMED_FULLY_SPECIFIED_NAME, "en").getItem(0))
+    "FULL_NAME",
+    designation(to_snomed_coding(csv.CODE), SNOMED_FULLY_SPECIFIED_NAME, "en").getItem(
+        0
+    ),
+)
 result.select("CODE", "DESCRIPTION", "FULL_NAME").show()

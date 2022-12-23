@@ -56,7 +56,7 @@ public final class ParametersUtils {
       final PropertyDescriptor descriptor = PropertyUtils.getPropertyDescriptor(bean,
           name);
       if (descriptor != null) {
-        Object currentValue = descriptor.getReadMethod().invoke(bean);
+        final Object currentValue = descriptor.getReadMethod().invoke(bean);
         if (currentValue == null) {
           if (List.class.isAssignableFrom(descriptor.getPropertyType())) {
             final List<Object> newList = new ArrayList<>();
@@ -91,7 +91,7 @@ public final class ParametersUtils {
   public static <T> T partsToBean(@Nonnull final ParametersParameterComponent component,
       @Nonnull final Supplier<T> supplier) {
     final T result = supplier.get();
-    for (ParametersParameterComponent p : component.getPart()) {
+    for (final ParametersParameterComponent p : component.getPart()) {
       if (p.hasValue()) {
         setProperty(result, p.getName(), p.getValue());
       } else if (p.hasPart()) {
@@ -161,6 +161,9 @@ public final class ParametersUtils {
 
   /**
    * Object representation of the 'property' part from $lookup results.
+   * <p>
+   * The fields of this class must match the names of the properties in the response to the lookup
+   * operation.
    */
   @Data
   @NoArgsConstructor
@@ -173,6 +176,7 @@ public final class ParametersUtils {
     @Nullable
     Type value;
 
+    @SuppressWarnings("SpellCheckingInspection")
     @Nullable
     List<PropertyPart> subproperty;
   }

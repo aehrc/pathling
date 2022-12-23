@@ -27,13 +27,13 @@ import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.http.client.HttpClient;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
-import org.hl7.fhir.r4.model.ConceptMap;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
@@ -44,13 +44,18 @@ import org.slf4j.LoggerFactory;
 /**
  * The client interface to FHIR terminology operations.
  */
-public interface TerminologyClient2 {
+public interface TerminologyClient {
 
-  Logger log = LoggerFactory.getLogger(TerminologyClient2.class);
+  Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
   /**
+   * @param url the URL of the value set to validate against
+   * @param system the system of the code to validate
+   * @param version the version of the code system to validate against
+   * @param code the code to validate
+   * @return a {@link Parameters} resource
    * @see <a
-   * href="https://www.hl7.org/fhir/R4/operation-codesystem-validate-code.html">CodeSystem/$validate-code</a>
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
   @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
   @Nonnull
@@ -62,6 +67,28 @@ public interface TerminologyClient2 {
   );
 
   /**
+   * Builds a validate code operation that can be customized and executed later.
+   *
+   * @param url the URL of the value set to validate against
+   * @param system the system of the code to validate
+   * @param version the version of the code system to validate against
+   * @param code the code to validate
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   */
+  IOperationUntypedWithInput<Parameters> buildValidateCode(@Nonnull UriType url,
+      @Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code);
+
+  /**
+   * @param url the URL of the concept map to use for translation
+   * @param system the system of the code to translate
+   * @param version the version of the code system to translate from
+   * @param code the code to translate
+   * @param reverse if true, the translation will be reversed
+   * @param target the URL of the value set within which the translation is sought
+   * @return a {@link Parameters} resource
    * @see <a
    * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
@@ -73,10 +100,34 @@ public interface TerminologyClient2 {
       @Nullable @OperationParam(name = "version") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code,
       @Nullable @OperationParam(name = "reverse") BooleanType reverse,
-      @Nullable @OperationParam(name = "system") UriType target
+      @Nullable @OperationParam(name = "target") UriType target
   );
 
   /**
+   * Builds a translate operation that can be customized and executed later.
+   *
+   * @param url the URL of the concept map to use for translation
+   * @param system the system of the code to translate
+   * @param version the version of the code system to translate from
+   * @param code the code to translate
+   * @param reverse if true, the translation will be reversed
+   * @param target the URL of the value set within which the translation is sought
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildTranslate(@Nonnull UriType url,
+      @Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable BooleanType reverse,
+      @Nullable UriType target);
+
+  /**
+   * @param codeA the code that will be tested to check if it subsumes codeB
+   * @param codeB the code that will be tested to check if it is subsumed by codeA
+   * @param system the system of the codes being tested
+   * @param version the version of the code system that the codes are from
+   * @return a {@link Parameters} resource
    * @see <a
    * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    */
@@ -90,7 +141,28 @@ public interface TerminologyClient2 {
   );
 
   /**
-   * See: <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * Builds a subsumes operation that can be customized and executed later.
+   *
+   * @param codeA the code that will be tested to check if it subsumes codeB
+   * @param codeB the code that will be tested to check if it is subsumed by codeA
+   * @param system the system of the codes being tested
+   * @param version the version of the code system that the codes are from
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildSubsumes(@Nonnull CodeType codeA,
+      @Nonnull CodeType codeB, @Nonnull UriType system, @Nullable StringType version);
+
+  /**
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @return a {@link Parameters} resource
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
   @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
   @Nonnull
@@ -101,6 +173,20 @@ public interface TerminologyClient2 {
       @Nullable @OperationParam(name = "property") CodeType property
   );
 
+  /**
+   * Builds a lookup operation that can be customized and executed later.
+   *
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property);
 
   /**
    * Builds a new terminology client.
@@ -111,10 +197,9 @@ public interface TerminologyClient2 {
    * responses.
    * @param authConfig the authentication to use for the server.
    * @param httpClient the {@link HttpClient} instance to use for HTTP request.
-   * @return the new instance of {@link TerminologyClient2}.
+   * @return the new instance of {@link TerminologyClient}.
    */
-
-  static TerminologyClient2 build(@Nonnull final FhirContext fhirContext,
+  static TerminologyClient build(@Nonnull final FhirContext fhirContext,
       @Nonnull final String terminologyServerUrl,
       final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
       @Nonnull final HttpClient httpClient) {
@@ -148,105 +233,7 @@ public interface TerminologyClient2 {
           authConfig.getScope(), authConfig.getTokenExpiryTolerance());
       genericClient.registerInterceptor(clientAuthInterceptor);
     }
-    return new TerminologyClient2Impl(genericClient);
-  }
-}
-
-class TerminologyClient2Impl implements TerminologyClient2 {
-
-  @Nonnull
-  final IGenericClient fhirClient;
-
-  TerminologyClient2Impl(@Nonnull final IGenericClient fhirClient) {
-    this.fhirClient = fhirClient;
-  }
-
-  @Nonnull
-  @Override
-  public Parameters validateCode(@Nonnull final UriType url, @Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("url").setValue(url);
-    params.addParameter().setName("system").setValue(system);
-    params.addParameter().setName("code").setValue(code);
-    if (version != null) {
-      params.addParameter().setName("systemVersion").setValue(version);
-    }
-
-    return fhirClient.operation()
-        .onType(ValueSet.class)
-        .named("$validate-code")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
-  }
-
-  @Nonnull
-  @Override
-  public Parameters translate(@Nonnull final UriType url, @Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final BooleanType reverse,
-      @Nullable final UriType target) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("url").setValue(url);
-    params.addParameter().setName("system").setValue(system);
-    params.addParameter().setName("code").setValue(code);
-    if (version != null) {
-      params.addParameter().setName("version").setValue(version);
-    }
-    if (reverse != null) {
-      params.addParameter().setName("reverse").setValue(reverse);
-    }
-    if (target != null) {
-      params.addParameter().setName("target").setValue(target);
-    }
-    return fhirClient.operation()
-        .onType(ConceptMap.class)
-        .named("$translate")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
-  }
-
-  @Nonnull
-  @Override
-  public Parameters subsumes(@Nonnull final CodeType codeA, @Nonnull final CodeType codeB,
-      @Nonnull final UriType system, @Nullable final StringType version) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("codeA").setValue(codeA);
-    params.addParameter().setName("codeB").setValue(codeB);
-    params.addParameter().setName("system").setValue(system);
-    if (version != null) {
-      params.addParameter().setName("version").setValue(version);
-    }
-    return fhirClient.operation()
-        .onType(CodeSystem.class)
-        .named("$subsumes")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
-  }
-
-  @Nonnull
-  @Override
-  public Parameters lookup(@Nonnull final UriType system,
-      @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final CodeType property) {
-    final Parameters params = new Parameters();
-    params.addParameter().setName("system").setValue(system);
-    params.addParameter().setName("code").setValue(code);
-    if (version != null) {
-      params.addParameter().setName("version").setValue(version);
-    }
-    if (property != null) {
-      params.addParameter().setName("property").setValue(property);
-    }
-    return fhirClient.operation()
-        .onType(CodeSystem.class)
-        .named("$lookup")
-        .withParameters(params)
-        .useHttpGet()
-        .execute();
+    return new DefaultTerminologyClient(genericClient);
   }
 
 }

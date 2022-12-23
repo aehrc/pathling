@@ -24,13 +24,12 @@ import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupLook
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import com.google.common.collect.ImmutableMap;
@@ -60,7 +59,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
   public static final int RANGE_TWO_TO = 4;
 
   @Value(staticConstructor = "of")
-  static class Values<FT extends Type, T> {
+  static class Values<T> {
 
     Type[] fhirValues;
     T[] objectValues;
@@ -90,14 +89,14 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
     }
 
     @SafeVarargs
-    public static <T, FT extends Type> Values<FT, T> ofPrimitive(
-        Function<T, FT> constructor,
+    public static <T, FT extends Type> Values<T> ofPrimitive(
+        final Function<T, FT> constructor,
         final T... values) {
       return of(Stream.of(values).map(constructor).toArray(Type[]::new), values);
     }
   }
 
-  private static final Map<Class<?>, Values<?, ?>> TEST_VALUES = ImmutableMap.of(
+  private static final Map<Class<?>, Values<?>> TEST_VALUES = ImmutableMap.of(
       // The last value is repeated for purpose for testing that
       // duplicate values are allowed in the result
       StringType.class, ofPrimitive(StringType::new,
@@ -113,74 +112,74 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
           asArray(CODING_A, CODING_BB_VERSION1, CODING_C, CODING_C))
   );
 
-  private static Stream<Values<?, ?>> allTestValues() {
+  private static Stream<Values<?>> allTestValues() {
     return TEST_VALUES.values().stream();
   }
 
   private PropertyUdf propertyUdf;
-  private TerminologyService2 terminologyService2;
+  private TerminologyService terminologyService;
   private TerminologyServiceFactory terminologyServiceFactory;
 
   @BeforeEach
   public void setUp() {
-    terminologyService2 = mock(TerminologyService2.class);
+    terminologyService = mock(TerminologyService.class);
     terminologyServiceFactory = mock(TerminologyServiceFactory.class);
-    when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService2);
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
   }
 
   public static Stream<Class<?>> inputs() {
     return TEST_VALUES.keySet().stream();
   }
 
-  private void setupUdf(Class<? extends Type> udfClass) {
+  private void setupUdf(final Class<? extends Type> udfClass) {
     propertyUdf = PropertyUdf.forClass(terminologyServiceFactory, udfClass);
   }
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsNullWhenNullCoding(Class<? extends Type> udfClass) {
+  public void testReturnsNullWhenNullCoding(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertNull(propertyUdf.call(null, "display"));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsNullWhenInvalidCodings(Class<? extends Type> udfClass) {
+  public void testReturnsNullWhenInvalidCodings(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertNull(propertyUdf.call(encode(INVALID_CODING_0), "display"));
     assertNull(propertyUdf.call(encode(INVALID_CODING_1), "name"));
     assertNull(propertyUdf.call(encode(INVALID_CODING_2), "code"));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsNullWhenNullPropertyCode(Class<? extends Type> udfClass) {
+  public void testReturnsNullWhenNullPropertyCode(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertNull(propertyUdf.call(encode(CODING_A), null));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsEmptyArrayWhenNonExisingProperty(Class<? extends Type> udfClass) {
+  public void testReturnsEmptyArrayWhenNonExisingProperty(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     assertArrayEquals(new String[RANGE_ONE_FROM],
         propertyUdf.call(encode(CODING_A), "unknownProperty_0"));
     assertArrayEquals(new String[RANGE_ONE_FROM],
         propertyUdf.call(encode(CODING_BB_VERSION1), "unknownProperty_1"));
 
-    verify(terminologyService2).lookup(deepEq(CODING_A), eq("unknownProperty_0"));
-    verify(terminologyService2).lookup(deepEq(CODING_BB_VERSION1), eq("unknownProperty_1"));
-    verifyNoMoreInteractions(terminologyService2);
+    verify(terminologyService).lookup(deepEq(CODING_A), eq("unknownProperty_0"));
+    verify(terminologyService).lookup(deepEq(CODING_BB_VERSION1), eq("unknownProperty_1"));
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @ParameterizedTest
   @MethodSource("inputs")
   public void testReturnsASingleValueForKnownProperty(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
-    setupLookup(terminologyService2)
+    setupLookup(terminologyService)
         .withProperty(CODING_A, "property_0",
             allTestValues().map(v -> v.fhirValueAt(0)).toArray(Type[]::new))
         .withProperty(CODING_BB_VERSION1, "property_1",
@@ -201,7 +200,7 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
   @MethodSource("inputs")
   public void testReturnsManyValueForKnownProperty(final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
-    setupLookup(terminologyService2)
+    setupLookup(terminologyService)
         .withProperty(CODING_AA_VERSION1, "property_a",
             allTestValues().flatMap(Values::fhirRangeOne).toArray(Type[]::new))
         .withProperty(CODING_B, "property_b",
@@ -216,5 +215,3 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
         propertyUdf.call(encode(CODING_B), "property_b"));
   }
 }
-
- 

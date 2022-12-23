@@ -1,8 +1,20 @@
 package au.csiro.pathling.sql.udf;
 
+import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.NARROWER;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
@@ -10,13 +22,6 @@ import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
-
-import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
-import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
-import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.NARROWER;
-import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
 
@@ -26,19 +31,19 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   private static final Row[] NO_TRANSLATIONS = new Row[]{};
 
   private TranslateUdf translateUdf;
-  private TerminologyService2 terminologyService2;
+  private TerminologyService terminologyService;
 
   @SafeVarargs
-  private static <T> WrappedArray<T> newWrappedArray(T... args) {
+  private static <T> WrappedArray<T> newWrappedArray(final T... args) {
     return WrappedArray.make(args);
   }
 
   @BeforeEach
   void setUp() {
-    terminologyService2 = mock(TerminologyService2.class);
+    terminologyService = mock(TerminologyService.class);
     final TerminologyServiceFactory terminologyServiceFactory = mock(
         TerminologyServiceFactory.class);
-    when(terminologyServiceFactory.buildService2()).thenReturn(terminologyService2);
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
     translateUdf = new TranslateUdf(terminologyServiceFactory);
 
   }
@@ -52,7 +57,7 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testTranslatesCodingWithDefaults() {
 
-    TerminologyServiceHelpers.setupTranslate(terminologyService2)
+    TerminologyServiceHelpers.setupTranslate(terminologyService)
         .withTranslations(CODING_AA, CONCEPT_MAP_A,
             Translation.of(EQUIVALENT, CODING_BB),
             Translation.of(RELATEDTO, CODING_AB));
@@ -64,7 +69,7 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   @Test
   void testTranslatesCodingsUniqueResults() {
 
-    TerminologyServiceHelpers.setupTranslate(terminologyService2)
+    TerminologyServiceHelpers.setupTranslate(terminologyService)
         .withTranslations(CODING_AA_VERSION1, CONCEPT_MAP_B, true, SYSTEM_B,
             Translation.of(EQUIVALENT, CODING_AA),
             Translation.of(NARROWER, CODING_BB),
@@ -85,7 +90,7 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
     assertArrayEquals(NO_TRANSLATIONS,
         translateUdf.call(encodeMany(INVALID_CODING_0, INVALID_CODING_1, INVALID_CODING_2, null),
             "uuid:url", true, null, null));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
@@ -95,13 +100,13 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
             newWrappedArray("invalid"),
             null));
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
   @Test
   void testToleratesNullAndBlankEquivalencesAndEmptyEquivalencesList() {
 
-    TerminologyServiceHelpers.setupTranslate(terminologyService2)
+    TerminologyServiceHelpers.setupTranslate(terminologyService)
         .withTranslations(CODING_AA, CONCEPT_MAP_A,
             Translation.of(EQUIVALENT, CODING_BB),
             Translation.of(RELATEDTO, CODING_AB));
@@ -113,7 +118,7 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
     assertArrayEquals(NO_TRANSLATIONS,
         translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, newWrappedArray(),
             null));
-    verifyNoMoreInteractions(terminologyService2);
+    verifyNoMoreInteractions(terminologyService);
   }
 
 }

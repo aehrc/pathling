@@ -9,9 +9,16 @@ import static java.util.function.Predicate.not;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Translation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.utilities.Strings;
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableSet;
 import java.util.Objects;
 import java.util.Set;
@@ -100,7 +107,7 @@ public class TranslateUdf implements SqlFunction,
       return Stream.empty();
     }
 
-    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
+    final TerminologyService terminologyService = terminologyServiceFactory.build();
     return validCodings(codings)
         .flatMap(coding ->
             terminologyService.translate(coding, conceptMapUri, resolvedReverse, target).stream())

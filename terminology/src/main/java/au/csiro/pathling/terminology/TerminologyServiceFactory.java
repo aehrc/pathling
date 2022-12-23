@@ -21,17 +21,21 @@ import java.io.Serializable;
 import javax.annotation.Nonnull;
 
 /**
- * Represents something that creates a {@link TerminologyService2}.
+ * Represents something that creates a {@link TerminologyService}.
  * <p>
- * Used for code that runs on Spark workers.
+ * Used for code that runs on Spark workers, providing a {@link Serializable} class that is capable
+ * of building a service that can be used on the worker.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
  */
 public interface TerminologyServiceFactory extends Serializable {
 
   /**
    * Builds a new instance.
    *
-   * @return a shiny new TerminologyService2 instance
+   * @return a shiny new TerminologyService instance
    */
   @Nonnull
-  TerminologyService2 buildService2();
+  TerminologyService build();
 }

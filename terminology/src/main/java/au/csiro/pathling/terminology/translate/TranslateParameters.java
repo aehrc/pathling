@@ -15,25 +15,27 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.caching;
+package au.csiro.pathling.terminology.translate;
 
-import org.apache.http.client.cache.HttpCacheStorage;
-import org.infinispan.configuration.cache.ConfigurationBuilder;
-import org.infinispan.manager.DefaultCacheManager;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.TerminologyParameters;
+import lombok.Value;
 
 /**
- * An abstract {@link HttpCacheStorage} implementation that uses embedded Infinispan with in-memory
- * storage.
+ * Represents the input parameters to the translate operation.
  *
  * @author John Grimes
+ * @see <a
+ * href="https://www.hl7.org/fhir/R4/codesystem-operation-translate.html">CodeSystem/$translate</a>
  */
-public class InfinispanInMemoryStorage extends InfinispanStorage {
+@Value
+public class TranslateParameters implements TerminologyParameters {
 
-  public InfinispanInMemoryStorage() {
-    super();
-    cacheManager = new DefaultCacheManager();
-    cacheManager.defineConfiguration(CACHE_NAME, new ConfigurationBuilder().build());
-    cache = cacheManager.getCache(CACHE_NAME);
-  }
+  private static final long serialVersionUID = 3514974005203890618L;
+
+  ImmutableCoding coding;
+  String conceptMapUrl;
+  boolean reverse;
+  String target;
 
 }

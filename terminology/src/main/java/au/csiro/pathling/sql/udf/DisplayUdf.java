@@ -2,11 +2,10 @@ package au.csiro.pathling.sql.udf;
 
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.decode;
 import static au.csiro.pathling.sql.udf.TerminologyUdfHelpers.isValidCoding;
-import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.PropertyOrDesignation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import java.util.List;
 import java.util.Optional;
@@ -53,7 +52,7 @@ public class DisplayUdf implements SqlFunction,
     if (coding == null || !isValidCoding(coding)) {
       return null;
     }
-    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
+    final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
         coding, DISPLAY_PROPERTY_CODE);
 

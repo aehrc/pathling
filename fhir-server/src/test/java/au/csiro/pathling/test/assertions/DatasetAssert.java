@@ -20,8 +20,6 @@ package au.csiro.pathling.test.assertions;
 import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.StorageConfiguration;
@@ -125,7 +123,7 @@ public class DatasetAssert {
     return this;
   }
 
-  @SuppressWarnings("UnusedReturnValue")
+  @SuppressWarnings({"UnusedReturnValue", "unused"})
   @Nonnull
   public DatasetAssert rowsAreAllNotEqual(@Nonnull final Dataset<Row> expected) {
     return rowsAreAllNotEqual(expected.collectAsList());

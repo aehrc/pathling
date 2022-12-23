@@ -15,9 +15,9 @@ import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.STRING;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.terminology.TerminologyService2;
-import au.csiro.pathling.terminology.TerminologyService2.Property;
-import au.csiro.pathling.terminology.TerminologyService2.PropertyOrDesignation;
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.PropertyOrDesignation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.model.api.annotation.DatatypeDef;
 import com.google.common.collect.ImmutableSet;
@@ -124,7 +124,7 @@ public class PropertyUdf implements SqlFunction,
     if (propertyCode == null || !isValidCoding(coding)) {
       return null;
     }
-    final TerminologyService2 terminologyService = terminologyServiceFactory.buildService2();
+    final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
         requireNonNull(coding), propertyCode);
 
@@ -139,7 +139,7 @@ public class PropertyUdf implements SqlFunction,
   }
 
   @Nullable
-  private Object[] encodeArray(@Nullable Object[] objectRows) {
+  private Object[] encodeArray(@Nullable final Object[] objectRows) {
     if (nonNull(objectRows) && CODING.equals(propertyType)) {
       return Stream.of(objectRows)
           .map(Coding.class::cast)
@@ -195,7 +195,7 @@ public class PropertyUdf implements SqlFunction,
    * @return the name of the UDF.
    */
   @Nonnull
-  public static String getNameForType(FHIRDefinedType propertyType) {
+  public static String getNameForType(final FHIRDefinedType propertyType) {
     if (!ALLOWED_FHIR_TYPES.contains(propertyType)) {
       throw new InvalidUserInputError(
           String.format("Type: '%s' is not supported for 'property' udf", propertyType.toCode()));

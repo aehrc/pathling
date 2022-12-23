@@ -18,54 +18,78 @@
 package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import java.io.Serializable;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-
-import static java.util.Objects.nonNull;
 
 /**
  * Abstraction layer for the terminology related operations.
  *
  * @author Piotr Szul
  */
-public interface TerminologyService2 {
+public interface TerminologyService {
 
   /**
    * Represent a single translation of a code.
    */
   @Value(staticConstructor = "of")
-  class Translation {
+  class Translation implements Serializable {
+
+    private static final long serialVersionUID = -7551505530196865478L;
 
     @Nonnull
     ConceptMapEquivalence equivalence;
 
     @Nonnull
     Coding concept;
+
+    @Override
+    public boolean equals(final Object o) {
+      // We override this method because Coding does not have a sane equals method.
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final Translation that = (Translation) o;
+      return equivalence == that.equivalence && ImmutableCoding.of(concept)
+          .equals(ImmutableCoding.of(that.concept));
+    }
+
+    @Override
+    public int hashCode() {
+      // We override this method because Coding does not have a sane hashCode method.
+      return Objects.hash(equivalence, ImmutableCoding.of(concept));
+    }
+
   }
 
   /**
-   * Validates that a coded value is in the code system. Abstracts the FHIR <a
-   * href="https://www.hl7.org/fhir/R4/operation-codesystem-validate-code.html">CodeSystem/$validate-code</a>
+   * Validates that a coded value is in a value set. Abstracts the FHIR <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    * operation.
    *
-   * @param codeSystemUrl the URL of the code system.
-   * @param coding the coding to test.
-   * @return true if the coding is valid.
+   * @param valueSetUrl the URL of the value set to validate against
+   * @param coding the coding to test
+   * @return true if the coding is a valid member of the value set
    */
-  boolean validateCode(@Nonnull String codeSystemUrl, @Nonnull Coding coding);
+  boolean validateCode(@Nonnull String valueSetUrl, @Nonnull Coding coding);
 
   /**
    * Translates a code from one value set to another, based on the existing concept map. Abstracts
-   * the FHIR <a href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   * the FHIR <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    * operation.
    *
    * @param coding the code to translate.
@@ -84,7 +108,8 @@ public interface TerminologyService2 {
 
   /**
    * Tests the subsumption relationship between two codings given the semantics of subsumption in
-   * the underlying code system. Abstracts the <a href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   * the underlying code system. Abstracts the <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    * operation.
    *
    * @param codingA the left code to be tested.
@@ -95,20 +120,34 @@ public interface TerminologyService2 {
   @Nonnull
   ConceptSubsumptionOutcome subsumes(@Nonnull Coding codingA, @Nonnull Coding codingB);
 
+  /**
+   * Gets additional details about the concept, including designations and properties. Abstracts
+   * the
+   * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * operation.
+   *
+   * @param coding the coding to lookup.
+   * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
+   * with matching codes are returned.
+   * @return the list of properties and/or designations.
+   */
+  @Nonnull
+  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode);
 
   /**
    * Common interface for properties and designations
    */
-  interface PropertyOrDesignation {
+  interface PropertyOrDesignation extends Serializable {
     // marker interface
   }
-
 
   /**
    * The representation of the property of a concept.
    */
   @Value(staticConstructor = "of")
   class Property implements PropertyOrDesignation {
+
+    private static final long serialVersionUID = 8827691056493768863L;
 
     @Nonnull
     String code;
@@ -141,7 +180,7 @@ public interface TerminologyService2 {
         return false;
       }
 
-      Property property = (Property) o;
+      final Property property = (Property) o;
 
       if (!code.equals(property.code)) {
         return false;
@@ -156,6 +195,8 @@ public interface TerminologyService2 {
    */
   @Value(staticConstructor = "of")
   class Designation implements PropertyOrDesignation {
+
+    private static final long serialVersionUID = -809107979219801186L;
 
     /**
      * The code of the designation properties
@@ -187,7 +228,7 @@ public interface TerminologyService2 {
         return false;
       }
 
-      Designation that = (Designation) o;
+      final Designation that = (Designation) o;
 
       if (use != null
           ? !use.equalsDeep(that.use)
@@ -207,19 +248,5 @@ public interface TerminologyService2 {
           part.getValue().getValue());
     }
   }
-
-  /**
-   * Gets additional details about the concept, including designations and properties. Abstracts
-   * the
-   * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
-   * operation.
-   *
-   * @param coding the coding to lookup.
-   * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
-   * with matching codes are returned.
-   * @return the list of properties and/or designations.
-   */
-  @Nonnull
-  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode);
 
 }

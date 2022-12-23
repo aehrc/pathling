@@ -37,7 +37,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyService2;
+import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -85,7 +85,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  TerminologyService2 terminologyService;
+  TerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
@@ -145,7 +145,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
     // Invoke the function.
     final FhirPath result = NamedFunction.getInstance("property").invoke(propertyInput);
-    
+
     // Check the result.
     assertThat(result)
         .hasExpression(
@@ -170,6 +170,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     }
   }
 
+  @SuppressWarnings("unused")
   @ParameterizedTest
   @MethodSource("propertyParameters")
   public void propertyAOfCoding(final String propertyType, final DataType resultDataType,
@@ -191,6 +192,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
         expectedResult);
   }
 
+  @SuppressWarnings("unused")
   @ParameterizedTest
   @MethodSource("propertyParameters")
   public void propertyBOfCoding(final String propertyType, final DataType resultDataType,
