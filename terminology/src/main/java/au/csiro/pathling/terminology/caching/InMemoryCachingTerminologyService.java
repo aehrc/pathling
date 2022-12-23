@@ -23,6 +23,7 @@ import java.io.Closeable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.infinispan.Cache;
+import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
@@ -48,7 +49,13 @@ public class InMemoryCachingTerminologyService extends CachingTerminologyService
   @Override
   protected Cache<Integer, ?> buildCache(@Nonnull final EmbeddedCacheManager cacheManager,
       @Nonnull final String cacheName) {
-    cacheManager.defineConfiguration(cacheName, new ConfigurationBuilder().build());
+    final Configuration cacheConfig = new ConfigurationBuilder()
+        .memory()
+        .maxCount(configuration.getMaxEntries())
+        .maxSize(configuration.getMaxObjectSize() + "B")
+        .build();
+   
+    cacheManager.defineConfiguration(cacheName, cacheConfig);
     return cacheManager.getCache(cacheName);
   }
 

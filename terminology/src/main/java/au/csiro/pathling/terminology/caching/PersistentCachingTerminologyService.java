@@ -27,6 +27,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.infinispan.Cache;
 import org.infinispan.commons.marshall.JavaSerializationMarshaller;
+import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
 import org.infinispan.configuration.global.GlobalConfiguration;
 import org.infinispan.configuration.global.GlobalConfigurationBuilder;
@@ -68,13 +69,18 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
     final String storagePath = configuration.getStoragePath();
     final String dataLocation = Path.of(requireNonNull(storagePath), DATA_DIRECTORY).toString();
     final String indexLocation = Path.of(storagePath, INDEX_DIRECTORY).toString();
-    cacheManager.defineConfiguration(cacheName,
-        new ConfigurationBuilder()
-            .persistence()
-            .addSoftIndexFileStore()
-            .dataLocation(dataLocation)
-            .indexLocation(indexLocation)
-            .build());
+
+    final Configuration cacheConfig = new ConfigurationBuilder()
+        .memory()
+        .maxCount(configuration.getMaxEntries())
+        .maxSize(configuration.getMaxObjectSize() + "B")
+        .persistence()
+        .addSoftIndexFileStore()
+        .dataLocation(dataLocation)
+        .indexLocation(indexLocation)
+        .build();
+
+    cacheManager.defineConfiguration(cacheName, cacheConfig);
     return cacheManager.getCache(cacheName);
   }
 
