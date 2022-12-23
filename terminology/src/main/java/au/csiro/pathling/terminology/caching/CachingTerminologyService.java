@@ -277,7 +277,6 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   @Nonnull
   private static Optional<Long> getExpires(@Nullable final Map<String, List<String>> headers) {
     final Optional<Integer> maxAge = getSingularHeader(headers, CACHE_CONTROL_HEADER_NAME)
-        .stream().findFirst()
         .map(CacheControl::valueOf)
         .map(CacheControl::getMaxAge);
     return maxAge.map(CachingTerminologyService::secondsFromNow);
