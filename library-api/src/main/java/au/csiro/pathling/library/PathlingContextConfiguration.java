@@ -52,9 +52,9 @@ public class PathlingContextConfiguration {
   public static final Default<StorageType> DEFAULT_CACHE_STORAGE_TYPE = Default.of(
       HttpClientCachingConfiguration.DEFAULT_STORAGE_TYPE);
   public static final Default<Integer> DEFAULT_CACHE_MAX_ENTRIES = Default.of(
-      HttpClientCachingConfiguration.DEFAULT_MAX_CACHE_ENTRIES);
-  public static final Default<Long> DEFAULT_CACHE_MAX_OBJECT_SIZE = Default.of(
-      HttpClientCachingConfiguration.DEFAULT_MAX_OBJECT_SIZE);
+      HttpClientCachingConfiguration.DEFAULT_MAX_ENTRIES);
+  public static final Default<String> DEFAULT_CACHE_MAX_SIZE = Default.of(
+      HttpClientCachingConfiguration.DEFAULT_MAX_SIZE);
 
   @Nullable
   String fhirVersion;
@@ -84,14 +84,14 @@ public class PathlingContextConfiguration {
   Integer maxConnectionsPerRoute;
 
   @Nullable
+  @Builder.Default
+  String cacheStorageType = HttpClientCachingConfiguration.DEFAULT_STORAGE_TYPE.toString();
+
+  @Nullable
   Integer cacheMaxEntries;
 
   @Nullable
-  Long cacheMaxObjectSize;
-
-  @Nullable
-  @Builder.Default
-  String cacheStorageType = HttpClientCachingConfiguration.DEFAULT_STORAGE_TYPE.toString();
+  String cacheMaxSize;
 
   @Nullable
   String cacheStoragePath;
@@ -147,7 +147,7 @@ public class PathlingContextConfiguration {
     config.setEnabled(enabled);
     if (enabled) {
       config.setMaxEntries(DEFAULT_CACHE_MAX_ENTRIES.resolve(getCacheMaxEntries()));
-      config.setMaxObjectSize(DEFAULT_CACHE_MAX_OBJECT_SIZE.resolve(getCacheMaxObjectSize()));
+      config.setMaxSize(DEFAULT_CACHE_MAX_SIZE.resolve(getCacheMaxSize()));
       final StorageType storageType = StorageType.fromCode(getCacheStorageType());
       config.setStorageType(DEFAULT_CACHE_STORAGE_TYPE.resolve(storageType));
       if (config.getStorageType().equals(StorageType.DISK)) {

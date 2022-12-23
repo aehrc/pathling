@@ -159,15 +159,17 @@ spark:
 - `pathling.terminology.client.socketTimeout` - (default: `60000`) The maximum
   period (in milliseconds) that the server should wait for incoming data from
   the terminology service.
-- `pathling.terminology.cache.enabled` - (default: `true`) Enables client-side 
-  caching of terminology responses.
-- `pathling.terminology.cache.maxEntries` - (default: `100000`) The maximum
-  number of responses that will be retained within the terminology cache.
-- `pathling.terminology.cache.maxObjectSize` - (default: `64000`) The maximum
-  size of a response that will be cached, in bytes.
-- `pathling.terminology.cache.storageType` - (default: `memory`) The type of 
-  storage to be used by the terminology cache. Valid values are `memory` and 
+- `pathling.terminology.cache.enabled` - (default: `true`) Set this to false to
+  disable caching of terminology requests (not recommended).
+- `pathling.terminology.cache.storageType` - (default: `memory`) The type of
+  storage to be used by the terminology cache. Valid values are `memory` and
   `disk`.
+- `pathling.terminology.cache.maxEntries` - (default: `50000`) Sets the maximum
+  number of entries that will be held in memory. Only applicable when using
+  the `memory` storage type.
+- `pathling.terminology.cache.maxSize` - (default: `100MB`) Sets the maximum 
+  amount of memory that the cache will occupy. Only applicable when using
+  the `disk` storage type.
 - `pathling.terminology.cache.storagePath` - The path at which to store cache
   data. Required if `pathling.terminology.cache.storageType` is set to `disk`.
 - `pathling.terminology.cache.defaultExpiry` - (default: `600`) The amount

@@ -175,8 +175,7 @@ class CachingTerminologyServiceTest {
         .build();
     final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
         .enabled(true)
-        .maxEntries(1_000)
-        .maxObjectSize(64_000)
+        .maxSize("10MB")
         .storageType(StorageType.MEMORY)
         .build();
     final TerminologyAuthConfiguration authConfig = TerminologyAuthConfiguration.builder()

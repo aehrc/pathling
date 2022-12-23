@@ -389,7 +389,7 @@ public class PathlingContextTest {
     final int socketTimeout = 123;
 
     final int cacheMaxEntries = 1233;
-    final long cacheMaxObjectSize = 4453L;
+    final String cacheMaxSize = "10MB";
     final StorageType cacheStorageType = StorageType.DISK;
     final File tempDirectory = Files.createTempDirectory("pathling-cache").toFile();
     tempDirectory.deleteOnExit();
@@ -402,7 +402,7 @@ public class PathlingContextTest {
         .maxConnectionsTotal(maxConnectionsTotal)
         .maxConnectionsPerRoute(maxConnectionsPerRoute)
         .cacheMaxEntries(cacheMaxEntries)
-        .cacheMaxObjectSize(cacheMaxObjectSize)
+        .cacheMaxSize(cacheMaxSize)
         .cacheStorageType(cacheStorageType.toString())
         .cacheStoragePath(cacheStoragePath)
         .tokenEndpoint(tokenEndpoint)
@@ -423,7 +423,7 @@ public class PathlingContextTest {
             .build(),
         HttpClientCachingConfiguration.builder()
             .maxEntries(cacheMaxEntries)
-            .maxObjectSize(cacheMaxObjectSize)
+            .maxSize(cacheMaxSize)
             .storageType(cacheStorageType)
             .storagePath(cacheStoragePath)
             .build(),

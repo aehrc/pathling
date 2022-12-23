@@ -38,7 +38,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.apache.http.impl.client.cache.CacheConfig;
 
 /**
  * Represents configuration relating to HTTP client caching.
@@ -53,9 +52,9 @@ public class HttpClientCachingConfiguration implements Serializable {
   private static final long serialVersionUID = -3030386957343963899L;
 
   public static final boolean DEFAULT_ENABLED = true;
-  public static final int DEFAULT_MAX_CACHE_ENTRIES = 100_000;
-  public static final long DEFAULT_MAX_OBJECT_SIZE = 64_000L;
   public static final StorageType DEFAULT_STORAGE_TYPE = StorageType.MEMORY;
+  public static final int DEFAULT_MAX_ENTRIES = 50_000;
+  public static final String DEFAULT_MAX_SIZE = "100MB";
   public static final int DEFAULT_EXPIRY = 600;
 
   /**
@@ -66,26 +65,6 @@ public class HttpClientCachingConfiguration implements Serializable {
   private boolean enabled = DEFAULT_ENABLED;
 
   /**
-   * Sets the maximum number of entries the cache will retain.
-   * <p>
-   * See also: {@link CacheConfig.Builder#setMaxCacheEntries(int)}
-   */
-  @NotNull
-  @Min(0)
-  @Builder.Default
-  private int maxEntries = DEFAULT_MAX_CACHE_ENTRIES;
-
-  /**
-   * Sets the maximum size of a cacheable response, in bytes.
-   *
-   * @see CacheConfig.Builder#setMaxObjectSize(long)
-   */
-  @Min(0)
-  @NotNull
-  @Builder.Default
-  private long maxObjectSize = DEFAULT_MAX_OBJECT_SIZE;
-
-  /**
    * The type of storage to use for the cache.
    *
    * @see StorageType
@@ -93,6 +72,23 @@ public class HttpClientCachingConfiguration implements Serializable {
   @NotNull
   @Builder.Default
   private StorageType storageType = DEFAULT_STORAGE_TYPE;
+
+  /**
+   * Sets the maximum number of entries that will be held in memory. Only applicable when using
+   * {@link StorageType#MEMORY}.
+   */
+  @NotNull
+  @Min(0)
+  @Builder.Default
+  private int maxEntries = DEFAULT_MAX_ENTRIES;
+
+  /**
+   * Sets the maximum amount of memory that the cache will occupy. Only applicable when using
+   * {@link StorageType#DISK}.
+   */
+  @NotNull
+  @Builder.Default
+  private String maxSize = DEFAULT_MAX_SIZE;
 
   /**
    * The path on disk to use for the cache, required when {@link StorageType#DISK} is specified.
