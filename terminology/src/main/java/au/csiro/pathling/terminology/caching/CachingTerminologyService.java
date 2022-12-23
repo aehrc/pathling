@@ -168,14 +168,15 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       final TerminologyResult<ResultType> result = fetch(operation, Optional.empty());
       cache.put(key, result);
       return result.getData();
-    } else if (cached.getExpires() != null && System.currentTimeMillis() > cached.getExpires()) {
-      // Cache hit, but the entry is expired and needs to be revalidated.
-      final TerminologyResult<ResultType> result = cache.compute(key,
-          (k, v) -> fetch(operation, Optional.of(cached)));
-      return result.getData();
     } else {
-      // Cache hit, and the entry is still valid.
-      return cached.getData();
+      final boolean expired =
+          cached.getExpires() != null && System.currentTimeMillis() > cached.getExpires();
+      return cache.compute(key,
+          (k, v) -> expired
+                    // Cache hit, but the entry is expired and needs to be revalidated.
+                    ? fetch(operation, Optional.ofNullable(v))
+                    // Cache hit, and the entry is still valid.
+                    : v).getData();
     }
   }
 
