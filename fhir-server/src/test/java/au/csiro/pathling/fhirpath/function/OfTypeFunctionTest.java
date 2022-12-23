@@ -23,6 +23,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -78,28 +79,20 @@ class OfTypeFunctionTest {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
-        .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("encounter-1", makeEid(1), "Patient",
-            RowFactory.create(null, "Patient/patient-1", null))
-        .withRow("encounter-1", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/patient-2", null))
-        .withRow("encounter-2", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/patient-3", null))
-        .withRow("encounter-2", makeEid(1), "Group",
-            RowFactory.create(null, "Group/group-1", null))
-        .withRow("encounter-3", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/patient-2", null))
-        .withRow("encounter-4", makeEid(0), "Patient",
-            RowFactory.create(null, "Patient/patient-2", null))
-        .withRow("encounter-5", makeEid(0), "Group",
-            RowFactory.create(null, "Group/group-1", null))
-        .withRow("encounter-6", null, null, null)
+        .withRow("encounter-1", makeEid(1), RowFactory.create(null, "Patient/patient-1", null))
+        .withRow("encounter-1", makeEid(0), RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-2", makeEid(0), RowFactory.create(null, "Patient/patient-3", null))
+        .withRow("encounter-2", makeEid(1), RowFactory.create(null, "Group/group-1", null))
+        .withRow("encounter-3", makeEid(0), RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-4", makeEid(0), RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-5", makeEid(0), RowFactory.create(null, "Group/group-1", null))
+        .withRow("encounter-6", null, null)
         .buildWithStructValue();
     final UntypedResourcePath inputPath = new UntypedResourcePathBuilder(spark)
         .expression("subject.resolve()")
         .dataset(inputDataset)
-        .idEidTypeAndValueColumns()
+        .idEidAndValueColumns()
         .singular(false)
         .build();
 
@@ -111,7 +104,7 @@ class OfTypeFunctionTest {
         .withRow("patient-2", "female", false)
         .withRow("patient-3", "male", true)
         .build();
-    when(database.read(ResourceType.PATIENT))
+    when(database.read(eq(ResourceType.PATIENT)))
         .thenReturn(argumentDataset);
     final ResourcePath argumentPath = new ResourcePathBuilder(spark)
         .database(database)
@@ -121,6 +114,7 @@ class OfTypeFunctionTest {
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
+        .database(database)
         .build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));

@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.element;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import ca.uhn.fhir.context.RuntimeChildAny;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import com.google.common.collect.ImmutableMap;
 import java.util.Collections;
@@ -91,7 +92,9 @@ public class ElementDefinition {
   @Nonnull
   public static ElementDefinition build(@Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
-    if (childDefinition instanceof RuntimeChildResourceDefinition) {
+    if (elementName.equals("valueReference") && childDefinition instanceof RuntimeChildAny) {
+      return new ReferenceExtensionDefinition(childDefinition, elementName);
+    } else if (childDefinition instanceof RuntimeChildResourceDefinition) {
       return new ReferenceDefinition((RuntimeChildResourceDefinition) childDefinition, elementName);
     } else {
       return new ElementDefinition(childDefinition, elementName);

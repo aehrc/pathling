@@ -37,7 +37,6 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
-import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService2;
@@ -63,7 +62,6 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -220,7 +218,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
     checkDesignationsOfCoding(Optional.of(CODING_D), Optional.empty(),
         expectedResult);
   }
-  
+
   @Test
   public void designationWithDefaultLanguageAndUse() {
 
@@ -240,7 +238,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
     checkDesignationsOfCoding(Optional.empty(), Optional.empty(),
         expectedResult);
   }
-  
+
   @Test
   void throwsErrorIfInputTypeIsUnsupported() {
     final FhirPath mockContext = new ElementPathBuilder(spark).build();

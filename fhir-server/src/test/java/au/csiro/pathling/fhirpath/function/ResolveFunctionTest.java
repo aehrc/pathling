@@ -189,22 +189,21 @@ class ResolveFunctionTest {
     final FhirPath result = invokeResolve(resolveInput);
 
     assertTrue(result instanceof UntypedResourcePath);
-    assertThat((UntypedResourcePath) result)
+    assertThat(result)
         .hasExpression("Encounter.subject.resolve()")
         .isSingular();
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
-        .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("encounter-1", "Patient", RowFactory.create(null, "Patient/patient-1", null))
-        .withRow("encounter-2", "Patient", RowFactory.create(null, "Patient/patient-3", null))
-        .withRow("encounter-3", "Patient", RowFactory.create(null, "Patient/patient-2", null))
-        .withRow("encounter-4", "Patient", RowFactory.create(null, "Patient/patient-2", null))
-        .withRow("encounter-5", "Group", RowFactory.create(null, "Group/group-1", null))
+        .withRow("encounter-1", RowFactory.create(null, "Patient/patient-1", null))
+        .withRow("encounter-2", RowFactory.create(null, "Patient/patient-3", null))
+        .withRow("encounter-3", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-4", RowFactory.create(null, "Patient/patient-2", null))
+        .withRow("encounter-5", RowFactory.create(null, "Group/group-1", null))
         .buildWithStructValue();
-    assertThat((UntypedResourcePath) result)
-        .selectUntypedResourceResult()
+    assertThat(result)
+        .selectResult()
         .hasRows(expectedDataset);
   }
 
@@ -254,21 +253,19 @@ class ResolveFunctionTest {
     final FhirPath result = invokeResolve(resolveInput);
 
     assertTrue(result instanceof UntypedResourcePath);
-    assertThat((UntypedResourcePath) result)
+    assertThat(result)
         .hasExpression("Condition.evidence.detail.resolve()")
         .isNotSingular();
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
-        .withTypeColumn()
         .withStructTypeColumns(referenceStructType())
-        .withRow("condition-1", "Observation",
-            RowFactory.create(null, "Observation/observation-1", null))
-        .withRow("condition-2", "ClinicalImpression",
+        .withRow("condition-1", RowFactory.create(null, "Observation/observation-1", null))
+        .withRow("condition-2",
             RowFactory.create(null, "ClinicalImpression/clinicalimpression-1", null))
         .buildWithStructValue();
-    assertThat((UntypedResourcePath) result)
-        .selectUntypedResourceResult()
+    assertThat(result)
+        .selectResult()
         .hasRows(expectedDataset);
   }
 

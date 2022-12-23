@@ -18,11 +18,9 @@
 package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -51,12 +49,6 @@ public abstract class Assertions {
   @Nonnull
   public static ElementPathAssertion assertThat(@Nonnull final ElementPath fhirPath) {
     return new ElementPathAssertion(fhirPath);
-  }
-
-  @Nonnull
-  public static UntypedResourcePathAssertion assertThat(
-      @Nonnull final UntypedResourcePath fhirPath) {
-    return new UntypedResourcePathAssertion(fhirPath);
   }
 
   @Nonnull

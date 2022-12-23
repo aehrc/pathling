@@ -107,11 +107,6 @@ public class DatasetBuilder {
   }
 
   @Nonnull
-  public DatasetBuilder withTypeColumn() {
-    return withColumn(DataTypes.StringType);
-  }
-
-  @Nonnull
   public DatasetBuilder withFidColumn() {
     return withColumn("_fid", DataTypes.IntegerType);
   }
@@ -260,9 +255,9 @@ public class DatasetBuilder {
     return Arrays.asList(levels);
   }
 
-  @Nonnull 
-  public static  DatasetBuilder of(@Nonnull final SparkSession spark) {
+  @Nonnull
+  public static DatasetBuilder of(@Nonnull final SparkSession spark) {
     return new DatasetBuilder(spark);
   }
-  
+
 }

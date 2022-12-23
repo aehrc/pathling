@@ -34,7 +34,6 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.HL7_USE_DISPLAY;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.mockCoding;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
-import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -459,7 +458,6 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testIfFunctionWithUntypedResourceResult() {
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.RELATEDPERSON);
     assertThatResultOf(
         "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
@@ -518,7 +516,7 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testDesignationFunctionWithLanguage() {
-    
+
     setupMockPropertiesFor_195662009_444814009();
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.designation(http://snomed.info/sct|900000000000003001, 'en')")
@@ -614,8 +612,6 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testCombineOperatorWithTwoUntypedResourcePaths() {
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP,
-        ResourceType.DEVICE, ResourceType.LOCATION);
     assertThatResultOf(
         "(reverseResolve(Condition.subject).subject.resolve() combine "
             + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient)")
@@ -692,7 +688,6 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testExtensionsCurrentResource() {
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
     assertThatResultOf(ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).extension.url")
         .isElementPath(StringPath.class)
@@ -756,9 +751,6 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testReverseResolveFollowingPolymorphicResolve() {
     setSubjectResource(ResourceType.ENCOUNTER);
-
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
-
     assertThatResultOf(
         "subject.resolve().ofType(Patient).reverseResolve(Encounter.subject).id "
             + "contains '2aff9edd-def2-487a-b435-a162e11a303c'")
@@ -787,7 +779,6 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testUntilFunction() {
     setSubjectResource(ResourceType.ENCOUNTER);
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
     assertThatResultOf(
         "subject.resolve().ofType(Patient).birthDate.until(%resource.period.start, 'years')")
         .isElementPath(IntegerPath.class)
@@ -852,6 +843,28 @@ public class ParserTest extends AbstractParserTest {
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         expression);
     assertEquals("No such child: " + expression, error.getMessage());
+  }
+
+  @Test
+  void testResolutionOfExtensionReference() {
+    mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
+            + ".valueReference.resolve().ofType(Goal).description.text")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.csv");
+  }
+
+  @Test
+  void testResolutionOfExtensionReferenceWithWrongType() {
+    mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
+            + ".valueReference.resolve().ofType(Condition).id")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReferenceWithWrongType.csv");
   }
 
 }
