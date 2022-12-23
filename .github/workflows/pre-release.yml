@@ -39,7 +39,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Run the deploy goal with Maven
         run: |
-          TAG=$(echo '${{ github.head_ref }}' | sed 's/refs\/heads\/release\///')
+          TAG=$(echo '${{ github.base_ref }}' | sed 's/refs\/heads\/release\///')
           mvn --batch-mode deploy \
           -pl fhir-server -am \
           -PdockerPreRelease \
