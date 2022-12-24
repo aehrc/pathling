@@ -79,6 +79,7 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
         .addSoftIndexFileStore()
         .dataLocation(dataLocation)
         .indexLocation(indexLocation)
+        .async()
         .build();
 
     cacheManager.defineConfiguration(cacheName, cacheConfig);
