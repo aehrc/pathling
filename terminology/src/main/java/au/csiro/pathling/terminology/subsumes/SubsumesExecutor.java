@@ -81,7 +81,7 @@ public class SubsumesExecutor implements
 
     // If both codings are obviously equal, we don't need to consult the terminology server.
     if (codingEquals(codingA.toCoding(), codingB.toCoding())) {
-      return Optional.of(ConceptSubsumptionOutcome.SUBSUMES);
+      return Optional.of(ConceptSubsumptionOutcome.EQUIVALENT);
     }
 
     return Optional.empty();
