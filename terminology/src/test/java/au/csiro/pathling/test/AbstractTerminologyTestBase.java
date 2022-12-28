@@ -52,6 +52,9 @@ public abstract class AbstractTerminologyTestBase {
   public static final Coding CODING_AB_VERSION2 = new Coding(SYSTEM_A, CODE_B,
       "displayAB").setVersion(
       VERSION_2);
+  
+  public static final Coding CODING_AA_DISPLAY1 = new Coding(SYSTEM_A, CODE_A,
+      "displayAA1");
 
   public static final Coding CODING_BA = new Coding(SYSTEM_B, CODE_A, "displayBA");
   public static final Coding CODING_BB = new Coding(SYSTEM_B, CODE_B, "displayBB");
