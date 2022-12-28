@@ -73,7 +73,7 @@ pathling:
 
       # Sets the maximum number of entries that will be held in memory. Only applicable when using
       # the "memory" storage type.
-      maxEntries: 50_000
+      maxEntries: 200_000
 
       # The path on disk to use for the cache, required when a storage type of "disk" is specified.
       # storagePath: /usr/share/cache
