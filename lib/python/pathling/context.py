@@ -71,6 +71,8 @@ class PathlingContext:
         cache_max_entries: Optional[int] = None,
         cache_storage_type: Optional[str] = StorageType.MEMORY,
         cache_storage_path: Optional[str] = None,
+        cache_default_expiry: Optional[int] = None,
+        cache_override_expiry: Optional[int] = None,
         token_endpoint: Optional[str] = None,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
@@ -116,6 +118,10 @@ class PathlingContext:
         uses transient in-memory cache. 'None' disables caching all together.
         :param cache_storage_path: the path on disk where the cache is stored when the storage
         type is 'disk'.
+        :param cache_default_expiry: the amount of time (in seconds) that a response from the
+        terminology server should be cached if the server does not specify an expiry.
+        :param cache_override_expiry: if provided, this value overrides the expiry time provided
+        by the terminology server.
         :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
         :param client_id: a client ID for use with the client credentials grant
         :param client_secret: a client secret for use with the client credentials grant
@@ -146,6 +152,8 @@ class PathlingContext:
             .cacheMaxEntries(cache_max_entries)
             .cacheStorageType(cache_storage_type)
             .cacheStoragePath(cache_storage_path)
+            .cacheDefaultExpiry(cache_default_expiry)
+            .cacheOverrideExpiry(cache_override_expiry)
             .tokenEndpoint(token_endpoint)
             .clientId(client_id)
             .clientSecret(client_secret)

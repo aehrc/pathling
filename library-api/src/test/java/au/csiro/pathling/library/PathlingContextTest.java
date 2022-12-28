@@ -389,7 +389,6 @@ public class PathlingContextTest {
     final int socketTimeout = 123;
 
     final int cacheMaxEntries = 1233;
-    final String cacheMaxSize = "10MB";
     final StorageType cacheStorageType = StorageType.DISK;
     final File tempDirectory = Files.createTempDirectory("pathling-cache").toFile();
     tempDirectory.deleteOnExit();

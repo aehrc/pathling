@@ -78,6 +78,13 @@ pathling:
       # The path on disk to use for the cache, required when a storage type of "disk" is specified.
       # storagePath: /usr/share/cache
 
+      # The default expiry time for cache entries (in seconds), used when the server does not
+      # provide an expiry value.
+      defaultExpiry: 600
+
+      # If provided, this value overrides the expiry time provided by the terminology server.
+      # overrideExpiry: 2592000
+
     # Configuration relating to authentication of requests to the terminology service.
     authentication:
       # Enables authenticated requests.

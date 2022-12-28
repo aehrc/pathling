@@ -96,6 +96,12 @@ public class HttpClientCachingConfiguration implements Serializable {
   private int defaultExpiry = DEFAULT_EXPIRY;
 
   /**
+   * If provided, this value overrides the expiry time provided by the terminology server.
+   */
+  @Nullable
+  private Integer overrideExpiry;
+
+  /**
    * Represents the type of storage used by the cache.
    */
   public enum StorageType {

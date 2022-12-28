@@ -92,6 +92,13 @@ public class PathlingContextConfiguration {
   String cacheStoragePath;
 
   @Nullable
+  @Builder.Default
+  Integer cacheDefaultExpiry = HttpClientCachingConfiguration.DEFAULT_EXPIRY;
+
+  @Nullable
+  Integer cacheOverrideExpiry;
+
+  @Nullable
   String tokenEndpoint;
 
   @Nullable

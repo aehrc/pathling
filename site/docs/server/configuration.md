@@ -172,6 +172,8 @@ spark:
 - `pathling.terminology.cache.defaultExpiry` - (default: `600`) The amount
   of time (in seconds) that a response from the terminology server should be 
   cached if the server does not specify an expiry.
+- `pathling.terminology.cache.overrideExpiry` - If provided, this value
+  overrides the expiry time provided by the terminology server.
 - `pathling.terminology.authentication.enabled` - (default: `false`) Enables
   authentication for requests to the terminology service.
 - `pathling.terminology.authentication.tokenEndpoint`, 

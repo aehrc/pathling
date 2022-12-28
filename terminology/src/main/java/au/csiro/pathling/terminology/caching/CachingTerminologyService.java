@@ -42,6 +42,7 @@ import java.io.Closeable;
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -206,7 +207,11 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
         .ifPresent(eTag -> request.withAdditionalHeader(IF_NONE_MATCH_HEADER_NAME, eTag));
 
     // We use a default expiry if the server does not provide one.
-    final long defaultExpires = secondsFromNow(configuration.getDefaultExpiry());
+    final Optional<Long> defaultExpires = Optional.of(
+        secondsFromNow(configuration.getDefaultExpiry()));
+    // There may be a configured override expiry.
+    final Optional<Long> overrideExpires = Optional.ofNullable(
+        configuration.getOverrideExpiry()).map(CachingTerminologyService::secondsFromNow);
 
     try {
       final MethodOutcome outcome = request.returnMethodOutcome().execute();
@@ -215,25 +220,40 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       @SuppressWarnings("unchecked") final ResultType result = operation.extractResult(
           (ResponseType) outcome.getResource());
       final Optional<String> newETag = getSingularHeader(outcome, ETAG_HEADER_NAME);
-      final Optional<Long> expires = getExpires(outcome);
+      final Optional<Long> serverExpires = getExpires(outcome);
       return new TerminologyResult<>(
-          result, newETag.orElse(null), expires.orElse(defaultExpires), false);
+          result,
+          newETag.orElse(null),
+          // Expiry values are used in this order:
+          // 1. The override expiry, if present;
+          // 2. The expiry provided by the server, if present, then;
+          // 3. The default expiry.
+          resolveExpires(overrideExpires, serverExpires, defaultExpires),
+          false);
 
     } catch (final NotModifiedException e) {
       // If the response was 304 Not Modified, use the data from the cached response and update 
       // the ETag and expiry.
       final Optional<String> newETag = getSingularHeader(e.getResponseHeaders(), ETAG_HEADER_NAME);
-      final Optional<Long> expires = getExpires(e.getResponseHeaders());
       final TerminologyResult<ResultType> previous = checkPresent(cached);
-      return new TerminologyResult<>(previous.getData(), newETag.orElse(previous.getETag()),
-          expires.orElse(previous.getExpires()), false);
+      final Optional<Long> serverExpires = getExpires(e.getResponseHeaders());
+      final Optional<Long> previousExpiry = Optional.ofNullable(previous.getExpires());
+      return new TerminologyResult<>(previous.getData(),
+          newETag.orElse(previous.getETag()),
+          // Expiry values are used in this order:
+          // 1. The override expiry, if present;
+          // 2. The expiry from the 304 response, if present;
+          // 3. The expiry from the cached response, if present, then;
+          // 4. The default expiry.
+          resolveExpires(overrideExpires, serverExpires, previousExpiry, defaultExpires),
+          false);
 
     } catch (final BaseServerResponseException e) {
       // If the terminology server rejects the request as invalid, cache the invalid result for the 
       // amount of time instructed by the server. If there is no such instruction, cache it for the 
       // configured default expiry.
-      final long expires = getExpires(e.getResponseHeaders()).orElse(
-          defaultExpires);
+      final Optional<Long> serverExpires = getExpires(e.getResponseHeaders());
+      final long expires = resolveExpires(serverExpires, defaultExpires);
       final TerminologyResult<ResultType> fallback = new TerminologyResult<>(
           operation.invalidRequestFallback(), null, expires, false);
       return handleError(e, fallback);
@@ -286,4 +306,12 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     return Instant.now().plusSeconds(seconds).toEpochMilli();
   }
 
+  private static Long resolveExpires(final Optional<Long>... orderedExpiryValues) {
+    // Go through each of the expiry values and combine them using OR logic. If the final value is 
+    // not present, throw an error.
+    return Arrays.stream(orderedExpiryValues)
+        .reduce((acc, v) -> acc.or(() -> v))
+        .orElseThrow()
+        .orElseThrow();
+  }
 }
