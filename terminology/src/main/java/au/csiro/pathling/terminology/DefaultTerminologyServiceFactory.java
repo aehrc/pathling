@@ -21,7 +21,6 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
@@ -144,7 +143,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
         .setDefaultRequestConfig(defaultRequestConfig)
         .setConnectionManager(connectionManager)
         .setConnectionManagerShared(false)
-        .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
+        .setRetryHandler(new RequestRetryHandler())
         .build();
   }
 
