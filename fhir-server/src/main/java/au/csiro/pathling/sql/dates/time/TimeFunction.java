@@ -18,8 +18,10 @@
 package au.csiro.pathling.sql.dates.time;
 
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Common functionality relating to time operations.
@@ -30,12 +32,16 @@ abstract class TimeFunction {
 
   private static final Pattern HOURS_ONLY = Pattern.compile("^\\d{2}$");
 
-  @Nonnull
+  @Nullable
   static LocalTime parseEncodedTime(@Nonnull final String encoded) {
-    // LocalDate will not successfully parse the HH format.
-    return HOURS_ONLY.matcher(encoded).matches()
-           ? LocalTime.parse(encoded + ":00")
-           : LocalTime.parse(encoded);
+    try {
+      // LocalDate will not successfully parse the HH format.
+      return HOURS_ONLY.matcher(encoded).matches()
+             ? LocalTime.parse(encoded + ":00")
+             : LocalTime.parse(encoded);
+    } catch (final DateTimeParseException e) {
+      return null;
+    }
   }
 
 }

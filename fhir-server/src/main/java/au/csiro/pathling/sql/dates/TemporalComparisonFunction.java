@@ -19,7 +19,6 @@ package au.csiro.pathling.sql.dates;
 
 import au.csiro.pathling.sql.udf.SqlFunction2;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
@@ -34,7 +33,8 @@ public abstract class TemporalComparisonFunction<StoredType, IntermediateType> i
 
   private static final long serialVersionUID = 492467651418666881L;
 
-  protected abstract Function<StoredType, IntermediateType> parseEncodedValue();
+  @Nullable
+  protected abstract IntermediateType parseEncodedValue(StoredType value);
 
   protected abstract BiFunction<IntermediateType, IntermediateType, Boolean> getOperationFunction();
 
@@ -50,8 +50,14 @@ public abstract class TemporalComparisonFunction<StoredType, IntermediateType> i
     if (left == null || right == null) {
       return null;
     }
-    final IntermediateType parsedLeft = parseEncodedValue().apply(left);
-    final IntermediateType parsedRight = parseEncodedValue().apply(right);
+    final IntermediateType parsedLeft = parseEncodedValue(left);
+    final IntermediateType parsedRight = parseEncodedValue(right);
+
+    if (parsedLeft == null || parsedRight == null) {
+      // If the result of parsing either argument is null, then the result is null.
+      return null;
+    }
+
     return getOperationFunction().apply(parsedLeft, parsedRight);
   }
 

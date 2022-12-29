@@ -19,7 +19,7 @@ package au.csiro.pathling.sql.dates.time;
 
 import au.csiro.pathling.sql.dates.TemporalComparisonFunction;
 import java.time.LocalTime;
-import java.util.function.Function;
+import javax.annotation.Nullable;
 
 /**
  * Base class for functions that compare times.
@@ -30,9 +30,10 @@ public abstract class TimeComparisonFunction extends TemporalComparisonFunction<
 
   private static final long serialVersionUID = 3661335567427062952L;
 
+  @Nullable
   @Override
-  protected Function<String, LocalTime> parseEncodedValue() {
-    return TimeFunction::parseEncodedTime;
+  protected LocalTime parseEncodedValue(final String value) {
+    return TimeFunction.parseEncodedTime(value);
   }
 
 }
