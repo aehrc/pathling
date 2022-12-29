@@ -24,6 +24,7 @@ import {
   RetryConfig,
 } from "./index.js";
 import { JobClient, JobInProgressError } from "./job.js";
+import { OpOutcomeError } from "./OperationOutcome.js";
 
 /**
  * A set of options that can be passed to the `retry` function.
@@ -88,24 +89,40 @@ export function waitForAsyncResult<ResponseType>(
   requestOptions?: QueryOptions
 ): Promise<ResponseType> {
   const jobClient = new JobClient();
-  return retry(
-    async () => {
-      try {
-        return await jobClient.request(url, requestOptions);
-      } catch (e: any) {
-        if (!(e instanceof JobInProgressError)) {
-          throw new AbortError(e);
-        }
-        reportProgress(e as Error, requestOptions);
-        throw e;
-      }
-    },
-    {
-      retry: clientOptions.asyncRetry,
-      verboseLogging: clientOptions.verboseLogging,
-      message,
+  return retry(async () => retryHandler(jobClient, url, requestOptions), {
+    retry: clientOptions.asyncRetry,
+    verboseLogging: clientOptions.verboseLogging,
+    message,
+  });
+}
+
+async function retryHandler(
+  jobClient: JobClient,
+  url: string,
+  requestOptions?: QueryOptions
+): Promise<any> {
+  try {
+    return await jobClient.request(url, requestOptions);
+  } catch (e: any) {
+    if (e instanceof OpOutcomeError && e.message === "Job ID not found") {
+      // If the error is an OpOutcomeError with a message of "Job ID not found",
+      // retry the request with cache-busting headers.
+      // This is to allow for situations where the server has been restarted but
+      // responses that refer to old job IDs still exist in caches.
+      return jobClient.request(url, {
+        ...requestOptions,
+        bustCache: true,
+      });
+    } else if (!(e instanceof JobInProgressError)) {
+      // If the error is not a JobInProgressError, abort the retry.
+      throw new AbortError(e);
+    } else {
+      // Otherwise, report progress and throw the JobInProgressError to trigger
+      // a retry.
+      reportProgress(e as Error, requestOptions);
+      throw e;
     }
-  );
+  }
 }
 
 function reportProgress(e: Error, requestOptions?: QueryOptions) {

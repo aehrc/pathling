@@ -50,6 +50,7 @@ export function requestConfig(
         ...(options?.token ? auth : {}),
         ...(options?.preferAsync ? preferAsync : {}),
       },
+      cache: options?.bustCache ? "no-cache" : "default",
     },
   };
 }

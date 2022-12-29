@@ -36,6 +36,7 @@ export class JobClient {
   ): Promise<ResponseType> {
     const config = getConfig(url, undefined, {
         token: options?.token,
+        bustCache: options?.bustCache,
       }),
       response = await fetch(config.input, config.init);
 
