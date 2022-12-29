@@ -93,14 +93,25 @@ public class TemporalDifferenceFunction implements SqlFunction3<String, String, 
     final ZonedDateTime from = parse(encodedFrom);
     final ZonedDateTime to = parse(encodedTo);
 
+    if (from == null || to == null) {
+      // If either of the arguments is null (invalid input), then the result is null.
+      return null;
+    }
+
     return from.until(to, temporalUnit);
   }
 
+  @Nullable
   private ZonedDateTime parse(final @Nonnull String encodedFrom) {
     try {
       return ZonedDateTime.parse(encodedFrom);
     } catch (final DateTimeParseException e) {
-      return LocalDate.parse(encodedFrom).atStartOfDay(ZoneId.of("UTC"));
+      try {
+        return LocalDate.parse(encodedFrom).atStartOfDay(ZoneId.of("UTC"));
+      } catch (final DateTimeParseException ex) {
+        // If we can't parse the value as a date or datetime, return null.
+        return null;
+      }
     }
   }
 
