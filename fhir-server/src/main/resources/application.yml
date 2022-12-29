@@ -54,16 +54,27 @@ pathling:
     # the server and the terminology service.
     verboseLogging: false
 
-    # Configuration relating to HTTP client
+    # Configuration relating to the HTTP client used for terminology requests.
     client:
       # The maximum period (in milliseconds) that the server should wait for incoming data from the
       # terminology service.
       socketTimeout: 60_000
 
+      # The maximum number of connections that the server should open to the terminology service.
       maxConnectionsTotal: 32
 
+      # The maximum number of connections that the server should open to the terminology service,
+      # per route.
       maxConnectionsPerRoute: 16
 
+      # Controls whether terminology requests that fail for possibly transient reasons (network
+      # connections, DNS problems) should be retried.
+      retryEnabled: true
+
+      # The number of times to retry failed terminology requests.
+      retryCount: 2
+
+    # Configuration relating to the caching of terminology requests.
     cache:
       # Set this to false to disable caching of terminology requests (not recommended).
       enabled: true

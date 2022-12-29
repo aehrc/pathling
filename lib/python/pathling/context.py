@@ -68,6 +68,8 @@ class PathlingContext:
         terminology_verbose_request_logging: Optional[bool] = None,
         max_connections_total: Optional[int] = None,
         max_connections_per_route: Optional[int] = None,
+        terminology_retry_enabled: Optional[bool] = None,
+        terminology_retry_count: Optional[int] = None,
         cache_max_entries: Optional[int] = None,
         cache_storage_type: Optional[str] = StorageType.MEMORY,
         cache_storage_path: Optional[str] = None,
@@ -113,6 +115,8 @@ class PathlingContext:
         requests
         :param max_connections_total: the maximum total number of connections for  http services.
         :param max_connections_per_route: the maximum number of connections per route for
+        :param terminology_retry_enabled: enables retrying of terminology server requests
+        :param terminology_retry_count: the maximum number of times to retry terminology requests
         :param cache_max_entries: the maximum number of cached entries.
         :param cache_storage_type: the type of cache storage to use for http service. By default,
         uses transient in-memory cache. 'None' disables caching all together.
@@ -149,6 +153,8 @@ class PathlingContext:
             .terminologyVerboseRequestLogging(terminology_verbose_request_logging)
             .maxConnectionsTotal(max_connections_total)
             .maxConnectionsPerRoute(max_connections_per_route)
+            .terminologyRetryEnabled(terminology_retry_enabled)
+            .terminologyRetryCount(terminology_retry_count)
             .cacheMaxEntries(cache_max_entries)
             .cacheStorageType(cache_storage_type)
             .cacheStoragePath(cache_storage_path)

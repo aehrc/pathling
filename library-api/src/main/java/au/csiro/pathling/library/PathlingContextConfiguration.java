@@ -82,6 +82,12 @@ public class PathlingContextConfiguration {
   Integer maxConnectionsPerRoute;
 
   @Nullable
+  Boolean terminologyRetryEnabled;
+
+  @Nullable
+  Integer terminologyRetryCount;
+
+  @Nullable
   @Builder.Default
   String cacheStorageType = HttpClientCachingConfiguration.DEFAULT_STORAGE_TYPE.toString();
 

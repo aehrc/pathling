@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.net.ssl.SSLException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.NoHttpResponseException;
@@ -39,8 +40,8 @@ import org.apache.http.protocol.HttpContext;
 @Slf4j
 public class RequestRetryHandler extends DefaultHttpRequestRetryHandler {
 
-  public RequestRetryHandler() {
-    super(2, true,
+  public RequestRetryHandler(@Nonnull final int retryCount) {
+    super(retryCount, true,
         List.of(InterruptedIOException.class, UnknownHostException.class, ConnectException.class,
             SSLException.class, SocketException.class, HttpHostConnectException.class,
             ConnectTimeoutException.class, NoHttpResponseException.class));

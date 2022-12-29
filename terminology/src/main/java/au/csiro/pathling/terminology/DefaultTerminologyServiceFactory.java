@@ -21,6 +21,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
@@ -139,12 +140,16 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
         .setSocketTimeout(clientConfig.getSocketTimeout())
         .build();
 
-    return HttpClients.custom()
+    final HttpClientBuilder clientBuilder = HttpClients.custom()
         .setDefaultRequestConfig(defaultRequestConfig)
         .setConnectionManager(connectionManager)
-        .setConnectionManagerShared(false)
-        .setRetryHandler(new RequestRetryHandler())
-        .build();
+        .setConnectionManagerShared(false);
+
+    if (clientConfig.isRetryEnabled()) {
+      clientBuilder.setRetryHandler(new RequestRetryHandler(clientConfig.getRetryCount()));
+    }
+
+    return clientBuilder.build();
   }
 
 }

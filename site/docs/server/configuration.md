@@ -159,6 +159,10 @@ spark:
 - `pathling.terminology.client.socketTimeout` - (default: `60000`) The maximum
   period (in milliseconds) that the server should wait for incoming data from
   the terminology service.
+- `pathling.terminology.client.retryEnabled` - (default: `true`) Enables
+  automatic retry of failed terminology service requests.
+- `pathling.terminology.client.retryCount` - (default: `2`) The maximum
+  number of times that failed terminology service requests should be retried.
 - `pathling.terminology.cache.enabled` - (default: `true`) Set this to false to
   disable caching of terminology requests (not recommended).
 - `pathling.terminology.cache.storageType` - (default: `memory`) The type of

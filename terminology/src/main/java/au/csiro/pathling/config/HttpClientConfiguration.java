@@ -39,6 +39,7 @@ public class HttpClientConfiguration implements Serializable {
   public static final int DEFAULT_MAX_CONNECTIONS_TOTAL = 32;
   public static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = 16;
   public static final int DEFAULT_SOCKET_TIMEOUT = 60_000;
+  public static final int DEFAULT_RETRY_COUNT = 2;
 
   /**
    * The maximum total number of connections for the client.
@@ -65,6 +66,13 @@ public class HttpClientConfiguration implements Serializable {
   @Min(0)
   @Builder.Default
   private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
+
+  @Builder.Default
+  private boolean retryEnabled = true;
+
+  @Min(1)
+  @Builder.Default
+  private int retryCount = DEFAULT_RETRY_COUNT;
 
   public static HttpClientConfiguration defaults() {
     return HttpClientConfiguration.builder().build();
