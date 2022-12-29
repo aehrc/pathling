@@ -93,6 +93,11 @@ export interface QueryOptions {
   preferAsync?: boolean;
 
   /**
+   * Pass headers that will prevent the use of a cached response.
+   */
+  bustCache?: boolean;
+
+  /**
    * A callback that will report the progress of unfinished async operations.
    */
   onProgress?: (progress: string) => unknown;
@@ -124,7 +129,7 @@ export default class PathlingClient {
     this.options = {
       asyncRetry: options.asyncRetry || { times: 60, wait: 1, backOff: 1.0 },
       maxGetQueryLength: 1500,
-      ...options
+      ...options,
     };
     this.capabilities = new CapabilitiesClient(this.options);
     this.smartConfiguration = new SmartConfigurationClient(this.options);
