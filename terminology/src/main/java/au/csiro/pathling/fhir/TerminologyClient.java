@@ -217,8 +217,8 @@ public interface TerminologyClient {
       loggingInterceptor.setLogger(log);
       loggingInterceptor.setLogRequestSummary(true);
       loggingInterceptor.setLogResponseSummary(true);
-      loggingInterceptor.setLogRequestHeaders(false);
-      loggingInterceptor.setLogResponseHeaders(false);
+      loggingInterceptor.setLogRequestHeaders(true);
+      loggingInterceptor.setLogResponseHeaders(true);
       loggingInterceptor.setLogRequestBody(true);
       loggingInterceptor.setLogResponseBody(true);
       genericClient.registerInterceptor(loggingInterceptor);
