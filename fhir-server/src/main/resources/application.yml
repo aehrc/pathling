@@ -3,6 +3,8 @@ spring:
     active:
       - core
       - server
+  banner:
+    location: classpath:banner.txt
 
 pathling:
   # Controls the description of this server as displayed within the FHIR CapabilityStatement.
