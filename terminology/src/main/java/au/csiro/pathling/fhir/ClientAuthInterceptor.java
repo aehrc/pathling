@@ -26,6 +26,7 @@ import ca.uhn.fhir.rest.client.api.IHttpRequest;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -50,12 +51,15 @@ import org.apache.http.util.EntityUtils;
 
 @Interceptor
 @Slf4j
-public class ClientAuthInterceptor {
+public class ClientAuthInterceptor implements Closeable {
 
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
   public static final int AUTH_SOCKET_TIMEOUT = 5_000;
   public static final int AUTH_RETRY_COUNT = 3;
+
+  @Nonnull
+  private CloseableHttpClient httpClient;
 
   @Nonnull
   private final String tokenEndpoint;
@@ -77,11 +81,20 @@ public class ClientAuthInterceptor {
   public ClientAuthInterceptor(@Nonnull final String tokenEndpoint, @Nonnull final String clientId,
       @Nonnull final String clientSecret, @Nullable final String scope,
       final long tokenExpiryTolerance) {
+    this.httpClient = ClientAuthInterceptor.getHttpClient();
     this.tokenEndpoint = tokenEndpoint;
     this.clientId = clientId;
     this.clientSecret = clientSecret;
     this.scope = scope;
     this.tokenExpiryTolerance = tokenExpiryTolerance;
+  }
+
+  ClientAuthInterceptor(@Nonnull final CloseableHttpClient httpClient,
+      @Nonnull final String tokenEndpoint, @Nonnull final String clientId,
+      @Nonnull final String clientSecret, @Nullable final String scope,
+      final long tokenExpiryTolerance) {
+    this(tokenEndpoint, clientId, clientSecret, scope, tokenExpiryTolerance);
+    this.httpClient = httpClient;
   }
 
   @SuppressWarnings("unused")
@@ -98,9 +111,9 @@ public class ClientAuthInterceptor {
   }
 
   @Nonnull
-  private static AccessContext ensureAccessContext(@Nonnull final String clientId,
+  private AccessContext ensureAccessContext(@Nonnull final String clientId,
       @Nonnull final String clientSecret, @Nonnull final String tokenEndpoint,
-      @Nonnull final String scope, final long tokenExpiryTolerance)
+      @Nullable final String scope, final long tokenExpiryTolerance)
       throws IOException {
     synchronized (accessContexts) {
       final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, scope);
@@ -121,7 +134,7 @@ public class ClientAuthInterceptor {
   }
 
   @Nonnull
-  private static AccessContext getNewAccessContext(@Nonnull final String clientId,
+  private AccessContext getNewAccessContext(@Nonnull final String clientId,
       @Nonnull final String clientSecret, @Nonnull final String tokenEndpoint,
       @Nullable final String scope, final long tokenExpiryTolerance)
       throws IOException {
@@ -132,7 +145,7 @@ public class ClientAuthInterceptor {
   }
 
   @Nonnull
-  private static AccessContext getAccessContext(@Nonnull final List<NameValuePair> authParams,
+  private AccessContext getAccessContext(@Nonnull final List<NameValuePair> authParams,
       @Nonnull final String tokenEndpoint, @Nullable final String scope,
       final long tokenExpiryTolerance) throws IOException {
     final ClientCredentialsResponse response = clientCredentialsGrant(authParams, tokenEndpoint,
@@ -143,54 +156,57 @@ public class ClientAuthInterceptor {
   }
 
   @Nonnull
-  private static ClientCredentialsResponse clientCredentialsGrant(
+  private ClientCredentialsResponse clientCredentialsGrant(
       @Nonnull final List<NameValuePair> authParams, @Nonnull final String tokenEndpoint,
       @Nullable final String scope, final long tokenExpiryTolerance)
       throws IOException {
     log.debug("Performing client credentials grant using token endpoint: {}", tokenEndpoint);
-    try (final CloseableHttpClient httpClient = getHttpClient()) {
-      final HttpPost request = new HttpPost(tokenEndpoint);
-      request.addHeader("Content-Type", "application/x-www-form-urlencoded");
-      request.addHeader("Accept", "application/json");
+    final HttpPost request = new HttpPost(tokenEndpoint);
+    request.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    request.addHeader("Accept", "application/json");
 
-      final List<NameValuePair> params = new ArrayList<>();
-      params.add(new BasicNameValuePair("grant_type", "client_credentials"));
-      if (scope != null) {
-        authParams.add(new BasicNameValuePair("scope", scope));
-      }
-      params.addAll(authParams);
-      request.setEntity(new UrlEncodedFormEntity(params));
+    final List<NameValuePair> params = new ArrayList<>();
+    params.add(new BasicNameValuePair("grant_type", "client_credentials"));
+    if (scope != null) {
+      authParams.add(new BasicNameValuePair("scope", scope));
+    }
+    params.addAll(authParams);
+    request.setEntity(new UrlEncodedFormEntity(params));
 
-      final CloseableHttpResponse response = httpClient.execute(request);
+    final String responseString;
+    try (final CloseableHttpResponse response = httpClient.execute(request)) {
       @Nullable final Header contentTypeHeader = response.getFirstHeader("Content-Type");
       if (contentTypeHeader == null) {
         throw new ClientProtocolException(
             "Client credentials response contains no Content-Type header");
       }
+      log.debug("Content-Type: {}", contentTypeHeader.getValue());
       final boolean responseIsJson = contentTypeHeader.getValue()
           .startsWith("application/json");
       if (!responseIsJson) {
         throw new ClientProtocolException(
             "Invalid response from token endpoint: content type is not application/json");
       }
-      final Gson gson = new GsonBuilder()
-          .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-          .create();
-      final String responseString = EntityUtils.toString(response.getEntity());
-      final ClientCredentialsResponse grant = gson.fromJson(
-          responseString,
-          ClientCredentialsResponse.class);
-      if (grant.getAccessToken() == null) {
-        throw new ClientProtocolException("Client credentials grant does not contain access token");
-      }
-      if (grant.getExpiresIn() < tokenExpiryTolerance) {
-        throw new ClientProtocolException(
-            "Client credentials grant expiry is less than the tolerance: " + grant.getExpiresIn());
-      }
-      return grant;
+      responseString = EntityUtils.toString(response.getEntity());
     }
+
+    final Gson gson = new GsonBuilder()
+        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+        .create();
+    final ClientCredentialsResponse grant = gson.fromJson(
+        responseString,
+        ClientCredentialsResponse.class);
+    if (grant.getAccessToken() == null) {
+      throw new ClientProtocolException("Client credentials grant does not contain access token");
+    }
+    if (grant.getExpiresIn() < tokenExpiryTolerance) {
+      throw new ClientProtocolException(
+          "Client credentials grant expiry is less than the tolerance: " + grant.getExpiresIn());
+    }
+    return grant;
   }
 
+  @Nonnull
   private static CloseableHttpClient getHttpClient() {
     final RequestConfig requestConfig = RequestConfig.custom()
         .setConnectTimeout(AUTH_CONNECT_TIMEOUT)
@@ -211,6 +227,11 @@ public class ClientAuthInterceptor {
     synchronized (accessContexts) {
       accessContexts.clear();
     }
+  }
+
+  @Override
+  public void close() throws IOException {
+    httpClient.close();
   }
 
 }
