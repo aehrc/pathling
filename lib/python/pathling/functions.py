@@ -29,6 +29,7 @@ def to_coding(
     Converts a Column containing codes into a Column that contains a Coding struct. The Coding
     struct Column can be used as an input to terminology functions such as `member_of` and
     `translate`.
+
     :param coding_column: the Column containing the codes
     :param system: the URI of the system the codes belong to
     :param version: the version of the code system
@@ -52,9 +53,9 @@ def to_coding(
 def to_snomed_coding(coding_column: Column, version: Optional[str] = None) -> Column:
     """
     Converts a Column containing codes into a Column that contains a SNOMED Coding struct. The
-    Coding
-    struct Column can be used as an input to terminology functions such as `member_of` and
+    Coding struct Column can be used as an input to terminology functions such as `member_of` and
     `translate`.
+
     :param coding_column: the Column containing the codes
     :param version: the version of the code system
     :return: a Column containing a Coding struct
@@ -66,6 +67,7 @@ def to_ecl_value_set(ecl: str) -> str:
     """
     Converts a SNOMED CT ECL expression into a FHIR ValueSet URI. Can be used with the `member_of`
     function.
+
     :param ecl: the ECL expression
     :return: the ValueSet URI
     """

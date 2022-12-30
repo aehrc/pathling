@@ -43,8 +43,8 @@ class PathlingContext:
 
     Example use::
 
-        ptl = PathlingContext.create(spark)
-        patient_df = ptl.encode(spark.read.text('ndjson_resources'), 'Patient')
+        pc = PathlingContext.create(spark)
+        patient_df = pc.encode(spark.read.text('ndjson_resources'), 'Patient')
         patient_df.show()
     """
 
@@ -98,40 +98,39 @@ class PathlingContext:
         classpath. You can get the path for the JAR (which is bundled with the Python package)
         using the `pathling.etc.find_jar` method.
 
-        http services.
-        :param spark: the :class:`SparkSession` instance.
-        :param fhir_version: the FHIR version to use.
-            Must a valid FHIR version string. Defaults to R4.
-        :param max_nesting_level: the maximum nesting level for recursive data types.
-            Zero (0) indicates that all direct or indirect fields of type T in element of type T
-            should be skipped
+        :param spark: The :class:`SparkSession` instance.
+        :param fhir_version: the FHIR version to use. Must a valid FHIR version string. Defaults to
+               R4.
+        :param max_nesting_level: the maximum nesting level for recursive data types. Zero (0)
+               indicates that all direct or indirect fields of type T in element of type T should be
+               skipped
         :param enable_extensions: switches on/off the support for FHIR extensions
-        :param enabled_open_types: list of types that are encoded within open types, such as
-            extensions
+        :param enabled_open_types: list of types that are encoded within open types,
+               such as extensions
         :param terminology_server_url: the URL of the FHIR terminology server used to resolve
-            terminology queries
+               terminology queries
         :param terminology_socket_timeout: the socket timeout for terminology server requests
         :param terminology_verbose_request_logging: enables verbose logging of terminology server
-        requests
+               requests
         :param max_connections_total: the maximum total number of connections for  http services.
         :param max_connections_per_route: the maximum number of connections per route for
         :param terminology_retry_enabled: enables retrying of terminology server requests
         :param terminology_retry_count: the maximum number of times to retry terminology requests
-        :param cache_max_entries: the maximum number of cached entries.
+        :param cache_max_entries: the maximum number of cached entries
         :param cache_storage_type: the type of cache storage to use for http service. By default,
-        uses transient in-memory cache. 'None' disables caching all together.
+               uses transient in-memory cache. 'None' disables caching all together.
         :param cache_storage_path: the path on disk where the cache is stored when the storage
-        type is 'disk'.
+               type is 'disk'
         :param cache_default_expiry: the amount of time (in seconds) that a response from the
-        terminology server should be cached if the server does not specify an expiry.
+               terminology server should be cached if the server does not specify an expiry
         :param cache_override_expiry: if provided, this value overrides the expiry time provided
-        by the terminology server.
+               by the terminology server.
         :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
         :param client_id: a client ID for use with the client credentials grant
         :param client_secret: a client secret for use with the client credentials grant
         :param scope: a scope value for use with the client credentials grant
         :param token_expiry_tolerance: the minimum number of seconds that a token should have
-            before expiry when deciding whether to send it with a terminology request
+               before expiry when deciding whether to send it with a terminology request
         :return: a DataFrame containing the given resource encoded into Spark columns
         """
         spark = (
@@ -193,22 +192,22 @@ class PathlingContext:
         self,
         df: DataFrame,
         resource_name: str,
-        input_type: Optional[MimeType] = None,
+        input_type: Optional[str] = None,
         column: Optional[str] = None,
     ) -> DataFrame:
         """
-        Takes a dataframe with a string representations of FHIR resources  in the given column and
+        Takes a dataframe with a string representations of FHIR resources in the given column and
         encodes the resources of the given types as Spark dataframe.
 
         :param df: a :class:`DataFrame` containing the resources to encode.
-        :param resource_name: the name of the FHIR resource to extract
-            (Condition, Observation, etc).
-        :param input_type: the mime type of input string encoding.
-            Defaults to `application/fhir+json`.
-        :param column: the column in which the resources to encode are stored. If None then
-            the input dataframe is assumed to have one column of type string.
+        :param resource_name: the name of the FHIR resource to extract (Condition, Observation,
+               etc.)
+        :param input_type: the mime type of input string encoding. Defaults to
+               `application/fhir+json`.
+        :param column: the column in which the resources to encode are stored. If 'None' then the
+               input dataframe is assumed to have one column of type string.
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
-            columns
+                 columns
         """
 
         return self._wrap_df(
@@ -221,7 +220,7 @@ class PathlingContext:
         self,
         df: DataFrame,
         resource_name: str,
-        input_type: Optional[MimeType] = None,
+        input_type: Optional[str] = None,
         column: Optional[str] = None,
     ) -> DataFrame:
         """
@@ -229,14 +228,14 @@ class PathlingContext:
         encodes the resources of the given types as Spark dataframe.
 
         :param df: a :class:`DataFrame` containing the bundles with the resources to encode.
-        :param resource_name: the name of the FHIR resource to extract
-            (condition, observation, etc).
-        :param input_type: the mime type of input string encoding.
-            Defaults to `application/fhir+json`.
-        :param column: the column in which the resources to encode are stored. If None then
-            the input dataframe is assumed to have one column of type string.
+        :param resource_name: the name of the FHIR resource to extract (Condition, Observation,
+               etc.)
+        :param input_type: the MIME type of the input string encoding. Defaults to
+               `application/fhir+json`.
+        :param column: the column in which the resources to encode are stored. If 'None' then the
+               input dataframe is assumed to have one column of type string.
         :return: a :class:`DataFrame` containing the given type of resources encoded into Spark
-            columns
+                 columns
         """
         return self._wrap_df(
             self._jpc.encodeBundle(
@@ -261,7 +260,7 @@ class PathlingContext:
         :param coding_column: a Column containing a struct representation of a Coding
         :param value_set_uri: an identifier for a FHIR ValueSet
         :param output_column_name: the name of the result column
-        :return: A new dataframe with an additional column containing the result of the operation.
+        :return: A new dataframe with an additional column containing the result of the operation
         """
         return self._wrap_df(
             self._jpc.memberOf(
@@ -289,10 +288,10 @@ class PathlingContext:
         :param coding_column: a Column containing a struct representation of a Coding
         :param concept_map_uri: an identifier for a FHIR ConceptMap
         :param reverse: the direction to traverse the map - false results in "source to target"
-            mappings, while true results in "target to source"
+               mappings, while true results in "target to source"
         :param equivalence: a comma-delimited set of values from the ConceptMapEquivalence ValueSet
-        :param target: identifies the value set in which a translation is sought.  If there's no
-            target specified, the server should return all known translations.
+        :param target: identifies the value set in which a translation is sought.  If there is no
+               target specified, the server should return all known translations.
         :param output_column_name: the name of the result column
         :return: A new dataframe with an additional column containing the result of the operation.
         """
@@ -324,9 +323,9 @@ class PathlingContext:
 
         :param df: a DataFrame containing the input data
         :param left_coding_column: a Column containing a struct representation of a Coding,
-            for the left-hand side of the subsumption test
+               for the left-hand side of the subsumption test
         :param right_coding_column: a Column containing a struct representation of a Coding,
-            for the right-hand side of the subsumption test
+               for the right-hand side of the subsumption test
         :param left_coding: a Coding object for the left-hand side of the subsumption test
         :param right_coding: a Coding object for the right-hand side of the subsumption test
         :param output_column_name: the name of the result column

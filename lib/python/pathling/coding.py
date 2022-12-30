@@ -51,6 +51,7 @@ class Coding:
         Converts a Coding into a Column that contains a Coding struct. The Coding
         struct Column can be used as an input to terminology functions such as `member_of` and
         `translate`.
+
         :return: a Column containing a Coding struct
         """
         id_column = lit(None).alias("id")
@@ -78,6 +79,7 @@ class Coding:
     ) -> "Coding":
         """
         Creates a SNOMED Coding.
+
         :param code: the code
         :param version: a URI that identifies the version of the code system
         :param display: the display text for the Coding

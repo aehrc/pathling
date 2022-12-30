@@ -91,7 +91,7 @@ class PropertyType:
 
 class Equivalence:
     """
-    Concept Map Equivalences
+    Concept map equivalences, see https://www.hl7.org/fhir/R4/valueset-concept-map-equivalence.html.
     """
 
     RELATEDTO = "relatedto"
@@ -113,7 +113,7 @@ def member_of(coding: CodingArg, value_set_uri: str) -> Column:
     ValueSet.
 
     :param coding: a Column containing a struct representation of a Coding or an array of such
-        structs.
+           structs.
     :param value_set_uri: an identifier for a FHIR ValueSet
     :return: a Column containing the result of the operation.
     """
@@ -136,10 +136,10 @@ def translate(
     :param coding: a Column containing a struct representation of a Coding
     :param concept_map_uri: an identifier for a FHIR ConceptMap
     :param reverse: the direction to traverse the map - false results in "source to target"
-        mappings, while true results in "target to source"
+           mappings, while true results in "target to source"
     :param equivalences: a value of a collection of values from the ConceptMapEquivalence ValueSet
     :param target: identifies the value set in which a translation is sought.  If there's no
-        target specified, the server should return all known translations.
+           target specified, the server should return all known translations.
     :return: a Column containing the result of the operation (an array of Coding structs).
     """
     return _invoke_udf(
@@ -160,9 +160,9 @@ def subsumes(left_coding: CodingArg, right_coding: CodingArg) -> Column:
         Boolean value, indicating whether the left Coding subsumes the right Coding.
 
     :param left_coding: a Column containing a struct representation of a Coding or an array of
-        Codings.
+           Codings.
     :param right_coding: a Column containing a struct representation of a Coding or an array of
-        Codings.
+           Codings.
     :return: a Column containing the result of the operation (boolean).
     """
     return _invoke_udf(
@@ -175,12 +175,12 @@ def subsumes(left_coding: CodingArg, right_coding: CodingArg) -> Column:
 def subsumed_by(left_coding: CodingArg, right_coding: CodingArg) -> Column:
     """
     Takes two Coding columns as input. Returns the Column, which contains a
-        Boolean value, indicating whether the left Coding is subsumed by the right Coding.
+    Boolean value, indicating whether the left Coding is subsumed by the right Coding.
 
     :param left_coding: a Column containing a struct representation of a Coding or an array of
-        Codings.
+           Codings.
     :param right_coding: a Column containing a struct representation of a Coding or an array of
-        Codings.
+           Codings.
     :return: a Column containing the result of the operation (boolean).
     """
     return _invoke_udf(
@@ -194,6 +194,7 @@ def display(coding: CodingArg) -> Column:
     """
     Takes a Coding column as its input. Returns the Column, which contains the canonical display
     name associated with the given code.
+
     :param coding: a Column containing a struct representation of a Coding.
     :return: a Column containing the result of the operation (String).
     """
@@ -234,7 +235,7 @@ def designation(
     :param use: the code with the use of the designations
     :param language: the language of the designations
     :return: the Column containing the result of the operation (array of strings with designation
-    values)
+             values)
     """
     return _invoke_udf(
         "designation",

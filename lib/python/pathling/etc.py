@@ -20,8 +20,8 @@ import pkg_resources
 
 
 def find_jar(verbose: bool = False) -> str:
-    """Gets the path to the pathling encoders jar bundled with the
-    python distribution
+    """
+    Gets the path to the Pathling library JAR, bundled with the python distribution.
     """
     # try to find the distribution jars first
     verbose and print("Package name is: %s" % __name__)
