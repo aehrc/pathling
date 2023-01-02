@@ -19,7 +19,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.springframework.context.annotation.Bean;
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("server & ga4gh")
-public class PassportDecoderFactory implements JwtDecoderFactory<Configuration> {
+public class PassportDecoderFactory implements JwtDecoderFactory<ServerConfiguration> {
 
   @Nonnull
   private final PassportDecoderBuilder builder;
@@ -48,7 +48,7 @@ public class PassportDecoderFactory implements JwtDecoderFactory<Configuration> 
   }
 
   @Override
-  public JwtDecoder createDecoder(@Nullable final Configuration configuration) {
+  public JwtDecoder createDecoder(@Nullable final ServerConfiguration configuration) {
     checkArgument(configuration != null, "configuration cannot be null");
     return builder.build(configuration);
   }
@@ -59,7 +59,7 @@ public class PassportDecoderFactory implements JwtDecoderFactory<Configuration> 
    * @return a shiny new {@link JwtDecoder}
    */
   @Bean
-  public static JwtDecoder passportDecoder(@Nullable final Configuration configuration,
+  public static JwtDecoder passportDecoder(@Nullable final ServerConfiguration configuration,
       @Nonnull final PassportDecoderFactory factory) {
     return factory.createDecoder(configuration);
   }

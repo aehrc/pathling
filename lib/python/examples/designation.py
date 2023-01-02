@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 #  Copyright 2022 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
 #
@@ -17,17 +15,14 @@
 
 import os
 
-from pathling import PathlingContext
-from pathling.coding import Coding
-from pathling.functions import to_snomed_coding
-from pathling.udfs import designation
+from pathling import PathlingContext, Coding, to_snomed_coding, designation
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+  f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
 )
 
 # Obtain display name for snomed codes
@@ -35,9 +30,9 @@ csv = pc.spark.read.options(header=True).csv(
 SNOMED_FULLY_SPECIFIED_NAME = Coding.of_snomed("900000000000003001")
 
 result = csv.withColumn(
-    "FULL_NAME",
-    designation(to_snomed_coding(csv.CODE), SNOMED_FULLY_SPECIFIED_NAME, "en").getItem(
-        0
-    ),
+  "FULL_NAME",
+  designation(to_snomed_coding(csv.CODE), SNOMED_FULLY_SPECIFIED_NAME, "en").getItem(
+    0
+  ),
 )
 result.select("CODE", "DESCRIPTION", "FULL_NAME").show()

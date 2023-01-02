@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchExecutor;
@@ -65,7 +65,7 @@ abstract class AggregateExecutorTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  Configuration configuration;
+  ServerConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;

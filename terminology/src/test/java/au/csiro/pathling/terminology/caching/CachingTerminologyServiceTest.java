@@ -31,9 +31,10 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUM
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
-import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientCachingStorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Property;
@@ -112,10 +113,8 @@ class CachingTerminologyServiceTest {
     /**
      * Whether the request was intended to be invalid.
      */
-    @Nonnull
     boolean badRequest;
 
-    @Nonnull
     boolean invalidParameters;
 
     @Override
@@ -176,15 +175,19 @@ class CachingTerminologyServiceTest {
     final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
         .enabled(true)
         .maxEntries(1_000)
-        .storageType(StorageType.MEMORY)
+        .storageType(HttpClientCachingStorageType.MEMORY)
         .build();
     final TerminologyAuthConfiguration authConfig = TerminologyAuthConfiguration.builder()
         .enabled(false)
         .build();
+    final TerminologyConfiguration config = TerminologyConfiguration.builder()
+        .serverUrl("http://localhost:" + WIREMOCK_PORT + "/fhir")
+        .client(clientConfig)
+        .cache(cacheConfig)
+        .authentication(authConfig)
+        .build();
 
-    terminologyServiceFactory = new DefaultTerminologyServiceFactory(FhirVersionEnum.R4,
-        "http://localhost:" + WIREMOCK_PORT + "/fhir",
-        false, clientConfig, cacheConfig, authConfig);
+    terminologyServiceFactory = new DefaultTerminologyServiceFactory(FhirVersionEnum.R4, config);
   }
 
   @BeforeEach

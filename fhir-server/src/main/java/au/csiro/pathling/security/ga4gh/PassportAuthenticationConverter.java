@@ -19,7 +19,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -72,7 +72,7 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
    * filters
    */
   public PassportAuthenticationConverter(@Nonnull final VisaDecoderFactory visaDecoderFactory,
-      @Nonnull final Configuration configuration,
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final ManifestConverter manifestConverter,
       @Nonnull final PassportScope passportScope) {
     log.debug("Instantiating passport authentication converter");

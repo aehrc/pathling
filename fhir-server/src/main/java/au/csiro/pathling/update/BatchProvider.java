@@ -22,7 +22,7 @@ import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.hl7.fhir.r4.model.Bundle.BundleType.BATCHRESPONSE;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.FhirServer;
 import au.csiro.pathling.io.Database;
@@ -63,14 +63,14 @@ public class BatchProvider {
   private final Database database;
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @SuppressWarnings("RegExpRedundantEscape")
   private static final Pattern UPDATE_URL = Pattern.compile(
       "^[A-Za-z]+/[A-Za-z0-9\\-\\.&&[^\\$]][A-Za-z0-9\\-\\.]{0,63}$");
 
   public BatchProvider(@Nonnull final Database database,
-      @Nonnull final Configuration configuration) {
+      @Nonnull final ServerConfiguration configuration) {
     this.database = database;
     this.configuration = configuration;
   }

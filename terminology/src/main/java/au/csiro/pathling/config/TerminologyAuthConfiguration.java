@@ -31,30 +31,29 @@ import javax.validation.ConstraintValidatorContext;
 import javax.validation.Payload;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.hibernate.validator.constraints.URL;
 
+/**
+ * Configuration relating to authentication of requests to the terminology service.
+ *
+ * @author John Grimes
+ */
 @Data
-@Builder(toBuilder = true)
-@NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 @ValidTerminologyAuthConfiguration
 public class TerminologyAuthConfiguration implements Serializable {
 
   private static final long serialVersionUID = 6321330066417583745L;
 
-  public static final long DEF_TOKEN_EXPIRY_TOLERANCE = 120;
-
   /**
    * Enables authentication of requests to the terminology server.
    */
   @NotNull
-  private boolean enabled;
+  @Builder.Default
+  private boolean enabled = false;
 
   /**
    * An OAuth2 token endpoint for use with the client credentials grant.
@@ -89,7 +88,7 @@ public class TerminologyAuthConfiguration implements Serializable {
   @NotNull
   @Min(0)
   @Builder.Default
-  private long tokenExpiryTolerance = DEF_TOKEN_EXPIRY_TOLERANCE;
+  private long tokenExpiryTolerance = 120;
 
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
@@ -124,8 +123,5 @@ public class TerminologyAuthConfiguration implements Serializable {
     }
 
   }
-
-  public static TerminologyAuthConfiguration defaults() {
-    return TerminologyAuthConfiguration.builder().build();
-  }
+ 
 }

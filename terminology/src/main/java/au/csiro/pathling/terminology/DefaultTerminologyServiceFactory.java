@@ -17,12 +17,10 @@
 
 package au.csiro.pathling.terminology;
 
-import static java.util.Objects.nonNull;
-
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
-import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientCachingStorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
-import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.terminology.caching.InMemoryCachingTerminologyService;
@@ -31,7 +29,6 @@ import au.csiro.pathling.utilities.ObjectHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
@@ -62,63 +59,23 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private static final ObjectHolder<DefaultTerminologyServiceFactory, TerminologyService> terminologyServiceHolder = ObjectHolder.singleton(
       DefaultTerminologyServiceFactory::createService);
 
-
   @Nonnull
   private final FhirVersionEnum fhirVersion;
 
   @Nonnull
-  private final String terminologyServerUrl;
+  private final TerminologyConfiguration configuration;
 
-  private final boolean verboseRequestLogging;
-
-  @Nonnull
-  private final HttpClientConfiguration clientConfig;
-
-  @Nonnull
-  private final HttpClientCachingConfiguration cacheConfig;
-
-  @Nonnull
-  private final TerminologyAuthConfiguration authConfig;
 
   public static synchronized void reset() {
     log.info("Resetting terminology services");
     terminologyServiceHolder.reset();
   }
 
-  @Deprecated
   public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final String terminologyServerUrl,
-      @Nullable final Integer socketTimeout,
-      final boolean verboseRequestLogging,
-      @Nonnull final HttpClientConfiguration clientConfig,
-      @Nonnull final HttpClientCachingConfiguration cacheConfig,
-      @Nonnull final TerminologyAuthConfiguration authConfig) {
-
-    // For backwards compatibility with the old version config version
-    this(fhirVersion, terminologyServerUrl, verboseRequestLogging,
-        nonNull(socketTimeout)
-        ? clientConfig.toBuilder()
-            .socketTimeout(socketTimeout)
-            .build()
-        : clientConfig,
-        cacheConfig,
-        authConfig);
-  }
-
-  public DefaultTerminologyServiceFactory(@Nonnull final FhirVersionEnum fhirVersion,
-      @Nonnull final String terminologyServerUrl,
-      final boolean verboseRequestLogging,
-      @Nonnull final HttpClientConfiguration clientConfig,
-      @Nonnull final HttpClientCachingConfiguration cacheConfig,
-      @Nonnull final TerminologyAuthConfiguration authConfig) {
+      @Nonnull final TerminologyConfiguration configuration) {
     this.fhirVersion = fhirVersion;
-    this.terminologyServerUrl = terminologyServerUrl;
-    this.verboseRequestLogging = verboseRequestLogging;
-    this.authConfig = authConfig;
-    this.clientConfig = clientConfig;
-    this.cacheConfig = cacheConfig;
+    this.configuration = configuration;
   }
-
 
   @Nonnull
   @Override
@@ -128,19 +85,25 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   @Nonnull
   private TerminologyService createService() {
-    final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
-    final CloseableHttpClient httpClient = buildHttpClient(clientConfig);
-    final TerminologyClient terminologyClient = TerminologyClient.build(fhirContext,
-        terminologyServerUrl, verboseRequestLogging, authConfig, httpClient);
 
-    if (cacheConfig.isEnabled() && cacheConfig.getStorageType().equals(StorageType.DISK)) {
+    final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
+    final CloseableHttpClient httpClient = buildHttpClient(configuration.getClient());
+    final TerminologyClient terminologyClient = TerminologyClient.build(fhirContext, configuration,
+        httpClient);
+    final HttpClientCachingConfiguration cacheConfig = configuration.getCache();
+
+    if (cacheConfig.isEnabled() && cacheConfig.getStorageType()
+        .equals(HttpClientCachingStorageType.DISK)) {
       // If caching is enabled and storage type is disk, use a persistent caching terminology 
       // service implementation.
       return new PersistentCachingTerminologyService(terminologyClient, httpClient, cacheConfig);
-    } else if (cacheConfig.isEnabled() && cacheConfig.getStorageType().equals(StorageType.MEMORY)) {
+
+    } else if (cacheConfig.isEnabled() && cacheConfig.getStorageType().equals(
+        HttpClientCachingStorageType.MEMORY)) {
       // If caching is enabled and storage type is memory, use an in-memory caching terminology
       // service implementation.
       return new InMemoryCachingTerminologyService(terminologyClient, httpClient, cacheConfig);
+
     } else {
       // If caching is disabled, use a terminology service implementation that does not cache.
       return new DefaultTerminologyService(terminologyClient, httpClient);
@@ -149,6 +112,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
 
   private static CloseableHttpClient buildHttpClient(
       @Nonnull final HttpClientConfiguration clientConfig) {
+
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
     connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());

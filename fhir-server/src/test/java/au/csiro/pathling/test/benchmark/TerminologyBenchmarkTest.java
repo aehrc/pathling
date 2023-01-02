@@ -21,14 +21,16 @@ import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import java.util.Optional;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,8 +41,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-import javax.annotation.Nonnull;
-import java.util.Optional;
 
 @Disabled
 @SpringBootTest
@@ -59,7 +59,7 @@ public class TerminologyBenchmarkTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  Configuration configuration;
+  ServerConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;
@@ -117,7 +117,7 @@ public class TerminologyBenchmarkTest {
   public void memberOfLoincImplicit_Benchmark() {
 
     System.out.println(2_000_000);
-    
+
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.OBSERVATION)
         .withAggregation("count()")
         .withFilter("code.coding.memberOf('http://loinc.org/vs/LP14885-5') contains true")
@@ -132,12 +132,12 @@ public class TerminologyBenchmarkTest {
 
     final AggregateRequest request = new AggregateRequestBuilder(ResourceType.CONDITION)
         .withAggregation("count()")
-        .withFilter("code.coding.memberOf('http://snomed.info/sct?fhir_vs=ecl/*%20%3A%20%3C%3C%20363698007%20%3D%20%3C%3C%2080891009%20') contains true")
+        .withFilter(
+            "code.coding.memberOf('http://snomed.info/sct?fhir_vs=ecl/*%20%3A%20%3C%3C%20363698007%20%3D%20%3C%3C%2080891009%20') contains true")
         .build();
     execute(request);
     //Thread.sleep(1000000);
   }
-
 
 
   @Test

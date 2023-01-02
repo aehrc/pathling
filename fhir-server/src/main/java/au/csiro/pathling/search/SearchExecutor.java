@@ -23,10 +23,9 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.col;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.QueryExecutor;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -34,6 +33,7 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IQueryParameterAnd;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -85,7 +85,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   private Optional<Integer> count;
 
   /**
-   * @param configuration A {@link Configuration} object to control the behaviour of the executor
+   * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
+   * executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param database A {@link Database} for retrieving resources
@@ -96,7 +97,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    * @param subjectResource The type of resource that is the subject for this query
    * @param filters A list of filters that should be applied within queries
    */
-  public SearchExecutor(@Nonnull final Configuration configuration,
+  public SearchExecutor(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,

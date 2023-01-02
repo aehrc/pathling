@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.security.ga4gh;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -45,7 +45,7 @@ import org.springframework.stereotype.Component;
 public class ScopeAwareDatabase extends Database {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -57,7 +57,8 @@ public class ScopeAwareDatabase extends Database {
   private final Optional<PassportScope> passportScope;
 
   /**
-   * @param configuration a {@link Configuration} object to control the behaviour of the executor
+   * @param configuration a {@link ServerConfiguration} object to control the behaviour of the
+   * executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param spark a {@link SparkSession} for interacting with Spark
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
@@ -67,7 +68,7 @@ public class ScopeAwareDatabase extends Database {
    * @param executor a {@link ThreadPoolTaskExecutor} for executing background tasks
    */
   @SuppressWarnings("WeakerAccess")
-  public ScopeAwareDatabase(@Nonnull final Configuration configuration,
+  public ScopeAwareDatabase(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,

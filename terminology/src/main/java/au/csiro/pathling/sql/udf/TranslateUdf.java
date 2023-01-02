@@ -151,4 +151,5 @@ public class TranslateUdf implements SqlFunction,
         .map(TranslateUdf::checkValidEquivalenceCode)
         .collect(Collectors.toUnmodifiableSet());
   }
+
 }

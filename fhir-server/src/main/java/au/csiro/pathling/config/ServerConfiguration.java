@@ -40,7 +40,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @Data
 @ToString(doNotUseGetters = true)
-public class Configuration {
+public class ServerConfiguration {
 
   /**
    * Controls the description of this server displayed within the FHIR CapabilityStatement.
@@ -78,7 +78,10 @@ public class Configuration {
   private StorageConfiguration storage;
 
   @NotNull
-  private TerminologyConfiguration terminology;
+  private EncodingConfiguration encoding = EncodingConfiguration.builder().build();
+
+  @NotNull
+  private TerminologyConfiguration terminology = TerminologyConfiguration.builder().build();
 
   @NotNull
   private AuthorizationConfiguration auth;
@@ -106,8 +109,5 @@ public class Configuration {
   public void setImport(@Nonnull final ImportConfiguration import_) {
     this.import_ = import_;
   }
-
-  @NotNull
-  private EncodingConfiguration encoding;
 
 }

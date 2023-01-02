@@ -25,8 +25,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.asc;
 import static org.apache.spark.sql.functions.desc;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.caching.Cacheable;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
@@ -78,7 +78,7 @@ public class Database implements Cacheable {
   private final String databaseName;
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   protected final SparkSession spark;
@@ -90,12 +90,13 @@ public class Database implements Cacheable {
   protected final ThreadPoolTaskExecutor executor;
 
   /**
-   * @param configuration a {@link Configuration} object which controls the behaviour of the reader
+   * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
+   * reader
    * @param spark a {@link SparkSession} for interacting with Spark
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
    * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
    */
-  public Database(@Nonnull final Configuration configuration,
+  public Database(@Nonnull final ServerConfiguration configuration,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ThreadPoolTaskExecutor executor) {
     this.configuration = configuration;

@@ -17,30 +17,22 @@
 
 package au.csiro.pathling.library;
 
-import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_SERVER_URL;
-import static au.csiro.pathling.library.PathlingContextConfiguration.DEFAULT_TERMINOLOGY_VERBOSE_LOGGING;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.config.HttpClientCachingConfiguration;
-import au.csiro.pathling.config.HttpClientConfiguration;
-import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.config.EncodingConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
-import au.csiro.pathling.support.FhirConversionSupport;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -51,7 +43,6 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
@@ -92,36 +83,8 @@ public class PathlingContext {
     this.fhirVersion = fhirEncoders.getFhirVersion();
     this.fhirEncoders = fhirEncoders;
     this.terminologyServiceFactory = terminologyServiceFactory;
-    this.terminologyFunctions = TerminologyFunctions.of(terminologyServiceFactory);
+    this.terminologyFunctions = TerminologyFunctions.build();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
-  }
-
-  /**
-   * Creates a new {@link PathlingContext} using default configuration, and a default or existing
-   * {@link SparkSession}.
-   */
-  @Nonnull
-  public static PathlingContext create() {
-    return create(PathlingContextConfiguration.builder().build());
-  }
-
-  /**
-   * Creates a new {@link PathlingContext} using default configuration, and a pre-configured
-   * {@link SparkSession}.
-   */
-  @Nonnull
-  public static PathlingContext create(@Nonnull final SparkSession spark) {
-    return create(spark, PathlingContextConfiguration.builder().build());
-  }
-
-  /**
-   * Creates a new {@link PathlingContext} using supplied configuration, and a default or existing
-   * {@link SparkSession}.
-   */
-  @Nonnull
-  public static PathlingContext create(@Nonnull final PathlingContextConfiguration configuration) {
-    final SparkSession spark = SparkSession.builder().getOrCreate();
-    return create(spark, configuration);
   }
 
   /**
@@ -141,35 +104,44 @@ public class PathlingContext {
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
-      @Nullable final PathlingContextConfiguration configuration) {
-    final PathlingContextConfiguration config;
-    if (configuration == null) {
-      config = PathlingContextConfiguration.builder().build();
-    } else {
-      config = configuration;
-    }
-
-    final Builder encoderBuilder = getEncoderBuilder(config);
-    final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(config);
+      @Nonnull final EncodingConfiguration encodingConfiguration,
+      @Nonnull final TerminologyConfiguration terminologyConfiguration) {
+    final Builder encoderBuilder = getEncoderBuilder(encodingConfiguration);
+    final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
+        terminologyConfiguration);
     return create(sparkSession, encoderBuilder.getOrCreate(), terminologyServiceFactory);
   }
 
-  static class EncodeResourceMapPartitionsFunc<T extends IBaseResource> extends
-      EncodeMapPartitionsFunc<T> {
+  /**
+   * Creates a new {@link PathlingContext} using a pre-configured {@link SparkSession}.
+   */
+  @Nonnull
+  public static PathlingContext create(@Nonnull final SparkSession sparkSession) {
+    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder().build();
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder().build();
+    return create(sparkSession, encodingConfig, terminologyConfig);
+  }
 
-    private static final long serialVersionUID = 6405663463302424287L;
+  /**
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
+   */
+  @Nonnull
+  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
+      @Nonnull final EncodingConfiguration encodingConfig) {
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder().build();
+    return create(sparkSession, encodingConfig, terminologyConfig);
+  }
 
-    EncodeResourceMapPartitionsFunc(final FhirVersionEnum fhirVersion, final String inputMimeType,
-        final Class<T> resourceClass) {
-      super(fhirVersion, inputMimeType, resourceClass);
-    }
-
-    @Nonnull
-    @Override
-    protected Stream<IBaseResource> processResources(
-        @Nonnull final Stream<IBaseResource> resources) {
-      return resources.filter(resourceClass::isInstance);
-    }
+  /**
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
+   */
+  @Nonnull
+  public static PathlingContext create(@Nonnull final SparkSession sparkSession,
+      @Nonnull final TerminologyConfiguration terminologyConfig) {
+    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder().build();
+    return create(sparkSession, encodingConfig, terminologyConfig);
   }
 
   /**
@@ -186,7 +158,7 @@ public class PathlingContext {
   public <T extends IBaseResource> Dataset<T> encode(@Nonnull final Dataset<String> stringResources,
       @Nonnull final Class<T> resourceClass, @Nonnull final String inputMimeType) {
     return stringResources.mapPartitions(
-        new EncodeResourceMapPartitionsFunc<>(fhirVersion, inputMimeType, resourceClass),
+        new EncodeResourceMapPartitions<>(fhirVersion, inputMimeType, resourceClass),
         fhirEncoders.of(resourceClass));
   }
 
@@ -249,28 +221,6 @@ public class PathlingContext {
   }
 
 
-  static class EncodeBundleMapPartitionsFunc<T extends IBaseResource> extends
-      EncodeMapPartitionsFunc<T> {
-
-    private static final long serialVersionUID = -4264073360143318480L;
-
-    EncodeBundleMapPartitionsFunc(final FhirVersionEnum fhirVersion, final String inputMimeType,
-        final Class<T> resourceClass) {
-      super(fhirVersion, inputMimeType, resourceClass);
-    }
-
-    @Nonnull
-    @Override
-    protected Stream<IBaseResource> processResources(
-        @Nonnull final Stream<IBaseResource> resources) {
-      final FhirConversionSupport conversionSupport = FhirConversionSupport.supportFor(fhirVersion);
-      return resources.flatMap(
-          maybeBundle -> conversionSupport.extractEntryFromBundle((IBaseBundle) maybeBundle,
-              resourceClass).stream());
-    }
-  }
-
-
   /**
    * Takes a dataset with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataset.
@@ -286,7 +236,7 @@ public class PathlingContext {
       @Nonnull final Dataset<String> stringBundles, @Nonnull final Class<T> resourceClass,
       @Nonnull final String inputMimeType) {
     return stringBundles.mapPartitions(
-        new EncodeBundleMapPartitionsFunc<>(fhirVersion, inputMimeType, resourceClass),
+        new EncodeBundleMapPartitions<>(fhirVersion, inputMimeType, resourceClass),
         fhirEncoders.of(resourceClass));
   }
 
@@ -294,12 +244,12 @@ public class PathlingContext {
    * Takes a dataframe with string representations of FHIR bundles and encodes the resources of the
    * given type as a Spark dataframe.
    *
-   * @param stringBundlesDF the dataframe with the string representation of the resources.
-   * @param resourceName the name of the resources to encode.
-   * @param inputMimeType the mime type of the encoding for the input strings.
+   * @param stringBundlesDF the dataframe with the string representation of the resources
+   * @param resourceName the name of the resources to encode
+   * @param inputMimeType the MIME type of the input strings
    * @param maybeColumnName the name of the column in the input dataframe that contains the bundle
-   * strings. If null the input dataframe must have a single column of type string.
-   * @return the dataframe with Spark encoded resources.
+   * strings. If null, the input dataframe must have a single column of type string.
+   * @return a Spark dataframe containing the encoded resources
    */
   @Nonnull
   public Dataset<Row> encodeBundle(@Nonnull final Dataset<Row> stringBundlesDF,
@@ -321,9 +271,9 @@ public class PathlingContext {
    *
    * @param stringBundlesDF the dataframe with the string representation of the bundles. The
    * dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode.
-   * @param inputMimeType the mime type of the encoding for the input strings.
-   * @return the dataframe with Spark encoded resources.
+   * @param resourceName the name of the resources to encode
+   * @param inputMimeType the MIME type of the input strings
+   * @return a Spark dataframe containing the encoded resources
    */
   @Nonnull
   public Dataset<Row> encodeBundle(@Nonnull final Dataset<Row> stringBundlesDF,
@@ -338,8 +288,8 @@ public class PathlingContext {
    *
    * @param stringBundlesDF the dataframe with the JSON representation of the resources. The
    * dataframe must have a single column of type string.
-   * @param resourceName the name of the resources to encode.
-   * @return the dataframe with Spark encoded resources.
+   * @param resourceName the name of the resources to encode
+   * @return a Spark dataframe containing the encoded resources
    */
   @Nonnull
   public Dataset<Row> encodeBundle(@Nonnull final Dataset<Row> stringBundlesDF,
@@ -347,6 +297,18 @@ public class PathlingContext {
     return encodeBundle(stringBundlesDF, resourceName, FhirMimeTypes.FHIR_JSON);
   }
 
+  /**
+   * Tests whether the codings within the specified column are members of the specified value set.
+   * Creates a new column containing the result.
+   *
+   * @param dataset the dataset containing the codings
+   * @param coding the column containing the codings to test
+   * @param valueSetUri the URI of the value set to test against
+   * @param outputColumnName the name of the output column
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/valueset-operation-validate-code.html">Operation
+   * $validate-code on ValueSet</a>
+   */
   @Nonnull
   public Dataset<Row> memberOf(@Nonnull final Dataset<Row> dataset, @Nonnull final Column coding,
       @Nonnull final String valueSetUri, @Nonnull final String outputColumnName) {
@@ -356,6 +318,21 @@ public class PathlingContext {
     return terminologyFunctions.memberOf(codingArrayCol, valueSetUri, dataset, outputColumnName);
   }
 
+  /**
+   * Translates the codings within the specified column using a concept map known to the terminology
+   * service.
+   *
+   * @param dataset the dataset containing the codings
+   * @param coding the column containing the codings to translate
+   * @param conceptMapUri the URI of the concept map to use for translation
+   * @param reverse if true, the translation will be reversed
+   * @param equivalence the CSV representation of the equivalences to use for translation
+   * @param target the target value set to translate to
+   * @param outputColumnName the name of the output column
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/conceptmap-operation-translate.html">Operation
+   * $translate on ConceptMap</a>
+   */
   @Nonnull
   public Dataset<Row> translate(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column coding, @Nonnull final String conceptMapUri,
@@ -370,6 +347,17 @@ public class PathlingContext {
     return translatedDataset.withColumn(outputColumnName, functions.col(outputColumnName));
   }
 
+  /**
+   * Tests whether one coding subsumes another coding.
+   *
+   * @param dataset the dataset containing the codings
+   * @param leftCoding the column containing the first coding to test
+   * @param rightCoding the column containing the second coding to test
+   * @param outputColumnName the name of the output column
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/codesystem-operation-subsumes.html">Operation $subsumes
+   * on CodeSystem</a>
+   */
   @Nonnull
   public Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column leftCoding, @Nonnull final Column rightCoding,
@@ -387,46 +375,18 @@ public class PathlingContext {
   }
 
   @Nonnull
-  private static Builder getEncoderBuilder(@Nonnull final PathlingContextConfiguration config) {
-    Builder encoderBuilder = nonNull(config.getFhirVersion())
-                             ? FhirEncoders.forVersion(
-        FhirVersionEnum.forVersionString(config.getFhirVersion()))
-                             : FhirEncoders.forR4();
-    if (nonNull(config.getMaxNestingLevel())) {
-      encoderBuilder = encoderBuilder.withMaxNestingLevel(config.getMaxNestingLevel());
-    }
-    if (nonNull(config.getExtensionsEnabled())) {
-      encoderBuilder = encoderBuilder.withExtensionsEnabled(config.getExtensionsEnabled());
-    }
-    if (nonNull(config.getOpenTypesEnabled())) {
-      final Set<String> openTypes = config.getOpenTypesEnabled().stream()
-          .collect(Collectors.toUnmodifiableSet());
-      encoderBuilder = encoderBuilder.withOpenTypes(openTypes);
-    }
-    return encoderBuilder;
+  private static Builder getEncoderBuilder(@Nonnull final EncodingConfiguration config) {
+    return FhirEncoders.forR4()
+        .withMaxNestingLevel(config.getMaxNestingLevel())
+        .withExtensionsEnabled(config.isEnableExtensions())
+        .withOpenTypes(config.getOpenTypes());
   }
 
   @Nonnull
   private static TerminologyServiceFactory getTerminologyServiceFactory(
-      @Nonnull final PathlingContextConfiguration config) {
-
-    if (!config.isMockTerminology()) {
-      final String resolvedTerminologyServerUrl = DEFAULT_TERMINOLOGY_SERVER_URL.resolve(
-          config.getTerminologyServerUrl());
-      final boolean verboseRequestLogging = DEFAULT_TERMINOLOGY_VERBOSE_LOGGING.resolve(
-          config.getTerminologyVerboseRequestLogging());
-
-      final TerminologyAuthConfiguration authConfig = config.toAuthConfig();
-      final HttpClientConfiguration clientConfig = config.toClientConfig();
-      final HttpClientCachingConfiguration cacheConfig = config.toCacheConfig();
-
-      return new DefaultTerminologyServiceFactory(FhirContext.forR4().getVersion().getVersion(),
-          resolvedTerminologyServerUrl, verboseRequestLogging, clientConfig, cacheConfig,
-          authConfig);
-    } else {
-      log.warn("Using mock terminology service. NOT connecting to server: {}",
-          config.getTerminologyServerUrl());
-      return new MockTerminologyServiceFactory();
-    }
+      @Nonnull final TerminologyConfiguration configuration) {
+    final FhirVersionEnum fhirVersion = FhirContext.forR4().getVersion().getVersion();
+    return new DefaultTerminologyServiceFactory(fhirVersion, configuration);
   }
+
 }

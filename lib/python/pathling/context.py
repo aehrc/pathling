@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+import logging
 from typing import Optional, Sequence
 
 from deprecated import deprecated
@@ -59,28 +59,43 @@ class PathlingContext:
     def create(
         cls,
         spark: Optional[SparkSession] = None,
-        fhir_version: Optional[str] = None,
-        max_nesting_level: Optional[int] = None,
-        enable_extensions: Optional[bool] = None,
-        enabled_open_types: Optional[Sequence[str]] = None,
-        terminology_server_url: Optional[str] = None,
-        terminology_socket_timeout: Optional[int] = None,
-        terminology_verbose_request_logging: Optional[bool] = None,
-        max_connections_total: Optional[int] = None,
-        max_connections_per_route: Optional[int] = None,
-        terminology_retry_enabled: Optional[bool] = None,
-        terminology_retry_count: Optional[int] = None,
-        cache_max_entries: Optional[int] = None,
+        max_nesting_level: Optional[int] = 3,
+        enable_extensions: Optional[bool] = False,
+        enabled_open_types: Optional[Sequence[str]] = (
+            "boolean",
+            "code",
+            "date",
+            "dateTime",
+            "decimal",
+            "integer",
+            "string",
+            "Coding",
+            "CodeableConcept",
+            "Address",
+            "Identifier",
+            "Reference",
+        ),
+        enable_terminology: Optional[bool] = True,
+        terminology_server_url: Optional[str] = "https://tx.ontoserver.csiro.au/fhir",
+        terminology_verbose_request_logging: Optional[bool] = False,
+        terminology_socket_timeout: Optional[int] = 60_000,
+        max_connections_total: Optional[int] = 32,
+        max_connections_per_route: Optional[int] = 16,
+        terminology_retry_enabled: Optional[bool] = True,
+        terminology_retry_count: Optional[int] = 2,
+        enable_cache: Optional[bool] = True,
+        cache_max_entries: Optional[int] = 200_000,
         cache_storage_type: Optional[str] = StorageType.MEMORY,
         cache_storage_path: Optional[str] = None,
-        cache_default_expiry: Optional[int] = None,
+        cache_default_expiry: Optional[int] = 600,
         cache_override_expiry: Optional[int] = None,
         token_endpoint: Optional[str] = None,
+        enable_auth: Optional[bool] = False,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
         scope: Optional[str] = None,
-        token_expiry_tolerance: Optional[int] = None,
-        mock_terminology: bool = False,
+        token_expiry_tolerance: Optional[int] = 120,
+        logging_level: Optional[int] = logging.INFO,
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -99,39 +114,49 @@ class PathlingContext:
         using the `pathling.etc.find_jar` method.
 
         :param spark: The :class:`SparkSession` instance.
-        :param fhir_version: the FHIR version to use. Must a valid FHIR version string. Defaults to
-               R4.
-        :param max_nesting_level: the maximum nesting level for recursive data types. Zero (0)
-               indicates that all direct or indirect fields of type T in element of type T should be
-               skipped
-        :param enable_extensions: switches on/off the support for FHIR extensions
-        :param enabled_open_types: list of types that are encoded within open types,
-               such as extensions
-        :param terminology_server_url: the URL of the FHIR terminology server used to resolve
-               terminology queries
-        :param terminology_socket_timeout: the socket timeout for terminology server requests
-        :param terminology_verbose_request_logging: enables verbose logging of terminology server
-               requests
-        :param max_connections_total: the maximum total number of connections for  http services.
-        :param max_connections_per_route: the maximum number of connections per route for
-        :param terminology_retry_enabled: enables retrying of terminology server requests
-        :param terminology_retry_count: the maximum number of times to retry terminology requests
-        :param cache_max_entries: the maximum number of cached entries
-        :param cache_storage_type: the type of cache storage to use for http service. By default,
-               uses transient in-memory cache. 'None' disables caching all together.
-        :param cache_storage_path: the path on disk where the cache is stored when the storage
-               type is 'disk'
-        :param cache_default_expiry: the amount of time (in seconds) that a response from the
-               terminology server should be cached if the server does not specify an expiry
-        :param cache_override_expiry: if provided, this value overrides the expiry time provided
-               by the terminology server.
+        :param max_nesting_level: controls the maximum depth of nested element data that is encoded
+               upon import. This affects certain elements within FHIR resources that contain
+               recursive references, e.g. `QuestionnaireResponse.item
+               <https://hl7.org/fhir/R4/questionnaireresponse.html>`_.
+        :param enable_extensions: enables support for FHIR extensions
+        :param enabled_open_types: the list of types that are encoded within open types,
+               such as extensions. This default list was taken from the data types that are common
+               to extensions found in widely-used IGs, such as the US and AU base profiles. In
+               general, you will get the best query performance by encoding your data with the
+               shortest possible list.
+        :param enable_terminology: enables the use of terminology functions
+        :param terminology_server_url: the endpoint of a FHIR terminology service (R4) that the
+               server can use to resolve terminology queries. The default server is suitable for
+               testing purposes only.
+        :param terminology_verbose_request_logging: setting this option to `True` will enable
+               additional logging of the details of requests to the terminology service
+        :param terminology_socket_timeout: the maximum period (in milliseconds) that the server
+               should wait for incoming data from the HTTP service
+        :param max_connections_total: the maximum total number of connections for the client
+        :param max_connections_per_route: the maximum number of connections per route for the client
+        :param terminology_retry_enabled: controls whether terminology requests that fail for
+               possibly transient reasons (network connections, DNS problems) should be retried
+        :param terminology_retry_count: the number of times to retry failed terminology requests
+        :param enable_cache: set this to false to disable caching of terminology requests (not
+               recommended)
+        :param cache_max_entries: sets the maximum number of entries that will be held in memory
+        :param cache_storage_type: the type of storage to use for the terminology cache. See
+               `StorageType`.
+        :param cache_storage_path: the path on disk to use for the cache, required when
+               `cache_storage_type` is `disk`
+        :param cache_default_expiry: the default expiry time for cache entries (in seconds), used
+               when the server does not provide an expiry value
+        :param cache_override_expiry: if provided, this value overrides the expiry time provided by
+               the terminology server
+        :param enable_auth: enables authentication of requests to the terminology server
         :param token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
         :param client_id: a client ID for use with the client credentials grant
         :param client_secret: a client secret for use with the client credentials grant
         :param scope: a scope value for use with the client credentials grant
         :param token_expiry_tolerance: the minimum number of seconds that a token should have
                before expiry when deciding whether to send it with a terminology request
-        :return: a DataFrame containing the given resource encoded into Spark columns
+        :param logging_level: the logging level to use
+        :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
         spark = (
             spark
@@ -140,36 +165,75 @@ class PathlingContext:
         )
         jvm = spark._jvm
 
-        # Build a Java configuration object from the provided parameters.
-        config = (
-            jvm.au.csiro.pathling.library.PathlingContextConfiguration.builder()
-            .fhirVersion(fhir_version)
+        # Configure logging.
+        jvm.py4j.GatewayServer.turnLoggingOn()
+        logger = logging.getLogger("py4j")
+        logger.setLevel(logging_level)
+        logger.addHandler(logging.StreamHandler())
+
+        # Build an encoders configuration object from the provided parameters.
+        encoders_config = (
+            jvm.au.csiro.pathling.config.EncodingConfiguration.builder()
             .maxNestingLevel(max_nesting_level)
-            .extensionsEnabled(enable_extensions)
-            .openTypesEnabled(enabled_open_types)
-            .terminologyServerUrl(terminology_server_url)
-            .terminologySocketTimeout(terminology_socket_timeout)
-            .terminologyVerboseRequestLogging(terminology_verbose_request_logging)
+            .enableExtensions(enable_extensions)
+            .openTypes(jvm.java.util.HashSet(enabled_open_types))
+            .build()
+        )
+
+        # Build a terminology client configuration object from the provided parameters.
+        client_config = (
+            jvm.au.csiro.pathling.config.HttpClientConfiguration.builder()
+            .socketTimeout(terminology_socket_timeout)
             .maxConnectionsTotal(max_connections_total)
             .maxConnectionsPerRoute(max_connections_per_route)
-            .terminologyRetryEnabled(terminology_retry_enabled)
-            .terminologyRetryCount(terminology_retry_count)
-            .cacheMaxEntries(cache_max_entries)
-            .cacheStorageType(cache_storage_type)
-            .cacheStoragePath(cache_storage_path)
-            .cacheDefaultExpiry(cache_default_expiry)
-            .cacheOverrideExpiry(cache_override_expiry)
+            .retryEnabled(terminology_retry_enabled)
+            .retryCount(terminology_retry_count)
+            .build()
+        )
+
+        # Build a terminology cache configuration object from the provided parameters.
+        cache_storage_type_enum = (
+            jvm.au.csiro.pathling.config.HttpClientCachingStorageType.fromCode(
+                cache_storage_type
+            )
+        )
+        cache_config = (
+            jvm.au.csiro.pathling.config.HttpClientCachingConfiguration.builder()
+            .enabled(enable_cache)
+            .maxEntries(cache_max_entries)
+            .storageType(cache_storage_type_enum)
+            .storagePath(cache_storage_path)
+            .defaultExpiry(cache_default_expiry)
+            .overrideExpiry(cache_override_expiry)
+            .build()
+        )
+
+        # Build a terminology authentication configuration object from the provided parameters.
+        auth_config = (
+            jvm.au.csiro.pathling.config.TerminologyAuthConfiguration.builder()
+            .enabled(enable_auth)
             .tokenEndpoint(token_endpoint)
             .clientId(client_id)
             .clientSecret(client_secret)
             .scope(scope)
             .tokenExpiryTolerance(token_expiry_tolerance)
-            .mockTerminology(mock_terminology)
+            .build()
+        )
+
+        # Build a terminology configuration object from the provided parameters.
+        terminology_config = (
+            jvm.au.csiro.pathling.config.TerminologyConfiguration.builder()
+            .enabled(enable_terminology)
+            .serverUrl(terminology_server_url)
+            .verboseLogging(terminology_verbose_request_logging)
+            .client(client_config)
+            .cache(cache_config)
+            .authentication(auth_config)
             .build()
         )
 
         jpc: JavaObject = jvm.au.csiro.pathling.library.PathlingContext.create(
-            spark._jsparkSession, config
+            spark._jsparkSession, encoders_config, terminology_config
         )
         return PathlingContext(spark, jpc)
 

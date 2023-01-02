@@ -17,9 +17,8 @@
 
 package au.csiro.pathling.fhir;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
@@ -43,6 +42,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The client interface to FHIR terminology operations.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
  */
 public interface TerminologyClient {
 
@@ -191,49 +193,52 @@ public interface TerminologyClient {
   /**
    * Builds a new terminology client.
    *
-   * @param fhirContext the FHIR context to use.
-   * @param terminologyServerUrl the url to terminology server.
-   * @param verboseRequestLogging enables verbose logging that includes bodes HTTP requests and
-   * responses.
-   * @param authConfig the authentication to use for the server.
-   * @param httpClient the {@link HttpClient} instance to use for HTTP request.
-   * @return the new instance of {@link TerminologyClient}.
+   * @param fhirContext the FHIR context to use for building the client
+   * @param terminologyConfiguration a {@link TerminologyConfiguration} to govern the behaviour of
+   * the client
+   * @param httpClient the {@link HttpClient} instance to use for making HTTP requests
+   * @return the new instance of {@link TerminologyClient}
    */
   static TerminologyClient build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final String terminologyServerUrl,
-      final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
+      @Nonnull final TerminologyConfiguration terminologyConfiguration,
       @Nonnull final HttpClient httpClient) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
     restfulClientFactory.setHttpClient(httpClient);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
     final IGenericClient genericClient = restfulClientFactory.newGenericClient(
-        terminologyServerUrl);
+        terminologyConfiguration.getServerUrl());
 
+    // Register an interceptor that identifies the Pathling client within the request headers.
     genericClient.registerInterceptor(new UserAgentInterceptor());
 
-    if (verboseRequestLogging) {
-      final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
-      loggingInterceptor.setLogger(log);
-      loggingInterceptor.setLogRequestSummary(true);
-      loggingInterceptor.setLogResponseSummary(true);
-      loggingInterceptor.setLogRequestHeaders(true);
-      loggingInterceptor.setLogResponseHeaders(true);
-      loggingInterceptor.setLogRequestBody(true);
-      loggingInterceptor.setLogResponseBody(true);
-      genericClient.registerInterceptor(loggingInterceptor);
+    // If verbose logging is enabled, register an interceptor that logs the request and response 
+    // details.
+    if (terminologyConfiguration.isVerboseLogging()) {
+      final LoggingInterceptor verboseLogging = buildVerboseLogging();
+      genericClient.registerInterceptor(verboseLogging);
     }
 
+    // If authentication is enabled, register an interceptor that authenticates requests before 
+    // sending them.
+    final TerminologyAuthConfiguration authConfig = terminologyConfiguration.getAuthentication();
     if (authConfig.isEnabled()) {
-      checkNotNull(authConfig.getTokenEndpoint());
-      checkNotNull(authConfig.getClientId());
-      checkNotNull(authConfig.getClientSecret());
-      final ClientAuthInterceptor clientAuthInterceptor = new ClientAuthInterceptor(
-          authConfig.getTokenEndpoint(), authConfig.getClientId(), authConfig.getClientSecret(),
-          authConfig.getScope(), authConfig.getTokenExpiryTolerance());
-      genericClient.registerInterceptor(clientAuthInterceptor);
+      genericClient.registerInterceptor(new ClientAuthInterceptor(authConfig));
     }
     return new DefaultTerminologyClient(genericClient);
+  }
+
+  @Nonnull
+  private static LoggingInterceptor buildVerboseLogging() {
+    final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
+    loggingInterceptor.setLogger(log);
+    loggingInterceptor.setLogRequestSummary(true);
+    loggingInterceptor.setLogResponseSummary(true);
+    loggingInterceptor.setLogRequestHeaders(true);
+    loggingInterceptor.setLogResponseHeaders(true);
+    loggingInterceptor.setLogRequestBody(true);
+    loggingInterceptor.setLogResponseBody(true);
+    return loggingInterceptor;
   }
 
 }

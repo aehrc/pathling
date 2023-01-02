@@ -19,7 +19,7 @@ package au.csiro.pathling.security;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("server & !ga4gh")
 @ConditionalOnProperty(prefix = "pathling", name = "auth.enabled", havingValue = "true")
-public class PathlingJwtDecoderFactory implements JwtDecoderFactory<Configuration> {
+public class PathlingJwtDecoderFactory implements JwtDecoderFactory<ServerConfiguration> {
 
   @Nonnull
   private final PathlingJwtDecoderBuilder builder;
@@ -50,7 +50,7 @@ public class PathlingJwtDecoderFactory implements JwtDecoderFactory<Configuratio
   }
 
   @Override
-  public JwtDecoder createDecoder(@Nullable final Configuration configuration) {
+  public JwtDecoder createDecoder(@Nullable final ServerConfiguration configuration) {
     checkArgument(configuration != null, "configuration cannot be null");
     return builder.build(configuration);
   }
@@ -61,7 +61,7 @@ public class PathlingJwtDecoderFactory implements JwtDecoderFactory<Configuratio
    * @return a shiny new {@link JwtDecoder}
    */
   @Bean
-  public static JwtDecoder pathlingJwtDecoder(@Nullable final Configuration configuration,
+  public static JwtDecoder pathlingJwtDecoder(@Nullable final ServerConfiguration configuration,
       @Nonnull final PathlingJwtDecoderFactory factory) {
     return factory.createDecoder(configuration);
   }

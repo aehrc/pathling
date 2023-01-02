@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.test.benchmark;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
@@ -75,7 +75,7 @@ public class SearchDevBenchmark {
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    Configuration configuration;
+    ServerConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;
@@ -91,7 +91,7 @@ public class SearchDevBenchmark {
 
     @Bean
     @ConditionalOnMissingBean
-    public static Database database(@Nonnull final Configuration configuration,
+    public static Database database(@Nonnull final ServerConfiguration configuration,
         @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
         @Nonnull final ThreadPoolTaskExecutor executor) {
       return new Database(configuration, spark, fhirEncoders, executor);

@@ -20,7 +20,7 @@ package au.csiro.pathling.io;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -48,16 +48,17 @@ import org.springframework.stereotype.Component;
 public class ResultWriter {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final SparkSession spark;
 
   /**
-   * @param configuration a {@link Configuration} object which controls the behaviour of the writer
+   * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
+   * writer
    * @param spark the current {@link SparkSession}
    */
-  public ResultWriter(@Nonnull final Configuration configuration,
+  public ResultWriter(@Nonnull final ServerConfiguration configuration,
       @Nonnull final SparkSession spark) {
     this.configuration = configuration;
     this.spark = spark;

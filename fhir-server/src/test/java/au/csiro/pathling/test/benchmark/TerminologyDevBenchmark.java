@@ -21,12 +21,12 @@ import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -61,7 +61,7 @@ public class TerminologyDevBenchmark {
 
   @State(Scope.Benchmark)
   @ActiveProfiles({"core", "server", "benchmark"})
-  @TestPropertySource(properties = {"pathling.terminology.serverUrl=http://localhost:8081/fhir", 
+  @TestPropertySource(properties = {"pathling.terminology.serverUrl=http://localhost:8081/fhir",
       "pathling.terminology.useLegacy=false"})
   // @TestPropertySource(
   //       properties = {"pathling.terminology.serverUrl=https://tx.ontoserver.csiro.au/fhir"})
@@ -74,7 +74,7 @@ public class TerminologyDevBenchmark {
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    Configuration configuration;
+    ServerConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;

@@ -18,7 +18,9 @@
 package au.csiro.pathling.fhir;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
@@ -78,22 +80,18 @@ public class ClientAuthInterceptor implements Closeable {
   @Nonnull
   private static final Map<AccessScope, AccessContext> accessContexts = new HashMap<>();
 
-  public ClientAuthInterceptor(@Nonnull final String tokenEndpoint, @Nonnull final String clientId,
-      @Nonnull final String clientSecret, @Nullable final String scope,
-      final long tokenExpiryTolerance) {
+  public ClientAuthInterceptor(@Nonnull final TerminologyAuthConfiguration configuration) {
     this.httpClient = ClientAuthInterceptor.getHttpClient();
-    this.tokenEndpoint = tokenEndpoint;
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
-    this.scope = scope;
-    this.tokenExpiryTolerance = tokenExpiryTolerance;
+    this.tokenEndpoint = requireNonNull(configuration.getTokenEndpoint());
+    this.clientId = requireNonNull(configuration.getClientId());
+    this.clientSecret = requireNonNull(configuration.getClientSecret());
+    this.scope = configuration.getScope();
+    this.tokenExpiryTolerance = configuration.getTokenExpiryTolerance();
   }
 
   ClientAuthInterceptor(@Nonnull final CloseableHttpClient httpClient,
-      @Nonnull final String tokenEndpoint, @Nonnull final String clientId,
-      @Nonnull final String clientSecret, @Nullable final String scope,
-      final long tokenExpiryTolerance) {
-    this(tokenEndpoint, clientId, clientSecret, scope, tokenExpiryTolerance);
+      @Nonnull final TerminologyAuthConfiguration configuration) {
+    this(configuration);
     this.httpClient = httpClient;
   }
 

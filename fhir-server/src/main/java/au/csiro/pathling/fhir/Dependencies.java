@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.PathlingVersion;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
@@ -67,7 +67,7 @@ public class Dependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static FhirEncoders fhirEncoders(@Nonnull final Configuration configuration) {
+  static FhirEncoders fhirEncoders(@Nonnull final ServerConfiguration configuration) {
     final int maxNestingLevel = configuration.getEncoding().getMaxNestingLevel();
     final boolean enableExtensions = configuration.getEncoding().isEnableExtensions();
     log.debug("Creating R4 FHIR encoders (max nesting level of: {}, and extensions enabled: {})",
@@ -83,13 +83,9 @@ public class Dependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory(
-      @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ServerConfiguration configuration, @Nonnull final FhirContext fhirContext) {
     log.info("Creating CacheableTerminologyServiceFactory");
     final TerminologyConfiguration terminology = configuration.getTerminology();
-    return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
-        terminology.getServerUrl(), terminology.getSocketTimeout(), terminology.isVerboseLogging(),
-        terminology.getClient(),
-        terminology.getCache(),
-        terminology.getAuthentication());
+    return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(), terminology);
   }
 }

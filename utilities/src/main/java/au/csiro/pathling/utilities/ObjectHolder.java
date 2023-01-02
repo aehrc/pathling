@@ -17,12 +17,12 @@
 
 package au.csiro.pathling.utilities;
 
-import org.apache.curator.utils.CloseableUtils;
 import java.io.Closeable;
 import java.io.Serializable;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.curator.utils.CloseableUtils;
 
 /**
  * Represents a scoped storage for instances of type V that can be created from configuration of
@@ -31,6 +31,7 @@ import javax.annotation.Nullable;
  *
  * @param <C> the type of the configuration
  * @param <V> the type of the instance
+ * @author Piotr Szul
  */
 public interface ObjectHolder<C extends Serializable, V> {
 

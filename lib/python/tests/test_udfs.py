@@ -51,6 +51,7 @@ PROJECT_DIR = os.path.abspath(
 )
 
 
+# noinspection PyProtectedMember
 @fixture(scope="module")
 def spark(request):
     """
@@ -72,7 +73,22 @@ def spark(request):
     )
 
     request.addfinalizer(lambda: spark.stop())
-    PathlingContext.create(spark, mock_terminology=True)
+
+    jvm = spark._jvm
+    encoders = (
+        jvm.au.csiro.pathling.encoders.FhirEncoders.forR4()
+        .withMaxNestingLevel(0)
+        .withExtensionsEnabled(False)
+        .withOpenTypes(jvm.java.util.Collections.emptySet())
+        .getOrCreate()
+    )
+    terminology_service_factory = (
+        jvm.au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory()
+    )
+    pathling_context = jvm.au.csiro.pathling.library.PathlingContext.create(
+        spark._jsparkSession, encoders, terminology_service_factory
+    )
+    PathlingContext(spark, pathling_context)
 
     return spark
 

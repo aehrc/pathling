@@ -19,7 +19,7 @@ package au.csiro.pathling.test;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.async.SparkListener;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.spark.Spark;
@@ -58,7 +58,7 @@ class UnitTestDependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static SparkSession sparkSession(@Nonnull final Configuration configuration,
+  static SparkSession sparkSession(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Environment environment,
       @Nonnull final List<SparkConfigurer> sparkConfigurers,
       @Nonnull final Optional<SparkListener> sparkListener) {

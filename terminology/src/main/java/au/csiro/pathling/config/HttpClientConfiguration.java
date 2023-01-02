@@ -19,63 +19,64 @@ package au.csiro.pathling.config;
 
 import java.io.Serializable;
 import javax.validation.constraints.Min;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
+import javax.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
- * Represents configuration relating to the HTTP client.
+ * Represents configuration relating to the HTTP client used for terminology requests.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
  */
 @Data
-@Builder(toBuilder = true)
-@NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 public class HttpClientConfiguration implements Serializable {
 
   private static final long serialVersionUID = -1624276800166930462L;
-
-  public static final int DEFAULT_MAX_CONNECTIONS_TOTAL = 32;
-  public static final int DEFAULT_MAX_CONNECTIONS_PER_ROUTE = 16;
-  public static final int DEFAULT_SOCKET_TIMEOUT = 60_000;
-  public static final int DEFAULT_RETRY_COUNT = 2;
-
-  /**
-   * The maximum total number of connections for the client.
-   * <p>
-   * See also: {@link org.apache.http.impl.client.HttpClientBuilder#setMaxConnTotal(int)}
-   */
-  @Min(0)
-  @Builder.Default
-  private int maxConnectionsTotal = DEFAULT_MAX_CONNECTIONS_TOTAL;
-
-  /**
-   * The maximum number of connections per route for the client.
-   * <p>
-   * See also: {@link org.apache.http.impl.client.HttpClientBuilder#setMaxConnPerRoute(int)}
-   */
-  @Min(0)
-  @Builder.Default
-  private int maxConnectionsPerRoute = DEFAULT_MAX_CONNECTIONS_PER_ROUTE;
 
   /**
    * The maximum period (in milliseconds) that the server should wait for incoming data from the
    * HTTP service.
    */
+  @NotNull
   @Min(0)
   @Builder.Default
-  private int socketTimeout = DEFAULT_SOCKET_TIMEOUT;
+  private int socketTimeout = 60_000;
 
+  /**
+   * The maximum total number of connections for the client.
+   *
+   * @see org.apache.http.impl.client.HttpClientBuilder#setMaxConnTotal
+   */
+  @NotNull
+  @Min(0)
+  @Builder.Default
+  private int maxConnectionsTotal = 32;
+
+  /**
+   * The maximum number of connections per route for the client.
+   *
+   * @see org.apache.http.impl.client.HttpClientBuilder#setMaxConnPerRoute
+   */
+  @Min(0)
+  @Builder.Default
+  private int maxConnectionsPerRoute = 16;
+
+  /**
+   * Controls whether terminology requests that fail for possibly transient reasons (network
+   * connections, DNS problems) should be retried.
+   */
+  @NotNull
   @Builder.Default
   private boolean retryEnabled = true;
 
+  /**
+   * The number of times to retry failed terminology requests.
+   */
+  @NotNull
   @Min(1)
   @Builder.Default
-  private int retryCount = DEFAULT_RETRY_COUNT;
-
-  public static HttpClientConfiguration defaults() {
-    return HttpClientConfiguration.builder().build();
-  }
+  private int retryCount = 2;
 
 }

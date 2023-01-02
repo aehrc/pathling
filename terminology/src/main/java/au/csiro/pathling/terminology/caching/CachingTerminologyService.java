@@ -18,6 +18,7 @@
 package au.csiro.pathling.terminology.caching;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -172,12 +173,12 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     } else {
       final boolean expired =
           cached.getExpires() != null && System.currentTimeMillis() > cached.getExpires();
-      return cache.compute(key,
+      return requireNonNull(cache.compute(key,
           (k, v) -> expired
                     // Cache hit, but the entry is expired and needs to be revalidated.
                     ? fetch(operation, Optional.ofNullable(v))
                     // Cache hit, and the entry is still valid.
-                    : v).getData();
+                    : v)).getData();
     }
   }
 
@@ -306,6 +307,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     return Instant.now().plusSeconds(seconds).toEpochMilli();
   }
 
+  @SafeVarargs
   private static Long resolveExpires(final Optional<Long>... orderedExpiryValues) {
     // Go through each of the expiry values and combine them using OR logic. If the final value is 
     // not present, throw an error.

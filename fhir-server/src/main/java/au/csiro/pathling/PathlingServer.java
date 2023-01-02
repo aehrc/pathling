@@ -17,7 +17,7 @@
 
 package au.csiro.pathling;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.ServletComponentScan;
@@ -30,7 +30,7 @@ import org.springframework.context.annotation.Import;
  * @author John Grimes
  */
 @SpringBootApplication
-@Import(Configuration.class)
+@Import(ServerConfiguration.class)
 @ServletComponentScan
 @EnableAspectJAutoProxy
 public class PathlingServer {

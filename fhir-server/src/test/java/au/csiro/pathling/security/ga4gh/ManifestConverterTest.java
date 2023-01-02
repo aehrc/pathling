@@ -20,7 +20,7 @@ package au.csiro.pathling.security.ga4gh;
 import static au.csiro.pathling.test.TestResources.assertJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.parser.AbstractParserTest;
@@ -53,7 +53,7 @@ import org.springframework.test.context.TestPropertySource;
 class ManifestConverterTest extends AbstractParserTest {
 
   @Autowired
-  Configuration configuration;
+  ServerConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;

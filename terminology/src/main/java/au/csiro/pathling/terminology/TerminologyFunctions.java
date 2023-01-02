@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.terminology;
 
+import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
+
 import au.csiro.pathling.sql.Terminology;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -26,35 +28,76 @@ import org.apache.spark.sql.Row;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
-
-@Deprecated
+/**
+ * Describes the interface to the terminology functions from a library context.
+ */
 public interface TerminologyFunctions {
 
   Logger log = LoggerFactory.getLogger(TerminologyFunctions.class);
 
+  /**
+   * Tests whether the codings within the specified column are members of the specified value set.
+   * Creates a new column containing the result.
+   *
+   * @param codingArrayCol the column containing the codings to test
+   * @param valueSetUri the URI of the value set to test against
+   * @param dataset the dataset containing the codings
+   * @param outputColumnName the name of the output column
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/valueset-operation-validate-code.html">Operation
+   * $validate-code on ValueSet</a>
+   */
   @Nonnull
   Dataset<Row> memberOf(@Nonnull final Column codingArrayCol, @Nonnull final String valueSetUri,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName);
 
+  /**
+   * Translates the codings within the specified column using a concept map known to the terminology
+   * service.
+   *
+   * @param codingArrayCol the column containing the codings to translate
+   * @param conceptMapUrl the URL of the concept map to use for translation
+   * @param reverse if true, the translation will be reversed
+   * @param equivalencesCsv the CSV representation of the equivalences to use for translation
+   * @param target the target value set to translate to
+   * @param dataset the dataset containing the codings
+   * @param outputColumnName the name of the output column
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/conceptmap-operation-translate.html">Operation
+   * $translate on ConceptMap</a>
+   */
   @Nonnull
   Dataset<Row> translate(@Nonnull final Column codingArrayCol, @Nonnull final String conceptMapUrl,
       final boolean reverse, @Nonnull final String equivalencesCsv, @Nullable final String target,
       @Nonnull final Dataset<Row> dataset,
       @Nonnull final String outputColumnName);
 
+  /**
+   * Tests whether one or more of a set of codings subsume one or more of another set of codings.
+   *
+   * @param dataset the dataset containing the codings
+   * @param codingArrayA the column containing the first set of codings
+   * @param codingArrayB the column containing the second set of codings
+   * @param outputColumnName the name of the output column
+   * @param inverted if true, the subsumption test will be inverted
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/codesystem-operation-subsumes.html">Operation $subsumes
+   * on CodeSystem</a>
+   */
   @Nonnull
-  Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
+  Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
       @Nonnull final String outputColumnName, final boolean inverted);
 
   @Nonnull
-  static TerminologyFunctions of(
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
+  static TerminologyFunctions build() {
     return new TerminologyFunctionsImpl();
   }
 }
 
+/**
+ * An implementation of the library terminology functions interface that uses the UDFs.
+ */
 class TerminologyFunctionsImpl implements TerminologyFunctions {
 
   TerminologyFunctionsImpl() {
@@ -82,14 +125,13 @@ class TerminologyFunctionsImpl implements TerminologyFunctions {
 
   @Override
   @Nonnull
-  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
-      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB
-      , @Nonnull final String outputColumnName,
-      final boolean inverted) {
-    return idAndCodingSet.withColumn(outputColumnName,
+  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
+      @Nonnull final String outputColumnName, final boolean inverted) {
+    return dataset.withColumn(outputColumnName,
         inverted
         ? Terminology.subsumed_by(codingArrayA, codingArrayB)
         : Terminology.subsumes(codingArrayA, codingArrayB));
-
   }
+
 }

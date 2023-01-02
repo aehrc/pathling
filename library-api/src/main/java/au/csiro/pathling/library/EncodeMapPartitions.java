@@ -31,7 +31,7 @@ import javax.annotation.Nonnull;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
-abstract class EncodeMapPartitionsFunc<T extends IBaseResource> implements
+abstract class EncodeMapPartitions<T extends IBaseResource> implements
     MapPartitionsFunction<String, T> {
 
   private static final long serialVersionUID = -189338116652852324L;
@@ -39,7 +39,7 @@ abstract class EncodeMapPartitionsFunc<T extends IBaseResource> implements
   protected final String inputMimeType;
   protected final Class<T> resourceClass;
 
-  protected EncodeMapPartitionsFunc(FhirVersionEnum fhirVersion, final String inputMimeType,
+  protected EncodeMapPartitions(FhirVersionEnum fhirVersion, final String inputMimeType,
       Class<T> resourceClass) {
     this.fhirVersion = fhirVersion;
     this.inputMimeType = inputMimeType;

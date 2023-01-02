@@ -19,7 +19,7 @@ package au.csiro.pathling.caching;
 
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.interceptor.api.Hook;
@@ -50,7 +50,7 @@ import org.springframework.stereotype.Component;
 public class EntityTagInterceptor {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final Database database;
@@ -66,7 +66,7 @@ public class EntityTagInterceptor {
    * @param database {@link Database} for use in retrieving cache keys
    * @param conformanceProvider for determining the cacheability of conformance statement requests
    */
-  public EntityTagInterceptor(@Nonnull final Configuration configuration,
+  public EntityTagInterceptor(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Database database,
       @Nonnull final ConformanceProvider conformanceProvider) {
     this.configuration = configuration;
@@ -130,11 +130,11 @@ public class EntityTagInterceptor {
    * Sets caching headers on a response to make sure that it doesn't get cached.
    *
    * @param response a {@link HttpServletResponse} upon which to set caching headers
-   * @param configuration the {@link Configuration} for the server, which controls which header
-   * values are used
+   * @param configuration the {@link ServerConfiguration} for the server, which controls which
+   * header values are used
    */
   public static void makeRequestNonCacheable(@Nullable final HttpServletResponse response,
-      @Nonnull final Configuration configuration) {
+      @Nonnull final ServerConfiguration configuration) {
     if (response == null) {
       return;
     }

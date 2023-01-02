@@ -44,74 +44,6 @@ pathling:
     # The subdirectory within the warehouse path used to read and write data.
     databaseName: default
 
-  terminology:
-    # Enables the use of terminology functions.
-    enabled: true
-
-    # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology
-    # queries. The server listed here is suitable for testing purposes only.
-    serverUrl: https://tx.ontoserver.csiro.au/fhir
-
-    # Setting this option to true will enable additional logging of the details of requests between
-    # the server and the terminology service.
-    verboseLogging: false
-
-    # Configuration relating to the HTTP client used for terminology requests.
-    client:
-      # The maximum period (in milliseconds) that the server should wait for incoming data from the
-      # terminology service.
-      socketTimeout: 60_000
-
-      # The maximum number of connections that the server should open to the terminology service.
-      maxConnectionsTotal: 32
-
-      # The maximum number of connections that the server should open to the terminology service,
-      # per route.
-      maxConnectionsPerRoute: 16
-
-      # Controls whether terminology requests that fail for possibly transient reasons (network
-      # connections, DNS problems) should be retried.
-      retryEnabled: true
-
-      # The number of times to retry failed terminology requests.
-      retryCount: 2
-
-    # Configuration relating to the caching of terminology requests.
-    cache:
-      # Set this to false to disable caching of terminology requests (not recommended).
-      enabled: true
-
-      # The type of storage to use for the cache. Can be "memory" or "disk".
-      storageType: "memory"
-
-      # Sets the maximum number of entries that will be held in memory. Only applicable when using
-      # the "memory" storage type.
-      maxEntries: 200_000
-
-      # The path on disk to use for the cache, required when a storage type of "disk" is specified.
-      # storagePath: /usr/share/cache
-
-      # The default expiry time for cache entries (in seconds), used when the server does not
-      # provide an expiry value.
-      defaultExpiry: 600
-
-      # If provided, this value overrides the expiry time provided by the terminology server.
-      # overrideExpiry: 2592000
-
-    # Configuration relating to authentication of requests to the terminology service.
-    authentication:
-      # Enables authenticated requests.
-      enabled: false
-
-      # Authentication details for use with the client credentials grant.
-      # tokenEndpoint: [token endpoint]
-      # clientId: [client ID]
-      # clientSecret: [client secret]
-
-      # The minimum number of seconds that a token should have before expiry when deciding whether
-      # to send it with a terminology request.
-      tokenExpiryTolerance: 120
-
   auth:
     # Enables authorization.
     enabled: false
@@ -182,31 +114,6 @@ pathling:
 
   async:
     enabled: true
-
-  encoding:
-    # Controls the maximum depth of nested element data that is encoded upon import.
-    maxNestingLevel: 3
-
-    # Enables support for FHIR extensions.
-    enableExtensions: true
-
-    # The list of types that are encoded within open types, such as extensions. This default list
-    # was taken from the data types that are common to extensions found in widely-used IGs,
-    # such as the US and AU base profiles. In general, you will get the best query performance by
-    # encoding your data with the shortest possible list.
-    openTypes:
-      - boolean
-      - code
-      - date
-      - dateTime
-      - decimal
-      - integer
-      - string
-      - Coding
-      - CodeableConcept
-      - Address
-      - Identifier
-      - Reference
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.

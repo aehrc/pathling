@@ -19,7 +19,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.springframework.context.annotation.Profile;
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("server & ga4gh")
-public class VisaDecoderFactory implements JwtDecoderFactory<Configuration> {
+public class VisaDecoderFactory implements JwtDecoderFactory<ServerConfiguration> {
 
   @Nonnull
   private final VisaDecoderBuilder builder;
@@ -48,7 +48,7 @@ public class VisaDecoderFactory implements JwtDecoderFactory<Configuration> {
   }
 
   @Override
-  public JwtDecoder createDecoder(@Nullable final Configuration configuration) {
+  public JwtDecoder createDecoder(@Nullable final ServerConfiguration configuration) {
     checkArgument(configuration != null, "configuration cannot be null");
     return builder.build(configuration);
   }

@@ -22,7 +22,7 @@ import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -63,7 +63,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class SearchExecutorTest {
 
   @Autowired
-  Configuration configuration;
+  ServerConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;

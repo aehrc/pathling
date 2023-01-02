@@ -23,7 +23,7 @@ import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ResourceNotFoundError;
@@ -64,16 +64,16 @@ public class JobProvider {
   private static final String PROGRESS_HEADER = "X-Progress";
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final JobRegistry jobRegistry;
 
   /**
-   * @param configuration a {@link Configuration} for determining if authorization is enabled
+   * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
-  public JobProvider(@Nonnull final Configuration configuration,
+  public JobProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final JobRegistry jobRegistry) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;

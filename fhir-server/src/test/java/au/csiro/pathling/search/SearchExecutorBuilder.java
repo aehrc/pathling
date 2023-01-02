@@ -20,10 +20,10 @@ package au.csiro.pathling.search;
 import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.StringAndListParam;
@@ -41,7 +41,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 class SearchExecutorBuilder {
 
   @Nonnull
-  final Configuration configuration;
+  final ServerConfiguration configuration;
 
   @Nonnull
   final FhirContext fhirContext;
@@ -64,7 +64,7 @@ class SearchExecutorBuilder {
   @Nonnull
   Optional<StringAndListParam> filters = Optional.empty();
 
-  SearchExecutorBuilder(@Nonnull final Configuration configuration,
+  SearchExecutorBuilder(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {

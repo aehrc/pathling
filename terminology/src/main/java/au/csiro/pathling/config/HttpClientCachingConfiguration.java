@@ -24,8 +24,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Objects;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.Constraint;
 import javax.validation.ConstraintValidator;
@@ -33,44 +31,28 @@ import javax.validation.ConstraintValidatorContext;
 import javax.validation.Payload;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
- * Represents configuration relating to HTTP client caching.
+ * Configuration relating to the caching of terminology requests.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
  */
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @ValidHttpCacheConfiguration
 public class HttpClientCachingConfiguration implements Serializable {
 
   private static final long serialVersionUID = -3030386957343963899L;
 
-  public static final boolean DEFAULT_ENABLED = true;
-  public static final StorageType DEFAULT_STORAGE_TYPE = StorageType.MEMORY;
-  public static final int DEFAULT_MAX_ENTRIES = 50_000;
-  public static final int DEFAULT_EXPIRY = 600;
-
   /**
-   * Enables client side caching of REST requests.
+   * Set this to false to disable caching of terminology requests (not recommended).
    */
   @NotNull
   @Builder.Default
-  private boolean enabled = DEFAULT_ENABLED;
-
-  /**
-   * The type of storage to use for the cache.
-   *
-   * @see StorageType
-   */
-  @NotNull
-  @Builder.Default
-  private StorageType storageType = DEFAULT_STORAGE_TYPE;
+  private boolean enabled = true;
 
   /**
    * Sets the maximum number of entries that will be held in memory.
@@ -78,10 +60,18 @@ public class HttpClientCachingConfiguration implements Serializable {
   @NotNull
   @Min(0)
   @Builder.Default
-  private int maxEntries = DEFAULT_MAX_ENTRIES;
+  private int maxEntries = 200_000;
 
   /**
-   * The path on disk to use for the cache, required when {@link StorageType#DISK} is specified.
+   * The {@link HttpClientCachingStorageType} to use for the cache.
+   */
+  @NotNull
+  @Builder.Default
+  private HttpClientCachingStorageType storageType = HttpClientCachingStorageType.MEMORY;
+
+  /**
+   * The path on disk to use for the cache, required when {@link HttpClientCachingStorageType#DISK}
+   * is specified.
    */
   @Nullable
   private String storagePath;
@@ -91,64 +81,15 @@ public class HttpClientCachingConfiguration implements Serializable {
    * an expiry value.
    */
   @Min(0)
-  @NotNull
   @Builder.Default
-  private int defaultExpiry = DEFAULT_EXPIRY;
+  private int defaultExpiry = 600;
 
   /**
    * If provided, this value overrides the expiry time provided by the terminology server.
    */
   @Nullable
+  @Min(0)
   private Integer overrideExpiry;
-
-  /**
-   * Represents the type of storage used by the cache.
-   */
-  public enum StorageType {
-    /**
-     * The cache is stored in memory, and is reset when the application is restarted.
-     */
-    MEMORY("memory"),
-
-    /**
-     * The cache is stored on disk, and is persisted between application restarts.
-     */
-    DISK("disk");
-
-    @Nonnull
-    private final String code;
-
-    // NOTE: Not using @Nonnull annotation here on purpose to avoid warning:
-    // "Constraints on the parameters of constructors of non-static inner classes are not supported 
-    // if those parameters have a generic type due to JDK bug JDK-5087240."
-    // and a lengthy stack trace.
-    StorageType(final String code) {
-      this.code = Objects.requireNonNull(code);
-    }
-
-    @Override
-    public String toString() {
-      return code;
-    }
-
-    @Nonnull
-    public static StorageType fromCode(@Nonnull final String code) {
-      for (final StorageType storageType : values()) {
-        if (storageType.code.equals(code)) {
-          return storageType;
-        }
-      }
-      throw new IllegalArgumentException("Unknown storage type: " + code);
-    }
-  }
-
-  public static HttpClientCachingConfiguration defaults() {
-    return HttpClientCachingConfiguration.builder().build();
-  }
-
-  public static HttpClientCachingConfiguration disabled() {
-    return HttpClientCachingConfiguration.builder().enabled(false).build();
-  }
 
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
@@ -174,7 +115,7 @@ public class HttpClientCachingConfiguration implements Serializable {
     @Override
     public boolean isValid(final HttpClientCachingConfiguration value,
         final ConstraintValidatorContext context) {
-      if (value.getStorageType().equals(StorageType.DISK)) {
+      if (value.getStorageType().equals(HttpClientCachingStorageType.DISK)) {
         return value.getStoragePath() != null;
       } else {
         return true;

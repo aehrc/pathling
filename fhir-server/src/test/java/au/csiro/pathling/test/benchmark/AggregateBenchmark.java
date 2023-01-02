@@ -19,15 +19,15 @@ package au.csiro.pathling.test.benchmark;
 
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -67,12 +67,12 @@ public class AggregateBenchmark {
 
     @Autowired
     SparkSession spark;
-    
+
     @Autowired
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    Configuration configuration;
+    ServerConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;

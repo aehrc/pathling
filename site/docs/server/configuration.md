@@ -152,6 +152,9 @@ spark:
 - `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
   to `true` will enable additional logging of the details of requests between
   the server and the terminology service.
+
+#### Client
+
 - `pathling.terminology.client.maxConnectionsTotal` - (default: `32`) The
   maximum number of total connections allowed from the client.
 - `pathling.terminology.client.maxConnectionsPerRoute` - (default: `16`) The
@@ -163,6 +166,9 @@ spark:
   automatic retry of failed terminology service requests.
 - `pathling.terminology.client.retryCount` - (default: `2`) The maximum
   number of times that failed terminology service requests should be retried.
+
+#### Cache
+
 - `pathling.terminology.cache.enabled` - (default: `true`) Set this to false to
   disable caching of terminology requests (not recommended).
 - `pathling.terminology.cache.storageType` - (default: `memory`) The type of
@@ -178,6 +184,9 @@ spark:
   cached if the server does not specify an expiry.
 - `pathling.terminology.cache.overrideExpiry` - If provided, this value
   overrides the expiry time provided by the terminology server.
+
+#### Authentication
+
 - `pathling.terminology.authentication.enabled` - (default: `false`) Enables
   authentication for requests to the terminology service.
 - `pathling.terminology.authentication.tokenEndpoint`, 

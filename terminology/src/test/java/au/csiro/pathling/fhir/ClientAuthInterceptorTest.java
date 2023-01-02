@@ -27,6 +27,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import ca.uhn.fhir.rest.client.api.IHttpRequest;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -72,8 +73,14 @@ class ClientAuthInterceptorTest {
     httpClient = mock(CloseableHttpClient.class);
     request = mock(IHttpRequest.class);
     response = mock(CloseableHttpResponse.class);
-    interceptor = new ClientAuthInterceptor(httpClient, TOKEN_URL, CLIENT_ID, CLIENT_SECRET, SCOPE,
-        TOKEN_EXPIRY_TOLERANCE);
+    final TerminologyAuthConfiguration configuration = TerminologyAuthConfiguration.builder()
+        .tokenEndpoint(TOKEN_URL)
+        .clientId(CLIENT_ID)
+        .clientSecret(CLIENT_SECRET)
+        .scope(SCOPE)
+        .tokenExpiryTolerance(TOKEN_EXPIRY_TOLERANCE)
+        .build();
+    interceptor = new ClientAuthInterceptor(httpClient, configuration);
   }
 
   @Test
@@ -149,8 +156,14 @@ class ClientAuthInterceptorTest {
 
   @Test
   void expiryLessThanTolerance() throws IOException {
-    interceptor = new ClientAuthInterceptor(httpClient, TOKEN_URL, CLIENT_ID, CLIENT_SECRET, SCOPE,
-        10);
+    final TerminologyAuthConfiguration configuration = TerminologyAuthConfiguration.builder()
+        .tokenEndpoint(TOKEN_URL)
+        .clientId(CLIENT_ID)
+        .clientSecret(CLIENT_SECRET)
+        .scope(SCOPE)
+        .tokenExpiryTolerance(10)
+        .build();
+    interceptor = new ClientAuthInterceptor(httpClient, configuration);
 
     final Header contentTypeHeader = mock(Header.class);
     when(contentTypeHeader.getValue()).thenReturn("application/json");

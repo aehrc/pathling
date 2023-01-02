@@ -27,7 +27,7 @@ import static au.csiro.pathling.utilities.Versioning.getMajorVersion;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.caching.Cacheable;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
@@ -128,7 +128,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   }
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final Optional<OidcConfiguration> oidcConfiguration;
@@ -149,15 +149,15 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private final Map<String, OperationDefinition> resources;
 
   /**
-   * @param configuration a {@link Configuration} object controlling the behaviour of the capability
-   * statement
+   * @param configuration a {@link ServerConfiguration} object controlling the behaviour of the
+   * capability statement
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
    * @param version a {@link PathlingVersion} object containing version information for the server
    * @param fhirContext a {@link FhirContext} for determining the supported FHIR version
    * @param jsonParser a {@link IParser} for parsing JSON OperationDefinitions
    */
-  public ConformanceProvider(@Nonnull final Configuration configuration,
+  public ConformanceProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext,
       @Nonnull final IParser jsonParser) {

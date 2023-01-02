@@ -130,9 +130,15 @@ def test_element_nesting(spark_session, json_resources_df):
     ptl_0 = PathlingContext.create(spark_session, max_nesting_level=0)
     ptl_1 = PathlingContext.create(spark_session, max_nesting_level=1)
 
-    # default nesting level is 0
+    # default nesting level is 3
     quest_def = ptl_def.encode(json_resources_df, "Questionnaire").head()
-    assert ("item" in quest_def) and ("item" not in quest_def["item"][0])
+    assert (
+        ("item" in quest_def)
+        and ("item" in quest_def["item"][0])
+        and ("item" in quest_def["item"][0]["item"][0])
+        and ("item" in quest_def["item"][0]["item"][0]["item"][0])
+        and ("item" not in quest_def["item"][0]["item"][0]["item"][0]["item"][0])
+    )
 
     # max nesting level set to 0
     quest_0 = ptl_0.encode(json_resources_df, "Questionnaire").head()
@@ -188,17 +194,31 @@ def test_open_types(spark_session, json_resources_df):
         enabled_open_types=["boolean", "integer", "string", "Address"],
     )
 
-    # by default no open types
+    # Test defaults.
     patient_def = ptl_def.encode(json_resources_df, "Patient").head()
     assert "_extension" in patient_def
-    assert not _get_extension_value_keys(patient_def)
+    assert [
+        "valueAddress",
+        "valueBoolean",
+        "valueCode",
+        "valueCodeableConcept",
+        "valueCoding",
+        "valueDateTime",
+        "valueDate",
+        "valueDecimal",
+        "valueDecimal_scale",
+        "valueIdentifier",
+        "valueInteger",
+        "valueReference",
+        "valueString",
+    ] == _get_extension_value_keys(patient_def)
 
-    # explicit empty open types
+    # Explicit empty open types.
     patient_none = ptl_none.encode(json_resources_df, "Patient").head()
     assert "_extension" in patient_none
     assert not _get_extension_value_keys(patient_none)
 
-    # some open types present
+    # Some open types present.
     patient_some = ptl_some.encode(json_resources_df, "Patient").head()
     assert [
         "valueAddress",

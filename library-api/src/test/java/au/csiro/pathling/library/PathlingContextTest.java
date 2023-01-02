@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.library;
 
+import static au.csiro.pathling.test.SchemaAsserts.assertFieldNotPresent;
+import static au.csiro.pathling.test.SchemaAsserts.assertFieldPresent;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupTranslate;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupValidate;
@@ -29,23 +31,25 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
-import au.csiro.pathling.config.HttpClientCachingConfiguration.StorageType;
+import au.csiro.pathling.config.HttpClientCachingStorageType;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.SchemaAsserts;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -165,53 +169,54 @@ public class PathlingContextTest {
     final Row defaultRow = PathlingContext.create(spark)
         .encode(jsonResourcesDF, "Questionnaire")
         .head();
-    SchemaAsserts.assertFieldNotPresent("_extension", defaultRow.schema());
+    assertFieldPresent("_extension", defaultRow.schema());
     final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).get(0);
-    SchemaAsserts.assertFieldNotPresent("item", defaultItem.schema());
+    assertFieldPresent("item", defaultItem.schema());
 
     // Test explicit options
     // Nested items
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+    final EncodingConfiguration encodingConfig1 = EncodingConfiguration.builder()
+        .enableExtensions(false)
         .maxNestingLevel(1)
         .build();
-    final Row rowWithNesting = PathlingContext.create(spark, config)
+    final Row rowWithNesting = PathlingContext.create(spark, encodingConfig1)
         .encode(jsonResourcesDF, "Questionnaire").head();
-    SchemaAsserts.assertFieldNotPresent("_extension", rowWithNesting.schema());
+    assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
     final Row itemWithNesting = (Row) rowWithNesting
         .getList(rowWithNesting.fieldIndex("item")).get(0);
-    SchemaAsserts.assertFieldPresent("item", itemWithNesting.schema());
+    assertFieldPresent("item", itemWithNesting.schema());
     final Row nestedItem = (Row) itemWithNesting
         .getList(itemWithNesting.fieldIndex("item")).get(0);
-    SchemaAsserts.assertFieldNotPresent("item", nestedItem.schema());
+    assertFieldNotPresent("item", nestedItem.schema());
 
     // Test explicit options
     // Extensions and open types
-    final PathlingContextConfiguration config2 = PathlingContextConfiguration.builder()
-        .extensionsEnabled(true)
-        .openTypesEnabled(List.of("boolean", "string", "Address"))
+    final EncodingConfiguration encodingConfig2 = EncodingConfiguration.builder()
+        .enableExtensions(true)
+        .openTypes(Set.of("boolean", "string", "Address"))
         .build();
-    final Row rowWithExtensions = PathlingContext.create(spark, config2)
+    final Row rowWithExtensions = PathlingContext.create(spark, encodingConfig2)
         .encode(jsonResourcesDF, "Patient").head();
-    SchemaAsserts.assertFieldPresent("_extension", rowWithExtensions.schema());
+    assertFieldPresent("_extension", rowWithExtensions.schema());
 
     final Map<Integer, WrappedArray<Row>> extensions = rowWithExtensions
         .getJavaMap(rowWithExtensions.fieldIndex("_extension"));
 
     // get the first extension of some extension set
     final Row extension = (Row) extensions.values().toArray(WrappedArray[]::new)[0].apply(0);
-    SchemaAsserts.assertFieldPresent("valueString", extension.schema());
-    SchemaAsserts.assertFieldPresent("valueAddress", extension.schema());
-    SchemaAsserts.assertFieldPresent("valueBoolean", extension.schema());
-    SchemaAsserts.assertFieldNotPresent("valueInteger", extension.schema());
+    assertFieldPresent("valueString", extension.schema());
+    assertFieldPresent("valueAddress", extension.schema());
+    assertFieldPresent("valueBoolean", extension.schema());
+    assertFieldNotPresent("valueInteger", extension.schema());
   }
 
   @Test
   public void testEncodeResourceStream() throws Exception {
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-        .extensionsEnabled(true)
+    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
+        .enableExtensions(true)
         .build();
-    final PathlingContext pathling = PathlingContext.create(spark, config);
+    final PathlingContext pathling = PathlingContext.create(spark, encodingConfig);
 
     final Dataset<Row> jsonResources = spark.readStream().text(testDataUrl + "/resources/R4/json");
 
@@ -336,17 +341,15 @@ public class PathlingContextTest {
 
   @Test
   void testBuildContextWithTerminologyDefaults() {
-
     final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
 
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-        .terminologyServerUrl(terminologyServerUrl)
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl(terminologyServerUrl)
         .build();
-    final PathlingContext pathlingContext = PathlingContext.create(spark, config);
+    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
     assertNotNull(pathlingContext);
     final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConfiguration.defaults(),
-        HttpClientCachingConfiguration.defaults(), TerminologyAuthConfiguration.defaults());
+        FhirVersionEnum.R4, terminologyConfig);
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
@@ -356,18 +359,19 @@ public class PathlingContextTest {
 
   @Test
   void testBuildContextWithTerminologyNoCache() {
-
     final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
 
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-        .terminologyServerUrl(terminologyServerUrl)
-        .cacheStorageType(null)
+    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
+        .enabled(false)
         .build();
-    final PathlingContext pathlingContext = PathlingContext.create(spark, config);
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl(terminologyServerUrl)
+        .cache(cacheConfig)
+        .build();
+    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyServerUrl, false, HttpClientConfiguration.defaults(),
-        HttpClientCachingConfiguration.disabled(), TerminologyAuthConfiguration.defaults());
+        FhirVersionEnum.R4, terminologyConfig);
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);
@@ -389,50 +393,40 @@ public class PathlingContextTest {
     final int socketTimeout = 123;
 
     final int cacheMaxEntries = 1233;
-    final StorageType cacheStorageType = StorageType.DISK;
+    final HttpClientCachingStorageType cacheStorageType = HttpClientCachingStorageType.DISK;
     final File tempDirectory = Files.createTempDirectory("pathling-cache").toFile();
     tempDirectory.deleteOnExit();
     final String cacheStoragePath = tempDirectory.getAbsolutePath();
 
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-        .terminologyServerUrl(terminologyServerUrl)
-        .terminologyVerboseRequestLogging(true)
-        .terminologySocketTimeout(socketTimeout)
+    final HttpClientConfiguration clientConfig = HttpClientConfiguration.builder()
         .maxConnectionsTotal(maxConnectionsTotal)
         .maxConnectionsPerRoute(maxConnectionsPerRoute)
-        .cacheMaxEntries(cacheMaxEntries)
-        .cacheStorageType(cacheStorageType.toString())
-        .cacheStoragePath(cacheStoragePath)
+        .socketTimeout(socketTimeout)
+        .build();
+    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
+        .maxEntries(cacheMaxEntries)
+        .storageType(cacheStorageType)
+        .storagePath(cacheStoragePath)
+        .build();
+    final TerminologyAuthConfiguration authConfig = TerminologyAuthConfiguration.builder()
         .tokenEndpoint(tokenEndpoint)
         .clientId(clientId)
         .clientSecret(clientSecret)
         .scope(scope)
         .tokenExpiryTolerance(tokenExpiryTolerance)
         .build();
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl(terminologyServerUrl)
+        .verboseLogging(true)
+        .client(clientConfig)
+        .cache(cacheConfig)
+        .authentication(authConfig)
+        .build();
 
-    final PathlingContext pathlingContext = PathlingContext.create(spark, config);
+    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
     assertNotNull(pathlingContext);
     final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
-        FhirVersionEnum.R4, terminologyServerUrl, true,
-        HttpClientConfiguration.builder()
-            .socketTimeout(socketTimeout)
-            .maxConnectionsTotal(maxConnectionsTotal)
-            .maxConnectionsPerRoute(maxConnectionsPerRoute)
-            .build(),
-        HttpClientCachingConfiguration.builder()
-            .maxEntries(cacheMaxEntries)
-            .storageType(cacheStorageType)
-            .storagePath(cacheStoragePath)
-            .build(),
-        TerminologyAuthConfiguration.builder()
-            .enabled(true)
-            .tokenEndpoint(tokenEndpoint)
-            .clientId(clientId)
-            .clientSecret(clientSecret)
-            .scope(scope)
-            .tokenExpiryTolerance(tokenExpiryTolerance)
-            .build()
-    );
+        FhirVersionEnum.R4, terminologyConfig);
 
     final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
     assertEquals(expectedFactory, actualServiceFactory);

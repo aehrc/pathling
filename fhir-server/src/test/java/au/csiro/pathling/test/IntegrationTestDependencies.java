@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.test;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -51,13 +51,9 @@ public class IntegrationTestDependencies {
   @Bean
   public DefaultTerminologyServiceFactory terminologyServiceFactory(
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final Configuration configuration) {
+      @Nonnull final ServerConfiguration configuration) {
     log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
-    return new DefaultTerminologyServiceFactory(
-        fhirContext.getVersion().getVersion(),
-        configuration.getTerminology().getServerUrl(), false,
-        configuration.getTerminology().getClient(),
-        configuration.getTerminology().getCache(),
-        configuration.getTerminology().getAuthentication());
+    return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
+        configuration.getTerminology());
   }
 }

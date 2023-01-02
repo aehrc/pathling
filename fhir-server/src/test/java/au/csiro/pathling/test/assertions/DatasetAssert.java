@@ -21,7 +21,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstC
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -168,7 +168,7 @@ public class DatasetAssert {
       log.info("Existing file not found, skipping delete");
     }
 
-    final Configuration configuration = new Configuration();
+    final ServerConfiguration configuration = new ServerConfiguration();
     final StorageConfiguration storage = new StorageConfiguration();
     storage.setWarehouseUrl("file://" + location);
     configuration.setStorage(storage);

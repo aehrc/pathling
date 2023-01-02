@@ -26,8 +26,7 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.config.Configuration;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -36,6 +35,7 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
 import java.util.Collections;
@@ -62,7 +62,7 @@ import org.apache.spark.sql.SparkSession;
 public abstract class QueryExecutor {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -76,7 +76,7 @@ public abstract class QueryExecutor {
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
-  protected QueryExecutor(@Nonnull final Configuration configuration,
+  protected QueryExecutor(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
