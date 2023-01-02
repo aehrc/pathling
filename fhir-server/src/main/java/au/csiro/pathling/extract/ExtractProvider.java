@@ -18,7 +18,7 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.security.OperationAccess;
@@ -27,6 +27,7 @@ import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IResourceProvider;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -104,7 +105,7 @@ public class ExtractProvider implements IResourceProvider {
   private Parameters invoke(@Nullable final List<String> column,
       @Nullable final List<String> filter, @Nullable final IntegerType limit,
       @Nullable final RequestDetails requestDetails) {
-    checkNotNull(requestDetails);
+    requireNonNull(requestDetails);
 
     final String requestId = requestDetails.getRequestId();
     final String resultId = requestId != null

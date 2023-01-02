@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -39,6 +39,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.PolarityExpres
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TermExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -67,7 +68,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitTermExpression(@Nullable final TermExpressionContext ctx) {
-    return checkNotNull(ctx).term().accept(new TermVisitor(context));
+    return requireNonNull(ctx).term().accept(new TermVisitor(context));
   }
 
   /**
@@ -79,7 +80,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitInvocationExpression(@Nullable final InvocationExpressionContext ctx) {
-    final FhirPath expressionResult = new Visitor(context).visit(checkNotNull(ctx).expression());
+    final FhirPath expressionResult = new Visitor(context).visit(
+        requireNonNull(ctx).expression());
     // The input context is passed through to the invocation visitor as the invoker.
     return ctx.invocation().accept(new InvocationVisitor(context, expressionResult));
   }
@@ -87,7 +89,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   private FhirPath visitBinaryOperator(@Nullable final ParseTree leftContext,
       @Nullable final ParseTree rightContext, @Nullable final String operatorName) {
-    checkNotNull(operatorName);
+    requireNonNull(operatorName);
 
     // Parse the left and right expressions.
     final FhirPath left = new Visitor(context).visit(leftContext);
@@ -103,41 +105,41 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitEqualityExpression(@Nullable final EqualityExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   public FhirPath visitInequalityExpression(@Nullable final InequalityExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
   public FhirPath visitAndExpression(@Nullable final AndExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
   public FhirPath visitOrExpression(@Nullable final OrExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
   public FhirPath visitImpliesExpression(@Nullable final ImpliesExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
   public FhirPath visitMembershipExpression(@Nullable final MembershipExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
@@ -145,20 +147,20 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitMultiplicativeExpression(
       @Nullable final MultiplicativeExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
   public FhirPath visitAdditiveExpression(@Nullable final AdditiveExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   public FhirPath visitCombineExpression(@Nullable final CombineExpressionContext ctx) {
-    return visitBinaryOperator(checkNotNull(ctx).expression(0), ctx.expression(1),
+    return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 

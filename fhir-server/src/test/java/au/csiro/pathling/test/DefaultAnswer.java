@@ -17,9 +17,10 @@
 
 package au.csiro.pathling.test;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
+import java.util.Objects;
 import javax.annotation.Nullable;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -31,7 +32,7 @@ public class DefaultAnswer implements Answer<Object> {
 
   @Override
   public Object answer(@Nullable final InvocationOnMock invocation) {
-    checkNotNull(invocation);
+    requireNonNull(invocation);
     throw new AssertionError(String.format("Calling a mock with undefined arguments: %s %s",
         invocation.getMethod(),
         Arrays.toString(invocation.getArguments())));

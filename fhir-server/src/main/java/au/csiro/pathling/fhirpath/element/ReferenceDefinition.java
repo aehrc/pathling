@@ -17,11 +17,12 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -49,7 +50,7 @@ public class ReferenceDefinition extends ElementDefinition {
   @Nonnull
   public Set<ResourceType> getReferenceTypes() {
     final List<Class<? extends IBaseResource>> resourceTypes = childDefinition.getResourceTypes();
-    checkNotNull(resourceTypes);
+    requireNonNull(resourceTypes);
 
     return resourceTypes.stream()
         .map(clazz -> {

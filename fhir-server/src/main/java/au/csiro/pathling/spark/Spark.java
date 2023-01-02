@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.spark;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.config.ServerConfiguration;
 import java.util.Arrays;
@@ -68,7 +70,7 @@ public class Spark {
     // Pass through Spark configuration.
     resolveThirdPartyConfiguration(environment, List.of("spark."),
         property -> System.setProperty(property,
-            Objects.requireNonNull(environment.getProperty(property))));
+            requireNonNull(environment.getProperty(property))));
 
     final SparkSession spark = SparkSession.builder()
         .appName(configuration.getSpark().getAppName())
@@ -83,7 +85,7 @@ public class Spark {
     // Pass through Hadoop AWS configuration.
     resolveThirdPartyConfiguration(environment, List.of("fs.s3a."),
         property -> spark.sparkContext().hadoopConfiguration().set(property,
-            Objects.requireNonNull(environment.getProperty(property))));
+            requireNonNull(environment.getProperty(property))));
 
     return spark;
   }

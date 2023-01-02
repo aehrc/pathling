@@ -9,7 +9,6 @@ package au.csiro.pathling.utilities;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.errors.UnexpectedResponseException;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -61,18 +60,6 @@ public abstract class Preconditions {
     if (!expression) {
       throw new IllegalArgumentException(errorMessage);
     }
-  }
-
-  /**
-   * Ensures that an object is not null, throwing a {@link NullPointerException} if it is.
-   *
-   * @param object the object to check
-   * @param <T> the type of the object
-   * @return the non-null object
-   */
-  @Nonnull
-  public static <T> T checkNotNull(@Nullable final T object) {
-    return Objects.requireNonNull(object);
   }
 
   /**

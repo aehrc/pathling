@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath;
 import static au.csiro.pathling.QueryHelpers.aliasAllColumns;
 import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
@@ -146,7 +147,7 @@ public class ResourcePath extends NonLiteralPath {
    */
   @Nonnull
   public Column getElementColumn(@Nonnull final String elementName) {
-    return Objects.requireNonNull(elementsToColumns.get(elementName));
+    return requireNonNull(elementsToColumns.get(elementName));
   }
 
   @Nonnull

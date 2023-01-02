@@ -19,6 +19,7 @@ package au.csiro.pathling.search;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsStream;
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -182,7 +183,7 @@ class SearchExecutorTest {
       entry.setResource((Resource) resource);
       return entry;
     }).collect(Collectors.toList()));
-    actualBundle.setTotal(Objects.requireNonNull(executor.size()));
+    actualBundle.setTotal(requireNonNull(executor.size()));
     actualBundle.setType(BundleType.SEARCHSET);
     final String actualJson = jsonParser.encodeResourceToString(actualBundle);
 

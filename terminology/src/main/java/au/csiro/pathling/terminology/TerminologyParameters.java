@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.terminology;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.function.Function;
@@ -43,7 +45,7 @@ public interface TerminologyParameters extends Serializable {
   @Nonnull
   static <T> T required(@Nonnull final Function<String, T> converter,
       @Nullable final String value) {
-    return converter.apply(Objects.requireNonNull(value));
+    return converter.apply(requireNonNull(value));
   }
 
 }

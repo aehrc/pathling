@@ -19,9 +19,9 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
@@ -231,7 +231,7 @@ public abstract class QueryExecutor {
               currentContext.getEidColumn(), currentContext.getValueColumn(),
               currentContext.isSingular(), currentContext.getThisColumn());
     }
-    checkNotNull(filterColumn);
+    requireNonNull(filterColumn);
 
     // Return a dataset of filtered IDs with an aliased ID column, ready for joining.
     final String filterIdAlias = randomAlias();

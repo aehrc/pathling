@@ -17,16 +17,16 @@
 
 package au.csiro.pathling.test.helpers;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.utilities.Preconditions;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -128,16 +128,16 @@ public abstract class SparkHelpers {
             null}, codingStructType());
   }
 
-  
+
   @Nonnull
   public static Row rowFromCodeableConcept(@Nonnull final CodeableConcept codeableConcept) {
     final List<Coding> coding = codeableConcept.getCoding();
-    checkNotNull(coding);
+    requireNonNull(coding);
 
     final List<Row> codings = coding.stream().map(SparkHelpers::rowFromCoding)
         .collect(Collectors.toList());
     final Buffer<Row> buffer = JavaConverters.asScalaBuffer(codings);
-    checkNotNull(buffer);
+    requireNonNull(buffer);
 
     return new GenericRowWithSchema(
         new Object[]{codeableConcept.getId(), buffer.toList(), codeableConcept.getText()},
@@ -146,7 +146,8 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
-    return Preconditions.checkNotNull(QuantityEncoding.encode(quantity, false));
+    final Row object = QuantityEncoding.encode(quantity, false);
+    return requireNonNull(object);
   }
 
   @Nonnull

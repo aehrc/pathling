@@ -20,8 +20,8 @@ package au.csiro.pathling.io;
 import static au.csiro.pathling.QueryHelpers.createEmptyDataset;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
 import static org.apache.spark.sql.functions.desc;
 
@@ -37,6 +37,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -250,7 +251,7 @@ public class Database implements Cacheable {
       final String tableUrl) {
     log.info("Loading resource {} from: {}", resourceType.toCode(), tableUrl);
     @Nullable final DeltaTable resources = DeltaTable.forPath(spark, tableUrl);
-    checkNotNull(resources);
+    requireNonNull(resources);
 
     if (configuration.getSpark().getCacheDatasets()) {
       // Cache the raw resource data.
@@ -346,7 +347,7 @@ public class Database implements Cacheable {
 
     @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
         .hadoopConfiguration();
-    checkNotNull(hadoopConfiguration);
+    requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouse;
     try {
       warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
@@ -355,7 +356,7 @@ public class Database implements Cacheable {
           warehouseUrl);
       return Optional.empty();
     }
-    checkNotNull(warehouse);
+    requireNonNull(warehouse);
 
     // Check that the database path exists.
     try {
@@ -376,13 +377,13 @@ public class Database implements Cacheable {
           databasePath);
       return Optional.empty();
     }
-    checkNotNull(fileStatuses);
+    requireNonNull(fileStatuses);
 
     final List<Long> timestamps = Arrays.stream(fileStatuses)
         // Get the filename of each item in the directory listing.
         .map(fileStatus -> {
           @Nullable final Path path = fileStatus.getPath();
-          checkNotNull(path);
+          requireNonNull(path);
           return path.toString();
         })
         // Filter out any file names that don't match the pattern.

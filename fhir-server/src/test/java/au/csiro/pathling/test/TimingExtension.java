@@ -17,9 +17,10 @@
 
 package au.csiro.pathling.test;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -36,12 +37,12 @@ public class TimingExtension implements BeforeTestExecutionCallback, AfterTestEx
 
   @Override
   public void beforeTestExecution(@Nullable final ExtensionContext context) {
-    getStore(checkNotNull(context)).put(START_TIME, System.currentTimeMillis());
+    getStore(requireNonNull(context)).put(START_TIME, System.currentTimeMillis());
   }
 
   @Override
   public void afterTestExecution(@Nullable final ExtensionContext context) {
-    final Class<?> testClass = checkNotNull(context).getRequiredTestClass();
+    final Class<?> testClass = requireNonNull(context).getRequiredTestClass();
     final Method testMethod = context.getRequiredTestMethod();
     final long startTime = getStore(context).remove(START_TIME, long.class);
     final long duration = System.currentTimeMillis() - startTime;

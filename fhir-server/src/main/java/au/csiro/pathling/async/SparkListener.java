@@ -17,8 +17,9 @@
 
 package au.csiro.pathling.async;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +58,7 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
 
   @Override
   public void onStageCompleted(final SparkListenerStageCompleted stageCompleted) {
-    checkNotNull(stageCompleted);
+    requireNonNull(stageCompleted);
     @Nullable final String jobGroupId = stageMap.get(stageCompleted.stageInfo().stageId());
     if (jobGroupId != null) {
       @Nullable final Job job = jobRegistry.get(jobGroupId);
@@ -69,7 +70,7 @@ public class SparkListener extends org.apache.spark.scheduler.SparkListener {
 
   @Override
   public void onStageSubmitted(final SparkListenerStageSubmitted stageSubmitted) {
-    checkNotNull(stageSubmitted);
+    requireNonNull(stageSubmitted);
     @Nullable final String jobGroupId = stageSubmitted.properties()
         .getProperty("spark.jobGroup.id");
     if (jobGroupId == null) {

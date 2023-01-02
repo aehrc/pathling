@@ -21,7 +21,7 @@ import static au.csiro.pathling.caching.EntityTagInterceptor.makeRequestNonCache
 import static au.csiro.pathling.caching.EntityTagInterceptor.requestIsCacheable;
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
@@ -31,6 +31,7 @@ import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
@@ -128,7 +129,7 @@ public class JobProvider {
       }
     } else {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
-      checkNotNull(response);
+      requireNonNull(response);
       // We need to set the caching headers such that the incomplete response is never cached.
       if (request != null && requestIsCacheable(request)) {
         makeRequestNonCacheable(response, configuration);

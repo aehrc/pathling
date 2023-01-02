@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.config;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -40,7 +42,7 @@ public enum HttpClientCachingStorageType {
   private final String code;
 
   HttpClientCachingStorageType(@Nonnull final String code) {
-    this.code = Objects.requireNonNull(code);
+    this.code = requireNonNull(code);
   }
 
   @Override

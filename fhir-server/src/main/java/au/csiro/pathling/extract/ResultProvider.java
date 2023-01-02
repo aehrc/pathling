@@ -18,7 +18,7 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ResourceNotFoundError;
@@ -29,6 +29,7 @@ import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -80,8 +81,8 @@ public class ResultProvider {
   @Operation(name = "$result", idempotent = true, manualResponse = true)
   public void result(@Nullable @OperationParam(name = "id") final String id,
       @Nullable final HttpServletResponse response, @Nullable final RequestDetails requestDetails) {
-    checkNotNull(response);
-    checkNotNull(requestDetails);
+    requireNonNull(response);
+    requireNonNull(requestDetails);
 
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {

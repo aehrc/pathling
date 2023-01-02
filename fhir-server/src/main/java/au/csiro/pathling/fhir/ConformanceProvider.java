@@ -20,10 +20,10 @@ package au.csiro.pathling.fhir;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Versioning.getMajorVersion;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.caching.Cacheable;
@@ -45,6 +45,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -411,7 +412,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private OperationDefinition load(@Nonnull final String resourcePath) {
     @Nullable final InputStream resourceStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(resourcePath);
-    checkNotNull(resourceStream);
+    requireNonNull(resourceStream);
 
     final OperationDefinition operationDefinition = (OperationDefinition) jsonParser
         .parseResource(resourceStream);

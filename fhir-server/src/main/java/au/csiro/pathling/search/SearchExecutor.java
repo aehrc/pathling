@@ -18,9 +18,9 @@
 package au.csiro.pathling.search;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryExecutor;
@@ -45,6 +45,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -184,8 +185,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
                        ? orColumn
                        : filterColumn.and(orColumn);
       }
-      checkNotNull(filterIdColumn);
-      checkNotNull(filterColumn);
+      requireNonNull(filterIdColumn);
+      requireNonNull(filterColumn);
       check(!fhirPaths.isEmpty());
 
       // Get the full resources which are present in the filtered dataset.
@@ -235,7 +236,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     // The requested resources are encoded into HAPI FHIR objects, and then collected.
     @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
         .of(subjectResource.toCode());
-    checkNotNull(encoder);
+    requireNonNull(encoder);
     reportQueryPlan(resources);
 
     return resources.as(encoder).collectAsList();

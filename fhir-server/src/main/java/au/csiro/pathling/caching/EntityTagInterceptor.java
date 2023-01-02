@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.caching;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhir.ConformanceProvider;
@@ -27,6 +27,7 @@ import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -87,9 +88,9 @@ public class EntityTagInterceptor {
   public void checkIncomingTag(@Nullable final HttpServletRequest request,
       @Nullable final RequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
-    checkNotNull(request);
-    checkNotNull(response);
-    checkNotNull(requestDetails);
+    requireNonNull(request);
+    requireNonNull(response);
+    requireNonNull(requestDetails);
     if (requestIsCacheable(request)) {
       // Set the Vary header to instruct HTTP caches on how to construct the cache key.
       final String varyValues = String.join(",", configuration.getHttpCaching().getVary());

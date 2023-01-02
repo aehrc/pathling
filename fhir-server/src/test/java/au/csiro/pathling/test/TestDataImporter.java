@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.test;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.update.ImportExecutor;
 import java.io.File;
 import java.io.FileFilter;
@@ -78,8 +80,7 @@ public class TestDataImporter implements CommandLineRunner {
     final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
     final File[] srcNdJsonFiles = srcNdJsonDir.listFiles(fileFilter);
 
-    final List<ParametersParameterComponent> sources = Stream.of(
-            Objects.requireNonNull(srcNdJsonFiles))
+    final List<ParametersParameterComponent> sources = Stream.of(requireNonNull(srcNdJsonFiles))
         .map(file -> {
           final String resourceName = FilenameUtils.getBaseName(file.getName());
           final ResourceType subjectResource = ResourceType

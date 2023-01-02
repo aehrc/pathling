@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhir;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
@@ -103,7 +102,7 @@ public class ClientAuthInterceptor implements Closeable {
           scope, tokenExpiryTolerance);
       // Now we should have a valid token, so we can add it to the request.
       final String accessToken = accessContext.getClientCredentialsResponse().getAccessToken();
-      checkNotNull(accessToken);
+      requireNonNull(accessToken);
       httpRequest.addHeader("Authorization", "Bearer " + accessToken);
     }
   }

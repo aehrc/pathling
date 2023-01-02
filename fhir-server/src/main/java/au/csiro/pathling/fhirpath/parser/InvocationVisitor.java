@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -37,6 +37,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocation
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -92,8 +93,8 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitMemberInvocation(@Nullable final MemberInvocationContext ctx) {
-    @Nullable final String fhirPath = checkNotNull(ctx).getText();
-    checkNotNull(fhirPath);
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
 
     if (invoker != null) {
       // If there is an invoker, we treat this as a path traversal from the invoker.
@@ -159,8 +160,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitFunctionInvocation(@Nullable final FunctionInvocationContext ctx) {
-    @Nullable final String functionIdentifier = checkNotNull(ctx).function().identifier().getText();
-    checkNotNull(functionIdentifier);
+    @Nullable final String functionIdentifier = requireNonNull(ctx).function().identifier()
+        .getText();
+    requireNonNull(functionIdentifier);
     final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
 
     // If there is no invoker, we use either the input context or the this context, depending on

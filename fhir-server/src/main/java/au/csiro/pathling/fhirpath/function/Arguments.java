@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.List;
@@ -93,7 +95,7 @@ public class Arguments {
    */
   @Nonnull
   public <T extends Type> T getValue(final int index, @Nonnull final Class<T> valueClass) {
-    return Objects.requireNonNull(getNullableValue(index, valueClass));
+    return requireNonNull(getNullableValue(index, valueClass));
   }
 
   /**

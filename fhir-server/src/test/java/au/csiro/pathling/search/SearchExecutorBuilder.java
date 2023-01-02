@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -27,6 +27,7 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.StringAndListParam;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -88,7 +89,7 @@ class SearchExecutorBuilder {
   }
 
   SearchExecutor build() {
-    checkNotNull(subjectResource);
+    requireNonNull(subjectResource);
     return new SearchExecutor(configuration, fhirContext, sparkSession, database,
         Optional.of(terminologyServiceFactory), fhirEncoders, subjectResource, filters);
   }

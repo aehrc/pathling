@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.errors;
 
+import static java.util.Objects.requireNonNull;
+
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import io.sentry.Sentry;
@@ -114,7 +116,7 @@ public class DiagnosticContext {
     MDC.put("requestId", requestId);
     Sentry.configureScope(scope -> {
       if (requestId != null) {
-        scope.setTag(REQUEST_ID_TAG, Objects.requireNonNull(requestId));
+        scope.setTag(REQUEST_ID_TAG, requireNonNull(requestId));
       } else {
         scope.removeTag(REQUEST_ID_TAG);
       }
