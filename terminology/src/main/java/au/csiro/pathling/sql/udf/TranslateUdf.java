@@ -64,7 +64,7 @@ public class TranslateUdf implements SqlFunction,
   public static final Set<String> DEFAULT_EQUIVALENCES = ImmutableSet.of(
       ConceptMapEquivalence.EQUIVALENT.toCode());
 
-  public static final String FUNCTION_NAME = "translate";
+  public static final String FUNCTION_NAME = "translate_coding";
   public static final DataType RETURN_TYPE = DataTypes.createArrayType(CodingEncoding.DATA_TYPE);
   public static final boolean PARAM_REVERSE_DEFAULT = false;
 
