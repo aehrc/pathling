@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.utilities;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static java.util.Objects.requireNonNull;
 
 import java.io.Closeable;
@@ -71,7 +72,7 @@ public interface ObjectHolder<C extends Serializable, V> {
         instance = constructor.apply(config);
         configuration = config;
       } else {
-        Preconditions.check(configuration.equals(config),
+        check(configuration.equals(config),
             "Attempt to create SingletonHolder with different configuration");
       }
       return requireNonNull(instance);

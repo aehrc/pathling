@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import javax.annotation.Nonnull;
@@ -60,7 +62,7 @@ public interface TerminologyUtils {
 
   @Nonnull
   static Column getCodingColumn(@Nonnull final FhirPath fhirPath) {
-    Preconditions.check(isCodingOrCodeableConcept(fhirPath),
+    check(isCodingOrCodeableConcept(fhirPath),
         "Coding or CodeableConcept path expected");
     final Column conceptColumn = fhirPath.getValueColumn();
     return isCodeableConcept(fhirPath)

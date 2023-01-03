@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.utilities.Preconditions.checkState;
+
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -77,7 +79,7 @@ public interface Orderable {
    * @throws IllegalStateException if the path cannot be ordered
    */
   default void checkHasOrder() {
-    Preconditions.checkState(hasOrder(), "Orderable path expected");
+    checkState(hasOrder(), "Orderable path expected");
   }
 
 }
