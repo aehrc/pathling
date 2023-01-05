@@ -212,6 +212,13 @@
         <version>${project.version}</version>
       </dependency>
 
+      <!-- Scala -->
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-library</artifactId>
+        <version>${pathling.sparkScalaFullVersion}</version>
+      </dependency>
+      
       <!-- HAPI FHIR -->
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>

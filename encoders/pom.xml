@@ -60,7 +60,7 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <version>${pathling.sparkScalaFullVersion}</version>
+      <scope>provided</scope>
     </dependency>
 
     <!-- HAPI FHIR -->
