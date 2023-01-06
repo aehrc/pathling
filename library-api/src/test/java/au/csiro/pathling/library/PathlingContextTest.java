@@ -26,6 +26,7 @@ import static org.apache.spark.sql.functions.col;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -47,9 +48,11 @@ import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -432,6 +435,46 @@ public class PathlingContextTest {
     assertEquals(expectedFactory, actualServiceFactory);
     final TerminologyService terminologyService = actualServiceFactory.build();
     assertNotNull(terminologyService);
+  }
+
+  @Test
+  public void failsOnInvalidTerminologyConfiguration() {
+
+    final TerminologyConfiguration invalidTerminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl("not-a-URL")
+        .client(null)
+        .cache(HttpClientCachingConfiguration.builder()
+            .storageType(HttpClientCachingStorageType.DISK)
+            .build())
+        .build();
+
+    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+        () -> PathlingContext.create(spark, invalidTerminologyConfig));
+
+    assertEquals("Invalid terminology configuration:"
+        + " cache: If the storage type is disk, then a storage path must be supplied.,"
+        + " client: must not be null,"
+        + " serverUrl: must be a valid URL", ex.getMessage());
+  }
+
+  @Test
+  public void failsOnInvalidEncodingConfiguration() {
+
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .build();
+
+    final EncodingConfiguration invalidEncodersConfiguration = EncodingConfiguration.builder()
+        .maxNestingLevel(-10)
+        .openTypes(null)
+        .build();
+
+    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+        () -> PathlingContext.create(spark, invalidEncodersConfiguration, terminologyConfig));
+
+    assertEquals("Invalid encoding configuration:"
+            + " maxNestingLevel: must be greater than or equal to 0,"
+            + " openTypes: must not be null",
+        ex.getMessage());
   }
 
 }

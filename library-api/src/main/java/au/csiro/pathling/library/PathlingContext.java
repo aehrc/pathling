@@ -30,11 +30,17 @@ import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.validation.ValidationUtils;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -44,6 +50,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A class designed to provide access to selected Pathling functionality from non-JVM language
@@ -88,8 +96,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession},
-   * {@link FhirEncoders} and {@link TerminologyServiceFactory} objects.
+   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession}, {@link
+   * FhirEncoders} and {@link TerminologyServiceFactory} objects.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark,
@@ -99,13 +107,17 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
       @Nonnull final EncodingConfiguration encodingConfiguration,
       @Nonnull final TerminologyConfiguration terminologyConfiguration) {
+
+    ValidationUtils.ensureValid(terminologyConfiguration, "Invalid terminology configuration");
+    ValidationUtils.ensureValid(encodingConfiguration, "Invalid encoding configuration");
+    
     final Builder encoderBuilder = getEncoderBuilder(encodingConfiguration);
     final TerminologyServiceFactory terminologyServiceFactory = getTerminologyServiceFactory(
         terminologyConfiguration);
@@ -123,8 +135,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -134,8 +146,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,

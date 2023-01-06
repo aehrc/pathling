@@ -89,6 +89,10 @@
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.awsSdkVersion>1.12.375</pathling.awsSdkVersion>
+    <!-- we do not use recent version 1.18.24 as it (wrongly) copies the JSR-380 NonNull 
+         annotations from fields to getters resulting in duplicate constraint violations.
+         This has been fixed in the main branch but not released yet -->
+    <pathling.lombokVersion>1.18.22</pathling.lombokVersion>
   </properties>
 
   <modules>
@@ -218,7 +222,7 @@
         <artifactId>scala-library</artifactId>
         <version>${pathling.sparkScalaFullVersion}</version>
       </dependency>
-      
+
       <!-- HAPI FHIR -->
       <dependency>
         <groupId>ca.uhn.hapi.fhir</groupId>
@@ -354,6 +358,19 @@
         <version>6.6.0</version>
       </dependency>
 
+      <!-- JSR-380 Validation RI -->
+      <dependency>
+        <groupId>org.hibernate.validator</groupId>
+        <artifactId>hibernate-validator</artifactId>
+        <version>6.0.13.Final</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.glassfish</groupId>
+        <artifactId>javax.el</artifactId>
+        <version>3.0.0</version>
+      </dependency>
+      
       <!-- Testing -->
       <dependency>
         <groupId>com.github.docker-java</groupId>
@@ -396,7 +413,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.24</version>
+        <version>${pathling.lombokVersion}</version>
         <scope>provided</scope>
       </dependency>
 

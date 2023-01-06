@@ -34,6 +34,8 @@ import javax.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 
+import static java.util.Objects.nonNull;
+
 /**
  * Configuration relating to the caching of terminology requests.
  *
@@ -115,8 +117,8 @@ public class HttpClientCachingConfiguration implements Serializable {
     @Override
     public boolean isValid(final HttpClientCachingConfiguration value,
         final ConstraintValidatorContext context) {
-      if (value.getStorageType().equals(HttpClientCachingStorageType.DISK)) {
-        return value.getStoragePath() != null;
+      if (HttpClientCachingStorageType.DISK.equals(value.getStorageType())) {
+        return nonNull(value.getStoragePath());
       } else {
         return true;
       }
