@@ -1,5 +1,5 @@
 -r package.txt
-Sphinx==6.0.0
+Sphinx==6.1.1
 pytest==7.2.0
 ipython==8.8.0
 wheel==0.38.1
