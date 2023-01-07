@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,14 @@
 
 package au.csiro.pathling.terminology;
 
-import org.hl7.fhir.r4.model.*;
-import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import java.util.Optional;
-
-import static java.util.Objects.nonNull;
+import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
 
 @SuppressWarnings({"unused", "SameParameterValue"})
 class PropertiesParametersBuilder {

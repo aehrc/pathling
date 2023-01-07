@@ -1,4 +1,4 @@
-#  Copyright 2022 Commonwealth Scientific and Industrial Research
+#  Copyright 2023 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,20 +23,20 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 pc = PathlingContext.create()
 
 csv = pc.spark.read.options(header=True).csv(
-  f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
+    f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'
 )
 
 result = pc.member_of(
-  csv,
-  to_coding(csv.CODE, "http://snomed.info/sct"),
-  to_ecl_value_set(
-    """
+    csv,
+    to_coding(csv.CODE, "http://snomed.info/sct"),
+    to_ecl_value_set(
+        """
 << 64572001|Disease| : (
   << 370135005|Pathological process| = << 441862004|Infectious process|,
   << 246075003|Causative agent| = << 49872002|Virus|
 )
                       """
-  ),
-  "VIRAL_INFECTION",
+    ),
+    "VIRAL_INFECTION",
 )
 result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show()

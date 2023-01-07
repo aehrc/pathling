@@ -1,4 +1,4 @@
-#  Copyright 2022 Commonwealth Scientific and Industrial Research
+#  Copyright 2023 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,13 +20,13 @@ from tempfile import mkdtemp
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import lit
 from pyspark.sql.types import (
-    StructType,
-    StringType,
-    StructField,
-    BooleanType,
-    Row,
-    ArrayType,
-    IntegerType,
+  StructType,
+  StringType,
+  StructField,
+  BooleanType,
+  Row,
+  ArrayType,
+  IntegerType,
 )
 from pytest import fixture
 
@@ -35,15 +35,15 @@ from pathling.coding import Coding
 from pathling.etc import find_jar as find_pathling_jar
 from pathling.functions import SNOMED_URI, to_snomed_coding
 from pathling.udfs import (
-    member_of,
-    subsumes,
-    subsumed_by,
-    translate,
-    display,
-    PropertyType,
-    Equivalence,
-    property_of,
-    designation,
+  member_of,
+  subsumes,
+  subsumed_by,
+  translate,
+  display,
+  PropertyType,
+  Equivalence,
+  property_of,
+  designation,
 )
 
 PROJECT_DIR = os.path.abspath(
