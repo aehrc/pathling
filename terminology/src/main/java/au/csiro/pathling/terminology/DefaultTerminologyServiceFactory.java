@@ -96,16 +96,19 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
         .equals(HttpClientCachingStorageType.DISK)) {
       // If caching is enabled and storage type is disk, use a persistent caching terminology 
       // service implementation.
+      log.debug("Creating PersistentCachingTerminologyService with cache config: {}", cacheConfig);
       return new PersistentCachingTerminologyService(terminologyClient, httpClient, cacheConfig);
 
     } else if (cacheConfig.isEnabled() && cacheConfig.getStorageType().equals(
         HttpClientCachingStorageType.MEMORY)) {
       // If caching is enabled and storage type is memory, use an in-memory caching terminology
       // service implementation.
+      log.debug("Creating InMemoryCachingTerminologyService with cache config: {}", cacheConfig);
       return new InMemoryCachingTerminologyService(terminologyClient, httpClient, cacheConfig);
 
     } else {
       // If caching is disabled, use a terminology service implementation that does not cache.
+      log.debug("Creating DefaultTerminologyService with no caching");
       return new DefaultTerminologyService(terminologyClient, httpClient);
     }
   }

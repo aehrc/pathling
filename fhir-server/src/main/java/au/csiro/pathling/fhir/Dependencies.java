@@ -84,7 +84,6 @@ public class Dependencies {
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory(
       @Nonnull final ServerConfiguration configuration, @Nonnull final FhirContext fhirContext) {
-    log.info("Creating CacheableTerminologyServiceFactory");
     final TerminologyConfiguration terminology = configuration.getTerminology();
     return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(), terminology);
   }
