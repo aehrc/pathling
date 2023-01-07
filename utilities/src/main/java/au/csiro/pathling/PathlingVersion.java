@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.util.Optional;
 import java.util.Properties;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Retrieves version information from the properties file created during the build, making it
@@ -18,6 +19,7 @@ import javax.annotation.Nonnull;
  *
  * @author John Grimes
  */
+@Slf4j
 public class PathlingVersion {
 
   private static final String GIT_PROPERTIES_FILE_NAME = "git.properties";
@@ -32,6 +34,7 @@ public class PathlingVersion {
    */
   public PathlingVersion() {
     initialiseGitProperties();
+    log.info("Pathling build version: {}", getDescriptiveVersion().orElse("UNKNOWN"));
   }
 
   private void initialiseGitProperties() {
