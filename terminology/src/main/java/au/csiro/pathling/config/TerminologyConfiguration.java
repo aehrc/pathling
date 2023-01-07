@@ -21,6 +21,7 @@ import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import java.io.Serializable;
+import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import lombok.Builder;
@@ -69,6 +70,7 @@ public class TerminologyConfiguration implements Serializable {
    * Configuration relating to the HTTP client used for terminology requests.
    */
   @NotNull
+  @Valid
   @Builder.Default
   private HttpClientConfiguration client = HttpClientConfiguration.builder().build();
 
@@ -76,6 +78,7 @@ public class TerminologyConfiguration implements Serializable {
    * Configuration relating to the caching of terminology requests.
    */
   @NotNull
+  @Valid
   @Builder.Default
   private HttpClientCachingConfiguration cache = HttpClientCachingConfiguration.builder().build();
 
@@ -83,6 +86,7 @@ public class TerminologyConfiguration implements Serializable {
    * Configuration relating to authentication of requests to the terminology service.
    */
   @NotNull
+  @Valid
   @Builder.Default
   private TerminologyAuthConfiguration authentication = TerminologyAuthConfiguration.builder()
       .build();
