@@ -44,6 +44,14 @@ pathling.functions module
    :undoc-members:
    :show-inheritance:
 
+pathling.udfs module
+--------------------
+
+.. automodule:: pathling.udfs
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

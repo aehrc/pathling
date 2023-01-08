@@ -11,9 +11,7 @@ au.csiro.pathling.fhirpath.comparison
 au.csiro.pathling.fhirpath.element
 au.csiro.pathling.fhirpath.encoding
 au.csiro.pathling.fhirpath.function
-au.csiro.pathling.fhirpath.function.memberof
-au.csiro.pathling.fhirpath.function.subsumes
-au.csiro.pathling.fhirpath.function.translate
+au.csiro.pathling.fhirpath.function.terminology
 au.csiro.pathling.fhirpath.literal
 au.csiro.pathling.fhirpath.operator
 au.csiro.pathling.fhirpath.parser
@@ -31,6 +29,13 @@ au.csiro.pathling.sql.dates.datetime
 au.csiro.pathling.sql.dates.time
 au.csiro.pathling.sql.udf
 au.csiro.pathling.terminology
+au.csiro.pathling.terminology.caching
+au.csiro.pathling.terminology.lookup
+au.csiro.pathling.terminology.mock
+au.csiro.pathling.terminology.subsumes
+au.csiro.pathling.terminology.translate
+au.csiro.pathling.terminology.validatecode
 au.csiro.pathling.update
 au.csiro.pathling.utilities
+au.csiro.pathling.validation
 org.springframework.security.oauth2.jwt

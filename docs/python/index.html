@@ -10,9 +10,6 @@
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/haiku.css" />
     <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
     <script src="_static/doctools.js"></script>
     <script src="_static/sphinx_highlight.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -44,6 +41,7 @@
 <li class="toctree-l2"><a class="reference internal" href="pathling.html#submodules">Submodules</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.coding">pathling.coding module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.coding.Coding"><code class="docutils literal notranslate"><span class="pre">Coding</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.coding.Coding.of_snomed"><code class="docutils literal notranslate"><span class="pre">Coding.of_snomed()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.coding.Coding.to_literal"><code class="docutils literal notranslate"><span class="pre">Coding.to_literal()</span></code></a></li>
 </ul>
 </li>
@@ -81,9 +79,66 @@
 <li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.functions">pathling.functions module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.functions.to_coding"><code class="docutils literal notranslate"><span class="pre">to_coding()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.functions.to_ecl_value_set"><code class="docutils literal notranslate"><span class="pre">to_ecl_value_set()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.functions.to_snomed_coding"><code class="docutils literal notranslate"><span class="pre">to_snomed_coding()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling.udfs">pathling.udfs module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence"><code class="docutils literal notranslate"><span class="pre">Equivalence</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.DISJOINT"><code class="docutils literal notranslate"><span class="pre">Equivalence.DISJOINT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.EQUAL"><code class="docutils literal notranslate"><span class="pre">Equivalence.EQUAL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.EQUIVALENT"><code class="docutils literal notranslate"><span class="pre">Equivalence.EQUIVALENT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.INEXACT"><code class="docutils literal notranslate"><span class="pre">Equivalence.INEXACT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.NARROWER"><code class="docutils literal notranslate"><span class="pre">Equivalence.NARROWER</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.RELATEDTO"><code class="docutils literal notranslate"><span class="pre">Equivalence.RELATEDTO</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.SPECIALIZES"><code class="docutils literal notranslate"><span class="pre">Equivalence.SPECIALIZES</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.SUBSUMES"><code class="docutils literal notranslate"><span class="pre">Equivalence.SUBSUMES</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.UNMATCHED"><code class="docutils literal notranslate"><span class="pre">Equivalence.UNMATCHED</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.Equivalence.WIDER"><code class="docutils literal notranslate"><span class="pre">Equivalence.WIDER</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType"><code class="docutils literal notranslate"><span class="pre">PropertyType</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType.BOOLEAN"><code class="docutils literal notranslate"><span class="pre">PropertyType.BOOLEAN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType.CODE"><code class="docutils literal notranslate"><span class="pre">PropertyType.CODE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType.CODING"><code class="docutils literal notranslate"><span class="pre">PropertyType.CODING</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType.DATETIME"><code class="docutils literal notranslate"><span class="pre">PropertyType.DATETIME</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType.DECIMAL"><code class="docutils literal notranslate"><span class="pre">PropertyType.DECIMAL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType.INTEGER"><code class="docutils literal notranslate"><span class="pre">PropertyType.INTEGER</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.udfs.PropertyType.STRING"><code class="docutils literal notranslate"><span class="pre">PropertyType.STRING</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.designation"><code class="docutils literal notranslate"><span class="pre">designation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.display"><code class="docutils literal notranslate"><span class="pre">display()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.member_of"><code class="docutils literal notranslate"><span class="pre">member_of()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.property_of"><code class="docutils literal notranslate"><span class="pre">property_of()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.subsumed_by"><code class="docutils literal notranslate"><span class="pre">subsumed_by()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.subsumes"><code class="docutils literal notranslate"><span class="pre">subsumes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.udfs.translate"><code class="docutils literal notranslate"><span class="pre">translate()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="pathling.html#module-pathling">Module contents</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.Coding"><code class="docutils literal notranslate"><span class="pre">Coding</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Coding.of_snomed"><code class="docutils literal notranslate"><span class="pre">Coding.of_snomed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Coding.to_literal"><code class="docutils literal notranslate"><span class="pre">Coding.to_literal()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.Equivalence"><code class="docutils literal notranslate"><span class="pre">Equivalence</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.DISJOINT"><code class="docutils literal notranslate"><span class="pre">Equivalence.DISJOINT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.EQUAL"><code class="docutils literal notranslate"><span class="pre">Equivalence.EQUAL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.EQUIVALENT"><code class="docutils literal notranslate"><span class="pre">Equivalence.EQUIVALENT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.INEXACT"><code class="docutils literal notranslate"><span class="pre">Equivalence.INEXACT</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.NARROWER"><code class="docutils literal notranslate"><span class="pre">Equivalence.NARROWER</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.RELATEDTO"><code class="docutils literal notranslate"><span class="pre">Equivalence.RELATEDTO</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.SPECIALIZES"><code class="docutils literal notranslate"><span class="pre">Equivalence.SPECIALIZES</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.SUBSUMES"><code class="docutils literal notranslate"><span class="pre">Equivalence.SUBSUMES</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.UNMATCHED"><code class="docutils literal notranslate"><span class="pre">Equivalence.UNMATCHED</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Equivalence.WIDER"><code class="docutils literal notranslate"><span class="pre">Equivalence.WIDER</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.MimeType"><code class="docutils literal notranslate"><span class="pre">MimeType</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.MimeType.FHIR_JSON"><code class="docutils literal notranslate"><span class="pre">MimeType.FHIR_JSON</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.MimeType.FHIR_XML"><code class="docutils literal notranslate"><span class="pre">MimeType.FHIR_XML</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.PathlingContext"><code class="docutils literal notranslate"><span class="pre">PathlingContext</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.create"><code class="docutils literal notranslate"><span class="pre">PathlingContext.create()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.encode"><code class="docutils literal notranslate"><span class="pre">PathlingContext.encode()</span></code></a></li>
@@ -94,6 +149,36 @@
 <li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PathlingContext.translate"><code class="docutils literal notranslate"><span class="pre">PathlingContext.translate()</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.PropertyType"><code class="docutils literal notranslate"><span class="pre">PropertyType</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PropertyType.BOOLEAN"><code class="docutils literal notranslate"><span class="pre">PropertyType.BOOLEAN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PropertyType.CODE"><code class="docutils literal notranslate"><span class="pre">PropertyType.CODE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PropertyType.CODING"><code class="docutils literal notranslate"><span class="pre">PropertyType.CODING</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PropertyType.DATETIME"><code class="docutils literal notranslate"><span class="pre">PropertyType.DATETIME</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PropertyType.DECIMAL"><code class="docutils literal notranslate"><span class="pre">PropertyType.DECIMAL</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PropertyType.INTEGER"><code class="docutils literal notranslate"><span class="pre">PropertyType.INTEGER</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.PropertyType.STRING"><code class="docutils literal notranslate"><span class="pre">PropertyType.STRING</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.StorageType"><code class="docutils literal notranslate"><span class="pre">StorageType</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.StorageType.DISK"><code class="docutils literal notranslate"><span class="pre">StorageType.DISK</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.StorageType.MEMORY"><code class="docutils literal notranslate"><span class="pre">StorageType.MEMORY</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.Version"><code class="docutils literal notranslate"><span class="pre">Version</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pathling.html#pathling.Version.R4"><code class="docutils literal notranslate"><span class="pre">Version.R4</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.designation"><code class="docutils literal notranslate"><span class="pre">designation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.display"><code class="docutils literal notranslate"><span class="pre">display()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.find_jar"><code class="docutils literal notranslate"><span class="pre">find_jar()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.member_of"><code class="docutils literal notranslate"><span class="pre">member_of()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.property_of"><code class="docutils literal notranslate"><span class="pre">property_of()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.subsumed_by"><code class="docutils literal notranslate"><span class="pre">subsumed_by()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.subsumes"><code class="docutils literal notranslate"><span class="pre">subsumes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.to_coding"><code class="docutils literal notranslate"><span class="pre">to_coding()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.to_ecl_value_set"><code class="docutils literal notranslate"><span class="pre">to_ecl_value_set()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.to_snomed_coding"><code class="docutils literal notranslate"><span class="pre">to_snomed_coding()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pathling.html#pathling.translate"><code class="docutils literal notranslate"><span class="pre">translate()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -124,7 +209,7 @@
 
     <div class="footer" role="contentinfo">
         &#169; Copyright 2018-2022 CSIRO, dedicated to the public domain via CC0 1.0.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 5.3.0.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.1.
     </div>
   </body>
 </html>
