@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,14 +20,14 @@ package au.csiro.pathling.fhir;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.AUTH_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.REVOKE_URL;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.TOKEN_URL;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Versioning.getMajorVersion;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.caching.Cacheable;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.ResourceNotFoundError;
 import au.csiro.pathling.security.OidcConfiguration;
 import ca.uhn.fhir.context.FhirContext;
@@ -45,6 +45,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -128,7 +129,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   }
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final Optional<OidcConfiguration> oidcConfiguration;
@@ -149,15 +150,15 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private final Map<String, OperationDefinition> resources;
 
   /**
-   * @param configuration a {@link Configuration} object controlling the behaviour of the capability
-   * statement
+   * @param configuration a {@link ServerConfiguration} object controlling the behaviour of the
+   * capability statement
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
    * @param version a {@link PathlingVersion} object containing version information for the server
    * @param fhirContext a {@link FhirContext} for determining the supported FHIR version
    * @param jsonParser a {@link IParser} for parsing JSON OperationDefinitions
    */
-  public ConformanceProvider(@Nonnull final Configuration configuration,
+  public ConformanceProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final PathlingVersion version, @Nonnull final FhirContext fhirContext,
       @Nonnull final IParser jsonParser) {
@@ -411,7 +412,7 @@ public class ConformanceProvider implements IServerConformanceProvider<Capabilit
   private OperationDefinition load(@Nonnull final String resourcePath) {
     @Nullable final InputStream resourceStream = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(resourcePath);
-    checkNotNull(resourceStream);
+    requireNonNull(resourceStream);
 
     final OperationDefinition operationDefinition = (OperationDefinition) jsonParser
         .parseResource(resourceStream);

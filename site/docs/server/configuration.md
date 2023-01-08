@@ -149,12 +149,44 @@ spark:
   `https://tx.ontoserver.csiro.au/fhir`) The endpoint of the
   [FHIR terminology service](https://hl7.org/fhir/R4/terminology-service.html)
   (R4) that the server can use to resolve terminology queries.
-- `pathling.terminology.socketTimeout` - (default: `60000`) The maximum period
-  (in milliseconds) that the server should wait for incoming data from the
-  terminology service.
 - `pathling.terminology.verboseLogging` - (default: `false`) Setting this option
   to `true` will enable additional logging of the details of requests between
   the server and the terminology service.
+
+#### Client
+
+- `pathling.terminology.client.maxConnectionsTotal` - (default: `32`) The
+  maximum number of total connections allowed from the client.
+- `pathling.terminology.client.maxConnectionsPerRoute` - (default: `16`) The
+  maximum number of connections allowed from the client, per route.
+- `pathling.terminology.client.socketTimeout` - (default: `60000`) The maximum
+  period (in milliseconds) that the server should wait for incoming data from
+  the terminology service.
+- `pathling.terminology.client.retryEnabled` - (default: `true`) Enables
+  automatic retry of failed terminology service requests.
+- `pathling.terminology.client.retryCount` - (default: `2`) The maximum
+  number of times that failed terminology service requests should be retried.
+
+#### Cache
+
+- `pathling.terminology.cache.enabled` - (default: `true`) Set this to false to
+  disable caching of terminology requests (not recommended).
+- `pathling.terminology.cache.storageType` - (default: `memory`) The type of
+  storage to be used by the terminology cache. Valid values are `memory` and
+  `disk`.
+- `pathling.terminology.cache.maxEntries` - (default: `50000`) Sets the maximum
+  number of entries that will be held in memory. Only applicable when using
+  the `memory` storage type.
+- `pathling.terminology.cache.storagePath` - The path at which to store cache
+  data. Required if `pathling.terminology.cache.storageType` is set to `disk`.
+- `pathling.terminology.cache.defaultExpiry` - (default: `600`) The amount
+  of time (in seconds) that a response from the terminology server should be 
+  cached if the server does not specify an expiry.
+- `pathling.terminology.cache.overrideExpiry` - If provided, this value
+  overrides the expiry time provided by the terminology server.
+
+#### Authentication
+
 - `pathling.terminology.authentication.enabled` - (default: `false`) Enables
   authentication for requests to the terminology service.
 - `pathling.terminology.authentication.tokenEndpoint`, 

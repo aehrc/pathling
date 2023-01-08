@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,9 +21,9 @@ import static au.csiro.pathling.caching.EntityTagInterceptor.makeRequestNonCache
 import static au.csiro.pathling.caching.EntityTagInterceptor.requestIsCacheable;
 import static au.csiro.pathling.security.SecurityAspect.checkHasAuthority;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.AccessDeniedError;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ResourceNotFoundError;
@@ -31,6 +31,7 @@ import au.csiro.pathling.security.PathlingAuthority;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
@@ -64,16 +65,16 @@ public class JobProvider {
   private static final String PROGRESS_HEADER = "X-Progress";
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final JobRegistry jobRegistry;
 
   /**
-   * @param configuration a {@link Configuration} for determining if authorization is enabled
+   * @param configuration a {@link ServerConfiguration} for determining if authorization is enabled
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    */
-  public JobProvider(@Nonnull final Configuration configuration,
+  public JobProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final JobRegistry jobRegistry) {
     this.configuration = configuration;
     this.jobRegistry = jobRegistry;
@@ -128,7 +129,7 @@ public class JobProvider {
       }
     } else {
       // If the job is not done, we return a 202 along with an OperationOutcome and progress header.
-      checkNotNull(response);
+      requireNonNull(response);
       // We need to set the caching headers such that the incomplete response is never cached.
       if (request != null && requestIsCacheable(request)) {
         makeRequestNonCacheable(response, configuration);

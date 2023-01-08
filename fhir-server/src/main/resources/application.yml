@@ -3,6 +3,8 @@ spring:
     active:
       - core
       - server
+  banner:
+    location: classpath:banner.txt
 
 pathling:
   # Controls the description of this server as displayed within the FHIR CapabilityStatement.
@@ -27,12 +29,12 @@ pathling:
     # search results. It may be useful to turn this off for large datasets in memory-constrained
     # environments.
     cacheDatasets: true
-    
-    # When a table is updated, the number of partitions is checked. If the number exceeds this 
-    # threshold, the table will be repartitioned back to the default number of partitions. This 
+
+    # When a table is updated, the number of partitions is checked. If the number exceeds this
+    # threshold, the table will be repartitioned back to the default number of partitions. This
     # prevents large numbers of small updates causing poor subsequent query performance.
     compactionThreshold: 10
-  
+
   storage:
     # The base URL at which Pathling will look for data files, and where it will save data received
     # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
@@ -41,36 +43,6 @@ pathling:
 
     # The subdirectory within the warehouse path used to read and write data.
     databaseName: default
-
-  terminology:
-    # Enables the use of terminology functions.
-    enabled: true
-
-    # The endpoint of a FHIR terminology service (R4) that the server can use to resolve terminology 
-    # queries. The server listed here is suitable for testing purposes only.
-    serverUrl: https://tx.ontoserver.csiro.au/fhir
-
-    # The maximum period (in milliseconds) that the server should wait for incoming data from the
-    # terminology service.
-    socketTimeout: 60000
-    
-    # Setting this option to true will enable additional logging of the details of requests between 
-    # the server and the terminology service.
-    verboseLogging: false
-    
-    # Configuration relating to authentication of requests to the terminology service.
-    authentication:
-      # Enables authenticated requests.
-      enabled: false
-      
-      # Authentication details for use with the client credentials grant.
-      # tokenEndpoint: [token endpoint]
-      # clientId: [client ID]
-      # clientSecret: [client secret]
-      
-      # The minimum number of seconds that a token should have before expiry when deciding whether 
-      # to send it with a terminology request.
-      tokenExpiryTolerance: 120
 
   auth:
     # Enables authorization.
@@ -94,14 +66,14 @@ pathling:
     # revokeUrl: [token revocation URL]
 
     ga4ghPassports:
-      # When GA4GH passport authentication is enabled, this option configures the identifier system 
+      # When GA4GH passport authentication is enabled, this option configures the identifier system
       # that is used to identify and control access to patient data.
       patientIdSystem: http://www.australiangenomics.org.au/id/study-number
-      
-      # When GA4GH passport authentication is enabled, this option configures the list of endpoints 
+
+      # When GA4GH passport authentication is enabled, this option configures the list of endpoints
       # that are allowed to issue visas.
-      allowedVisaIssuers: [ ]
-  
+      allowedVisaIssuers: []
+
   # This section configures HTTP caching response headers.
   httpCaching:
     # A list of values to return within the Vary header.
@@ -121,8 +93,8 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: [ ]
-    allowedOriginPatterns: [ ]
+    allowedOrigins: []
+    allowedOriginPatterns: []
     allowedMethods:
       - OPTIONS
       - GET
@@ -142,31 +114,6 @@ pathling:
 
   async:
     enabled: true
-
-  encoding:
-    # Controls the maximum depth of nested element data that is encoded upon import.
-    maxNestingLevel: 3
-
-    # Enables support for FHIR extensions.
-    enableExtensions: true
-
-    # The list of types that are encoded within open types, such as extensions. This default list 
-    # was taken from the data types that are common to extensions found in widely-used IGs, 
-    # such as the US and AU base profiles. In general, you will get the best query performance by 
-    # encoding your data with the shortest possible list.
-    openTypes:
-      - boolean
-      - code
-      - date
-      - dateTime
-      - decimal
-      - integer
-      - string
-      - Coding
-      - CodeableConcept
-      - Address
-      - Identifier
-      - Reference
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.

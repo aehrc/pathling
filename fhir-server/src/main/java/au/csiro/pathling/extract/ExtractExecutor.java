@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,16 +22,16 @@ import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -73,7 +73,8 @@ public class ExtractExecutor extends QueryExecutor {
   private final ResultRegistry resultRegistry;
 
   /**
-   * @param configuration a {@link Configuration} object to control the behaviour of the executor
+   * @param configuration a {@link ServerConfiguration} object to control the behaviour of the
+   * executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
    * @param database a {@link Database} for retrieving resources
@@ -82,7 +83,7 @@ public class ExtractExecutor extends QueryExecutor {
    * @param resultRegistry a {@link ResultRegistry} for storing the mapping between request ID and
    * result URL
    */
-  public ExtractExecutor(@Nonnull final Configuration configuration,
+  public ExtractExecutor(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory,

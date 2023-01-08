@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,9 @@
 package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -26,6 +28,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 /**
  * @author John Grimes
  */
+@SuppressWarnings("UnusedReturnValue")
 public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAssertion> {
 
   @Nonnull
@@ -42,4 +45,11 @@ public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAsser
     return this;
   }
 
+
+  @Nonnull
+  public ElementPathAssertion hasDefinition(@Nonnull final ElementDefinition elementDefinition) {
+    assertTrue(fhirPath.getDefinition().isPresent());
+    assertEquals(elementDefinition, fhirPath.getDefinition().get());
+    return this;
+  }
 }

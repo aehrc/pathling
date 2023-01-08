@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 package au.csiro.pathling.errors;
 
 import au.csiro.pathling.PathlingVersion;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import io.sentry.Sentry;
 import javax.annotation.Nonnull;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -35,17 +35,18 @@ import org.springframework.stereotype.Component;
 public class ErrorReportingInitialization implements ApplicationListener<ApplicationReadyEvent> {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final PathlingVersion version;
 
   /**
-   * @param configuration A {@link Configuration} object to control the behaviour of the listene
+   * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
+   * listene
    * @param version A {@link PathlingVersion} object containing version information about the
    * server
    */
-  public ErrorReportingInitialization(@Nonnull final Configuration configuration,
+  public ErrorReportingInitialization(@Nonnull final ServerConfiguration configuration,
       @Nonnull final PathlingVersion version) {
     this.configuration = configuration;
     this.version = version;

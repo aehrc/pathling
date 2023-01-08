@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathString;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import ca.uhn.fhir.context.RuntimeSearchParam;
@@ -52,7 +52,7 @@ public class ManifestConverter {
    * @param configuration used to determine the patient identifier system
    * @param fhirContext a {@link FhirContext} that we use to look up the patient compartment
    */
-  public ManifestConverter(@Nonnull final Configuration configuration,
+  public ManifestConverter(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext) {
     patientIdSystem = configuration.getAuth().getGa4ghPassports().getPatientIdSystem();
     this.fhirContext = fhirContext;

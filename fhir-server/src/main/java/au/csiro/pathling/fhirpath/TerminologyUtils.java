@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,13 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.utilities.Preconditions;
+import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -54,5 +58,15 @@ public interface TerminologyUtils {
     } else {
       return false;
     }
+  }
+
+  @Nonnull
+  static Column getCodingColumn(@Nonnull final FhirPath fhirPath) {
+    check(isCodingOrCodeableConcept(fhirPath),
+        "Coding or CodeableConcept path expected");
+    final Column conceptColumn = fhirPath.getValueColumn();
+    return isCodeableConcept(fhirPath)
+           ? conceptColumn.getField("coding")
+           : conceptColumn;
   }
 }

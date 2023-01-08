@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +19,8 @@ package au.csiro.pathling.io;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.ImportConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.SecurityError;
 import java.util.Arrays;
 import org.junit.jupiter.api.Tag;
@@ -37,7 +37,7 @@ class AccessRulesTest {
   final AccessRules accessRules;
 
   AccessRulesTest() {
-    final Configuration configuration = new Configuration();
+    final ServerConfiguration configuration = new ServerConfiguration();
     final ImportConfiguration importConf = new ImportConfiguration();
     configuration.setImport(importConf);
     importConf.setAllowableSources(Arrays.asList("file:///usr/share/import", "s3://data/"));

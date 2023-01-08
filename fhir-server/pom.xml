@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2022 Commonwealth Scientific and Industrial Research
+  ~ Copyright 2023 Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.0.4</version>
+    <version>6.1.0</version>
   </parent>
   <artifactId>fhir-server</artifactId>
   <packaging>jar</packaging>
@@ -36,8 +36,8 @@
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
-    <jmh.version>1.35</jmh.version>
-    <pathling.dockerBaseImage>openjdk:11-jre-slim</pathling.dockerBaseImage>
+    <jmh.version>1.36</jmh.version>
+    <pathling.dockerBaseImage>amazoncorretto:11</pathling.dockerBaseImage>
   </properties>
 
   <dependencies>
@@ -150,7 +150,7 @@
     <dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>4.2.0</version>
+      <version>4.2.1</version>
     </dependency>
     <dependency>
       <groupId>com.auth0</groupId>
@@ -348,15 +348,12 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
         <configuration>
           <excludes>
             <exclude>au/csiro/pathling/fhirpath/parser/generated/*</exclude>
+            <exclude>au/csiro/pathling/terminology/mock/*</exclude>
           </excludes>
         </configuration>
       </plugin>
@@ -366,7 +363,7 @@
         <plugin>
           <groupId>com.google.cloud.tools</groupId>
           <artifactId>jib-maven-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.3.1</version>
           <configuration>
             <from>
               <image>${pathling.dockerBaseImage}</image>
@@ -392,7 +389,7 @@
                 <JAVA_TOOL_OPTIONS>-Xmx2g -XX:MaxMetaspaceSize=400m -XX:ReservedCodeCacheSize=240m -Xss1m -Duser.timezone=UTC</JAVA_TOOL_OPTIONS>
               </environment>
               <labels>
-                <copyright>Copyright © 2018-2022, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement.</copyright>
+                <copyright>Copyright © 2018-2023, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the CSIRO Open Source Software Licence Agreement.</copyright>
                 <author>John Grimes &lt;John.Grimes@csiro.au&gt;</author>
               </labels>
               <ports>

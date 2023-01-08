@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,13 +17,14 @@
 
 package au.csiro.pathling.io;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.extract.Result;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -62,7 +63,7 @@ public class ResultReader {
   public InputStream read(@Nonnull final Result result) {
     // Initialise a Hadoop FileSystem instance centred on the result URL.
     @Nullable final Configuration hadoopConfiguration = spark.sparkContext().hadoopConfiguration();
-    checkNotNull(hadoopConfiguration);
+    requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem resultLocation;
     final URI resultUri;
     try {
@@ -73,7 +74,7 @@ public class ResultReader {
     } catch (final URISyntaxException e) {
       throw new RuntimeException("Problem parsing result URL: " + result, e);
     }
-    checkNotNull(resultLocation);
+    requireNonNull(resultLocation);
 
     // Open up an input stream from the result.
     final Path path = new Path(resultUri);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 package au.csiro.pathling.sql.dates;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -49,6 +50,18 @@ class TemporalDifferenceFunctionTest {
         () -> function.call("2020-01-01", "2020-01-01", "femtoseconds"));
     assertEquals("Invalid calendar duration: femtoseconds",
         error.getMessage());
+  }
+
+  @Test
+  void nullFromArgument() throws Exception {
+    final Long result = function.call(null, "2020-01-01", "years");
+    assertNull(result);
+  }
+
+  @Test
+  void nullToArgument() throws Exception {
+    final Long result = function.call("2020-01-01", null, "years");
+    assertNull(result);
   }
 
 }

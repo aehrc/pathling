@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,86 +17,121 @@
 
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
+import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
-import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCodingsDecoders;
-import au.csiro.pathling.fhirpath.function.memberof.MemberOfMapper;
-import au.csiro.pathling.fhirpath.function.subsumes.SubsumesMapper;
-import au.csiro.pathling.fhirpath.function.translate.TranslateMapper;
-import au.csiro.pathling.sql.MapperWithPreview;
-import au.csiro.pathling.sql.SqlExtensions;
-import au.csiro.pathling.utilities.Strings;
-import java.util.List;
-import java.util.Set;
+import au.csiro.pathling.sql.Terminology;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.DataTypes;
-import org.apache.spark.sql.types.Metadata;
-import org.apache.spark.sql.types.StructField;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+/**
+ * Describes the interface to the terminology functions from a library context.
+ */
 public interface TerminologyFunctions {
 
+  Logger log = LoggerFactory.getLogger(TerminologyFunctions.class);
+
+  /**
+   * Tests whether the codings within the specified column are members of the specified value set.
+   * Creates a new column containing the result.
+   *
+   * @param codingArrayCol the column containing the codings to test
+   * @param valueSetUri the URI of the value set to test against
+   * @param dataset the dataset containing the codings
+   * @param outputColumnName the name of the output column
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/valueset-operation-validate-code.html">Operation
+   * $validate-code on ValueSet</a>
+   */
   @Nonnull
-  static Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
-      @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName,
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final String requestId) {
+  Dataset<Row> memberOf(@Nonnull final Column codingArrayCol, @Nonnull final String valueSetUri,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName);
 
-    final MapperWithPreview<List<SimpleCoding>, Boolean, Set<SimpleCoding>> mapper =
-        new MemberOfMapper(requestId, terminologyServiceFactory,
-            valueSetUri);
-
-    return SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
-  }
-
+  /**
+   * Translates the codings within the specified column using a concept map known to the terminology
+   * service.
+   *
+   * @param codingArrayCol the column containing the codings to translate
+   * @param conceptMapUrl the URL of the concept map to use for translation
+   * @param reverse if true, the translation will be reversed
+   * @param equivalencesCsv the CSV representation of the equivalences to use for translation
+   * @param target the target value set to translate to
+   * @param dataset the dataset containing the codings
+   * @param outputColumnName the name of the output column
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/conceptmap-operation-translate.html">Operation
+   * $translate on ConceptMap</a>
+   */
   @Nonnull
-  static Dataset<Row> translate(@Nonnull final Column codingArrayCol,
-      @Nonnull final String conceptMapUrl, final boolean reverse, @Nonnull final String equivalence,
+  Dataset<Row> translate(@Nonnull final Column codingArrayCol, @Nonnull final String conceptMapUrl,
+      final boolean reverse, @Nonnull final String equivalencesCsv, @Nullable final String target,
       @Nonnull final Dataset<Row> dataset,
-      @Nonnull final String outputColumnName,
-      @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final String requestId) {
+      @Nonnull final String outputColumnName);
 
-    final MapperWithPreview<List<SimpleCoding>, Row[], ConceptTranslator> mapper =
-        new TranslateMapper(requestId, terminologyServiceFactory,
-            conceptMapUrl, reverse, Strings.parseCsvList(equivalence,
-            wrapInUserInputError(ConceptMapEquivalence::fromCode)));
+  /**
+   * Tests whether one or more of a set of codings subsume one or more of another set of codings.
+   *
+   * @param dataset the dataset containing the codings
+   * @param codingArrayA the column containing the first set of codings
+   * @param codingArrayB the column containing the second set of codings
+   * @param outputColumnName the name of the output column
+   * @param inverted if true, the subsumption test will be inverted
+   * @return a new dataset with a new column containing the result
+   * @see <a href="https://www.hl7.org/fhir/codesystem-operation-subsumes.html">Operation $subsumes
+   * on CodeSystem</a>
+   */
+  @Nonnull
+  Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
+      @Nonnull final String outputColumnName, final boolean inverted);
 
-    return SqlExtensions
-        .mapWithPartitionPreview(dataset, codingArrayCol,
-            SimpleCodingsDecoders::decodeList,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.createArrayType(CodingEncoding.DATA_TYPE),
-                true, Metadata.empty()));
+  @Nonnull
+  static TerminologyFunctions build() {
+    return new TerminologyFunctionsImpl();
+  }
+}
+
+/**
+ * An implementation of the library terminology functions interface that uses the UDFs.
+ */
+class TerminologyFunctionsImpl implements TerminologyFunctions {
+
+  TerminologyFunctionsImpl() {
   }
 
   @Nonnull
-  static Dataset<Row> subsumes(@Nonnull final Dataset<Row> idAndCodingSet,
-      @Nonnull final Column codingPairCol, @Nonnull final String outputColumnName,
-      final boolean inverted, @Nonnull final TerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final String requestId) {
+  @Override
+  public Dataset<Row> memberOf(@Nonnull final Column codingArrayCol,
+      @Nonnull final String valueSetUri, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final String outputColumnName) {
+    return dataset.withColumn(outputColumnName, Terminology.member_of(codingArrayCol, valueSetUri));
+  }
 
-    final SubsumesMapper mapper =
-        new SubsumesMapper(requestId,
-            terminologyServiceFactory,
-            inverted);
+  @Nonnull
+  @Override
+  public Dataset<Row> translate(@Nonnull final Column codingArrayCol,
+      @Nonnull final String conceptMapUrl, final boolean reverse,
+      @Nonnull final String equivalencesCsv,
+      @Nullable final String target,
+      @Nonnull final Dataset<Row> dataset, @Nonnull final String outputColumnName) {
+    return dataset.withColumn(outputColumnName,
+        Terminology.translate(codingArrayCol, conceptMapUrl, reverse,
+            parseCsvEquivalences(equivalencesCsv), target));
+  }
 
-    return SqlExtensions
-        .mapWithPartitionPreview(idAndCodingSet, codingPairCol,
-            SimpleCodingsDecoders::decodeListPair,
-            mapper,
-            StructField.apply(outputColumnName, DataTypes.BooleanType, true, Metadata.empty()));
+  @Override
+  @Nonnull
+  public Dataset<Row> subsumes(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column codingArrayA, @Nonnull final Column codingArrayB,
+      @Nonnull final String outputColumnName, final boolean inverted) {
+    return dataset.withColumn(outputColumnName,
+        inverted
+        ? Terminology.subsumed_by(codingArrayA, codingArrayB)
+        : Terminology.subsumes(codingArrayA, codingArrayB));
   }
 
 }

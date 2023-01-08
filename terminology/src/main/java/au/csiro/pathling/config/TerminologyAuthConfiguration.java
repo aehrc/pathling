@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,12 +29,20 @@ import javax.validation.Constraint;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import javax.validation.Payload;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Data;
 import lombok.ToString;
 import org.hibernate.validator.constraints.URL;
 
+/**
+ * Configuration relating to authentication of requests to the terminology service.
+ *
+ * @author John Grimes
+ */
 @Data
+@Builder
 @ValidTerminologyAuthConfiguration
 public class TerminologyAuthConfiguration implements Serializable {
 
@@ -44,7 +52,8 @@ public class TerminologyAuthConfiguration implements Serializable {
    * Enables authentication of requests to the terminology server.
    */
   @NotNull
-  private boolean enabled;
+  @Builder.Default
+  private boolean enabled = false;
 
   /**
    * An OAuth2 token endpoint for use with the client credentials grant.
@@ -77,13 +86,15 @@ public class TerminologyAuthConfiguration implements Serializable {
    * send it with a terminology request.
    */
   @NotNull
-  private long tokenExpiryTolerance;
+  @Min(0)
+  @Builder.Default
+  private long tokenExpiryTolerance = 120;
 
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = TerminologyAuthConfigValidator.class)
   @Documented
-  public static @interface ValidTerminologyAuthConfiguration {
+  public @interface ValidTerminologyAuthConfiguration {
 
     String message() default "If terminology authentication is enabled, token endpoint, "
         + "client ID and client secret must be supplied.";
@@ -112,5 +123,5 @@ public class TerminologyAuthConfiguration implements Serializable {
     }
 
   }
-
+ 
 }

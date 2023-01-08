@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-#  Copyright 2022 Commonwealth Scientific and Industrial Research
+#  Copyright 2023 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,8 +15,9 @@
 
 import os
 
-from pathling import PathlingContext
-from pathling.functions import to_coding
+from pyspark.sql.functions import explode_outer
+
+from pathling import PathlingContext, to_snomed_coding, translate
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -29,11 +28,14 @@ csv = pc.spark.read.options(header=True).csv(
 )
 
 # Translate codings to Read CTV3 using the map that ships with SNOMED CT.
-result = pc.translate(
-    csv,
-    to_coding(csv.CODE, "http://snomed.info/sct"),
-    "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
-    output_column_name="READ_CODE",
+
+result = csv.withColumn(
+    "READ_CODES",
+    translate(
+        to_snomed_coding(csv.CODE),
+        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+    ).code,
 )
-result = result.withColumn("READ_CODE", result.READ_CODE.code)
-result.select("CODE", "DESCRIPTION", "READ_CODE").show()
+result.select(
+    "CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")
+).show()

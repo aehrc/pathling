@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -31,7 +32,6 @@ import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
-import au.csiro.pathling.test.builders.UntypedResourcePathBuilder;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -69,7 +69,7 @@ class CanBeCombinedWithTest {
   final ElementPath dateTimePath;
   final ElementPath decimalPath;
   final ElementPath integerPath;
-  final ElementPath referencePath;
+  final ReferencePath referencePath;
   final ElementPath stringPath;
   final ElementPath timePath;
 
@@ -88,8 +88,6 @@ class CanBeCombinedWithTest {
   @Autowired
   CanBeCombinedWithTest(@Nonnull final SparkSession spark) throws ParseException {
     resourcePath = new ResourcePathBuilder(spark)
-        .build();
-    untypedResourcePath = new UntypedResourcePathBuilder(spark)
         .build();
 
     booleanPath = new ElementPathBuilder(spark)
@@ -110,9 +108,10 @@ class CanBeCombinedWithTest {
     integerPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .build();
-    referencePath = new ElementPathBuilder(spark)
+    referencePath = (ReferencePath) new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
+    untypedResourcePath = UntypedResourcePath.build(referencePath, referencePath.getExpression());
     stringPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .build();

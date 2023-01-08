@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +20,9 @@ package au.csiro.pathling.security.ga4gh;
 import static au.csiro.pathling.security.OidcConfiguration.ConfigItem.JWKS_URI;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
 import au.csiro.pathling.config.AuthorizationConfiguration.Ga4ghPassports;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.security.PathlingJwtDecoderBuilder;
 import com.nimbusds.jwt.JWTClaimsSet;
@@ -50,7 +50,7 @@ public class VisaDecoderBuilder extends PathlingJwtDecoderBuilder {
   }
 
   @Override
-  public JwtDecoder build(@Nonnull final Configuration configuration) {
+  public JwtDecoder build(@Nonnull final ServerConfiguration configuration) {
     final AuthorizationConfiguration auth = getAuthConfiguration(configuration);
     final Ga4ghPassports ga4ghPassports = auth.getGa4ghPassports();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,18 +19,17 @@ package au.csiro.pathling.search;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsStream;
 import static au.csiro.pathling.test.TestResources.getResourceAsString;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -65,7 +64,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class SearchExecutorTest {
 
   @Autowired
-  Configuration configuration;
+  ServerConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;
@@ -103,8 +102,11 @@ class SearchExecutorTest {
 
     final ValueSet valueSet = (ValueSet) jsonParser.parseResource(getResourceAsStream(
         "txResponses/SearchExecutorTest/simpleSearchWithMemberOf.ValueSet.json"));
-    when(terminologyService.intersect(any(), any()))
-        .thenReturn(setOfSimpleFrom(valueSet));
+
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .fromValueSet(
+            "http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009",
+            valueSet);
 
     final SearchExecutor executor = builder.build();
     assertResponse("SearchExecutorTest/simpleSearchWithMemberOf.Bundle.json", executor);
@@ -181,7 +183,7 @@ class SearchExecutorTest {
       entry.setResource((Resource) resource);
       return entry;
     }).collect(Collectors.toList()));
-    actualBundle.setTotal(Objects.requireNonNull(executor.size()));
+    actualBundle.setTotal(requireNonNull(executor.size()));
     actualBundle.setType(BundleType.SEARCHSET);
     final String actualJson = jsonParser.encodeResourceToString(actualBundle);
 

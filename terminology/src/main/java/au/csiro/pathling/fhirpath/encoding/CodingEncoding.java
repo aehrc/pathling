@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,10 @@
  */
 
 package au.csiro.pathling.fhirpath.encoding;
+
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
+import static org.apache.spark.sql.functions.lit;
 
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -92,7 +96,11 @@ public interface CodingEncoding {
    * @param row the row to decode
    * @return the resulting Coding
    */
-  static Coding decode(@Nonnull final Row row) {
+  @Nullable
+  static Coding decode(@Nullable final Row row) {
+    if (isNull(row)) {
+      return null;
+    }
     final Coding coding = new Coding();
     coding.setSystem(row.getString(SYSTEM_INDEX));
     coding.setVersion(row.getString(VERSION_INDEX));
@@ -117,8 +125,9 @@ public interface CodingEncoding {
            : codings.stream().map(CodingEncoding::encode).toArray(Row[]::new);
   }
 
+
   @Nonnull
-  public static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
+  static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
       @Nonnull final Column version, @Nonnull final Column code, @Nonnull final Column display,
       @Nonnull final Column userSelected) {
     return functions.struct(
@@ -127,8 +136,30 @@ public interface CodingEncoding {
         version.as("version"),
         code.as("code"),
         display.as("display"),
-        userSelected.as("userSelected")
+        userSelected.as("userSelected"),
+        lit(null).as("_fid")
     );
   }
- 
+
+
+  @Nonnull
+  private static Column userSelectedToLiteral(@Nonnull final Coding coding) {
+    return coding.hasUserSelected()
+           ? lit(coding.getUserSelected())
+           : lit(null);
+  }
+
+  /**
+   * Encodes the coding as a literal column.
+   *
+   * @param coding the Coding to encode.
+   * @return the column with the literal representation of the coding.
+   */
+  @Nonnull
+  static Column toLiteralColumn(@Nullable final Coding coding) {
+    return nonNull(coding)
+           ? toStruct(lit(coding.getId()), lit(coding.getSystem()), lit(coding.getVersion()),
+        lit(coding.getCode()), lit(coding.getDisplay()), userSelectedToLiteral(coding))
+           : lit(null);
+  }
 }

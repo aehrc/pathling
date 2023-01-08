@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,16 +18,16 @@
 package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.PathlingVersion;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -67,7 +67,7 @@ public class Dependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static FhirEncoders fhirEncoders(@Nonnull final Configuration configuration) {
+  static FhirEncoders fhirEncoders(@Nonnull final ServerConfiguration configuration) {
     final int maxNestingLevel = configuration.getEncoding().getMaxNestingLevel();
     final boolean enableExtensions = configuration.getEncoding().isEnableExtensions();
     log.debug("Creating R4 FHIR encoders (max nesting level of: {}, and extensions enabled: {})",
@@ -81,27 +81,10 @@ public class Dependencies {
 
   @Bean
   @ConditionalOnMissingBean
-  @ConditionalOnProperty(prefix = "pathling", value = "terminology.enabled", havingValue = "true")
-  @Nonnull
-  static TerminologyClient terminologyClient(@Nonnull final Configuration configuration,
-      @Nonnull final FhirContext fhirContext) {
-    final TerminologyConfiguration terminology = configuration.getTerminology();
-    log.debug("Creating FHIR terminology client: {}", terminology.getServerUrl());
-    return TerminologyClient.build(fhirContext, terminology.getServerUrl(),
-        terminology.getSocketTimeout(), terminology.isVerboseLogging(),
-        terminology.getAuthentication(), log);
-  }
-
-  @Bean
-  @ConditionalOnMissingBean
-  @ConditionalOnBean(TerminologyClient.class)
   @Nonnull
   static TerminologyServiceFactory terminologyClientFactory(
-      @Nonnull final Configuration configuration, @Nonnull final FhirContext fhirContext) {
+      @Nonnull final ServerConfiguration configuration, @Nonnull final FhirContext fhirContext) {
     final TerminologyConfiguration terminology = configuration.getTerminology();
-    return new DefaultTerminologyServiceFactory(fhirContext, terminology.getServerUrl(),
-        terminology.getSocketTimeout(), terminology.isVerboseLogging(),
-        terminology.getAuthentication());
+    return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(), terminology);
   }
-
 }

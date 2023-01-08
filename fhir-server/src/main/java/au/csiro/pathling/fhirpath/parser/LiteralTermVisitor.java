@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -43,6 +43,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.QuantityLitera
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.StringLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralContext;
 import java.text.ParseException;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -65,8 +66,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitCodingLiteral(@Nullable final CodingLiteralContext ctx) {
-    @Nullable final String fhirPath = checkNotNull(ctx).getText();
-    checkNotNull(fhirPath);
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
     try {
       return CodingLiteralPath.fromString(fhirPath,
           context.getThisContext().orElse(context.getInputContext()));
@@ -78,16 +79,16 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitStringLiteral(@Nullable final StringLiteralContext ctx) {
-    @Nullable final String fhirPath = checkNotNull(ctx).getText();
-    checkNotNull(fhirPath);
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
     return StringLiteralPath.fromString(fhirPath,
         context.getThisContext().orElse(context.getInputContext()));
   }
 
   @Override
   public FhirPath visitDateLiteral(@Nullable final DateLiteralContext ctx) {
-    @Nullable final String fhirPath = checkNotNull(ctx).getText();
-    checkNotNull(fhirPath);
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
     try {
       return DateLiteralPath.fromString(fhirPath,
           context.getThisContext().orElse(context.getInputContext()));
@@ -99,8 +100,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitDateTimeLiteral(@Nullable final DateTimeLiteralContext ctx) {
-    @Nullable final String fhirPath = checkNotNull(ctx).getText();
-    checkNotNull(fhirPath);
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
     try {
       return DateTimeLiteralPath.fromString(fhirPath,
           context.getThisContext().orElse(context.getInputContext()));
@@ -112,8 +113,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
-    @Nullable final String fhirPath = checkNotNull(ctx).getText();
-    checkNotNull(fhirPath);
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
     return TimeLiteralPath.fromString(fhirPath,
         context.getThisContext().orElse(context.getInputContext()));
   }
@@ -121,8 +122,8 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitNumberLiteral(@Nullable final NumberLiteralContext ctx) {
-    @Nullable final String fhirPath = checkNotNull(ctx).getText();
-    checkNotNull(fhirPath);
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
     // The FHIRPath grammar lumps these two types together, so we tease them apart by trying to 
     // parse them. A better way of doing this would be to modify the grammar.
     try {
@@ -141,9 +142,9 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitBooleanLiteral(@Nullable final BooleanLiteralContext ctx) {
-    checkNotNull(ctx);
+    requireNonNull(ctx);
     @Nullable final String fhirPath = ctx.getText();
-    checkNotNull(fhirPath);
+    requireNonNull(fhirPath);
     return BooleanLiteralPath.fromString(fhirPath,
         context.getThisContext().orElse(context.getInputContext()));
   }
@@ -157,9 +158,9 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitQuantityLiteral(@Nullable final QuantityLiteralContext ctx) {
-    checkNotNull(ctx);
+    requireNonNull(ctx);
     @Nullable final String number = ctx.quantity().NUMBER().getText();
-    checkNotNull(number);
+    requireNonNull(number);
 
     final FhirPath resultContext = this.context.getThisContext().orElse(context.getInputContext());
     @Nullable final TerminalNode ucumUnit = ctx.quantity().unit().STRING();

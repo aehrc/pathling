@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.parser.IParser;
@@ -50,7 +50,7 @@ class BatchProviderTest {
   IParser jsonParser;
 
   @Autowired
-  Configuration configuration;
+  ServerConfiguration configuration;
 
   @MockBean
   Database database;

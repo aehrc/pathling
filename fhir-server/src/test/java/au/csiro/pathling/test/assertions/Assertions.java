@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,11 +18,9 @@
 package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -33,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.opentest4j.AssertionFailedError;
 
 @Slf4j
 public abstract class Assertions {
@@ -53,20 +52,16 @@ public abstract class Assertions {
   }
 
   @Nonnull
-  public static UntypedResourcePathAssertion assertThat(
-      @Nonnull final UntypedResourcePath fhirPath) {
-    return new UntypedResourcePathAssertion(fhirPath);
-  }
-
-  @Nonnull
   public static DatasetAssert assertThat(@Nonnull final Dataset<Row> rowDataset) {
     return new DatasetAssert(rowDataset);
   }
 
+  @SuppressWarnings("unused")
   public static void assertMatches(@Nonnull final String expectedRegex,
       @Nonnull final String actualString) {
     if (!Pattern.matches(expectedRegex, actualString)) {
-      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex));
+      fail(String.format("'%s' does not match expected regex: `%s`", actualString, expectedRegex),
+          actualString, expectedRegex);
     }
   }
 
@@ -81,4 +76,7 @@ public abstract class Assertions {
         .hasRowsUnordered(expectedDataset);
   }
 
+  public static <T> T fail(String message, Object expected, Object actual) {
+    throw new AssertionFailedError(message, expected, actual);
+  }
 }

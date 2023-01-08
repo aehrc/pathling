@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,20 @@
 
 package au.csiro.pathling.terminology;
 
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import java.util.Collection;
-import java.util.Set;
+import au.csiro.pathling.fhir.ParametersUtils.DesignationPart;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import java.io.Serializable;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
+import javax.annotation.Nullable;
+import lombok.Value;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
+import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
+import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
 /**
  * Abstraction layer for the terminology related operations.
@@ -31,51 +40,213 @@ import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 public interface TerminologyService {
 
   /**
-   * Creates a translator for given set of codings according to the specified concept map. See also:
-   * https://www.hl7.org/fhir/operation-conceptmap-translate.html.
-   * <p>
-   * Should be able to ignore codings including are undefined (i.e. the system or code is null).
+   * Represent a single translation of a code.
+   */
+  @Value(staticConstructor = "of")
+  class Translation implements Serializable {
+
+    private static final long serialVersionUID = -7551505530196865478L;
+
+    @Nonnull
+    ConceptMapEquivalence equivalence;
+
+    @Nonnull
+    Coding concept;
+
+    @Override
+    public boolean equals(final Object o) {
+      // We override this method because Coding does not have a sane equals method.
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      final Translation that = (Translation) o;
+      return equivalence == that.equivalence && ImmutableCoding.of(concept)
+          .equals(ImmutableCoding.of(that.concept));
+    }
+
+    @Override
+    public int hashCode() {
+      // We override this method because Coding does not have a sane hashCode method.
+      return Objects.hash(equivalence, ImmutableCoding.of(concept));
+    }
+
+  }
+
+  /**
+   * Validates that a coded value is in a value set. Abstracts the FHIR <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
+   * operation.
    *
-   * @param codings the collections of codings to find translations for.
+   * @param valueSetUrl the URL of the value set to validate against
+   * @param coding the coding to test
+   * @return true if the coding is a valid member of the value set
+   */
+  boolean validateCode(@Nonnull String valueSetUrl, @Nonnull Coding coding);
+
+  /**
+   * Translates a code from one value set to another, based on the existing concept map. Abstracts
+   * the FHIR <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   * operation.
+   *
+   * @param coding the code to translate.
    * @param conceptMapUrl the url of the concept map to use for translation.
-   * @param reverse reverse true if true.
-   * @param equivalences the equivalences to consider for translation.
-   * @return the translator instance with requested translation.
+   * @param reverse if this is true, then the operation should return all the codes that might be
+   * mapped to this code.
+   * @param target identifies the value set in which a translation is sought. If null all known
+   * translations are returned.
+   * @return the list of translations.
    */
   @Nonnull
-  ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,
-      @Nonnull final String conceptMapUrl,
-      boolean reverse, @Nonnull final Collection<ConceptMapEquivalence> equivalences);
+  List<Translation> translate(@Nonnull Coding coding,
+      @Nonnull String conceptMapUrl,
+      boolean reverse,
+      @Nullable String target);
 
   /**
-   * Creates a transitive closure representation of subsumes relation for the given set of codings.
-   * <p>
-   * Should be able to ignore codings including are undefined (i.e. the system or code is null) or
-   * where the system is unknown to the underlying terminology service.
-   * <p>
-   * Additional resources on closure table maintenance:
-   * <a href="https://www.hl7.org/fhir/terminology-service.html#closure">Maintaining
-   * a Closure Table</a>
+   * Tests the subsumption relationship between two codings given the semantics of subsumption in
+   * the underlying code system. Abstracts the <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   * operation.
    *
-   * @param systemAndCodes the codings to construct the closure for.
-   * @return the closure representation.
+   * @param codingA the left code to be tested.
+   * @param codingB the right code to be tested.
+   * @return {@link ConceptSubsumptionOutcome} representing the relation between codingA (left code)
+   * and codingB (right code).
    */
   @Nonnull
-  Relation getSubsumesRelation(@Nonnull final Collection<SimpleCoding> systemAndCodes);
-
+  ConceptSubsumptionOutcome subsumes(@Nonnull Coding codingA, @Nonnull Coding codingB);
 
   /**
-   * Intersects the given set of codings with the {@code ValueSet} defined by provided uri.
-   * <p>
-   * Should be able to ignore codings including are undefined (i.e. the system or code is null) or
-   * where the system is unknown to the underlying terminology service.
+   * Gets additional details about the concept, including designations and properties. Abstracts
+   * the
+   * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * operation.
    *
-   * @param valueSetUri the URI of the {@code ValueSet}
-   * @param systemAndCodes the collections of codings to intersect
-   * @return the set of input codings that belong to the {@code ValueSet}
+   * @param coding the coding to lookup.
+   * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
+   * with matching codes are returned.
+   * @return the list of properties and/or designations.
    */
   @Nonnull
-  Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,
-      @Nonnull final Collection<SimpleCoding> systemAndCodes);
+  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode);
+
+  /**
+   * Common interface for properties and designations
+   */
+  interface PropertyOrDesignation extends Serializable {
+    // marker interface
+  }
+
+  /**
+   * The representation of the property of a concept.
+   */
+  @Value(staticConstructor = "of")
+  class Property implements PropertyOrDesignation {
+
+    private static final long serialVersionUID = 8827691056493768863L;
+
+    @Nonnull
+    String code;
+    @Nonnull
+    Type value;
+
+    /**
+     * Gets the string representation of the property value.
+     *
+     * @return the string representation of the property value
+     */
+    @Nonnull
+    public String getValueAsString() {
+      return value.primitiveValue();
+    }
+
+    @Override
+    public int hashCode() {
+      // not supported for now because it's not possible to satisfy the hashCode/equals contract
+      // without some form of deepHash corresponding to equalsDeep()
+      throw new UnsupportedOperationException("hashCode not implemented.");
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      final Property property = (Property) o;
+
+      if (!code.equals(property.code)) {
+        return false;
+      }
+      return value.equalsDeep(property.value);
+    }
+
+  }
+
+  /**
+   * The representation of a designation of a concept.
+   */
+  @Value(staticConstructor = "of")
+  class Designation implements PropertyOrDesignation {
+
+    private static final long serialVersionUID = -809107979219801186L;
+
+    /**
+     * The code of the designation properties
+     */
+    public static final String PROPERTY_CODE = "designation";
+
+    @Nullable
+    Coding use;
+
+    @Nullable
+    String language;
+
+    @Nonnull
+    String value;
+
+    @Override
+    public int hashCode() {
+      // not supported for now because it's not possible to satisfy the hashCode/equals contract
+      // without some form of deepHash corresponding to equalsDeep()
+      throw new UnsupportedOperationException("hashCode not implemented.");
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      final Designation that = (Designation) o;
+
+      if (use != null
+          ? !use.equalsDeep(that.use)
+          : that.use != null) {
+        return false;
+      }
+      if (!Objects.equals(language, that.language)) {
+        return false;
+      }
+      return value.equals(that.value);
+    }
+
+    @Nonnull
+    public static Designation ofPart(@Nonnull final DesignationPart part) {
+      return of(part.getUse(),
+          Optional.ofNullable(part.getLanguage()).map(StringType::getValue).orElse(null),
+          part.getValue().getValue());
+    }
+  }
 
 }

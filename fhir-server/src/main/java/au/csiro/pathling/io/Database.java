@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,13 +20,13 @@ package au.csiro.pathling.io;
 import static au.csiro.pathling.QueryHelpers.createEmptyDataset;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
 import static org.apache.spark.sql.functions.desc;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.caching.Cacheable;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
@@ -37,6 +37,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -78,7 +79,7 @@ public class Database implements Cacheable {
   private final String databaseName;
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   protected final SparkSession spark;
@@ -90,12 +91,13 @@ public class Database implements Cacheable {
   protected final ThreadPoolTaskExecutor executor;
 
   /**
-   * @param configuration a {@link Configuration} object which controls the behaviour of the reader
+   * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
+   * reader
    * @param spark a {@link SparkSession} for interacting with Spark
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
    * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
    */
-  public Database(@Nonnull final Configuration configuration,
+  public Database(@Nonnull final ServerConfiguration configuration,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ThreadPoolTaskExecutor executor) {
     this.configuration = configuration;
@@ -249,7 +251,7 @@ public class Database implements Cacheable {
       final String tableUrl) {
     log.info("Loading resource {} from: {}", resourceType.toCode(), tableUrl);
     @Nullable final DeltaTable resources = DeltaTable.forPath(spark, tableUrl);
-    checkNotNull(resources);
+    requireNonNull(resources);
 
     if (configuration.getSpark().getCacheDatasets()) {
       // Cache the raw resource data.
@@ -345,7 +347,7 @@ public class Database implements Cacheable {
 
     @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
         .hadoopConfiguration();
-    checkNotNull(hadoopConfiguration);
+    requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouse;
     try {
       warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
@@ -354,7 +356,7 @@ public class Database implements Cacheable {
           warehouseUrl);
       return Optional.empty();
     }
-    checkNotNull(warehouse);
+    requireNonNull(warehouse);
 
     // Check that the database path exists.
     try {
@@ -375,13 +377,13 @@ public class Database implements Cacheable {
           databasePath);
       return Optional.empty();
     }
-    checkNotNull(fileStatuses);
+    requireNonNull(fileStatuses);
 
     final List<Long> timestamps = Arrays.stream(fileStatuses)
         // Get the filename of each item in the directory listing.
         .map(fileStatus -> {
           @Nullable final Path path = fileStatus.getPath();
-          checkNotNull(path);
+          requireNonNull(path);
           return path.toString();
         })
         // Filter out any file names that don't match the pattern.

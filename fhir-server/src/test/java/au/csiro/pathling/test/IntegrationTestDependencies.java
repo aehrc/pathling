@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,12 @@
 
 package au.csiro.pathling.test;
 
-import au.csiro.pathling.config.Configuration;
-import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.UUIDFactory;
+import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
-import java.util.UUID;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -54,23 +51,9 @@ public class IntegrationTestDependencies {
   @Bean
   public DefaultTerminologyServiceFactory terminologyServiceFactory(
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final Configuration configuration) {
+      @Nonnull final ServerConfiguration configuration) {
     log.info("Configuration at creation of TerminologyServiceFactory: {}", configuration);
-    return new DefaultTerminologyServiceFactory(fhirContext,
-        configuration.getTerminology().getServerUrl(), 0, false,
-        configuration.getTerminology().getAuthentication());
+    return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
+        configuration.getTerminology());
   }
-
-  @Bean
-  public UUIDFactory uuidFactory() {
-    return UUID::randomUUID;
-  }
-
-  @Bean
-  public TerminologyService terminologyService(
-      @Nonnull final DefaultTerminologyServiceFactory terminologyServiceFactory,
-      @Nonnull final UUIDFactory uuidFactory) throws NoSuchFieldException, IllegalAccessException {
-    return terminologyServiceFactory.buildService(log, uuidFactory);
-  }
-
 }

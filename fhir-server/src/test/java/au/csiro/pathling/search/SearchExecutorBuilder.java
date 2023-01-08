@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,16 +17,17 @@
 
 package au.csiro.pathling.search;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.StringAndListParam;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +42,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 class SearchExecutorBuilder {
 
   @Nonnull
-  final Configuration configuration;
+  final ServerConfiguration configuration;
 
   @Nonnull
   final FhirContext fhirContext;
@@ -64,7 +65,7 @@ class SearchExecutorBuilder {
   @Nonnull
   Optional<StringAndListParam> filters = Optional.empty();
 
-  SearchExecutorBuilder(@Nonnull final Configuration configuration,
+  SearchExecutorBuilder(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
@@ -88,7 +89,7 @@ class SearchExecutorBuilder {
   }
 
   SearchExecutor build() {
-    checkNotNull(subjectResource);
+    requireNonNull(subjectResource);
     return new SearchExecutor(configuration, fhirContext, sparkSession, database,
         Optional.of(terminologyServiceFactory), fhirEncoders, subjectResource, filters);
   }

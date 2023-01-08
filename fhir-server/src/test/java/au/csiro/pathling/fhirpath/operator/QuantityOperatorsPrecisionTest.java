@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +42,6 @@ import org.apache.spark.sql.SparkSession;
 import org.fhir.ucum.Prefix;
 import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,12 +81,9 @@ public class QuantityOperatorsPrecisionTest {
       "Tm");
 
   // These mol prefixes results in overflow for reasonable decimals (e.g.  9e3 'Tmol')
-  static final Set<String> UNSUPPORTED_REASONABLE_DECIMAL_MOL_UNITS = ImmutableSet.of("Ymol", "Zmol",
+  static final Set<String> UNSUPPORTED_REASONABLE_DECIMAL_MOL_UNITS = ImmutableSet.of("Ymol",
+      "Zmol",
       "Emol", "Pmol", "Tmol");
-
-  @BeforeEach
-  void setUp() {
-  }
 
 
   @Nonnull

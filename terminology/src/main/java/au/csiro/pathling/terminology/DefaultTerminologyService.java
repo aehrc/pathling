@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,178 +17,98 @@
 
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.terminology.ClosureMapping.relationFromConceptMap;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.param.UriParam;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
+import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
+import au.csiro.pathling.terminology.lookup.LookupExecutor;
+import au.csiro.pathling.terminology.lookup.LookupParameters;
+import au.csiro.pathling.terminology.subsumes.SubsumesExecutor;
+import au.csiro.pathling.terminology.subsumes.SubsumesParameters;
+import au.csiro.pathling.terminology.translate.TranslateExecutor;
+import au.csiro.pathling.terminology.translate.TranslateParameters;
+import au.csiro.pathling.terminology.validatecode.ValidateCodeExecutor;
+import au.csiro.pathling.terminology.validatecode.ValidateCodeParameters;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import java.io.Closeable;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.ConceptMap;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
-import org.hl7.fhir.r4.model.IntegerType;
-import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.ValueSet;
+import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
 /**
- * Default implementation of TerminologyService using a backend terminology server.
+ * The default implementation of the TerminologyServiceFactory accessing the REST interface of FHIR
+ * compliant terminology server.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
  */
-@Slf4j
-public class DefaultTerminologyService implements TerminologyService {
+public class DefaultTerminologyService extends BaseTerminologyService {
 
-  @Nonnull
-  private final FhirContext fhirContext;
-
-  @Nonnull
-  private final TerminologyClient terminologyClient;
-
-
-  @Nonnull
-  private final UUIDFactory uuidFactory;
-
-  /**
-   * @param fhirContext The {@link FhirContext} used to interpret responses.
-   * @param terminologyClient The {@link TerminologyClient} used to issue requests.
-   * @param uuidFactory The {@link UUIDFactory} used to create UUIDs.
-   */
-  public DefaultTerminologyService(@Nonnull final FhirContext fhirContext,
-      @Nonnull final TerminologyClient terminologyClient,
-      @Nonnull final UUIDFactory uuidFactory) {
-    this.fhirContext = fhirContext;
-    this.terminologyClient = terminologyClient;
-    this.uuidFactory = uuidFactory;
+  public DefaultTerminologyService(@Nonnull final TerminologyClient terminologyClient,
+      @Nullable final Closeable toClose) {
+    super(terminologyClient, toClose);
   }
 
-
-  private boolean isValidCoding(@Nullable final SimpleCoding coding) {
-    return Objects.nonNull(coding) && coding.isDefined();
-  }
-
-  private boolean isKnownSystem(@Nonnull final String codeSystem) {
-    final UriParam uri = new UriParam(codeSystem);
-    final List<CodeSystem> knownSystems = terminologyClient.searchCodeSystems(
-        uri, new HashSet<>(Collections.singletonList("id")));
-    return !(knownSystems == null || knownSystems.isEmpty());
-  }
-
-  @Nonnull
-  private Stream<SimpleCoding> validCodings(
-      @Nonnull final Collection<SimpleCoding> codings) {
-    return codings.stream()
-        .filter(this::isValidCoding);
-  }
-
-  @Nonnull
-  private Stream<SimpleCoding> validAndKnownCodings(
-      @Nonnull final Collection<SimpleCoding> codings) {
-
-    // filter out codings with code systems unknown to the terminology server
-    final Set<String> allCodeSystems = validCodings(codings)
-        .map(SimpleCoding::getSystem)
-        .collect(Collectors.toSet());
-
-    final Set<String> knownCodeSystems = allCodeSystems.stream()
-        .filter(this::isKnownSystem)
-        .collect(Collectors.toSet());
-
-    if (!knownCodeSystems.equals(allCodeSystems)) {
-      final Collection<String> unrecognizedCodeSystems = new HashSet<>(allCodeSystems);
-      unrecognizedCodeSystems.removeAll(knownCodeSystems);
-      log.warn("Terminology server does not recognize these coding systems: {}",
-          unrecognizedCodeSystems);
-    }
-    return validCodings(codings)
-        .filter(coding -> knownCodeSystems.contains(coding.getSystem()));
+  @Override
+  public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
+    final ValidateCodeParameters parameters = new ValidateCodeParameters(valueSetUrl,
+        ImmutableCoding.of(coding));
+    final ValidateCodeExecutor executor = new ValidateCodeExecutor(terminologyClient, parameters);
+    return Boolean.TRUE.equals(execute(executor));
   }
 
   @Nonnull
   @Override
-  public ConceptTranslator translate(@Nonnull final Collection<SimpleCoding> codings,
-      @Nonnull final String conceptMapUrl, final boolean reverse,
-      @Nonnull final Collection<ConceptMapEquivalence> equivalences) {
-
-    final List<SimpleCoding> uniqueCodings = validCodings(codings)
-        .distinct()
-        .collect(Collectors.toUnmodifiableList());
-
-    final Set<ConceptMapEquivalence> uniqueEquivalences = equivalences.stream()
-        .collect(Collectors.toUnmodifiableSet());
-
-    // create bundle
-    if (!uniqueCodings.isEmpty() && !uniqueEquivalences.isEmpty()) {
-      final Bundle translateBatch = TranslateMapping
-          .toRequestBundle(uniqueCodings, conceptMapUrl, reverse);
-      final Bundle result = terminologyClient.batch(translateBatch);
-      return TranslateMapping
-          .fromResponseBundle(checkNotNull(result), uniqueCodings, uniqueEquivalences,
-              fhirContext);
-    } else {
-      return ConceptTranslator.empty();
-    }
+  public List<Translation> translate(@Nonnull final Coding coding,
+      @Nonnull final String conceptMapUrl, final boolean reverse, @Nullable final String target) {
+    final TranslateParameters parameters = new TranslateParameters(ImmutableCoding.of(coding),
+        conceptMapUrl, reverse, target);
+    final TranslateExecutor executor = new TranslateExecutor(terminologyClient, parameters);
+    return requireNonNull(execute(executor));
   }
 
   @Nonnull
   @Override
-  public Relation getSubsumesRelation(@Nonnull final Collection<SimpleCoding> systemAndCodes) {
-    final List<Coding> codings = validAndKnownCodings(systemAndCodes)
-        .distinct()
-        .map(SimpleCoding::toCoding)
-        .collect(Collectors.toUnmodifiableList());
-    if (!codings.isEmpty()) {
-      // recreate the systemAndCodes dataset from the list not to execute the query again.
-      // Create a unique name for the closure table for this code system, based upon the
-      // expressions of the input, argument and the CodeSystem URI.
-      final String closureName = uuidFactory.nextUUID().toString();
-      log.info("Sending $closure request to terminology service with name '{}' and {} codings",
-          closureName, codings.size());
-      terminologyClient.initialiseClosure(new StringType(closureName));
-      final ConceptMap closureResponse =
-          terminologyClient.closure(new StringType(closureName), codings);
-      checkNotNull(closureResponse);
-      return relationFromConceptMap(closureResponse);
-    } else {
-      return Relation.equality();
-    }
+  public ConceptSubsumptionOutcome subsumes(@Nonnull final Coding codingA,
+      @Nonnull final Coding codingB) {
+    final SubsumesParameters parameters = new SubsumesParameters(
+        ImmutableCoding.of(codingA), ImmutableCoding.of(codingB));
+    final SubsumesExecutor executor = new SubsumesExecutor(terminologyClient, parameters);
+    return requireNonNull(execute(executor));
   }
 
   @Nonnull
   @Override
-  public Set<SimpleCoding> intersect(@Nonnull final String valueSetUri,
-      @Nonnull final Collection<SimpleCoding> systemAndCodes) {
-    final Set<SimpleCoding> codings = validAndKnownCodings(systemAndCodes)
-        .collect(Collectors.toSet());
-
-    // Create a ValueSet to represent the intersection of the input codings and the ValueSet
-    // described by the URI in the argument.
-    final ValueSet intersection = ValueSetMapping.toIntersection(valueSetUri, codings);
-
-    final Set<SimpleCoding> expandedCodings;
-    if (intersection.getCompose().getInclude().isEmpty()) {
-      // If there is nothing to expand, don't bother calling the terminology server.
-      expandedCodings = Collections.emptySet();
-    } else {
-      // Ask the terminology service to work out the intersection between the set of input codings
-      // and the ValueSet identified by the URI in the argument.
-      log.info("Intersecting {} concepts with {} using terminology service", codings.size(),
-          valueSetUri);
-      final ValueSet expansion = terminologyClient
-          .expand(intersection, new IntegerType(codings.size()));
-      expandedCodings = ValueSetMapping.codingSetFromExpansion(expansion);
-    }
-    return expandedCodings;
+  public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
+      @Nullable final String property) {
+    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property);
+    final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
+    return requireNonNull(execute(executor));
   }
+
+
+  @Nullable
+  private static <ResponseType, ResultType> ResultType execute(
+      @Nonnull final TerminologyOperation<ResponseType, ResultType> operation) {
+    final Optional<ResultType> invalidResult = operation.validate();
+    if (invalidResult.isPresent()) {
+      return invalidResult.get();
+    }
+
+    try {
+      final IOperationUntypedWithInput<ResponseType> request = operation.buildRequest();
+      final ResponseType response = request.execute();
+      return operation.extractResult(response);
+
+    } catch (final BaseServerResponseException e) {
+      // If the terminology server rejects the request as invalid, use false as the result.
+      final ResultType fallback = operation.invalidRequestFallback();
+      return handleError(e, fallback);
+    }
+  }
+
 }

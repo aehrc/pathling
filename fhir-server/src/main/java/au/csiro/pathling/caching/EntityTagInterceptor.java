@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.caching;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhir.ConformanceProvider;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.interceptor.api.Hook;
@@ -27,6 +27,7 @@ import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -50,7 +51,7 @@ import org.springframework.stereotype.Component;
 public class EntityTagInterceptor {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final Database database;
@@ -66,7 +67,7 @@ public class EntityTagInterceptor {
    * @param database {@link Database} for use in retrieving cache keys
    * @param conformanceProvider for determining the cacheability of conformance statement requests
    */
-  public EntityTagInterceptor(@Nonnull final Configuration configuration,
+  public EntityTagInterceptor(@Nonnull final ServerConfiguration configuration,
       @Nonnull final Database database,
       @Nonnull final ConformanceProvider conformanceProvider) {
     this.configuration = configuration;
@@ -87,9 +88,9 @@ public class EntityTagInterceptor {
   public void checkIncomingTag(@Nullable final HttpServletRequest request,
       @Nullable final RequestDetails requestDetails,
       @Nullable final HttpServletResponse response) {
-    checkNotNull(request);
-    checkNotNull(response);
-    checkNotNull(requestDetails);
+    requireNonNull(request);
+    requireNonNull(response);
+    requireNonNull(requestDetails);
     if (requestIsCacheable(request)) {
       // Set the Vary header to instruct HTTP caches on how to construct the cache key.
       final String varyValues = String.join(",", configuration.getHttpCaching().getVary());
@@ -130,11 +131,11 @@ public class EntityTagInterceptor {
    * Sets caching headers on a response to make sure that it doesn't get cached.
    *
    * @param response a {@link HttpServletResponse} upon which to set caching headers
-   * @param configuration the {@link Configuration} for the server, which controls which header
-   * values are used
+   * @param configuration the {@link ServerConfiguration} for the server, which controls which
+   * header values are used
    */
   public static void makeRequestNonCacheable(@Nullable final HttpServletResponse response,
-      @Nonnull final Configuration configuration) {
+      @Nonnull final ServerConfiguration configuration) {
     if (response == null) {
       return;
     }

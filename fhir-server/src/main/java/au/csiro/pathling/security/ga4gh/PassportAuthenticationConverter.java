@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.security.ga4gh;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -72,7 +73,7 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
    * filters
    */
   public PassportAuthenticationConverter(@Nonnull final VisaDecoderFactory visaDecoderFactory,
-      @Nonnull final Configuration configuration,
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final ManifestConverter manifestConverter,
       @Nonnull final PassportScope passportScope) {
     log.debug("Instantiating passport authentication converter");
@@ -122,10 +123,11 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
     @Nonnull
     @Override
     public Collection<GrantedAuthority> convert(@Nullable final Jwt credentials) {
-      checkNotNull(credentials);
+      requireNonNull(credentials);
 
       final List<String> encodedVisas = credentials.getClaimAsStringList(PASSPORT_CLAIM_NAME);
-      checkToken(() -> checkNotNull(encodedVisas), "No " + PASSPORT_CLAIM_NAME + " claim");
+      checkToken(() -> requireNonNull(encodedVisas),
+          "No " + PASSPORT_CLAIM_NAME + " claim");
 
       for (final String encodedVisa : encodedVisas) {
         // Decode each visa using the same decoder we use for the primary access token.

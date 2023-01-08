@@ -7,26 +7,21 @@ sidebar_position: 3
 The library also provides a set of functions for querying a FHIR terminology
 server from within your queries and transformations.
 
-import Tabs from "@theme/Tabs";
-import TabItem from "@theme/TabItem";
-import {
-JavaInstallation,
-PythonInstallation,
-ScalaInstallation
-} from "../../src/components/installation";
+import Tabs from "@theme/Tabs"; import TabItem from "@theme/TabItem"; import {
+JavaInstallation, PythonInstallation, ScalaInstallation } from "../../src/components/installation";
 
 ### Value set membership
 
 The `member_of` function can be used to test the membership of a code within a
-[FHIR value set](https://hl7.org/fhir/valueset.html). This can be used with both 
-explicit value sets (i.e. those that have been pre-defined and loaded into the 
-terminology server) and implicit value sets (e.g. SNOMED CT 
+[FHIR value set](https://hl7.org/fhir/valueset.html). This can be used with both
+explicit value sets (i.e. those that have been pre-defined and loaded into the
+terminology server) and implicit value sets (e.g. SNOMED CT
 [Expression Constraint Language](http://snomed.org/ecl)).
 
-In this example, we take a list of SNOMED CT diagnosis codes and
-create a new column which shows which are viral infections. We use an ECL
-expression to define viral infection as a disease with a pathological process 
-of "Infectious process", and a causative agent of "Virus".
+In this example, we take a list of SNOMED CT diagnosis codes and create a new
+column which shows which are viral infections. We use an ECL expression to
+define viral infection as a disease with a pathological process of "Infectious
+process", and a causative agent of "Virus".
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -36,19 +31,26 @@ of "Infectious process", and a causative agent of "Virus".
 
 ```python
 from pathling import PathlingContext
-from pathling.functions import to_coding, to_ecl_value_set
+from pathling.functions import to_snomed_coding, to_ecl_value_set
+from pathling.udfs import member_of
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
-result = pc.member_of(csv, to_coding(csv.CODE, 'http://snomed.info/sct'),
-                      to_ecl_value_set("""
-<< 64572001|Disease| : (
-  << 370135005|Pathological process| = << 441862004|Infectious process|,
-  << 246075003|Causative agent| = << 49872002|Virus|
-)
-                      """), 'VIRAL_INFECTION')
-result.select('CODE', 'DESCRIPTION', 'VIRAL_INFECTION').show()
+VIRAL_INFECTION_ECL = """
+    << 64572001|Disease| : (
+      << 370135005|Pathological process| = << 441862004|Infectious process|,
+      << 246075003|Causative agent| = << 49872002|Virus|
+    )
+"""
+
+csv.select(
+    "CODE",
+    "DESCRIPTION",
+    member_of(to_snomed_coding(csv.CODE), to_ecl_value_set(VIRAL_INFECTION_ECL)).alias(
+        "VIRAL_INFECTION"
+    ),
+).show()
 ```
 
 </TabItem>
@@ -58,19 +60,25 @@ result.select('CODE', 'DESCRIPTION', 'VIRAL_INFECTION').show()
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 
 val pc = PathlingContext.create()
-val csv = spark.read.csv("conditions.csv")
+val csv = pc.getSpark.read.csv("conditions.csv")
 
-val result = pc.memberOf(csv, toCoding(csv.col("CODE"), "http://snomed.info/sct"),
-    toEclValueSet("""
-        << 64572001|Disease| : (
-          << 370135005|Pathological process| = << 441862004|Infectious process|,
-          << 246075003|Causative agent| = << 49872002|Virus|
-        )
-    """), "VIRAL_INFECTION")
-result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show()
+val VIRAL_INFECTION_ECL = """
+    << 64572001|Disease| : (
+      << 370135005|Pathological process| = << 441862004|Infectious process|,
+      << 246075003|Causative agent| = << 49872002|Virus|
+    )
+"""
+
+csv.select(
+    csv.col("CODE"),
+    csv.col("DESCRIPTION"),
+    member_of(toCoding(csv.col("CODE"), "http://snomed.info/sct"),
+        toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
+).show()
 ```
 
 </TabItem>
@@ -80,6 +88,8 @@ result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show()
 
 ```java
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+import static au.csiro.pathling.sql.Terminology.*;
+
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -88,13 +98,20 @@ class MyApp {
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+        
+        String VIRAL_INFECTION_ECL = """
+            << 64572001|Disease| : (
+              << 370135005|Pathological process| = << 441862004|Infectious process|,
+              << 246075003|Causative agent| = << 49872002|Virus|
+            )
+        """;
 
-        Dataset<Row> result = pc.memberOf(csv, toCoding(csv.col("code"), SNOMED_URI),
-            toEclValueSet("<< 64572001|Disease| : ("
-                + "<< 370135005|Pathological process| = << 441862004|Infectious process|,"
-                + "<< 246075003|Causative agent| = << 49872002|Virus|"
-                + ")"), "VIRAL_INFECTION");
-        result.select("CODE", "DESCRIPTION", "VIRAL_INFECTION").show();
+        csv.select(
+                csv.col("CODE"),
+                csv.col("DESCRIPTION"),
+                member_of(toSnomedCoding(csv.col("CODE")),
+                        toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
+        ).show();
     }
 }
 
@@ -117,7 +134,11 @@ Results in:
 
 The `translate` function can be used to translate codes from one code system to
 another using maps that are known to the terminology server. In this example, we
-translate our SNOMED CT diagnosis codes into Read CTV3.
+translate our SNOMED CT diagnosis codes into [Read CTV3](https://digital.nhs.uk/services/terminology-and-classifications/read-codes). 
+
+Please note that the
+type of the output column is the array of coding structs, as the translation may
+produce multiple results for each input coding.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -127,17 +148,23 @@ translate our SNOMED CT diagnosis codes into Read CTV3.
 
 ```python
 from pathling import PathlingContext
-from pathling.functions import to_coding
+from pathling.functions import to_snomed_coding
+from pathling.udfs import translate
+from pyspark.sql.functions import explode_outer
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
-result = pc.translate(csv, to_coding(csv.CODE, 'http://snomed.info/sct'),
-                      'http://snomed.info/sct/900000000000207008?fhir_cm='
-                      '900000000000497000',
-                      output_column_name='READ_CODE')
-result = result.withColumn('READ_CODE', result.READ_CODE.code)
-result.select('CODE', 'DESCRIPTION', 'READ_CODE').show()
+translate_result = csv.withColumn(
+    "READ_CODES",
+    translate(
+        to_snomed_coding(csv.CODE),
+        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+    ).code,
+)
+translate_result.select(
+    "CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")
+).show()
 ```
 
 </TabItem>
@@ -147,15 +174,24 @@ result.select('CODE', 'DESCRIPTION', 'READ_CODE').show()
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
+import org.apache.spark.sql.functions.explode_outer
 
 val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
 
-val result = pc.translate(csv, toCoding(csv.col("CODE"), SNOMED_URI),
-    "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000", 
-    false, "equivalent", "READ_CODE")
-result.select("CODE", "DESCRIPTION", "READ_CODE").show()
+val translate_result = csv.withColumn(
+    "READ_CODES",
+    translate(
+        toCoding(csv.col("CODE"), "https://snomed.info/sct"),
+        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+        false, null
+    ).getField("code")
+)
+translate_result.select(
+    csv.col("CODE"), csv.col("DESCRIPTION"), explode_outer(translate_result.col("READ_CODES")).alias("READ_CODE")
+).show()
 ```
 
 </TabItem>
@@ -164,7 +200,10 @@ result.select("CODE", "DESCRIPTION", "READ_CODE").show()
 <JavaInstallation/>
 
 ```java
+import static au.csiro.pathling.sql.Terminology.*;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+import static org.apache.spark.sql.functions.explode_outer;
+
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -174,10 +213,18 @@ class MyApp {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
-        Dataset<Row> result = pc.translate(csv, toCoding(csv.col("CODE"), SNOMED_URI),
-            "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000", 
-            false, "equivalent", "READ_CODE");
-        result.select("CODE", "DESCRIPTION", "READ_CODE").show();
+        val translate_result = csv.withColumn(
+                "READ_CODES",
+                translate(
+                        toCoding(csv.col("CODE"), "https://snomed.info/sct"),
+                        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+                        false, null
+                ).getField("code")
+        );
+        translate_result.select(
+                csv.col("CODE"), csv.col("DESCRIPTION"), 
+                explode_outer(translate_result.col("READ_CODES")).alias("READ_CODE")
+        ).show();
     }
 }
 
@@ -190,24 +237,24 @@ Results in:
 
 | CODE      | DESCRIPTION               | READ_CODE |
 |-----------|---------------------------|-----------|
-| 65363002  | Otitis media              | X00ik     |
-| 16114001  | Fracture of ankle         | S34..     |
-| 444814009 | Viral sinusitis           | XUjp0     |
-| 444814009 | Viral sinusitis           | XUjp0     |
-| 43878008  | Streptococcal sore throat | A340.     |
+| 65363002  | Otitis media              | \[X00ik\] |
+| 16114001  | Fracture of ankle         | \[S34..\] |
+| 444814009 | Viral sinusitis           | \[XUjp0\] |
+| 444814009 | Viral sinusitis           | \[XUjp0\] |
+| 43878008  | Streptococcal sore throat | \[A340.\] |
 
 ### Subsumption testing
 
 Subsumption test is a fancy way of saying "is this code equal or a subtype of
 this other code".
 
-For example, a code representing "ankle fracture" is subsumed 
-by another code representing "fracture". The "fracture" code is more general, 
-and using it with subsumption can help us find other codes representing
-different subtypes of fracture.
+For example, a code representing "ankle fracture" is subsumed by another code
+representing "fracture". The "fracture" code is more general, and using it with
+subsumption can help us find other codes representing different subtypes of
+fracture.
 
 The `subsumes` function allows us to perform subsumption testing on codes within
-our data. The order of the left and right operands can be reversed to query 
+our data. The order of the left and right operands can be reversed to query
 whether a code is "subsumed by" another code.
 
 <!--suppress CheckEmptyScriptTag -->
@@ -219,20 +266,20 @@ whether a code is "subsumed by" another code.
 ```python
 from pathling import PathlingContext
 from pathling.coding import Coding
-from pathling.functions import to_coding
+from pathling.functions import to_snomed_coding
+from pathling.udfs import subsumes
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
 # 232208008 |Ear, nose and throat disorder|
 left_coding = Coding('http://snomed.info/sct', '232208008')
-right_coding_column = to_coding(csv.CODE, 'http://snomed.info/sct')
+right_coding_column = to_snomed_coding(csv.CODE)
 
-result = pc.subsumes(csv, 'SUBSUMES',
-                     left_coding=left_coding,
-                     right_coding_column=right_coding_column)
-
-result.select('CODE', 'DESCRIPTION', 'IS_ENT').show()
+csv.select(
+    'CODE', 'DESCRIPTION',
+    subsumes(left_coding, right_coding_column).alias('SUBSUMES')
+).show()
 ```
 
 </TabItem>
@@ -242,23 +289,28 @@ result.select('CODE', 'DESCRIPTION', 'IS_ENT').show()
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding
 
 val pc = PathlingContext.create()
 val csv = spark.read.csv("conditions.csv")
 
-val result = pc.subsumes(csv,
+csv.select(
+    csv.col("CODE"),
     // 232208008 |Ear, nose and throat disorder|
-    CodingEncoding.toStruct(
-        lit(null),
-        lit(SNOMED_URI),
-        lit(null),
-        lit("232208008"),
-        lit(null),
-        lit(null)
-    ), toCoding(csv.col("CODE"), SNOMED_URI), "IS_ENT")
-result.select("CODE", "DESCRIPTION", "IS_ENT").show()
+    subsumes(
+        CodingEncoding.toStruct(
+            lit(null),
+            lit(SNOMED_URI),
+            lit(null),
+            lit("232208008"),
+            lit(null),
+            lit(null)
+        ), 
+        toSnomedCoding(csv.col("CODE"))
+    ).alias("IS_ENT")
+).show()
 ```
 
 </TabItem>
@@ -267,7 +319,9 @@ result.select("CODE", "DESCRIPTION", "IS_ENT").show()
 <JavaInstallation/>
 
 ```java
+import static au.csiro.pathling.sql.Terminology.*;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
+
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -277,17 +331,21 @@ class MyApp {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
-        Dataset<Row> result = pc.subsumes(csv,
-            // 232208008 |Ear, nose and throat disorder|
-            CodingEncoding.toStruct(
-                lit(null),
-                lit(SNOMED_URI),
-                lit(null),
-                lit("232208008"),
-                lit(null),
-                lit(null)
-            ), toCoding(csv.col("CODE"), SNOMED_URI), "IS_ENT");
-        result.select("CODE", "DESCRIPTION", "IS_ENT").show();
+        csv.select(
+                csv.col("CODE"),
+                // 232208008 |Ear, nose and throat disorder|
+                subsumes(
+                        CodingEncoding.toStruct(
+                                lit(null),
+                                lit(SNOMED_URI),
+                                lit(null),
+                                lit("232208008"),
+                                lit(null),
+                                lit(null)
+                        ),
+                        toSnomedCoding(csv.col("CODE"))
+                ).alias("IS_ENT")
+        ).show();
     }
 }
 
@@ -303,6 +361,242 @@ Results in:
 | 65363002  | Otitis media      | true   |
 | 16114001  | Fracture of ankle | false  |
 | 444814009 | Viral sinusitis   | true   |
+
+### Retrieving properties
+
+Some terminologies contain additional properties that are associated with codes. 
+You can query these properties using the `property_of` function.
+
+There is also a `display` function that can be used to retrieve the preferred 
+display term for each code.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+<PythonInstallation/>
+
+```python
+from pathling import PathlingContext
+from pathling.functions import to_snomed_coding
+from pathling.udfs import property_of, display, PropertyType
+
+pc = PathlingContext.create()
+csv = pc.spark.read.csv("conditions.csv")
+
+# Get the parent codes for each code in the dataset.
+parents = csv.withColumn(
+    "PARENTS",
+    property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE),
+)
+# Split each parent code into a separate row.
+exploded_parents = parents.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+)
+# Retrieve the preferred term for each parent code.
+with_displays = exploded_parents.withColumn(
+    "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
+)
+with_displays.show()
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+<ScalaInstallation/>
+
+```scala
+import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology
+import au.csiro.pathling.sql.Terminology._
+import au.csiro.pathling.library.TerminologyHelpers._
+import au.csiro.pathling.fhirpath.encoding.CodingEncoding
+
+val pc = PathlingContext.create()
+val csv = spark.read.csv("conditions.csv")
+
+// Get the parent codes for each code in the dataset.
+val parents = csv.withColumn(
+    "PARENTS",
+    property_of(toSnomedCoding(csv.col("CODE")), "parent", "code")
+)
+// Split each parent code into a separate row.
+val exploded_parents = parents.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+)
+// Retrieve the preferred term for each parent code.
+val with_displays = exploded_parents.withColumn(
+    "PARENT_DISPLAY", Terminology.display(toSnomedCoding(exploded_parents.col("PARENT")))
+)
+with_displays.show()
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+<JavaInstallation/>
+
+```java
+import static au.csiro.pathling.sql.Terminology.*;
+import static au.csiro.pathling.library.TerminologyHelpers.*;
+
+import au.csiro.pathling.library.PathlingContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
+class MyApp {
+    public static void main(String[] args) {
+        PathlingContext pc = PathlingContext.create();
+        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+
+        // Get the parent codes for each code in the dataset.
+        Dataset<Row> parents = csv.withColumn(
+                "PARENTS",
+                property_of(toSnomedCoding(csv.col("CODE")), "parent", "code")
+        );
+        // Split each parent code into a separate row.
+        Dataset<Row> exploded_parents = parents.selectExpr(
+                "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+        );
+        // Retrieve the preferred term for each parent code.
+        Dataset<Row> with_displays = exploded_parents.withColumn(
+                "PARENT_DISPLAY", Terminology.display(toSnomedCoding(exploded_parents.col("PARENT")))
+        );
+        with_displays.show();
+    }
+}
+
+```
+
+</TabItem>
+</Tabs>
+
+Results in:
+
+| CODE      | DESCRIPTION               | PARENT    | PARENT_DISPLAY                             |
+|-----------|---------------------------|-----------|--------------------------------------------|
+| 65363002  | Otitis media              | 43275000  | Otitis                                     |
+| 65363002  | Otitis media              | 68996008  | Disorder of middle ear                     |
+| 16114001  | Fracture of ankle         | 125603006 | Injury of ankle                            |
+| 16114001  | Fracture of ankle         | 46866001  | Fracture of lower limb                     |
+| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
+| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
+| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
+| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
+| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
+| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
+
+### Retrieving designations
+
+Some terminologies contain additional display terms for codes. These can be used
+for language translations, synonyms, and more. You can query these terms using the `designation` function.
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+<PythonInstallation/>
+
+```python
+from pathling import PathlingContext
+from pathling.functions import to_snomed_coding
+from pathling.coding import Coding
+from pathling.udfs import designation
+
+pc = PathlingContext.create()
+csv = pc.spark.read.csv("conditions.csv")
+
+# Get the synonyms for each code in the dataset.
+synonyms = csv.withColumn(
+    "SYNONYMS",
+    designation(to_snomed_coding(csv.CODE), Coding.of_snomed("900000000000013009")),
+)
+# Split each synonyms into a separate row.
+exploded_synonyms = synonyms.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+)
+exploded_synonyms.show()
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+<ScalaInstallation/>
+
+```scala
+import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.sql.Terminology._
+import au.csiro.pathling.library.TerminologyHelpers._
+import org.hl7.fhir.r4.model.Coding
+
+val pc = PathlingContext.create()
+val csv = spark.read.csv("conditions.csv")
+
+// Get the synonyms for each code in the dataset.
+val synonyms = csv.withColumn(
+    "SYNONYMS",
+    designation(toSnomedCoding(csv.col("CODE")),
+        new Coding("http://snomed.info/sct", "900000000000013009", null))
+)
+// Split each synonym into a separate row.
+val exploded_synonyms = synonyms.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+)
+exploded_synonyms.show()
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+<JavaInstallation/>
+
+```java
+import static au.csiro.pathling.sql.Terminology.*;
+import static au.csiro.pathling.library.TerminologyHelpers.*;
+
+import au.csiro.pathling.library.PathlingContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
+class MyApp {
+
+    public static void main(String[] args) {
+        PathlingContext pc = PathlingContext.create();
+        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+
+        // Get the synonyms for each code in the dataset.
+        Dataset<Row> synonyms = csv.withColumn(
+                "SYNONYMS",
+                designation(toSnomedCoding(csv.col("CODE")),
+                        new Coding("http://snomed.info/sct",
+                                "900000000000013009", null))
+        );
+        // Split each synonym into a separate row.
+        Dataset<Row> exploded_synonyms = synonyms.selectExpr(
+                "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+        );
+        exploded_synonyms.show();
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Results in:
+
+| CODE      | DESCRIPTION                          | SYNONYM                                    |
+|-----------|--------------------------------------|--------------------------------------------|
+| 65363002  | Otitis media                         | OM - Otitis media                          |
+| 16114001  | Fracture of ankle                    | Ankle fracture                             |
+| 16114001  | Fracture of ankle                    | Fracture of distal end of tibia and fibula |
+| 444814009 | Viral sinusitis (disorder)           | NULL                                       |
+| 444814009 | Viral sinusitis (disorder)           | NULL                                       |
+| 43878008  | Streptococcal sore throat (disorder) | Septic sore throat                         |
+| 43878008  | Streptococcal sore throat (disorder) | Strep throat                               |
+| 43878008  | Streptococcal sore throat (disorder) | Strept throat                              |
+| 43878008  | Streptococcal sore throat (disorder) | Streptococcal angina                       |
+| 43878008  | Streptococcal sore throat (disorder) | Streptococcal pharyngitis                  |
 
 ### Authentication
 

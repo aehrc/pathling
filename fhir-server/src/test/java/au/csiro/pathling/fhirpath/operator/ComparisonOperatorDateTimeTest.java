@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,12 +74,16 @@ class ComparisonOperatorDateTimeTest {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
-        .withRow("patient-1", "2013-06-10T15:33:22Z")       // Equal, exact
-        .withRow("patient-2", "2013-06-10T15:33:22Z")       // Equal, different time zones
-        .withRow("patient-3", "2013-06-10T15:33:22+00:00")  // Equal, different time zone syntax
-        .withRow("patient-4", "2013-06-10T15:33:22.000Z")   // Equal, different precisions
-        .withRow("patient-5", "2013-06-10T15:33:21.900Z")   // Less than
-        .withRow("patient-6", "2013-06-11T15:33:22Z")       // Greater than
+        .withRow("patient-01", "2013-06-10T15:33:22Z")       // Equal, exact
+        .withRow("patient-02", "2013-06-10T15:33:22Z")       // Equal, different time zones
+        .withRow("patient-03", "2013-06-10T15:33:22+00:00")  // Equal, different time zone syntax
+        .withRow("patient-04", "2013-06-10T15:33:22.000Z")   // Equal, different precisions
+        .withRow("patient-05", "2013-06-10T15:33:21.900Z")   // Less than
+        .withRow("patient-06", "2013-06-11T15:33:22Z")       // Greater than
+        .withRow("patient-07", "foo")                        // Invalid on the left
+        .withRow("patient-08", "2013-06-11T15:33:22Z")       // Invalid on the right
+        .withRow("patient-09", null)                         // Null on the left
+        .withRow("patient-10", "2013-06-11T15:33:22Z")       // Null on the right
         .build();
     left = new ElementPathBuilder(spark)
         .dataset(leftDataset)
@@ -99,12 +103,16 @@ class ComparisonOperatorDateTimeTest {
     final Dataset<Row> rightDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
         .withColumn(DataTypes.StringType)
-        .withRow("patient-1", "2013-06-10T15:33:22Z")       // Equal, exact
-        .withRow("patient-2", "2013-06-11T01:33:22+10:00")  // Equal, different time zones
-        .withRow("patient-3", "2013-06-10T15:33:22Z")       // Equal, different time zone syntax
-        .withRow("patient-4", "2013-06-10T15:33:22Z")       // Equal, different precisions
-        .withRow("patient-5", "2013-06-10T15:33:22Z")       // Less than
-        .withRow("patient-6", "2013-06-10T15:33:22Z")       // Greater than
+        .withRow("patient-01", "2013-06-10T15:33:22Z")       // Equal, exact
+        .withRow("patient-02", "2013-06-11T01:33:22+10:00")  // Equal, different time zones
+        .withRow("patient-03", "2013-06-10T15:33:22Z")       // Equal, different time zone syntax
+        .withRow("patient-04", "2013-06-10T15:33:22Z")       // Equal, different precisions
+        .withRow("patient-05", "2013-06-10T15:33:22Z")       // Less than
+        .withRow("patient-06", "2013-06-10T15:33:22Z")       // Greater than
+        .withRow("patient-07", "2013-06-11T15:33:22Z")       // Invalid on the left
+        .withRow("patient-08", "foo")                        // Invalid on the right
+        .withRow("patient-09", "2013-06-11T15:33:22Z")       // Null on the left
+        .withRow("patient-10", null)                         // Null on the right
         .build();
     right = new ElementPathBuilder(spark)
         .dataset(rightDataset)
@@ -126,12 +134,16 @@ class ComparisonOperatorDateTimeTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", true),  // Equal, exact
-        RowFactory.create("patient-2", true),  // Equal, different time zones
-        RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", true),  // Equal, different precisions
-        RowFactory.create("patient-5", false), // Less than
-        RowFactory.create("patient-6", false)  // Greater than
+        RowFactory.create("patient-01", true),  // Equal, exact
+        RowFactory.create("patient-02", true),  // Equal, different time zones
+        RowFactory.create("patient-03", true),  // Equal, different time zone syntax
+        RowFactory.create("patient-04", true),  // Equal, different precisions
+        RowFactory.create("patient-05", false), // Less than
+        RowFactory.create("patient-06", false), // Greater than
+        RowFactory.create("patient-07", null),  // Invalid on the left
+        RowFactory.create("patient-08", null),  // Invalid on the right
+        RowFactory.create("patient-09", null),  // Null on the left
+        RowFactory.create("patient-10", null)   // Null on the right
     );
   }
 
@@ -142,12 +154,16 @@ class ComparisonOperatorDateTimeTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", false),  // Equal, exact
-        RowFactory.create("patient-2", false),  // Equal, different time zones
-        RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", false),  // Equal, different precisions
-        RowFactory.create("patient-5", true),   // Less than
-        RowFactory.create("patient-6", true)    // Greater than
+        RowFactory.create("patient-01", false),  // Equal, exact
+        RowFactory.create("patient-02", false),  // Equal, different time zones
+        RowFactory.create("patient-03", false),  // Equal, different time zone syntax
+        RowFactory.create("patient-04", false),  // Equal, different precisions
+        RowFactory.create("patient-05", true),   // Less than
+        RowFactory.create("patient-06", true),   // Greater than
+        RowFactory.create("patient-07", null),   // Invalid on the left
+        RowFactory.create("patient-08", null),   // Invalid on the right
+        RowFactory.create("patient-09", null),   // Null on the left
+        RowFactory.create("patient-10", null)    // Null on the right
     );
   }
 
@@ -158,12 +174,16 @@ class ComparisonOperatorDateTimeTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", false),  // Equal, exact
-        RowFactory.create("patient-2", false),  // Equal, different time zones
-        RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", false),  // Equal, different precisions
-        RowFactory.create("patient-5", true),   // Less than
-        RowFactory.create("patient-6", false)   // Greater than
+        RowFactory.create("patient-01", false),  // Equal, exact
+        RowFactory.create("patient-02", false),  // Equal, different time zones
+        RowFactory.create("patient-03", false),  // Equal, different time zone syntax
+        RowFactory.create("patient-04", false),  // Equal, different precisions
+        RowFactory.create("patient-05", true),   // Less than
+        RowFactory.create("patient-06", false),  // Greater than
+        RowFactory.create("patient-07", null),   // Invalid on the left
+        RowFactory.create("patient-08", null),   // Invalid on the right
+        RowFactory.create("patient-09", null),   // Null on the left
+        RowFactory.create("patient-10", null)    // Null on the right
     );
   }
 
@@ -174,12 +194,16 @@ class ComparisonOperatorDateTimeTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", true),  // Equal, exact
-        RowFactory.create("patient-2", true),  // Equal, different time zones
-        RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", true),  // Equal, different precisions
-        RowFactory.create("patient-5", true),  // Less than
-        RowFactory.create("patient-6", false)  // Greater than
+        RowFactory.create("patient-01", true),  // Equal, exact
+        RowFactory.create("patient-02", true),  // Equal, different time zones
+        RowFactory.create("patient-03", true),  // Equal, different time zone syntax
+        RowFactory.create("patient-04", true),  // Equal, different precisions
+        RowFactory.create("patient-05", true),  // Less than
+        RowFactory.create("patient-06", false), // Greater than
+        RowFactory.create("patient-07", null),  // Invalid on the left
+        RowFactory.create("patient-08", null),  // Invalid on the right
+        RowFactory.create("patient-09", null),  // Null on the left
+        RowFactory.create("patient-10", null)   // Null on the right
     );
   }
 
@@ -190,12 +214,16 @@ class ComparisonOperatorDateTimeTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", false),  // Equal, exact
-        RowFactory.create("patient-2", false),  // Equal, different time zones
-        RowFactory.create("patient-3", false),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", false),  // Equal, different precisions
-        RowFactory.create("patient-5", false),  // Less than
-        RowFactory.create("patient-6", true)    // Greater than
+        RowFactory.create("patient-01", false),  // Equal, exact
+        RowFactory.create("patient-02", false),  // Equal, different time zones
+        RowFactory.create("patient-03", false),  // Equal, different time zone syntax
+        RowFactory.create("patient-04", false),  // Equal, different precisions
+        RowFactory.create("patient-05", false),  // Less than
+        RowFactory.create("patient-06", true),   // Greater than
+        RowFactory.create("patient-07", null),   // Invalid on the left
+        RowFactory.create("patient-08", null),   // Invalid on the right
+        RowFactory.create("patient-09", null),   // Null on the left
+        RowFactory.create("patient-10", null)    // Null on the right
     );
   }
 
@@ -206,12 +234,16 @@ class ComparisonOperatorDateTimeTest {
     final FhirPath result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
-        RowFactory.create("patient-1", true),  // Equal, exact
-        RowFactory.create("patient-2", true),  // Equal, different time zones
-        RowFactory.create("patient-3", true),  // Equal, different time zone syntax
-        RowFactory.create("patient-4", true),  // Equal, different precisions
-        RowFactory.create("patient-5", false), // Less than
-        RowFactory.create("patient-6", true)   // Greater than
+        RowFactory.create("patient-01", true),  // Equal, exact
+        RowFactory.create("patient-02", true),  // Equal, different time zones
+        RowFactory.create("patient-03", true),  // Equal, different time zone syntax
+        RowFactory.create("patient-04", true),  // Equal, different precisions
+        RowFactory.create("patient-05", false), // Less than
+        RowFactory.create("patient-06", true),  // Greater than
+        RowFactory.create("patient-07", null),  // Invalid on the left
+        RowFactory.create("patient-08", null),  // Invalid on the right
+        RowFactory.create("patient-09", null),  // Null on the left
+        RowFactory.create("patient-10", null)   // Null on the right
     );
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath;
 import static au.csiro.pathling.QueryHelpers.aliasAllColumns;
 import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
@@ -146,7 +147,7 @@ public class ResourcePath extends NonLiteralPath {
    */
   @Nonnull
   public Column getElementColumn(@Nonnull final String elementName) {
-    return Objects.requireNonNull(elementsToColumns.get(elementName));
+    return requireNonNull(elementsToColumns.get(elementName));
   }
 
   @Nonnull

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +20,8 @@ package au.csiro.pathling.test.assertions;
 import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -96,9 +95,14 @@ public class DatasetAssert {
   @Nonnull
   private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
     final List<Row> actualRows = dataset.collectAsList();
-    assertTrue(actualRows.containsAll(expected));
-    assertTrue(expected.containsAll(actualRows));
     assertEquals(expected.size(), actualRows.size());
+
+    if (!actualRows.containsAll(expected)) {
+      return Assertions.fail("Some rows are missing.", expected, actualRows);
+    }
+    if (!expected.containsAll(actualRows)) {
+      return Assertions.fail("Unexpected rows found.", expected, actualRows);
+    }
     return this;
   }
 
@@ -119,7 +123,7 @@ public class DatasetAssert {
     return this;
   }
 
-  @SuppressWarnings("UnusedReturnValue")
+  @SuppressWarnings({"UnusedReturnValue", "unused"})
   @Nonnull
   public DatasetAssert rowsAreAllNotEqual(@Nonnull final Dataset<Row> expected) {
     return rowsAreAllNotEqual(expected.collectAsList());
@@ -164,7 +168,7 @@ public class DatasetAssert {
       log.info("Existing file not found, skipping delete");
     }
 
-    final Configuration configuration = new Configuration();
+    final ServerConfiguration configuration = new ServerConfiguration();
     final StorageConfiguration storage = new StorageConfiguration();
     storage.setWarehouseUrl("file://" + location);
     configuration.setStorage(storage);

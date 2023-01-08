@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,15 @@
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateProvider;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.extract.ExtractExecutor;
 import au.csiro.pathling.extract.ExtractProvider;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchProvider;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.server.IResourceProvider;
@@ -50,7 +51,7 @@ public class ResourceProviderFactory {
   private final ApplicationContext applicationContext;
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final AggregateExecutor aggregateExecutor;
@@ -76,7 +77,7 @@ public class ResourceProviderFactory {
   /**
    * @param applicationContext the Spring {@link ApplicationContext}
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
-   * @param configuration a {@link Configuration} instance which controls the behaviour of the
+   * @param configuration a {@link ServerConfiguration} instance which controls the behaviour of the
    * server
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
    * @param database a {@link Database} for reading and writing resources
@@ -91,7 +92,7 @@ public class ResourceProviderFactory {
   public ResourceProviderFactory(
       @Nonnull final ApplicationContext applicationContext,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final Configuration configuration,
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,

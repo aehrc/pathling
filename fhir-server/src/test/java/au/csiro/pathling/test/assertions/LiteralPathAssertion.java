@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,6 @@ package au.csiro.pathling.test.assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.function.Function;
@@ -50,13 +49,10 @@ public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAsser
   }
 
   @Nonnull
-  public LiteralPathAssertion hasCodingValue(@Nonnull final Coding coding) {
+  public LiteralPathAssertion hasCodingValue(@Nonnull final Coding expectedCoding) {
     assertTrue(fhirPath instanceof CodingLiteralPath);
-    final SimpleCoding actualCoding = new SimpleCoding(
-        ((CodingLiteralPath) fhirPath).getValue());
-    final SimpleCoding expectedCoding = new SimpleCoding(coding);
-    assertEquals(expectedCoding, actualCoding);
+    final Coding actualCoding = ((CodingLiteralPath) fhirPath).getValue();
+    assertTrue(expectedCoding.equalsDeep(actualCoding));
     return this;
   }
-
 }

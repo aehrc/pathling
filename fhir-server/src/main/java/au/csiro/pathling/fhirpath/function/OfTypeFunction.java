@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,18 +17,12 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * A function filters items in the input collection to only those that are of the given type.
@@ -58,19 +52,9 @@ public class OfTypeFunction implements NamedFunction {
         "Argument to ofType function must be a resource type: " + argumentPath.getExpression());
     final ResourcePath resourcePath = (ResourcePath) argumentPath;
 
-    // Do a left outer join to the resource dataset using the reference in the untyped dataset - the
-    // result will be null in the rows that are not of the resource type nominated.
-    final Column joinCondition = inputPath.getResourceEquality(resourcePath);
-    final Dataset<Row> dataset = join(inputPath.getDataset(), resourcePath.getDataset(),
-        joinCondition, JoinType.LEFT_OUTER);
-
-    // Return a new resource path with the joined dataset, and the argument's value column.
-    final Optional<Column> thisColumn = inputPath.getThisColumn();
-    final ResourcePath result = resourcePath.copy(expression, dataset, inputPath.getIdColumn(),
-        inputPath.getEidColumn(), resourcePath.getValueColumn(), inputPath.isSingular(),
-        thisColumn);
-    result.setCurrentResource(resourcePath);
-    return result;
+    return ResolveFunction.resolveMonomorphicReference(inputPath, input.getContext().getDatabase(),
+        input.getContext().getFhirContext(), resourcePath.getResourceType(), expression,
+        input.getContext());
   }
 
 }

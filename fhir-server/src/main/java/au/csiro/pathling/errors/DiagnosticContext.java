@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
  */
 
 package au.csiro.pathling.errors;
+
+import static java.util.Objects.requireNonNull;
 
 import ca.uhn.fhir.parser.IParser;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
@@ -114,7 +116,7 @@ public class DiagnosticContext {
     MDC.put("requestId", requestId);
     Sentry.configureScope(scope -> {
       if (requestId != null) {
-        scope.setTag(REQUEST_ID_TAG, Objects.requireNonNull(requestId));
+        scope.setTag(REQUEST_ID_TAG, requireNonNull(requestId));
       } else {
         scope.removeTag(REQUEST_ID_TAG);
       }

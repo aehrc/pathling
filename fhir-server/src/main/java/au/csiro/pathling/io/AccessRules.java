@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.io;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.SecurityError;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,10 +41,10 @@ public class AccessRules {
   private final List<String> allowableSources;
 
   /**
-   * @param configuration a {@link Configuration} object which controls the behaviour of the
+   * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
    * AccessRules
    */
-  public AccessRules(@Nonnull final Configuration configuration) {
+  public AccessRules(@Nonnull final ServerConfiguration configuration) {
 
     this.allowableSources = configuration.getImport().getAllowableSources().stream()
         .filter(StringUtils::isNotBlank)

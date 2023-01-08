@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,28 +17,23 @@
 
 package au.csiro.pathling.test.helpers;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import au.csiro.pathling.utilities.Preconditions;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
@@ -48,7 +43,6 @@ import org.apache.spark.sql.types.StructType;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Quantity;
-import org.hl7.fhir.r4.model.Quantity.QuantityComparator;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.Buffer;
 
@@ -134,29 +128,16 @@ public abstract class SparkHelpers {
             null}, codingStructType());
   }
 
-  @Nonnull
-  public static Row rowFromSimpleCoding(@Nonnull final SimpleCoding coding) {
-    return new GenericRowWithSchema(
-        new Object[]{coding.getSystem(), coding.getVersion(), coding.getCode()},
-        simpleCodingStructType());
-  }
-
-  @Nonnull
-  public static List<Row> rowsFromSimpleCodings(@Nonnull final SimpleCoding... codings) {
-    return Stream.of(codings)
-        .map(SparkHelpers::rowFromSimpleCoding)
-        .collect(Collectors.toList());
-  }
 
   @Nonnull
   public static Row rowFromCodeableConcept(@Nonnull final CodeableConcept codeableConcept) {
     final List<Coding> coding = codeableConcept.getCoding();
-    checkNotNull(coding);
+    requireNonNull(coding);
 
     final List<Row> codings = coding.stream().map(SparkHelpers::rowFromCoding)
         .collect(Collectors.toList());
     final Buffer<Row> buffer = JavaConverters.asScalaBuffer(codings);
-    checkNotNull(buffer);
+    requireNonNull(buffer);
 
     return new GenericRowWithSchema(
         new Object[]{codeableConcept.getId(), buffer.toList(), codeableConcept.getText()},
@@ -165,7 +146,8 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static Row rowFromQuantity(@Nonnull final Quantity quantity) {
-    return Preconditions.checkNotNull(QuantityEncoding.encode(quantity, false));
+    final Row object = QuantityEncoding.encode(quantity, false);
+    return requireNonNull(object);
   }
 
   @Nonnull

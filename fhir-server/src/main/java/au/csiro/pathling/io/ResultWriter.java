@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +18,14 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -48,16 +49,17 @@ import org.springframework.stereotype.Component;
 public class ResultWriter {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final SparkSession spark;
 
   /**
-   * @param configuration a {@link Configuration} object which controls the behaviour of the writer
+   * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
+   * writer
    * @param spark the current {@link SparkSession}
    */
-  public ResultWriter(@Nonnull final Configuration configuration,
+  public ResultWriter(@Nonnull final ServerConfiguration configuration,
       @Nonnull final SparkSession spark) {
     this.configuration = configuration;
     this.spark = spark;
@@ -90,7 +92,7 @@ public class ResultWriter {
     // is accessible.
     @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
         .hadoopConfiguration();
-    checkNotNull(hadoopConfiguration);
+    requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouseLocation;
     try {
       warehouseLocation = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
@@ -99,7 +101,7 @@ public class ResultWriter {
     } catch (final URISyntaxException e) {
       throw new RuntimeException("Problem parsing result URL: " + warehouseUrl, e);
     }
-    checkNotNull(warehouseLocation);
+    requireNonNull(warehouseLocation);
 
     // Write result dataset to result location.
     final String resultFileUrl = warehouseUrl + "/results/" + name;

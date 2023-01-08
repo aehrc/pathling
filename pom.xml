@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2022 Commonwealth Scientific and Industrial Research
+  ~ Copyright 2023 Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>6.0.4</version>
+  <version>6.1.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -84,11 +84,15 @@
     <pathling.sparkVersion>3.3.1</pathling.sparkVersion>
     <pathling.sparkScalaVersion>2.12</pathling.sparkScalaVersion>
     <pathling.sparkScalaFullVersion>2.12.17</pathling.sparkScalaFullVersion>
-    <pathling.deltaVersion>2.1.0</pathling.deltaVersion>
+    <pathling.deltaVersion>2.2.0</pathling.deltaVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
-    <pathling.awsSdkVersion>1.12.327</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.379</pathling.awsSdkVersion>
+    <!-- we do not use recent version 1.18.24 as it (wrongly) copies the JSR-380 NonNull 
+         annotations from fields to getters resulting in duplicate constraint violations.
+         This has been fixed in the main branch but not released yet -->
+    <pathling.lombokVersion>1.18.22</pathling.lombokVersion>
   </properties>
 
   <modules>
@@ -210,6 +214,13 @@
         <groupId>au.csiro.pathling</groupId>
         <artifactId>import</artifactId>
         <version>${project.version}</version>
+      </dependency>
+
+      <!-- Scala -->
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-library</artifactId>
+        <version>${pathling.sparkScalaFullVersion}</version>
       </dependency>
 
       <!-- HAPI FHIR -->
@@ -347,6 +358,19 @@
         <version>6.6.0</version>
       </dependency>
 
+      <!-- JSR-380 Validation RI -->
+      <dependency>
+        <groupId>org.hibernate.validator</groupId>
+        <artifactId>hibernate-validator</artifactId>
+        <version>6.0.13.Final</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.glassfish</groupId>
+        <artifactId>javax.el</artifactId>
+        <version>3.0.0</version>
+      </dependency>
+      
       <!-- Testing -->
       <dependency>
         <groupId>com.github.docker-java</groupId>
@@ -375,7 +399,7 @@
       <dependency>
         <groupId>com.github.tomakehurst</groupId>
         <artifactId>wiremock-jre8</artifactId>
-        <version>2.34.0</version>
+        <version>2.35.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -389,7 +413,7 @@
       <dependency>
         <groupId>org.projectlombok</groupId>
         <artifactId>lombok</artifactId>
-        <version>1.18.24</version>
+        <version>${pathling.lombokVersion}</version>
         <scope>provided</scope>
       </dependency>
 
@@ -402,7 +426,7 @@
       <dependency>
         <groupId>joda-time</groupId>
         <artifactId>joda-time</artifactId>
-        <version>2.12.0</version>
+        <version>2.12.2</version>
       </dependency>
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
@@ -420,18 +444,18 @@
         <version>1.9.4</version>
       </dependency>
 
-      <!-- CVE-2022-42889 -->
+      <!-- CVE-2022-42889-->
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-text</artifactId>
         <version>1.10.0</version>
       </dependency>
 
-      <!-- CVE-2022-25857 -->
+      <!-- CVE-2022-25857, CVE-2022-1471, CVE-2022-41854  -->
       <dependency>
         <groupId>org.yaml</groupId>
         <artifactId>snakeyaml</artifactId>
-        <version>1.31</version>
+        <version>1.33</version>
       </dependency>
 
       <!-- CVE-2022-31692 -->
@@ -632,7 +656,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.4.0</version>
+          <version>3.4.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

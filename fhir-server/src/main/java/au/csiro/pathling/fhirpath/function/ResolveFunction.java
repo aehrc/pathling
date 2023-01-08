@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,14 +18,10 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.QueryHelpers.union;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
-import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhir.FhirServer;
@@ -33,10 +29,9 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -82,72 +77,23 @@ public class ResolveFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     if (isPolymorphic) {
-      return resolvePolymorphicReference(input, database, referenceTypes, expression);
+      final ReferencePath referencePath = (ReferencePath) input.getInput();
+      return UntypedResourcePath.build(referencePath, expression);
     } else {
       final FhirContext fhirContext = input.getContext().getFhirContext();
-      return resolveMonomorphicReference(input, database, fhirContext, referenceTypes,
-          expression);
+      final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
+      return resolveMonomorphicReference(inputPath, database, fhirContext, resourceType, expression,
+          input.getContext());
     }
   }
 
   @Nonnull
-  private static FhirPath resolvePolymorphicReference(@Nonnull final NamedFunctionInput input,
-      @Nonnull final Database database,
-      @Nonnull final Iterable<ResourceType> referenceTypes, final String expression) {
-    final ReferencePath referencePath = (ReferencePath) input.getInput();
-
-    // If this is a polymorphic reference, create a dataset for each reference type, and union
-    // them together to produce the target dataset. The dataset will not contain the resources
-    // themselves, only a type and identifier for later resolution.
-    final Collection<Dataset<Row>> typeDatasets = new ArrayList<>();
-    for (final ResourceType referenceType : referenceTypes) {
-      if (FhirServer.supportedResourceTypes().contains(referenceType)) {
-        // We can't include the full content of the resource, as you can't union two datasets with
-        // different schema. The content of the resource is added later, when ofType is invoked.
-        final Dataset<Row> typeDatasetWithColumns = database.read(referenceType);
-        final Column idColumn = typeDatasetWithColumns.col("id");
-        Dataset<Row> typeDataset = typeDatasetWithColumns
-            .withColumn("type", lit(referenceType.toCode()));
-        typeDataset = typeDataset.select(idColumn, typeDataset.col("type"));
-
-        typeDatasets.add(typeDataset);
-      }
-    }
-    checkUserInput(!typeDatasets.isEmpty(),
-        "No types within reference are available, cannot resolve: " + referencePath
-            .getExpression());
-    final String idColumnName = randomAlias();
-    final String targetColumnName = randomAlias();
-    Dataset<Row> targetDataset = union(typeDatasets);
-    Column targetId = targetDataset.col(targetDataset.columns()[0]);
-    Column targetType = targetDataset.col(targetDataset.columns()[1]);
-    targetDataset = targetDataset
-        .withColumn(idColumnName, targetId)
-        .withColumn(targetColumnName, targetType);
-    targetId = targetDataset.col(idColumnName);
-    targetType = targetDataset.col(targetColumnName);
-    targetDataset = targetDataset.select(targetId, targetType);
-
-    checkNotNull(targetId);
-    final Column joinCondition = referencePath.getResourceEquality(targetId, targetType);
-    final Dataset<Row> dataset = join(referencePath.getDataset(), targetDataset, joinCondition,
-        JoinType.LEFT_OUTER);
-
-    final Column inputId = referencePath.getIdColumn();
-    final Optional<Column> inputEid = referencePath.getEidColumn();
-    return UntypedResourcePath
-        .build(referencePath, expression, dataset, inputId, inputEid, targetType);
-  }
-
-  @Nonnull
-  private FhirPath resolveMonomorphicReference(@Nonnull final NamedFunctionInput input,
+  public static FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
       @Nonnull final Database database, @Nonnull final FhirContext fhirContext,
-      @Nonnull final Collection<ResourceType> referenceTypes, final String expression) {
-    final ReferencePath referencePath = (ReferencePath) input.getInput();
-
+      @Nonnull final ResourceType resourceType, @Nonnull final String expression,
+      @Nonnull final ParserContext context) {
     // If this is a monomorphic reference, we just need to retrieve the appropriate table and
     // create a dataset with the full resources.
-    final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
     final ResourcePath resourcePath = ResourcePath
         .build(fhirContext, database, resourceType, expression, referencePath.isSingular());
 
@@ -161,7 +107,7 @@ public class ResolveFunction implements NamedFunction {
 
     // We need to add the resource ID column to the parser context so that it can be used within
     // joins in certain situations, e.g. extract.
-    input.getContext().getNodeIdColumns()
+    context.getNodeIdColumns()
         .putIfAbsent(expression, resourcePath.getElementColumn("id"));
 
     final ResourcePath result = resourcePath.copy(expression, dataset, inputId, inputEid,

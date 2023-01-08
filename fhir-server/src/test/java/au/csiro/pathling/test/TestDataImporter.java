@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@
  */
 
 package au.csiro.pathling.test;
+
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.update.ImportExecutor;
 import java.io.File;
@@ -78,8 +80,7 @@ public class TestDataImporter implements CommandLineRunner {
     final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
     final File[] srcNdJsonFiles = srcNdJsonDir.listFiles(fileFilter);
 
-    final List<ParametersParameterComponent> sources = Stream.of(
-            Objects.requireNonNull(srcNdJsonFiles))
+    final List<ParametersParameterComponent> sources = Stream.of(requireNonNull(srcNdJsonFiles))
         .map(file -> {
           final String resourceName = FilenameUtils.getBaseName(file.getName());
           final ResourceType subjectResource = ResourceType

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,16 +19,15 @@ package au.csiro.pathling.test.benchmark;
 
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
-import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -70,13 +69,10 @@ public class AggregateBenchmark {
     SparkSession spark;
 
     @Autowired
-    TerminologyService terminologyService;
-
-    @Autowired
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    Configuration configuration;
+    ServerConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;

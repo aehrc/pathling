@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.security;
 
+
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import java.lang.reflect.Method;
@@ -37,15 +39,15 @@ class SecurityAspectTest extends SecurityTest {
   }
 
   @Nonnull
-  final Method testOperationMethods = Objects.requireNonNull(ReflectionUtils
+  final Method testOperationMethods = requireNonNull(ReflectionUtils
       .findMethod(this.getClass(), "myOperation"));
 
   @Nonnull
-  final OperationAccess operationAccess = Objects.requireNonNull(AnnotationUtils
+  final OperationAccess operationAccess = requireNonNull(AnnotationUtils
       .getAnnotation(testOperationMethods, OperationAccess.class));
 
   @Nonnull
-  final ResourceAccess resourceAccess = Objects.requireNonNull(AnnotationUtils
+  final ResourceAccess resourceAccess = requireNonNull(AnnotationUtils
       .getAnnotation(testOperationMethods, ResourceAccess.class));
 
 

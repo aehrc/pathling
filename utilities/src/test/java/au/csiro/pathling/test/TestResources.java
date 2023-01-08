@@ -1,8 +1,8 @@
 package au.csiro.pathling.test;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -25,13 +25,15 @@ public abstract class TestResources {
 
   @Nonnull
   private static ClassLoader getClassLoader() {
-    return checkNotNull(Thread.currentThread().getContextClassLoader());
+    final ClassLoader object = Thread.currentThread().getContextClassLoader();
+    return requireNonNull(object);
   }
 
   @Nonnull
   public static URL getResourceAsUrl(@Nonnull final String name) {
     final ClassLoader loader = getClassLoader();
-    return checkNotNull(loader.getResource(name));
+    final URL object = loader.getResource(name);
+    return requireNonNull(object);
   }
 
   @Nonnull
@@ -39,7 +41,7 @@ public abstract class TestResources {
     final ClassLoader loader = getClassLoader();
     final InputStream inputStream = loader.getResourceAsStream(name);
     check(Objects.nonNull(inputStream), "Failed to load resource from : '%s'", name);
-    return checkNotNull(inputStream);
+    return requireNonNull(inputStream);
   }
 
   @Nonnull
@@ -78,5 +80,5 @@ public abstract class TestResources {
       @Nonnull final String actualJson) {
     assertJson(expectedPath, actualJson, JSONCompareMode.NON_EXTENSIBLE);
   }
- 
+
 }

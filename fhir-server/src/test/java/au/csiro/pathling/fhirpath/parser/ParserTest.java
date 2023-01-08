@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,15 +25,16 @@ import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_9360
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_bbd33563;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.PATIENT_ID_beff242e;
 import static au.csiro.pathling.test.fixtures.PatientListBuilder.allPatientsWithValue;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_195662009;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_40055000;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
-import static au.csiro.pathling.test.helpers.TestHelpers.mockEmptyResource;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000000000003001;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.HL7_USE_DISPLAY;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.mockCoding;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -42,18 +43,14 @@ import au.csiro.pathling.fhirpath.element.DatePath;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.element.StringPath;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
-import au.csiro.pathling.terminology.ConceptTranslator;
-import au.csiro.pathling.terminology.Relation;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
-import au.csiro.pathling.test.fixtures.RelationBuilder;
-import au.csiro.pathling.test.helpers.TerminologyHelpers;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
 import java.util.Collections;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.types.DataTypes;
@@ -66,10 +63,47 @@ import org.junit.jupiter.api.Test;
  * @author Piotr Szul
  */
 public class ParserTest extends AbstractParserTest {
-  
+
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
     return Assertions.assertThrows(errorType, () -> parser.parse(expression));
+  }
+
+  private TranslateExpectations setupMockTranslationFor_195662009_444814009(
+      final String conceptMapUrl) {
+    return TerminologyServiceHelpers.setupTranslate(terminologyService)
+        .withMockTranslations(CD_SNOMED_195662009,
+            conceptMapUrl, "uuid:test-system", 3)
+        .withMockTranslations(CD_SNOMED_444814009,
+            conceptMapUrl, "uuid:test-system", 2);
+  }
+
+  private void setupMockTranslationFor_195662009_444814009() {
+    setupMockTranslationFor_195662009_444814009(
+        "http://snomed.info/sct?fhir_cm=900000000000526001");
+  }
+
+  private void setupMockDisplayFor_195662009_444814009() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDisplay(CD_SNOMED_195662009)
+        .withDisplay(CD_SNOMED_444814009);
+  }
+
+  private void setupMockPropertiesFor_195662009_444814009() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withProperty(CD_SNOMED_195662009, "child", CD_SNOMED_40055000, CD_SNOMED_403190006)
+        .withProperty(CD_SNOMED_444814009, "child", CD_SNOMED_284551006)
+        .withDesignation(CD_SNOMED_195662009, CD_SNOMED_900000000000003001, "en",
+            "Acute viral pharyngitis : disorder")
+        .withDesignation(CD_SNOMED_444814009, CD_SNOMED_900000000000003001, "en",
+            "Viral sinusitis : disorder")
+        .withDesignation(CD_SNOMED_195662009, HL7_USE_DISPLAY, "en",
+            "Acute viral pharyngitis")
+        .withDesignation(CD_SNOMED_444814009, HL7_USE_DISPLAY, "en",
+            "Viral sinusitis")
+        .withDesignation(CD_SNOMED_444814009, HL7_USE_DISPLAY, "pl",
+            "Wirusowe zapalenie zatok")
+        .done();
   }
 
   @Test
@@ -256,8 +290,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testSubsumesAndSubsumedBy() {
-    when(terminologyService.getSubsumesRelation(any())).thenReturn(Relation.equality());
 
+    setupSubsumes(terminologyService);
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
     // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
@@ -281,9 +315,8 @@ public class ParserTest extends AbstractParserTest {
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
 
-    // http://snomed.info/sct|444814009 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(TerminologyHelpers.REL_SNOMED_444814009_SUBSUMES_40055000);
+    setupSubsumes(terminologyService).withSubsumes(
+        CD_SNOMED_444814009, CD_SNOMED_40055000);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectOrderedResult()
@@ -317,11 +350,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testWhereWithSubsumes() {
-    // Not a real subsumption - just works for this use case.
-    // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(RelationBuilder.empty().add(TerminologyHelpers.CD_SNOMED_VER_284551006,
-            TerminologyHelpers.CD_SNOMED_VER_40055000).build());
+
+    setupSubsumes(terminologyService).withSubsumes(CD_SNOMED_284551006, CD_SNOMED_40055000);
 
     assertThatResultOf(
         "where($this.reverseResolve(Condition.subject).code"
@@ -335,9 +365,10 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testWhereWithMemberOf() {
-    when(terminologyService.intersect(any(), any()))
-        .thenReturn(setOfSimpleFrom(CD_SNOMED_403190006, CD_SNOMED_284551006));
 
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withValueSet("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+            CD_SNOMED_403190006, CD_SNOMED_284551006);
     assertThatResultOf(
         "reverseResolve(Condition.subject).where("
             + "$this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'))"
@@ -427,7 +458,6 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testIfFunctionWithUntypedResourceResult() {
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.RELATEDPERSON);
     assertThatResultOf(
         "iif(gender = 'male', link.where(type = 'replaced-by').other.resolve(), "
             + "link.where(type = 'replaces').other.resolve()).ofType(Patient).gender")
@@ -446,15 +476,8 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testTranslateFunction() {
-    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
-        .toSystem("uuid:test-system")
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
-        .build();
 
-    // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
-        .thenReturn(returnedConceptTranslator);
+    setupMockTranslationFor_195662009_444814009();
 
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').code")
@@ -463,25 +486,62 @@ public class ParserTest extends AbstractParserTest {
   }
 
   @Test
+  void testDisplayFunction() {
+    setupMockDisplayFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.display()")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+  }
+
+
+  @Test
+  void testPropertyFunctionWithDefaultType() {
+    setupMockDisplayFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.property('display')")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+  }
+
+  @Test
+  void testPropertyFunctionWithCodingType() {
+    setupMockPropertiesFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.property('child', 'Coding').code")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testPropertyFunctionWithCodingType.csv");
+  }
+
+
+  @Test
+  void testDesignationFunctionWithLanguage() {
+
+    setupMockPropertiesFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.designation(http://snomed.info/sct|900000000000003001, 'en')")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithLanguage.csv");
+  }
+
+  @Test
+  void testDesignationFunctionWithNoLanguage() {
+
+    setupMockPropertiesFor_195662009_444814009();
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.designation(http://terminology.hl7.org/CodeSystem/designation-usage|display)")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithNoLanguage.csv");
+  }
+
+  @Test
   void testTranslateWithWhereAndTranslate() {
 
-    final ConceptTranslator conceptTranslator1 = ConceptTranslatorBuilder
-        .toSystem("uuid:test-system")
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
-        .build();
-
-    final ConceptTranslator conceptTranslator2 = ConceptTranslatorBuilder
-        .toSystem("uuid:other-system")
-        .putTimes(new SimpleCoding("uuid:test-system", "444814009-0"), 1)
-        .putTimes(new SimpleCoding("uuid:test-system", "444814009-1"), 2)
-        .build();
-
-    // Create a mock terminology client.
-    when(terminologyService.translate(any(), eq("uuid:cm=1"), anyBoolean(), any()))
-        .thenReturn(conceptTranslator1);
-    when(terminologyService.translate(any(), eq("uuid:cm=2"), anyBoolean(), any()))
-        .thenReturn(conceptTranslator2);
+    setupMockTranslationFor_195662009_444814009("uuid:cm=1")
+        .withMockTranslations(mockCoding("uuid:test-system", "444814009", 0), "uuid:cm=2",
+            "uuid:other-system", 1)
+        .withMockTranslations(mockCoding("uuid:test-system", "444814009", 1), "uuid:cm=2",
+            "uuid:other-system", 2);
 
     assertThatResultOf(ResourceType.CONDITION,
         "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=13).code")
@@ -552,8 +612,6 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testCombineOperatorWithTwoUntypedResourcePaths() {
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP,
-        ResourceType.DEVICE, ResourceType.LOCATION);
     assertThatResultOf(
         "(reverseResolve(Condition.subject).subject.resolve() combine "
             + "reverseResolve(DiagnosticReport.subject).subject.resolve()).ofType(Patient)")
@@ -630,7 +688,6 @@ public class ParserTest extends AbstractParserTest {
 
   @Test
   void testExtensionsCurrentResource() {
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
     assertThatResultOf(ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).extension.url")
         .isElementPath(StringPath.class)
@@ -665,15 +722,7 @@ public class ParserTest extends AbstractParserTest {
     // This is a special case as the codings here are created from the terminology server response
     // using the hardcoded encoding core in CodingEncoding.
 
-    final ConceptTranslator returnedConceptTranslator = ConceptTranslatorBuilder
-        .toSystem("uuid:test-system")
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "195662009"), 3)
-        .putTimes(new SimpleCoding("http://snomed.info/sct", "444814009"), 2)
-        .build();
-
-    // Create a mock terminology client.
-    when(terminologyService.translate(any(), any(), anyBoolean(), any()))
-        .thenReturn(returnedConceptTranslator);
+    setupMockTranslationFor_195662009_444814009();
 
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
@@ -702,9 +751,6 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testReverseResolveFollowingPolymorphicResolve() {
     setSubjectResource(ResourceType.ENCOUNTER);
-
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
-
     assertThatResultOf(
         "subject.resolve().ofType(Patient).reverseResolve(Encounter.subject).id "
             + "contains '2aff9edd-def2-487a-b435-a162e11a303c'")
@@ -733,7 +779,6 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testUntilFunction() {
     setSubjectResource(ResourceType.ENCOUNTER);
-    mockEmptyResource(database, spark, fhirEncoders, ResourceType.GROUP);
     assertThatResultOf(
         "subject.resolve().ofType(Patient).birthDate.until(%resource.period.start, 'years')")
         .isElementPath(IntegerPath.class)
@@ -755,7 +800,7 @@ public class ParserTest extends AbstractParserTest {
         .build();
     parser = new Parser(parserContext);
   }
-  
+
   @Test
   void testQuantityMultiplicationAndDivision() {
     assertThatResultOf(
@@ -765,7 +810,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.csv");
   }
-  
+
   @Test
   void testQuantityAdditionSubtractionAndEquality() {
     //  33 'mmol/L == 19873051110000000000000000 'm-3'
@@ -791,7 +836,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
   }
-  
+
   @Test
   void testTraversalToUnsupportedReferenceChild() {
     final String expression = "reverseResolve(MedicationRequest.subject).requester.identifier";
@@ -799,5 +844,27 @@ public class ParserTest extends AbstractParserTest {
         expression);
     assertEquals("No such child: " + expression, error.getMessage());
   }
- 
+
+  @Test
+  void testResolutionOfExtensionReference() {
+    mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
+            + ".valueReference.resolve().ofType(Goal).description.text")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.csv");
+  }
+
+  @Test
+  void testResolutionOfExtensionReferenceWithWrongType() {
+    mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
+    assertThatResultOf(
+        "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
+            + ".valueReference.resolve().ofType(Condition).id")
+        .isElementPath(StringPath.class)
+        .selectResult()
+        .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReferenceWithWrongType.csv");
+  }
+
 }

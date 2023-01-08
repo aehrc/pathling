@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,9 +25,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.config.Configuration;
-import au.csiro.pathling.config.HttpCachingConfiguration;
 import au.csiro.pathling.caching.EntityTagInterceptor;
+import au.csiro.pathling.config.HttpServerCachingConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
@@ -63,8 +63,8 @@ class EntityTagInterceptorTest {
     request = mock(HttpServletRequest.class);
     requestDetails = mock(RequestDetails.class);
     response = mock(HttpServletResponse.class);
-    final Configuration configuration = mock(Configuration.class);
-    final HttpCachingConfiguration httpCaching = mock(HttpCachingConfiguration.class);
+    final ServerConfiguration configuration = mock(ServerConfiguration.class);
+    final HttpServerCachingConfiguration httpCaching = mock(HttpServerCachingConfiguration.class);
     when(httpCaching.getVary()).thenReturn(
         List.of("Accept", "Accept-Encoding", "Prefer", "Authorization"));
     when(httpCaching.getCacheableControl()).thenReturn(List.of("must-revalidate", "max-age=1"));

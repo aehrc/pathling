@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,8 +22,8 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -92,7 +92,7 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
    * @param configuration controls the behaviour of the resulting JWT decoder
    * @return a JWT decoder
    */
-  public JwtDecoder build(@Nonnull final Configuration configuration) {
+  public JwtDecoder build(@Nonnull final ServerConfiguration configuration) {
     final AuthorizationConfiguration auth = getAuthConfiguration(configuration);
 
     // Audience and issuer within each incoming bearer token are validated against the values
@@ -104,7 +104,8 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   }
 
   @Nonnull
-  protected AuthorizationConfiguration getAuthConfiguration(@Nullable final Configuration configuration) {
+  protected AuthorizationConfiguration getAuthConfiguration(
+      @Nullable final ServerConfiguration configuration) {
     checkArgument(configuration != null, "configuration cannot be null");
     final AuthorizationConfiguration auth = configuration.getAuth();
     check(auth.isEnabled());

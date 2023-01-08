@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,6 +67,30 @@ public class TerminologyHelpers {
   @Nonnull
   public static Column toCoding(@Nonnull final Column codingColumn, @Nullable final String system) {
     return toCoding(codingColumn, system, null);
+  }
+
+  /**
+   * Converts a Column containing SNOMED CT codes into a Column that contains a Coding struct.
+   *
+   * @param codingColumn the Column containing codes
+   * @param version the version of the system for the codes
+   * @return a Column containing a Coding struct
+   */
+  @Nonnull
+  public static Column toSnomedCoding(@Nonnull final Column codingColumn,
+      @Nullable final String version) {
+    return toCoding(codingColumn, SNOMED_URI, version);
+  }
+
+  /**
+   * Converts a Column containing SNOMED CT codes into a Column that contains a Coding struct.
+   *
+   * @param codingColumn the Column containing codes
+   * @return a Column containing a Coding struct
+   */
+  @Nonnull
+  public static Column toSnomedCoding(@Nonnull final Column codingColumn) {
+    return toCoding(codingColumn, SNOMED_URI);
   }
 
   /**

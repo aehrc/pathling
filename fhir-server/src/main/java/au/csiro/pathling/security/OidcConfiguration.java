@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,8 +20,8 @@ package au.csiro.pathling.security;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.springframework.security.oauth2.jwt.JwtDecoderProviderConfigurationUtilsProxy.getConfigurationForIssuerLocation;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.config.AuthorizationConfiguration;
+import au.csiro.pathling.config.ServerConfiguration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -46,11 +46,11 @@ public class OidcConfiguration {
   private final Map<String, Object> oidcConfiguration;
 
   /**
-   * @param configuration A {@link Configuration} instance which controls the behaviour of the
+   * @param configuration A {@link ServerConfiguration} instance which controls the behaviour of the
    * server
    */
   @Autowired
-  public OidcConfiguration(@Nonnull final Configuration configuration) {
+  public OidcConfiguration(@Nonnull final ServerConfiguration configuration) {
     final AuthorizationConfiguration authConfig = configuration.getAuth();
     final Supplier<RuntimeException> authConfigError = () -> new RuntimeException(
         "Configuration for issuer must be present if authorization is enabled");

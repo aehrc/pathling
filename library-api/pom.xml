@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  ~ Copyright 2022 Commonwealth Scientific and Industrial Research
+  ~ Copyright 2023 Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>6.0.4</version>
+    <version>6.1.0</version>
   </parent>
   <artifactId>library-api</artifactId>
   <packaging>jar</packaging>
@@ -67,6 +67,12 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>terminology</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
@@ -150,7 +156,7 @@
             <filter>
               <artifact>*:*</artifact>
               <excludes>
-                <exclude>META-INF/**</exclude>
+                <exclude>META-INF/MANIFEST.MF</exclude>
               </excludes>
             </filter>
           </filters>

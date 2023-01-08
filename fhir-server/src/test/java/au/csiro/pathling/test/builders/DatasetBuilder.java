@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,15 @@
 
 package au.csiro.pathling.test.builders;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkState;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.Orderable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -74,7 +75,7 @@ public class DatasetBuilder {
   public DatasetBuilder(@Nonnull final SparkSession spark) {
     this.spark = spark;
     final Metadata metadata = new MetadataBuilder().build();
-    checkNotNull(metadata);
+    requireNonNull(metadata);
     this.metadata = metadata;
   }
 
@@ -104,11 +105,6 @@ public class DatasetBuilder {
   @Nonnull
   public DatasetBuilder withIdColumn(@Nonnull final String alias) {
     return withColumn(alias, DataTypes.StringType);
-  }
-
-  @Nonnull
-  public DatasetBuilder withTypeColumn() {
-    return withColumn(DataTypes.StringType);
   }
 
   @Nonnull
@@ -154,10 +150,10 @@ public class DatasetBuilder {
   public DatasetBuilder changeValue(@Nonnull final String id, @Nonnull final Object value) {
     for (int i = 0; i < datasetRows.size(); i++) {
       final Row row = datasetRows.get(i);
-      checkNotNull(row);
+      requireNonNull(row);
 
       final String string = row.getString(0);
-      checkNotNull(string);
+      requireNonNull(string);
 
       if (string.equals(id)) {
         datasetRows.set(i, RowFactory.create(id, value));
@@ -195,7 +191,7 @@ public class DatasetBuilder {
   @Nonnull
   public DatasetBuilder withStructTypeColumns(@Nonnull final StructType structType) {
     final StructField[] fields = structType.fields();
-    checkNotNull(fields);
+    requireNonNull(fields);
 
     structColumns.addAll(Arrays.asList(fields));
     return this;
@@ -241,7 +237,7 @@ public class DatasetBuilder {
     schema = new StructType(columns.toArray(new StructField[]{}));
 
     Dataset<Row> dataFrame = spark.createDataFrame(datasetRows, schema);
-    checkNotNull(dataFrame);
+    requireNonNull(dataFrame);
     dataFrame = dataFrame.repartition(1);
     // needs to allow for empty datasets with 0 partitions
     checkState(dataFrame.rdd().getNumPartitions() <= 1,
@@ -258,6 +254,11 @@ public class DatasetBuilder {
   @Nonnull
   public static List<Integer> makeEid(final Integer... levels) {
     return Arrays.asList(levels);
+  }
+
+  @Nonnull
+  public static DatasetBuilder of(@Nonnull final SparkSession spark) {
+    return new DatasetBuilder(spark);
   }
 
 }

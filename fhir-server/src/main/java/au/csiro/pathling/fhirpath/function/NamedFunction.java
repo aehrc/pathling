@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,9 +24,11 @@ import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansT
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.function.memberof.MemberOfFunction;
-import au.csiro.pathling.fhirpath.function.subsumes.SubsumesFunction;
-import au.csiro.pathling.fhirpath.function.translate.TranslateFunction;
+import au.csiro.pathling.fhirpath.function.terminology.DesignationFunction;
+import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
+import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
+import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
+import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,7 +42,7 @@ import javax.annotation.Nonnull;
 public interface NamedFunction {
 
   /**
-   * Mapping of function names to instances of those functions.
+   * Mapping of function names to the instances of those functions.
    */
   Map<String, NamedFunction> NAME_TO_INSTANCE = new ImmutableMap.Builder<String, NamedFunction>()
       .put("count", new CountFunction())
@@ -64,6 +66,9 @@ public interface NamedFunction {
       .put("extension", new ExtensionFunction())
       .put("until", new UntilFunction())
       .put("exists", new ExistsFunction())
+      .put("display", new DisplayFunction())
+      .put("property", new PropertyFunction())
+      .put("designation", new DesignationFunction())
       .build();
 
   /**

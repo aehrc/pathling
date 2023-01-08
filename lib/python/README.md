@@ -169,6 +169,94 @@ Results in:
 | 16114001  | Fracture of ankle | false  |
 | 444814009 | Viral sinusitis   | true   |
 
+### Retrieving properties
+
+Some terminologies contain additional properties that are associated with codes.
+You can query these properties using the `property_of` function.
+
+There is also a `display` function that can be used to retrieve the preferred
+display term for each code.
+
+```python
+from pathling import PathlingContext
+from pathling.functions import to_snomed_coding
+from pathling.udfs import property_of, display, PropertyType
+
+pc = PathlingContext.create()
+csv = pc.spark.read.csv("conditions.csv")
+
+# Get the parent codes for each code in the dataset.
+parents = csv.withColumn(
+    "PARENTS",
+    property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE),
+)
+# Split each parent code into a separate row.
+exploded_parents = parents.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+)
+# Retrieve the preferred term for each parent code.
+with_displays = exploded_parents.withColumn(
+    "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
+)
+with_displays.show()
+```
+
+Results in:
+
+| CODE      | DESCRIPTION               | PARENT    | PARENT_DISPLAY                             |
+|-----------|---------------------------|-----------|--------------------------------------------|
+| 65363002  | Otitis media              | 43275000  | Otitis                                     |
+| 65363002  | Otitis media              | 68996008  | Disorder of middle ear                     |
+| 16114001  | Fracture of ankle         | 125603006 | Injury of ankle                            |
+| 16114001  | Fracture of ankle         | 46866001  | Fracture of lower limb                     |
+| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
+| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
+| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
+| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
+| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
+| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
+
+### Retrieving designations
+
+Some terminologies contain additional display terms for codes. These can be used
+for language translations, synonyms, and more. You can query these terms using the `designation` function.
+
+```python
+from pathling import PathlingContext
+from pathling.functions import to_snomed_coding
+from pathling.coding import Coding
+from pathling.udfs import designation
+
+pc = PathlingContext.create()
+csv = pc.spark.read.csv("conditions.csv")
+
+# Get the synonyms for each code in the dataset.
+synonyms = csv.withColumn(
+    "SYNONYMS",
+    designation(to_snomed_coding(csv.CODE), Coding.of_snomed("900000000000013009")),
+)
+# Split each synonyms into a separate row.
+exploded_synonyms = synonyms.selectExpr(
+    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+)
+exploded_synonyms.show()
+```
+
+Results in:
+
+| CODE      | DESCRIPTION                          | SYNONYM                                    |
+|-----------|--------------------------------------|--------------------------------------------|
+| 65363002  | Otitis media                         | OM - Otitis media                          |
+| 16114001  | Fracture of ankle                    | Ankle fracture                             |
+| 16114001  | Fracture of ankle                    | Fracture of distal end of tibia and fibula |
+| 444814009 | Viral sinusitis (disorder)           | NULL                                       |
+| 444814009 | Viral sinusitis (disorder)           | NULL                                       |
+| 43878008  | Streptococcal sore throat (disorder) | Septic sore throat                         |
+| 43878008  | Streptococcal sore throat (disorder) | Strep throat                               |
+| 43878008  | Streptococcal sore throat (disorder) | Strept throat                              |
+| 43878008  | Streptococcal sore throat (disorder) | Streptococcal angina                       |
+| 43878008  | Streptococcal sore throat (disorder) | Streptococcal pharyngitis                  |
+
 ### Terminology server authentication
 
 Pathling can be configured to connect to a protected terminology server by
@@ -244,7 +332,7 @@ RUN pip install --quiet --no-cache-dir pathling && \
     fix-permissions "/home/${NB_USER}"
 ```
 
-Pathling is copyright © 2018-2022, Commonwealth Scientific and Industrial
+Pathling is copyright © 2018-2023, Commonwealth Scientific and Industrial
 Research Organisation
 (CSIRO) ABN 41 687 119 230. Licensed under
 the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).

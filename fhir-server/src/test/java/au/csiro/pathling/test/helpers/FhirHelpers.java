@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,13 @@
 
 package au.csiro.pathling.test.helpers;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -40,7 +41,7 @@ public class FhirHelpers {
       @Nonnull final String elementName) {
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
-    checkNotNull(hapiDefinition);
+    requireNonNull(hapiDefinition);
     final ResourceDefinition definition = new ResourceDefinition(
         ResourceType.fromCode(resourceCode), hapiDefinition);
     return definition.getChildElement(elementName);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.encoding;
 
 import java.io.Serializable;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
@@ -101,5 +102,22 @@ public class ImmutableCoding implements Serializable {
     return ImmutableCoding.of(null, null, null, null, null);
   }
 
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final ImmutableCoding that = (ImmutableCoding) o;
+    return Objects.equals(system, that.system) && Objects.equals(version,
+        that.version) && Objects.equals(code, that.code);
+  }
 
+  @Override
+  public int hashCode() {
+    return Objects.hash(system, version, code);
+  }
+  
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.DiagnosticContext;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
@@ -29,6 +29,7 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
@@ -123,7 +124,7 @@ public class AsyncAspect {
     // Store the diagnostic context from the current Sentry scope.
     final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
 
-    checkNotNull(requestId);
+    requireNonNull(requestId);
     final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
     final Future<IBaseResource> result = executor.submit(() -> {
       try {

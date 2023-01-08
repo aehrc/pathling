@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,15 +19,14 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.config.Configuration;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -36,6 +35,7 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
 import java.util.Collections;
@@ -62,7 +62,7 @@ import org.apache.spark.sql.SparkSession;
 public abstract class QueryExecutor {
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -76,7 +76,7 @@ public abstract class QueryExecutor {
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
-  protected QueryExecutor(@Nonnull final Configuration configuration,
+  protected QueryExecutor(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
@@ -231,7 +231,7 @@ public abstract class QueryExecutor {
               currentContext.getEidColumn(), currentContext.getValueColumn(),
               currentContext.isSingular(), currentContext.getThisColumn());
     }
-    checkNotNull(filterColumn);
+    requireNonNull(filterColumn);
 
     // Return a dataset of filtered IDs with an aliased ID column, ready for joining.
     final String filterIdAlias = randomAlias();

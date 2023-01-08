@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +18,8 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -28,6 +28,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConsta
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -48,20 +49,20 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
-    return new InvocationVisitor(context).visit(checkNotNull(ctx).invocation());
+    return new InvocationVisitor(context).visit(requireNonNull(ctx).invocation());
   }
 
   @Override
   @Nonnull
   public FhirPath visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
-    return new LiteralTermVisitor(context).visit(checkNotNull(ctx).literal());
+    return new LiteralTermVisitor(context).visit(requireNonNull(ctx).literal());
   }
 
   @Override
   @Nonnull
   public FhirPath visitExternalConstantTerm(@Nullable final ExternalConstantTermContext ctx) {
-    @Nullable final String term = checkNotNull(ctx).getText();
-    checkNotNull(term);
+    @Nullable final String term = requireNonNull(ctx).getText();
+    requireNonNull(term);
     checkUserInput(term.equals("%resource") || term.equals("%context"),
         "Unsupported environment variable: " + term);
     check(context.getInputContext() instanceof NonLiteralPath);
@@ -80,7 +81,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitParenthesizedTerm(@Nullable final ParenthesizedTermContext ctx) {
     // Parentheses are ignored in the standalone term case.
-    final FhirPath result = new Visitor(context).visit(checkNotNull(ctx).expression());
+    final FhirPath result = new Visitor(context).visit(requireNonNull(ctx).expression());
     return result.withExpression("(" + result.getExpression() + ")");
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.security;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,12 +46,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Slf4j
 public class SecurityConfiguration {
 
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Value("${pathling.auth.enabled}")
   private boolean authEnabled;
 
-  public SecurityConfiguration(@Nonnull final Configuration configuration) {
+  public SecurityConfiguration(@Nonnull final ServerConfiguration configuration) {
     this.configuration = configuration;
   }
 

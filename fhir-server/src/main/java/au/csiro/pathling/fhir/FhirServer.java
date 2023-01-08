@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.errors.DiagnosticContextInterceptor;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
@@ -77,7 +77,7 @@ public class FhirServer extends RestfulServer {
   private static final int SEARCH_MAP_SIZE = 10;
 
   @Nonnull
-  private final Configuration configuration;
+  private final ServerConfiguration configuration;
 
   @Nonnull
   private final Optional<OidcConfiguration> oidcConfiguration;
@@ -111,7 +111,7 @@ public class FhirServer extends RestfulServer {
 
   /**
    * @param fhirContext a {@link FhirContext} for use in executing FHIR operations
-   * @param configuration a {@link Configuration} instance which controls the behaviour of the
+   * @param configuration a {@link ServerConfiguration} instance which controls the behaviour of the
    * server
    * @param oidcConfiguration a {@link OidcConfiguration} object containing configuration retrieved
    * from OIDC discovery
@@ -129,7 +129,7 @@ public class FhirServer extends RestfulServer {
    * @param batchProvider a {@link BatchProvider} for providing batch support
    */
   public FhirServer(@Nonnull final FhirContext fhirContext,
-      @Nonnull final Configuration configuration,
+      @Nonnull final ServerConfiguration configuration,
       @Nonnull final Optional<OidcConfiguration> oidcConfiguration,
       @Nonnull final ImportProvider importProvider,
       @Nonnull final Optional<JobProvider> jobProvider,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +18,11 @@
 package au.csiro.pathling.sql.dates.datetime;
 
 import au.csiro.pathling.sql.dates.TemporalComparisonFunction;
+import ca.uhn.fhir.parser.DataFormatException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Date;
-import java.util.function.Function;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.DateTimeType;
 
 /**
@@ -34,16 +35,20 @@ public abstract class DateTimeComparisonFunction extends
 
   private static final long serialVersionUID = -2449192480093120211L;
 
+  @Nullable
   @Override
-  protected Function<Object, DateTimeType> parseEncodedValue() {
-    return (object) -> {
-      if (object instanceof Timestamp) {
-        final Instant instant = ((Timestamp) object).toInstant();
+  protected DateTimeType parseEncodedValue(final Object value) {
+    try {
+      if (value instanceof Timestamp) {
+        final Instant instant = ((Timestamp) value).toInstant();
         return new DateTimeType(Date.from(instant));
       } else {
-        return new DateTimeType((String) object);
+        return new DateTimeType((String) value);
       }
-    };
+    } catch (final NullPointerException | IllegalArgumentException | DataFormatException e) {
+      // If we are unable to parse the value, the result will be null.
+      return null;
+    }
   }
 
 }

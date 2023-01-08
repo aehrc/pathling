@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +29,7 @@ import org.springframework.test.context.TestPropertySource;
  * @author John Grimes
  */
 @TestPropertySource(properties = {
-    "pathling.test.recording.terminologyServerUrl=https://tx.ontoserver.csiro.au",
+    "pathling.test.recording.terminologyServerUrl=https://r4.ontoserver.csiro.au",
     "pathling.sentryDsn=http://123abc@localhost:" + IntegrationTestDependencies.WIREMOCK_PORT
         + "/5513555",
     "pathling.sentryEnvironment=integration-test"

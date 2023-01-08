@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,11 +17,10 @@
 
 package au.csiro.pathling.test.stubs;
 
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import javax.annotation.Nonnull;
-import org.slf4j.Logger;
 
 public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
 
@@ -32,7 +31,8 @@ public class TestTerminologyServiceFactory implements TerminologyServiceFactory 
 
   @Nonnull
   @Override
-  public TerminologyService buildService(@Nonnull final Logger logger) {
+  public TerminologyService build() {
     return SharedMocks.getOrCreate(TerminologyService.class);
   }
+
 }

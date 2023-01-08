@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  ~ Copyright 2022 Commonwealth Scientific and Industrial Research
+  ~ Copyright 2023 Commonwealth Scientific and Industrial Research
   ~ Organisation (CSIRO) ABN 41 687 119 230.
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,13 +25,16 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>6.0.4</version>
+    <version>6.1.0</version>
   </parent>
   <artifactId>terminology</artifactId>
   <packaging>jar</packaging>
 
   <name>Pathling Terminology</name>
   <description>Interact with a FHIR terminology server from Spark.</description>
+  <properties>
+    <infinispan.version>14.0.3.Final</infinispan.version>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -42,7 +45,6 @@
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
     </dependency>
-
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
@@ -69,7 +71,20 @@
       <groupId>org.hibernate.validator</groupId>
       <artifactId>hibernate-validator</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient-cache</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-core</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.infinispan</groupId>
+      <artifactId>infinispan-commons</artifactId>
+      <version>${infinispan.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
@@ -110,6 +125,11 @@
     <dependency>
       <groupId>com.github.tomakehurst</groupId>
       <artifactId>wiremock-jre8</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

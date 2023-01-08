@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ package au.csiro.pathling.security.ga4gh;
 import static au.csiro.pathling.test.TestResources.assertJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.config.Configuration;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.parser.AbstractParserTest;
@@ -53,7 +53,7 @@ import org.springframework.test.context.TestPropertySource;
 class ManifestConverterTest extends AbstractParserTest {
 
   @Autowired
-  Configuration configuration;
+  ServerConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;

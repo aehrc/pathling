@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,168 +17,228 @@
 
 package au.csiro.pathling.fhir;
 
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
-
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.annotation.Elements;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.annotation.RequiredParam;
-import ca.uhn.fhir.rest.annotation.Search;
-import ca.uhn.fhir.rest.annotation.Transaction;
-import ca.uhn.fhir.rest.annotation.TransactionParam;
-import ca.uhn.fhir.rest.client.api.IRestfulClient;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.IRestfulClientFactory;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
-import ca.uhn.fhir.rest.param.UriParam;
-import java.util.List;
-import java.util.Set;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.hl7.fhir.r4.model.Bundle;
+import org.apache.http.client.HttpClient;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeSystem;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.ConceptMap;
-import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * A HAPI "annotation client" for communicating with a R4 FHIR terminology service.
+ * The client interface to FHIR terminology operations.
  *
  * @author John Grimes
- * @see <a href="https://hapifhir.io/hapi-fhir/docs/client/annotation_client.html">Annotation
- * Client</a>
+ * @author Piotr Szul
  */
-public interface TerminologyClient extends IRestfulClient {
+public interface TerminologyClient {
+
+  Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
   /**
-   * Performs a CodeSystem search using a single URI.
-   *
-   * @param uri a URI string
-   * @param elements a set of elements to return within the response
-   * @return a list of {@link CodeSystem} objects
+   * @param url the URL of the value set to validate against
+   * @param system the system of the code to validate
+   * @param version the version of the code system to validate against
+   * @param code the code to validate
+   * @return a {@link Parameters} resource
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
-  @Search
-  @Nullable
-  List<CodeSystem> searchCodeSystems(@Nonnull @RequiredParam(name = CodeSystem.SP_URL) UriParam uri,
-      @Nonnull @Elements Set<String> elements);
+  @Operation(name = "$validate-code", type = ValueSet.class, idempotent = true)
+  @Nonnull
+  Parameters validateCode(
+      @Nonnull @OperationParam(name = "url") UriType url,
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "systemVersion") StringType version,
+      @Nonnull @OperationParam(name = "code") CodeType code
+  );
 
   /**
-   * Invokes an "expand" request against the terminology server, using an inline ValueSet resource
+   * Builds a validate code operation that can be customized and executed later.
    *
-   * @param valueSet a {@link ValueSet} resource to be expanded by the terminology server
-   * @param count the number of results to return
-   * @return a ValueSet containing the expansion result
-   * @see <a href="https://www.hl7.org/fhir/R4/valueset-operation-expand.html">Operation $expand on
-   * ValueSet</a>
+   * @param url the URL of the value set to validate against
+   * @param system the system of the code to validate
+   * @param version the version of the code system to validate against
+   * @param code the code to validate
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/valueset-operation-validate-code.html">ValueSet/$validate-code</a>
    */
-  @Operation(name = "$expand", type = ValueSet.class)
-  @Nullable
-  ValueSet expand(@Nonnull @OperationParam(name = "valueSet") ValueSet valueSet,
-      @Nonnull @OperationParam(name = "count") IntegerType count);
+  IOperationUntypedWithInput<Parameters> buildValidateCode(@Nonnull UriType url,
+      @Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code);
 
   /**
-   * Invokes the "closure" operation against the ConceptMap resource.
-   *
-   * @param name The name that defines the particular context for the subsumption based closure
-   * table
-   * @return an empty {@link ConceptMap}
-   * @see <a href="https://www.hl7.org/fhir/R4/conceptmap-operation-closure.html">Operation $closure
-   * on ConceptMap</a>
+   * @param url the URL of the concept map to use for translation
+   * @param system the system of the code to translate
+   * @param version the version of the code system to translate from
+   * @param code the code to translate
+   * @param reverse if true, the translation will be reversed
+   * @param target the URL of the value set within which the translation is sought
+   * @return a {@link Parameters} resource
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
-  @Operation(name = "$closure")
-  @SuppressWarnings("UnusedReturnValue")
-  ConceptMap initialiseClosure(@Nonnull @OperationParam(name = "name") StringType name);
+  @Operation(name = "$translate", type = CodeSystem.class, idempotent = true)
+  @Nonnull
+  Parameters translate(
+      @Nonnull @OperationParam(name = "url") UriType url,
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "version") StringType version,
+      @Nonnull @OperationParam(name = "code") CodeType code,
+      @Nullable @OperationParam(name = "reverse") BooleanType reverse,
+      @Nullable @OperationParam(name = "target") UriType target
+  );
 
   /**
-   * Invokes the "closure" operation against the ConceptMap resource.
+   * Builds a translate operation that can be customized and executed later.
    *
-   * @param name the name that defines the particular context for the subsumption based closure
-   * table
-   * @param concept concepts to add to the closure table
-   * @return a list of new entries ({@code code / system --> code/system}) that the client should
-   * add to its closure table. The only kind of entry mapping equivalences that can be returned are
-   * equal, specializes, subsumes and unmatched
-   * @see <a href="https://www.hl7.org/fhir/R4/conceptmap-operation-closure.html">Operation $closure
-   * on ConceptMap</a>
-   */
-  @Operation(name = "$closure")
-  @Nullable
-  ConceptMap closure(@Nonnull @OperationParam(name = "name") StringType name,
-      @Nonnull @OperationParam(name = "concept") List<Coding> concept);
-
-  /**
-   * Invokes the transaction/batch operation with the provided bundle.
-   *
-   * @param inputBundle a bundle describing the batch/transaction to execute
-   * @return the response bundle
-   * @see <a href="https://www.hl7.org/fhir/http.html#transaction">Batch/Transaction</a>
-   */
-  @Transaction
-  @Nullable
-  Bundle batch(@Nonnull @TransactionParam Bundle inputBundle);
-
-  /**
-   * Build a new instance using the supplied {@link FhirContext} and configuration options.
-   *
-   * @param fhirContext the {@link FhirContext} used to build the client
-   * @param terminologyServerUrl the URL of the terminology server this client will communicate
-   * with
-   * @param socketTimeout the number of milliseconds to wait for response data
-   * @param verboseRequestLogging whether to log out verbose details of each request
-   * @param logger a {@link Logger} to use for logging
-   * @return a shiny new TerminologyClient instance
+   * @param url the URL of the concept map to use for translation
+   * @param system the system of the code to translate
+   * @param version the version of the code system to translate from
+   * @param code the code to translate
+   * @param reverse if true, the translation will be reversed
+   * @param target the URL of the value set within which the translation is sought
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    */
   @Nonnull
+  IOperationUntypedWithInput<Parameters> buildTranslate(@Nonnull UriType url,
+      @Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable BooleanType reverse,
+      @Nullable UriType target);
+
+  /**
+   * @param codeA the code that will be tested to check if it subsumes codeB
+   * @param codeB the code that will be tested to check if it is subsumed by codeA
+   * @param system the system of the codes being tested
+   * @param version the version of the code system that the codes are from
+   * @return a {@link Parameters} resource
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   */
+  @Operation(name = "$subsumes", type = CodeSystem.class, idempotent = true)
+  @Nonnull
+  Parameters subsumes(
+      @Nonnull @OperationParam(name = "codeA") CodeType codeA,
+      @Nonnull @OperationParam(name = "codeB") CodeType codeB,
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "version") StringType version
+  );
+
+  /**
+   * Builds a subsumes operation that can be customized and executed later.
+   *
+   * @param codeA the code that will be tested to check if it subsumes codeB
+   * @param codeB the code that will be tested to check if it is subsumed by codeA
+   * @param system the system of the codes being tested
+   * @param version the version of the code system that the codes are from
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildSubsumes(@Nonnull CodeType codeA,
+      @Nonnull CodeType codeB, @Nonnull UriType system, @Nullable StringType version);
+
+  /**
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @return a {@link Parameters} resource
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   */
+  @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
+  @Nonnull
+  Parameters lookup(
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "version") StringType version,
+      @Nonnull @OperationParam(name = "code") CodeType code,
+      @Nullable @OperationParam(name = "property") CodeType property
+  );
+
+  /**
+   * Builds a lookup operation that can be customized and executed later.
+   *
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property);
+
+  /**
+   * Builds a new terminology client.
+   *
+   * @param fhirContext the FHIR context to use for building the client
+   * @param terminologyConfiguration a {@link TerminologyConfiguration} to govern the behaviour of
+   * the client
+   * @param httpClient the {@link HttpClient} instance to use for making HTTP requests
+   * @return the new instance of {@link TerminologyClient}
+   */
   static TerminologyClient build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final String terminologyServerUrl, final int socketTimeout,
-      final boolean verboseRequestLogging, @Nonnull final TerminologyAuthConfiguration authConfig,
-      @Nonnull final Logger logger) {
+      @Nonnull final TerminologyConfiguration terminologyConfiguration,
+      @Nonnull final HttpClient httpClient) {
     final IRestfulClientFactory restfulClientFactory = fhirContext.getRestfulClientFactory();
-    restfulClientFactory.setHttpClient(buildHttpClient());
-    restfulClientFactory.setSocketTimeout(socketTimeout);
+    restfulClientFactory.setHttpClient(httpClient);
     restfulClientFactory.setServerValidationMode(ServerValidationModeEnum.NEVER);
 
-    final TerminologyClient terminologyClient = restfulClientFactory
-        .newClient(TerminologyClient.class, terminologyServerUrl);
-    terminologyClient.registerInterceptor(new UserAgentInterceptor());
+    final IGenericClient genericClient = restfulClientFactory.newGenericClient(
+        terminologyConfiguration.getServerUrl());
 
-    final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
-    loggingInterceptor.setLogger(logger);
-    loggingInterceptor.setLogRequestSummary(true);
-    loggingInterceptor.setLogResponseSummary(true);
-    loggingInterceptor.setLogRequestHeaders(false);
-    loggingInterceptor.setLogResponseHeaders(false);
-    if (verboseRequestLogging) {
-      loggingInterceptor.setLogRequestBody(true);
-      loggingInterceptor.setLogResponseBody(true);
+    // Register an interceptor that identifies the Pathling client within the request headers.
+    genericClient.registerInterceptor(new UserAgentInterceptor());
+
+    // If verbose logging is enabled, register an interceptor that logs the request and response 
+    // details.
+    if (terminologyConfiguration.isVerboseLogging()) {
+      final LoggingInterceptor verboseLogging = buildVerboseLogging();
+      genericClient.registerInterceptor(verboseLogging);
     }
-    terminologyClient.registerInterceptor(loggingInterceptor);
 
+    // If authentication is enabled, register an interceptor that authenticates requests before 
+    // sending them.
+    final TerminologyAuthConfiguration authConfig = terminologyConfiguration.getAuthentication();
     if (authConfig.isEnabled()) {
-      checkNotNull(authConfig.getTokenEndpoint());
-      checkNotNull(authConfig.getClientId());
-      checkNotNull(authConfig.getClientSecret());
-      final ClientAuthInterceptor clientAuthInterceptor = new ClientAuthInterceptor(
-          authConfig.getTokenEndpoint(), authConfig.getClientId(), authConfig.getClientSecret(),
-          authConfig.getScope(), authConfig.getTokenExpiryTolerance());
-      terminologyClient.registerInterceptor(clientAuthInterceptor);
+      genericClient.registerInterceptor(new ClientAuthInterceptor(authConfig));
     }
-
-    return terminologyClient;
+    return new DefaultTerminologyClient(genericClient);
   }
 
-  private static CloseableHttpClient buildHttpClient() {
-    return HttpClientBuilder.create()
-        .setRetryHandler(new DefaultHttpRequestRetryHandler(1, true))
-        .build();
+  @Nonnull
+  private static LoggingInterceptor buildVerboseLogging() {
+    final LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
+    loggingInterceptor.setLogger(log);
+    loggingInterceptor.setLogRequestSummary(true);
+    loggingInterceptor.setLogResponseSummary(true);
+    loggingInterceptor.setLogRequestHeaders(true);
+    loggingInterceptor.setLogResponseHeaders(true);
+    loggingInterceptor.setLogRequestBody(true);
+    loggingInterceptor.setLogResponseBody(true);
+    return loggingInterceptor;
   }
 
 }

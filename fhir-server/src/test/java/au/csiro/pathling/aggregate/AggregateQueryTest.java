@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,20 +17,17 @@
 
 package au.csiro.pathling.aggregate;
 
-import static au.csiro.pathling.test.TestResources.getResourceAsStream;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.setOfSimpleFrom;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_403190006;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.test.TimingExtension;
-import au.csiro.pathling.test.fixtures.RelationBuilder;
 import au.csiro.pathling.test.helpers.TerminologyHelpers;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.ValueSet;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -175,7 +172,6 @@ class AggregateQueryTest extends AggregateExecutorTest {
   void queryWithPolymorphicResolve() {
     subjectResource = ResourceType.DIAGNOSTICREPORT;
     mockResource(subjectResource, ResourceType.PATIENT);
-    mockEmptyResource(ResourceType.GROUP, ResourceType.DEVICE, ResourceType.LOCATION);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
@@ -270,12 +266,17 @@ class AggregateQueryTest extends AggregateExecutorTest {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.CONDITION, subjectResource);
 
-    final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
-        getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
-    when(terminologyService.intersect(any(), any()))
-        .thenReturn(setOfSimpleFrom(mockExpansion));
-
     final String valueSetUrl = "http://snomed.info/sct?fhir_vs=refset/32570521000036109";
+
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withValueSet(valueSetUrl,
+            CD_SNOMED_403190006, CD_SNOMED_284551006);
+
+    // final ValueSet mockExpansion = (ValueSet) jsonParser.parseResource(
+    //     getResourceAsStream("txResponses/AggregateQueryTest/queryWithMemberOf.ValueSet.json"));
+    // when(terminologyService.intersect(any(), any()))
+    //     .thenReturn(setOfSimpleFrom(mockExpansion));
+
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
         .withGrouping("reverseResolve(Condition.subject).code.memberOf('" + valueSetUrl + "')")
@@ -516,9 +517,10 @@ class AggregateQueryTest extends AggregateExecutorTest {
     mockResource(ResourceType.CONDITION, subjectResource);
     // Not a real subsumption - just works for this use case.
     // http://snomed.info/sct|284551006 -- subsumes --> http://snomed.info/sct|40055000
-    when(terminologyService.getSubsumesRelation(any()))
-        .thenReturn(RelationBuilder.empty().add(TerminologyHelpers.CD_SNOMED_VER_284551006,
-            TerminologyHelpers.CD_SNOMED_VER_40055000).build());
+
+    TerminologyServiceHelpers.setupSubsumes(terminologyService)
+        .withSubsumes(CD_SNOMED_284551006,
+            TerminologyHelpers.CD_SNOMED_40055000);
 
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")

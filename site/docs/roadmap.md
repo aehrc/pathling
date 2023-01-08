@@ -6,17 +6,6 @@ yet, please [get into contact](https://pathling.csiro.au/#contact) with us
 or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
 understand your use case.
 
-## Terminology functions: `property` and `designation`
-
-These two functions will round out the terminology functionality of the Pathling
-operations, allowing virtually any knowledge held by the terminology server
-about concepts to be accessed within expressions.
-
-See also:
-
-- [FHIRPath function: property](https://github.com/aehrc/pathling/issues/366)
-- [FHIRPath function: designation](https://github.com/aehrc/pathling/issues/519)
-
 ## Library API: `aggregate` and `extract` operations
 
 This change will make it possible to use

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,29 +17,42 @@
 
 package au.csiro.pathling.library;
 
+import static au.csiro.pathling.test.SchemaAsserts.assertFieldNotPresent;
+import static au.csiro.pathling.test.SchemaAsserts.assertFieldPresent;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupTranslate;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupValidate;
 import static org.apache.spark.sql.functions.col;
+import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
+import au.csiro.pathling.config.EncodingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingConfiguration;
+import au.csiro.pathling.config.HttpClientCachingStorageType;
+import au.csiro.pathling.config.HttpClientConfiguration;
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.DefaultTerminologyServiceFactory;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.terminology.ConceptTranslator;
-import au.csiro.pathling.terminology.Relation;
-import au.csiro.pathling.terminology.Relation.Entry;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.test.SchemaAsserts;
-import java.util.HashSet;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import ca.uhn.fhir.context.FhirVersionEnum;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import javax.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -51,10 +64,12 @@ import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
+import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Condition;
 import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import scala.collection.mutable.WrappedArray;
 
@@ -68,7 +83,7 @@ public class PathlingContextTest {
    * Set up Spark.
    */
   @BeforeAll
-  public static void setUp() {
+  public static void setUpAll() {
     spark = TestHelpers.spark();
   }
 
@@ -76,8 +91,23 @@ public class PathlingContextTest {
    * Tear down Spark.
    */
   @AfterAll
-  public static void tearDown() {
+  public static void tearDownAll() {
     spark.stop();
+  }
+
+  private TerminologyServiceFactory terminologyServiceFactory;
+  private TerminologyService terminologyService;
+
+  @BeforeEach
+  public void setUp() {
+    // setup terminology mocks
+    terminologyServiceFactory = mock(
+        TerminologyServiceFactory.class, withSettings().serializable());
+    terminologyService = mock(TerminologyService.class,
+        withSettings().serializable());
+    when(terminologyServiceFactory.build()).thenReturn(terminologyService);
+
+    DefaultTerminologyServiceFactory.reset();
   }
 
 
@@ -142,53 +172,54 @@ public class PathlingContextTest {
     final Row defaultRow = PathlingContext.create(spark)
         .encode(jsonResourcesDF, "Questionnaire")
         .head();
-    SchemaAsserts.assertFieldNotPresent("_extension", defaultRow.schema());
+    assertFieldPresent("_extension", defaultRow.schema());
     final Row defaultItem = (Row) defaultRow.getList(defaultRow.fieldIndex("item")).get(0);
-    SchemaAsserts.assertFieldNotPresent("item", defaultItem.schema());
+    assertFieldPresent("item", defaultItem.schema());
 
     // Test explicit options
     // Nested items
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+    final EncodingConfiguration encodingConfig1 = EncodingConfiguration.builder()
+        .enableExtensions(false)
         .maxNestingLevel(1)
         .build();
-    final Row rowWithNesting = PathlingContext.create(spark, config)
+    final Row rowWithNesting = PathlingContext.create(spark, encodingConfig1)
         .encode(jsonResourcesDF, "Questionnaire").head();
-    SchemaAsserts.assertFieldNotPresent("_extension", rowWithNesting.schema());
+    assertFieldNotPresent("_extension", rowWithNesting.schema());
     // Test item nesting
     final Row itemWithNesting = (Row) rowWithNesting
         .getList(rowWithNesting.fieldIndex("item")).get(0);
-    SchemaAsserts.assertFieldPresent("item", itemWithNesting.schema());
+    assertFieldPresent("item", itemWithNesting.schema());
     final Row nestedItem = (Row) itemWithNesting
         .getList(itemWithNesting.fieldIndex("item")).get(0);
-    SchemaAsserts.assertFieldNotPresent("item", nestedItem.schema());
+    assertFieldNotPresent("item", nestedItem.schema());
 
     // Test explicit options
     // Extensions and open types
-    final PathlingContextConfiguration config2 = PathlingContextConfiguration.builder()
-        .extensionsEnabled(true)
-        .openTypesEnabled(List.of("boolean", "string", "Address"))
+    final EncodingConfiguration encodingConfig2 = EncodingConfiguration.builder()
+        .enableExtensions(true)
+        .openTypes(Set.of("boolean", "string", "Address"))
         .build();
-    final Row rowWithExtensions = PathlingContext.create(spark, config2)
+    final Row rowWithExtensions = PathlingContext.create(spark, encodingConfig2)
         .encode(jsonResourcesDF, "Patient").head();
-    SchemaAsserts.assertFieldPresent("_extension", rowWithExtensions.schema());
+    assertFieldPresent("_extension", rowWithExtensions.schema());
 
     final Map<Integer, WrappedArray<Row>> extensions = rowWithExtensions
         .getJavaMap(rowWithExtensions.fieldIndex("_extension"));
 
     // get the first extension of some extension set
     final Row extension = (Row) extensions.values().toArray(WrappedArray[]::new)[0].apply(0);
-    SchemaAsserts.assertFieldPresent("valueString", extension.schema());
-    SchemaAsserts.assertFieldPresent("valueAddress", extension.schema());
-    SchemaAsserts.assertFieldPresent("valueBoolean", extension.schema());
-    SchemaAsserts.assertFieldNotPresent("valueInteger", extension.schema());
+    assertFieldPresent("valueString", extension.schema());
+    assertFieldPresent("valueAddress", extension.schema());
+    assertFieldPresent("valueBoolean", extension.schema());
+    assertFieldNotPresent("valueInteger", extension.schema());
   }
 
   @Test
   public void testEncodeResourceStream() throws Exception {
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-        .extensionsEnabled(true)
+    final EncodingConfiguration encodingConfig = EncodingConfiguration.builder()
+        .enableExtensions(true)
         .build();
-    final PathlingContext pathling = PathlingContext.create(spark, config);
+    final PathlingContext pathling = PathlingContext.create(spark, encodingConfig);
 
     final Dataset<Row> jsonResources = spark.readStream().text(testDataUrl + "/resources/R4/json");
 
@@ -227,22 +258,16 @@ public class PathlingContextTest {
   @Test
   void testMemberOf() {
     final String valueSetUri = "urn:test:456";
-    final SimpleCoding coding1 = new SimpleCoding("urn:test:123", "ABC");
-    final SimpleCoding coding2 = new SimpleCoding("urn:test:123", "DEF");
+    final Coding coding1 = new Coding("urn:test:123", "ABC", "abc");
+    final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
 
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class, withSettings().serializable());
-    final TerminologyService terminologyService = mock(TerminologyService.class,
-        withSettings().serializable());
-    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
-    when(terminologyService.intersect(eq(valueSetUri), any()))
-        .thenReturn(new HashSet<>(List.of(coding1)));
+    setupValidate(terminologyService).withValueSet(valueSetUri, coding1);
 
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
 
-    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1.toCoding()));
-    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding2.toCoding()));
+    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1));
+    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding2));
     final List<Row> datasetRows = List.of(row1, row2);
     final StructType schema = DataTypes.createStructType(
         new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
@@ -260,26 +285,17 @@ public class PathlingContextTest {
   @Test
   void testTranslate() {
     final String conceptMapUri = "urn:test:456";
-    final List<ConceptMapEquivalence> equivalences = List.of(ConceptMapEquivalence.EQUIVALENT);
-    final SimpleCoding coding1 = new SimpleCoding("urn:test:123", "ABC");
-    final SimpleCoding coding2 = new SimpleCoding("urn:test:123", "DEF");
+    final Coding coding1 = new Coding("urn:test:123", "ABC", "abc");
+    final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
 
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class, withSettings().serializable());
-    final TerminologyService terminologyService = mock(TerminologyService.class,
-        withSettings().serializable());
-    final ConceptTranslator conceptTranslator = mock(ConceptTranslator.class,
-        withSettings().serializable());
-    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
-    when(terminologyService.translate(any(), eq(conceptMapUri), eq(false), eq(equivalences)))
-        .thenReturn(conceptTranslator);
-    when(conceptTranslator.translate(any())).thenReturn(List.of(coding2.toCoding()));
+    setupTranslate(terminologyService).withTranslations(coding1, conceptMapUri,
+        Translation.of(EQUIVALENT, coding2));
 
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
 
-    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1.toCoding()));
-    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding2.toCoding()));
+    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1));
+    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding2));
     final List<Row> datasetRows = List.of(row1, row2);
     final StructType schema = DataTypes.createStructType(
         new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
@@ -287,34 +303,29 @@ public class PathlingContextTest {
     final Dataset<Row> codingDataFrame = spark.createDataFrame(datasetRows, schema);
     final Column codingColumn = col("coding");
     final Dataset<Row> result = pathlingContext.translate(codingDataFrame, codingColumn,
-        conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), "result");
+        conceptMapUri, false, ConceptMapEquivalence.EQUIVALENT.toCode(), null, "result");
 
     final List<Row> rows = result.select("id", "result").collectAsList();
-    assertEquals(RowFactory.create("foo", CodingEncoding.encode(coding2.toCoding())), rows.get(0));
+    assertEquals(
+        RowFactory.create("foo", WrappedArray.make(new Row[]{CodingEncoding.encode(coding2)})),
+        rows.get(0));
   }
 
   @Test
   void testSubsumes() {
-    final SimpleCoding coding1 = new SimpleCoding("urn:test:123", "ABC");
-    final SimpleCoding coding2 = new SimpleCoding("urn:test:123", "DEF");
-    final SimpleCoding coding3 = new SimpleCoding("urn:test:123", "GHI");
+    final Coding coding1 = new Coding("urn:test:123", "ABC", "abc");
+    final Coding coding2 = new Coding("urn:test:123", "DEF", "def");
+    final Coding coding3 = new Coding("urn:test:123", "GHI", "ghi");
 
-    final TerminologyServiceFactory terminologyServiceFactory = mock(
-        TerminologyServiceFactory.class, withSettings().serializable());
-    final TerminologyService terminologyService = mock(TerminologyService.class,
-        withSettings().serializable());
-    final Entry entry = Entry.of(coding1, coding2);
-    final Relation relation = Relation.fromMappings(List.of(entry));
-    when(terminologyServiceFactory.buildService(any())).thenReturn(terminologyService);
-    when(terminologyService.getSubsumesRelation(any())).thenReturn(relation);
+    setupSubsumes(terminologyService).withSubsumes(coding1, coding2);
 
     final PathlingContext pathlingContext = PathlingContext.create(spark,
         FhirEncoders.forR4().getOrCreate(), terminologyServiceFactory);
 
-    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1.toCoding()),
-        CodingEncoding.encode(coding2.toCoding()));
-    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding1.toCoding()),
-        CodingEncoding.encode(coding3.toCoding()));
+    final Row row1 = RowFactory.create("foo", CodingEncoding.encode(coding1),
+        CodingEncoding.encode(coding2));
+    final Row row2 = RowFactory.create("bar", CodingEncoding.encode(coding1),
+        CodingEncoding.encode(coding3));
     final List<Row> datasetRows = List.of(row1, row2);
     final StructType schema = DataTypes.createStructType(
         new StructField[]{DataTypes.createStructField("id", DataTypes.StringType, true),
@@ -332,41 +343,138 @@ public class PathlingContextTest {
   }
 
   @Test
-  void testBuildContextWithTerminology() {
+  void testBuildContextWithTerminologyDefaults() {
     final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
+
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl(terminologyServerUrl)
+        .build();
+    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
+    assertNotNull(pathlingContext);
+    final DefaultTerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
+        FhirVersionEnum.R4, terminologyConfig);
+
+    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertEquals(expectedFactory, actualServiceFactory);
+    final TerminologyService terminologyService = actualServiceFactory.build();
+    assertNotNull(terminologyService);
+  }
+
+  @Test
+  void testBuildContextWithTerminologyNoCache() {
+    final String terminologyServerUrl = "https://tx.ontoserver.csiro.au/fhir";
+
+    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
+        .enabled(false)
+        .build();
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl(terminologyServerUrl)
+        .cache(cacheConfig)
+        .build();
+    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
+    assertNotNull(pathlingContext);
+    final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
+        FhirVersionEnum.R4, terminologyConfig);
+
+    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertEquals(expectedFactory, actualServiceFactory);
+    final TerminologyService terminologyService = actualServiceFactory.build();
+    assertNotNull(terminologyService);
+  }
+
+  @Test
+  void testBuildContextWithCustomizedTerminology() throws IOException {
+    final String terminologyServerUrl = "https://r4.ontoserver.csiro.au/fhir";
     final String tokenEndpoint = "https://auth.ontoserver.csiro.au/auth/realms/aehrc/protocol/openid-connect/token";
     final String clientId = "some-client";
     final String clientSecret = "some-secret";
     final String scope = "openid";
-    final int tokenExpiryTolerance = 120;
+    final long tokenExpiryTolerance = 300L;
 
-    final PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-        .terminologyServerUrl(terminologyServerUrl)
+    final int maxConnectionsTotal = 66;
+    final int maxConnectionsPerRoute = 33;
+    final int socketTimeout = 123;
+
+    final int cacheMaxEntries = 1233;
+    final HttpClientCachingStorageType cacheStorageType = HttpClientCachingStorageType.DISK;
+    final File tempDirectory = Files.createTempDirectory("pathling-cache").toFile();
+    tempDirectory.deleteOnExit();
+    final String cacheStoragePath = tempDirectory.getAbsolutePath();
+
+    final HttpClientConfiguration clientConfig = HttpClientConfiguration.builder()
+        .maxConnectionsTotal(maxConnectionsTotal)
+        .maxConnectionsPerRoute(maxConnectionsPerRoute)
+        .socketTimeout(socketTimeout)
+        .build();
+    final HttpClientCachingConfiguration cacheConfig = HttpClientCachingConfiguration.builder()
+        .maxEntries(cacheMaxEntries)
+        .storageType(cacheStorageType)
+        .storagePath(cacheStoragePath)
+        .build();
+    final TerminologyAuthConfiguration authConfig = TerminologyAuthConfiguration.builder()
         .tokenEndpoint(tokenEndpoint)
         .clientId(clientId)
         .clientSecret(clientSecret)
         .scope(scope)
         .tokenExpiryTolerance(tokenExpiryTolerance)
         .build();
-    final PathlingContext pathlingContext = PathlingContext.create(spark, config);
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl(terminologyServerUrl)
+        .verboseLogging(true)
+        .client(clientConfig)
+        .cache(cacheConfig)
+        .authentication(authConfig)
+        .build();
+
+    final PathlingContext pathlingContext = PathlingContext.create(spark, terminologyConfig);
     assertNotNull(pathlingContext);
+    final TerminologyServiceFactory expectedFactory = new DefaultTerminologyServiceFactory(
+        FhirVersionEnum.R4, terminologyConfig);
 
-    final TerminologyServiceFactory terminologyServiceFactory = pathlingContext.getTerminologyServiceFactory();
-    assertNotNull(terminologyServiceFactory);
-    assertTrue(terminologyServiceFactory instanceof DefaultTerminologyServiceFactory);
-    final DefaultTerminologyServiceFactory defaultTerminologyServiceFactory = (DefaultTerminologyServiceFactory) terminologyServiceFactory;
-    assertEquals(terminologyServerUrl, defaultTerminologyServiceFactory.getTerminologyServerUrl());
-    assertEquals(tokenEndpoint,
-        defaultTerminologyServiceFactory.getAuthConfig().getTokenEndpoint());
-    assertEquals(clientId, defaultTerminologyServiceFactory.getAuthConfig().getClientId());
-    assertEquals(clientSecret, defaultTerminologyServiceFactory.getAuthConfig().getClientSecret());
-    assertEquals(scope, defaultTerminologyServiceFactory.getAuthConfig().getScope());
-    assertEquals(tokenExpiryTolerance,
-        defaultTerminologyServiceFactory.getAuthConfig().getTokenExpiryTolerance());
-
-    final TerminologyService terminologyService = terminologyServiceFactory
-        .buildService(log);
+    final TerminologyServiceFactory actualServiceFactory = pathlingContext.getTerminologyServiceFactory();
+    assertEquals(expectedFactory, actualServiceFactory);
+    final TerminologyService terminologyService = actualServiceFactory.build();
     assertNotNull(terminologyService);
+  }
+
+  @Test
+  public void failsOnInvalidTerminologyConfiguration() {
+
+    final TerminologyConfiguration invalidTerminologyConfig = TerminologyConfiguration.builder()
+        .serverUrl("not-a-URL")
+        .client(null)
+        .cache(HttpClientCachingConfiguration.builder()
+            .storageType(HttpClientCachingStorageType.DISK)
+            .build())
+        .build();
+
+    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+        () -> PathlingContext.create(spark, invalidTerminologyConfig));
+
+    assertEquals("Invalid terminology configuration:"
+        + " cache: If the storage type is disk, then a storage path must be supplied.,"
+        + " client: must not be null,"
+        + " serverUrl: must be a valid URL", ex.getMessage());
+  }
+
+  @Test
+  public void failsOnInvalidEncodingConfiguration() {
+
+    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder()
+        .build();
+
+    final EncodingConfiguration invalidEncodersConfiguration = EncodingConfiguration.builder()
+        .maxNestingLevel(-10)
+        .openTypes(null)
+        .build();
+
+    final ConstraintViolationException ex = assertThrows(ConstraintViolationException.class,
+        () -> PathlingContext.create(spark, invalidEncodersConfiguration, terminologyConfig));
+
+    assertEquals("Invalid encoding configuration:"
+            + " maxNestingLevel: must be greater than or equal to 0,"
+            + " openTypes: must not be null",
+        ex.getMessage());
   }
 
 }

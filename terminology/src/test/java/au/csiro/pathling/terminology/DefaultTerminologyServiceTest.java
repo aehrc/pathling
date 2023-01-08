@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,298 +17,427 @@
 
 package au.csiro.pathling.terminology;
 
-import static au.csiro.pathling.test.helpers.FhirDeepMatcher.deepEq;
+import static au.csiro.pathling.terminology.PropertiesParametersBuilder.standardProperties;
+import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_EQUIVALENT;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMED_BY;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.OUTCOME_SUBSUMES;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.RESULT_FALSE;
+import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.RESULT_TRUE;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.EQUIVALENT;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.NOTSUBSUMED;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMEDBY;
+import static org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome.SUBSUMES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.fhirpath.encoding.SimpleCoding;
-import au.csiro.pathling.test.fixtures.ConceptMapBuilder;
-import au.csiro.pathling.test.fixtures.ConceptTranslatorBuilder;
-import au.csiro.pathling.test.fixtures.RelationBuilder;
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.param.UriParam;
-import com.google.common.collect.ImmutableSet;
-import java.util.Arrays;
+import au.csiro.pathling.terminology.TerminologyService.Designation;
+import au.csiro.pathling.terminology.TerminologyService.Property;
+import au.csiro.pathling.terminology.TerminologyService.Translation;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
+import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
+import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.Optional;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Bundle.BundleType;
-import org.hl7.fhir.r4.model.Bundle.HTTPVerb;
-import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.ConceptMap;
-import org.hl7.fhir.r4.model.Enumerations.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.IntegerType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Parameters.ParametersParameterComponent;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
-import org.hl7.fhir.r4.model.ValueSet;
-import org.hl7.fhir.r4.model.ValueSet.ConceptReferenceComponent;
-import org.hl7.fhir.r4.model.ValueSet.ConceptSetComponent;
-import org.hl7.fhir.r4.model.ValueSet.ValueSetExpansionContainsComponent;
+import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentMatcher;
-import org.mockito.ArgumentMatchers;
 
-class DefaultTerminologyServiceTest {
+public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
-  static final String SYSTEM1 = "uuid:system1";
-  static final String SYSTEM2 = "uuid:system2";
-  static final SimpleCoding CODING1_UNVERSIONED = new SimpleCoding(SYSTEM1, "code1");
-  static final SimpleCoding CODING1_VERSION1 =
-      new SimpleCoding(SYSTEM1, "code1", "version1");
-  static final SimpleCoding CODING2_VERSION1 =
-      new SimpleCoding(SYSTEM1, "code2", "version1");
-  static final SimpleCoding CODING3_VERSION1 =
-      new SimpleCoding(SYSTEM2, "code", "version1");
+  private static final String VALUE_SET_X = "uuid:valueSetX";
+  private static final String VALUE_SET_Y = "uuid:valueSetY";
 
-  static final String TEST_UUID_AS_STRING = "5d1b976d-c50c-445a-8030-64074b83f355";
-  static final UUID TEST_UUID = UUID.fromString(TEST_UUID_AS_STRING);
+  private static final String CONCEPT_MAP_0 = "uuid:conceptMap0";
+  private static final String CONCEPT_MAP_1 = "uuid:conceptMap1";
 
+  private static final List<Translation> EMPTY_TRANSLATION = Collections.emptyList();
 
-  ValueSetExpansionContainsComponent fromSimpleCoding(
-      @Nonnull final SimpleCoding simpleCoding) {
-    final ValueSetExpansionContainsComponent result = new ValueSetExpansionContainsComponent();
-    result.setSystem(simpleCoding.getSystem());
-    result.setCode(simpleCoding.getCode());
-    result.setVersion(simpleCoding.getVersion());
-    return result;
+  public static final Coding USE_PREFERRED_FOR_LANG = new Coding(
+      "http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra",
+      "preferredForLanguage", "Preferred For Language"
+  );
+
+  @Nonnull
+  private static Parameters translation(@Nonnull final Translation... entries) {
+    final Parameters translateResponse = new Parameters()
+        .setParameter("result", true);
+
+    for (final Translation entry : entries) {
+      final ParametersParameterComponent matchParameter1 = translateResponse.addParameter()
+          .setName("match");
+      matchParameter1.addPart().setName("equivalence")
+          .setValue(new CodeType(entry.getEquivalence().toCode()));
+      matchParameter1.addPart().setName("concept").setValue(entry.getConcept());
+    }
+    return translateResponse;
   }
 
-  FhirContext fhirContext;
 
-  TerminologyClient terminologyClient;
-
-  TerminologyService terminologyService;
+  private TerminologyClient terminologyClient;
+  private DefaultTerminologyService terminologyService;
 
   @BeforeEach
   void setUp() {
-    fhirContext = FhirContext.forR4();
     terminologyClient = mock(TerminologyClient.class);
-    final UUIDFactory uuidFactory = mock(UUIDFactory.class);
-    when(uuidFactory.nextUUID()).thenReturn(TEST_UUID);
-    terminologyService = new DefaultTerminologyService(fhirContext, terminologyClient, uuidFactory);
+    terminologyService = new DefaultTerminologyService(
+        terminologyClient, null);
   }
 
   @Test
-  @SuppressWarnings("ConstantConditions")
-  void testSubsumesFiltersIllegalAndUnknownCodings() {
+  public void testValidateCodingTrue() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        RESULT_TRUE);
+    when(terminologyClient.buildValidateCode(
+        deepEq(new UriType(VALUE_SET_X)),
+        deepEq(new UriType(SYSTEM_A)),
+        isNull(),
+        deepEq(new CodeType(CODE_A))
+    )).thenReturn(request);
+    assertTrue(terminologyService.validateCode(VALUE_SET_X, CODING_AA));
+  }
 
-    // CODING1 subsumes CODING2
-    final ConceptMap responseMap = ConceptMapBuilder.empty()
-        .withSubsumes(CODING2_VERSION1.toCoding(),
-            CODING1_VERSION1.toCoding()).build();
+  @Test
+  public void testValidateVersionedCodingFalse() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        RESULT_FALSE);
+    when(terminologyClient.buildValidateCode(
+        deepEq(new UriType(VALUE_SET_Y)),
+        deepEq(new UriType(SYSTEM_B)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_B))
+    )).thenReturn(request);
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, CODING_BB_VERSION1));
+  }
 
-    when(terminologyClient.closure(any(), any()))
-        .thenReturn(responseMap);
+  @Test
+  public void testValidateInvalidCodings() {
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_0));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_1));
+    assertFalse(terminologyService.validateCode(VALUE_SET_Y, INVALID_CODING_2));
+  }
 
-    // setup SYSTEM1 as known system
-    when(terminologyClient.searchCodeSystems(ArgumentMatchers.refEq(new UriParam(SYSTEM1)), any()))
-        .thenReturn(Collections.singletonList(new CodeSystem()));
+  @Test
+  public void testSubsumesNoVersion() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_SUBSUMES);
+    when(terminologyClient.buildSubsumes(
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new UriType(SYSTEM_A)),
+        isNull()
+    )).thenReturn(request);
+    assertEquals(SUBSUMES, terminologyService.subsumes(CODING_AA, CODING_AB));
+  }
 
-    final Relation actualRelation = terminologyService.getSubsumesRelation(
-        Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1, CODING3_VERSION1,
-            new SimpleCoding(SYSTEM1, null), new SimpleCoding(null, "code1"),
-            new SimpleCoding(null, null), null));
+  @Test
+  public void testSubsumesLeftVersion() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_EQUIVALENT);
+    when(terminologyClient.buildSubsumes(
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new UriType(SYSTEM_A)),
+        deepEq(new StringType(VERSION_1))
+    )).thenReturn(request);
+    assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AA_VERSION1, CODING_AB));
+  }
 
-    final Relation expectedRelation = RelationBuilder.empty()
-        .add(CODING1_VERSION1.toCoding(), CODING2_VERSION1.toCoding()).build();
+  @Test
+  public void testSubsumesRightVersion() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_SUBSUMED_BY);
+    when(terminologyClient.buildSubsumes(
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new UriType(SYSTEM_A)),
+        deepEq(new StringType(VERSION_2))
+    )).thenReturn(request);
+    assertEquals(SUBSUMEDBY, terminologyService.subsumes(CODING_AA, CODING_AB_VERSION2));
+  }
 
-    assertEquals(expectedRelation, actualRelation);
+  @Test
+  public void testSubsumesBothVersionTheSame() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        OUTCOME_EQUIVALENT);
+    when(terminologyClient.buildSubsumes(
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new UriType(SYSTEM_A)),
+        deepEq(new StringType(VERSION_1))
+    )).thenReturn(request);
+    assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AA_VERSION1, CODING_AB_VERSION1));
+  }
 
-    // verify behaviour
-    verify(terminologyClient)
-        .searchCodeSystems(ArgumentMatchers.refEq(new UriParam(SYSTEM1)), any());
-    verify(terminologyClient)
-        .searchCodeSystems(ArgumentMatchers.refEq(new UriParam(SYSTEM2)), any());
-    verify(terminologyClient)
-        .initialiseClosure(deepEq(new StringType(TEST_UUID_AS_STRING)));
-    verify(terminologyClient)
-        .closure(deepEq(new StringType(TEST_UUID_AS_STRING)),
-            argThat(new CodingSetMatcher(
-                Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1))));
+  @Test
+  public void testSubsumesDifferentVersions() {
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA_VERSION1, CODING_AB_VERSION2));
     verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
-  void testSubsumeForEmptySet() {
-    // Does NOT call the terminologyClient and returns equality relation
-    final Relation actualRelation = terminologyService.getSubsumesRelation(Collections.emptySet());
-    assertEquals(Relation.equality(), actualRelation);
-    verifyNoMoreInteractions(terminologyClient);
-  }
-
-
-  @SuppressWarnings("ConstantConditions")
-  @Test
-  void testIntersectFiltersIllegalAndUnknownCodings() {
-
-    final ValueSet responseExpansion = new ValueSet();
-    responseExpansion.getExpansion().getContains().addAll(Arrays.asList(
-        fromSimpleCoding(CODING1_VERSION1),
-        fromSimpleCoding(CODING2_VERSION1)
-    ));
-
-    when(terminologyClient.expand(any(), any()))
-        .thenReturn(responseExpansion);
-
-    // setup SYSTEM1 as known system
-    when(terminologyClient.searchCodeSystems(ArgumentMatchers.refEq(new UriParam(SYSTEM1)),
-        any()))
-        .thenReturn(Collections.singletonList(new CodeSystem()));
-
-    final Set<SimpleCoding> actualExpansion = terminologyService.intersect("uuid:value-set",
-        Arrays.asList(CODING1_VERSION1, CODING2_VERSION1, CODING3_VERSION1,
-            new SimpleCoding(SYSTEM1, null), new SimpleCoding(null, "code1"),
-            new SimpleCoding(null, null), null));
-
-    final Set<SimpleCoding> expectedExpansion = ImmutableSet.of(CODING1_VERSION1, CODING2_VERSION1);
-    assertEquals(expectedExpansion, actualExpansion);
-
-    // verify behaviour
-    verify(terminologyClient)
-        .searchCodeSystems(ArgumentMatchers.refEq(new UriParam(SYSTEM1)), any());
-    verify(terminologyClient)
-        .searchCodeSystems(ArgumentMatchers.refEq(new UriParam(SYSTEM2)), any());
-
-    final ValueSet requestValueSet = new ValueSet();
-    final List<ConceptSetComponent> includes = requestValueSet.getCompose().getInclude();
-    includes.add(new ConceptSetComponent().addValueSet("uuid:value-set").setSystem(SYSTEM1)
-        .setVersion("version1").addConcept(new ConceptReferenceComponent().setCode("code1"))
-        .addConcept(new ConceptReferenceComponent().setCode("code2")));
-
-    verify(terminologyClient)
-        .expand(deepEq(requestValueSet), deepEq(new IntegerType(2)));
+  public void testSubsumesDifferentSystems() {
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_AA, CODING_BB_VERSION1));
     verifyNoMoreInteractions(terminologyClient);
   }
 
   @Test
-  void testIntersectForEmptySet() {
-    // Does NOT call the terminologyClient and returns equality relation
-    final Set<SimpleCoding> actualExpansion = terminologyService
-        .intersect("uuid:test", Collections.emptySet());
-    assertEquals(Collections.emptySet(), actualExpansion);
+  public void testSubsumesInvalidCodings() {
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, INVALID_CODING_0));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, INVALID_CODING_1));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, INVALID_CODING_2));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, CODING_AB));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, CODING_AB));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, CODING_AB));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_BB_VERSION1, INVALID_CODING_0));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_BB_VERSION1, INVALID_CODING_1));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(CODING_BB_VERSION1, INVALID_CODING_2));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_0, INVALID_CODING_1));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_1, INVALID_CODING_2));
+    assertEquals(NOTSUBSUMED, terminologyService.subsumes(INVALID_CODING_2, INVALID_CODING_0));
     verifyNoMoreInteractions(terminologyClient);
   }
 
+
   @Test
-  void testTranslateForEmptyCodingSet() {
-    // Does NOT call the terminologyClient and returns equality relation
-    final ConceptTranslator actualTranslator = terminologyService
-        .translate(Collections.emptySet(), "uuid:concept-map", false, Arrays
-            .asList(ConceptMapEquivalence.values()));
-    assertEquals(ConceptTranslatorBuilder.empty().build(), actualTranslator);
+  public void testSubsumesEqualCodingsLocally() {
+    assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_B, CODING_B));
+    assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AA, CODING_AA_VERSION1));
+    assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AB_VERSION1, CODING_AB));
+    assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AB_VERSION2, CODING_AB_VERSION2));
+    assertEquals(EQUIVALENT, terminologyService.subsumes(CODING_AA, CODING_AA_DISPLAY1));
     verifyNoMoreInteractions(terminologyClient);
   }
 
+
   @Test
-  void testTranslateForEmptyEquivalences() {
-    // Does NOT call the terminologyClient and returns equality relation
-    final ConceptTranslator actualTranslator = terminologyService
-        .translate(Arrays.asList(CODING1_VERSION1, CODING1_UNVERSIONED, CODING2_VERSION1),
-            "uuid:concept-map", false, Collections.emptyList());
-    assertEquals(ConceptTranslatorBuilder.empty().build(), actualTranslator);
-    verifyNoMoreInteractions(terminologyClient);
+  public void testTranslatesVersionedCodingWithDefaults() {
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        RESULT_FALSE);
+    when(terminologyClient.buildTranslate(
+        deepEq(new UriType(CONCEPT_MAP_0)),
+        deepEq(new UriType(SYSTEM_A)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new BooleanType(false)),
+        isNull()
+    )).thenReturn(request);
+
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(CODING_AA_VERSION1, CONCEPT_MAP_0, false, null));
   }
 
   @Test
-  void testTranslateForValidAndInvalidCodings() {
+  public void testTranslatesUnversionedCoding() {
 
-    // Response bundle:
-    // [1]  CODING1_VERSION1 -> None
-    // [2]  CODING2_VERSION1 -> { equivalent: CODING3_VERSION1, wider: CODING1_VERSION1}
-    final Bundle responseBundle = new Bundle().setType(BundleType.BATCHRESPONSE);
-    // entry with no mapping
-    final Parameters noTranslation = new Parameters().addParameter("result", false);
-    responseBundle.addEntry().setResource(noTranslation).getResponse().setStatus("200");
+    final Parameters translationResponse = translation(
+        Translation.of(ConceptMapEquivalence.RELATEDTO, CODING_AA),
+        Translation.of(ConceptMapEquivalence.EQUIVALENT, CODING_AB),
+        Translation.of(ConceptMapEquivalence.SUBSUMES, CODING_AA_VERSION1),
+        Translation.of(ConceptMapEquivalence.NARROWER, CODING_AB_VERSION1)
+    );
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(translationResponse);
 
-    // entry with two mappings
-    final Parameters withTranslation = new Parameters().addParameter("result", true);
-    final ParametersParameterComponent equivalentMatch = withTranslation.addParameter()
-        .setName("match");
-    equivalentMatch.addPart().setName("equivalence")
-        .setValue(new CodeType("equivalent"));
-    equivalentMatch.addPart().setName("concept")
-        .setValue(CODING3_VERSION1.toCoding());
+    when(terminologyClient.buildTranslate(
+        deepEq(new UriType(CONCEPT_MAP_1)),
+        deepEq(new UriType(SYSTEM_B)),
+        isNull(),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new BooleanType(true)),
+        deepEq(new UriType(SYSTEM_A))
+    )).thenReturn(request);
 
-    final ParametersParameterComponent widerMatch = withTranslation.addParameter()
-        .setName("match");
-    widerMatch.addPart().setName("equivalence")
-        .setValue(new CodeType("wider"));
-    widerMatch.addPart().setName("concept")
-        .setValue(CODING1_VERSION1.toCoding());
-
-    responseBundle.addEntry().setResource(withTranslation).getResponse().setStatus("200");
-
-    when(terminologyClient.batch(any())).thenReturn(responseBundle);
-    final ConceptTranslator actualTranslator = terminologyService
-        .translate(Arrays
-                .asList(CODING1_VERSION1, CODING2_VERSION1, new SimpleCoding(SYSTEM1, null),
-                    new SimpleCoding(null, "code1"),
-                    new SimpleCoding(null, null), null),
-            "uuid:concept-map", false,
-            Collections.singletonList(ConceptMapEquivalence.EQUIVALENT));
     assertEquals(
-        ConceptTranslatorBuilder.empty().put(CODING2_VERSION1, CODING3_VERSION1.toCoding()).build(),
-        actualTranslator);
+        List.of(
+            Translation.of(ConceptMapEquivalence.RELATEDTO, CODING_AA),
+            Translation.of(ConceptMapEquivalence.EQUIVALENT, CODING_AB),
+            Translation.of(ConceptMapEquivalence.SUBSUMES, CODING_AA_VERSION1),
+            Translation.of(ConceptMapEquivalence.NARROWER, CODING_AB_VERSION1)
+        ),
+        terminologyService.translate(CODING_B, CONCEPT_MAP_1, true, SYSTEM_A));
+  }
 
-    // expected request bundle
-    final Bundle requestBundle = new Bundle().setType(BundleType.BATCH);
+  @Test
+  public void testTranslatesInvalidsCoding() {
 
-    requestBundle.addEntry().setResource(
-            new Parameters()
-                .addParameter("url", new UriType("uuid:concept-map"))
-                .addParameter("reverse", false)
-                .addParameter("coding", CODING1_VERSION1.toCoding())
-        ).getRequest().setMethod(HTTPVerb.POST)
-        .setUrl("ConceptMap/$translate");
-
-    requestBundle.addEntry().setResource(
-            new Parameters()
-                .addParameter("url", new UriType("uuid:concept-map"))
-                .addParameter("reverse", false)
-                .addParameter("coding", CODING2_VERSION1.toCoding())
-        ).getRequest().setMethod(HTTPVerb.POST)
-        .setUrl("ConceptMap/$translate");
-
-    verify(terminologyClient).batch(deepEq(requestBundle));
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(INVALID_CODING_0, CONCEPT_MAP_0, false, null));
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(INVALID_CODING_1, CONCEPT_MAP_0, true, null));
+    assertEquals(EMPTY_TRANSLATION,
+        terminologyService.translate(INVALID_CODING_2, CONCEPT_MAP_0, false, SYSTEM_B));
     verifyNoMoreInteractions(terminologyClient);
   }
 
-  static class CodingSetMatcher implements ArgumentMatcher<List<Coding>> {
+  @Test
+  public void testLooksUpInvalidCoding() {
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(INVALID_CODING_0, null));
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(INVALID_CODING_1, "display"));
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(INVALID_CODING_2, "designation"));
+    verifyNoMoreInteractions(terminologyClient);
+  }
 
-    @Nonnull
-    final Set<SimpleCoding> leftSet;
+  @Test
+  public void testLooksUpStandardProperty() {
 
-    // constructors
-    CodingSetMatcher(@Nonnull final Set<SimpleCoding> leftSet) {
-      this.leftSet = leftSet;
-    }
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        standardProperties(CODING_A).build());
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_A)),
+        isNull(),
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType("display"))))
+        .thenReturn(request);
 
-    CodingSetMatcher(@Nonnull final List<SimpleCoding> left) {
-      this(new HashSet<>(left));
-    }
+    assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
+        terminologyService.lookup(CODING_AA, "display"));
+  }
 
-    @Override
-    public boolean matches(@Nullable final List<Coding> right) {
-      return right != null &&
-          leftSet.size() == right.size() &&
-          leftSet.equals(right.stream().map(SimpleCoding::new).collect(Collectors.toSet()));
-    }
+  @Test
+  public void testLooksNamedProperties() {
+    final Parameters response = standardProperties(CODING_BB_VERSION1)
+        .withProperty("property_A", "string_value_a")
+        .withProperty("property_A", new IntegerType(333))
+        .withProperty("property_A", new CodeType("code_value_a"))
+        .withProperty("property_A", new BooleanType(true))
+        // Adding some unexpected elements to make they are excluded.
+        .withProperty("property_B", "string_value_b")
+        .withDesignation("Coding BB", USE_PREFERRED_FOR_LANG, "en")
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(response);
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_B)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new CodeType("property_A"))
+    )).thenReturn(request);
+
+    assertEquals(List.of(
+            Property.of("property_A", new StringType("string_value_a")),
+            Property.of("property_A", new IntegerType(333)),
+            Property.of("property_A", new CodeType("code_value_a")),
+            Property.of("property_A", new BooleanType(true))
+        ),
+        terminologyService.lookup(CODING_BB_VERSION1, "property_A"));
+  }
+
+  @Test
+  public void testLookupSubProperties() {
+    final Parameters response = standardProperties(CODING_C)
+        .withPropertyGroup("group_C")
+        .withSubProperty("property_C", new StringType("string_value_c"))
+        .withSubProperty("property_C", new CodeType("code_value_c"))
+        .withSubProperty("property_D", new StringType("string_value_D"))
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_C)),
+        isNull(),
+        deepEq(new CodeType(CODE_C)),
+        any()
+    )).thenReturn(request);
+
+    assertEquals(List.of(
+            Property.of("property_C", new StringType("string_value_c")),
+            Property.of("property_C", new CodeType("code_value_c"))
+        ),
+        terminologyService.lookup(CODING_C, "property_C"));
+    // Does not include grouping property in the results.
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(CODING_C, "group_C"));
+  }
+
+  @Test
+  public void testLookupDesignations() {
+    final Parameters response = standardProperties(CODING_A)
+        .withProperty("property_A", "value_A")
+        .withDesignation("designation_D_X", CODING_D, "lang_X")
+        .withDesignation("designation_E_Y", CODING_E, "lang_Y")
+        .withDesignation("designation_E_?", Optional.of(CODING_E), Optional.empty())
+        .withDesignation("designation_?_Z", Optional.empty(), Optional.of("lang_Z"))
+        .withDesignation("designation_?_?", Optional.empty(), Optional.empty())
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_A)),
+        isNull(),
+        deepEq(new CodeType(CODE_A)),
+        deepEq(new CodeType("designation"))
+    )).thenReturn(request);
+
+    assertEquals(List.of(
+            Designation.of(CODING_D, "lang_X", "designation_D_X"),
+            Designation.of(CODING_E, "lang_Y", "designation_E_Y"),
+            Designation.of(CODING_E, null, "designation_E_?"),
+            Designation.of(null, "lang_Z", "designation_?_Z"),
+            Designation.of(null, null, "designation_?_?")
+        ),
+        terminologyService.lookup(CODING_A, Designation.PROPERTY_CODE));
+  }
+
+  @Test
+  public void testLooksUpDesignationsForVersionedCodingAndUse() {
+    final Parameters response = standardProperties(CODING_BB_VERSION1)
+        .withProperty("property_A", "value_A")
+        .withDesignation("designation_AB2_Z", CODING_AB_VERSION2, "lang_Z")
+        .build();
+
+    final IOperationUntypedWithInput<Parameters> request = mockRequest(
+        response);
+    when(terminologyClient.buildLookup(
+        deepEq(new UriType(SYSTEM_B)),
+        deepEq(new StringType(VERSION_1)),
+        deepEq(new CodeType(CODE_B)),
+        deepEq(new CodeType("designation"))
+    )).thenReturn(request);
+
+    assertEquals(List.of(
+            Designation.of(CODING_AB_VERSION2, "lang_Z", "designation_AB2_Z")
+        ),
+        terminologyService.lookup(CODING_BB_VERSION1, Designation.PROPERTY_CODE));
+  }
+
+  @Test
+  public void testLookupHandles404Exceptions() {
+    when(terminologyClient.buildLookup(any(), any(), any(), any()
+    )).thenThrow(BaseServerResponseException.newInstance(404, "Resource Not Found"));
+
+    assertEquals(Collections.emptyList(),
+        terminologyService.lookup(CODING_C, "property_A"));
+  }
+
+  @SuppressWarnings("unchecked")
+  <ResponseType> IOperationUntypedWithInput<ResponseType> mockRequest(final ResponseType response) {
+    final IOperationUntypedWithInput<ResponseType> request = (IOperationUntypedWithInput<ResponseType>) mock(
+        IOperationUntypedWithInput.class);
+    when(request.withAdditionalHeader(anyString(), anyString())).thenReturn(request);
+    when(request.execute()).thenReturn(response);
+    return request;
   }
 }

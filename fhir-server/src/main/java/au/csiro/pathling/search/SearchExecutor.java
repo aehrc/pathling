@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Commonwealth Scientific and Industrial Research
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,15 +18,14 @@
 package au.csiro.pathling.search;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkNotNull;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
-import au.csiro.pathling.config.Configuration;
 import au.csiro.pathling.QueryExecutor;
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhir.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -34,6 +33,7 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IQueryParameterAnd;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -45,6 +45,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -85,7 +86,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   private Optional<Integer> count;
 
   /**
-   * @param configuration A {@link Configuration} object to control the behaviour of the executor
+   * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
+   * executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param database A {@link Database} for retrieving resources
@@ -96,7 +98,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    * @param subjectResource The type of resource that is the subject for this query
    * @param filters A list of filters that should be applied within queries
    */
-  public SearchExecutor(@Nonnull final Configuration configuration,
+  public SearchExecutor(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
@@ -183,8 +185,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
                        ? orColumn
                        : filterColumn.and(orColumn);
       }
-      checkNotNull(filterIdColumn);
-      checkNotNull(filterColumn);
+      requireNonNull(filterIdColumn);
+      requireNonNull(filterColumn);
       check(!fhirPaths.isEmpty());
 
       // Get the full resources which are present in the filtered dataset.
@@ -234,7 +236,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     // The requested resources are encoded into HAPI FHIR objects, and then collected.
     @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
         .of(subjectResource.toCode());
-    checkNotNull(encoder);
+    requireNonNull(encoder);
     reportQueryPlan(resources);
 
     return resources.as(encoder).collectAsList();
