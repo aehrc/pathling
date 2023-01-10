@@ -13,7 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import logging
 from typing import Optional, Sequence
 
 from deprecated import deprecated
@@ -96,7 +95,6 @@ class PathlingContext:
         client_secret: Optional[str] = None,
         scope: Optional[str] = None,
         token_expiry_tolerance: Optional[int] = 120,
-        logging_level: Optional[int] = logging.INFO,
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -156,7 +154,6 @@ class PathlingContext:
         :param scope: a scope value for use with the client credentials grant
         :param token_expiry_tolerance: the minimum number of seconds that a token should have
                before expiry when deciding whether to send it with a terminology request
-        :param logging_level: the logging level to use
         :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
         spark = (
@@ -165,12 +162,6 @@ class PathlingContext:
             or SparkSession.builder.config("spark.jars", find_jar()).getOrCreate()
         )
         jvm = spark._jvm
-
-        # Configure logging.
-        jvm.py4j.GatewayServer.turnLoggingOn()
-        logger = logging.getLogger("py4j")
-        logger.setLevel(logging_level)
-        logger.addHandler(logging.StreamHandler())
 
         # Build an encoders configuration object from the provided parameters.
         encoders_config = (
