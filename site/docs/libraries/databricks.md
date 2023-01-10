@@ -13,6 +13,18 @@ the `au.csiro.pathling:library-api`
 Maven package. Once the cluster is restarted, the libraries should be available
 for import and use within all notebooks.
 
+## Spark config
+
+Add the following to __Advanced Options > Spark > Spark Config__ - this
+prevents problems relating to conflicts between dependencies within Pathling and
+the Databricks environment:
+
+```
+spark.executor.userClassPathFirst true
+```
+
+## Environment variables
+
 By default, Databricks uses Java 8 within its clusters, while Pathling requires
 Java 11. To enable Java 11 support within your cluster, navigate to __Advanced
 Options > Spark > Environment Variables__ and add the following:
