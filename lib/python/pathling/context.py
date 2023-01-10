@@ -112,7 +112,8 @@ class PathlingContext:
         classpath. You can get the path for the JAR (which is bundled with the Python package)
         using the `pathling.etc.find_jar` method.
 
-        :param spark: The :class:`SparkSession` instance.
+        :param spark: a pre-configured :class:`SparkSession` instance, use this if you need to
+               control the way that the session is set up
         :param max_nesting_level: controls the maximum depth of nested element data that is encoded
                upon import. This affects certain elements within FHIR resources that contain
                recursive references, e.g. `QuestionnaireResponse.item
