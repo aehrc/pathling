@@ -129,7 +129,10 @@ class PathlingContext:
                server can use to resolve terminology queries. The default server is suitable for
                testing purposes only.
         :param terminology_verbose_request_logging: setting this option to `True` will enable
-               additional logging of the details of requests to the terminology service
+               additional logging of the details of requests to the terminology service. Note that
+               logging is subject to the Spark logging level, which you can set using
+               `SparkContext.setLogLevel`. Verbose request logging is sent to the `DEBUG` logging
+               level.
         :param terminology_socket_timeout: the maximum period (in milliseconds) that the server
                should wait for incoming data from the HTTP service
         :param max_connections_total: the maximum total number of connections for the client
