@@ -45,3 +45,7 @@ CVE-2019-8457
 CVE-2022-1587
 CVE-2022-37434
 CVE-2022-1586
+
+# This vulnerability relates to deserialization of untrusted data within spring-web, which is not
+# relevant to Pathling.
+CVE-2016-1000027

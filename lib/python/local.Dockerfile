@@ -1,12 +1,12 @@
 FROM jupyter/all-spark-notebook
 
 USER root
+COPY target/py-dist/pathling-*.whl /tmp
 RUN echo "spark.executor.userClassPathFirst true" >> /usr/local/spark/conf/spark-defaults.conf
-RUN echo "spark.jars.packages au.csiro.pathling:library-api:6.1.1" >> /usr/local/spark/conf/spark-defaults.conf
 
 USER ${NB_UID}
 
-RUN pip install --quiet --no-cache-dir pathling && \
+RUN pip install --no-cache-dir /tmp/pathling-*.whl && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
 

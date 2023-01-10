@@ -178,13 +178,6 @@ There is also a `display` function that can be used to retrieve the preferred
 display term for each code.
 
 ```python
-from pathling import PathlingContext
-from pathling.functions import to_snomed_coding
-from pathling.udfs import property_of, display, PropertyType
-
-pc = PathlingContext.create()
-csv = pc.spark.read.csv("conditions.csv")
-
 # Get the parent codes for each code in the dataset.
 parents = csv.withColumn(
     "PARENTS",
@@ -198,7 +191,6 @@ exploded_parents = parents.selectExpr(
 with_displays = exploded_parents.withColumn(
     "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
 )
-with_displays.show()
 ```
 
 Results in:
@@ -222,14 +214,6 @@ Some terminologies contain additional display terms for codes. These can be used
 for language translations, synonyms, and more. You can query these terms using the `designation` function.
 
 ```python
-from pathling import PathlingContext
-from pathling.functions import to_snomed_coding
-from pathling.coding import Coding
-from pathling.udfs import designation
-
-pc = PathlingContext.create()
-csv = pc.spark.read.csv("conditions.csv")
-
 # Get the synonyms for each code in the dataset.
 synonyms = csv.withColumn(
     "SYNONYMS",
@@ -239,7 +223,6 @@ synonyms = csv.withColumn(
 exploded_synonyms = synonyms.selectExpr(
     "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
 )
-exploded_synonyms.show()
 ```
 
 Results in:

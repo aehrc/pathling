@@ -15,8 +15,7 @@ Here is an example of streaming a source of FHIR data, encoding it and then
 performing a terminology operation upon it:
 
 ```python
-from pathling import PathlingContext
-from pathling.coding import Coding
+from pathling import PathlingContext, Coding, subsumes
 
 pc = PathlingContext.create()
 
@@ -30,17 +29,24 @@ df = (
 )
 
 # Pull out the MedicationAdministration resources and put them into a dataset.
-med_administrations = pc.encode_bundle(df, "MedicationAdministration").selectExpr(
-    "id", "status", "EXPLODE_OUTER(medicationCodeableConcept.coding) as coding"
+med_administrations = (
+    pc.encode_bundle(df, "MedicationAdministration")
+    .selectExpr(
+        "id", "status",
+        "EXPLODE_OUTER(medicationCodeableConcept.coding) as coding"
+    )
 )
 
 # Perform a subsumes operation on the medication coding to determine whether it is a type of
 # anti-coagulant.
-result = pc.subsumes(
-    med_administrations,
-    "ANTICOAGULANT",
-    # 372862008 |Anticoagulant|
-    left_coding=Coding("http://snomed.info/sct", "372862008"),
-    right_coding_column="coding",
+result = med_administrations.select(
+    med_administrations.id,
+    med_administrations.status,
+    med_administrations.coding,
+    subsumes(
+        # 372862008 |Anticoagulant|
+        left_coding=Coding("http://snomed.info/sct", "372862008"),
+        right_coding_column="coding",
+    ).alias("is_anticoagulant"),
 )
 ```
