@@ -30,9 +30,8 @@ process", and a causative agent of "Virus".
 <PythonInstallation/>
 
 ```python
-from pathling import PathlingContext
-from pathling.functions import to_snomed_coding, to_ecl_value_set
-from pathling.udfs import member_of
+from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set,
+    member_of
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
@@ -47,9 +46,10 @@ VIRAL_INFECTION_ECL = """
 csv.select(
     "CODE",
     "DESCRIPTION",
-    member_of(to_snomed_coding(csv.CODE), to_ecl_value_set(VIRAL_INFECTION_ECL)).alias(
-        "VIRAL_INFECTION"
-    ),
+    member_of(
+        to_snomed_coding(csv.CODE),
+        to_ecl_value_set(VIRAL_INFECTION_ECL)
+    ).alias("VIRAL_INFECTION"),
 ).show()
 ```
 
@@ -147,9 +147,7 @@ produce multiple results for each input coding.
 <PythonInstallation/>
 
 ```python
-from pathling import PathlingContext
-from pathling.functions import to_snomed_coding
-from pathling.udfs import translate
+from pathling import PathlingContext, to_snomed_coding, translate
 from pyspark.sql.functions import explode_outer
 
 pc = PathlingContext.create()
@@ -159,7 +157,8 @@ translate_result = csv.withColumn(
     "READ_CODES",
     translate(
         to_snomed_coding(csv.CODE),
-        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+        concept_map_uri="http://snomed.info/sct/900000000000207008?"
+                        "fhir_cm=900000000000497000",
     ).code,
 )
 translate_result.select(
@@ -264,10 +263,7 @@ whether a code is "subsumed by" another code.
 <PythonInstallation/>
 
 ```python
-from pathling import PathlingContext
-from pathling.coding import Coding
-from pathling.functions import to_snomed_coding
-from pathling.udfs import subsumes
+from pathling import PathlingContext, Coding, to_snomed_coding, subsumes
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
@@ -377,9 +373,8 @@ display term for each code.
 <PythonInstallation/>
 
 ```python
-from pathling import PathlingContext
-from pathling.functions import to_snomed_coding
-from pathling.udfs import property_of, display, PropertyType
+from pathling import PathlingContext, to_snomed_coding, property_of, display,
+    PropertyType
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
@@ -498,10 +493,7 @@ for language translations, synonyms, and more. You can query these terms using t
 <PythonInstallation/>
 
 ```python
-from pathling import PathlingContext
-from pathling.functions import to_snomed_coding
-from pathling.coding import Coding
-from pathling.udfs import designation
+from pathling import PathlingContext, to_snomed_coding, Coding, designation
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
