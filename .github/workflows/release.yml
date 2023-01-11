@@ -16,7 +16,7 @@ on:
 jobs:
 
   deploy-maven:
-    name: Maven
+    name: Maven Central
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -6,6 +6,11 @@
 # Tranche 1: ModificationTest, AggregateQueryTest, ExtractTest
 # Tranche 2: ManifestConverterTest, integration tests
 # Tranche 3: All other FHIR server tests, tests from utilities and terminology modules
+#
+# There are a set of performance benchmarks that run and upload their results to a S3 bucket.
+#
+# This workflow also deploys a pre-release version of the software to Docker Hub and Maven Central,
+# if the branch is a release branch (`release/**`).
 
 name: Test
 
@@ -660,9 +665,9 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
 
-  deploy-pre-release:
+  deploy-docker-pre-release:
     name: Deploy pre-release image to Docker Hub
-    needs: [fhir-server-1, fhir-server-2, fhir-server-3, docker-image]
+    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image]
     runs-on: ubuntu-latest
     # If the branch starts with "release/", we deploy a pre-release image.
     if: startsWith(github.ref, 'refs/heads/release/')
@@ -697,4 +702,50 @@ jobs:
           -PdockerPreRelease \
           -Dpathling.fhirServerDockerTag=$TAG \
           -DskipTests -DskipScalaDocs
+        timeout-minutes: 30
+
+  deploy-maven-pre-release:
+    name: Deploy snapshot packages to Maven Central
+    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image]
+    runs-on: ubuntu-latest
+    # If the branch starts with "release/", we deploy to the snapshot repository.
+    if: startsWith(github.ref, 'refs/heads/release/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: "zulu"
+      - name: Cache local Maven repository
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Install GPG key
+        run: |
+          cat <(echo -e "${{ secrets.GPG_KEY }}") | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+      - name: Configure Maven settings
+        uses: s4u/maven-settings-action@v2.6.0
+        with:
+          servers: |
+            [{
+              "id": "ossrh",
+              "username": "${{ secrets.OSSRH_USERNAME }}",
+              "password": "${{ secrets.OSSRH_PASSWORD }}"
+            }]
+      - name: Run the deploy goal with Maven
+        run: |
+          mvn --batch-mode deploy \
+          -pl fhir-server,library-api -am \
+          -PmavenPreRelease,docs \
+          -DskipTests \
+          -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         timeout-minutes: 30
