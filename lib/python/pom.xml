@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.1.2-SNAPSHOT</version>
+    <version>6.1.3-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
