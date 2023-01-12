@@ -2,7 +2,7 @@ FROM jupyter/all-spark-notebook
 
 USER root
 RUN echo "spark.executor.userClassPathFirst true" >> /usr/local/spark/conf/spark-defaults.conf
-RUN echo "spark.jars.packages au.csiro.pathling:library-api:6.1.3-SNAPSHOT" >> /usr/local/spark/conf/spark-defaults.conf
+RUN echo "spark.jars.packages au.csiro.pathling:library-api:6.1.1" >> /usr/local/spark/conf/spark-defaults.conf
 
 USER ${NB_UID}
 
