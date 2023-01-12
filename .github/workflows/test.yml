@@ -708,6 +708,9 @@ jobs:
               "password": "${{ secrets.OSSRH_PASSWORD }}"
             }]
       - name: Run the deploy goal with Maven
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
         run: |
           TAG=$(echo '${{ github.ref }}' | sed 's/refs\/heads\/release\///')
           mvn --batch-mode deploy \
