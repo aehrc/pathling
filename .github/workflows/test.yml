@@ -715,7 +715,7 @@ jobs:
           TAG=$(echo '${{ github.ref }}' | sed 's/refs\/heads\/release\///')
           mvn --batch-mode deploy \
           -pl fhir-server,library-api,lib/python -am \
-          -PmavenPreRelease,pythonRelease,dockerPreRelease,docs \
+          -PmavenPreRelease,pythonPreRelease,dockerPreRelease,docs \
           -Dpathling.fhirServerDockerTag=6.1.2 \
           -DskipTests \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"

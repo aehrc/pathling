@@ -321,5 +321,38 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>pythonPreRelease</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <!-- Deploy package to PyPI -->
+              <execution>
+                <id>deploy</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>python</executable>
+                  <arguments>
+                    <argument>-m</argument>
+                    <argument>twine</argument>
+                    <argument>upload</argument>
+                    <argument>--verbose</argument>
+                    <argument>--repository</argument>
+                    <argument>${pathling.pypi.repository}</argument>
+                    <argument>${project.build.directory}/py-dist/*</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 </project>
