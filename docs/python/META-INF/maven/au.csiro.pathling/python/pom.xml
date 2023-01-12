@@ -34,8 +34,8 @@
   <description>A library for using Pathling with Python.</description>
 
   <properties>
-    <pathling.pyapi.version>${project.version}${pathling.pyapi.version.qualifier}</pathling.pyapi.version>
-    <pathling.pyapi.version.qualifier/>
+    <pathling.pyapi.version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}${pathling.pyapi.version.qualifier}</pathling.pyapi.version>
+    <pathling.pyapi.version.qualifier>.dev</pathling.pyapi.version.qualifier>
     <pathling.pypi.repository>pypi</pathling.pypi.repository>
   </properties>
 
@@ -173,6 +173,13 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 
@@ -280,6 +287,42 @@
     </profile>
     <profile>
       <id>pythonRelease</id>
+      <properties>
+        <pathling.pyapi.version.qualifier/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <!-- Deploy package to PyPI -->
+              <execution>
+                <id>deploy</id>
+                <phase>deploy</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>python</executable>
+                  <arguments>
+                    <argument>-m</argument>
+                    <argument>twine</argument>
+                    <argument>upload</argument>
+                    <argument>--verbose</argument>
+                    <argument>--repository</argument>
+                    <argument>${pathling.pypi.repository}</argument>
+                    <argument>${project.build.directory}/py-dist/*</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>pythonPreRelease</id>
       <build>
         <plugins>
           <plugin>
