@@ -713,7 +713,7 @@ jobs:
           mvn --batch-mode deploy \
           -pl fhir-server,library-api,lib/python -am \
           -PmavenPreRelease,pythonRelease,dockerPreRelease,docs \
-          -Dpathling.fhirServerDockerTag=$TAG \
+          -Dpathling.fhirServerDockerTag=6.1.2 \
           -DskipTests \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         timeout-minutes: 30
