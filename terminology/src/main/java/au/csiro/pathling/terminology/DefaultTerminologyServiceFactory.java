@@ -28,7 +28,6 @@ import au.csiro.pathling.terminology.caching.PersistentCachingTerminologyService
 import au.csiro.pathling.utilities.ObjectHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -38,7 +37,6 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.client.IdleConnectionEvictor;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 
@@ -121,13 +119,6 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
     connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
     connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
-
-    // Create an IdleConnectionEvictor that will evict expired connections and connections that have 
-    // been idle for longer than one minute. This prevents problems that can occur from the upstream 
-    // server closing connections on us.
-    final IdleConnectionEvictor connectionEvictor = new IdleConnectionEvictor(connectionManager,
-        5, TimeUnit.SECONDS, 60, TimeUnit.SECONDS);
-    connectionEvictor.start();
 
     final RequestConfig defaultRequestConfig = RequestConfig.custom()
         .setSocketTimeout(clientConfig.getSocketTimeout())
