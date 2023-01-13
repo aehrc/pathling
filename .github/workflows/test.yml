@@ -380,7 +380,8 @@ jobs:
           image-ref: "aehrc/pathling:${{ github.sha }}"
           exit-code: "1"
           ignore-unfixed: true
-          severity: "CRITICAL"
+          severity: CRITICAL
+          timeout: 10m
       - name: Publish test results
         # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
         if: github.actor != 'dependabot[bot]'
