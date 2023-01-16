@@ -713,7 +713,7 @@ jobs:
           TAG=$(echo '${{ github.ref }}' | sed 's/refs\/heads\/release\///')
           mvn --batch-mode deploy \
           -pl fhir-server,library-api -am \
-          -PmavenPreRelease,dockerPreRelease \
+          -PmavenPreRelease,dockerPreRelease,docs \
           -Dpathling.fhirServerDockerTag=$TAG \
           -DskipTests -DskipScalaDocs \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
