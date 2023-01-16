@@ -220,7 +220,7 @@ separate files distributed with the Software.
 * (MIT License) mockito-core (org.mockito:mockito-core:4.5.1 - https://github.com/mockito/mockito)
 * (GNU General Public License (GPL), version 2, with the Classpath exception) JMH Core (org.openjdk.jmh:jmh-core:1.36 - http://openjdk.java.net/projects/code-tools/jmh/jmh-core/)
 * (GNU General Public License (GPL), version 2, with the Classpath exception) JMH Generators: Annotation Processors (org.openjdk.jmh:jmh-generator-annprocess:1.36 - http://openjdk.java.net/projects/code-tools/jmh/jmh-generator-annprocess/)
-* (MIT License) Project Lombok (org.projectlombok:lombok:1.18.24 - https://projectlombok.org)
+* (MIT License) Project Lombok (org.projectlombok:lombok:1.18.22 - https://projectlombok.org)
 * (Apache License, Version 2.0) Scala Library (org.scala-lang:scala-library:2.12.17 - https://www.scala-lang.org/)
 * (Apache License, Version 2.0) JSONassert (org.skyscreamer:jsonassert:1.5.1 - https://github.com/skyscreamer/JSONassert)
 * (MIT License) SLF4J API Module (org.slf4j:slf4j-api:1.7.36 - http://www.slf4j.org)
