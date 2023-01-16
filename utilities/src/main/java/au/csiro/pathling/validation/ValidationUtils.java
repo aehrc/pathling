@@ -1,5 +1,7 @@
 package au.csiro.pathling.validation;
 
+import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
+
 import static java.util.Objects.nonNull;
 
 import java.util.Set;
@@ -21,7 +23,12 @@ public final class ValidationUtils {
     // utility class
   }
 
-  private static final ValidatorFactory DEFAULT_VALIDATION_FACTORY = Validation.buildDefaultValidatorFactory();
+  // We use the ParameterMessageInterpolator rather than the default one which depends on EL implementation
+  // for message interpolation as it causes library conflicts in Databricks environments.
+  private static final ValidatorFactory DEFAULT_VALIDATION_FACTORY = Validation.byDefaultProvider()
+      .configure()
+      .messageInterpolator(new ParameterMessageInterpolator())
+      .buildValidatorFactory();
 
   /**
    * Validates a bean annotated with JSR-380 constraints using the default validation factory.

@@ -8,7 +8,7 @@ on:
       segmentIdentifier:
         description: "Pre-release identifier"
         required: true
-        default: "dev0"
+        default: ".dev0"
 
 jobs:
   deploy-python-pre-release:

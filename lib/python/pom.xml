@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.1.1</version>
+    <version>6.1.3</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
@@ -34,6 +34,7 @@
   <description>A library for using Pathling with Python.</description>
 
   <properties>
+    <!--suppress UnresolvedMavenProperty -->
     <pathling.pyapi.version>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}${pathling.pyapi.version.qualifier}</pathling.pyapi.version>
     <pathling.pyapi.version.qualifier>.dev</pathling.pyapi.version.qualifier>
     <pathling.pypi.repository>pypi</pathling.pypi.repository>
