@@ -9,7 +9,7 @@ sidebar_label: Synchronization
 
 If the other FHIR server
 supports [FHIR subscriptions](https://www.hl7.org/fhir/subscription.html), then
-you can configure it to send resources updates to Pathling.
+you can configure it to send resource updates to Pathling.
 
 The first task is to enable subscription support, which may be disabled by
 default. This process will vary depending on the FHIR server implementation.
