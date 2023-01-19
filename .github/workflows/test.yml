@@ -376,6 +376,8 @@ jobs:
         timeout-minutes: 15
       - name: Scan Docker image for vulnerabilities
         uses: aquasecurity/trivy-action@master
+        env:
+          TRIVY_OFFLINE_SCAN: true
         with:
           image-ref: "aehrc/pathling:${{ github.sha }}"
           exit-code: "1"
