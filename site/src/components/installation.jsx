@@ -4,7 +4,7 @@ export const PythonInstallation = () => (
   <p>
     To use the Pathling encoders from Python, install the{" "}
     <a href="https://pypi.org/project/pathling/">pathling</a> package using{" "}
-    <a href="https://pip.pypa.io/">pip</a>. Note that Java 11 or later is required, with your{" "}
+    <a href="https://pip.pypa.io/">pip</a>. Note that Java 11 is required, with your{" "}
     <code>JAVA_HOME</code> properly set.
   </p>
 );
