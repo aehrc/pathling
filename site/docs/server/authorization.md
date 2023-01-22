@@ -63,8 +63,8 @@ that are referenced within the request.
 ## GA4GH passports
 
 Pathling supports an opt-in implementation of
-[GA4GH Passport v1](https://github.com/ga4gh-duri/ga4gh-duri.github.io/blob/master/researcher_ids/ga4gh_passport_v1.md)
-, which is a way of encoding permission to access patient data within the access
+[GA4GH Passport v1](https://github.com/ga4gh-duri/ga4gh-duri.github.io/blob/master/researcher_ids/ga4gh_passport_v1.md), 
+which is a way of encoding permission to access patient data within the access
 token presented to the server.
 
 You can enable GA4GH passport authentication by enabling the `ga4gh` Spring
@@ -98,8 +98,7 @@ FHIR identifiers that Pathling can match against resources in the database.
 When running with GA4GH passports enabled, all queries will be scoped to return
 only records that relate to white-listed patients, according to the joining
 logic defined within
-the [FHIR Patient compartment](https://hl7.org/fhir/R4/compartmentdefinition-patient.html)
-.
+the [FHIR Patient compartment](https://hl7.org/fhir/R4/compartmentdefinition-patient.html).
 
 The presence of a `ControlledAccessGrants` visa implies the following
 authorities within Pathling: `pathling:aggregate`, `pathling:search`,

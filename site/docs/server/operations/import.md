@@ -52,8 +52,7 @@ following parameters:
   resource.
     - `resourceType [1..1] (code)` - The base FHIR resource type contained
       within this source file. Code must be a member of
-      [http://hl7.org/fhir/ValueSet/resource-types](http://hl7.org/fhir/ValueSet/resource-types)
-      .
+      [http://hl7.org/fhir/ValueSet/resource-types](http://hl7.org/fhir/ValueSet/resource-types).
     - `url [1..1] (uri)` - A URL that can be used to retrieve this source file.
     - `mode [0..1] (code)` - A value of `overwrite` will cause all existing
       resources of the specified type to be deleted and replaced with the
