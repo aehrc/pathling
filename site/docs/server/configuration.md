@@ -10,8 +10,7 @@ easiest way to configure Pathling is through environment variables.
 If environment variables are problematic for your deployment, Pathling can be
 also configured in a variety of other ways as supported by the Spring Boot
 framework (see
-[Spring Boot Reference Documentation: Externalized Configuration](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config))
-.
+[Spring Boot Reference Documentation: Externalized Configuration](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-external-config)).
 
 ## Configuration variables
 
@@ -29,8 +28,7 @@ framework (see
   configuration of arbitrary options on the Java VM that Pathling runs within.
 
 Additionally, you can set any variable supported by Spring Boot, see
-[Spring Boot Reference Documentation: Common Application properties](https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties)
-.
+[Spring Boot Reference Documentation: Common Application properties](https://docs.spring.io/spring-boot/docs/current/reference/html/appendix-application-properties.html#common-application-properties).
 
 ### Import
 
@@ -50,8 +48,7 @@ Additionally, you can set any variable supported by Spring Boot, see
 - `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum
   depth of nested element data that is encoded upon import. This affects certain
   elements within FHIR resources that contain recursive references, e.g.
-  [QuestionnaireResponse.item](https://hl7.org/fhir/R4/questionnaireresponse.html)
-  .
+  [QuestionnaireResponse.item](https://hl7.org/fhir/R4/questionnaireresponse.html).
 - `pathling.encoding.enableExtensions` - (default: `true`) Enables support for
   FHIR extensions.
 - `pathling.encoding.openTypes` - (default: `boolean`,`code`,`date`,`dateTime`,
@@ -79,10 +76,40 @@ methods,
 see [DefaultAWSCredentialsProviderChain](https://docs.aws.amazon.com/AWSJavaSDK/latest/javadoc/com/amazonaws/auth/DefaultAWSCredentialsProviderChain.html)
 for details.
 
-In addition to this, ny Hadoop S3 configuration variable (`fs.s3a.*`) can be set
-within Pathling directly. See
+In addition to this, any Hadoop S3 configuration variable (`fs.s3a.*`) can be 
+set within Pathling directly. See
 the [Hadoop AWS documentation](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/index.html)
 for all the possible options.
+
+This is the default S3 configuration, along with some hints on how to add some
+common configuration parameters:
+
+```yaml
+fs:
+  s3a:
+    aws:
+      # credentials:
+      #   provider: org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider
+      #   provider: org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider
+      #
+      # For use with: SimpleAWSCredentialsProvider
+      # access:
+      #   key: [access key]
+      # secret:
+      #   key: [secret key]
+      #
+      # For use with: AssumedRoleCredentialProvider
+      # assumed:
+      #   role:
+      #     arn: [role ARN]
+      #
+      connection:
+        maximum: 100
+      committer:
+        name: magic
+        magic:
+          enabled: true
+```
 
 ### Apache Spark
 
@@ -109,8 +136,7 @@ Here are a few that you might be particularly interested in:
 
 - `spark.master` - (default: `local[*]`) Address of the master node of an
   [Apache Spark](https://spark.apache.org/) cluster to use for processing data,
-  see [Master URLs](https://spark.apache.org/docs/latest/submitting-applications.html#master-urls)
-  .
+  see [Master URLs](https://spark.apache.org/docs/latest/submitting-applications.html#master-urls).
 - `spark.executor.memory` - (default: `1g`) The quantity of memory available for
   each child task to process data within, in the same format as JVM memory
   strings with a size unit suffix (`k`, `m`, `g` or `t`) (e.g. `512m`, `2g`).
