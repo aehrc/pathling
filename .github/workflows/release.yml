@@ -128,7 +128,7 @@ jobs:
   create-release:
     name: Draft GitHub release
     runs-on: ubuntu-latest
-    needs: [deploy-maven, deploy-python, deploy-docker]
+    needs: deploy-maven
     steps:
       - name: Create release
         id: create_release
