@@ -30,6 +30,7 @@ import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
+import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
@@ -112,7 +113,10 @@ class R4DataTypeMappings extends DataTypeMappings {
 
       case tsClass if tsClass == classOf[org.hl7.fhir.r4.model.InstantType] =>
 
-        Cast(dataTypeToUtf8Expr(inputObject), DataTypes.TimestampType).withTimeZone("UTC")
+        // NOTE: using the instantiation with the new operator is necessary to invoke the auxiliary
+        // constructor that is common between version 3.3 and 3.4 of spark catalyst.
+        // The 3.4 code is deployed in databricks runtimes version >= 11.1.
+        new Cast(dataTypeToUtf8Expr(inputObject), DataTypes.TimestampType, Some("UTC"))
 
       case base64Class if base64Class == classOf[org.hl7.fhir.r4.model.Base64BinaryType] =>
 
