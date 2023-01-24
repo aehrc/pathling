@@ -49,3 +49,6 @@ CVE-2022-1586
 # This vulnerability relates to deserialization of untrusted data within spring-web, which is not
 # relevant to Pathling.
 CVE-2016-1000027
+
+# This vulnerability relates to Freetype, which is not a dependency of Pathling.
+CVE-2022-27404
