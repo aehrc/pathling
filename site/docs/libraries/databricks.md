@@ -13,6 +13,8 @@ the `au.csiro.pathling:library-api`
 Maven package. Once the cluster is restarted, the libraries should be available
 for import and use within all notebooks.
 
+Pathling has been tested on Databricks Runtime 12.0.
+
 ## Spark config
 
 Add the following to __Advanced Options > Spark > Spark Config__ - this
