@@ -27,11 +27,10 @@ import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.query.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -71,10 +70,10 @@ public class ResourcePath extends NonLiteralPath {
   }
 
   /**
-   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link Database}.
+   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link DataSource}.
    *
    * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
-   * @param database the {@link Database} to use for retrieving the Dataset
+   * @param dataSource the {@link DataSource} to use for retrieving the Dataset
    * @param resourceType the type of the resource
    * @param expression the expression to use in the resulting path
    * @param singular whether the resulting path should be flagged as a single item collection
@@ -82,16 +81,16 @@ public class ResourcePath extends NonLiteralPath {
    */
   @Nonnull
   public static ResourcePath build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final Database database, @Nonnull final ResourceType resourceType,
+      @Nonnull final DataSource dataSource, @Nonnull final ResourceType resourceType,
       @Nonnull final String expression, final boolean singular) {
-    return build(fhirContext, database, resourceType, expression, singular, false);
+    return build(fhirContext, dataSource, resourceType, expression, singular, false);
   }
 
   /**
-   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link Database}.
+   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link DataSource}.
    *
    * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
-   * @param database the {@link Database} to use for retrieving the Dataset
+   * @param dataSource the {@link DataSource} to use for retrieving the Dataset
    * @param resourceType the type of the resource
    * @param expression the expression to use in the resulting path
    * @param singular whether the resulting path should be flagged as a single item collection
@@ -100,7 +99,7 @@ public class ResourcePath extends NonLiteralPath {
    */
   @Nonnull
   public static ResourcePath build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final Database database, @Nonnull final ResourceType resourceType,
+      @Nonnull final DataSource dataSource, @Nonnull final ResourceType resourceType,
       @Nonnull final String expression, final boolean singular, final boolean skipAliasing) {
 
     // Get the resource definition from HAPI.
@@ -110,7 +109,7 @@ public class ResourcePath extends NonLiteralPath {
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
 
     // Retrieve the dataset for the resource type using the supplied resource reader.
-    final Dataset<Row> dataset = database.read(resourceType);
+    final Dataset<Row> dataset = dataSource.read(resourceType);
 
     final Column idColumn = col("id");
     final Column finalIdColumn;

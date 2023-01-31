@@ -52,7 +52,7 @@ public class OfTypeFunction implements NamedFunction {
         "Argument to ofType function must be a resource type: " + argumentPath.getExpression());
     final ResourcePath resourcePath = (ResourcePath) argumentPath;
 
-    return ResolveFunction.resolveMonomorphicReference(inputPath, input.getContext().getDatabase(),
+    return ResolveFunction.resolveMonomorphicReference(inputPath, input.getContext().getDataSource(),
         input.getContext().getFhirContext(), resourcePath.getResourceType(), expression,
         input.getContext());
   }

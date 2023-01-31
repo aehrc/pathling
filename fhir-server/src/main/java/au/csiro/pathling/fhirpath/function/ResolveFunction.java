@@ -30,7 +30,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.query.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import java.util.Set;
@@ -62,7 +62,7 @@ public class ResolveFunction implements NamedFunction {
         "Input to " + NAME + " function must be a Reference: " + input.getInput().getExpression());
     checkNoArguments(NAME, input);
     final ReferencePath inputPath = (ReferencePath) input.getInput();
-    final Database database = input.getContext().getDatabase();
+    final DataSource dataSource = input.getContext().getDataSource();
 
     // Get the allowed types for the input reference. This gives us the set of possible resource
     // types that this reference could resolve to.
@@ -82,20 +82,20 @@ public class ResolveFunction implements NamedFunction {
     } else {
       final FhirContext fhirContext = input.getContext().getFhirContext();
       final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
-      return resolveMonomorphicReference(inputPath, database, fhirContext, resourceType, expression,
+      return resolveMonomorphicReference(inputPath, dataSource, fhirContext, resourceType, expression,
           input.getContext());
     }
   }
 
   @Nonnull
   public static FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
-      @Nonnull final Database database, @Nonnull final FhirContext fhirContext,
+      @Nonnull final DataSource dataSource, @Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceType resourceType, @Nonnull final String expression,
       @Nonnull final ParserContext context) {
     // If this is a monomorphic reference, we just need to retrieve the appropriate table and
     // create a dataset with the full resources.
     final ResourcePath resourcePath = ResourcePath
-        .build(fhirContext, database, resourceType, expression, referencePath.isSingular());
+        .build(fhirContext, dataSource, resourceType, expression, referencePath.isSingular());
 
     // Join the resource dataset to the reference dataset.
     final Column joinCondition = referencePath.getResourceEquality(resourcePath);

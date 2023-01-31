@@ -37,7 +37,6 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocation
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -145,7 +144,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // If the expression is a resource reference, we build a ResourcePath for it - we call this
         // the current resource reference.
         return ResourcePath
-            .build(context.getFhirContext(), context.getDatabase(), resourceType, fhirPath, true);
+            .build(context.getFhirContext(), context.getDataSource(), resourceType, fhirPath, true);
       }
     }
   }
@@ -199,7 +198,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
-          context.getFhirContext(), context.getSparkSession(), context.getDatabase(),
+          context.getFhirContext(), context.getSparkSession(), context.getDataSource(),
           context.getTerminologyServiceFactory(), argumentGroupings, context.getNodeIdColumns());
       argumentContext.setThisContext(thisPath);
 

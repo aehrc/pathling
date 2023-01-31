@@ -101,7 +101,7 @@ public abstract class QueryExecutor {
         .map(expression -> {
           final ParserContext currentContext = new ParserContext(parserContext.getInputContext(),
               parserContext.getFhirContext(), parserContext.getSparkSession(),
-              parserContext.getDatabase(), parserContext.getTerminologyServiceFactory(),
+              parserContext.getDataSource(), parserContext.getTerminologyServiceFactory(),
               parserContext.getGroupingColumns(), new HashMap<>());
           final Parser parser = new Parser(currentContext);
           final FhirPath result = parser.parse(expression);

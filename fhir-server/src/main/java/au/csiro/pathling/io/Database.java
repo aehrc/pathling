@@ -29,6 +29,7 @@ import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
 import io.delta.tables.DeltaTable;
@@ -67,7 +68,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("(core | import) & !ga4gh")
 @Slf4j
-public class Database implements Cacheable {
+public class Database implements DataSource, Cacheable {
 
   @Nonnull
   @Getter

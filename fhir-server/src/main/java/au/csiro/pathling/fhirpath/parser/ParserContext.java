@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -69,7 +69,7 @@ public class ParserContext {
    * A table resolver for retrieving Datasets for resource references.
    */
   @Nonnull
-  private final Database database;
+  private final DataSource dataSource;
 
   /**
    * A factory for creating new {@link TerminologyService} objects, which is needed within blocks of
@@ -106,7 +106,7 @@ public class ParserContext {
    * @param fhirContext a {@link FhirContext} that can be used to do FHIR stuff
    * @param sparkSession a {@link SparkSession} that can be used to resolve Spark queries required
    * for this expression
-   * @param database for retrieving data relating to resource references
+   * @param dataSource for retrieving data relating to resource references
    * @param terminologyServiceFactory a factory for {@link TerminologyService} objects, used for
    * parallel processing
    * @param groupingColumns the list of columns to group on when aggregating
@@ -114,14 +114,14 @@ public class ParserContext {
    * paths parsed within this context
    */
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final Database database,
+      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final List<Column> groupingColumns,
       @Nonnull final Map<String, Column> nodeIdColumns) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.database = database;
+    this.dataSource = dataSource;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.groupingColumns = groupingColumns;
     this.nodeIdColumns = nodeIdColumns;
