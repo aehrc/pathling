@@ -24,14 +24,17 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
+import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.query.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -42,6 +45,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import scala.collection.JavaConverters;
 
 /**
  * Represents any FHIRPath expression which refers to a resource type.
@@ -213,6 +217,24 @@ public class ResourcePath extends NonLiteralPath {
     throw new InvalidUserInputError(
         "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
             .getExpression());
+  }
+  /**
+   * @return The set of resource types currently supported by this implementation.
+   */
+  @Nonnull
+  public static Set<ResourceType> supportedResourceTypes() {
+    final Set<ResourceType> availableResourceTypes = EnumSet.allOf(
+        ResourceType.class);
+    final Set<ResourceType> unsupportedResourceTypes =
+        JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
+            .map(ResourceType::fromCode)
+            .collect(Collectors.toSet());
+    availableResourceTypes.removeAll(unsupportedResourceTypes);
+    availableResourceTypes.remove(ResourceType.RESOURCE);
+    availableResourceTypes.remove(ResourceType.DOMAINRESOURCE);
+    availableResourceTypes.remove(ResourceType.NULL);
+    availableResourceTypes.remove(ResourceType.OPERATIONDEFINITION);
+    return availableResourceTypes;
   }
 
 }
