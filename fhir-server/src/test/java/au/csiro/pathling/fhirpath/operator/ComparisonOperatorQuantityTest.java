@@ -24,6 +24,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -38,13 +39,10 @@ import org.fhir.ucum.UcumService;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Quantity;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 public class ComparisonOperatorQuantityTest {
 
   @Autowired

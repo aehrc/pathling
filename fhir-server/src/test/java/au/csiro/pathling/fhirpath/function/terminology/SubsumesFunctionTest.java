@@ -41,6 +41,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.assertions.ElementPathAssertion;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -60,16 +61,13 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class SubsumesFunctionTest {
 
   static final String TEST_SYSTEM = "uuid:1";

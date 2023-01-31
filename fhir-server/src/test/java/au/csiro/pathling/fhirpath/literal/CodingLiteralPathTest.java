@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import org.apache.spark.sql.Dataset;
@@ -33,16 +34,13 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class CodingLiteralPathTest {
 
   @Autowired

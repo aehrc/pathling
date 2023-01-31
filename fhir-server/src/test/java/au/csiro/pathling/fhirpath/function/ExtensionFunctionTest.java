@@ -34,7 +34,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -43,6 +42,8 @@ import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -59,16 +60,13 @@ import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class ExtensionFunctionTest {
 
   @Autowired

@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.util.Collections;
@@ -52,14 +53,11 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.UrlType;
 import org.hl7.fhir.r4.model.UuidType;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class DrillDownBuilderTest {
 
   @Autowired

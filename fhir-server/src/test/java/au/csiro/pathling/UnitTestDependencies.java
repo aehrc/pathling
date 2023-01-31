@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.test;
+package au.csiro.pathling;
 
-import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -26,6 +25,7 @@ import au.csiro.pathling.spark.Spark;
 import au.csiro.pathling.spark.SparkConfigurer;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -37,16 +37,18 @@ import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
 
 /**
  * @author John Grimes
  */
-@Component
+@Configuration
+@ComponentScan
 @Profile("unit-test")
-class UnitTestDependencies {
+public class UnitTestDependencies {
 
   @Bean
   @ConditionalOnMissingBean

@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import java.util.Arrays;
@@ -34,18 +35,15 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * Tests some basic NonLiteralPath behaviour.
  *
  * @author Piotr Szul
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class NonLiteralPathTest {
 
   @Autowired

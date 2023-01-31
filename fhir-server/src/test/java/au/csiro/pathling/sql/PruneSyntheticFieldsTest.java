@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.sql;
 
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import java.util.stream.Stream;
@@ -30,13 +31,10 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.Metadata;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 public class PruneSyntheticFieldsTest {
 
   @Autowired

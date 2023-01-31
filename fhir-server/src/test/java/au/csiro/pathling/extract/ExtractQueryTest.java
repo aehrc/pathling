@@ -29,6 +29,7 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
@@ -45,13 +46,11 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 @Tag("Tranche1")
 @ExtendWith(TimingExtension.class)
 class ExtractQueryTest {

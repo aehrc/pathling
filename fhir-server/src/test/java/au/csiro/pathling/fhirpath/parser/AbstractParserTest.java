@@ -26,6 +26,7 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -38,14 +39,11 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 @ExtendWith(TimingExtension.class)
 public class AbstractParserTest {
 

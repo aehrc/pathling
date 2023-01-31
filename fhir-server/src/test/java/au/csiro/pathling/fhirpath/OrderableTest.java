@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import org.apache.spark.sql.Dataset;
@@ -32,19 +33,16 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * Test some basic Orderable behaviour across different FhirPath types.
  *
  * @author Piotr Szul
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class OrderableTest {
 
   @Autowired

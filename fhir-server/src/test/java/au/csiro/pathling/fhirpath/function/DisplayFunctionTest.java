@@ -38,6 +38,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -52,16 +53,13 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class DisplayFunctionTest {
 
   @Autowired

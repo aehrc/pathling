@@ -40,6 +40,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -61,18 +62,15 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author Piotr Szul
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
   @Autowired

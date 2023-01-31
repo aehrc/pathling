@@ -22,6 +22,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -34,16 +35,13 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class BooleanOperatorTest {
 
   @Autowired

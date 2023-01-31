@@ -23,22 +23,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import ca.uhn.fhir.context.FhirContext;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 class MathOperatorValidationTest {
 
   @Autowired
