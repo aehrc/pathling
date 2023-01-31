@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.utilities.Datasets;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.file.SimplePathVisitor;
@@ -167,26 +168,7 @@ public class DatasetAssert {
     } catch (final IOException e) {
       log.info("Existing file not found, skipping delete");
     }
-
-    final ServerConfiguration configuration = new ServerConfiguration();
-    final StorageConfiguration storage = new StorageConfiguration();
-    storage.setWarehouseUrl("file://" + location);
-    configuration.setStorage(storage);
-    final ResultWriter resultWriter = new ResultWriter(configuration, spark);
-    resultWriter.write(dataset, name, SaveMode.Overwrite);
-    final Path tempPath = Path.of(location, "results", name + ".csv");
-    try {
-      Files.copy(tempPath, path);
-    } catch (final IOException e) {
-      throw new RuntimeException("Problem copying file", e);
-    }
-
-    try {
-      Files.walkFileTree(Path.of(location, "results"), new DeleteDirectoryVisitor());
-    } catch (final IOException e) {
-      log.error("Problem cleaning up", e);
-    }
-
+    Datasets.writeCsv(dataset, path.toUri().toString(), SaveMode.Overwrite);
     throw new AssertionError(
         "Rows saved to CSV, check that the file is correct and replace this line with an assertion");
   }
