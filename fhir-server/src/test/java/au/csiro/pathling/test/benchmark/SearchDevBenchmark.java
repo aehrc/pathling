@@ -94,7 +94,7 @@ public class SearchDevBenchmark {
     public static Database database(@Nonnull final ServerConfiguration configuration,
         @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
         @Nonnull final ThreadPoolTaskExecutor executor) {
-      return new Database(configuration, spark, fhirEncoders, executor);
+      return new Database(configuration.getStorage(), spark, fhirEncoders, executor);
     }
 
     public List<IBaseResource> execute(@Nonnull final Optional<StringAndListParam> filters) {

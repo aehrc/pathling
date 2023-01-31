@@ -75,7 +75,7 @@ public class ScopeAwareDatabase extends Database {
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final Optional<PassportScope> passportScope,
       @Nonnull final ThreadPoolTaskExecutor executor) {
-    super(configuration, spark, fhirEncoders, executor);
+    super(configuration.getStorage(), spark, fhirEncoders, executor);
     log.debug("Initializing passport scope-aware resource reader");
 
     this.configuration = configuration;
@@ -96,7 +96,7 @@ public class ScopeAwareDatabase extends Database {
         .map(scope -> {
           // We need to create a non-scope-aware reader here for the parsing of the filters, so that
           // we don't have recursive application of the filters.
-          final Database database = new Database(configuration, spark, fhirEncoders, executor);
+          final Database database = new Database(configuration.getStorage(), spark, fhirEncoders, executor);
           final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(configuration,
               fhirContext, spark, database, terminologyServiceFactory, scope);
           return scopeEnforcer.enforce(resourceType, resources);

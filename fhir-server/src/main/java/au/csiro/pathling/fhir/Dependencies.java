@@ -19,6 +19,7 @@ package au.csiro.pathling.fhir;
 
 import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
@@ -41,7 +42,15 @@ import org.springframework.stereotype.Component;
 @Profile({"core", "fhir"})
 @Slf4j
 public class Dependencies {
-
+  
+  @Bean
+  @ConditionalOnMissingBean
+  @Nonnull
+  static StorageConfiguration storageConfiguration(
+      @Nonnull final ServerConfiguration configuration) {
+    return configuration.getStorage();
+  }
+  
   @Bean
   @ConditionalOnMissingBean
   @Nonnull

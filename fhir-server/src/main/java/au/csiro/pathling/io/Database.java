@@ -27,6 +27,7 @@ import static org.apache.spark.sql.functions.desc;
 
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
@@ -79,7 +80,7 @@ public class Database implements Cacheable {
   private final String databaseName;
 
   @Nonnull
-  private final ServerConfiguration configuration;
+  private final StorageConfiguration configuration;
 
   @Nonnull
   protected final SparkSession spark;
@@ -91,19 +92,19 @@ public class Database implements Cacheable {
   protected final ThreadPoolTaskExecutor executor;
 
   /**
-   * @param configuration a {@link ServerConfiguration} object which controls the behaviour of the
-   * reader
+   * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
+   * database
    * @param spark a {@link SparkSession} for interacting with Spark
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
    * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
    */
-  public Database(@Nonnull final ServerConfiguration configuration,
+  public Database(@Nonnull final StorageConfiguration configuration,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ThreadPoolTaskExecutor executor) {
     this.configuration = configuration;
     this.spark = spark;
-    this.warehouseUrl = convertS3ToS3aUrl(configuration.getStorage().getWarehouseUrl());
-    this.databaseName = configuration.getStorage().getDatabaseName();
+    this.warehouseUrl = convertS3ToS3aUrl(configuration.getWarehouseUrl());
+    this.databaseName = configuration.getDatabaseName();
     this.fhirEncoders = fhirEncoders;
     this.executor = executor;
     cacheKey = buildCacheKeyFromDatabase();
@@ -125,8 +126,8 @@ public class Database implements Cacheable {
   }
 
   /**
-   * Overwrites the resources for a particular type with the contents of the supplied
-   * {@link Dataset}.
+   * Overwrites the resources for a particular type with the contents of the supplied {@link
+   * Dataset}.
    *
    * @param resourceType the type of the resource to write
    * @param resources the {@link Dataset} containing the resource data
@@ -253,7 +254,7 @@ public class Database implements Cacheable {
     @Nullable final DeltaTable resources = DeltaTable.forPath(spark, tableUrl);
     requireNonNull(resources);
 
-    if (configuration.getStorage().getCacheDatasets()) {
+    if (configuration.getCacheDatasets()) {
       // Cache the raw resource data.
       log.debug("Caching resource dataset: {}", resourceType.toCode());
       resources.toDF().cache();
@@ -302,7 +303,7 @@ public class Database implements Cacheable {
    * Documentation - Compact files</a>
    */
   private void compact(final @Nonnull ResourceType resourceType, final DeltaTable table) {
-    final int threshold = configuration.getStorage().getCompactionThreshold();
+    final int threshold = configuration.getCompactionThreshold();
     final int numPartitions = table.toDF().rdd().getNumPartitions();
     if (numPartitions > threshold) {
       final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
