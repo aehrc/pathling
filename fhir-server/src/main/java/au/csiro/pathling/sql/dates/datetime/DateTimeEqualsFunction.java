@@ -20,16 +20,12 @@ package au.csiro.pathling.sql.dates.datetime;
 import java.util.function.BiFunction;
 import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.DateTimeType;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
  * Determines the equality of two datetimes.
  *
  * @author John Grimes
  */
-@Component
-@Profile("core | unit-test")
 public class DateTimeEqualsFunction extends DateTimeComparisonFunction {
 
   private static final long serialVersionUID = -8717420985056046161L;

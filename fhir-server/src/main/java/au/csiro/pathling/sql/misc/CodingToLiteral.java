@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.terminology;
+package au.csiro.pathling.sql.misc;
 
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
@@ -25,16 +25,12 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
  * Spark UDF to convert a Coding struct to a valid Coding literal string.
  *
  * @author John Grimes
  */
-@Component
-@Profile("core | unit-test")
 public class CodingToLiteral implements SqlFunction1<Row, String> {
 
   /**

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.sql.dates;
+package au.csiro.pathling.sql.misc;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.sql.udf.SqlFunction3;
@@ -31,8 +31,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
  * Calculates the difference between two temporal values, returning an integer value using the
@@ -40,8 +38,6 @@ import org.springframework.stereotype.Component;
  *
  * @author John Grimes
  */
-@Component
-@Profile("core | unit-test")
 public class TemporalDifferenceFunction implements SqlFunction3<String, String, String, Long> {
 
   private static final long serialVersionUID = -7306741471632636471L;

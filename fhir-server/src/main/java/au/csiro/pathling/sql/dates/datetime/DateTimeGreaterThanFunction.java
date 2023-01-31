@@ -21,16 +21,12 @@ import java.util.function.BiFunction;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.BaseDateTimeType;
 import org.hl7.fhir.r4.model.DateTimeType;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
  * Determines whether one datetime is after another.
  *
  * @author John Grimes
  */
-@Component
-@Profile("core | unit-test")
 public class DateTimeGreaterThanFunction extends DateTimeComparisonFunction {
 
   private static final long serialVersionUID = 6648102436817402989L;

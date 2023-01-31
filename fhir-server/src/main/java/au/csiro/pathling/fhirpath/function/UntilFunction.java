@@ -32,7 +32,7 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.sql.dates.TemporalDifferenceFunction;
+import au.csiro.pathling.sql.misc.TemporalDifferenceFunction;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;

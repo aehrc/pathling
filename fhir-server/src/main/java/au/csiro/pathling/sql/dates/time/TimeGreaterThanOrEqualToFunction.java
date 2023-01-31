@@ -19,16 +19,12 @@ package au.csiro.pathling.sql.dates.time;
 
 import java.time.LocalTime;
 import java.util.function.BiFunction;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
  * Determines whether one time is after or at the same time as another.
  *
  * @author John Grimes
  */
-@Component
-@Profile("core | unit-test")
 public class TimeGreaterThanOrEqualToFunction extends TimeComparisonFunction {
 
   private static final long serialVersionUID = -8098751595303018323L;

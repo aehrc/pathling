@@ -15,32 +15,21 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.sql.dates.datetime;
+package au.csiro.pathling.sql.dates.time;
 
-import java.util.function.BiFunction;
-import org.hl7.fhir.r4.model.DateTimeType;
-import org.hl7.fhir.r4.model.Quantity;
+import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
 
 /**
- * Subtracts a duration from a datetime.
- *
- * @author John Grimes
+ * Registration of time UDFs.
  */
-public class DateTimeSubtractDurationFunction extends DateTimeArithmeticFunction {
+public class TimeUdfRegistrar extends AbstractUDFRegistrar {
 
-  private static final long serialVersionUID = -5922228168177608861L;
-
-  public static final String FUNCTION_NAME = "datetime_subtract_duration";
-
-  @Override
-  protected BiFunction<DateTimeType, Quantity, DateTimeType> getOperationFunction() {
-    return this::performSubtraction;
+  protected void registerUDFs(UDFRegistrar udfRegistrar) {
+    udfRegistrar
+        .register(new TimeEqualsFunction())
+        .register(new TimeGreaterThanFunction())
+        .register(new TimeGreaterThanOrEqualToFunction())
+        .register(new TimeLessThanFunction())
+        .register(new TimeLessThanOrEqualToFunction());
   }
-
-  @Override
-  public String getName() {
-    return FUNCTION_NAME;
-  }
-
-
 }

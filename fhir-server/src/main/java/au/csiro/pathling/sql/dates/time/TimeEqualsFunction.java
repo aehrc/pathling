@@ -19,16 +19,12 @@ package au.csiro.pathling.sql.dates.time;
 
 import java.time.LocalTime;
 import java.util.function.BiFunction;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
  * Determines the equality of two times.
  *
  * @author John Grimes
  */
-@Component
-@Profile("core | unit-test")
 public class TimeEqualsFunction extends TimeComparisonFunction {
 
   private static final long serialVersionUID = -6607019777915271539L;
