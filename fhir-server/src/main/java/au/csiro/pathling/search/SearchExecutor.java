@@ -45,7 +45,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -197,7 +196,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           .join(filteredIds, subjectIdColumn.equalTo(col(filterIdAlias)), "left_semi");
     }
 
-    if (getConfiguration().getSpark().getCacheDatasets()) {
+    if (getConfiguration().getQuery().getCacheResults()) {
       // We cache the dataset because we know it will be accessed for both the total and the record
       // retrieval.
       log.debug("Caching search dataset");
@@ -243,7 +242,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   }
 
   private void reportQueryPlan(@Nonnull final Dataset<Row> resources) {
-    if (getConfiguration().getSpark().getExplainQueries()) {
+    if (getConfiguration().getQuery().getExplainQueries()) {
       log.debug("Search query plan:");
       resources.explain(true);
     }

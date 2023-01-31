@@ -17,22 +17,33 @@
 
 package au.csiro.pathling.config;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 
+import javax.validation.constraints.NotNull;
+
 /**
- * Represents configuration that controls the behaviour of Apache Spark.
+ * Represents configuration that controls the behaviour of query executors.
+ * @author Piotr Szul
  */
 @Data
 @Builder
-public class SparkConfiguration {
+public class QueryConfiguration {
 
   /**
-   * The name that Pathling will be identified as within the Spark cluster.
+   * Setting this option to {@code true} will enable additional logging relating to the query plan
+   * used to execute queries.
    */
-  @NotBlank
+  @NotNull
   @Builder.Default
-  private String appName = "Pathling";
+  private Boolean explainQueries = false;
+  
+  /**
+   * This controls whether the built-in caching within Spark is used for search results. 
+   * It may be useful to turn this off for large datasets in memory-constrained
+   * environments.
+   */
+  @NotNull
+  @Builder.Default
+  private Boolean cacheResults = true;
 }

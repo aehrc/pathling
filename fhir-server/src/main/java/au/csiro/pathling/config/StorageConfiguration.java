@@ -17,15 +17,24 @@
 
 package au.csiro.pathling.config;
 
+import javax.annotation.Nonnull;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Configuration relating to the storage of data.
  */
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class StorageConfiguration {
 
   /**
@@ -34,7 +43,8 @@ public class StorageConfiguration {
    * filesystem ({@code file://}) URL.
    */
   @NotBlank
-  private String warehouseUrl;
+  @Builder.Default
+  private String warehouseUrl = "file:///usr/share/warehouse";
 
   /**
    * The subdirectory within the warehouse path used to read and write data.
@@ -42,6 +52,29 @@ public class StorageConfiguration {
   @NotBlank
   @Pattern(regexp = "[A-Za-z0-9-_]+")
   @Size(min = 1, max = 50)
-  private String databaseName;
+  @Builder.Default
+  private String databaseName = "default";
 
+  /**
+   * This controls whether the built-in caching within Spark is used for resource datasets. It may
+   * be useful to turn this off for large datasets in memory-constrained environments.
+   */
+  @NotNull
+  @Builder.Default
+  private Boolean cacheDatasets = true;
+
+  /**
+   * When a table is updated, the number of partitions is checked. If the number exceeds this
+   * threshold, the table will be repartitioned back to the default number of partitions. This
+   * prevents large numbers of small updates causing poor subsequent query performance.
+   */
+  @NotNull
+  @Min(1)
+  @Builder.Default
+  private int compactionThreshold = 10;
+
+  public static StorageConfiguration forDatabase(@Nonnull final String warehouseUrl,
+      @Nonnull final String databaseName) {
+    return builder().warehouseUrl(warehouseUrl).databaseName(databaseName).build();
+  }
 }

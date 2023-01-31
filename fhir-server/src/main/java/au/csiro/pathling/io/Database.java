@@ -253,7 +253,7 @@ public class Database implements Cacheable {
     @Nullable final DeltaTable resources = DeltaTable.forPath(spark, tableUrl);
     requireNonNull(resources);
 
-    if (configuration.getSpark().getCacheDatasets()) {
+    if (configuration.getStorage().getCacheDatasets()) {
       // Cache the raw resource data.
       log.debug("Caching resource dataset: {}", resourceType.toCode());
       resources.toDF().cache();
@@ -302,7 +302,7 @@ public class Database implements Cacheable {
    * Documentation - Compact files</a>
    */
   private void compact(final @Nonnull ResourceType resourceType, final DeltaTable table) {
-    final int threshold = configuration.getSpark().getCompactionThreshold();
+    final int threshold = configuration.getStorage().getCompactionThreshold();
     final int numPartitions = table.toDF().rdd().getNumPartitions();
     if (numPartitions > threshold) {
       final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
