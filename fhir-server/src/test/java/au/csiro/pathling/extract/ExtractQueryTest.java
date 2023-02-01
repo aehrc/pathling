@@ -25,8 +25,7 @@ import static org.mockito.Mockito.mock;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.ResultWriter;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -46,6 +45,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 /**
  * @author John Grimes
@@ -73,20 +73,20 @@ class ExtractQueryTest {
   @Autowired
   FhirEncoders fhirEncoders;
 
+  @MockBean
+  DataSource dataSource;
+
+
   ResourceType subjectResource;
 
-  Database database;
 
-  ExtractExecutor executor;
+  ExtractQueryExecutor executor;
 
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    database = mock(Database.class);
-    final ResultWriter resultWriter = mock(ResultWriter.class);
-    final ResultRegistry resultRegistry = mock(ResultRegistry.class);
-    executor = new ExtractExecutor(configuration, fhirContext, spark, database,
-        Optional.ofNullable(terminologyServiceFactory), resultWriter, resultRegistry);
+    executor = new ExtractQueryExecutor(configuration, fhirContext, spark, dataSource,
+        Optional.ofNullable(terminologyServiceFactory));
   }
 
   @Test
@@ -363,7 +363,7 @@ class ExtractQueryTest {
   }
 
   void mockResource(final ResourceType... resourceTypes) {
-    TestHelpers.mockResource(database, spark, resourceTypes);
+    TestHelpers.mockResource(dataSource, spark, resourceTypes);
   }
 
 }

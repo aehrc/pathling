@@ -83,7 +83,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
 
       // Build a new expression parser, and parse all the column expressions within the query.
       final ResourcePath inputContext = ResourcePath
-          .build(getFhirContext(), getDatabase(), subjectResource,
+          .build(getFhirContext(), getDataSource(), subjectResource,
               subjectResource.toCode(), true);
 
       return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);

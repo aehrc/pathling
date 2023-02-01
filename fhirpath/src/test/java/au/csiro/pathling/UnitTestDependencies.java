@@ -42,7 +42,6 @@ import org.springframework.core.env.Environment;
  * @author John Grimes
  */
 @Configuration
-//@ComponentScan
 @Profile("unit-test")
 public class UnitTestDependencies {
 

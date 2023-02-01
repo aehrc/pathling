@@ -25,7 +25,6 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -121,7 +120,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Nonnull
   private Dataset<Row> initializeDataset() {
     final ResourcePath resourcePath = ResourcePath
-        .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
+        .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode(),
             true, true);
     final Dataset<Row> subjectDataset = resourcePath.getDataset();
     final Column subjectIdColumn = resourcePath.getIdColumn();
@@ -138,7 +137,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       @Nullable Column filterColumn = null;
 
       ResourcePath currentContext = ResourcePath
-          .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
+          .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode(),
               true);
 
       // Parse each of the supplied filter expressions, building up a filter column. This captures 

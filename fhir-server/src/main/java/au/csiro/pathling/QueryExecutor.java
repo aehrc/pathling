@@ -35,6 +35,7 @@ import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
@@ -71,25 +72,25 @@ public abstract class QueryExecutor {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final Database database;
+  private final DataSource dataSource;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   protected QueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Database database,
+      @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.database = database;
+    this.dataSource = dataSource;
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
       @Nonnull final List<Column> groupingColumns) {
-    return new ParserContext(inputContext, fhirContext, sparkSession, database,
+    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
         terminologyServiceFactory, groupingColumns, new HashMap<>());
   }
 

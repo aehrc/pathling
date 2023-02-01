@@ -102,7 +102,7 @@ public class AggregateExecutor extends QueryExecutor {
     // Build a new expression parser, and parse all of the filter and grouping expressions within
     // the query.
     final ResourcePath inputContext = ResourcePath
-        .build(getFhirContext(), getDatabase(), query.getSubjectResource(),
+        .build(getFhirContext(), getDataSource(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
     final ParserContext groupingAndFilterContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));
