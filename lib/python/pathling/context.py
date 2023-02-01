@@ -94,6 +94,7 @@ class PathlingContext:
       client_secret: Optional[str] = None,
       scope: Optional[str] = None,
       token_expiry_tolerance: Optional[int] = 120,
+      accept_language: Optional[str] = None,
   ) -> "PathlingContext":
     """
     Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -157,6 +158,8 @@ class PathlingContext:
     :param scope: a scope value for use with the client credentials grant
     :param token_expiry_tolerance: the minimum number of seconds that a token should have
            before expiry when deciding whether to send it with a terminology request
+    :param accept_language: the default language string which is passed as the Accept-Language
+           HTTP header to the terminology server
     :return: a :class:`PathlingContext` instance initialized with the specified configuration
     """
     spark = (
@@ -183,6 +186,7 @@ class PathlingContext:
       .maxConnectionsPerRoute(max_connections_per_route)
       .retryEnabled(terminology_retry_enabled)
       .retryCount(terminology_retry_count)
+      .acceptLanguage(accept_language)
       .build()
     )
 

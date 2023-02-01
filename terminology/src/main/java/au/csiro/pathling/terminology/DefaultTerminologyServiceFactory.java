@@ -39,6 +39,11 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
+import org.apache.http.message.BasicHeader;
+import org.apache.http.Header;
+import java.util.List;
+import java.util.ArrayList;
+import org.apache.http.HttpHeaders;
 
 /**
  * Default implementation of {@link TerminologyServiceFactory}, providing the appropriate
@@ -124,7 +129,14 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
         .setSocketTimeout(clientConfig.getSocketTimeout())
         .build();
 
+	List<Header> headers = new ArrayList<Header>();
+	if (clientConfig.getAcceptLanguage() != null) {
+		Header header = new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, clientConfig.getAcceptLanguage());
+		headers.add(header);
+	}
+
     final HttpClientBuilder clientBuilder = HttpClients.custom()
+    	.setDefaultHeaders(headers)
         .setDefaultRequestConfig(defaultRequestConfig)
         .setConnectionManager(connectionManager)
         .setConnectionManagerShared(false);

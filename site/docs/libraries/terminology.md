@@ -30,11 +30,10 @@ process", and a causative agent of "Virus".
 <PythonInstallation/>
 
 ```python
-from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set,
-    member_of
+from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set, member_of
 
 pc = PathlingContext.create()
-csv = pc.spark.read.csv("conditions.csv")
+csv = pc.spark.read.option("header","true").csv("conditions.csv")
 
 VIRAL_INFECTION_ECL = """
     << 64572001|Disease| : (
@@ -87,34 +86,33 @@ csv.select(
 <JavaInstallation/>
 
 ```java
-import static au.csiro.pathling.library.TerminologyHelpers.*;
-import static au.csiro.pathling.sql.Terminology.*;
-
+import au.csiro.pathling.library.TerminologyHelpers;
+import au.csiro.pathling.sql.Terminology;
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 
 class MyApp {
     public static void main(String[] args) {
-        PathlingContext pc = PathlingContext.create();
-        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+    	
+    	SparkSession spark = SparkSession
+    	  .builder()
+    	  .config("spark.master", "local")
+    	  .getOrCreate();
+        PathlingContext pc = PathlingContext.create(spark);
+        Dataset<Row> csv = pc.getSpark().read().option("header", "true").csv("conditions.csv");
         
-        String VIRAL_INFECTION_ECL = """
-            << 64572001|Disease| : (
-              << 370135005|Pathological process| = << 441862004|Infectious process|,
-              << 246075003|Causative agent| = << 49872002|Virus|
-            )
-        """;
+        String VIRAL_INFECTION_ECL = " << 64572001|Disease| : ( << 370135005|Pathological process| = << 441862004|Infectious process|,  << 246075003|Causative agent| = << 49872002|Virus| ) ";
 
         csv.select(
                 csv.col("CODE"),
                 csv.col("DESCRIPTION"),
-                member_of(toSnomedCoding(csv.col("CODE")),
-                        toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
+                Terminology.member_of(TerminologyHelpers.toSnomedCoding(csv.col("CODE")),
+                        TerminologyHelpers.toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
         ).show();
     }
 }
-
 ```
 
 </TabItem>
@@ -151,7 +149,7 @@ from pathling import PathlingContext, to_snomed_coding, translate
 from pyspark.sql.functions import explode_outer
 
 pc = PathlingContext.create()
-csv = pc.spark.read.csv("conditions.csv")
+csv = pc.spark.read.option("header","true").csv("conditions.csv")
 
 translate_result = csv.withColumn(
     "READ_CODES",
@@ -202,17 +200,23 @@ translate_result.select(
 import static au.csiro.pathling.sql.Terminology.*;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
 import static org.apache.spark.sql.functions.explode_outer;
-
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 
 class MyApp {
     public static void main(String[] args) {
-        PathlingContext pc = PathlingContext.create();
-        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
-        val translate_result = csv.withColumn(
+    	SparkSession spark = SparkSession
+    	  .builder()
+    	  .config("spark.master", "local")
+    	  .getOrCreate();
+
+        PathlingContext pc = PathlingContext.create(spark);
+        Dataset<Row> csv = pc.getSpark().read().option("header", "true").csv("conditions.csv");
+
+        Dataset<Row> translate_result = csv.withColumn(
                 "READ_CODES",
                 translate(
                         toCoding(csv.col("CODE"), "https://snomed.info/sct"),
@@ -226,7 +230,6 @@ class MyApp {
         ).show();
     }
 }
-
 ```
 
 </TabItem>
@@ -266,7 +269,7 @@ whether a code is "subsumed by" another code.
 from pathling import PathlingContext, Coding, to_snomed_coding, subsumes
 
 pc = PathlingContext.create()
-csv = pc.spark.read.csv("conditions.csv")
+csv = pc.spark.read.option("header","true").csv("conditions.csv")
 
 # 232208008 |Ear, nose and throat disorder|
 left_coding = Coding('http://snomed.info/sct', '232208008')
@@ -317,15 +320,21 @@ csv.select(
 ```java
 import static au.csiro.pathling.sql.Terminology.*;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
-
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import org.apache.spark.sql.SparkSession;
+import static org.apache.spark.sql.functions.lit;
 
 class MyApp {
     public static void main(String[] args) {
-        PathlingContext pc = PathlingContext.create();
-        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+    	SparkSession spark = SparkSession
+    	  .builder()
+    	  .config("spark.master", "local")
+    	  .getOrCreate();
+        PathlingContext pc = PathlingContext.create(spark);
+        Dataset<Row> csv = pc.getSpark().read().option("header", "true").csv("conditions.csv");
 
         csv.select(
                 csv.col("CODE"),
@@ -344,7 +353,6 @@ class MyApp {
         ).show();
     }
 }
-
 ```
 
 </TabItem>
@@ -373,11 +381,10 @@ display term for each code.
 <PythonInstallation/>
 
 ```python
-from pathling import PathlingContext, to_snomed_coding, property_of, display,
-    PropertyType
+from pathling import PathlingContext, to_snomed_coding, property_of, display, PropertyType
 
 pc = PathlingContext.create()
-csv = pc.spark.read.csv("conditions.csv")
+csv = pc.spark.read.option("header","true").csv("conditions.csv")
 
 # Get the parent codes for each code in the dataset.
 parents = csv.withColumn(
@@ -432,22 +439,26 @@ with_displays.show()
 <JavaInstallation/>
 
 ```java
-import static au.csiro.pathling.sql.Terminology.*;
+import au.csiro.pathling.sql.Terminology;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
-
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 
 class MyApp {
     public static void main(String[] args) {
-        PathlingContext pc = PathlingContext.create();
-        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+    	SparkSession spark = SparkSession
+    	  .builder()
+    	  .config("spark.master", "local")
+    	  .getOrCreate();
+        PathlingContext pc = PathlingContext.create(spark);
+        Dataset<Row> csv = pc.getSpark().read().option("header", "true").csv("conditions.csv");
 
         // Get the parent codes for each code in the dataset.
         Dataset<Row> parents = csv.withColumn(
                 "PARENTS",
-                property_of(toSnomedCoding(csv.col("CODE")), "parent", "code")
+                Terminology.property_of(toSnomedCoding(csv.col("CODE")), "parent", "code")
         );
         // Split each parent code into a separate row.
         Dataset<Row> exploded_parents = parents.selectExpr(
@@ -460,7 +471,6 @@ class MyApp {
         with_displays.show();
     }
 }
-
 ```
 
 </TabItem>
@@ -496,7 +506,7 @@ for language translations, synonyms, and more. You can query these terms using t
 from pathling import PathlingContext, to_snomed_coding, Coding, designation
 
 pc = PathlingContext.create()
-csv = pc.spark.read.csv("conditions.csv")
+csv = pc.spark.read.option("header","true").csv("conditions.csv")
 
 # Get the synonyms for each code in the dataset.
 synonyms = csv.withColumn(
@@ -543,23 +553,31 @@ exploded_synonyms.show()
 <JavaInstallation/>
 
 ```java
-import static au.csiro.pathling.sql.Terminology.*;
+import au.csiro.pathling.sql.Terminology;
 import static au.csiro.pathling.library.TerminologyHelpers.*;
 
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
+
+import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Coding;
+
 class MyApp {
 
     public static void main(String[] args) {
-        PathlingContext pc = PathlingContext.create();
-        Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
+    	SparkSession spark = SparkSession
+    	  .builder()
+    	  .config("spark.master", "local")
+    	  .getOrCreate();
+        PathlingContext pc = PathlingContext.create(spark);
+        Dataset<Row> csv = pc.getSpark().read().option("header", "true").csv("conditions.csv");
 
         // Get the synonyms for each code in the dataset.
         Dataset<Row> synonyms = csv.withColumn(
                 "SYNONYMS",
-                designation(toSnomedCoding(csv.col("CODE")),
+                Terminology.designation(toSnomedCoding(csv.col("CODE")),
                         new Coding("http://snomed.info/sct",
                                 "900000000000013009", null))
         );
@@ -639,17 +657,27 @@ val pc = PathlingContext.create(config)
 
 ```java
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.PathlingContextConfiguration;
+import org.apache.spark.sql.SparkSession;
+import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.TerminologyAuthConfiguration;
 
 class MyApp {
     public static void main(String[] args) {
-        PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-                .terminologyServerUrl("https://ontology.nhs.uk/production1/fhir")
-                .tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
-                .clientId("[client ID]")
-                .clientSecret("[client secret]")
-                .build();
-        PathlingContext pc = PathlingContext.create(config);
+    	SparkSession spark = SparkSession
+	      .builder()
+	      .config(/* configurations */)
+	      .getOrCreate();
+
+    	TerminologyConfiguration configuration = TerminologyConfiguration.builder()
+    		.serverUrl("https://ontology.nhs.uk/production1/fhir")
+    		.authentication(TerminologyAuthConfiguration.builder()
+    			.tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
+    			.clientId("[client ID]")
+    			.clientSecret("[client secret]")
+    			.build()
+    		).build();
+    	
+        PathlingContext pc = PathlingContext.create(spark, configuration);
         // ...
     }
 }

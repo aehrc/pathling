@@ -57,7 +57,6 @@ public class TerminologyConfiguration implements Serializable {
   @Builder.Default
   private String serverUrl = "https://tx.ontoserver.csiro.au/fhir";
 
-
   /**
    * Setting this option to {@code true} will enable additional logging of the details of requests
    * to the terminology service.
