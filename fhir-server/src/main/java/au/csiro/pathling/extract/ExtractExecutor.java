@@ -24,6 +24,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers.JoinType;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
@@ -73,7 +74,7 @@ public class ExtractExecutor extends QueryExecutor {
   private final ResultRegistry resultRegistry;
 
   /**
-   * @param configuration a {@link ServerConfiguration} object to control the behaviour of the
+   * @param configuration a {@link QueryConfiguration} object to control the behaviour of the
    * executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
@@ -83,7 +84,7 @@ public class ExtractExecutor extends QueryExecutor {
    * @param resultRegistry a {@link ResultRegistry} for storing the mapping between request ID and
    * result URL
    */
-  public ExtractExecutor(@Nonnull final ServerConfiguration configuration,
+  public ExtractExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory,

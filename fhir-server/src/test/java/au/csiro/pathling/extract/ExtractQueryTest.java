@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.Database;
@@ -56,7 +56,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 class ExtractQueryTest {
 
   @Autowired
-  ServerConfiguration configuration;
+  QueryConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;

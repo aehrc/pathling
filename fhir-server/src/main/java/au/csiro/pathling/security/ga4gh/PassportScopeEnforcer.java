@@ -18,7 +18,7 @@
 package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -46,7 +46,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
   private final PassportScope passportScope;
 
   /**
-   * @param configuration a {@link ServerConfiguration} object to control the behaviour of the
+   * @param configuration a {@link QueryConfiguration} object to control the behaviour of the
    * executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
@@ -57,7 +57,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
    * to be applied
    */
   public PassportScopeEnforcer(
-      @Nonnull final ServerConfiguration configuration,
+      @Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,

@@ -97,7 +97,7 @@ public class ScopeAwareDatabase extends Database {
           // We need to create a non-scope-aware reader here for the parsing of the filters, so that
           // we don't have recursive application of the filters.
           final Database database = new Database(configuration.getStorage(), spark, fhirEncoders, executor);
-          final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(configuration,
+          final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(configuration.getQuery(),
               fhirContext, spark, database, terminologyServiceFactory, scope);
           return scopeEnforcer.enforce(resourceType, resources);
         })

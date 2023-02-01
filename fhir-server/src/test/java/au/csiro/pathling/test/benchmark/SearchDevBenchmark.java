@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.test.benchmark;
 
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
@@ -49,6 +50,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
@@ -63,7 +65,6 @@ public class SearchDevBenchmark {
 
   public static final int PAGE_SIZE = 10;
 
-  @Component
   @State(Scope.Benchmark)
   @ActiveProfiles("unit-test")
   public static class SearchState extends AbstractJmhSpringBootState {
@@ -75,7 +76,7 @@ public class SearchDevBenchmark {
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    ServerConfiguration configuration;
+    QueryConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;

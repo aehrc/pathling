@@ -22,7 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -62,14 +62,14 @@ import org.springframework.stereotype.Component;
 public class AggregateExecutor extends QueryExecutor {
 
   /**
-   * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
+   * @param configuration A {@link QueryConfiguration} object to control the behaviour of the
    * executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
    * @param database A {@link Database} for retrieving resources
    * @param terminologyClientFactory A {@link TerminologyServiceFactory} for resolving terminology
    */
-  public AggregateExecutor(@Nonnull final ServerConfiguration configuration,
+  public AggregateExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory) {
@@ -191,7 +191,7 @@ public class AggregateExecutor extends QueryExecutor {
   private AggregateResponse buildResponse(
       @Nonnull final ResultWithExpressions resultWithExpressions) {
     // If explain queries is on, print out a query plan to the log.
-    if (getConfiguration().getQuery().getExplainQueries()) {
+    if (getConfiguration().getExplainQueries()) {
       log.debug("$aggregate query plan:");
       resultWithExpressions.getDataset().explain(true);
     }

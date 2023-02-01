@@ -39,6 +39,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -50,6 +51,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.storage.databaseName=parquet"})
 @Tag("Tranche2")
 @Slf4j
+@SpringBootTest(classes = {})
 class ManifestConverterTest extends AbstractParserTest {
 
   @Autowired
@@ -98,7 +100,7 @@ class ManifestConverterTest extends AbstractParserTest {
 
   @Test
   void convertsManifest() {
-    database = new Database(configuration.getStorage(), spark, fhirEncoders, executor);
+    dataSource = new Database(configuration.getStorage(), spark, fhirEncoders, executor);
 
     final PassportScope passportScope = new PassportScope();
     final VisaManifest manifest = new VisaManifest();
