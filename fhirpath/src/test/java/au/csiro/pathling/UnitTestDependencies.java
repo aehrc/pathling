@@ -68,10 +68,17 @@ public class UnitTestDependencies {
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory
       /*@Nonnull final Optional<SparkListener> sparkListener*/) {
 
-    // TODO: Check is this is sufficient
+    // TODO: See it this properies can be set from Environment (extract common code from Spark class)
     final SparkSession spark = SparkSession.builder()
         .master("local[1]")
         .appName("pathling-unittest")
+        .config("spark.default.parallelism", 1)
+        .config("spark.driver.bindAddress","localhost")
+        .config("spark.driver.host","localhost")
+        .config("spark.sql.shuffle.partitions", 1)
+        .config("spark.sql.debug.maxToStringFields", 100)
+        .config("spark.network.timeout", "600s")
+        .config("spark.ui.enabled",false)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog")
