@@ -1,16 +1,15 @@
 spring:
   main:
     banner-mode: off
-
-
+    
+pathling:
+  async:
+    enabled: false
 #TODO: perhaps USE (at least the spark part) 
-#pathling:
 #  storage:
 #    warehouseUrl: file:///some/nonexistent/path
 #  terminology:
 #    serverUrl: https://somenonexistenttxserver.com/fhir
-#  async:
-#    enabled: false
 #
 #spark:
 #  master: local[1]
