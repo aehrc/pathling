@@ -20,7 +20,6 @@ package au.csiro.pathling.extract;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -41,16 +40,12 @@ public class ExtractRequestBuilder {
 
   @Nullable
   private Integer limit;
-
-  @Nonnull
-  private String requestId;
-
+  
   public ExtractRequestBuilder(@Nonnull final ResourceType subjectResource) {
     this.subjectResource = subjectResource;
     columns = new ArrayList<>();
     filters = new ArrayList<>();
     limit = null;
-    requestId = UUID.randomUUID().toString();
   }
 
   public ExtractRequestBuilder withColumn(@Nonnull final String expression) {
@@ -67,16 +62,10 @@ public class ExtractRequestBuilder {
     this.limit = limit;
     return this;
   }
-
-  @SuppressWarnings("unused")
-  public ExtractRequestBuilder withRequestId(@Nonnull final String requestId) {
-    this.requestId = requestId;
-    return this;
-  }
-
+  
   public ExtractRequest build() {
     return new ExtractRequest(subjectResource, Optional.of(columns), Optional.of(filters),
-        Optional.ofNullable(limit), requestId);
+        Optional.ofNullable(limit));
   }
 
 }

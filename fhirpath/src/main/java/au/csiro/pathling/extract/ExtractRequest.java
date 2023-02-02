@@ -45,20 +45,16 @@ public class ExtractRequest {
 
   @Nonnull
   Optional<Integer> limit;
-
-  @Nonnull
-  String requestId;
-
+  
   /**
    * @param subjectResource the resource which will serve as the input context for each expression
    * @param columns a set of columns expressions to execute over the data
    * @param filters the criteria by which the data should be filtered
    * @param limit the maximum number of rows to return
-   * @param requestId an identifier for the request used to initiate this
    */
   public ExtractRequest(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<List<String>> columns, @Nonnull final Optional<List<String>> filters,
-      @Nonnull final Optional<Integer> limit, @Nonnull final String requestId) {
+      @Nonnull final Optional<Integer> limit) {
     this.limit = limit;
     checkUserInput(columns.isPresent() && columns.get().size() > 0,
         "Query must have at least one column expression");
@@ -70,7 +66,6 @@ public class ExtractRequest {
     this.subjectResource = subjectResource;
     this.columns = columns.get();
     this.filters = filters.orElse(Collections.emptyList());
-    this.requestId = requestId;
   }
 
 }

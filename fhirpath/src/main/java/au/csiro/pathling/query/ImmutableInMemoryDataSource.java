@@ -27,7 +27,7 @@ import java.util.Map;
 /**
  * A basic immutable data source that allows for explicit mapping of datasets to resource types.
  */
-public class SimpleDataSource implements DataSource {
+public class ImmutableInMemoryDataSource implements DataSource {
 
   @Nonnull
   private final Map<ResourceType, Dataset<Row>> resourceMap;
@@ -44,12 +44,12 @@ public class SimpleDataSource implements DataSource {
     }
 
     @Nonnull
-    public SimpleDataSource build() {
-      return new SimpleDataSource(resourceMap);
+    public ImmutableInMemoryDataSource build() {
+      return new ImmutableInMemoryDataSource(resourceMap);
     }
   }
 
-  public SimpleDataSource(
+  public ImmutableInMemoryDataSource(
       @Nonnull final Map<ResourceType, Dataset<Row>> resourceMap) {
     this.resourceMap = new HashMap<>(resourceMap);
   }

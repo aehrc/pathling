@@ -244,6 +244,15 @@ public class FhirEncoders {
   }
 
   /**
+   * Returns the FHIR context used by encoders produced by this instance.
+   *
+   * @return the FHIR context used by encoders produced by this instance.
+   */
+  public FhirContext getContext() {
+    return context;
+  }
+
+  /**
    * Immutable key to look up a matching encoders instance by configuration.
    */
   @Value

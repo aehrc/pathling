@@ -26,6 +26,8 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
+import au.csiro.pathling.library.query.PathlingClient;
+import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
@@ -86,11 +88,23 @@ public class PathlingContext {
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.terminologyFunctions = TerminologyFunctions.build();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
+    FhirpathUDFRegistrar.registerUDFs(spark);
+  }
+
+
+  /**
+   * Gets the FhirContext for this instance.
+   *
+   * @return the FhirContext.
+   */
+  @Nonnull
+  public FhirContext getFhirContext() {
+    return fhirEncoders.getContext();
   }
 
   /**
-   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession},
-   * {@link FhirEncoders} and {@link TerminologyServiceFactory} objects.
+   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession}, {@link
+   * FhirEncoders} and {@link TerminologyServiceFactory} objects.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark,
@@ -100,8 +114,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -128,8 +142,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -139,8 +153,8 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
-   * {@link SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
+   * SparkSession}.
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -394,4 +408,7 @@ public class PathlingContext {
     return new DefaultTerminologyServiceFactory(fhirVersion, configuration);
   }
 
+  public PathlingClient.Builder newClientBuilder() {
+    return PathlingClient.builder(this);
+  }
 }

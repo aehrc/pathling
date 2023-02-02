@@ -17,13 +17,9 @@
 
 package au.csiro.pathling.extract;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -31,7 +27,6 @@ import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -88,9 +83,8 @@ public class ExtractExecutor extends ExtractQueryExecutor {
    */
   @Nonnull
   public ExtractResponse execute(@Nonnull final ExtractRequest query,
-      @Nonnull final String serverBase) {
+      @Nonnull final String serverBase, @Nonnull final String requestId) {
     log.info("Executing request: {}", query);
-    final String requestId = query.getRequestId();
     final Dataset<Row> result = buildQuery(query);
 
     // Write the result and get the URL.

@@ -75,8 +75,9 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
+    // TODO: add support for explicit labels
     final Column[] columnValues = columns.stream()
-        .map(path -> ((Materializable<?>) path).getExtractableColumn())
+        .map(path -> ((Materializable<?>) path).getExtractableColumn().alias(path.getExpression()))
         .toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
         .filter(idColumn.isNotNull());
