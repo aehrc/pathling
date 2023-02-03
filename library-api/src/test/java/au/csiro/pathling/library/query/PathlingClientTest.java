@@ -83,14 +83,14 @@ public class PathlingClientTest {
   public void testExtractQueryUnbound() {
     final Dataset<Row> conditionResult = ExtractQuery.of(ResourceType.CONDITION)
         .withColumn("id")
-        .withColumn("code.coding.code")
-        .withColumn("code.coding.display")
-        .withColumn("subject.resolve().ofType(Patient).gender")
+        .withColumn("code.coding.code", "code")
+        .withColumn("code.coding.display", "display")
+        .withColumn("subject.resolve().ofType(Patient).gender", "patientGender")
         .withLimit(5)
         .execute(pathlingClient);
 
-    assertEquals(List.of("id", "code.coding.code", "code.coding.display",
-            "subject.resolve().ofType(Patient).gender"),
+    assertEquals(List.of("id", "code", "display",
+            "patientGender"),
         Arrays.asList(conditionResult.columns()));
 
     DatasetAssert.of(conditionResult)

@@ -26,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import com.google.common.collect.Streams;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -60,7 +61,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
         parseMaterializableExpressions(parserContext, query.getColumns(), "Column");
     final List<FhirPath> columns = columnParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toList());
+        .collect(Collectors.toUnmodifiableList());
 
     // Join all the column expressions together.
     final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
@@ -75,9 +76,10 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
-    // TODO: add support for explicit labels
-    final Column[] columnValues = columns.stream()
-        .map(path -> ((Materializable<?>) path).getExtractableColumn().alias(path.getExpression()))
+    final Column[] columnValues = Streams.zip(
+            columns.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
+            query.getLabels().stream(),
+            (column, maybeLabel) -> (maybeLabel.map(label -> column.alias(label)).orElse(column)))
         .toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
         .filter(idColumn.isNotNull());
@@ -150,7 +152,6 @@ public class ExtractQueryExecutor extends QueryExecutor {
             current.getFhirPath().getDataset());
       }
     }
-
     return result;
   }
 
@@ -185,7 +186,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
           additionalCondition, JoinType.RIGHT_OUTER);
     }
   }
-  
+
   @Value
   private static class FhirPathContextAndResult {
 

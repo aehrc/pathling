@@ -129,9 +129,9 @@ public abstract class Preconditions {
    * @return non blank string
    */
   @Nonnull
-  public static String requireNonBlank(@Nonnull final String string) {
+  public static String requireNonBlank(@Nonnull final String string, @Nonnull final String msg) {
     if (string.isBlank()) {
-      throw new IllegalArgumentException("Non blank string expected");
+      throw new IllegalArgumentException(msg);
     }
     return string;
   }

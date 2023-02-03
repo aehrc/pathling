@@ -40,7 +40,7 @@ public class ExtractRequestBuilder {
 
   @Nullable
   private Integer limit;
-  
+
   public ExtractRequestBuilder(@Nonnull final ResourceType subjectResource) {
     this.subjectResource = subjectResource;
     columns = new ArrayList<>();
@@ -62,10 +62,9 @@ public class ExtractRequestBuilder {
     this.limit = limit;
     return this;
   }
-  
+
   public ExtractRequest build() {
-    return new ExtractRequest(subjectResource, Optional.of(columns), Optional.of(filters),
+    return ExtractRequest.fromUserInput(subjectResource, Optional.of(columns), Optional.of(filters),
         Optional.ofNullable(limit));
   }
-
 }

@@ -36,6 +36,13 @@ public class ImmutableInMemoryDataSource implements DataSource {
 
     private final Map<ResourceType, Dataset<Row>> resourceMap = new HashMap<>();
 
+    /**
+     * Registers a dataset as the source of data the specified resource type.
+     *
+     * @param resourceType the type of the resource.
+     * @param dataset the dataset to use as the source of data.
+     * @return this builder.
+     */
     @Nonnull
     public Builder withResource(@Nonnull final ResourceType resourceType,
         @Nonnull final Dataset<Row> dataset) {
@@ -43,13 +50,18 @@ public class ImmutableInMemoryDataSource implements DataSource {
       return this;
     }
 
+    /**
+     * Builds a new in-memory data source with the registered resources.
+     *
+     * @return the new {@link ImmutableInMemoryDataSource} instance.
+     */
     @Nonnull
     public ImmutableInMemoryDataSource build() {
       return new ImmutableInMemoryDataSource(resourceMap);
     }
   }
 
-  public ImmutableInMemoryDataSource(
+  private ImmutableInMemoryDataSource(
       @Nonnull final Map<ResourceType, Dataset<Row>> resourceMap) {
     this.resourceMap = new HashMap<>(resourceMap);
   }

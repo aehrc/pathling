@@ -50,9 +50,9 @@ public class ExtractFromJsonApp {
 
     final Dataset<Row> conditionResult = ExtractQuery.of(ResourceType.CONDITION)
         .withColumn("id")
-        .withColumn("code.coding.code")
-        .withColumn("code.coding.display")
-        .withColumn("subject.resolve().ofType(Patient).gender")
+        .withColumn("code.coding.code", "code")
+        .withColumn("code.coding.display", "display_name")
+        .withColumn("subject.resolve().ofType(Patient).gender", "patient_gender")
         .withLimit(10)
         .execute(pathlingClient);
 

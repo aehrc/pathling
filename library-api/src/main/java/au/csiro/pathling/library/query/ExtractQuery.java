@@ -5,10 +5,12 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.extract.ExtractRequest;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.extract.ExtractRequest.ExpressionWithLabel;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -27,7 +29,7 @@ public class ExtractQuery {
   final ResourceType subjectResource;
 
   @Nonnull
-  final List<String> columns = new ArrayList<>();
+  final List<ExpressionWithLabel> columnsWithLabels = new ArrayList<>();
 
   @Nonnull
   final List<String> filters = new ArrayList<>();
@@ -72,7 +74,7 @@ public class ExtractQuery {
    */
   @Nonnull
   public ExtractQuery withFilter(@Nonnull final String filterFhirpath) {
-    filters.add(requireNonBlank(filterFhirpath));
+    filters.add(requireNonBlank(filterFhirpath, "Filter expression cannot be blank"));
     return this;
   }
 
@@ -84,7 +86,22 @@ public class ExtractQuery {
    */
   @Nonnull
   public ExtractQuery withColumn(@Nonnull final String columnFhirpath) {
-    columns.add(requireNonBlank(columnFhirpath));
+    columnsWithLabels.add(ExpressionWithLabel.withExpressionAsLabel(columnFhirpath));
+    return this;
+  }
+
+  /**
+   * Adds a fhirpath expression that represents a column to be extract in the result with the
+   * explict label.
+   *
+   * @param columnFhirpath the column expressions.
+   * @param label the label of the column.
+   * @return this query.
+   */
+  @Nonnull
+  public ExtractQuery withColumn(@Nonnull final String columnFhirpath,
+      @Nonnull final String label) {
+    columnsWithLabels.add(ExpressionWithLabel.of(columnFhirpath, label));
     return this;
   }
 
@@ -121,18 +138,17 @@ public class ExtractQuery {
   }
 
   @Nonnull
-  private static <T> Optional<List<T>> optionalOfList(@Nonnull List<T> list) {
+  private static <T> List<T> normalizedList(@Nonnull List<T> list) {
     return list.isEmpty()
-           ? Optional.empty()
-           : Optional.of(list);
+           ? Collections.emptyList()
+           : list;
   }
 
   @Nonnull
   private ExtractRequest buildRequest() {
     return new ExtractRequest(subjectResource,
-        optionalOfList(columns),
-        optionalOfList(filters),
+        normalizedList(columnsWithLabels),
+        normalizedList(filters),
         limit);
   }
-
 }
