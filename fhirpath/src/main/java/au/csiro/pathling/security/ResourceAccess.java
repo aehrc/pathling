@@ -18,6 +18,8 @@
 package au.csiro.pathling.security;
 
 
+import lombok.Getter;
+import javax.annotation.Nonnull;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -26,8 +28,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Identifies methods that implement access to underlying Resources. Used by {@link SecurityAspect}
- * to enforce Resource access authorization.
+ * Identifies methods that implement access to underlying Resources.
  *
  * @author Piotr Szul
  */
@@ -42,5 +43,28 @@ public @interface ResourceAccess {
    *
    * @return The type of access.
    */
-  PathlingAuthority.AccessType value();
+  AccessType value();
+
+  /**
+   * Types of access.
+   */
+  @Getter
+  enum AccessType {
+    /**
+     * Read access.
+     */
+    READ("read"),
+    /**
+     * Write access (does not subsume read access).
+     */
+    WRITE("write");
+
+    @Nonnull
+    private final String code;
+
+    AccessType(@Nonnull final String code) {
+      this.code = code;
+    }
+
+  }
 }

@@ -47,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.io.DatabaseComponent;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
@@ -101,7 +102,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   // Mocking the Database bean to avoid lengthy initialization
   @SuppressWarnings("unused")
   @MockBean
-  private Database database;
+  private DatabaseComponent database;
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;

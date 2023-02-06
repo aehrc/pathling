@@ -21,6 +21,7 @@ import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
@@ -50,7 +51,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
    * executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
-   * @param database a {@link Database} for retrieving resources
+   * @param dataSource a {@link Database} for retrieving resources
    * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving terminology
    * queries
    * @param passportScope a request-scoped {@link PassportScope} that provides the filters that need
@@ -60,10 +61,10 @@ public class PassportScopeEnforcer extends QueryExecutor {
       @Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession,
-      @Nonnull final Database database,
+      @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final PassportScope passportScope) {
-    super(configuration, fhirContext, sparkSession, database, terminologyServiceFactory);
+    super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
     this.passportScope = passportScope;
   }
 

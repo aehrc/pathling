@@ -20,9 +20,7 @@ package au.csiro.pathling.security;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import java.lang.reflect.Method;
-import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
@@ -33,7 +31,7 @@ import org.springframework.util.ReflectionUtils;
 class SecurityAspectTest extends SecurityTest {
 
   @OperationAccess("test")
-  @ResourceAccess(AccessType.READ)
+  @ResourceAccess(ResourceAccess.AccessType.READ)
   @SuppressWarnings({"unused", "EmptyMethod"})
   void myOperation() {
   }

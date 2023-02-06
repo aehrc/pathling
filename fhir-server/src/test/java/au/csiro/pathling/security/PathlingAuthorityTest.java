@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import java.util.Arrays;
 import java.util.Collections;
 import javax.annotation.Nonnull;
@@ -138,7 +137,7 @@ class PathlingAuthorityTest {
   @Test
   void testResourceAccess() {
     final PathlingAuthority authority = PathlingAuthority
-        .resourceAccess(AccessType.READ, ResourceType.PATIENT);
+        .resourceAccess(ResourceAccess.AccessType.READ, ResourceType.PATIENT);
     assertEquals("pathling:read:Patient", authority.getAuthority());
     assertTrue(authority.getAction().isPresent());
     assertEquals("read", authority.getAction().get());

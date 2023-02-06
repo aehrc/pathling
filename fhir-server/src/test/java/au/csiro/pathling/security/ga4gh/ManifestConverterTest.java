@@ -100,7 +100,7 @@ class ManifestConverterTest extends AbstractParserTest {
 
   @Test
   void convertsManifest() {
-    dataSource = new Database(configuration.getStorage(), spark, fhirEncoders, executor);
+    dataSource = new Database(configuration.getStorage(), spark, fhirEncoders);
 
     final PassportScope passportScope = new PassportScope();
     final VisaManifest manifest = new VisaManifest();

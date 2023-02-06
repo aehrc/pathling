@@ -23,32 +23,17 @@ import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
-import static org.apache.spark.sql.functions.desc;
 
-import au.csiro.pathling.caching.Cacheable;
-import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.query.DataSource;
-import au.csiro.pathling.security.PathlingAuthority.AccessType;
 import au.csiro.pathling.security.ResourceAccess;
 import io.delta.tables.DeltaTable;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Row;
@@ -56,59 +41,43 @@ import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.springframework.context.annotation.Profile;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.stereotype.Component;
 
 /**
  * Used for reading and writing resource data in persistent storage.
  *
  * @author John Grimes
  */
-@Component
-@Profile("(core | import) & !ga4gh")
 @Slf4j
-public class Database implements DataSource, Cacheable {
+public class Database implements DataSource {
 
   @Nonnull
-  @Getter
-  private Optional<String> cacheKey;
+  protected final String warehouseUrl;
 
   @Nonnull
-  private final String warehouseUrl;
+  protected final String databaseName;
 
   @Nonnull
-  private final String databaseName;
-
-  @Nonnull
-  private final StorageConfiguration configuration;
+  protected final StorageConfiguration configuration;
 
   @Nonnull
   protected final SparkSession spark;
 
   @Nonnull
   protected final FhirEncoders fhirEncoders;
-
-  @Nonnull
-  protected final ThreadPoolTaskExecutor executor;
-
+  
   /**
    * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
    * database
    * @param spark a {@link SparkSession} for interacting with Spark
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
-   * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
    */
   public Database(@Nonnull final StorageConfiguration configuration,
-      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final ThreadPoolTaskExecutor executor) {
+      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
     this.configuration = configuration;
     this.spark = spark;
     this.warehouseUrl = convertS3ToS3aUrl(configuration.getWarehouseUrl());
     this.databaseName = configuration.getDatabaseName();
     this.fhirEncoders = fhirEncoders;
-    this.executor = executor;
-    cacheKey = buildCacheKeyFromDatabase();
   }
 
   /**
@@ -117,7 +86,7 @@ public class Database implements DataSource, Cacheable {
    * @param resourceType the desired {@link ResourceType}
    * @return a {@link Dataset} containing the raw resource, i.e. NOT wrapped in a value column
    */
-  @ResourceAccess(AccessType.READ)
+  @ResourceAccess(ResourceAccess.AccessType.READ)
   @Nonnull
   public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
     return attemptDeltaLoad(resourceType)
@@ -133,7 +102,7 @@ public class Database implements DataSource, Cacheable {
    * @param resourceType the type of the resource to write
    * @param resources the {@link Dataset} containing the resource data
    */
-  @ResourceAccess(AccessType.WRITE)
+  @ResourceAccess(ResourceAccess.AccessType.WRITE)
   public void overwrite(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
     write(resourceType, resources);
@@ -145,7 +114,7 @@ public class Database implements DataSource, Cacheable {
    * @param resourceType the type of resource to write
    * @param resource the new or updated resource
    */
-  @ResourceAccess(AccessType.WRITE)
+  @ResourceAccess(ResourceAccess.AccessType.WRITE)
   public void merge(@Nonnull final ResourceType resourceType,
       @Nonnull final IBaseResource resource) {
     merge(resourceType, List.of(resource));
@@ -157,7 +126,7 @@ public class Database implements DataSource, Cacheable {
    * @param resourceType the type of resource to write
    * @param resources a list containing the new or updated resource data
    */
-  @ResourceAccess(AccessType.WRITE)
+  @ResourceAccess(ResourceAccess.AccessType.WRITE)
   public void merge(@Nonnull final ResourceType resourceType,
       @Nonnull final List<IBaseResource> resources) {
     final Encoder<IBaseResource> encoder = fhirEncoders.of(resourceType.toCode());
@@ -171,7 +140,7 @@ public class Database implements DataSource, Cacheable {
    * @param resourceType the type of resource to write
    * @param updates a {@link Dataset} containing the new or updated resource data
    */
-  @ResourceAccess(AccessType.WRITE)
+  @ResourceAccess(ResourceAccess.AccessType.WRITE)
   public void merge(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> updates) {
     final DeltaTable original = readDelta(resourceType);
@@ -186,9 +155,7 @@ public class Database implements DataSource, Cacheable {
         .insertAll()
         .execute();
 
-    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
-    invalidateCache(tableUrl);
-    compact(resourceType, original);
+    onDataChange(resourceType, Optional.empty());
   }
 
   /**
@@ -211,11 +178,6 @@ public class Database implements DataSource, Cacheable {
     checkUserInput(resource.getIdElement().getIdPart().equals(id),
         "Resource ID missing or does not match supplied ID");
     return resource;
-  }
-
-  @Override
-  public boolean cacheKeyMatches(@Nonnull final String otherKey) {
-    return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
   }
 
   /**
@@ -249,7 +211,7 @@ public class Database implements DataSource, Cacheable {
    * Loads a Delta table that we already know exists.
    */
   @Nonnull
-  private DeltaTable getDeltaTable(final @Nonnull ResourceType resourceType,
+  DeltaTable getDeltaTable(final @Nonnull ResourceType resourceType,
       final String tableUrl) {
     log.info("Loading resource {} from: {}", resourceType.toCode(), tableUrl);
     @Nullable final DeltaTable resources = DeltaTable.forPath(spark, tableUrl);
@@ -281,8 +243,7 @@ public class Database implements DataSource, Cacheable {
         // See: https://docs.delta.io/latest/delta-batch.html#replace-table-schema
         .option("overwriteSchema", "true")
         .save(tableUrl);
-
-    invalidateCache(tableUrl);
+    onDataChange(resourceType, Optional.of(tableUrl));
   }
 
   @Nonnull
@@ -296,138 +257,15 @@ public class Database implements DataSource, Cacheable {
   }
 
   /**
-   * Compacts the table if it has a number of partitions that exceed the configured threshold.
+   * Callback method called when the data for a resourced have been updated (either with merge or
+   * write). Subclasses can override to add extra functionality required on data updates.
    *
-   * @param resourceType the resource type of the table to compact
-   * @param table the Delta table for which to check the number of partitions
-   * @see <a href="https://docs.delta.io/latest/best-practices.html#compact-files">Delta Lake
-   * Documentation - Compact files</a>
+   * @param resourceType the type of the resource for which the data has changed.
+   * @param maybeTableUrl optionally the URL to the table for this resource (if known).
    */
-  private void compact(final @Nonnull ResourceType resourceType, final DeltaTable table) {
-    final int threshold = configuration.getCompactionThreshold();
-    final int numPartitions = table.toDF().rdd().getNumPartitions();
-    if (numPartitions > threshold) {
-      final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
-      log.debug("Scheduling table compaction (number of partitions: {}, threshold: {}): {}",
-          numPartitions,
-          threshold, tableUrl);
-      executor.submit(() -> {
-        log.debug("Commencing compaction: {}", tableUrl);
-        read(resourceType)
-            .repartition()
-            .write()
-            .option("dataChange", "false")
-            .format("delta")
-            .mode(SaveMode.Overwrite)
-            .save(tableUrl);
-        log.debug("Compaction complete: {}", tableUrl);
-      });
-    } else {
-      log.debug("Compaction not needed (number of partitions: {}, threshold: {})", numPartitions,
-          threshold);
-    }
-  }
-
-  private void invalidateCache(final String tableUrl) {
-    executor.execute(() -> {
-      cacheKey = buildCacheKeyFromTable(tableUrl);
-      spark.sqlContext().clearCache();
-    });
-  }
-
-  private Optional<String> buildCacheKeyFromDatabase() {
-    return latestUpdateToDatabase().map(this::cacheKeyFromTimestamp);
-  }
-
-  /**
-   * Checks the warehouse location and gets the latest snapshot timestamp found within all the
-   * tables.
-   */
-  private Optional<Long> latestUpdateToDatabase() {
-    final String databasePath = warehouseUrl + "/" + databaseName;
-    log.info("Querying latest snapshot from database: {}", databasePath);
-
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-        .hadoopConfiguration();
-    requireNonNull(hadoopConfiguration);
-    @Nullable final FileSystem warehouse;
-    try {
-      warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
-    } catch (final IOException | URISyntaxException e) {
-      log.debug("Unable to access warehouse location, returning empty snapshot time: {}",
-          warehouseUrl);
-      return Optional.empty();
-    }
-    requireNonNull(warehouse);
-
-    // Check that the database path exists.
-    try {
-      warehouse.exists(new Path(databasePath));
-    } catch (final IOException e) {
-      log.debug("Unable to access database location, returning empty snapshot time: {}",
-          databasePath);
-      return Optional.empty();
-    }
-
-    // Find all the Parquet files within the warehouse and use them to create a set of resource
-    // types.
-    @Nullable final FileStatus[] fileStatuses;
-    try {
-      fileStatuses = warehouse.listStatus(new Path(databasePath));
-    } catch (final IOException e) {
-      log.debug("Unable to access database location, returning empty snapshot time: {}",
-          databasePath);
-      return Optional.empty();
-    }
-    requireNonNull(fileStatuses);
-
-    final List<Long> timestamps = Arrays.stream(fileStatuses)
-        // Get the filename of each item in the directory listing.
-        .map(fileStatus -> {
-          @Nullable final Path path = fileStatus.getPath();
-          requireNonNull(path);
-          return path.toString();
-        })
-        // Filter out any file names that don't match the pattern.
-        .filter(path -> path.matches("^[^.]+\\.parquet$"))
-        // Filter out anything that is not a Delta table.
-        .filter(path -> DeltaTable.isDeltaTable(spark, path))
-        // Get the latest history entry for each Delta table.
-        .map(this::latestUpdateToTable)
-        // Filter out any tables which don't have history rows.
-        .filter(Optional::isPresent)
-        // Get the timestamp from the history row.
-        .map(Optional::get)
-        .collect(Collectors.toList());
-
-    return timestamps.isEmpty()
-           ? Optional.empty()
-           : Optional.ofNullable(Collections.max(timestamps));
-  }
-
-  @Nonnull
-  private Optional<String> buildCacheKeyFromTable(@Nonnull final String path) {
-    return latestUpdateToTable(path).map(this::cacheKeyFromTimestamp);
-  }
-
-  @Nonnull
-  private Optional<Long> latestUpdateToTable(@Nonnull final String path) {
-    log.debug("Querying latest snapshot for table: {}", path);
-    final DeltaTable deltaTable = DeltaTable.forPath(spark, path);
-    @SuppressWarnings("RedundantCast") final Row[] head = (Row[]) deltaTable.history()
-        .orderBy(desc("version"))
-        .select("timestamp")
-        .head(1);
-    if (head.length != 1) {
-      return Optional.empty();
-    } else {
-      return Optional.of(head[0].getTimestamp(0).getTime());
-    }
-  }
-
-  @Nonnull
-  private String cacheKeyFromTimestamp(@Nonnull final Long timestamp) {
-    return Long.toString(timestamp, Character.MAX_RADIX);
+  protected void onDataChange(@Nonnull final ResourceType resourceType,
+      @Nonnull final Optional<String> maybeTableUrl) {
+    // do nothing here
   }
 
 }

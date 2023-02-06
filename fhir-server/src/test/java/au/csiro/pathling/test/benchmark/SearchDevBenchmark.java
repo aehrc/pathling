@@ -93,9 +93,8 @@ public class SearchDevBenchmark {
     @Bean
     @ConditionalOnMissingBean
     public static Database database(@Nonnull final ServerConfiguration configuration,
-        @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
-        @Nonnull final ThreadPoolTaskExecutor executor) {
-      return new Database(configuration.getStorage(), spark, fhirEncoders, executor);
+        @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
+      return new Database(configuration.getStorage(), spark, fhirEncoders);
     }
 
     public List<IBaseResource> execute(@Nonnull final Optional<StringAndListParam> filters) {

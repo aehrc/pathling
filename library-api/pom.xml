@@ -52,6 +52,11 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-core_${pathling.sparkScalaVersion}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
     </dependency>
@@ -105,11 +110,6 @@
     <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.delta</groupId>
-      <artifactId>delta-core_${pathling.sparkScalaVersion}</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
