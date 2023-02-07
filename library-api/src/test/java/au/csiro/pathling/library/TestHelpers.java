@@ -29,6 +29,9 @@ public class TestHelpers {
         .appName("testing")
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         .getOrCreate();
   }
 

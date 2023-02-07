@@ -1,11 +1,17 @@
 package au.csiro.pathling.library.query;
 
-import au.csiro.pathling.config.QueryConfiguration;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.withSettings;
+
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -13,44 +19,28 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.withSettings;
+abstract public class BasePathlingClientTest {
 
-public class PathlingClientTest {
-
-  private static final Path FHIR_JSON_DATA_PATH = Path.of(
+  protected static final Path FHIR_JSON_DATA_PATH = Path.of(
       "../fhir-server/src/test/resources/test-data/fhir").toAbsolutePath();
-  private static SparkSession spark;
-  private static PathlingClient pathlingClient;
+  protected static PathlingContext pathlingCtx;
+  protected static SparkSession spark;
+
+  protected static PathlingClient pathlingClient;
 
   /**
    * Set up Spark.
    */
   @BeforeAll
-  public static void setUpAll() {
+  public static void setupContext() {
     spark = TestHelpers.spark();
 
     final TerminologyServiceFactory terminologyServiceFactory = mock(
         TerminologyServiceFactory.class, withSettings().serializable());
 
-    final PathlingContext ptc = PathlingContext.create(spark, FhirEncoders.forR4().getOrCreate(),
+    pathlingCtx = PathlingContext.create(spark, FhirEncoders.forR4().getOrCreate(),
         terminologyServiceFactory);
-
-    final Dataset<Row> patientJsonDf = spark.read()
-        .text(FHIR_JSON_DATA_PATH.resolve("Patient.ndjson").toString());
-    final Dataset<Row> conditionJsonDf = spark.read()
-        .text(FHIR_JSON_DATA_PATH.resolve("Condition.ndjson").toString());
-
-    pathlingClient = ptc.newClientBuilder()
-        .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
-        .withResource(ResourceType.PATIENT, ptc.encode(patientJsonDf, "Patient").cache())
-        .withResource(ResourceType.CONDITION, ptc.encode(conditionJsonDf, "Condition").cache())
-        .build();
   }
 
   /**

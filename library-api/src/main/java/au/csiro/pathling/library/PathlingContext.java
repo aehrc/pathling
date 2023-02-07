@@ -69,6 +69,7 @@ public class PathlingContext {
   private final FhirVersionEnum fhirVersion;
 
   @Nonnull
+  @Getter
   private final FhirEncoders fhirEncoders;
 
   @Nonnull

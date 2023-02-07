@@ -1,12 +1,12 @@
 package au.csiro.pathling.library.query;
 
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.extract.ExtractQueryExecutor;
 import au.csiro.pathling.extract.ExtractRequest;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.DataSource;
-import au.csiro.pathling.query.ImmutableInMemoryDataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
@@ -17,7 +17,6 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-
 
 /**
  * The class representing a client that can execute complex queries such as extract or aggregate on
@@ -41,74 +40,58 @@ public class PathlingClient {
   @Nonnull
   Optional<TerminologyServiceFactory> terminologyClientFactory;
 
-  public static class Builder {
-
-    @Nonnull
-    final FhirContext fhirContext;
-    @Nonnull
-    final SparkSession sparkSession;
-    @Nonnull
-    final TerminologyServiceFactory terminologyClientFactory;
-
-    @Nonnull
-    QueryConfiguration queryConfiguration = QueryConfiguration.builder().build();
+  /**
+   * A builder of {@link PathlingClient} that allows for explicit assignment of the underlying
+   * {@link DataSource}.
+   */
+  public static class Builder extends AbstractClientBuilder<Builder> {
 
     @Nullable
-    ImmutableInMemoryDataSource.Builder inMemoryDataSourceBuilder;
+    private DataSource dataSource;
 
-    @Nullable
-    StorageConfiguration storageConfiguration;
-
-    private Builder(@Nonnull final FhirContext fhirContext,
-        @Nonnull final SparkSession sparkSession,
-        @Nonnull final TerminologyServiceFactory terminologyClientFactory) {
-      this.fhirContext = fhirContext;
-      this.sparkSession = sparkSession;
-      this.terminologyClientFactory = terminologyClientFactory;
+    protected Builder(@Nonnull final PathlingContext pathlingContext) {
+      super(pathlingContext);
     }
 
     @Nonnull
-    public Builder withQueryConfiguration(@Nonnull final QueryConfiguration queryConfiguration) {
-      this.queryConfiguration = queryConfiguration;
+    @Override
+    protected DataSource buildDataSource() {
+      return requireNonNull(dataSource);
+    }
+
+    /**
+     * Switches to an in-memory client builder.
+     *
+     * @return in-memory client builder.
+     */
+    @Nonnull
+    public InMemoryClientBuilder inMemory() {
+      return new InMemoryClientBuilder(pathlingContext).withQueryConfiguration(queryConfiguration);
+    }
+
+    /**
+     * Switches to a database client builder.
+     *
+     * @return the database  client builder.
+     */
+    @Nonnull
+    public DatabaseClientBuilder database() {
+      return new DatabaseClientBuilder(pathlingContext).withQueryConfiguration(queryConfiguration);
+    }
+
+    /**
+     * Sets the {@link DataSource} the client should be using.
+     *
+     * @param dataSource the data source.
+     * @return this builder.
+     */
+    @Nonnull
+    public Builder withDataSource(@Nonnull final DataSource dataSource) {
+      this.dataSource = dataSource;
       return this;
-    }
-
-    @Nonnull
-    public Builder withResource(@Nonnull final ResourceType resourceType,
-        @Nonnull final Dataset<Row> dataset) {
-      getInMemoryDataSourceBuilder().withResource(resourceType, dataset);
-      return this;
-    }
-
-    @Nonnull
-    public PathlingClient build() {
-      return new PathlingClient(fhirContext, sparkSession, buildDataSource(), queryConfiguration,
-          Optional.of(terminologyClientFactory));
-    }
-
-    @Nonnull
-    public ExtractQuery buildExtractQuery(@Nonnull final ResourceType resourceType) {
-      return this.build().newExtractQuery(resourceType);
-    }
-
-    @Nonnull
-    private DataSource buildDataSource() {
-      if (inMemoryDataSourceBuilder != null) {
-        return inMemoryDataSourceBuilder.build();
-      } else {
-        throw new IllegalStateException("DataSource has not been defined");
-      }
-    }
-
-    @Nonnull
-    private ImmutableInMemoryDataSource.Builder getInMemoryDataSourceBuilder() {
-      if (inMemoryDataSourceBuilder == null) {
-        inMemoryDataSourceBuilder = new ImmutableInMemoryDataSource.Builder();
-      }
-      return inMemoryDataSourceBuilder;
     }
   }
-  
+
   /**
    * Creates a new extract query bound to this client with given subject resource type.
    *
@@ -119,16 +102,16 @@ public class PathlingClient {
   public ExtractQuery newExtractQuery(@Nonnull final ResourceType subjectResourceType) {
     return ExtractQuery.of(subjectResourceType).withClient(this);
   }
-  
+
   /**
    * Creates a builder for pathling client.
+   *
    * @param pathlingContext the context to build the client for.
    * @return the new instance of the pathling client builder.
    */
   @Nonnull
   public static Builder builder(@Nonnull final PathlingContext pathlingContext) {
-    return new Builder(pathlingContext.getFhirContext(), pathlingContext.getSpark(),
-        pathlingContext.getTerminologyServiceFactory());
+    return new Builder(pathlingContext);
   }
 
   @Nonnull

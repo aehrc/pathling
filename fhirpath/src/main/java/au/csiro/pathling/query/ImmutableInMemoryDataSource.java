@@ -36,6 +36,10 @@ public class ImmutableInMemoryDataSource implements DataSource {
 
     private final Map<ResourceType, Dataset<Row>> resourceMap = new HashMap<>();
 
+    private Builder() {
+      // noop
+    }
+
     /**
      * Registers a dataset as the source of data the specified resource type.
      *
@@ -74,4 +78,15 @@ public class ImmutableInMemoryDataSource implements DataSource {
           String.format("Cannot find data for resource of type: %s", key));
     });
   }
+
+  /**
+   * Creates the new builder instance.
+   *
+   * @return new builder instance.
+   */
+  @Nonnull
+  public static Builder builder() {
+    return new Builder();
+  }
+
 }

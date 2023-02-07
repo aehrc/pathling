@@ -1,21 +1,24 @@
 package au.csiro.pathling.examples;
 
 import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.query.ExtractQuery;
 import au.csiro.pathling.library.query.PathlingClient;
-import java.nio.file.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import java.nio.file.Path;
 
-public class ExtractFromJsonApp {
+public class ExtractFromDatabaseApp {
+
 
   public static void main(String[] args) {
 
-    final Path fhirData = Path.of("fhir-server/src/test/resources/test-data/fhir").toAbsolutePath();
-    System.out.printf("JSON Data: %s\n", fhirData);
+    final String warehouseUrl = Path.of("fhir-server/src/test/resources/test-data").toAbsolutePath()
+        .toUri().toString();
+    System.out.printf("Warehouse URL: %s\n", warehouseUrl);
 
     final SparkSession spark = SparkSession.builder()
         .appName(ExtractFromJsonApp.class.getName())
@@ -25,18 +28,12 @@ public class ExtractFromJsonApp {
             "org.apache.spark.sql.delta.catalog.DeltaCatalog")
         .getOrCreate();
 
-    final Dataset<Row> patientJsonDf = spark.read()
-        .text(fhirData.resolve("Patient.ndjson").toString());
-    final Dataset<Row> conditionJsonDf = spark.read()
-        .text(fhirData.resolve("Condition.ndjson").toString());
-
     final PathlingContext ptc = PathlingContext.create(spark);
 
     final PathlingClient pathlingClient = ptc.newClientBuilder()
-        .inMemory()
+        .database()
         .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
-        .withResource(ResourceType.PATIENT, ptc.encode(patientJsonDf, "Patient").cache())
-        .withResource(ResourceType.CONDITION, ptc.encode(conditionJsonDf, "Condition").cache())
+        .withStorageConfiguration(StorageConfiguration.forDatabase(warehouseUrl, "parquet"))
         .build();
 
     final Dataset<Row> patientResult = pathlingClient.newExtractQuery(ResourceType.PATIENT)
