@@ -43,8 +43,17 @@
       <artifactId>terminology</artifactId>
     </dependency>
     <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhirpath</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-core_${pathling.sparkScalaVersion}</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -76,6 +85,13 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>fhirpath</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>

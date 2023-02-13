@@ -18,9 +18,10 @@
 package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
@@ -46,24 +47,24 @@ public class PassportScopeEnforcer extends QueryExecutor {
   private final PassportScope passportScope;
 
   /**
-   * @param configuration a {@link ServerConfiguration} object to control the behaviour of the
+   * @param configuration a {@link QueryConfiguration} object to control the behaviour of the
    * executor
    * @param fhirContext a {@link FhirContext} for doing FHIR stuff
    * @param sparkSession a {@link SparkSession} for resolving Spark queries
-   * @param database a {@link Database} for retrieving resources
+   * @param dataSource a {@link Database} for retrieving resources
    * @param terminologyServiceFactory a {@link TerminologyServiceFactory} for resolving terminology
    * queries
    * @param passportScope a request-scoped {@link PassportScope} that provides the filters that need
    * to be applied
    */
   public PassportScopeEnforcer(
-      @Nonnull final ServerConfiguration configuration,
+      @Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession,
-      @Nonnull final Database database,
+      @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final PassportScope passportScope) {
-    super(configuration, fhirContext, sparkSession, database, terminologyServiceFactory);
+    super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
     this.passportScope = passportScope;
   }
 
@@ -83,7 +84,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
 
       // Build a new expression parser, and parse all the column expressions within the query.
       final ResourcePath inputContext = ResourcePath
-          .build(getFhirContext(), getDatabase(), subjectResource,
+          .build(getFhirContext(), getDataSource(), subjectResource,
               subjectResource.toCode(), true);
 
       return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);

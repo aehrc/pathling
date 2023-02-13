@@ -789,12 +789,12 @@ public class ParserTest extends AbstractParserTest {
   @SuppressWarnings("SameParameterValue")
   private void setSubjectResource(@Nonnull final ResourceType resourceType) {
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, resourceType, resourceType.toCode(),
+        .build(fhirContext, dataSource, resourceType, resourceType.toCode(),
             true);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
+        .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();

@@ -29,11 +29,11 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
   @Test
   void lengthOfEncounter() {
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
+        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
             true);
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
+        .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
@@ -48,11 +48,11 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
   @Test
   void ageAtTimeOfEncounter() {
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
+        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
             true);
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
+        .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();

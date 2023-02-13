@@ -25,6 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.security.ResourceAccess.AccessType;
 import lombok.Getter;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -131,37 +132,14 @@ public class PathlingAuthority {
     } else {
       final Optional<String> action = Optional.ofNullable(matcher.group(1));
       final Optional<String> subject = Optional.ofNullable(matcher.group(2));
-      final List<String> accessCodes = Arrays.stream(AccessType.values())
-          .map(AccessType::getCode)
+      final List<String> accessCodes = Arrays.stream(ResourceAccess.AccessType.values())
+          .map(ResourceAccess.AccessType::getCode)
           .collect(Collectors.toList());
       if (action.isPresent() && !accessCodes.contains(action.get()) && subject.isPresent()) {
         throw new IllegalArgumentException("Subject not supported for action: " + action);
       }
       return new Permission(action, subject);
     }
-  }
-
-  /**
-   * Types of access.
-   */
-  @Getter
-  public enum AccessType {
-    /**
-     * Read access.
-     */
-    READ("read"),
-    /**
-     * Write access (does not subsume read access).
-     */
-    WRITE("write");
-
-    @Nonnull
-    private final String code;
-
-    AccessType(@Nonnull final String code) {
-      this.code = code;
-    }
-
   }
 
   @Value

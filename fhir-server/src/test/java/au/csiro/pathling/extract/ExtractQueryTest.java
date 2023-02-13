@@ -18,24 +18,28 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.ResultWriter;
+import au.csiro.pathling.extract.ExtractRequest.ExpressionWithLabel;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.helpers.TestHelpers;
+import au.csiro.pathling.utilities.Strings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -45,19 +49,18 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 @Tag("Tranche1")
 @ExtendWith(TimingExtension.class)
 class ExtractQueryTest {
 
   @Autowired
-  ServerConfiguration configuration;
+  QueryConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;
@@ -74,36 +77,40 @@ class ExtractQueryTest {
   @Autowired
   FhirEncoders fhirEncoders;
 
+  @MockBean
+  DataSource dataSource;
+
+
   ResourceType subjectResource;
 
-  Database database;
 
-  ExtractExecutor executor;
+  ExtractQueryExecutor executor;
 
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    database = mock(Database.class);
-    final ResultWriter resultWriter = mock(ResultWriter.class);
-    final ResultRegistry resultRegistry = mock(ResultRegistry.class);
-    executor = new ExtractExecutor(configuration, fhirContext, spark, database,
-        Optional.ofNullable(terminologyServiceFactory), resultWriter, resultRegistry);
+    executor = new ExtractQueryExecutor(configuration, fhirContext, spark, dataSource,
+        Optional.ofNullable(terminologyServiceFactory));
   }
 
   @Test
-  void simpleQuery() {
+  void simpleQueryWithAliases() {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
 
-    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
-        .withColumn("id")
-        .withColumn("gender")
-        .withColumn("name.given.first()")
-        .withColumn("reverseResolve(Condition.subject).count()")
-        .withFilter("gender = 'female'")
-        .build();
-
+    final ExtractRequest request = new ExtractRequest(subjectResource,
+        List.of(
+            ExpressionWithLabel.withExpressionAsLabel("id"),
+            ExpressionWithLabel.withExpressionAsLabel("gender"),
+            ExpressionWithLabel.of("name.given.first()", "given_name"),
+            ExpressionWithLabel.of("reverseResolve(Condition.subject).count()", "patient_count")
+        ),
+        List.of("gender = 'female'"),
+        Optional.empty()
+    );
     final Dataset<Row> result = executor.buildQuery(request);
+    assertArrayEquals(new String[]{"id", "gender", "given_name", "patient_count"},
+        result.columns());
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/simpleQuery.csv");
   }
@@ -121,6 +128,8 @@ class ExtractQueryTest {
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request);
+
+    assertTrue(Stream.of(result.columns()).allMatch(Strings::looksLikeAlias));
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multipleResolves.csv");
   }
@@ -364,7 +373,7 @@ class ExtractQueryTest {
   }
 
   void mockResource(final ResourceType... resourceTypes) {
-    TestHelpers.mockResource(database, spark, resourceTypes);
+    TestHelpers.mockResource(dataSource, spark, resourceTypes);
   }
 
 }

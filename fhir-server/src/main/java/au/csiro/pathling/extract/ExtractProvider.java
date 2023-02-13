@@ -112,11 +112,11 @@ public class ExtractProvider implements IResourceProvider {
                             ? requestId
                             : UUID.randomUUID().toString();
 
-    final ExtractRequest query = new ExtractRequest(resourceType, Optional.ofNullable(column),
-        Optional.ofNullable(filter), Optional.ofNullable(limit).map(IntegerType::getValue),
-        resultId);
+    final ExtractRequest query = ExtractRequest.fromUserInput(resourceType,
+        Optional.ofNullable(column),
+        Optional.ofNullable(filter), Optional.ofNullable(limit).map(IntegerType::getValue));
     final ExtractResponse result = extractExecutor.execute(query,
-        requestDetails.getFhirServerBase());
+        requestDetails.getFhirServerBase(), resultId);
 
     return result.toParameters();
   }

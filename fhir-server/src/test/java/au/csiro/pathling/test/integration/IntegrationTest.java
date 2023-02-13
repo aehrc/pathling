@@ -24,6 +24,7 @@ import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
  * @author John Grimes
@@ -31,6 +32,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
+@ActiveProfiles({"core","server","integration-test"})
 public abstract class IntegrationTest {
 
   @BeforeAll

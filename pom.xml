@@ -99,6 +99,7 @@
     <module>encoders</module>
     <module>library-api</module>
     <module>terminology</module>
+    <module>fhirpath</module>
     <module>fhir-server</module>
     <module>lib/import</module>
     <module>lib/js</module>
@@ -146,6 +147,23 @@
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>terminology</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhirpath</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhirpath</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>fhirpath</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
       </dependency>

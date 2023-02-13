@@ -19,7 +19,9 @@ package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.DatabaseComponent;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
@@ -42,7 +44,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("core & ga4gh")
 @Slf4j
-public class ScopeAwareDatabase extends Database {
+public class ScopeAwareDatabase extends DatabaseComponent {
 
   @Nonnull
   private final ServerConfiguration configuration;
@@ -75,7 +77,7 @@ public class ScopeAwareDatabase extends Database {
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final Optional<PassportScope> passportScope,
       @Nonnull final ThreadPoolTaskExecutor executor) {
-    super(configuration, spark, fhirEncoders, executor);
+    super(configuration.getStorage(), spark, fhirEncoders, executor);
     log.debug("Initializing passport scope-aware resource reader");
 
     this.configuration = configuration;
@@ -96,12 +98,13 @@ public class ScopeAwareDatabase extends Database {
         .map(scope -> {
           // We need to create a non-scope-aware reader here for the parsing of the filters, so that
           // we don't have recursive application of the filters.
-          final Database database = new Database(configuration, spark, fhirEncoders, executor);
-          final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(configuration,
-              fhirContext, spark, database, terminologyServiceFactory, scope);
+          final DataSource dataSource = new Database(configuration.getStorage(), spark,
+              fhirEncoders);
+          final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(
+              configuration.getQuery(),
+              fhirContext, spark, dataSource, terminologyServiceFactory, scope);
           return scopeEnforcer.enforce(resourceType, resources);
         })
         .orElse(resources);
   }
-
 }

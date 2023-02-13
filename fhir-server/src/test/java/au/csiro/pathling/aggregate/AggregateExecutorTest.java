@@ -22,13 +22,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -44,15 +45,13 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 /**
  * @author John Grimes
  */
-@SpringBootTest
-@Tag("UnitTest")
+@SpringBootUnitTest
 abstract class AggregateExecutorTest {
 
   @Autowired
@@ -65,7 +64,7 @@ abstract class AggregateExecutorTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  ServerConfiguration configuration;
+  QueryConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;
@@ -76,15 +75,16 @@ abstract class AggregateExecutorTest {
   @Autowired
   FhirEncoders fhirEncoders;
 
+  @MockBean
+  Database database;
+  
   AggregateExecutor executor;
   ResourceType subjectResource;
-  Database database;
   AggregateResponse response = null;
 
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    database = mock(Database.class);
     executor = new AggregateExecutor(configuration, fhirContext, spark, database,
         Optional.of(terminologyServiceFactory));
   }
