@@ -17,14 +17,13 @@
 
 package au.csiro.pathling.extract;
 
+import static au.csiro.pathling.utilities.Lists.normalizeEmpty;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
 import static java.util.Objects.nonNull;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -82,22 +81,6 @@ public class ExtractRequest {
   @Nonnull
   Optional<Integer> limit;
 
-  /**
-   * @param subjectResource the resource which will serve as the input context for each expression
-   * @param columnsWithLabels a set of columns expressions to execute over the data
-   * @param filters the criteria by which the data should be filtered
-   * @param limit the maximum number of rows to return
-   */
-  public ExtractRequest(@Nonnull final ResourceType subjectResource,
-      @Nonnull final List<ExpressionWithLabel> columnsWithLabels,
-      @Nonnull final List<String> filters,
-      @Nonnull final Optional<Integer> limit) {
-    this.limit = limit;
-    this.subjectResource = subjectResource;
-    this.columnsWithLabels = columnsWithLabels;
-    this.filters = filters;
-  }
-
   @Nonnull
   public List<String> getColumns() {
     return columnsWithLabels.stream().map(ExpressionWithLabel::getExpression)
@@ -131,6 +114,6 @@ public class ExtractRequest {
     return new ExtractRequest(subjectResource,
         checkPresent(columns).stream().map(ExpressionWithLabel::withNoLabel)
             .collect(Collectors.toUnmodifiableList()),
-        filters.orElse(Collections.emptyList()), limit);
+        normalizeEmpty(filters), limit);
   }
 }

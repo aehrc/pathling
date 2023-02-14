@@ -28,11 +28,13 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import com.google.common.collect.Streams;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
+@Slf4j
 public class ExtractQueryExecutor extends QueryExecutor {
 
   public ExtractQueryExecutor(QueryConfiguration configuration, FhirContext fhirContext,
@@ -79,7 +81,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final Column[] columnValues = Streams.zip(
             columns.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
             query.getLabels().stream(),
-            (column, maybeLabel) -> (maybeLabel.map(label -> column.alias(label)).orElse(column)))
+            (column, maybeLabel) -> (maybeLabel.map(column::alias).orElse(column)))
         .toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
         .filter(idColumn.isNotNull());

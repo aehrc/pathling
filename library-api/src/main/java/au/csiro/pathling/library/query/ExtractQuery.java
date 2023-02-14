@@ -1,16 +1,29 @@
+/*
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *  
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *  
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *  
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.library.query;
 
-import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
-import static java.util.Objects.requireNonNull;
-
 import au.csiro.pathling.extract.ExtractRequest;
+import au.csiro.pathling.extract.ExtractRequest.ExpressionWithLabel;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import au.csiro.pathling.extract.ExtractRequest.ExpressionWithLabel;
+import au.csiro.pathling.utilities.Lists;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -20,25 +33,16 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author Piotr Szul
  */
-public class ExtractQuery {
-
-  @Nullable
-  private PathlingClient pathlingClient = null;
-
-  @Nonnull
-  final ResourceType subjectResource;
+public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
 
   @Nonnull
   final List<ExpressionWithLabel> columnsWithLabels = new ArrayList<>();
 
   @Nonnull
-  final List<String> filters = new ArrayList<>();
-
-  @Nonnull
   Optional<Integer> limit = Optional.empty();
 
   private ExtractQuery(@Nonnull final ResourceType subjectResource) {
-    this.subjectResource = subjectResource;
+    super(subjectResource);
   }
 
   /**
@@ -53,6 +57,12 @@ public class ExtractQuery {
     return this;
   }
 
+  @Nonnull
+  @Override
+  protected Dataset<Row> doExecute(@Nonnull final PathlingClient pathlingClient) {
+    return pathlingClient.execute(buildRequest());
+  }
+
   /**
    * Sets the limit on the number of rows returned in the extract result.
    *
@@ -62,19 +72,6 @@ public class ExtractQuery {
   @Nonnull
   public ExtractQuery withLimit(int limit) {
     this.limit = Optional.of(limit);
-    return this;
-  }
-
-  /**
-   * Adds a fhirpath filter expression to the query. The extract query result only include rows for
-   * resources that match ALL the filters.
-   *
-   * @param filterFhirpath the filter expression to add.
-   * @return this query.
-   */
-  @Nonnull
-  public ExtractQuery withFilter(@Nonnull final String filterFhirpath) {
-    filters.add(requireNonBlank(filterFhirpath, "Filter expression cannot be blank"));
     return this;
   }
 
@@ -106,27 +103,6 @@ public class ExtractQuery {
   }
 
   /**
-   * Executes the query on the bound client.
-   *
-   * @return the dataset with the result of the query.
-   */
-  @Nonnull
-  public Dataset<Row> execute() {
-    return requireNonNull(this.pathlingClient).execute(buildRequest());
-  }
-
-  /**
-   * Executes the query on the given client.
-   *
-   * @param pathlingClient the client to execute the query against.
-   * @return the dataset with the result of the query.
-   */
-  @Nonnull
-  public Dataset<Row> execute(@Nonnull final PathlingClient pathlingClient) {
-    return pathlingClient.execute(buildRequest());
-  }
-
-  /**
    * Construct a new extract query instance for the given subject resource type.
    *
    * @param subjectResourceType the type of the subject resource.
@@ -138,17 +114,10 @@ public class ExtractQuery {
   }
 
   @Nonnull
-  private static <T> List<T> normalizedList(@Nonnull List<T> list) {
-    return list.isEmpty()
-           ? Collections.emptyList()
-           : list;
-  }
-
-  @Nonnull
   private ExtractRequest buildRequest() {
     return new ExtractRequest(subjectResource,
-        normalizedList(columnsWithLabels),
-        normalizedList(filters),
+        Lists.normalizeEmpty(columnsWithLabels),
+        Lists.normalizeEmpty(filters),
         limit);
   }
 }

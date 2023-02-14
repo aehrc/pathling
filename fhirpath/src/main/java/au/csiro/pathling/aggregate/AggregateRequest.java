@@ -19,10 +19,10 @@ package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.utilities.Lists;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -46,13 +46,17 @@ public class AggregateRequest {
   @Nonnull
   List<String> filters;
 
+
   /**
+   * Constructs the instance of {@code AggregateRequest} from user input, performing necessary
+   * validations.
+   *
    * @param subjectResource The resource which will serve as the input context for each expression
    * @param aggregations A set of aggregation expressions to execute over the data
    * @param groupings Instructions on how the data should be grouped when aggregating
    * @param filters The criteria by which the data should be filtered
    */
-  public AggregateRequest(@Nonnull final ResourceType subjectResource,
+  public static AggregateRequest fromUserInput(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<List<String>> aggregations,
       @Nonnull final Optional<List<String>> groupings,
       @Nonnull final Optional<List<String>> filters) {
@@ -64,10 +68,8 @@ public class AggregateRequest {
         "Grouping expression cannot be blank"));
     filters.ifPresent(f -> checkUserInput(f.stream().noneMatch(String::isBlank),
         "Filter expression cannot be blank"));
-    this.subjectResource = subjectResource;
-    this.aggregations = aggregations.get();
-    this.groupings = groupings.orElse(Collections.emptyList());
-    this.filters = filters.orElse(Collections.emptyList());
+    return new AggregateRequest(subjectResource, aggregations.get(),
+        Lists.normalizeEmpty(groupings), Lists.normalizeEmpty(filters));
   }
 
 }

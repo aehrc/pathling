@@ -63,7 +63,8 @@ public class AggregateRequestBuilder {
   }
 
   public AggregateRequest build() {
-    return new AggregateRequest(subjectResource, Optional.of(aggregations), Optional.of(groupings),
+    return AggregateRequest.fromUserInput(subjectResource, Optional.of(aggregations),
+        Optional.of(groupings),
         Optional.of(filters));
   }
 
