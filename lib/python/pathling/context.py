@@ -26,6 +26,8 @@ from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
 
+from pathling.query import PathlingClient
+
 EQ_EQUIVALENT = "equivalent"
 
 
@@ -406,3 +408,10 @@ class PathlingContext:
         df._jdf, left_column._jc, right_column._jc, output_column_name
       )
     )
+
+  def client_builder(self) -> PathlingClient.Builder:
+    """
+    Creates a new :class:`PathlingClient.Builder` instance.
+    """
+    return PathlingClient.Builder(self._jpc.newClientBuilder().inMemory(), self._spark)
+    
