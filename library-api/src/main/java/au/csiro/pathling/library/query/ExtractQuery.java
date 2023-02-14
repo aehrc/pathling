@@ -18,7 +18,7 @@
 package au.csiro.pathling.library.query;
 
 import au.csiro.pathling.extract.ExtractRequest;
-import au.csiro.pathling.extract.ExtractRequest.ExpressionWithLabel;
+import au.csiro.pathling.query.ExpressionWithLabel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;

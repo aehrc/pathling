@@ -17,11 +17,13 @@
 
 package au.csiro.pathling.aggregate;
 
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.utilities.Lists;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -38,14 +40,29 @@ public class AggregateRequest {
   ResourceType subjectResource;
 
   @Nonnull
-  List<String> aggregations;
+  List<ExpressionWithLabel> aggregationsWithLabels;
 
   @Nonnull
-  List<String> groupings;
+  List<ExpressionWithLabel> groupingsWithLabels;
 
   @Nonnull
   List<String> filters;
 
+  /**
+   * Returns the list of aggregation expressions.
+   */
+  @Nonnull
+  public List<String> getAggregations() {
+    return ExpressionWithLabel.expressionsAsList(aggregationsWithLabels);
+  }
+  
+  /**
+   * Returns the list of grouping expressions.
+   */
+  @Nonnull
+  public List<String> getGroupings() {
+    return ExpressionWithLabel.expressionsAsList(groupingsWithLabels);
+  }
 
   /**
    * Constructs the instance of {@code AggregateRequest} from user input, performing necessary
@@ -68,8 +85,9 @@ public class AggregateRequest {
         "Grouping expression cannot be blank"));
     filters.ifPresent(f -> checkUserInput(f.stream().noneMatch(String::isBlank),
         "Filter expression cannot be blank"));
-    return new AggregateRequest(subjectResource, aggregations.get(),
-        Lists.normalizeEmpty(groupings), Lists.normalizeEmpty(filters));
+    return new AggregateRequest(subjectResource,
+        ExpressionWithLabel.fromUnlabelledExpressions(checkPresent(aggregations)),
+        ExpressionWithLabel.fromUnlabelledExpressions(Lists.normalizeEmpty(groupings)),
+        Lists.normalizeEmpty(filters));
   }
-
 }

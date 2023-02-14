@@ -86,20 +86,19 @@ abstract public class BasePathlingClientTest {
     DatasetAssert.of(conditionResult)
         .hasRows(spark, "results/PathlingClientTest/testExtractQueryUnbound.csv");
   }
-
-
+  
   @Test
   public void testAggregateQuery() {
     final Dataset<Row> patientResult = pathlingClient.newAggregateQuery(ResourceType.PATIENT)
         .withGrouping("gender")
-        .withGrouping("maritalStatus.coding.code")
-        .withAggregation("count()")
+        .withGrouping("maritalStatus.coding.code", "maritalStatusCode")
+        .withAggregation("count()", "patientCount")
+        .withAggregation("id.count()")
         .withFilter("birthDate > @1957-06-06")
         .execute();
 
-    // TODO: Enable this assertion once we have a way to get the column names from the query.
-    // assertEquals(List.of("id", "gender", "reverseResolve(Condition.subject).code.coding"),
-    //     Arrays.asList(patientResult.columns()));
+    assertEquals(List.of("gender", "maritalStatusCode", "patientCount", "id.count()"),
+        Arrays.asList(patientResult.columns()));
 
     DatasetAssert.of(patientResult)
         .debugAllRows()

@@ -18,6 +18,7 @@
 package au.csiro.pathling;
 
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
@@ -44,8 +45,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import com.google.common.collect.Streams;
 import lombok.Getter;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -200,6 +203,15 @@ public abstract class QueryExecutor {
           idColumn.equalTo(filteredIdColumn), "left_semi");
     }
     return filteredDataset;
+  }
+
+
+  @Nonnull
+  protected static Stream<Column> labelColumns(@Nonnull final Stream<Column> columns,
+      @Nonnull final Stream<Optional<String>> labels) {
+    return Streams.zip(
+        columns, labels,
+        (column, maybeLabel) -> (maybeLabel.map(column::alias).orElse(column)));
   }
 
   @Nonnull

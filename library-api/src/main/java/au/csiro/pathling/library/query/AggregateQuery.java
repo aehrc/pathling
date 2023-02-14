@@ -1,13 +1,13 @@
 /*
  * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,12 @@
 
 package au.csiro.pathling.library.query;
 
-import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
-
 import au.csiro.pathling.aggregate.AggregateRequest;
+import au.csiro.pathling.query.ExpressionWithLabel;
+import au.csiro.pathling.utilities.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.utilities.Lists;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -36,10 +35,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
 
   @Nonnull
-  final List<String> groupings = new ArrayList<>();
+  final List<ExpressionWithLabel> groupingsWithLabels = new ArrayList<>();
 
   @Nonnull
-  final List<String> aggregations = new ArrayList<>();
+  final List<ExpressionWithLabel> aggregationsWithLabels = new ArrayList<>();
 
   private AggregateQuery(@Nonnull final ResourceType subjectResource) {
     super(subjectResource);
@@ -50,7 +49,22 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
   protected Dataset<Row> doExecute(@Nonnull final PathlingClient pathlingClient) {
     return pathlingClient.execute(buildRequest());
   }
-  
+
+
+  /**
+   * Adds a fhirpath expression that represents a grouping column..
+   *
+   * @param groupingFhirpath the column expressions.
+   * @param label the label for the column.
+   * @return this query.
+   */
+  @Nonnull
+  public AggregateQuery withGrouping(@Nonnull final String groupingFhirpath,
+      @Nonnull final String label) {
+    groupingsWithLabels.add(ExpressionWithLabel.of(groupingFhirpath, label));
+    return this;
+  }
+
   /**
    * Adds a fhirpath expression that represents an aggregation grouping column..
    *
@@ -59,7 +73,21 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
    */
   @Nonnull
   public AggregateQuery withGrouping(@Nonnull final String groupingFhirpath) {
-    groupings.add(requireNonBlank(groupingFhirpath, "Grouping expression cannot be blank"));
+    groupingsWithLabels.add(ExpressionWithLabel.withExpressionAsLabel(groupingFhirpath));
+    return this;
+  }
+
+  /**
+   * Adds a fhirpath expression that represents an aggregation column..
+   *
+   * @param aggregationFhirpath the column expressions.
+   * @param label the label for the column.
+   * @return this query.
+   */
+  @Nonnull
+  public AggregateQuery withAggregation(@Nonnull final String aggregationFhirpath,
+      @Nonnull final String label) {
+    aggregationsWithLabels.add(ExpressionWithLabel.of(aggregationFhirpath, label));
     return this;
   }
 
@@ -71,8 +99,7 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
    */
   @Nonnull
   public AggregateQuery withAggregation(@Nonnull final String aggregationFhirpath) {
-    aggregations.add(
-        requireNonBlank(aggregationFhirpath, "Aggregation expression cannot be blank"));
+    aggregationsWithLabels.add(ExpressionWithLabel.withExpressionAsLabel(aggregationFhirpath));
     return this;
   }
 
@@ -86,12 +113,12 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
   public static AggregateQuery of(@Nonnull final ResourceType subjectResourceType) {
     return new AggregateQuery(subjectResourceType);
   }
-  
+
   @Nonnull
   private AggregateRequest buildRequest() {
     return new AggregateRequest(subjectResource,
-        Lists.normalizeEmpty(aggregations),
-        Lists.normalizeEmpty(groupings),
+        Lists.normalizeEmpty(aggregationsWithLabels),
+        Lists.normalizeEmpty(groupingsWithLabels),
         Lists.normalizeEmpty(filters));
   }
 }

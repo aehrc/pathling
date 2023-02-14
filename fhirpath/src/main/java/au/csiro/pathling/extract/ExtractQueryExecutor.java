@@ -1,6 +1,7 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
@@ -61,7 +62,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
         Collections.singletonList(inputContext.getIdColumn()));
     final List<FhirPathAndContext> columnParseResult =
         parseMaterializableExpressions(parserContext, query.getColumns(), "Column");
-    final List<FhirPath> columns = columnParseResult.stream()
+    final List<FhirPath> columnPaths = columnParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toUnmodifiableList());
 
@@ -69,7 +70,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
     final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
     final Dataset<Row> trimmedDataset = trimTrailingNulls(inputContext.getIdColumn(),
-        columns, columnJoinResultDataset);
+        columnPaths, columnJoinResultDataset);
 
     // Apply the filters.
     final List<String> filters = query.getFilters();
@@ -78,11 +79,10 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
-    final Column[] columnValues = Streams.zip(
-            columns.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
-            query.getLabels().stream(),
-            (column, maybeLabel) -> (maybeLabel.map(column::alias).orElse(column)))
-        .toArray(Column[]::new);
+    final Column[] columnValues = labelColumns(
+        columnPaths.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
+        labelsAsStream(query.getColumnsWithLabels())
+    ).toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
         .filter(idColumn.isNotNull());
 

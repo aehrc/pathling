@@ -56,8 +56,8 @@ public class AggregateFromDatabaseApp {
 
     final Dataset<Row> patientResult = pathlingClient.newAggregateQuery(ResourceType.PATIENT)
         .withGrouping("gender")
-        .withGrouping("maritalStatus.coding.code")
-        .withAggregation("count()")
+        .withGrouping("maritalStatus.coding")
+        .withAggregation("count()","countOfPatients")
         .withFilter("birthDate > @1957-06-06")
         .execute();
 
