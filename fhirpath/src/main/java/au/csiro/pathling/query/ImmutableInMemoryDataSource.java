@@ -18,6 +18,7 @@ package au.csiro.pathling.query;
 
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.storage.StorageLevel;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 import javax.annotation.Nonnull;
@@ -73,10 +74,13 @@ public class ImmutableInMemoryDataSource implements DataSource {
   @Nonnull
   @Override
   public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
-    return resourceMap.computeIfAbsent(resourceType, key -> {
+    final Dataset<Row> resourceDataset = resourceMap.computeIfAbsent(resourceType, key -> {
       throw new IllegalStateException(
           String.format("Cannot find data for resource of type: %s", key));
     });
+    return StorageLevel.NONE().equals(resourceDataset.storageLevel())
+           ? resourceDataset.cache()
+           : resourceDataset;
   }
 
   /**

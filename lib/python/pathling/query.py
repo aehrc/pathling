@@ -18,18 +18,16 @@ from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
 
-
-
 class Expression:
-  def __init__(self, expression):
-    self.expression = expression
+    def __init__(self, expression):
+        self.expression = expression
 
-  def alias(self, label:str):
-    return (self.expression, label)
+    def alias(self, label: str):
+        return (self.expression, label)
 
 
 def exp(expression: str) -> Expression:
-  return Expression(expression)
+    return Expression(expression)
 
 
 class SparkAware:
