@@ -1,8 +1,8 @@
 ---
-sidebar_position: 6
+sidebar_position: 4
 ---
 
-# Spark cluster configuration
+# Spark configuration
 
 If you are running your own Spark cluster, or using a Docker image (such
 as [jupyter/all-spark-notebook](https://hub.docker.com/r/jupyter/all-spark-notebook)), 
