@@ -16,7 +16,7 @@
 set -e
 
 # Substitute environment variables in the config file, where the ${ENV_VAR} syntax is used.
-envs=`printenv`
+envs=$(printenv)
 for env in $envs
 do
     IFS== read name value <<< "$env"
