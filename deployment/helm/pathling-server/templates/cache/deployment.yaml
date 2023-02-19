@@ -1,0 +1,46 @@
+# Copyright 2023 Commonwealth Scientific and Industrial Research
+# Organisation (CSIRO) ABN 41 687 119 230.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Release.Name }}-pathling-cache-deployment
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-pathling-cache
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-pathling-cache
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-cache
+          image: {{ .Values.pathling.cacheImage }}
+          ports:
+            - containerPort: 80
+          resources:
+            requests: {{ toJson .Values.pathling.resources.cache.requests }}
+            limits: {{ toJson .Values.pathling.resources.cache.limits }}
+          env:
+            - name: PATHLING_HOST
+              value: {{ .Release.Name }}-pathling-service
+            - name: PATHLING_PORT
+              value: "8080"
+      imagePullSecrets: {{ toJson .Values.pathling.imagePullSecrets }}
+      tolerations: {{ toJson .Values.pathling.tolerations.cache }}
+      affinity: {{ toJson .Values.pathling.affinity.cache }}
+  strategy:
+    type: {{ .Values.pathling.deployment.strategy }}
