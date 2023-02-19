@@ -1,0 +1,41 @@
+# This workflow builds the cache Docker image, and pushes to Docker Hub.
+#
+# This is only run when a version tag is pushed.
+
+name: Release cache image
+
+on:
+  push:
+    tags:
+      - "pathling-cache-v**"
+
+# Build and push Docker image to Docker Hub, using the tag as the version.
+jobs:
+  build:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install buildx
+        id: buildx
+        uses: crazy-max/ghaction-docker-buildx@v1
+        with:
+          version: latest
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Extract version from tag
+        run: |
+          echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION#pathling-cache-v}" >> $GITHUB_ENV
+      - name: Build and push Docker image
+        working-directory: deployment/cache
+        run: |
+          docker buildx build \
+          --tag aehrc/pathling-cache:latest \
+          --tag aehrc/pathling-cache:${VERSION} \
+          --platform linux/amd64,linux/arm64 \
+          --push .
