@@ -129,14 +129,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
         .setSocketTimeout(clientConfig.getSocketTimeout())
         .build();
 
-	List<Header> headers = new ArrayList<Header>();
-	if (clientConfig.getAcceptLanguage() != null) {
-		Header header = new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, clientConfig.getAcceptLanguage());
-		headers.add(header);
-	}
-
     final HttpClientBuilder clientBuilder = HttpClients.custom()
-    	.setDefaultHeaders(headers)
         .setDefaultRequestConfig(defaultRequestConfig)
         .setConnectionManager(connectionManager)
         .setConnectionManagerShared(false);

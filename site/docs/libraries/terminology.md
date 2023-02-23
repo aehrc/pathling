@@ -61,23 +61,32 @@ csv.select(
 import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
+import org.apache.spark.sql.SparkSession
 
-val pc = PathlingContext.create()
-val csv = pc.getSpark.read.csv("conditions.csv")
+object MyApp {
+	def main(args: Array[String]): Unit = {
+		val spark = SparkSession
+			.builder()
+			.config("spark.master", "local")
+			.getOrCreate();
+		val pc = PathlingContext.create(spark)
+		val csv = pc.getSpark.read.option("header", "true").csv("conditions.csv")
 
-val VIRAL_INFECTION_ECL = """
-    << 64572001|Disease| : (
-      << 370135005|Pathological process| = << 441862004|Infectious process|,
-      << 246075003|Causative agent| = << 49872002|Virus|
-    )
-"""
-
-csv.select(
-    csv.col("CODE"),
-    csv.col("DESCRIPTION"),
-    member_of(toCoding(csv.col("CODE"), "http://snomed.info/sct"),
-        toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
-).show()
+		val VIRAL_INFECTION_ECL = """
+			<< 64572001|Disease| : (
+			<< 370135005|Pathological process| = << 441862004|Infectious process|,
+			<< 246075003|Causative agent| = << 49872002|Virus|
+			)
+			"""
+		csv.select(
+			csv.col("CODE"),
+			csv.col("DESCRIPTION"),
+			member_of(toCoding(csv.col("CODE"), "http://snomed.info/sct"),
+				toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
+		).show()
+		spark.stop()
+	}
+}
 ```
 
 </TabItem>
@@ -174,21 +183,34 @@ import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 import org.apache.spark.sql.functions.explode_outer
+import org.apache.spark.sql.SparkSession
 
-val pc = PathlingContext.create()
-val csv = spark.read.csv("conditions.csv")
+object MyApp {
+	def main(args: Array[String]): Unit = {
+		val spark = SparkSession
+			.builder()
+			.config("spark.master", "local")
+			.getOrCreate();
 
-val translate_result = csv.withColumn(
-    "READ_CODES",
-    translate(
-        toCoding(csv.col("CODE"), "https://snomed.info/sct"),
-        "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
-        false, null
-    ).getField("code")
-)
-translate_result.select(
-    csv.col("CODE"), csv.col("DESCRIPTION"), explode_outer(translate_result.col("READ_CODES")).alias("READ_CODE")
-).show()
+		val pc = PathlingContext.create(spark)
+		val csv = pc.getSpark.read.option("header", "true").csv("conditions.csv")
+
+		val translate_result = csv.withColumn(
+			"READ_CODES",
+			translate(
+				toCoding(csv.col("CODE"), "https://snomed.info/sct"),
+				"http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000",
+				false, null
+				).getField("code")
+			)
+		translate_result.select(
+			csv.col("CODE"),
+			csv.col("DESCRIPTION"),
+			explode_outer(translate_result.col("READ_CODES")).alias("READ_CODE")
+		).show()
+		spark.stop()
+  }
+}
 ```
 
 </TabItem>
@@ -291,25 +313,35 @@ import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding
+import org.apache.spark.sql.functions.lit;
+import org.apache.spark.sql.SparkSession
 
-val pc = PathlingContext.create()
-val csv = spark.read.csv("conditions.csv")
-
-csv.select(
-    csv.col("CODE"),
-    // 232208008 |Ear, nose and throat disorder|
-    subsumes(
-        CodingEncoding.toStruct(
-            lit(null),
-            lit(SNOMED_URI),
-            lit(null),
-            lit("232208008"),
-            lit(null),
-            lit(null)
-        ), 
-        toSnomedCoding(csv.col("CODE"))
-    ).alias("IS_ENT")
-).show()
+object MyApp {
+	def main(args: Array[String]): Unit = {
+		val spark = SparkSession
+			.builder()
+			.config("spark.master", "local")
+			.getOrCreate();
+		val pc = PathlingContext.create(spark)
+		val csv = pc.getSpark.read.option("header", "true").csv("conditions.csv")
+		csv.select(
+			csv.col("CODE"),
+			// 232208008 |Ear, nose and throat disorder|
+			subsumes(
+				CodingEncoding.toStruct(
+					lit(null),
+					lit(SNOMED_URI),
+					lit(null),
+					lit("232208008"),
+					lit(null),
+					lit(null)
+				),
+				toSnomedCoding(csv.col("CODE"))
+			).alias("IS_ENT")
+		).show()
+		spark.stop()
+	}
+}
 ```
 
 </TabItem>
@@ -413,24 +445,34 @@ import au.csiro.pathling.sql.Terminology
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding
+import org.apache.spark.sql.SparkSession
 
-val pc = PathlingContext.create()
-val csv = spark.read.csv("conditions.csv")
-
-// Get the parent codes for each code in the dataset.
-val parents = csv.withColumn(
-    "PARENTS",
-    property_of(toSnomedCoding(csv.col("CODE")), "parent", "code")
-)
-// Split each parent code into a separate row.
-val exploded_parents = parents.selectExpr(
-    "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
-)
-// Retrieve the preferred term for each parent code.
-val with_displays = exploded_parents.withColumn(
-    "PARENT_DISPLAY", Terminology.display(toSnomedCoding(exploded_parents.col("PARENT")))
-)
-with_displays.show()
+object MyApp {
+	def main(args: Array[String]): Unit = {
+		val spark = SparkSession
+			.builder()
+			.config("spark.master", "local")
+			.getOrCreate();
+		val pc = PathlingContext.create(spark)
+		val csv = pc.getSpark.read.option("header", "true").csv("conditions.csv")
+	
+		// Get the parent codes for each code in the dataset.
+		val parents = csv.withColumn(
+			"PARENTS",
+			property_of(toSnomedCoding(csv.col("CODE")), "parent", "code")
+		)
+		// Split each parent code into a separate row.
+		val exploded_parents = parents.selectExpr(
+			"CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+		)
+		// Retrieve the preferred term for each parent code.
+		val with_displays = exploded_parents.withColumn(
+			"PARENT_DISPLAY", Terminology.display(toSnomedCoding(exploded_parents.col("PARENT")))
+		)
+		with_displays.show()
+		spark.stop()
+	}
+}
 ```
 
 </TabItem>
@@ -530,21 +572,31 @@ import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 import org.hl7.fhir.r4.model.Coding
+import org.apache.spark.sql.SparkSession
 
-val pc = PathlingContext.create()
-val csv = spark.read.csv("conditions.csv")
+object MyApp {
+	def main(args: Array[String]): Unit = {
+		val spark = SparkSession
+			.builder()
+			.config("spark.master", "local")
+			.getOrCreate();
+		val pc = PathlingContext.create(spark)
+		val csv = pc.getSpark.read.option("header", "true").csv("conditions.csv")
 
-// Get the synonyms for each code in the dataset.
-val synonyms = csv.withColumn(
-    "SYNONYMS",
-    designation(toSnomedCoding(csv.col("CODE")),
-        new Coding("http://snomed.info/sct", "900000000000013009", null))
-)
-// Split each synonym into a separate row.
-val exploded_synonyms = synonyms.selectExpr(
-    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
-)
-exploded_synonyms.show()
+		// Get the synonyms for each code in the dataset.
+		val synonyms = csv.withColumn(
+			"SYNONYMS",
+			designation(toSnomedCoding(csv.col("CODE")),
+				new Coding("http://snomed.info/sct", "900000000000013009", null))
+		)
+		// Split each synonym into a separate row.
+		val exploded_synonyms = synonyms.selectExpr(
+			"CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+		)
+		exploded_synonyms.show()
+		spark.stop()
+	}
+}
 ```
 
 </TabItem>
@@ -639,15 +691,30 @@ pc = PathlingContext.create(
 <ScalaInstallation/>
 
 ```scala
-import au.csiro.pathling.library.{PathlingContext, PathlingContextConfiguration}
+import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.config.TerminologyConfiguration
+import au.csiro.pathling.config.TerminologyAuthConfiguration
+import org.apache.spark.sql.SparkSession
 
-val config = PathlingContextConfiguration.builder()
-        .terminologyServerUrl("https://ontology.nhs.uk/production1/fhir")
-        .tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
-        .clientId("[client ID]")
-        .clientSecret("[client secret]")
-        .build()
-val pc = PathlingContext.create(config)
+object MyApp {
+	def main(args: Array[String]): Unit = {
+    	val spark = SparkSession
+	      .builder()
+	      .config(/* configurations */)
+	      .getOrCreate();
+
+    	val configuration = TerminologyConfiguration.builder()
+    		.serverUrl("https://ontology.nhs.uk/production1/fhir")
+    		.authentication(TerminologyAuthConfiguration.builder()
+    			.tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
+    			.clientId("[client ID]")
+    			.clientSecret("[client secret]")
+    			.build()
+    		).build();
+    	
+        val pc = PathlingContext.create(spark, configuration);
+	}
+}
 ```
 
 </TabItem>

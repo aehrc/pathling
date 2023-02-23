@@ -20,6 +20,7 @@ package au.csiro.pathling.config;
 import java.io.Serializable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Data;
 
@@ -78,12 +79,4 @@ public class HttpClientConfiguration implements Serializable {
   @Min(1)
   @Builder.Default
   private int retryCount = 2;
-  
-  /**
-   * The default language the server will resond with.
-   * this string is passed in the headers of resultant HTTP requests to the terminology server
-   * under 'AcceptLanguage' header. null to leave unspecified, should be appopriate syntax
-   */
-  @Builder.Default
-  private String acceptLanguage = null;
 }

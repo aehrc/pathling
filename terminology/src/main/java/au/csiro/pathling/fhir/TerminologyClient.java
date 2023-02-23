@@ -212,6 +212,9 @@ public interface TerminologyClient {
     // Register an interceptor that identifies the Pathling client within the request headers.
     genericClient.registerInterceptor(new UserAgentInterceptor());
 
+    // Register an interceptor that sets the appropriate language request header.
+    genericClient.registerInterceptor(new AcceptLanguageInterceptor(terminologyConfiguration.getAcceptLanguage()));
+    
     // If verbose logging is enabled, register an interceptor that logs the request and response 
     // details.
     if (terminologyConfiguration.isVerboseLogging()) {

@@ -24,6 +24,7 @@ import java.io.Serializable;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
@@ -90,4 +91,14 @@ public class TerminologyConfiguration implements Serializable {
   private TerminologyAuthConfiguration authentication = TerminologyAuthConfiguration.builder()
       .build();
 
+  /**
+   * The language that queries to the terminology server will resond in.
+   * this string is passed in the headers of the HTTP requests to the terminology server
+   * under the 'AcceptLanguage' field. The default value (NULL) is used to leave the field unspecified.
+   * alternatively, this string should be appropriately formatted to designate a known language as per HTTP specification
+   * see: https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language
+   */
+  @Nullable
+  @Builder.Default
+  private String acceptLanguage = null;
 }

@@ -186,7 +186,6 @@ class PathlingContext:
       .maxConnectionsPerRoute(max_connections_per_route)
       .retryEnabled(terminology_retry_enabled)
       .retryCount(terminology_retry_count)
-      .acceptLanguage(accept_language)
       .build()
     )
 
@@ -228,6 +227,7 @@ class PathlingContext:
       .client(client_config)
       .cache(cache_config)
       .authentication(auth_config)
+      .acceptLanguage(accept_language)
       .build()
     )
 
