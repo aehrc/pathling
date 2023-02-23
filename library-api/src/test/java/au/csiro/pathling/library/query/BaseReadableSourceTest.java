@@ -7,6 +7,7 @@ import static org.mockito.Mockito.withSettings;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
+import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import java.nio.file.Path;
@@ -20,14 +21,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-abstract public class BasePathlingClientTest {
+abstract public class BaseReadableSourceTest {
 
   protected static final Path FHIR_JSON_DATA_PATH = Path.of(
       "../fhir-server/src/test/resources/test-data/fhir").toAbsolutePath();
   protected static PathlingContext pathlingCtx;
   protected static SparkSession spark;
 
-  protected static PathlingClient pathlingClient;
+  protected static ReadableSource readableSource;
 
   /**
    * Set up Spark.
@@ -54,7 +55,7 @@ abstract public class BasePathlingClientTest {
 
   @Test
   public void testExtractQueryBound() {
-    final Dataset<Row> patientResult = pathlingClient.newExtractQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.newExtractQuery(ResourceType.PATIENT)
         .withColumn("id")
         .withColumn("gender")
         .withColumn("reverseResolve(Condition.subject).code.coding")
@@ -76,8 +77,7 @@ abstract public class BasePathlingClientTest {
         .withColumn("code.coding.code", "code")
         .withColumn("code.coding.display", "display")
         .withColumn("subject.resolve().ofType(Patient).gender", "patientGender")
-        .withLimit(5)
-        .execute(pathlingClient);
+        .execute(readableSource).limit(5);
 
     assertEquals(List.of("id", "code", "display",
             "patientGender"),
@@ -89,7 +89,7 @@ abstract public class BasePathlingClientTest {
   
   @Test
   public void testAggregateQuery() {
-    final Dataset<Row> patientResult = pathlingClient.newAggregateQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.newAggregateQuery(ResourceType.PATIENT)
         .withGrouping("gender")
         .withGrouping("maritalStatus.coding.code", "maritalStatusCode")
         .withAggregation("count()", "patientCount")

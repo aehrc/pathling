@@ -16,7 +16,7 @@
 import os
 
 from pathling import PathlingContext
-from pathling.query import exp
+from pathling.query import Expression
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -26,51 +26,25 @@ pc = PathlingContext.create()
 ndjson_dir = os.path.join(HERE, "data/resources/")
 json_resources = pc.spark.read.text(ndjson_dir)
 
-# Convert the data set of strings into a structured FHIR data set.
-
-data_source = (
-    pc.client_builder()
-    .with_resource("Patient", pc.encode(json_resources, "Patient"))
-    .with_resource("Condition", pc.encode(json_resources, "Condition"))
-    .build()
-)
-
-#
-# Fluent API
-#
-
-result = (
-    data_source.extract_query("Patient")
-    .with_column("id")
-    .with_column("gender")
-    .with_column("reverseResolve(Condition.subject).code.coding.code")
-    .with_filter("gender = 'male'")
-    .execute()
-)
-
-result.limit(10).show()
-
-agg_result = (
-    data_source.aggregate_query("Patient")
-    .with_aggregation("count()", "countOfPatients")
-    .with_grouping("gender")
-    .with_grouping("maritalStatus.coding")
-    .with_filter("birthDate > @1957-06-06")
-    .execute()
-)
-
-agg_result.show(10)
-
 #
 # "Pythonic" API
 #
+
+data_source = pc.data_source.with_resources(
+    {
+        "Patient": pc.encode(json_resources, "Patient"),
+        "Condition": pc.encode(json_resources, "Condition"),
+    }
+)
 
 result = data_source.extract(
     "Patient",
     columns=[
         "id",
         "gender",
-        ("reverseResolve(Condition.subject).code.coding.code", "condition_code"),
+        Expression(
+            "reverseResolve(Condition.subject).code.coding.code", "condition_code"
+        ),
     ],
     filters=["gender = 'male'"],
 )
@@ -85,5 +59,3 @@ agg_result = data_source.aggregate(
 )
 
 agg_result.show(10)
-
-

@@ -32,7 +32,7 @@ import lombok.NoArgsConstructor;
  * Configuration relating to the storage of data.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
 public class StorageConfiguration {

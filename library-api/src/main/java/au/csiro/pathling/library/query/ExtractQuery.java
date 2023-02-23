@@ -18,6 +18,7 @@
 package au.csiro.pathling.library.query;
 
 import au.csiro.pathling.extract.ExtractRequest;
+import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,22 +48,10 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
 
   @Nonnull
   @Override
-  protected Dataset<Row> doExecute(@Nonnull final PathlingClient pathlingClient) {
-    return pathlingClient.execute(buildRequest());
+  protected Dataset<Row> doExecute(@Nonnull final ReadableSource readableSource) {
+    return readableSource.execute(buildRequest());
   }
-
-  /**
-   * Sets the limit on the number of rows returned in the extract result.
-   *
-   * @param limit the upper limit on the number of rows in the result.
-   * @return this query.
-   */
-  @Nonnull
-  public ExtractQuery withLimit(int limit) {
-    this.limit = Optional.of(limit);
-    return this;
-  }
-
+  
   /**
    * Adds a fhirpath expression that represents a column to be extract in the result.
    *
@@ -106,6 +95,6 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
     return new ExtractRequest(subjectResource,
         Lists.normalizeEmpty(columnsWithLabels),
         Lists.normalizeEmpty(filters),
-        limit);
+        Optional.empty());
   }
 }

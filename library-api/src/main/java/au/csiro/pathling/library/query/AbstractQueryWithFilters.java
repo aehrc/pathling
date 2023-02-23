@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.library.data.ReadableSource;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -41,7 +42,7 @@ public abstract class AbstractQueryWithFilters<T extends AbstractQueryWithFilter
   protected final ResourceType subjectResource;
 
   @Nullable
-  protected PathlingClient pathlingClient = null;
+  protected ReadableSource readableSource = null;
 
   @Nonnull
   protected final List<String> filters = new ArrayList<>();
@@ -54,12 +55,12 @@ public abstract class AbstractQueryWithFilters<T extends AbstractQueryWithFilter
   /**
    * Binds the query to a specific client.
    *
-   * @param pathlingClient the client to use.
+   * @param readableSource the client to use.
    * @return this query
    */
   @Nonnull
-  public T withClient(@Nonnull final PathlingClient pathlingClient) {
-    this.pathlingClient = pathlingClient;
+  public T withClient(@Nonnull final ReadableSource readableSource) {
+    this.readableSource = readableSource;
     return (T) this;
   }
 
@@ -83,27 +84,27 @@ public abstract class AbstractQueryWithFilters<T extends AbstractQueryWithFilter
    */
   @Nonnull
   public Dataset<Row> execute() {
-    return doExecute(requireNonNull(this.pathlingClient));
+    return doExecute(requireNonNull(this.readableSource));
   }
 
   /**
    * Executes the query on the given client.
    *
-   * @param pathlingClient the client to execute the query against.
+   * @param readableSource the client to execute the query against.
    * @return the dataset with the result of the query.
    */
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final PathlingClient pathlingClient) {
-    return doExecute(pathlingClient);
+  public Dataset<Row> execute(@Nonnull final ReadableSource readableSource) {
+    return doExecute(readableSource);
   }
 
   /**
    * Performs the actual execution of the query.
    *
-   * @param pathlingClient the client to execute the query against.
+   * @param readableSource the client to execute the query against.
    * @return the dataset with the result of the query.
    */
   @Nonnull
-  protected abstract Dataset<Row> doExecute(@Nonnull final PathlingClient pathlingClient);
+  protected abstract Dataset<Row> doExecute(@Nonnull final ReadableSource readableSource);
 
 }

@@ -15,48 +15,81 @@
 
 import os
 
-from pathling import PathlingContext, MimeType
-from pathling.context import DataSources
+from pathling import PathlingContext
+from pathling.core import exp
+from pathling.datasource import DataSources
+from pathling.query import AggregateQuery
 
 HERE = os.path.abspath(os.path.dirname(__file__))
+PROJECT_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
+)
 
-pc = PathlingContext.create()
+TEST_DATA_DIR = os.path.join(
+    PROJECT_DIR, "fhir-server", "src", "test", "resources", "test-data"
+)
+ndjson_dir = os.path.join(TEST_DATA_DIR, "fhir")
+warehouse_dir_uri = "file://" + TEST_DATA_DIR
+
+pc = PathlingContext.create(enable_delta=True)
 
 # Read each line from the NDJSON into a row within a Spark data set.
-ndjson_dir = os.path.join(HERE, "data/resources/")
-json_resources = pc.spark.read.text(ndjson_dir)
+json_resources = pc.spark.read.text(ndjson_dir, pathGlobFilter="*.ndjson")
 
 #
 # Pythonic API for accessing data sources
 #
 
-# Direct resources
-DataSources(pc).with_resources(
-  {
-    "Patient": pc.encode(json_resources, "Patient"),
-    "Condition": pc.encode(json_resources, "Condition"),
-  }
-).extract("Patient", columns=["id", "gender", "name.given"]).show(10)
+patient_count_by_gender_and_status = agg_result = AggregateQuery(
+    "Patient",
+    aggregations=[exp("count()").alias("countOfPatients")],
+    groupings=["gender", "maritalStatus.coding"],
+    filters=["birthDate > @1957-06-06"],
+)
 
-# From text encoded resources
-DataSources(pc).from_text_resources(
-  json_resources, ["Patient", "Condition"], input_type=MimeType.FHIR_JSON
-).extract("Patient", columns=["id", "gender", "name.given"]).show(10)
+#
+# Transient ad-hoc data source
+#
 
-# From json json directory
-
-pc.datasource.from_ndjson(ndjson_dir).extract(
-  "Patient", columns=["id", "gender", "name.given"]
+print("Transient ad-hoc data source")
+patient_count_by_gender_and_status.execute(
+    pc.data_source.with_resources(
+        {
+            "Patient": pc.encode(json_resources, "Patient"),
+            "Condition": pc.encode(json_resources, "Condition"),
+        }
+    )
 ).show(10)
 
-# there will be also an option to create a datasource from the encoded delta directory, something like
 #
-# database = pc.datasource.from_delta_warehouse(delta_dir, ....)
-# database.extract(
-#     "Patient", columns=["id", "gender", "name.given"]
-# ).show(10)
+# Normalized NDJSON directory data source
+#
 
-# as well as in it might be possible to write/append/merge a datasource to another (modifiable) one
-# to achieve import functionality
+print("Normalized NDJSON directory data source")
 
-# database.import_from(pc.datasource.from_ndjson(ndjson_dir), mode = "append|merge|overwrite", resources = ...)
+patient_count_by_gender_and_status.execute(
+    pc.data_source.from_ndjson_dir(ndjson_dir)
+).show(10)
+
+#
+#  Text files data source
+#
+
+print("Text files data source")
+
+patient_count_by_gender_and_status.execute(
+    pc.data_source.from_text_files(
+        os.path.join("file://" + ndjson_dir, "*.ndjson"),
+        lambda filename: [os.path.basename(filename).split(".")[0]],
+    )
+).show(10)
+
+#
+# Delta warehouse data source
+#
+
+print("Delta warehouse data source")
+
+patient_count_by_gender_and_status.execute(
+    DataSources(pc).from_warehouse(warehouse_dir_uri, "parquet")
+).show(10)

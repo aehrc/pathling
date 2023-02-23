@@ -108,7 +108,7 @@ public class DatabaseComponent extends Database implements Cacheable {
       return Optional.empty();
     }
     requireNonNull(warehouse);
-
+    
     // Check that the database path exists.
     try {
       warehouse.exists(new Path(databasePath));

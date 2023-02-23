@@ -15,17 +15,19 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.library.query;
+package au.csiro.pathling.library.data;
 
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.query.AggregateQuery;
+import au.csiro.pathling.library.query.ExtractQuery;
 import au.csiro.pathling.query.DataSource;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Abstract base class for builders of {@link PathlingClient}.
+ * Abstract base class for builders of {@link ReadableSource}.
  *
  * @param <T> the actual class of the builder.
  */
@@ -55,14 +57,14 @@ public abstract class AbstractClientBuilder<T extends AbstractClientBuilder> {
   }
 
   /**
-   * Builds a new instance of {@link PathlingClient} with the configuration defined by this
+   * Builds a new instance of {@link ReadableSource} with the configuration defined by this
    * builder.
    *
    * @return the configured instance of pathling client.
    */
   @Nonnull
-  public PathlingClient build() {
-    return new PathlingClient(pathlingContext.getFhirContext(), pathlingContext.getSpark(),
+  public ReadableSource build() {
+    return new ReadableSource(pathlingContext.getFhirContext(), pathlingContext.getSpark(),
         buildDataSource(), queryConfiguration,
         Optional.of(pathlingContext.getTerminologyServiceFactory()));
   }

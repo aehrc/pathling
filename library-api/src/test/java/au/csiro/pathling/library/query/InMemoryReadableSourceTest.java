@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 
-public class InMemoryPathlingClientTest extends BasePathlingClientTest {
+public class InMemoryReadableSourceTest extends BaseReadableSourceTest {
 
   /**
    * Set up InMemory client.
@@ -19,8 +19,8 @@ public class InMemoryPathlingClientTest extends BasePathlingClientTest {
     final Dataset<Row> conditionJsonDf = spark.read()
         .text(FHIR_JSON_DATA_PATH.resolve("Condition.ndjson").toString());
 
-    pathlingClient = pathlingCtx.newClientBuilder()
-        .inMemory()
+    readableSource = pathlingCtx.datasources()
+        .transientBuilder()
         .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
         .withResource(ResourceType.PATIENT,
             pathlingCtx.encode(patientJsonDf, "Patient").cache())

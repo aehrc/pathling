@@ -11,8 +11,8 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
 
-public class DatabasePathlingClientTest extends BasePathlingClientTest {
-  
+public class DatabaseReadableSourceTest extends BaseReadableSourceTest {
+
   @BeforeAll
   public static void setupClient() throws IOException {
 
@@ -34,8 +34,8 @@ public class DatabasePathlingClientTest extends BasePathlingClientTest {
     database.overwrite(ResourceType.PATIENT, pathlingCtx.encode(patientJsonDf, "Patient"));
     database.overwrite(ResourceType.CONDITION, pathlingCtx.encode(conditionJsonDf, "Condition"));
 
-    pathlingClient = pathlingCtx.newClientBuilder()
-        .database()
+    readableSource = pathlingCtx.datasources()
+        .databaseBuilder()
         .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
         .withStorageConfiguration(StorageConfiguration.forDatabase(databaseUri, "default"))
         .build();

@@ -18,6 +18,7 @@
 package au.csiro.pathling.library.query;
 
 import au.csiro.pathling.aggregate.AggregateRequest;
+import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.utilities.Lists;
 import java.util.ArrayList;
@@ -46,8 +47,8 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
 
   @Nonnull
   @Override
-  protected Dataset<Row> doExecute(@Nonnull final PathlingClient pathlingClient) {
-    return pathlingClient.execute(buildRequest());
+  protected Dataset<Row> doExecute(@Nonnull final ReadableSource readableSource) {
+    return readableSource.execute(buildRequest());
   }
 
 

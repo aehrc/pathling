@@ -26,7 +26,8 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
-import au.csiro.pathling.library.query.PathlingClient;
+import au.csiro.pathling.library.data.Datasources;
+import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
@@ -408,8 +409,9 @@ public class PathlingContext {
     final FhirVersionEnum fhirVersion = FhirContext.forR4().getVersion().getVersion();
     return new DefaultTerminologyServiceFactory(fhirVersion, configuration);
   }
-
-  public PathlingClient.Builder newClientBuilder() {
-    return PathlingClient.builder(this);
+  
+  @Nonnull
+  public Datasources datasources() {
+    return new Datasources(this);
   }
 }

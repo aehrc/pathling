@@ -4,7 +4,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.query.ExtractQuery;
-import au.csiro.pathling.library.query.PathlingClient;
+import au.csiro.pathling.library.data.ReadableSource;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -30,19 +30,19 @@ public class ExtractFromDatabaseApp {
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final PathlingClient pathlingClient = ptc.newClientBuilder()
-        .database()
+    final ReadableSource readableSource = ptc.datasources()
+        .databaseBuilder()
         .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
         .withStorageConfiguration(StorageConfiguration.forDatabase(warehouseUrl, "parquet"))
         .build();
 
-    final Dataset<Row> patientResult = pathlingClient.newExtractQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.newExtractQuery(ResourceType.PATIENT)
         .withColumn("id")
         .withColumn("gender")
         .withColumn("reverseResolve(Condition.subject).code.coding.code")
         .withFilter("gender = 'male'")
-        .withLimit(10)
-        .execute();
+        .execute()
+        .limit(5);
 
     patientResult.show(5);
 
@@ -51,8 +51,8 @@ public class ExtractFromDatabaseApp {
         .withColumn("code.coding.code", "code")
         .withColumn("code.coding.display", "display_name")
         .withColumn("subject.resolve().ofType(Patient).gender", "patient_gender")
-        .withLimit(10)
-        .execute(pathlingClient);
+        .execute(readableSource)
+        .limit(5);
 
     conditionResult.show(5);
   }

@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Optional, Sequence, Dict
+from typing import Optional, Sequence
 
 from deprecated import deprecated
 
@@ -26,8 +26,6 @@ from pathling.etc import find_jar
 from pathling.fhir import MimeType
 
 __all__ = ["PathlingContext"]
-
-from pathling.query import PathlingClient
 
 EQ_EQUIVALENT = "equivalent"
 
@@ -97,6 +95,7 @@ class PathlingContext:
         client_secret: Optional[str] = None,
         scope: Optional[str] = None,
         token_expiry_tolerance: Optional[int] = 120,
+        enable_delta=False,
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -160,13 +159,33 @@ class PathlingContext:
         :param scope: a scope value for use with the client credentials grant
         :param token_expiry_tolerance: the minimum number of seconds that a token should have
                before expiry when deciding whether to send it with a terminology request
+        :param enable_delta: enables the use of Delta for storage of FHIR data.
+               Only supported when no SparkSession is provided.
         :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
-        spark = (
-            spark
-            or SparkSession.getActiveSession()
-            or SparkSession.builder.config("spark.jars", find_jar()).getOrCreate()
-        )
+
+        def _new_spark_session():
+            spark_builder = SparkSession.builder.config("spark.jars", find_jar())
+            spark_builder = (
+                (
+                    spark_builder.config(
+                        "spark.jars.packages", "io.delta:delta-core_2.12:2.2.0"
+                    )
+                    .config(
+                        "spark.sql.extensions",
+                        "io.delta.sql.DeltaSparkSessionExtension",
+                    )
+                    .config(
+                        "spark.sql.catalog.spark_catalog",
+                        "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+                    )
+                )
+                if enable_delta
+                else spark_builder
+            )
+            return spark_builder.getOrCreate()
+
+        spark = spark or SparkSession.getActiveSession() or _new_spark_session()
         jvm = spark._jvm
 
         # Build an encoders configuration object from the provided parameters.
@@ -410,52 +429,11 @@ class PathlingContext:
             )
         )
 
-    def client_builder(self) -> PathlingClient.Builder:
-        """
-        Creates a new :class:`PathlingClient.Builder` instance.
-        """
-        return PathlingClient.Builder(
-            self._jpc.newClientBuilder().inMemory(), self._spark
-        )
-
     @property
-    def datasource(self) -> "DataSources":
+    def data_source(self) -> "DataSources":
         """
-        Returns the datasource name.
+        Provides access to the instance of :class:`DataSource` factory.
         """
+        from pathling.datasource import DataSources
+
         return DataSources(self)
-
-
-# TODO: Get the list of all resources
-ALL_RESOURCES = ["Patient", "Condition", "Observation"]
-
-
-class DataSources:
-    def __init__(self, pathlingContext: PathlingContext):
-        self._pc = pathlingContext
-
-    def with_resources(self, resources: Dict[str, DataFrame]) -> PathlingClient:
-        builder = self._pc.client_builder()
-        for resource_code, resource_data in resources.items():
-            builder.with_resource(resource_code, resource_data)
-        return builder.build()
-
-    def from_text_resources(
-        self,
-        text_resources_df: DataFrame,
-        resource_types=None,
-        **kwargs,
-    ) -> PathlingClient:
-        if resource_types is None:
-          resource_types = ALL_RESOURCES
-        return self.with_resources(
-            resources={
-                resource_type: self._pc.encode(
-                    text_resources_df, resource_type, **kwargs
-                )
-                for resource_type in resource_types
-            }
-        )
-
-    def from_ndjson(self, ndjson_dir: str) -> PathlingClient:
-        return self.from_text_resources(self._pc.spark.read.text(ndjson_dir))

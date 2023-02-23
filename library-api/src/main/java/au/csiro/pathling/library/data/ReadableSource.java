@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.library.query;
+package au.csiro.pathling.library.data;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,6 +25,8 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.extract.ExtractQueryExecutor;
 import au.csiro.pathling.extract.ExtractRequest;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.query.AggregateQuery;
+import au.csiro.pathling.library.query.ExtractQuery;
 import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -32,6 +34,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
+import lombok.experimental.NonFinal;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -42,7 +45,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * a {@link DataSource}.
  */
 @Value
-public class PathlingClient {
+@NonFinal
+public class ReadableSource {
 
   @Nonnull
   FhirContext fhirContext;
@@ -60,7 +64,7 @@ public class PathlingClient {
   Optional<TerminologyServiceFactory> terminologyClientFactory;
 
   /**
-   * A builder of {@link PathlingClient} that allows for explicit assignment of the underlying
+   * A builder of {@link ReadableSource} that allows for explicit assignment of the underlying
    * {@link DataSource}.
    */
   public static class Builder extends AbstractClientBuilder<Builder> {
@@ -76,26 +80,6 @@ public class PathlingClient {
     @Override
     protected DataSource buildDataSource() {
       return requireNonNull(dataSource);
-    }
-
-    /**
-     * Switches to an in-memory client builder.
-     *
-     * @return in-memory client builder.
-     */
-    @Nonnull
-    public InMemoryClientBuilder inMemory() {
-      return new InMemoryClientBuilder(pathlingContext).withQueryConfiguration(queryConfiguration);
-    }
-
-    /**
-     * Switches to a database client builder.
-     *
-     * @return the database  client builder.
-     */
-    @Nonnull
-    public DatabaseClientBuilder database() {
-      return new DatabaseClientBuilder(pathlingContext).withQueryConfiguration(queryConfiguration);
     }
 
     /**
@@ -168,7 +152,7 @@ public class PathlingClient {
   }
 
   @Nonnull
-  Dataset<Row> execute(@Nonnull final ExtractRequest extractRequest) {
+  public Dataset<Row> execute(@Nonnull final ExtractRequest extractRequest) {
     return new ExtractQueryExecutor(
         configuration,
         fhirContext,
@@ -179,7 +163,7 @@ public class PathlingClient {
   }
 
   @Nonnull
-  Dataset<Row> execute(@Nonnull final AggregateRequest aggregateRequest) {
+  public Dataset<Row> execute(@Nonnull final AggregateRequest aggregateRequest) {
     // TODO: This is a temporary solution to allow for the aggregation query to be executed.
     return new AggregateQueryExecutor(
         configuration,
