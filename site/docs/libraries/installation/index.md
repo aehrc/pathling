@@ -40,7 +40,6 @@ To add the Pathling library to your project, add the following to
 your `pom.xml`:
 
 ```xml
-
 <dependency>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>library-api</artifactId>
