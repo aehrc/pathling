@@ -68,6 +68,7 @@
             <fileset>
               <directory>${project.basedir}/.pytest_cache</directory>
               <directory>${project.basedir}/.pathling.egg_info</directory>
+              <directory>${project.basedir}/build</directory>
             </fileset>
           </filesets>
         </configuration>
