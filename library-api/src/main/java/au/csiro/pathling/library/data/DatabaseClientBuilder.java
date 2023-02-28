@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.library.data;
 
-import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.StorageConfiguration;
@@ -25,7 +24,6 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.DataSource;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * The {@link ReadableSource} builder that binds the client to a persistent data storage using
@@ -49,7 +47,7 @@ public class DatabaseClientBuilder extends AbstractClientBuilder<DatabaseClientB
   @Nonnull
   public DatabaseClientBuilder withStorageConfiguration(
       @Nonnull final StorageConfiguration storageConfiguration) {
-    this.storageConfigurationBuilder = storageConfiguration.toBuilder();
+    this.storageConfigurationBuilder =  storageConfiguration.toBuilder();
     return this;
   }
 
