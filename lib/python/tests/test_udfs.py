@@ -13,9 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import logging
 import os
-from tempfile import mkdtemp
 
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import lit
@@ -30,9 +28,7 @@ from pyspark.sql.types import (
 )
 from pytest import fixture
 
-from pathling import PathlingContext
 from pathling.coding import Coding
-from pathling.etc import find_jar as find_pathling_jar
 from pathling.functions import SNOMED_URI, to_snomed_coding
 from pathling.udfs import (
   member_of,
@@ -53,44 +49,8 @@ PROJECT_DIR = os.path.abspath(
 
 # noinspection PyProtectedMember
 @fixture(scope="module")
-def spark(request):
-    """
-    Fixture for creating a Spark Session available for all tests in this
-    testing session.
-    """
-
-    gateway_log = logging.getLogger("java_gateway")
-    gateway_log.setLevel(logging.ERROR)
-
-    # Get the shaded JAR for testing purposes.
-    spark = (
-        SparkSession.builder.appName("pathling-test")
-        .master("local[1]")
-        .config("spark.jars", find_pathling_jar())
-        .config("spark.sql.warehouse.dir", mkdtemp())
-        .config("spark.driver.memory", "4g")
-        .getOrCreate()
-    )
-
-    request.addfinalizer(lambda: spark.stop())
-
-    jvm = spark._jvm
-    encoders = (
-        jvm.au.csiro.pathling.encoders.FhirEncoders.forR4()
-        .withMaxNestingLevel(0)
-        .withExtensionsEnabled(False)
-        .withOpenTypes(jvm.java.util.Collections.emptySet())
-        .getOrCreate()
-    )
-    terminology_service_factory = (
-        jvm.au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory()
-    )
-    pathling_context = jvm.au.csiro.pathling.library.PathlingContext.create(
-        spark._jsparkSession, encoders, terminology_service_factory
-    )
-    PathlingContext(spark, pathling_context)
-
-    return spark
+def spark(pathling_ctx):
+    return pathling_ctx.spark
 
 
 CODING_TYPE = StructType(

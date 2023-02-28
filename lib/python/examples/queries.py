@@ -15,8 +15,7 @@
 
 import os
 
-from pathling import PathlingContext
-from pathling.query import Expression
+from pathling import PathlingContext, Expression, exp
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 

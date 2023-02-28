@@ -30,6 +30,8 @@ from .udfs import (
     Equivalence,
 )
 
+from .core import Expression, exp
+
 __all__ = [
     "PathlingContext",
     "StorageType",
@@ -49,4 +51,6 @@ __all__ = [
     "to_snomed_coding",
     "to_ecl_value_set",
     "find_jar",
+    "exp",
+    "Expression",
 ]

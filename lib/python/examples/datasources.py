@@ -15,8 +15,7 @@
 
 import os
 
-from pathling import PathlingContext
-from pathling.core import exp
+from pathling import PathlingContext, exp
 from pathling.datasource import DataSources
 from pathling.query import AggregateQuery
 

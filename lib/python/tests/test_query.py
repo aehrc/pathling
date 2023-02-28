@@ -1,0 +1,148 @@
+#  Copyright 2023 Commonwealth Scientific and Industrial Research
+#  Organisation (CSIRO) ABN 41 687 119 230.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+import os
+
+from pyspark import Row
+from pytest import fixture
+
+from pathling import Expression, exp
+from pathling.query import AggregateQuery
+
+HERE = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = os.path.join(HERE, "data")
+
+
+@fixture(scope="module")
+def test_data_source(pathling_ctx):
+    return pathling_ctx.data_source.from_ndjson_dir(os.path.join(DATA_DIR, "ndjson"))
+
+
+def test_extract(test_data_source):
+    result = test_data_source.extract(
+        "Patient",
+        columns=[
+            "id",
+            "gender",
+            Expression(
+                "reverseResolve(Condition.subject).code.coding.code", "condition_code"
+            ),
+        ],
+        filters=["gender = 'male'"],
+    )
+
+    # noinspection PyPep8Naming
+    ExtractRow = Row("id", "gender", "condition_code")
+    assert result.columns == list(ExtractRow)
+
+    assert result.limit(5).collect() == [
+        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", None),
+        ExtractRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "44054006"),
+    ]
+
+
+def test_extract_no_filters(test_data_source):
+    result = test_data_source.extract(
+        "Patient",
+        columns=[
+            "id",
+            "gender",
+            exp("reverseResolve(Condition.subject).code.coding.code").alias(
+                "condition_code"
+            ),
+        ],
+    )
+
+    # noinspection PyPep8Naming
+    ExtractRow = Row("id", "gender", "condition_code")
+    assert result.columns == list(ExtractRow)
+
+    assert result.limit(5).collect() == [
+        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+        ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", None),
+        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", None),
+    ]
+
+
+def test_aggregate(test_data_source):
+    agg_result = test_data_source.aggregate(
+        "Patient",
+        aggregations=[exp("count()").alias("patient_count")],
+        groupings=["gender", "maritalStatus.coding.code"],
+        filters=["birthDate > @1957-06-06"],
+    )
+
+    # noinspection PyPep8Naming
+    AggregateRow = Row("gender", "maritalStatus.coding.code", "patient_count")
+    assert agg_result.columns == list(AggregateRow)
+
+    assert agg_result.collect() == [
+        AggregateRow("male", "S", 1),
+        AggregateRow("male", "M", 2),
+        AggregateRow("female", "S", 3),
+        AggregateRow("female", "M", 1),
+    ]
+
+
+def test_aggregate_no_filter(test_data_source):
+    agg_result = test_data_source.aggregate(
+        "Patient",
+        aggregations=[exp("count()").alias("patient_count")],
+        groupings=[
+            exp("gender"),
+            exp("maritalStatus.coding.code").alias("marital_status_code"),
+        ],
+    )
+
+    # noinspection PyPep8Naming
+    AggregateRow = Row("gender", "marital_status_code", "patient_count")
+    assert agg_result.columns == list(AggregateRow)
+
+    assert agg_result.collect() == [
+        AggregateRow("male", "S", 3),
+        AggregateRow("male", "M", 2),
+        AggregateRow("female", "S", 3),
+        AggregateRow("female", "M", 1),
+    ]
+
+
+def test_many_aggregate_no_grouping(test_data_source):
+
+    # noinspection PyPep8Naming
+    ResultRow = Row("patient_count", "id.count()")
+
+    agg_result = test_data_source.aggregate(
+        "Patient",
+        aggregations=[exp("count()").alias("patient_count"), "id.count()"],
+    )
+    assert agg_result.columns == list(ResultRow)
+    assert agg_result.collect() == [ResultRow(9, 9)]
+
+    agg_result = AggregateQuery(
+      "Patient",
+      aggregations=[exp("count()").alias("patient_count"), "id.count()"],
+    ).execute(test_data_source)
+    assert agg_result.columns == list(ResultRow)
+    assert agg_result.collect() == [ResultRow(9, 9)]
+
+
+
+
+
