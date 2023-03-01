@@ -14,9 +14,9 @@
 #  limitations under the License.
 
 from typing import Optional, Sequence
+from typing import TYPE_CHECKING
 
 from deprecated import deprecated
-
 # noinspection PyPackageRequirements
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
@@ -24,6 +24,10 @@ from pyspark.sql import DataFrame, SparkSession, Column
 from pathling.coding import Coding
 from pathling.etc import find_jar
 from pathling.fhir import MimeType
+
+if TYPE_CHECKING:
+    from .datasource import DataSources
+
 
 __all__ = ["PathlingContext"]
 
