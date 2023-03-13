@@ -33,7 +33,7 @@
   <name>Pathling Terminology</name>
   <description>Interact with a FHIR terminology server from Spark.</description>
   <properties>
-    <infinispan.version>14.0.5.Final</infinispan.version>
+    <infinispan.version>14.0.7.Final</infinispan.version>
   </properties>
 
   <dependencies>
