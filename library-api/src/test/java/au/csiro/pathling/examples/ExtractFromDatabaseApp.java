@@ -36,7 +36,7 @@ public class ExtractFromDatabaseApp {
         .withStorageConfiguration(StorageConfiguration.forDatabase(warehouseUrl, "parquet"))
         .build();
 
-    final Dataset<Row> patientResult = readableSource.newExtractQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.extract(ResourceType.PATIENT)
         .withColumn("id")
         .withColumn("gender")
         .withColumn("reverseResolve(Condition.subject).code.coding.code")

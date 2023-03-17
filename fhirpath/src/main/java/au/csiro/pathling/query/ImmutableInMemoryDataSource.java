@@ -78,9 +78,12 @@ public class ImmutableInMemoryDataSource implements DataSource {
       throw new IllegalStateException(
           String.format("Cannot find data for resource of type: %s", key));
     });
-    return StorageLevel.NONE().equals(resourceDataset.storageLevel())
-           ? resourceDataset.cache()
-           : resourceDataset;
+
+    // NOTE: We exclude streaming datasets from caching, as this results in errors.
+    return
+        StorageLevel.NONE().equals(resourceDataset.storageLevel()) && !resourceDataset.isStreaming()
+        ? resourceDataset.cache()
+        : resourceDataset;
   }
 
   /**

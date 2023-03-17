@@ -53,7 +53,7 @@ public class AggregateFromDatabaseApp {
         .withStorageConfiguration(StorageConfiguration.forDatabase(warehouseUrl, "parquet"))
         .build();
 
-    final Dataset<Row> patientResult = readableSource.newAggregateQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.aggregate(ResourceType.PATIENT)
         .withGrouping("gender")
         .withGrouping("maritalStatus.coding")
         .withAggregation("count()", "countOfPatients")

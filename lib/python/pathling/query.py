@@ -143,7 +143,7 @@ class ExtractQuery(QueryWithFilters):
         :param data_source: The DataSource instance to use for executing the query.
         :return: A new instance of a Java-based extract query object.
         """
-        jquery = data_source._jds.newExtractQuery(self._subject_resource)
+        jquery = data_source._jds.extract(self._subject_resource)
         for column in self._columns:
             jquery.withColumn(*column.as_tuple())
         if self._filters:
@@ -222,7 +222,7 @@ class AggregateQuery(QueryWithFilters):
         :param data_source: The DataSource object containing the data to be queried.
         :return: A new Java AggregateQuery object with the appropriate parameters.
         """
-        jquery = data_source._jds.newAggregateQuery(self._subject_resource)
+        jquery = data_source._jds.aggregate(self._subject_resource)
         for aggregation in self._aggregations:
             jquery.withAggregation(*aggregation.as_tuple())
 

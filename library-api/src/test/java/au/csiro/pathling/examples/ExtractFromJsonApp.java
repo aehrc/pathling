@@ -27,9 +27,9 @@ public class ExtractFromJsonApp {
     final PathlingContext ptc = PathlingContext.create(spark);
     
     final ReadableSource readableSource = ptc.datasources()
-        .fromNDJsonDir(fhirData.toUri().toString());
+        .fromNdjsonDir(fhirData.toUri().toString());
 
-    final Dataset<Row> patientResult = readableSource.newExtractQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.extract(ResourceType.PATIENT)
         .withColumn("id")
         .withColumn("gender")
         .withColumn("reverseResolve(Condition.subject).code.coding.code")

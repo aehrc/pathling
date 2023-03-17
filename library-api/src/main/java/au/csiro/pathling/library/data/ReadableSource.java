@@ -102,11 +102,10 @@ public class ReadableSource {
    * @return the new instance of extract query.
    */
   @Nonnull
-  public ExtractQuery newExtractQuery(@Nonnull final ResourceType subjectResourceType) {
+  public ExtractQuery extract(@Nonnull final ResourceType subjectResourceType) {
     return ExtractQuery.of(subjectResourceType).withClient(this);
   }
-
-
+  
   /**
    * Creates a new extract query bound to this client with given subject resource.
    *
@@ -114,8 +113,8 @@ public class ReadableSource {
    * @return the new instance of extract query.
    */
   @Nonnull
-  public ExtractQuery newExtractQuery(@Nonnull final String subjectResourceCode) {
-    return ExtractQuery.of(ResourceType.fromCode(subjectResourceCode)).withClient(this);
+  public ExtractQuery extract(@Nonnull final String subjectResourceCode) {
+    return extract(ResourceType.fromCode(subjectResourceCode));
   }
 
   /**
@@ -125,7 +124,7 @@ public class ReadableSource {
    * @return the new instance of aggregate query.
    */
   @Nonnull
-  public AggregateQuery newAggregateQuery(@Nonnull final ResourceType subjectResourceType) {
+  public AggregateQuery aggregate(@Nonnull final ResourceType subjectResourceType) {
     return AggregateQuery.of(subjectResourceType).withClient(this);
   }
 
@@ -136,8 +135,8 @@ public class ReadableSource {
    * @return the new instance of aggregate query.
    */
   @Nonnull
-  public AggregateQuery newAggregateQuery(@Nonnull final String subjectResourceCode) {
-    return AggregateQuery.of(ResourceType.fromCode(subjectResourceCode)).withClient(this);
+  public AggregateQuery aggregate(@Nonnull final String subjectResourceCode) {
+    return aggregate(ResourceType.fromCode(subjectResourceCode));
   }
 
   /**
@@ -164,7 +163,6 @@ public class ReadableSource {
 
   @Nonnull
   public Dataset<Row> execute(@Nonnull final AggregateRequest aggregateRequest) {
-    // TODO: This is a temporary solution to allow for the aggregation query to be executed.
     return new AggregateQueryExecutor(
         configuration,
         fhirContext,

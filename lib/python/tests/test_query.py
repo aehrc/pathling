@@ -18,7 +18,7 @@ import os
 from pyspark import Row
 from pytest import fixture
 
-from pathling import Expression, exp
+from pathling import Expression, Expression as fpe
 from pathling.query import AggregateQuery
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -62,7 +62,7 @@ def test_extract_no_filters(test_data_source):
         columns=[
             "id",
             "gender",
-            exp("reverseResolve(Condition.subject).code.coding.code").alias(
+            fpe("reverseResolve(Condition.subject).code.coding.code").alias(
                 "condition_code"
             ),
         ],
@@ -84,7 +84,7 @@ def test_extract_no_filters(test_data_source):
 def test_aggregate(test_data_source):
     agg_result = test_data_source.aggregate(
         "Patient",
-        aggregations=[exp("count()").alias("patient_count")],
+        aggregations=[fpe("count()").alias("patient_count")],
         groupings=["gender", "maritalStatus.coding.code"],
         filters=["birthDate > @1957-06-06"],
     )
@@ -104,10 +104,10 @@ def test_aggregate(test_data_source):
 def test_aggregate_no_filter(test_data_source):
     agg_result = test_data_source.aggregate(
         "Patient",
-        aggregations=[exp("count()").alias("patient_count")],
+        aggregations=[fpe("count()").alias("patient_count")],
         groupings=[
-            exp("gender"),
-            exp("maritalStatus.coding.code").alias("marital_status_code"),
+            fpe("gender"),
+            fpe("maritalStatus.coding.code").alias("marital_status_code"),
         ],
     )
 
@@ -130,14 +130,14 @@ def test_many_aggregate_no_grouping(test_data_source):
 
     agg_result = test_data_source.aggregate(
         "Patient",
-        aggregations=[exp("count()").alias("patient_count"), "id.count()"],
+        aggregations=[fpe("count()").alias("patient_count"), "id.count()"],
     )
     assert agg_result.columns == list(ResultRow)
     assert agg_result.collect() == [ResultRow(9, 9)]
 
     agg_result = AggregateQuery(
       "Patient",
-      aggregations=[exp("count()").alias("patient_count"), "id.count()"],
+      aggregations=[fpe("count()").alias("patient_count"), "id.count()"],
     ).execute(test_data_source)
     assert agg_result.columns == list(ResultRow)
     assert agg_result.collect() == [ResultRow(9, 9)]

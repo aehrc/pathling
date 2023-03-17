@@ -30,7 +30,11 @@ from .udfs import (
     Equivalence,
 )
 
-from .core import Expression, exp
+from .core import Expression
+
+from .query import ExtractQuery, AggregateQuery
+
+from .datasource import DataSources
 
 __all__ = [
     "PathlingContext",
@@ -51,6 +55,8 @@ __all__ = [
     "to_snomed_coding",
     "to_ecl_value_set",
     "find_jar",
-    "exp",
     "Expression",
+    "ExtractQuery",
+    "AggregateQuery",
+    "DataSources",
 ]

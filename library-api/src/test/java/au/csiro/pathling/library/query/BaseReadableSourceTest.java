@@ -55,7 +55,7 @@ abstract public class BaseReadableSourceTest {
 
   @Test
   public void testExtractQueryBound() {
-    final Dataset<Row> patientResult = readableSource.newExtractQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.extract(ResourceType.PATIENT)
         .withColumn("id")
         .withColumn("gender")
         .withColumn("reverseResolve(Condition.subject).code.coding")
@@ -89,7 +89,7 @@ abstract public class BaseReadableSourceTest {
   
   @Test
   public void testAggregateQuery() {
-    final Dataset<Row> patientResult = readableSource.newAggregateQuery(ResourceType.PATIENT)
+    final Dataset<Row> patientResult = readableSource.aggregate(ResourceType.PATIENT)
         .withGrouping("gender")
         .withGrouping("maritalStatus.coding.code", "maritalStatusCode")
         .withAggregation("count()", "patientCount")

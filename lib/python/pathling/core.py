@@ -84,6 +84,14 @@ ExpOrStr = Union["Expression", str]
 class Expression:
     """
     Represents an FHIRPath expression that may have an optional name/alias.
+    To make it easier to work with expressions, uses can alias this class with their own name, 
+    for example: 'exp' or 'fp' using import and then use the alias method to create labeled 
+    expressions. For example:
+
+    ```
+    from pathling import Expression as fp
+    fp('some FHIRPath expression').alias('some name')
+    ```
     """
 
     def __init__(self, expression: str, label: Optional[str] = None):
@@ -156,26 +164,3 @@ class Expression:
         return tuple(
             cls.as_expression(exp_or_str) for exp_or_str in sequence_of_exp_or_str
         )
-
-
-def exp(expression: str) -> Expression:
-    """
-    This function simplifies the creation of `Expression` objects by providing a succinct way to create them with just the FHIRPath expression. For example:
-
-    ```
-    exp('some FHIRPath expression')
-    ```
-
-    Additionally, this function can be used to create labeled expressions by chaining the `alias` method. For example:
-
-    ```
-    exp('some FHIRPath expression').alias('some name')
-    ```
-
-    See the `Expression` class for more information on creating and working with expressions.
-
-    :param expression: The FHIRPath expression.
-    :return: A new `Expression` object with the specified FHIRPath expression.
-
-    """
-    return Expression(expression)

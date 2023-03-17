@@ -78,7 +78,7 @@ public abstract class AbstractClientBuilder<T extends AbstractClientBuilder> {
    */
   @Nonnull
   public ExtractQuery buildExtractQuery(@Nonnull final ResourceType subjectResourceType) {
-    return this.build().newExtractQuery(subjectResourceType);
+    return this.build().extract(subjectResourceType);
   }
   
   /**
@@ -90,7 +90,7 @@ public abstract class AbstractClientBuilder<T extends AbstractClientBuilder> {
    */   
   @Nonnull
   public AggregateQuery buildAggregateQuery(@Nonnull final ResourceType subjectResourceType) {
-    return this.build().newAggregateQuery(subjectResourceType);
+    return this.build().aggregate(subjectResourceType);
   }
   
   @Nonnull

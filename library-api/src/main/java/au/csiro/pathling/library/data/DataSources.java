@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-public class Datasources {
+public class DataSources {
 
   @Nonnull
   private final PathlingContext pathlingContext;
@@ -48,7 +48,7 @@ public class Datasources {
   @Nonnull
   private final SparkSession spark;
 
-  public Datasources(@Nonnull final PathlingContext pathlingContext) {
+  public DataSources(@Nonnull final PathlingContext pathlingContext) {
     this.pathlingContext = pathlingContext;
     this.spark = pathlingContext.getSpark();
   }
@@ -117,9 +117,9 @@ public class Datasources {
   }
 
   @Nonnull
-  public ReadableSource fromNDJsonDir(@Nonnull final String ndjsonDir)
+  public ReadableSource fromNdjsonDir(@Nonnull final String ndjsonDir)
       throws URISyntaxException, IOException {
-    return fromTextFiles(Path.of(ndjsonDir, "*.ndjson").toString(), Datasources::basenameToResource,
+    return fromTextFiles(Path.of(ndjsonDir, "*.ndjson").toString(), DataSources::basenameToResource,
         FhirMimeTypes.FHIR_JSON);
   }
 }

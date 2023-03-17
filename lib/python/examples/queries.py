@@ -15,7 +15,8 @@
 
 import os
 
-from pathling import PathlingContext, Expression, exp
+from pathling import PathlingContext, Expression
+from pathling import Expression as fpe
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
@@ -52,7 +53,7 @@ result.limit(10).show()
 
 agg_result = data_source.aggregate(
     "Patient",
-    aggregations=[exp("count()").alias("countOfPatients")],
+    aggregations=[fpe("count()").alias("countOfPatients")],
     groupings=["gender", "maritalStatus.coding"],
     filters=["birthDate > @1957-06-06"],
 )

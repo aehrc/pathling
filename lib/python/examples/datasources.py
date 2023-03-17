@@ -15,9 +15,9 @@
 
 import os
 
-from pathling import PathlingContext, exp
-from pathling.datasource import DataSources
-from pathling.query import AggregateQuery
+from pathling import AggregateQuery
+from pathling import DataSources
+from pathling import PathlingContext, Expression as fpe
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 PROJECT_DIR = os.path.abspath(
@@ -41,7 +41,7 @@ json_resources = pc.spark.read.text(ndjson_dir, pathGlobFilter="*.ndjson")
 
 patient_count_by_gender_and_status = agg_result = AggregateQuery(
     "Patient",
-    aggregations=[exp("count()").alias("countOfPatients")],
+    aggregations=[fpe("count()").alias("countOfPatients")],
     groupings=["gender", "maritalStatus.coding"],
     filters=["birthDate > @1957-06-06"],
 )
