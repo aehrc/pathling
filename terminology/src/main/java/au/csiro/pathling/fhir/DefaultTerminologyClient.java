@@ -29,6 +29,7 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
+import org.apache.http.HttpHeaders;
 
 /**
  * An implementation of {@link TerminologyClient} that uses cacheable GET requests.
@@ -139,6 +140,15 @@ class DefaultTerminologyClient implements TerminologyClient {
 
   @Nonnull
   @Override
+  public Parameters lookup(@Nonnull final UriType system,
+        @Nullable final StringType version, @Nonnull final CodeType code,
+        @Nullable final CodeType property,
+        @Nullable final CodeType acceptLanguage) {
+    return buildLookup(system, version, code, property, acceptLanguage).execute();
+  }
+
+  @Nonnull
+  @Override
   public IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull final UriType system,
       @Nullable final StringType version,
       @Nonnull final CodeType code, @Nullable final CodeType property) {
@@ -156,6 +166,35 @@ class DefaultTerminologyClient implements TerminologyClient {
         .named("$lookup")
         .withParameters(params)
         .useHttpGet();
+  }
+
+  
+  @Nonnull
+  @Override
+  public IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull final UriType system,
+      @Nullable final StringType version,
+      @Nonnull final CodeType code, @Nullable final CodeType property,
+      @Nullable final CodeType acceptLanguage) {
+    final Parameters params = new Parameters();
+    params.addParameter().setName("system").setValue(system);
+    params.addParameter().setName("code").setValue(code);
+    if (version != null) {
+      params.addParameter().setName("version").setValue(version);
+    }
+    if (property != null) {
+      params.addParameter().setName("property").setValue(property);
+    }
+    IOperationUntypedWithInput<Parameters> ret = fhirClient.operation()
+        .onType(CodeSystem.class)
+        .named("$lookup")
+        .withParameters(params)
+        .useHttpGet();
+    
+    final String language = acceptLanguage.getCode();
+    if (language != null) {
+      ret = ret.withAdditionalHeader(HttpHeaders.ACCEPT_LANGUAGE, language);
+    }
+    return ret;
   }
 
 }

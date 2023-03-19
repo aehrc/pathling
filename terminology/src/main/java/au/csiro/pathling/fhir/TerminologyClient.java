@@ -176,6 +176,26 @@ public interface TerminologyClient {
   );
 
   /**
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @param acceptLanguage the preferable language of the return
+   * @return a {@link Parameters} resource
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   */
+  @Operation(name = "$lookup", type = CodeSystem.class, idempotent = true)
+  @Nonnull
+  Parameters lookup(
+      @Nonnull @OperationParam(name = "system") UriType system,
+      @Nullable @OperationParam(name = "version") StringType version,
+      @Nonnull @OperationParam(name = "code") CodeType code,
+      @Nullable @OperationParam(name = "property") CodeType property,
+      @Nullable @OperationParam(name = "acceptLanguage") CodeType acceptLanguage
+  );
+  
+  /**
    * Builds a lookup operation that can be customized and executed later.
    *
    * @param system the system of the code
@@ -189,6 +209,22 @@ public interface TerminologyClient {
   @Nonnull
   IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,
       @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property);
+
+  /**
+   * Builds a lookup operation that can be customized and executed later.
+   *
+   * @param system the system of the code
+   * @param version the version of the code system
+   * @param code the code to lookup
+   * @param property the property or properties to be returned in the response
+   * @return an {@link IOperationUntypedWithInput} that can be customized and executed later
+   * @see <a
+   * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   */
+  @Nonnull
+  IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,
+      @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property, @Nullable CodeType acceptLanguage);
+
 
   /**
    * Builds a new terminology client.

@@ -26,9 +26,11 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.StringType;
 
 import javax.annotation.Nonnull;
 import java.util.Optional;
+import java.util.List;
 
 import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
@@ -55,8 +57,17 @@ public class DisplayFunction implements NamedFunction {
     final ElementPath inputPath = (ElementPath) input.getInput();
     final String expression = expressionFromInput(input, NAME);
 
+    final Arguments arguments = Arguments.of(input);
+    var acceptLanguageStringType = arguments.getNullableValue(0, StringType.class);
+    String acceptLanguage = null;
+    if (acceptLanguageStringType != null) {
+    	acceptLanguage = acceptLanguageStringType.asStringValue();
+    } else {
+    	acceptLanguage = null;
+    }
+    
     final Dataset<Row> dataset = inputPath.getDataset();
-    final Column resultColumn = display(inputPath.getValueColumn());
+    final Column resultColumn = display(inputPath.getValueColumn(), acceptLanguage);
 
     return ElementPath
         .build(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
@@ -66,7 +77,6 @@ public class DisplayFunction implements NamedFunction {
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
     final ParserContext context = input.getContext();
-    checkNoArguments(NAME, input);
     checkUserInput(context.getTerminologyServiceFactory()
         .isPresent(), "Attempt to call terminology function " + NAME
         + " when terminology service has not been configured");
@@ -75,5 +85,9 @@ public class DisplayFunction implements NamedFunction {
     checkUserInput(inputPath instanceof ElementPath
             && (((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
         "Input to display function must be Coding but is: " + inputPath.getExpression());
+
+    final List<FhirPath> arguments = input.getArguments();
+    checkUserInput(arguments.size() >= 0 && arguments.size() <= 1,
+        NAME + " function accepts one optional language argument");
   }
 }

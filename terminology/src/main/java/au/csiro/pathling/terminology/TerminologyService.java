@@ -135,6 +135,20 @@ public interface TerminologyService {
   List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode);
 
   /**
+   * Gets additional details about the concept, including designations and properties. Abstracts
+   * the
+   * <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+   * operation.
+   *
+   * @param coding the coding to lookup.
+   * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
+   * with matching codes are returned.
+   * @return the list of properties and/or designations.
+   */
+  @Nonnull
+  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode, @Nullable String displayLanguage);
+  
+  /**
    * Common interface for properties and designations
    */
   interface PropertyOrDesignation extends Serializable {

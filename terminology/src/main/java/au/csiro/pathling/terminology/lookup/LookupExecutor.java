@@ -81,12 +81,14 @@ public class LookupExecutor implements
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final ImmutableCoding coding = parameters.getCoding();
     final String property = parameters.getProperty();
-   
+    final String language = parameters.getDisplayLanguage();
+
     return terminologyClient.buildLookup(
         TerminologyParameters.required(UriType::new, coding.getSystem()),
         TerminologyParameters.optional(StringType::new, coding.getVersion()),
         TerminologyParameters.required(CodeType::new, coding.getCode()),
-        TerminologyParameters.optional(CodeType::new, property)
+        TerminologyParameters.optional(CodeType::new, property),
+        TerminologyParameters.optional(CodeType::new, language)
     );
   }
 

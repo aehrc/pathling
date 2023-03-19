@@ -38,7 +38,7 @@ public class Udfs {
   @Bean
   @Nonnull
   @Qualifier("terminology")
-  public static SparkConfigurer terminologUdfRegistrar(
+  public static SparkConfigurer terminologyUdfRegistrar(
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
     return new TerminologyUdfRegistrar(terminologyServiceFactory);
   }
