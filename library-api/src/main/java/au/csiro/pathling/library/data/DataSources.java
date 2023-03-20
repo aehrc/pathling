@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -37,6 +38,9 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.spark.sql.DataFrameReader;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -87,11 +91,11 @@ public class DataSources {
     return databaseBuilder().withWarehouseUrl(warehouseUrl).withDatabaseName(databaseName).build();
   }
 
-
   @Nonnull
-  public ReadableSource fromTextFiles(String filesGlob,
-      Function<String, List<String>> filenameMapper,
-      final String mimeType)
+  public ReadableSource fromFiles(@Nonnull final String filesGlob,
+      @Nonnull final Function<String, List<String>> filenameMapper,
+      @Nonnull final DataFrameReader reader,
+      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> datasetTransformer)
       throws URISyntaxException, IOException {
     final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
         pathlingContext.getSpark().sparkContext()
@@ -110,10 +114,27 @@ public class DataSources {
 
     filenamesByResourceTypes.forEach((resourceType, filenames) ->
         builder.withResource(resourceType,
-            pathlingContext.encode(spark.read().text(filenames.toArray(String[]::new)),
-                resourceType, mimeType)
+            datasetTransformer.apply(reader.load(filenames.toArray(String[]::new)), resourceType)
         ));
     return builder.build();
+  }
+
+  @Nonnull
+  public ReadableSource fromFiles(@Nonnull final String filesGlob,
+      @Nonnull final Function<String, List<String>> filenameMapper,
+      @Nonnull final DataFrameReader reader)
+      throws URISyntaxException, IOException {
+    return fromFiles(filesGlob, filenameMapper, reader, (dataset, rt) -> dataset);
+  }
+
+  @Nonnull
+  public ReadableSource fromTextFiles(@Nonnull final String filesGlob,
+      @Nonnull final Function<String, List<String>> filenameMapper,
+      @Nonnull final String mimeType)
+      throws URISyntaxException, IOException {
+
+    return fromFiles(filesGlob, filenameMapper, spark.read().format("text"),
+        (dataset, resourceType) -> pathlingContext.encode(dataset, resourceType, mimeType));
   }
 
   @Nonnull

@@ -136,13 +136,8 @@ def test_many_aggregate_no_grouping(test_data_source):
     assert agg_result.collect() == [ResultRow(9, 9)]
 
     agg_result = AggregateQuery(
-      "Patient",
-      aggregations=[fpe("count()").alias("patient_count"), "id.count()"],
+        "Patient",
+        aggregations=[fpe("count()").alias("patient_count"), "id.count()"],
     ).execute(test_data_source)
     assert agg_result.columns == list(ResultRow)
     assert agg_result.collect() == [ResultRow(9, 9)]
-
-
-
-
-
