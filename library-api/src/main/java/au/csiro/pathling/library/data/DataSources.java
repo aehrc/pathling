@@ -17,67 +17,37 @@
 
 package au.csiro.pathling.library.data;
 
-import static java.util.Objects.requireNonNull;
-
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.query.DataSource;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.DataFrameReader;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public class DataSources {
 
   @Nonnull
   private final PathlingContext pathlingContext;
 
-  @Nonnull
-  private final SparkSession spark;
-
   public DataSources(@Nonnull final PathlingContext pathlingContext) {
     this.pathlingContext = pathlingContext;
-    this.spark = pathlingContext.getSpark();
-  }
-
-  public static List<String> basenameToResource(String filename) {
-    // get the basename from the filename (wihout the extension)
-    // return the resource type(s) that the file is for
-
-    return Collections.singletonList(
-        ResourceType.fromCode(FilenameUtils.getBaseName(filename)).toCode());
   }
 
   @Nonnull
-  public ReadableSource.Builder builderFromDatasource(@Nonnull final DataSource dataSource) {
-    return new ReadableSource.Builder(pathlingContext).withDataSource(dataSource);
+  public DirectSourceBuilder directBuilder() {
+    return new DirectSourceBuilder(pathlingContext);
   }
 
   @Nonnull
-  public InMemoryClientBuilder transientBuilder() {
-    return new InMemoryClientBuilder(pathlingContext);
+  public DatabaseSourceBuilder databaseBuilder() {
+    return new DatabaseSourceBuilder(pathlingContext);
   }
 
   @Nonnull
-  public DatabaseClientBuilder databaseBuilder() {
-    return new DatabaseClientBuilder(pathlingContext);
+  public FilesystemSourceBuilder filesystemBuilder() {
+    return new FilesystemSourceBuilder(pathlingContext);
   }
 
   @Nonnull
@@ -94,53 +64,47 @@ public class DataSources {
   @Nonnull
   public ReadableSource fromFiles(@Nonnull final String filesGlob,
       @Nonnull final Function<String, List<String>> filenameMapper,
-      @Nonnull final DataFrameReader reader,
-      @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> datasetTransformer)
-      throws URISyntaxException, IOException {
-    final org.apache.hadoop.conf.Configuration hadoopConfiguration = requireNonNull(
-        pathlingContext.getSpark().sparkContext()
-            .hadoopConfiguration());
-    final FileSystem warehouse = FileSystem.get(new URI(filesGlob), hadoopConfiguration);
-    final Map<String, List<String>> filenamesByResourceTypes = Stream.of(
-            warehouse.globStatus(new org.apache.hadoop.fs.Path(filesGlob)))
-        .map(FileStatus::getPath)
-        .map(Object::toString)
-        .flatMap(filepath -> filenameMapper.apply(filepath).stream()
-            .map(resourceType -> Pair.of(resourceType, filepath)))
-        .collect(Collectors.groupingBy(Pair::getKey,
-            Collectors.mapping(Pair::getValue, Collectors.toList())));
-
-    InMemoryClientBuilder builder = new InMemoryClientBuilder(pathlingContext);
-
-    filenamesByResourceTypes.forEach((resourceType, filenames) ->
-        builder.withResource(resourceType,
-            datasetTransformer.apply(reader.load(filenames.toArray(String[]::new)), resourceType)
-        ));
-    return builder.build();
+      @Nonnull final DataFrameReader reader) {
+    return this.filesystemBuilder()
+        .withFilesGlob(filesGlob)
+        .withFilenameMapper(filenameMapper)
+        .withReader(reader).build();
   }
 
   @Nonnull
   public ReadableSource fromFiles(@Nonnull final String filesGlob,
       @Nonnull final Function<String, List<String>> filenameMapper,
-      @Nonnull final DataFrameReader reader)
-      throws URISyntaxException, IOException {
-    return fromFiles(filesGlob, filenameMapper, reader, (dataset, rt) -> dataset);
+      @Nonnull final String format) {
+    return this.filesystemBuilder()
+        .withFilesGlob(filesGlob)
+        .withFilenameMapper(filenameMapper)
+        .withFormat(format).build();
   }
 
   @Nonnull
   public ReadableSource fromTextFiles(@Nonnull final String filesGlob,
       @Nonnull final Function<String, List<String>> filenameMapper,
-      @Nonnull final String mimeType)
-      throws URISyntaxException, IOException {
+      @Nonnull final String mimeType) {
+    return this.filesystemBuilder()
+        .withFilesGlob(filesGlob)
+        .withFilenameMapper(filenameMapper)
+        .withTextEncoder(mimeType)
+        .build();
 
-    return fromFiles(filesGlob, filenameMapper, spark.read().format("text"),
-        (dataset, resourceType) -> pathlingContext.encode(dataset, resourceType, mimeType));
   }
 
   @Nonnull
-  public ReadableSource fromNdjsonDir(@Nonnull final String ndjsonDir)
-      throws URISyntaxException, IOException {
-    return fromTextFiles(Path.of(ndjsonDir, "*.ndjson").toString(), DataSources::basenameToResource,
+  public ReadableSource fromNdjsonDir(@Nonnull final String ndjsonDir) {
+    return fromTextFiles(Path.of(ndjsonDir, "*.ndjson").toString(),
+        SupportFunctions::basenameToResource,
         FhirMimeTypes.FHIR_JSON);
   }
+
+  @Nonnull
+  public ReadableSource fromParquetDir(@Nonnull final String parquetDir) {
+    return fromFiles(Path.of(parquetDir, "*.parquet").toString(),
+        SupportFunctions::basenameToResource,
+        "parquet");
+  }
+
 }

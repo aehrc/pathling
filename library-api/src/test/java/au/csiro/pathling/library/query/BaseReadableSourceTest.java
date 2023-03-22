@@ -54,8 +54,8 @@ abstract public class BaseReadableSourceTest {
 
 
   @Test
-  public void testExtractQueryBound() {
-    final Dataset<Row> patientResult = readableSource.extract(ResourceType.PATIENT)
+  public void testExtractQueryBoundToSource() {
+    final Dataset<Row> patientResult = readableSource.extract("Patient")
         .withColumn("id")
         .withColumn("gender")
         .withColumn("reverseResolve(Condition.subject).code.coding")
@@ -71,7 +71,7 @@ abstract public class BaseReadableSourceTest {
   }
 
   @Test
-  public void testExtractQueryUnbound() {
+  public void testExtractQueryNotBound() {
     final Dataset<Row> conditionResult = ExtractQuery.of(ResourceType.CONDITION)
         .withColumn("id")
         .withColumn("code.coding.code", "code")
@@ -88,8 +88,8 @@ abstract public class BaseReadableSourceTest {
   }
   
   @Test
-  public void testAggregateQuery() {
-    final Dataset<Row> patientResult = readableSource.aggregate(ResourceType.PATIENT)
+  public void testAggregateQueryBoundToSource() {
+    final Dataset<Row> patientResult = readableSource.aggregate("Patient")
         .withGrouping("gender")
         .withGrouping("maritalStatus.coding.code", "maritalStatusCode")
         .withAggregation("count()", "patientCount")
@@ -101,7 +101,24 @@ abstract public class BaseReadableSourceTest {
         Arrays.asList(patientResult.columns()));
 
     DatasetAssert.of(patientResult)
-        .debugAllRows()
         .hasRows(spark, "results/PathlingClientTest/testAggregateQuery.csv");
   }
+  
+  @Test
+  public void testAggregateQueryUnbound() {
+    final Dataset<Row> patientResult = AggregateQuery.of(ResourceType.PATIENT)
+        .withGrouping("gender")
+        .withGrouping("maritalStatus.coding.code", "maritalStatusCode")
+        .withAggregation("count()", "patientCount")
+        .withAggregation("id.count()")
+        .withFilter("birthDate > @1957-06-06")
+        .execute(readableSource);
+
+    assertEquals(List.of("gender", "maritalStatusCode", "patientCount", "id.count()"),
+        Arrays.asList(patientResult.columns()));
+
+    DatasetAssert.of(patientResult)
+        .hasRows(spark, "results/PathlingClientTest/testAggregateQuery.csv");
+  }
+
 }

@@ -112,7 +112,7 @@ class DataSources(SparkConversionsMixin):
             and the values are the data frames containing the resource data.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        jbuilder = self._jdataSources.transientBuilder()
+        jbuilder = self._jdataSources.directBuilder()
         for resource_code, resource_data in resources.items():
             jbuilder.withResource(resource_code, resource_data._jdf)
         return self._wrap_ds(jbuilder.build())

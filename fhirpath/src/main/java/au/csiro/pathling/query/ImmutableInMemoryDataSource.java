@@ -24,14 +24,20 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A basic immutable data source that allows for explicit mapping of datasets to resource types.
  */
-public class ImmutableInMemoryDataSource implements DataSource {
+public class ImmutableInMemoryDataSource implements EnumerableDataSource {
 
   @Nonnull
   private final Map<ResourceType, Dataset<Row>> resourceMap;
+
+  @Override
+  public Set<ResourceType> getDefinedResources() {
+    return resourceMap.keySet();
+  }
 
   public static class Builder {
 

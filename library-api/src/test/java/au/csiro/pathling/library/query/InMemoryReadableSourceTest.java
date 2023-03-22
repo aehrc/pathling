@@ -20,12 +20,12 @@ public class InMemoryReadableSourceTest extends BaseReadableSourceTest {
         .text(FHIR_JSON_DATA_PATH.resolve("Condition.ndjson").toString());
 
     readableSource = pathlingCtx.datasources()
-        .transientBuilder()
+        .directBuilder()
         .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
         .withResource(ResourceType.PATIENT,
-            pathlingCtx.encode(patientJsonDf, "Patient").cache())
+            pathlingCtx.encode(patientJsonDf, "Patient"))
         .withResource(ResourceType.CONDITION,
-            pathlingCtx.encode(conditionJsonDf, "Condition").cache())
+            pathlingCtx.encode(conditionJsonDf, "Condition"))
         .build();
   }
 }

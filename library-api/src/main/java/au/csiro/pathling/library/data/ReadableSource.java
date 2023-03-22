@@ -67,7 +67,7 @@ public class ReadableSource {
    * A builder of {@link ReadableSource} that allows for explicit assignment of the underlying
    * {@link DataSource}.
    */
-  public static class Builder extends AbstractClientBuilder<Builder> {
+  public static class Builder extends AbstractSourceBuilder<Builder> {
 
     @Nullable
     private DataSource dataSource;

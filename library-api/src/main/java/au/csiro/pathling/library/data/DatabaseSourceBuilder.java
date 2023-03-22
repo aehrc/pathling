@@ -29,12 +29,12 @@ import javax.annotation.Nonnull;
  * The {@link ReadableSource} builder that binds the client to a persistent data storage using
  * {@link Database} as it's data source.
  */
-public class DatabaseClientBuilder extends AbstractClientBuilder<DatabaseClientBuilder> {
+public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceBuilder> {
 
   @Nonnull
   private StorageConfiguration.StorageConfigurationBuilder storageConfigurationBuilder = StorageConfiguration.builder();
 
-  protected DatabaseClientBuilder(@Nonnull final PathlingContext pathlingContext) {
+  protected DatabaseSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
   }
 
@@ -45,20 +45,20 @@ public class DatabaseClientBuilder extends AbstractClientBuilder<DatabaseClientB
    * @return this builder.
    */
   @Nonnull
-  public DatabaseClientBuilder withStorageConfiguration(
+  public DatabaseSourceBuilder withStorageConfiguration(
       @Nonnull final StorageConfiguration storageConfiguration) {
     this.storageConfigurationBuilder =  storageConfiguration.toBuilder();
     return this;
   }
 
   @Nonnull
-  public DatabaseClientBuilder withWarehouseUrl(@Nonnull final String warehouseUrl) {
+  public DatabaseSourceBuilder withWarehouseUrl(@Nonnull final String warehouseUrl) {
     this.storageConfigurationBuilder.warehouseUrl(warehouseUrl);
     return this;
   }
 
   @Nonnull
-  public DatabaseClientBuilder withDatabaseName(@Nonnull final String databaseName) {
+  public DatabaseSourceBuilder withDatabaseName(@Nonnull final String databaseName) {
     this.storageConfigurationBuilder.databaseName(databaseName);
     return this;
   }

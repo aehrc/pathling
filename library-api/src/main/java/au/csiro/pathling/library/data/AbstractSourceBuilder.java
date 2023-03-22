@@ -32,7 +32,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @param <T> the actual class of the builder.
  */
 @SuppressWarnings({"unchecked", "rawtypes"})
-public abstract class AbstractClientBuilder<T extends AbstractClientBuilder> {
+public abstract class AbstractSourceBuilder<T extends AbstractSourceBuilder> {
 
   @Nonnull
   protected final PathlingContext pathlingContext;
@@ -40,7 +40,7 @@ public abstract class AbstractClientBuilder<T extends AbstractClientBuilder> {
   @Nonnull
   protected QueryConfiguration queryConfiguration = QueryConfiguration.builder().build();
 
-  protected AbstractClientBuilder(@Nonnull final PathlingContext pathlingContext) {
+  protected AbstractSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     this.pathlingContext = pathlingContext;
   }
 

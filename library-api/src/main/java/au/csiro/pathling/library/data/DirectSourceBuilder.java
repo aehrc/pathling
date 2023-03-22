@@ -29,12 +29,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * The {@link ReadableSource} builder that binds the client to an {@link
  * ImmutableInMemoryDataSource}
  */
-public class InMemoryClientBuilder extends AbstractClientBuilder<InMemoryClientBuilder> {
+public class DirectSourceBuilder extends AbstractSourceBuilder<DirectSourceBuilder> {
 
   @Nonnull
   private final ImmutableInMemoryDataSource.Builder inMemoryDataSourceBuilder;
 
-  protected InMemoryClientBuilder(@Nonnull final PathlingContext pathlingContext) {
+  protected DirectSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
     this.inMemoryDataSourceBuilder = ImmutableInMemoryDataSource.builder();
   }
@@ -47,7 +47,7 @@ public class InMemoryClientBuilder extends AbstractClientBuilder<InMemoryClientB
    * @return this builder.
    */
   @Nonnull
-  public InMemoryClientBuilder withResource(@Nonnull final ResourceType resourceType,
+  public DirectSourceBuilder withResource(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> dataset) {
     inMemoryDataSourceBuilder.withResource(resourceType, dataset);
     return this;
@@ -61,7 +61,7 @@ public class InMemoryClientBuilder extends AbstractClientBuilder<InMemoryClientB
    * @return this builder.
    */
   @Nonnull
-  public InMemoryClientBuilder withResource(@Nonnull final String resourceCode,
+  public DirectSourceBuilder withResource(@Nonnull final String resourceCode,
       @Nonnull final Dataset<Row> dataset) {
     return withResource(ResourceType.fromCode(resourceCode), dataset);
   }
