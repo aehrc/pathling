@@ -26,8 +26,6 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;

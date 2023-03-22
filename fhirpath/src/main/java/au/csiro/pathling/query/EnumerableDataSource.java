@@ -18,10 +18,20 @@
 package au.csiro.pathling.query;
 
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import javax.annotation.Nonnull;
 import java.util.Set;
 
+/**
+ * A {@link DataSource} that can provice the list of resources with data.
+ */
 public interface EnumerableDataSource extends DataSource {
 
+  /**
+   * Returns the set of resources that are defined in this data source.
+   *
+   * @return the set of resources that are defined in this data source.
+   */
+  @Nonnull
   Set<ResourceType> getDefinedResources();
 
 }

@@ -29,15 +29,10 @@ import java.util.Set;
 /**
  * A basic immutable data source that allows for explicit mapping of datasets to resource types.
  */
-public class ImmutableInMemoryDataSource implements EnumerableDataSource {
+public class ImmutableDataSource implements EnumerableDataSource {
 
   @Nonnull
   private final Map<ResourceType, Dataset<Row>> resourceMap;
-
-  @Override
-  public Set<ResourceType> getDefinedResources() {
-    return resourceMap.keySet();
-  }
 
   public static class Builder {
 
@@ -64,21 +59,21 @@ public class ImmutableInMemoryDataSource implements EnumerableDataSource {
     /**
      * Builds a new in-memory data source with the registered resources.
      *
-     * @return the new {@link ImmutableInMemoryDataSource} instance.
+     * @return the new {@link ImmutableDataSource} instance.
      */
     @Nonnull
-    public ImmutableInMemoryDataSource build() {
-      return new ImmutableInMemoryDataSource(resourceMap);
+    public ImmutableDataSource build() {
+      return new ImmutableDataSource(resourceMap);
     }
   }
 
-  private ImmutableInMemoryDataSource(
+  private ImmutableDataSource(
       @Nonnull final Map<ResourceType, Dataset<Row>> resourceMap) {
     this.resourceMap = new HashMap<>(resourceMap);
   }
 
-  @Nonnull
   @Override
+  @Nonnull
   public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> resourceDataset = resourceMap.computeIfAbsent(resourceType, key -> {
       throw new IllegalStateException(
@@ -91,6 +86,13 @@ public class ImmutableInMemoryDataSource implements EnumerableDataSource {
         ? resourceDataset.cache()
         : resourceDataset;
   }
+
+  @Override
+  @Nonnull
+  public Set<ResourceType> getDefinedResources() {
+    return resourceMap.keySet();
+  }
+
 
   /**
    * Creates the new builder instance.

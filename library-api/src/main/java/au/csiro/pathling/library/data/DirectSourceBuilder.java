@@ -19,7 +19,7 @@ package au.csiro.pathling.library.data;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.DataSource;
-import au.csiro.pathling.query.ImmutableInMemoryDataSource;
+import au.csiro.pathling.query.ImmutableDataSource;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -27,16 +27,16 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * The {@link ReadableSource} builder that binds the client to an {@link
- * ImmutableInMemoryDataSource}
+ * ImmutableDataSource}
  */
 public class DirectSourceBuilder extends AbstractSourceBuilder<DirectSourceBuilder> {
 
   @Nonnull
-  private final ImmutableInMemoryDataSource.Builder inMemoryDataSourceBuilder;
+  private final ImmutableDataSource.Builder inMemoryDataSourceBuilder;
 
   protected DirectSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
-    this.inMemoryDataSourceBuilder = ImmutableInMemoryDataSource.builder();
+    this.inMemoryDataSourceBuilder = ImmutableDataSource.builder();
   }
 
   /**

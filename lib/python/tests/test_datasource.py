@@ -21,13 +21,10 @@ from pytest import fixture
 from pathling import Expression as fpe
 from pathling.query import AggregateQuery
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-DATA_DIR = os.path.join(HERE, "data")
-
 
 @fixture(scope="module")
-def test_data_dir():
-    return os.path.join(DATA_DIR, "ndjson")
+def ndjson_test_data_dir(test_data_dir):
+    return os.path.join(test_data_dir, "ndjson")
 
 
 @fixture(scope="module")
@@ -43,18 +40,18 @@ def test_query():
 ResultRow = Row("conditionCount")
 
 
-def test_datasource_from_resources(test_query, test_data_dir, pathling_ctx):
+def test_datasource_from_resources(test_query, ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.data_source.with_resources(
         resources={
             "Patient": pathling_ctx.encode(
                 pathling_ctx.spark.read.text(
-                    os.path.join(test_data_dir, "Patient.ndjson")
+                    os.path.join(ndjson_test_data_dir, "Patient.ndjson")
                 ),
                 "Patient",
             ),
             "Condition": pathling_ctx.encode(
                 pathling_ctx.spark.read.text(
-                    os.path.join(test_data_dir, "Condition.ndjson")
+                    os.path.join(ndjson_test_data_dir, "Condition.ndjson")
                 ),
                 "Condition",
             ),
@@ -63,40 +60,40 @@ def test_datasource_from_resources(test_query, test_data_dir, pathling_ctx):
     result = test_query.execute(data_source)
     assert result.columns == list(ResultRow)
     assert result.collect() == [
-        ResultRow(25),
+        ResultRow(71),
     ]
 
 
-def test_datasource_from_text_files(test_query, test_data_dir, pathling_ctx):
+def test_datasource_from_text_files(test_query, ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.data_source.from_text_files(
-        os.path.join(test_data_dir, "*.ndjson"),
+        os.path.join(ndjson_test_data_dir, "*.ndjson"),
         lambda filepath: ["Patient", "Condition"],
     )
 
     result = test_query.execute(data_source)
     assert result.columns == list(ResultRow)
     assert result.collect() == [
-        ResultRow(25),
+        ResultRow(71),
     ]
 
 
-def test_datasource_from_ndjson_dir(test_query, test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.data_source.from_ndjson_dir(test_data_dir)
+def test_datasource_from_ndjson_dir(test_query, ndjson_test_data_dir, pathling_ctx):
+    data_source = pathling_ctx.data_source.from_ndjson_dir(ndjson_test_data_dir)
 
     result = test_query.execute(data_source)
     assert result.columns == list(ResultRow)
     assert result.collect() == [
-        ResultRow(25),
+        ResultRow(71),
     ]
 
 
 def test_datasource_from_delta_warehouse(test_query, test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.data_source.from_warehouse("file://" + DATA_DIR, "delta")
+    data_source = pathling_ctx.data_source.from_warehouse(
+        "file://" + test_data_dir, "delta"
+    )
 
     result = test_query.execute(data_source)
     assert result.columns == list(ResultRow)
-    # NOTE: This is 71 because the warehouse contains all conditions, not just first 25
-    # as the NDJSON files.
     assert result.collect() == [
         ResultRow(71),
     ]

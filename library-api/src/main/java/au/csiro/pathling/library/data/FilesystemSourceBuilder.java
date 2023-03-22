@@ -21,8 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.DataSource;
-import au.csiro.pathling.query.ImmutableInMemoryDataSource;
-import au.csiro.pathling.query.ImmutableInMemoryDataSource.Builder;
+import au.csiro.pathling.query.ImmutableDataSource;
+import au.csiro.pathling.query.ImmutableDataSource.Builder;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -121,7 +121,7 @@ public class FilesystemSourceBuilder extends AbstractSourceBuilder<FilesystemSou
           .collect(Collectors.groupingBy(Pair::getKey,
               Collectors.mapping(Pair::getValue, Collectors.toList())));
 
-      final Builder inMemoryDataSourceBuilder = ImmutableInMemoryDataSource.builder();
+      final Builder inMemoryDataSourceBuilder = ImmutableDataSource.builder();
       filenamesByResourceTypes.forEach((resourceType, filenames) ->
           inMemoryDataSourceBuilder.withResource(ResourceType.fromCode(resourceType),
               datasetTransformer.apply(reader.load(JavaConverters.asScalaBuffer(filenames).toSeq()),

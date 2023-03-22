@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
 
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
@@ -21,10 +22,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-abstract public class BaseReadableSourceTest {
+public class QueriesTest {
 
   protected static final Path FHIR_JSON_DATA_PATH = Path.of(
-      "../fhir-server/src/test/resources/test-data/fhir").toAbsolutePath();
+      "src/test/resources/test-data/ndjson").toAbsolutePath();
   protected static PathlingContext pathlingCtx;
   protected static SparkSession spark;
 
@@ -42,6 +43,9 @@ abstract public class BaseReadableSourceTest {
 
     pathlingCtx = PathlingContext.create(spark, FhirEncoders.forR4().getOrCreate(),
         terminologyServiceFactory);
+    
+    readableSource = pathlingCtx.datasources()
+        .fromNdjsonDir(FHIR_JSON_DATA_PATH.toUri().toString());
   }
 
   /**
@@ -86,7 +90,7 @@ abstract public class BaseReadableSourceTest {
     DatasetAssert.of(conditionResult)
         .hasRows(spark, "results/PathlingClientTest/testExtractQueryUnbound.csv");
   }
-  
+
   @Test
   public void testAggregateQueryBoundToSource() {
     final Dataset<Row> patientResult = readableSource.aggregate("Patient")
@@ -103,7 +107,7 @@ abstract public class BaseReadableSourceTest {
     DatasetAssert.of(patientResult)
         .hasRows(spark, "results/PathlingClientTest/testAggregateQuery.csv");
   }
-  
+
   @Test
   public void testAggregateQueryUnbound() {
     final Dataset<Row> patientResult = AggregateQuery.of(ResourceType.PATIENT)

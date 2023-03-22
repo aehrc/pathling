@@ -21,13 +21,12 @@ from pytest import fixture
 from pathling import Expression, Expression as fpe
 from pathling.query import AggregateQuery
 
-HERE = os.path.abspath(os.path.dirname(__file__))
-DATA_DIR = os.path.join(HERE, "data")
-
 
 @fixture(scope="module")
-def test_data_source(pathling_ctx):
-    return pathling_ctx.data_source.from_ndjson_dir(os.path.join(DATA_DIR, "ndjson"))
+def test_data_source(pathling_ctx, test_data_dir):
+    return pathling_ctx.data_source.from_ndjson_dir(
+        os.path.join(test_data_dir, "ndjson")
+    )
 
 
 def test_extract(test_data_source):
@@ -51,8 +50,8 @@ def test_extract(test_data_source):
         ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
         ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
         ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", None),
-        ExtractRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "44054006"),
+        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "367498001"),
+        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "162864005"),
     ]
 
 
@@ -76,8 +75,8 @@ def test_extract_no_filters(test_data_source):
         ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
         ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
         ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", None),
-        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", None),
+        ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "15777000"),
+        ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "271737000"),
     ]
 
 
@@ -124,7 +123,6 @@ def test_aggregate_no_filter(test_data_source):
 
 
 def test_many_aggregate_no_grouping(test_data_source):
-
     # noinspection PyPep8Naming
     ResultRow = Row("patient_count", "id.count()")
 

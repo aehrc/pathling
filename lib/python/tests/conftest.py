@@ -15,6 +15,7 @@
 
 
 import logging
+import os
 from tempfile import mkdtemp
 
 from pyspark.sql import SparkSession
@@ -22,6 +23,16 @@ from pytest import fixture
 
 from pathling import PathlingContext
 from pathling.etc import find_jar as find_pathling_jar
+
+
+HERE = os.path.abspath(os.path.dirname(__file__))
+LIB_API_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "..", "library-api"))
+TEST_DATA_DIR = os.path.join(LIB_API_DIR, "src", "test", "resources", "test-data")
+
+
+@fixture(scope="module")
+def test_data_dir():
+    return TEST_DATA_DIR
 
 
 # noinspection PyProtectedMember

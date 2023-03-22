@@ -38,10 +38,7 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
 
   @Nonnull
   final List<ExpressionWithLabel> columnsWithLabels = new ArrayList<>();
-
-  @Nonnull
-  Optional<Integer> limit = Optional.empty();
-
+  
   private ExtractQuery(@Nonnull final ResourceType subjectResource) {
     super(subjectResource);
   }
@@ -51,7 +48,7 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
   protected Dataset<Row> doExecute(@Nonnull final ReadableSource readableSource) {
     return readableSource.execute(buildRequest());
   }
-  
+
   /**
    * Adds a fhirpath expression that represents a column to be extract in the result.
    *
@@ -89,7 +86,7 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
   public static ExtractQuery of(@Nonnull final ResourceType subjectResourceType) {
     return new ExtractQuery(subjectResourceType);
   }
-  
+
   @Nonnull
   private ExtractRequest buildRequest() {
     return new ExtractRequest(subjectResource,
