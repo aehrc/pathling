@@ -92,7 +92,7 @@ public class DataSourcesTest {
             pathlingCtx.datasources().filesystemBuilder()
                 .withFilesGlob(TEST_JSON_DATA_PATH.resolve("*.ndjson").toString())
                 .withReader(spark.read().format("text"))
-                .withFilenameMapper(SupportFunctions::basenameToResource)
+                .withFilepathMapper(SupportFunctions::basenameToResource)
                 .withDatasetTransformer(
                     SupportFunctions.textEncodingTransformer(pathlingCtx, FhirMimeTypes.FHIR_JSON))
                 .build()

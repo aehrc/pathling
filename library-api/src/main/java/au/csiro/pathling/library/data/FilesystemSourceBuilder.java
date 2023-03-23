@@ -43,49 +43,90 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import scala.collection.JavaConverters;
 
+/**
+ * The {@link ReadableSource} builder that creates immutable data sources from files.
+ */
 public class FilesystemSourceBuilder extends AbstractSourceBuilder<FilesystemSourceBuilder> {
 
   @Nullable
   private String filesGlob;
   @Nonnull
-  private Function<String, List<String>> filenameMapper;
+  private Function<String, List<String>> filepathMapper;
   @Nonnull
   private DataFrameReader reader;
   @Nonnull
   private BiFunction<Dataset<Row>, String, Dataset<Row>> datasetTransformer;
 
+  /**
+   * Creates a new builder.
+   */
   public FilesystemSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
-    this.filenameMapper = SupportFunctions::basenameToResource;
+    this.filepathMapper = SupportFunctions::basenameToResource;
     this.datasetTransformer = SupportFunctions::identityTransformer;
     this.reader = pathlingContext.getSpark().read().format("parquet");
   }
 
+  /**
+   * Sets the glob pattern to use to find files that should be included in the data source. The glob
+   * can ba a path or URI in a hadoop compatible filesystem.
+   *
+   * @param filesGlob the files glob.
+   * @return this builder.
+   */
   @Nonnull
   public FilesystemSourceBuilder withFilesGlob(@Nonnull final String filesGlob) {
     this.filesGlob = filesGlob;
     return this;
   }
 
+  /**
+   * Sets the function that maps the path of a file to list of resource types it contains. The path
+   * can be a filepath or a URI.
+   *
+   * @param filepathMapper the function that maps the path of a file to list of resource types it
+   * contains.
+   * @return this builder.
+   */
   @Nonnull
-  public FilesystemSourceBuilder withFilenameMapper(
-      @Nonnull final Function<String, List<String>> filenameMapper) {
-    this.filenameMapper = filenameMapper;
+  public FilesystemSourceBuilder withFilepathMapper(
+      @Nonnull final Function<String, List<String>> filepathMapper) {
+    this.filepathMapper = filepathMapper;
     return this;
   }
 
+  /**
+   * Sets the {@link DataFrameReader}  to use to read the files as dataframes.
+   *
+   * @param reader the data frame reader to use.
+   * @return this builder.
+   */
   @Nonnull
   public FilesystemSourceBuilder withReader(@Nonnull final DataFrameReader reader) {
     this.reader = reader;
     return this;
   }
 
+  /**
+   * Sets the format of the files to read. This is a shortcut for {@link
+   * #withReader(DataFrameReader)}
+   *
+   * @param format the format of the files to read.
+   * @return this builder.
+   */
   @Nonnull
   public FilesystemSourceBuilder withFormat(@Nonnull final String format) {
     this.reader = pathlingContext.getSpark().read().format(format);
     return this;
   }
 
+  /**
+   * Sets the function that transforms the dataset of a resource type before it is added to the data
+   * source. By default, no transformation is applied.
+   *
+   * @param datasetTransformer the transformer function.
+   * @return this builder.
+   */
   @Nonnull
   public FilesystemSourceBuilder withDatasetTransformer(
       @Nonnull final BiFunction<Dataset<Row>, String, Dataset<Row>> datasetTransformer) {
@@ -93,13 +134,21 @@ public class FilesystemSourceBuilder extends AbstractSourceBuilder<FilesystemSou
     return this;
   }
 
+
+  /**
+   * Sets the format of the files to read as text and sets the encoding of the text files.
+   *
+   * @param mimeType the mime type of the text files.
+   * @return this builder.
+   */
   @Nonnull
   public FilesystemSourceBuilder withTextEncoder(@Nonnull final String mimeType) {
     return this
         .withFormat("text")
-        .withDatasetTransformer(SupportFunctions.textEncodingTransformer(pathlingContext, mimeType));
+        .withDatasetTransformer(
+            SupportFunctions.textEncodingTransformer(pathlingContext, mimeType));
   }
-  
+
   @Nonnull
   @Override
   protected DataSource buildDataSource() {
@@ -116,7 +165,7 @@ public class FilesystemSourceBuilder extends AbstractSourceBuilder<FilesystemSou
           .map(org.apache.hadoop.fs.Path::toUri)
           .map(URI::normalize)
           .map(Object::toString)
-          .flatMap(filepath -> filenameMapper.apply(filepath).stream()
+          .flatMap(filepath -> filepathMapper.apply(filepath).stream()
               .map(resourceType -> Pair.of(resourceType, filepath)))
           .collect(Collectors.groupingBy(Pair::getKey,
               Collectors.mapping(Pair::getValue, Collectors.toList())));

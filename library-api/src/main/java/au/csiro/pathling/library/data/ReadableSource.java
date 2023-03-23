@@ -27,12 +27,14 @@ import au.csiro.pathling.extract.ExtractRequest;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
+import au.csiro.pathling.library.query.QueryExecutor;
 import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 import org.apache.spark.sql.Dataset;
@@ -45,8 +47,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * a {@link DataSource}.
  */
 @Value
+@EqualsAndHashCode(callSuper = false)
 @NonFinal
-public class ReadableSource {
+public class ReadableSource extends QueryExecutor {
 
   @Nonnull
   FhirContext fhirContext;
@@ -105,7 +108,7 @@ public class ReadableSource {
   public ExtractQuery extract(@Nonnull final ResourceType subjectResourceType) {
     return ExtractQuery.of(subjectResourceType).withClient(this);
   }
-  
+
   /**
    * Creates a new extract query bound to this client with given subject resource.
    *
@@ -150,8 +153,9 @@ public class ReadableSource {
     return new Builder(pathlingContext);
   }
 
+  @Override
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final ExtractRequest extractRequest) {
+  protected Dataset<Row> execute(@Nonnull final ExtractRequest extractRequest) {
     return new ExtractQueryExecutor(
         configuration,
         fhirContext,
@@ -161,8 +165,9 @@ public class ReadableSource {
     ).buildQuery(extractRequest);
   }
 
+  @Override
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final AggregateRequest aggregateRequest) {
+  protected Dataset<Row> execute(@Nonnull final AggregateRequest aggregateRequest) {
     return new AggregateQueryExecutor(
         configuration,
         fhirContext,

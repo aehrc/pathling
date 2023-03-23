@@ -27,22 +27,48 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
+/**
+ * The functions that support building of filesystem based data sources.
+ */
 public interface SupportFunctions {
 
+  /**
+   * Extracts the resource type from the base name of the provided filepath or URI. The resource
+   * type is computed by stripping the extension from the base name, e.g.
+   * "/foo/bar/Patient.sometype" will return ["Patient"].
+   *
+   * @param filePath the path/URI of the file
+   * @return the list of one with the resource type
+   */
   @Nonnull
-  static List<String> basenameToResource(@Nonnull final String filename) {
+  static List<String> basenameToResource(@Nonnull final String filePath) {
     // get the basename from the filename (without the extension)
     // return the resource type(s) that the file is for
     return Collections.singletonList(
-        ResourceType.fromCode(FilenameUtils.getBaseName(filename)).toCode());
+        ResourceType.fromCode(FilenameUtils.getBaseName(filePath)).toCode());
   }
 
+  /**
+   * The transformer that returns the original dataset.
+   *
+   * @param dataset the dataset to transform.
+   * @param resourceType the resource type of the dataset.
+   * @return the original dataset.
+   */
   @Nonnull
-  static Dataset<Row> identityTransformer(@Nonnull final Dataset<Row> df,
+  static Dataset<Row> identityTransformer(@Nonnull final Dataset<Row> dataset,
       @Nonnull final String resourceType) {
-    return df;
+    return dataset;
   }
 
+  /**
+   * Creates the transformer that encodes the text dataset of the specified resource type and mime
+   * type to the structured representation.
+   *
+   * @param pathlingContext the pathling context.
+   * @param mimeType the mime type of the text.
+   * @return the transformer.
+   */
   @Nonnull
   static BiFunction<Dataset<Row>, String, Dataset<Row>> textEncodingTransformer(@Nonnull final
   PathlingContext pathlingContext, @Nonnull final String mimeType) {

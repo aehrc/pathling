@@ -30,7 +30,6 @@ import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.query.EnumerableDataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import com.google.common.collect.ImmutableSet;
-import java.io.Serializable;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
@@ -178,7 +177,7 @@ public class FilesystemSourceBuilderTest {
         .withFilesGlob(MIXED_TEST_DATA_PATH.resolve("*.*").toString())
         .withReader(mockDataFrameReader)
         // This is purposely reverted, i.e. the actual file is Observation.ndjson, not Observation.xml.
-        .withFilenameMapper(fn -> fn.endsWith("xml")
+        .withFilepathMapper(fn -> fn.endsWith("xml")
                                   ? Arrays.asList("Patient", "Observation")
                                   : Arrays.asList("Patient", "Condition"))
         .build();
@@ -192,6 +191,7 @@ public class FilesystemSourceBuilderTest {
   }
 
   @Test
+  @SuppressWarnings({"unchecked"})
   public void testCustomTransformer() {
 
     // This is swapped on purpose. The transformer should correct that.

@@ -1,13 +1,13 @@
 /*
  * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -80,19 +80,24 @@ public abstract class AbstractSourceBuilder<T extends AbstractSourceBuilder> {
   public ExtractQuery buildExtractQuery(@Nonnull final ResourceType subjectResourceType) {
     return this.build().extract(subjectResourceType);
   }
-  
+
   /**
    * This is a shortcut to directly build an {@link  AggregateQuery} bound to the pathling client
    * created by this builder.
    *
    * @param subjectResourceType the type of the subject resource for the aggregate query.
    * @return the new instance of aggregate query.
-   */   
+   */
   @Nonnull
   public AggregateQuery buildAggregateQuery(@Nonnull final ResourceType subjectResourceType) {
     return this.build().aggregate(subjectResourceType);
   }
-  
+
+  /**
+   * The subclass must implement this method to build the actual data source.
+   *
+   * @return the data source.
+   */
   @Nonnull
   protected abstract DataSource buildDataSource();
 }

@@ -36,10 +36,10 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
 
   @Nonnull
-  final List<ExpressionWithLabel> groupingsWithLabels = new ArrayList<>();
+  private final List<ExpressionWithLabel> groupingsWithLabels = new ArrayList<>();
 
   @Nonnull
-  final List<ExpressionWithLabel> aggregationsWithLabels = new ArrayList<>();
+  private final List<ExpressionWithLabel> aggregationsWithLabels = new ArrayList<>();
 
   private AggregateQuery(@Nonnull final ResourceType subjectResource) {
     super(subjectResource);
@@ -47,11 +47,10 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
 
   @Nonnull
   @Override
-  protected Dataset<Row> doExecute(@Nonnull final ReadableSource readableSource) {
-    return readableSource.execute(buildRequest());
+  protected Dataset<Row> doExecute(@Nonnull final QueryExecutor queryExecutor) {
+    return queryExecutor.execute(buildRequest());
   }
-
-
+  
   /**
    * Adds a fhirpath expression that represents a grouping column..
    *

@@ -27,7 +27,12 @@ import javax.annotation.Nonnull;
 
 /**
  * The {@link ReadableSource} builder that binds the client to a persistent data storage using
- * {@link Database} as it's data source.
+ * {@link Database} as it's data source. The database is represented as directory with delta files
+ * with base names matching the resource types names. The database is referenced to by the warehouse
+ * URL and the database name, which combined form the database URL. The database name defaults to
+ * 'default'
+ *
+ * @author Piotr Szul
  */
 public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceBuilder> {
 
@@ -47,16 +52,28 @@ public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceB
   @Nonnull
   public DatabaseSourceBuilder withStorageConfiguration(
       @Nonnull final StorageConfiguration storageConfiguration) {
-    this.storageConfigurationBuilder =  storageConfiguration.toBuilder();
+    this.storageConfigurationBuilder = storageConfiguration.toBuilder();
     return this;
   }
 
+  /**
+   * Sets the URL of the warehouse use with this source.
+   *
+   * @param warehouseUrl the warehouse URL.
+   * @return this builder.
+   */
   @Nonnull
   public DatabaseSourceBuilder withWarehouseUrl(@Nonnull final String warehouseUrl) {
     this.storageConfigurationBuilder.warehouseUrl(warehouseUrl);
     return this;
   }
 
+  /**
+   * Sets the name of the database to use with this source.
+   *
+   * @param databaseName the database name.
+   * @return this builder.
+   */
   @Nonnull
   public DatabaseSourceBuilder withDatabaseName(@Nonnull final String databaseName) {
     this.storageConfigurationBuilder.databaseName(databaseName);

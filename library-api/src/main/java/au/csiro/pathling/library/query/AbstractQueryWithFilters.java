@@ -90,21 +90,21 @@ public abstract class AbstractQueryWithFilters<T extends AbstractQueryWithFilter
   /**
    * Executes the query on the given client.
    *
-   * @param readableSource the client to execute the query against.
+   * @param queryExecutor the client to execute the query against.
    * @return the dataset with the result of the query.
    */
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final ReadableSource readableSource) {
-    return doExecute(readableSource);
+  public Dataset<Row> execute(@Nonnull final QueryExecutor queryExecutor) {
+    return doExecute(queryExecutor);
   }
 
   /**
    * Performs the actual execution of the query.
    *
-   * @param readableSource the client to execute the query against.
+   * @param queryExecutor the client to execute the query against.
    * @return the dataset with the result of the query.
    */
   @Nonnull
-  protected abstract Dataset<Row> doExecute(@Nonnull final ReadableSource readableSource);
+  protected abstract Dataset<Row> doExecute(@Nonnull final QueryExecutor queryExecutor);
 
 }

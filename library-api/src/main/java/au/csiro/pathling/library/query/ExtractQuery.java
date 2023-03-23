@@ -37,7 +37,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
 
   @Nonnull
-  final List<ExpressionWithLabel> columnsWithLabels = new ArrayList<>();
+  private final List<ExpressionWithLabel> columnsWithLabels = new ArrayList<>();
   
   private ExtractQuery(@Nonnull final ResourceType subjectResource) {
     super(subjectResource);
@@ -45,8 +45,8 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
 
   @Nonnull
   @Override
-  protected Dataset<Row> doExecute(@Nonnull final ReadableSource readableSource) {
-    return readableSource.execute(buildRequest());
+  protected Dataset<Row> doExecute(@Nonnull final QueryExecutor queryExecutor) {
+    return queryExecutor.execute(buildRequest());
   }
 
   /**
