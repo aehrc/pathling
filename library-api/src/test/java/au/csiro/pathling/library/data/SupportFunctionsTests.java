@@ -30,14 +30,17 @@ import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.Test;
 
 public class SupportFunctionsTests {
-  
+
   @Test
   public void testBasenameToResourceTypeMapper() {
-    assertEquals(List.of("Patient"), SupportFunctions.basenameToResource("Patient.json"));
+    assertEquals(List.of("Patient"),
+        SupportFunctions.basenameWithQualifierToResource("Patient.json"));
     assertEquals(List.of("Condition"),
-        SupportFunctions.basenameToResource("/foo.xxx/bar/Condition.xml"));
+        SupportFunctions.basenameWithQualifierToResource("/foo.xxx/bar/Condition.xml"));
     assertEquals(List.of("Observation"),
-        SupportFunctions.basenameToResource("file:///foo.yyy/bar/Observation"));
+        SupportFunctions.basenameWithQualifierToResource("file:///foo.yyy/bar/Observation"));
+    assertEquals(List.of("Procedure"),
+        SupportFunctions.basenameWithQualifierToResource("file:///foo.yyy/bar/Procedure.ICU.json"));
   }
 
   @Test

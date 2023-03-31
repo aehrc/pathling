@@ -92,7 +92,7 @@ public class DataSourcesTest {
             pathlingCtx.datasources().filesystemBuilder()
                 .withFilesGlob(TEST_JSON_DATA_PATH.resolve("*.ndjson").toString())
                 .withReader(spark.read().format("text"))
-                .withFilepathMapper(SupportFunctions::basenameToResource)
+                .withFilepathMapper(SupportFunctions::basenameWithQualifierToResource)
                 .withDatasetTransformer(
                     SupportFunctions.textEncodingTransformer(pathlingCtx, FhirMimeTypes.FHIR_JSON))
                 .build()
@@ -106,17 +106,17 @@ public class DataSourcesTest {
         Arguments.arguments("fromFiles with reader='delta'",
             pathlingCtx.datasources().fromFiles(
                 TEST_DELTA_DATA_PATH.resolve("*.parquet").toString(),
-                SupportFunctions::basenameToResource, spark.read().format("delta"))
+                SupportFunctions::basenameWithQualifierToResource, spark.read().format("delta"))
         ),
         Arguments.arguments("fromFiles with format='delta'",
             pathlingCtx.datasources().fromFiles(
                 TEST_DELTA_DATA_PATH.resolve("*.parquet").toString(),
-                SupportFunctions::basenameToResource, "delta")
+                SupportFunctions::basenameWithQualifierToResource, "delta")
         ),
         Arguments.arguments("fromTextFiles with mimeType='ndjson'",
             pathlingCtx.datasources()
                 .fromTextFiles(TEST_JSON_DATA_PATH.resolve("*.ndjson").toUri().toString(),
-                    SupportFunctions::basenameToResource,
+                    SupportFunctions::basenameWithQualifierToResource,
                     FhirMimeTypes.FHIR_JSON)
         ),
         Arguments.arguments("fromWarehouse",

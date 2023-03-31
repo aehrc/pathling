@@ -33,19 +33,19 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public interface SupportFunctions {
 
   /**
-   * Extracts the resource type from the base name of the provided filepath or URI. The resource
-   * type is computed by stripping the extension from the base name, e.g.
-   * "/foo/bar/Patient.sometype" will return ["Patient"].
+   * Extracts the resource type from the base name of the provided filepath or URI. Allows for an
+   * optional qualifier string, which is separated from the resource name by a period. For example,
+   * "/foo/bar/Procedure.ICU.ndjson" will return ["Procedure"].
    *
    * @param filePath the path/URI of the file
-   * @return the list of one with the resource type
+   * @return a single-element list containing the resource type
    */
   @Nonnull
-  static List<String> basenameToResource(@Nonnull final String filePath) {
-    // get the basename from the filename (without the extension)
-    // return the resource type(s) that the file is for
+  static List<String> basenameWithQualifierToResource(@Nonnull final String filePath) {
+    final String baseName = FilenameUtils.getBaseName(filePath);
+    final String qualifierRemoved = baseName.replaceFirst("\\.([^\\.]+)$", "");
     return Collections.singletonList(
-        ResourceType.fromCode(FilenameUtils.getBaseName(filePath)).toCode());
+        ResourceType.fromCode(qualifierRemoved).toCode());
   }
 
   /**

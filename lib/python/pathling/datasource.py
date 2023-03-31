@@ -108,7 +108,7 @@ class DataSources(SparkConversionsMixin):
 
     def with_resources(self, resources: Dict[str, DataFrame]) -> DataSource:
         """
-        Creates an immutable, ad hoc data source from a dictionary of Spark DataFrames indexed with
+        Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
         resource type codes.
 
         :param resources: A dictionary of Spark DataFrames, where the keys are resource type codes

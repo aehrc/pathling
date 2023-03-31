@@ -62,7 +62,7 @@ public class FilesystemSourceBuilder extends AbstractSourceBuilder<FilesystemSou
    */
   public FilesystemSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
-    this.filepathMapper = SupportFunctions::basenameToResource;
+    this.filepathMapper = SupportFunctions::basenameWithQualifierToResource;
     this.datasetTransformer = SupportFunctions::identityTransformer;
     this.reader = pathlingContext.getSpark().read().format("parquet");
   }
@@ -108,8 +108,8 @@ public class FilesystemSourceBuilder extends AbstractSourceBuilder<FilesystemSou
   }
 
   /**
-   * Sets the format of the files to read. This is a shortcut for {@link
-   * #withReader(DataFrameReader)}
+   * Sets the format of the files to read. This is a shortcut for
+   * {@link #withReader(DataFrameReader)}
    *
    * @param format the format of the files to read.
    * @return this builder.

@@ -17,12 +17,12 @@
 
 package au.csiro.pathling.query;
 
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import javax.annotation.Nonnull;
 import java.util.Set;
+import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * A {@link DataSource} that can provice the list of resources with data.
+ * A {@link DataSource} that can provide the set of resources that it comprises.
  */
 public interface EnumerableDataSource extends DataSource {
 

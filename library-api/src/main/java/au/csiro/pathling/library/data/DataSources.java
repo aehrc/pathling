@@ -68,7 +68,7 @@ public class DataSources {
   }
 
   /**
-   * Creates a new data source from the default database in a delta warehouse.
+   * Creates a new data source from the default database in a Delta warehouse.
    *
    * @param warehouseUrl the URL of the warehouse.
    * @return the new data source.
@@ -79,7 +79,7 @@ public class DataSources {
   }
 
   /**
-   * Creates a new data source from a database in a delta warehouse.
+   * Creates a new data source from a database in a Delta warehouse.
    *
    * @param warehouseUrl the URL of the warehouse.
    * @param databaseName the name of the database.
@@ -155,17 +155,21 @@ public class DataSources {
   }
 
   /**
-   * Creates a new data source form a directory containing NDJSON encoded FHIR resource data, with
-   * filenames representing the resource type the file contains. E.g. 'Patient.ndjson' should
-   * contain Patient resources.
+   * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
+   * filenames containing the resource type the file contains, e.g. "Patient.ndjson" should contain
+   * only Patient resources.
+   * <p>
+   * The filename can also optionally contain a qualifier after the resource type, to allow for
+   * resources of the same type to be organised into different files, e.g.
+   * "Observation.Chart.ndjson" and "Observation.Lab.ndjson".
    *
-   * @param ndjsonDir the URI of directory containing ndjson files.
-   * @return the new data source.
+   * @param ndjsonDir the URI of directory containing NDJSON files
+   * @return the new data source
    */
   @Nonnull
   public ReadableSource fromNdjsonDir(@Nonnull final String ndjsonDir) {
     return fromTextFiles(Path.of(ndjsonDir, "*.ndjson").toString(),
-        SupportFunctions::basenameToResource,
+        SupportFunctions::basenameWithQualifierToResource,
         FhirMimeTypes.FHIR_JSON);
   }
 
@@ -180,7 +184,7 @@ public class DataSources {
   @Nonnull
   public ReadableSource fromParquetDir(@Nonnull final String parquetDir) {
     return fromFiles(Path.of(parquetDir, "*.parquet").toString(),
-        SupportFunctions::basenameToResource,
+        SupportFunctions::basenameWithQualifierToResource,
         "parquet");
   }
 
