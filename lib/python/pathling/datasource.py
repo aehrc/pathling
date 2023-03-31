@@ -20,14 +20,14 @@ from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
 from pathling import PathlingContext
+from pathling.core import ExpOrStr
 from pathling.core import SparkConversionsMixin
 from pathling.fhir import MimeType
-from pathling.core import ExpOrStr
 
 
 class DataSource(SparkConversionsMixin):
     """
-    A data source that can be used to run queries against FHIR resource data.
+    A data source that can be used to run queries against FHIR data.
     """
 
     def __init__(self, jds: JavaObject, spark: SparkSession):
@@ -48,11 +48,12 @@ class DataSource(SparkConversionsMixin):
         For more information see: :class:`ExtractQuery`
 
         :param resource_type: A string representing the type of FHIR resource to extract data from.
-        :param columns: A sequence of FHIRPath expressions that define the columns to include in the extract.
+        :param columns: A sequence of FHIRPath expressions that define the columns to include in the
+               extract.
         :param filters: An optional sequence of FHIRPath expressions that can be evaluated against
-              each resource in the data set to determine whether it is included within the result.
-              The expression must evaluate to a Boolean value.
-              Multiple filters are combined using AND logic.
+               each resource in the data set to determine whether it is included within the result.
+               The expression must evaluate to a Boolean value. Multiple filters are combined using
+               AND logic.
 
         :return: A Spark DataFrame containing the results of the extract query.
         """
@@ -68,21 +69,22 @@ class DataSource(SparkConversionsMixin):
         filters: Optional[Sequence[str]] = None,
     ) -> DataFrame:
         """
-         Runs an aggregate query for the given resource type, using the specified aggregations,
-         groupings, and filters expressions. The context for each of the expressions is a collection
-         of resources of the subject resource type.
+        Runs an aggregate query for the given resource type, using the specified aggregation,
+        grouping, and filter expressions. The context for each of the expressions is a collection
+        of resources of the subject resource type.
 
-         For more information see: :class:`AggregateQuery`
+        For more information see: :class:`AggregateQuery`
 
-        :param resource_type: A string representing the type of FHIR resource to aggregate data from.
+        :param resource_type: A string representing the type of FHIR resource to aggregate data
+               from.
         :param aggregations: A sequence of FHIRPath expressions that calculate a summary value from
-            each grouping. The expressions must be singular.
-        :param groupings: An optional sequence of FHIRPath expressions that determine which groupings
-            the resources should be counted within.
+               each grouping. The expressions must be singular.
+        :param groupings: An optional sequence of FHIRPath expressions that determine which
+               groupings the resources should be counted within.
         :param filters: An optional sequence of FHIRPath expressions that determine whether
-            a resource is included in the result.The expressions must evaluate to a Boolean value.
-            Multiple filters are combined using AND logic.
-        :return: A Spark DataFrame object containŁing the results of the aggregate query.
+               a resource is included in the result. The expressions must evaluate to a Boolean
+               value. Multiple filters are combined using AND logic.
+        :return: A Spark DataFrame object containing the results of the aggregate query.
         """
         from pathling.query import AggregateQuery
 
@@ -96,20 +98,21 @@ class DataSources(SparkConversionsMixin):
     A factory for creating data sources.
     """
 
-    def __init__(self, pathlingContext: PathlingContext):
-        SparkConversionsMixin.__init__(self, pathlingContext.spark)
-        self._pc = pathlingContext
-        self._jdataSources = pathlingContext._jpc.datasources()
+    def __init__(self, pc: PathlingContext):
+        SparkConversionsMixin.__init__(self, pc.spark)
+        self._pc = pc
+        self._jdataSources = pc._jpc.datasources()
 
     def _wrap_ds(self, jds: JavaObject) -> DataSource:
         return DataSource(jds, self.spark)
 
     def with_resources(self, resources: Dict[str, DataFrame]) -> DataSource:
         """
-        Creates an immutable,  ad hoc data source from a dictionary of Spark DataFrames indexed
-            with resource type codes.
-        :param resources:   A dictionary of Spark DataFrames, where the keys are resource type codes
-            and the values are the data frames containing the resource data.
+        Creates an immutable, ad hoc data source from a dictionary of Spark DataFrames indexed with
+        resource type codes.
+
+        :param resources: A dictionary of Spark DataFrames, where the keys are resource type codes
+               and the values are the data frames containing the resource data.
         :return: A DataSource object that can be used to run queries against the data.
         """
         jbuilder = self._jdataSources.directBuilder()
@@ -126,9 +129,12 @@ class DataSources(SparkConversionsMixin):
         """
         Creates a data source from a set of text files matching the glob expression, that contain
         FHIR resources encoded as text (e.g. JSON or XML), one resource per line.
+
         To optimize the encoding process, filename mapping function helps to determine which files
         contain which resource types.
-        :param files_glob: A glob expression that defined the files to be included in the datasource.
+
+        :param files_glob: A glob expression that defines the files to be included in the
+               datasource.
         :param filename_mapper: A function that maps a filename to a list of resource type codes
               it contains.
         :param mime_type:  The MIME type of the text file encoding. Defaults to
@@ -146,8 +152,9 @@ class DataSources(SparkConversionsMixin):
     def from_ndjson_dir(self, ndjson_dir_uri) -> DataSource:
         """
         Creates a data source from a directory containing NDJSON files. The files must be named with
-        the resource type code and must have the ".ndjson" extension, e.g."Patient.ndjson"
+        the resource type code and must have the ".ndjson" extension, e.g. "Patient.ndjson"
         or "Observation.ndjson".
+
         :param ndjson_dir_uri: The URI of the directory containing the NDJSON files.
         :return: A DataSource object that can be used to run queries against the data.
         """
@@ -158,8 +165,9 @@ class DataSources(SparkConversionsMixin):
     ) -> DataSource:
         """
         Creates a data source from a warehouse directory.
-        :param warehouse_dir_uri:  The URI of the warehouse directory.
-        :param database_name:  The name of the database to use.  Defaults to "default".
+
+        :param warehouse_dir_uri: The URI of the warehouse directory.
+        :param database_name: The name of the database to use. Defaults to "default".
         :return: A DataSource object that can be used to run queries against the data.
         """
         return self._wrap_ds(
