@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.DatabaseComponent;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.MalformedURLException;
@@ -126,10 +125,7 @@ class AsyncTest extends IntegrationTest {
         throw new AssertionError("Timed out waiting for async result");
       }
 
-      final List<String> contentLocations = response.getHeaders().get("Content-Location");
-      assertNotNull(contentLocations);
-      final String contentLocation = contentLocations.get(0);
-      assertNotNull(contentLocation);
+      final String contentLocation = getContentLocation(response);
       final URL statusUrl = new URL(contentLocation);
       final RequestEntity<Void> statusRequest = RequestEntity.get(statusUrl.toURI()).build();
       log.info("Sending status request");
@@ -161,4 +157,36 @@ class AsyncTest extends IntegrationTest {
     log.info("Successful response received");
   }
 
+  @Nonnull
+  private String getContentLocation(@Nonnull ResponseEntity<String> response) {
+    final List<String> contentLocations = response.getHeaders().get("Content-Location");
+    assertNotNull(contentLocations);
+    final String contentLocation = contentLocations.get(0);
+    assertNotNull(contentLocation);
+    return contentLocation;
+  }
+
+
+  @Test
+  void identicalAsyncRequestsReturnTheSameJobId()
+      throws URISyntaxException {
+    TestHelpers.mockResource(database, spark, ResourceType.OBSERVATION);
+    final String uri = "http://localhost:" + port + "/fhir/Observation/$extract?column=id&"
+        + "column=code.coding&column=valueQuantity.value&column=valueQuantity.unit";
+    final RequestEntity<Void> request = RequestEntity.get(new URI(uri))
+        .header("Prefer", "respond-async").build();
+    log.info("Sending kick-off request");
+    final ResponseEntity<String> response1 =
+        restTemplate.exchange(uri, HttpMethod.GET, request, String.class);
+    assertEquals(HttpStatus.ACCEPTED_202, response1.getStatusCode().value());
+
+    final ResponseEntity<String> response2 =
+        restTemplate.exchange(uri, HttpMethod.GET, request, String.class);
+    assertEquals(HttpStatus.ACCEPTED_202, response1.getStatusCode().value());
+    assertEquals(getContentLocation(response1), getContentLocation(response2));
+  }
+
+  
+  
+  
 }

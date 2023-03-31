@@ -18,6 +18,7 @@
 package au.csiro.pathling.async;
 
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Future;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -32,6 +33,17 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 @Getter
 @ToString
 public class Job {
+
+  /**
+   * A marker interface for job tags. These are used to identify input parameters that for which an
+   * existing job can be used to provide the result.
+   */
+  public interface JobTag {
+
+  }
+  
+  @Nonnull
+  final String id;
 
   @Nonnull
   private final String operation;
@@ -51,8 +63,10 @@ public class Job {
    * @param result the {@link Future} result
    * @param ownerId the identifier of the owner of the job, if authenticated
    */
-  public Job(@Nonnull final String operation, @Nonnull final Future<IBaseResource> result,
+  public Job(@Nonnull final String id, @Nonnull final String operation,
+      @Nonnull final Future<IBaseResource> result,
       @Nonnull final Optional<String> ownerId) {
+    this.id = id;
     this.operation = operation;
     this.result = result;
     this.ownerId = ownerId;
@@ -75,5 +89,4 @@ public class Job {
   public int getProgressPercentage() {
     return (completedStages * 100) / totalStages;
   }
-
 }

@@ -18,6 +18,7 @@
 package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
+import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.DiagnosticContext;
@@ -28,9 +29,11 @@ import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -78,6 +81,9 @@ public class AsyncAspect {
   private final JobRegistry jobRegistry;
 
   @Nonnull
+  private final Map<RequestTag, Job> requestTagToJob = new ConcurrentHashMap<>();
+
+  @Nonnull
   private final StageMap stageMap;
 
   @Nonnull
@@ -117,45 +123,45 @@ public class AsyncAspect {
   private void processRequestAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final Object[] args, @Nonnull final SparkSession spark) {
     final RequestDetails requestDetails = getRequestDetails(args);
-    final HttpServletResponse response = getResponse(args);
-    final String requestId = requestDetails.getRequestId();
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    // Store the diagnostic context from the current Sentry scope.
-    final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
+    final RequestTag requestTag = RequestTag.fromRequest(requestDetails, authentication);
+    final Job job = jobRegistry.getOrCreate(requestTag, jobId -> {
+      final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
+      final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
+      final Future<IBaseResource> result = executor.submit(() -> {
+        try {
+          diagnosticContext.configureScope(true);
+          SecurityContextHolder.getContext().setAuthentication(authentication);
+          spark.sparkContext().setJobGroup(jobId, jobId, true);
+          return (IBaseResource) joinPoint.proceed(args);
+        } catch (final Throwable e) {
+          // Unwrap the actual exception from the aspect proxy wrapper, if needed.
+          final Throwable actualEx = unwrapFromProxy(e);
 
-    requireNonNull(requestId);
-    final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
-    final Future<IBaseResource> result = executor.submit(() -> {
-      try {
-        diagnosticContext.configureScope(true);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        spark.sparkContext().setJobGroup(requestId, requestId, true);
-        return (IBaseResource) joinPoint.proceed(args);
-      } catch (final Throwable e) {
-        // Unwrap the actual exception from the aspect proxy wrapper, if needed.
-        final Throwable actualEx = unwrapFromProxy(e);
-
-        // Apply the same processing and filtering as we do for synchronous requests.
-        final BaseServerResponseException convertedError = ErrorHandlingInterceptor.convertError(
-            actualEx);
-        ErrorReportingInterceptor.reportExceptionToSentry(convertedError);
-        if (ErrorReportingInterceptor.isReportableException(convertedError)) {
-          log.error("Unexpected exception in asynchronous execution.",
-              ErrorReportingInterceptor.getReportableError(convertedError));
-        } else {
-          log.warn("Asynchronous execution failed: {}.",
-              ErrorReportingInterceptor.getReportableError(convertedError).getMessage());
+          // Apply the same processing and filtering as we do for synchronous requests.
+          final BaseServerResponseException convertedError = ErrorHandlingInterceptor.convertError(
+              actualEx);
+          ErrorReportingInterceptor.reportExceptionToSentry(convertedError);
+          if (ErrorReportingInterceptor.isReportableException(convertedError)) {
+            log.error("Unexpected exception in asynchronous execution.",
+                ErrorReportingInterceptor.getReportableError(convertedError));
+          } else {
+            log.warn("Asynchronous execution failed: {}.",
+                ErrorReportingInterceptor.getReportableError(convertedError).getMessage());
+          }
+          throw new RuntimeException("Problem processing request asynchronously", actualEx);
+        } finally {
+          cleanUpAfterJob(spark, jobId);
         }
-        throw new RuntimeException("Problem processing request asynchronously", actualEx);
-      } finally {
-        cleanUpAfterJob(spark, requestId);
-      }
+      });
+      final Optional<String> ownerId = getCurrentUserId(authentication);
+      return new Job(jobId, operation, result, ownerId);
     });
-    final Optional<String> ownerId = getCurrentUserId(authentication);
-    jobRegistry.put(requestId, new Job(operation, result, ownerId));
+
+    final HttpServletResponse response = getResponse(args);
     response.setHeader("Content-Location",
-        requestDetails.getFhirServerBase() + "/$job?id=" + requestId);
+        requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
   }
 
   @Nonnull
