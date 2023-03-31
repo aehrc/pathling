@@ -12,6 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
 from typing import Optional, Sequence, Tuple
 
 from py4j.java_gateway import JavaObject
@@ -42,12 +43,13 @@ class QueryWithFilters:
     ):
         """
         Initializes a new instance of the QueryWithFilters class.
+
         :param subject_resource: The FHIR resource type to use as the subject for the query.
         :param filters: An optional sequence of FHIRPath expressions that determine whether
-            a resource is included in the result. The expressions must evaluate to a Boolean value.
-            Multiple filters are combined using AND logic.
+               a resource is included in the result. The expressions must evaluate to a Boolean
+               value. Multiple filters are combined using AND logic.
         :param data_source: The data source to execute the query against. If not provided, the query
-            can only be executed by calling the `execute` method with a data source argument.
+               can only be executed by calling the `execute` method with a data source argument.
         """
         self._subject_resource = subject_resource
         self._filters = tuple(filters) if filters else None
@@ -63,7 +65,8 @@ class QueryWithFilters:
     @property
     def filters(self) -> Optional[Sequence[str]]:
         """
-        An optional sequence of FHIRPath expressions that determine whether a resource is included in the result.
+        An optional sequence of FHIRPath expressions that determine whether a resource is included
+        in the result.
         """
         return self._filters
 
@@ -72,7 +75,7 @@ class QueryWithFilters:
         Execute the query against a data source.
 
         :param data_source: The data source to execute the query against. If not provided, the query
-            will use the data source provided to the constructor.
+               will use the data source provided to the constructor.
         :type data_source: Optional[DataSource]
 
         :returns: A Spark DataFrame containing the query results.
@@ -85,7 +88,7 @@ class QueryWithFilters:
 
     def _create_jquery(self, data_source: DataSource) -> JavaObject:
         """
-        This method should be implemented by a subclass to create a java query object that can be
+        This method should be implemented by a subclass to create a Java query object that can be
         executed against the data source.
 
         :param data_source: The data source to execute the query against.
@@ -97,13 +100,16 @@ class QueryWithFilters:
 
 class ExtractQuery(QueryWithFilters):
     """
-    Represents an extract query that extracts specified columns from FHIR resources and applies optional filters.
+    Represents an extract query that extracts specified columns from FHIR resources and applies
+    optional filters.
 
     :param subject_resource: A string representing the type of FHIR resource to extract data from.
-    :param columns: A sequence of FHIRPath expressions that define the columns to include in the extract.
+    :param columns: A sequence of FHIRPath expressions that define the columns to include in the
+           extract.
     :param filters: An optional sequence of FHIRPath expressions that can be evaluated against
-          each resource in the data set to determine whether it is included within the result.
-          The expression must evaluate to a Boolean value. Multiple filters are combined using AND logic.
+           each resource in the data set to determine whether it is included within the result.
+           The expression must evaluate to a Boolean value. Multiple filters are combined using AND
+           logic.
     :param data_source: An optional DataSource instance to use for executing the query.
     """
 
@@ -117,11 +123,14 @@ class ExtractQuery(QueryWithFilters):
         """
         Initializes a new instance of the ExtractQuery class.
 
-        :param subject_resource: A string representing the type of FHIR resource to extract data from.
-        :param columns: A sequence of FHIRPath expressions that define the columns to include in the extract.
+        :param subject_resource: A string representing the type of FHIR resource to extract data
+               from.
+        :param columns: A sequence of FHIRPath expressions that define the columns to include in the
+               extract.
         :param filters: An optional sequence of FHIRPath expressions that can be evaluated against
-              each resource in the data set to determine whether it is included within the result.
-              The expression must evaluate to a Boolean value. Multiple filters are combined using AND logic.
+               each resource in the data set to determine whether it is included within the result.
+               The expression must evaluate to a Boolean value. Multiple filters are combined using
+               AND logic.
         :param data_source: An optional DataSource instance to use for executing the query.
         """
         super().__init__(subject_resource, filters, data_source)
@@ -147,8 +156,8 @@ class ExtractQuery(QueryWithFilters):
         for column in self._columns:
             jquery.withColumn(*column.as_tuple())
         if self._filters:
-            for filter in self._filters:
-                jquery.withFilter(filter)
+            for f in self._filters:
+                jquery.withFilter(f)
         return jquery
 
 
@@ -159,12 +168,12 @@ class AggregateQuery(QueryWithFilters):
 
     :param subject_resource: A string representing the type of FHIR resource to aggregate data from.
     :param aggregations: A sequence of FHIRPath expressions that calculate a summary value from
-        each grouping. The expressions must be singular.
+           each grouping. The expressions must be singular.
     :param groupings: An optional sequence of FHIRPath expressions that determine which groupings
-        the resources should be counted within.
+           the resources should be counted within.
     :param filters: An optional sequence of FHIRPath expressions that determine whether
-        a resource is included in the result. The expressions must evaluate to a Boolean value.
-        Multiple filters are combined using AND logic.
+           a resource is included in the result. The expressions must evaluate to a Boolean value.
+           Multiple filters are combined using AND logic.
     :param data_source: The DataSource object containing the data to be queried.
     """
 
@@ -179,14 +188,15 @@ class AggregateQuery(QueryWithFilters):
         """
         Creates a new AggregateQuery object.
 
-        :param subject_resource: A string representing the type of FHIR resource to aggregate data from.
+        :param subject_resource: A string representing the type of FHIR resource to aggregate data
+               from.
         :param aggregations: A sequence of FHIRPath expressions that calculate a summary value from
-            each grouping. The expressions must be singular.
-        :param groupings: An optional sequence of FHIRPath expressions that determine which groupings
-            the resources should be counted within.
+               each grouping. The expressions must be singular.
+        :param groupings: An optional sequence of FHIRPath expressions that determine which
+               groupings the resources should be counted within.
         :param filters: An optional sequence of FHIRPath expressions that determine whether
-            a resource is included in the result. The expressions must evaluate to a Boolean value.
-            Multiple filters are combined using AND logic.
+               a resource is included in the result. The expressions must evaluate to a Boolean
+               value. Multiple filters are combined using AND logic.
         :param data_source: The DataSource object containing the data to be queried.
         """
         super().__init__(subject_resource, filters, data_source)
@@ -230,6 +240,6 @@ class AggregateQuery(QueryWithFilters):
             for grouping in self._groupings:
                 jquery.withGrouping(*grouping.as_tuple())
         if self._filters:
-            for filter in self._filters:
-                jquery.withFilter(filter)
+            for f in self._filters:
+                jquery.withFilter(f)
         return jquery
