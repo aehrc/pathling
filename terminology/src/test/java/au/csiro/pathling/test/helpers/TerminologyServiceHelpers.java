@@ -217,6 +217,15 @@ public class TerminologyServiceHelpers {
       return withDisplay(coding, coding.getDisplay());
     }
 
+    @Nonnull
+    public LookupExpectations withDisplayLanguage(@Nonnull final Coding coding,
+        @Nonnull final String displayName, final String displayLanguage) {
+      when(mockService.lookup(codingEq(coding), eq("display"), eq(displayLanguage)))
+          .thenReturn(List.of(
+              Property.of("display", new StringType(displayName))));
+      return this;
+    }
+    
     @SafeVarargs
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,

@@ -45,6 +45,8 @@ import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -80,7 +82,8 @@ class DisplayFunctionTest {
   void setUp() {
     SharedMocks.resetAll();
   }
-
+  
+  static final String MY_LANGUAGE_HEADER = "de";
 
   @Test
   public void displayCoding() {
@@ -138,6 +141,74 @@ class DisplayFunctionTest {
     // Check the result.
     assertThat(result)
         .hasExpression("Encounter.class.display()")
+        .isElementPath(ElementPath.class)
+        .hasFhirType(FHIRDefinedType.STRING)
+        .isNotSingular()
+        .selectOrderedResultWithEid()
+        .hasRows(expectedResult);
+  }
+
+
+
+  @Test
+  public void displayCodingLanguage() {
+
+    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
+        .getChildOfResource(fhirContext, "Encounter", "class");
+    assertTrue(optionalDefinition.isPresent());
+    final ElementDefinition definition = optionalDefinition.get();
+
+    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withStructTypeColumns(codingStructType())
+        .withRow("encounter-1", makeEid(0), rowFromCoding(LC_55915_3))
+        .withRow("encounter-1", makeEid(1), rowFromCoding(INVALID_CODING_0))
+        .withRow("encounter-2", makeEid(0), rowFromCoding(CD_SNOMED_VER_63816008))
+        .withRow("encounter-3", null, null)
+        .buildWithStructValue();
+
+    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
+        .dataset(inputDataset)
+        .idAndEidAndValueColumns()
+        .expression("Encounter.class")
+        .singular(false)
+        .definition(definition)
+        .buildDefined();
+
+    // Setup mocks
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDisplayLanguage(LC_55915_3, LC_55915_3.getDisplay(), "de")
+        .withDisplayLanguage(CD_SNOMED_VER_63816008, CD_SNOMED_VER_63816008.getDisplay(), "de");
+
+    // Prepare the inputs to the function.
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .idColumn(inputExpression.getIdColumn())
+        .terminologyClientFactory(terminologyServiceFactory)
+        .build();
+
+    final StringLiteralPath argumentExpression = StringLiteralPath
+        .fromString("'" + MY_LANGUAGE_HEADER + "'", inputExpression);
+
+    final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, inputExpression,
+        Collections.singletonList(argumentExpression));
+
+    // Invoke the function.
+    final FhirPath result = new DisplayFunction().invoke(displayInput);
+
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("encounter-1", makeEid(0), LC_55915_3.getDisplay())
+        .withRow("encounter-1", makeEid(1), null)
+        .withRow("encounter-2", makeEid(0), CD_SNOMED_VER_63816008.getDisplay())
+        .withRow("encounter-3", null, null)
+        .build();
+
+    // Check the result.
+    assertThat(result)
+        .hasExpression("Encounter.class.display('de')")
         .isElementPath(ElementPath.class)
         .hasFhirType(FHIRDefinedType.STRING)
         .isNotSingular()

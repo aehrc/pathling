@@ -71,7 +71,7 @@ public class DisplayLanguageUdf implements SqlFunction,
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        coding, DISPLAY_PROPERTY_CODE);
+        coding, DISPLAY_PROPERTY_CODE, language);
 
     final Optional<Property> maybeDisplayName = result.stream()
         .filter(s -> s instanceof Property)
