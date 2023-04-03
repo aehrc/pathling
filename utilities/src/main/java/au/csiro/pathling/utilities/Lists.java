@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.utilities;
 
-import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nonnull;
 
 /**
  * Utility class containing some List helper functions.
@@ -37,7 +37,7 @@ public abstract class Lists {
    * @return an empty list if the input list is empty; otherwise, the input list
    */
   @Nonnull
-  public static <T> List<T> normalizeEmpty(@Nonnull List<T> list) {
+  public static <T> List<T> normalizeEmpty(@Nonnull final List<T> list) {
     return list.isEmpty()
            ? Collections.emptyList()
            : list;
@@ -45,13 +45,14 @@ public abstract class Lists {
 
 
   /**
-   * Returns an empty list if the input list is empty; otherwise, returns the input list.
+   * Returns an empty list if the input list is not present; otherwise, returns the input list.
    *
    * @param maybeList the list to normalize
-   * @return an empty list if the input list is empty; otherwise, the input list
+   * @return an empty list if the input list is not present; otherwise, the input list
    */
   @Nonnull
-  public static List<String> normalizeEmpty(@Nonnull Optional<List<String>> maybeList) {
+  public static List<String> normalizeEmpty(@Nonnull final Optional<List<String>> maybeList) {
     return maybeList.orElse(Collections.emptyList());
   }
+  
 }
