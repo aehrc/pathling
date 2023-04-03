@@ -28,7 +28,7 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * The functions that support building of filesystem based data sources.
+ * Functions that support the building of file system-based data sources.
  */
 public interface SupportFunctions {
 

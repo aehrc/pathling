@@ -17,6 +17,10 @@
 
 package au.csiro.pathling.aggregate;
 
+import static au.csiro.pathling.QueryHelpers.createColumns;
+import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.QueryConfiguration;
@@ -30,21 +34,20 @@ import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.sql.SqlExpressions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-
-import javax.annotation.Nonnull;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static au.csiro.pathling.QueryHelpers.createColumns;
-import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 @Slf4j
 public class AggregateQueryExecutor extends QueryExecutor {
@@ -59,9 +62,10 @@ public class AggregateQueryExecutor extends QueryExecutor {
    * @param dataSource A {@link Database} for retrieving resources
    * @param terminologyServiceFactory A {@link TerminologyServiceFactory} for resolving terminology
    */
-  public AggregateQueryExecutor(QueryConfiguration configuration, FhirContext fhirContext,
-      SparkSession sparkSession, DataSource dataSource,
-      Optional<TerminologyServiceFactory> terminologyServiceFactory) {
+  public AggregateQueryExecutor(@Nonnull final QueryConfiguration configuration,
+      @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
   }
 

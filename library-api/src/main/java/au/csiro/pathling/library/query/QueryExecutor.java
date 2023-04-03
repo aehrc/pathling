@@ -25,7 +25,7 @@ import org.apache.spark.sql.Row;
 
 /**
  * Abstract class that encapsulates the logic for executing queries in this package.
- * 
+ *
  * @author Piotr Szul
  */
 public abstract class QueryExecutor {
@@ -33,8 +33,8 @@ public abstract class QueryExecutor {
   /**
    * Executes the given extract request.
    *
-   * @param extractRequest the request to execute.
-   * @return the result of the execution.
+   * @param extractRequest the request to execute
+   * @return the result of the execution
    */
   @Nonnull
   abstract protected Dataset<Row> execute(@Nonnull final ExtractRequest extractRequest);
@@ -42,8 +42,8 @@ public abstract class QueryExecutor {
   /**
    * Executes the given aggregate request.
    *
-   * @param aggregateRequest the request to execute.
-   * @return the result of the execution.
+   * @param aggregateRequest the request to execute
+   * @return the result of the execution
    */
   @Nonnull
   abstract protected Dataset<Row> execute(@Nonnull final AggregateRequest aggregateRequest);

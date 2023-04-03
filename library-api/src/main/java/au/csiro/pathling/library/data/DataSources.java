@@ -63,8 +63,8 @@ public class DataSources {
    * @return the new builder.
    */
   @Nonnull
-  public FilesystemSourceBuilder filesystemBuilder() {
-    return new FilesystemSourceBuilder(pathlingContext);
+  public FileSystemSourceBuilder filesystemBuilder() {
+    return new FileSystemSourceBuilder(pathlingContext);
   }
 
   /**
@@ -99,15 +99,15 @@ public class DataSources {
    * contains.
    * @param reader the data frame reader to use.
    * @return the new data source.
-   * @see FilesystemSourceBuilder
+   * @see FileSystemSourceBuilder
    */
   @Nonnull
   public ReadableSource fromFiles(@Nonnull final String filesGlob,
       @Nonnull final Function<String, List<String>> filenameMapper,
       @Nonnull final DataFrameReader reader) {
     return this.filesystemBuilder()
-        .withFilesGlob(filesGlob)
-        .withFilepathMapper(filenameMapper)
+        .withGlob(filesGlob)
+        .withFilePathMapper(filenameMapper)
         .withReader(reader).build();
   }
 
@@ -120,15 +120,15 @@ public class DataSources {
    * contains.
    * @param format the structured format to use (e.g. "parquet").
    * @return the new data source.
-   * @see FilesystemSourceBuilder
+   * @see FileSystemSourceBuilder
    */
   @Nonnull
   public ReadableSource fromFiles(@Nonnull final String filesGlob,
       @Nonnull final Function<String, List<String>> filenameMapper,
       @Nonnull final String format) {
     return this.filesystemBuilder()
-        .withFilesGlob(filesGlob)
-        .withFilepathMapper(filenameMapper)
+        .withGlob(filesGlob)
+        .withFilePathMapper(filenameMapper)
         .withFormat(format).build();
   }
 
@@ -140,15 +140,15 @@ public class DataSources {
    * contains.
    * @param mimeType the MIME type of the encoding to use.
    * @return the new data source.
-   * @see FilesystemSourceBuilder
+   * @see FileSystemSourceBuilder
    */
   @Nonnull
   public ReadableSource fromTextFiles(@Nonnull final String filesGlob,
       @Nonnull final Function<String, List<String>> filenameMapper,
       @Nonnull final String mimeType) {
     return this.filesystemBuilder()
-        .withFilesGlob(filesGlob)
-        .withFilepathMapper(filenameMapper)
+        .withGlob(filesGlob)
+        .withFilePathMapper(filenameMapper)
         .withTextEncoder(mimeType)
         .build();
 

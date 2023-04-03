@@ -18,7 +18,6 @@
 package au.csiro.pathling;
 
 import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
@@ -38,6 +37,7 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.common.collect.Streams;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -48,7 +48,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.google.common.collect.Streams;
 import lombok.Getter;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -209,6 +208,7 @@ public abstract class QueryExecutor {
   @Nonnull
   protected static Stream<Column> labelColumns(@Nonnull final Stream<Column> columns,
       @Nonnull final Stream<Optional<String>> labels) {
+    //noinspection UnstableApiUsage
     return Streams.zip(
         columns, labels,
         (column, maybeLabel) -> (maybeLabel.map(column::alias).orElse(column)));

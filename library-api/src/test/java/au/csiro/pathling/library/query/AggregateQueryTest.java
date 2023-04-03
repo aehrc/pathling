@@ -17,22 +17,18 @@
 
 package au.csiro.pathling.library.query;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
 import au.csiro.pathling.aggregate.AggregateRequest;
-import au.csiro.pathling.extract.ExtractRequest;
-import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
+import java.util.Collections;
+import java.util.List;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 public class AggregateQueryTest {
 

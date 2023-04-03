@@ -18,7 +18,6 @@
 package au.csiro.pathling.library.query;
 
 import au.csiro.pathling.aggregate.AggregateRequest;
-import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.utilities.Lists;
 import java.util.ArrayList;
@@ -29,7 +28,7 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Represents an aggregate  query.
+ * Represents an aggregate query.
  *
  * @author Piotr Szul
  */
@@ -50,13 +49,13 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
   protected Dataset<Row> doExecute(@Nonnull final QueryExecutor queryExecutor) {
     return queryExecutor.execute(buildRequest());
   }
-  
+
   /**
-   * Adds a fhirpath expression that represents a grouping column..
+   * Adds a FHIRPath expression that represents a grouping column.
    *
-   * @param groupingFhirpath the column expressions.
-   * @param label the label for the column.
-   * @return this query.
+   * @param groupingFhirpath the column expressions
+   * @param label the label for the column
+   * @return this query
    */
   @Nonnull
   public AggregateQuery withGrouping(@Nonnull final String groupingFhirpath,
@@ -66,10 +65,10 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
   }
 
   /**
-   * Adds a fhirpath expression that represents an aggregation grouping column..
+   * Adds a FHIRPath expression that represents an aggregation grouping column.
    *
-   * @param groupingFhirpath the column expressions.
-   * @return this query.
+   * @param groupingFhirpath the column expressions
+   * @return this query
    */
   @Nonnull
   public AggregateQuery withGrouping(@Nonnull final String groupingFhirpath) {
@@ -78,11 +77,11 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
   }
 
   /**
-   * Adds a fhirpath expression that represents an aggregation column..
+   * Adds a FHIRPath expression that represents an aggregation column.
    *
-   * @param aggregationFhirpath the column expressions.
-   * @param label the label for the column.
-   * @return this query.
+   * @param aggregationFhirpath the column expressions
+   * @param label the label for the column
+   * @return this query
    */
   @Nonnull
   public AggregateQuery withAggregation(@Nonnull final String aggregationFhirpath,
@@ -92,10 +91,10 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
   }
 
   /**
-   * Adds a fhirpath expression that represents an aggregation column..
+   * Adds a FHIRPath expression that represents an aggregation column.
    *
-   * @param aggregationFhirpath the column expressions.
-   * @return this query.
+   * @param aggregationFhirpath the column expressions
+   * @return this query
    */
   @Nonnull
   public AggregateQuery withAggregation(@Nonnull final String aggregationFhirpath) {
@@ -104,7 +103,7 @@ public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
   }
 
   /**
-   * Construct a new extract query instance for the given subject resource type.
+   * Construct a new aggregate query instance for the given subject resource type.
    *
    * @param subjectResourceType the type of the subject resource.
    * @return the new instance of (unbound) extract query.

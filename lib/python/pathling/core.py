@@ -84,8 +84,8 @@ ExpOrStr = Union["Expression", str]
 class Expression:
     """
     Represents an FHIRPath expression that may have an optional name/alias.
-    To make it easier to work with expressions, uses can alias this class with their own name, 
-    for example: 'exp' or 'fp' using import and then use the alias method to create labeled 
+    To make it easier to work with expressions, uses can alias this class with their own name,
+    for example: 'exp' or 'fp' using import and then use the alias method to create labeled
     expressions. For example:
 
     ```

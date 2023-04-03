@@ -18,13 +18,12 @@
 package au.csiro.pathling.library.query;
 
 import au.csiro.pathling.extract.ExtractRequest;
-import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
+import au.csiro.pathling.utilities.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.utilities.Lists;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -38,7 +37,7 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
 
   @Nonnull
   private final List<ExpressionWithLabel> columnsWithLabels = new ArrayList<>();
-  
+
   private ExtractQuery(@Nonnull final ResourceType subjectResource) {
     super(subjectResource);
   }
@@ -50,10 +49,10 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
   }
 
   /**
-   * Adds a fhirpath expression that represents a column to be extract in the result.
+   * Adds a FHIRPath expression that represents a column to be extract in the result.
    *
-   * @param columnFhirpath the column expressions.
-   * @return this query.
+   * @param columnFhirpath the column expressions
+   * @return this query
    */
   @Nonnull
   public ExtractQuery withColumn(@Nonnull final String columnFhirpath) {
@@ -62,12 +61,12 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
   }
 
   /**
-   * Adds a fhirpath expression that represents a column to be extract in the result with the
+   * Adds a FHIRPath expression that represents a column to be extract in the result with the
    * explict label.
    *
-   * @param columnFhirpath the column expressions.
-   * @param label the label of the column.
-   * @return this query.
+   * @param columnFhirpath the column expressions
+   * @param label the label of the column
+   * @return this query
    */
   @Nonnull
   public ExtractQuery withColumn(@Nonnull final String columnFhirpath,
@@ -79,8 +78,8 @@ public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
   /**
    * Construct a new extract query instance for the given subject resource type.
    *
-   * @param subjectResourceType the type of the subject resource.
-   * @return the new instance of (unbound) extract query.
+   * @param subjectResourceType the type of the subject resource
+   * @return the new instance of (unbound) extract query
    */
   @Nonnull
   public static ExtractQuery of(@Nonnull final ResourceType subjectResourceType) {

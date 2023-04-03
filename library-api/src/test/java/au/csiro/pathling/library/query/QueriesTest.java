@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
 
-import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
@@ -43,7 +42,7 @@ public class QueriesTest {
 
     pathlingCtx = PathlingContext.create(spark, FhirEncoders.forR4().getOrCreate(),
         terminologyServiceFactory);
-    
+
     readableSource = pathlingCtx.datasources()
         .fromNdjsonDir(FHIR_JSON_DATA_PATH.toUri().toString());
   }

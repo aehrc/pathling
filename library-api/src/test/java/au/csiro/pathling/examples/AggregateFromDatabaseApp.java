@@ -21,17 +21,16 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.data.ReadableSource;
+import java.nio.file.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-import java.nio.file.Path;
-
 public class AggregateFromDatabaseApp {
 
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
 
     final String warehouseUrl = Path.of("fhir-server/src/test/resources/test-data").toAbsolutePath()
         .toUri().toString();

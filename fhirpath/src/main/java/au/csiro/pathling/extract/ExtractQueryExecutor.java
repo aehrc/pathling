@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import com.google.common.collect.Streams;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -38,9 +37,10 @@ import org.apache.spark.sql.SparkSession;
 @Slf4j
 public class ExtractQueryExecutor extends QueryExecutor {
 
-  public ExtractQueryExecutor(QueryConfiguration configuration, FhirContext fhirContext,
-      SparkSession sparkSession, DataSource dataSource,
-      Optional<TerminologyServiceFactory> terminologyServiceFactory) {
+  public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
+      @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
   }
 

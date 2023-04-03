@@ -43,8 +43,8 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * The class representing a client that can execute complex queries such as extract or aggregate on
- * a {@link DataSource}.
+ * Represents a client that can execute complex queries such as extract or aggregate on a
+ * {@link DataSource}.
  */
 @Value
 @EqualsAndHashCode(callSuper = false)
@@ -86,7 +86,7 @@ public class ReadableSource extends QueryExecutor {
     }
 
     /**
-     * Sets the {@link DataSource} the client should be using.
+     * Sets the {@link DataSource} to be used by the client.
      *
      * @param dataSource the data source.
      * @return this builder.
@@ -176,4 +176,5 @@ public class ReadableSource extends QueryExecutor {
         terminologyClientFactory
     ).buildQuery(aggregateRequest).getDataset();
   }
+  
 }

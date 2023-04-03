@@ -13,11 +13,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+# noinspection PyPackageRequirements
+
 from typing import Optional, Sequence
 from typing import TYPE_CHECKING
 
 from deprecated import deprecated
-# noinspection PyPackageRequirements
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
 
@@ -27,7 +28,6 @@ from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
     from .datasource import DataSources
-
 
 __all__ = ["PathlingContext"]
 

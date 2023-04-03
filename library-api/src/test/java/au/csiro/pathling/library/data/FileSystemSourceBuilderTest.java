@@ -51,7 +51,7 @@ import org.mockito.Mockito;
 import scala.collection.JavaConverters;
 import scala.collection.Seq;
 
-public class FilesystemSourceBuilderTest {
+public class FileSystemSourceBuilderTest {
 
   protected static final Path TEST_DATA_PATH = Path.of(
       "src/test/resources/test-data").toAbsolutePath().normalize();
@@ -128,8 +128,8 @@ public class FilesystemSourceBuilderTest {
 
   @Test
   public void testBuildsEmptySourceWhenNoMatchingFiles() {
-    final ReadableSource source = new FilesystemSourceBuilder(pathlingCtx)
-        .withFilesGlob(MIXED_TEST_DATA_PATH.resolve("*.other").toString())
+    final ReadableSource source = new FileSystemSourceBuilder(pathlingCtx)
+        .withGlob(MIXED_TEST_DATA_PATH.resolve("*.other").toString())
         .withReader(mockDataFrameReader)
         .build();
     assertEquals(Collections.emptySet(),
@@ -144,8 +144,8 @@ public class FilesystemSourceBuilderTest {
     when(mockDataFrameReader.load(seqEq(toTestDataUri("Observation.ndjson")))).thenReturn(
         observationDf);
 
-    final ReadableSource source = new FilesystemSourceBuilder(pathlingCtx)
-        .withFilesGlob(MIXED_TEST_DATA_PATH.resolve("*.ndjson").toString())
+    final ReadableSource source = new FileSystemSourceBuilder(pathlingCtx)
+        .withGlob(MIXED_TEST_DATA_PATH.resolve("*.ndjson").toString())
         .withReader(mockDataFrameReader)
         .build();
 
@@ -173,11 +173,11 @@ public class FilesystemSourceBuilderTest {
         toTestDataUri("Patient.xml")
     ))).thenReturn(observationDf);
 
-    final ReadableSource source = new FilesystemSourceBuilder(pathlingCtx)
-        .withFilesGlob(MIXED_TEST_DATA_PATH.resolve("*.*").toString())
+    final ReadableSource source = new FileSystemSourceBuilder(pathlingCtx)
+        .withGlob(MIXED_TEST_DATA_PATH.resolve("*.*").toString())
         .withReader(mockDataFrameReader)
         // This is purposely reverted, i.e. the actual file is Observation.ndjson, not Observation.xml.
-        .withFilepathMapper(fn -> fn.endsWith("xml")
+        .withFilePathMapper(fn -> fn.endsWith("xml")
                                   ? Arrays.asList("Patient", "Observation")
                                   : Arrays.asList("Patient", "Condition"))
         .build();
@@ -207,8 +207,8 @@ public class FilesystemSourceBuilderTest {
     when(mockTransformer.apply(eq(conditionDf), eq("Patient"))).thenReturn(patientDf);
     when(mockTransformer.apply(eq(patientDf), eq("Condition"))).thenReturn(conditionDf);
 
-    final ReadableSource source = new FilesystemSourceBuilder(pathlingCtx)
-        .withFilesGlob(MIXED_TEST_DATA_PATH.resolve("*.xml").toString())
+    final ReadableSource source = new FileSystemSourceBuilder(pathlingCtx)
+        .withGlob(MIXED_TEST_DATA_PATH.resolve("*.xml").toString())
         .withReader(mockDataFrameReader)
         .withDatasetTransformer(mockTransformer)
         .build();

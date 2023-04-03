@@ -18,28 +18,28 @@ import os
 from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import lit
 from pyspark.sql.types import (
-  StructType,
-  StringType,
-  StructField,
-  BooleanType,
-  Row,
-  ArrayType,
-  IntegerType,
+    StructType,
+    StringType,
+    StructField,
+    BooleanType,
+    Row,
+    ArrayType,
+    IntegerType,
 )
 from pytest import fixture
 
 from pathling.coding import Coding
 from pathling.functions import SNOMED_URI, to_snomed_coding
 from pathling.udfs import (
-  member_of,
-  subsumes,
-  subsumed_by,
-  translate,
-  display,
-  PropertyType,
-  Equivalence,
-  property_of,
-  designation,
+    member_of,
+    subsumes,
+    subsumed_by,
+    translate,
+    display,
+    PropertyType,
+    Equivalence,
+    property_of,
+    designation,
 )
 
 PROJECT_DIR = os.path.abspath(

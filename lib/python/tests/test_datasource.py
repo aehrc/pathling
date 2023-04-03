@@ -15,7 +15,7 @@
 
 import os
 
-from pyspark import Row
+from pyspark.sql import Row
 from pytest import fixture
 
 from pathling import Expression as fpe
