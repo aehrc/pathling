@@ -721,6 +721,11 @@
           <artifactId>maven-shade-plugin</artifactId>
           <version>3.4.1</version>
           <configuration>
+            <artifactSet>
+              <excludes>
+                <exclude>org.scala-lang:scala-library</exclude>
+              </excludes>
+            </artifactSet>
             <filters>
               <filter>
                 <artifact>au.csiro.pathling:${project.artifactId}</artifact>
