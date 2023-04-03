@@ -60,7 +60,6 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <!-- HAPI FHIR -->
