@@ -189,6 +189,24 @@ public interface Terminology {
    */
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nonnull final FHIRDefinedType propertyType, @Nullable final String acceptLanguage) {
+    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(acceptLanguage));
+  }
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the values of properties
+   * for this coding with specified names and types. The type of the result column depends on the
+   * types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
+   * Complex types are mapped to their corresponding structs. The allowed property types are: code |
+   * Coding | string | integer | boolean | dateTime | decimal.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve.
+   * @param propertyType the type of the property to retrieve.
+   * @return the Column containing the result of the operation (array of property values)
+   */
+  @Nonnull
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType) {
     return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode));
   }

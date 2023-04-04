@@ -143,7 +143,7 @@ public class PropertyLanguageUdf implements SqlFunction,
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        requireNonNull(coding), propertyCode);
+        requireNonNull(coding), propertyCode, language);
 
     return result.stream()
         .filter(s -> s instanceof Property)
