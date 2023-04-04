@@ -18,15 +18,12 @@
 package au.csiro.pathling.async;
 
 
-import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-
 import au.csiro.pathling.async.Job.JobTag;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Value;
-import org.springframework.security.core.Authentication;
 
 /**
  * Represents a tag which includes all aspects a request that need to be compared in order to
@@ -39,22 +36,14 @@ public class RequestTag implements JobTag {
   @Nonnull
   String requestUrl;
 
+  // NOTE: This assumes that principals support the notion of equality correctly 
+  // (which seem to be the case at least for AbstractOAuth2Token which is the base class for Jwt. 
   @Nonnull
-  Optional<String> userIdentity;
+  Optional<Object> requestPrincipal;
 
-  /**
-   * Creates a new {@link RequestTag} from the given request details and authentication.
-   *
-   * @param requestDetails the request details
-   * @param authentication the authentication
-   * @return a new {@link RequestTag}
-   */
   @Nonnull
-  public static RequestTag fromRequest(@Nonnull RequestDetails requestDetails,
-      @Nullable Authentication authentication) {
- 
-    // TODO: Determine what exactly should be included in the request tag.
-    return new RequestTag(requestDetails.getCompleteUrl(), getCurrentUserId(authentication));
-  }
+  Map<String, List<String>> varyHeaders;
 
+  @Nonnull
+  Optional<String> cacheKey;
 }

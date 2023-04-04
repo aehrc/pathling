@@ -18,7 +18,6 @@
 package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.DiagnosticContext;
@@ -32,13 +31,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -81,6 +80,9 @@ public class AsyncAspect {
   private final JobRegistry jobRegistry;
 
   @Nonnull
+  private final RequestTagFactory requestTagFactory;
+
+  @Nonnull
   private final Map<RequestTag, Job> requestTagToJob = new ConcurrentHashMap<>();
 
   @Nonnull
@@ -91,14 +93,17 @@ public class AsyncAspect {
 
   /**
    * @param executor used to run asynchronous jobs in the background
+   * @param requestTagFactory used to create {@link RequestTag} instances
    * @param jobRegistry the {@link JobRegistry} used to keep track of running jobs
    * @param stageMap the {@link StageMap} used to map stages to job IDs
    * @param spark used for updating the Spark Context with job identity
    */
   public AsyncAspect(@Nonnull final ThreadPoolTaskExecutor executor,
+      @Nonnull final RequestTagFactory requestTagFactory,
       @Nonnull final JobRegistry jobRegistry, @Nonnull final StageMap stageMap,
       @Nonnull final SparkSession spark) {
     this.executor = executor;
+    this.requestTagFactory = requestTagFactory;
     this.jobRegistry = jobRegistry;
     this.stageMap = stageMap;
     this.spark = spark;
@@ -122,10 +127,12 @@ public class AsyncAspect {
 
   private void processRequestAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final Object[] args, @Nonnull final SparkSession spark) {
-    final RequestDetails requestDetails = getRequestDetails(args);
+
+    // TODO: change the signature of the methods to get access to ServletRequestDetails directly.
+    final ServletRequestDetails requestDetails = (ServletRequestDetails) getRequestDetails(args);
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    final RequestTag requestTag = RequestTag.fromRequest(requestDetails, authentication);
+    final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication);
     final Job job = jobRegistry.getOrCreate(requestTag, jobId -> {
       final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
       final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
