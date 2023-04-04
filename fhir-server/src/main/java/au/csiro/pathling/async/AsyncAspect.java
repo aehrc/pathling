@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.errors.DiagnosticContext;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
@@ -113,12 +112,13 @@ public class AsyncAspect {
   private IBaseResource maybeExecuteAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final AsyncSupported asyncSupported) throws Throwable {
     final Object[] args = joinPoint.getArgs();
-    final HttpServletRequest request = getRequest(args);
+    final ServletRequestDetails requestDetails = getServletRequestDetails(args);
+    final HttpServletRequest request = requestDetails.getServletRequest();
     final String prefer = request.getHeader(ASYNC_HEADER);
 
     if (prefer != null && prefer.equals(ASYNC_HEADER_VALUE)) {
       log.info("Asynchronous processing requested");
-      processRequestAsynchronously(joinPoint, args, spark);
+      processRequestAsynchronously(joinPoint, args, requestDetails, spark);
       throw new ProcessingNotCompletedException("Accepted", buildOperationOutcome());
     } else {
       return (IBaseResource) joinPoint.proceed(args);
@@ -126,12 +126,10 @@ public class AsyncAspect {
   }
 
   private void processRequestAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
-      @Nonnull final Object[] args, @Nonnull final SparkSession spark) {
+      @Nonnull final Object[] args, @Nonnull final ServletRequestDetails requestDetails,
+      @Nonnull final SparkSession spark) {
 
-    // TODO: change the signature of the methods to get access to ServletRequestDetails directly.
-    final ServletRequestDetails requestDetails = (ServletRequestDetails) getRequestDetails(args);
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
     final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication);
     final Job job = jobRegistry.getOrCreate(requestTag, jobId -> {
       final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
@@ -166,7 +164,7 @@ public class AsyncAspect {
       return new Job(jobId, operation, result, ownerId);
     });
 
-    final HttpServletResponse response = getResponse(args);
+    final HttpServletResponse response = requestDetails.getServletResponse();
     response.setHeader("Content-Location",
         requestDetails.getFhirServerBase() + "/$job?id=" + job.getId());
   }
@@ -181,23 +179,13 @@ public class AsyncAspect {
   }
 
   @Nonnull
-  private RequestDetails getRequestDetails(@Nonnull final Object[] args) {
-    return (RequestDetails) Arrays.stream(args)
-        .filter(a -> a instanceof RequestDetails)
+  private ServletRequestDetails getServletRequestDetails(@Nonnull final Object[] args) {
+    return (ServletRequestDetails) Arrays.stream(args)
+        .filter(a -> a instanceof ServletRequestDetails)
         .findFirst()
         .orElseThrow(() -> new IllegalArgumentException(
-            "Method annotated with @AsyncSupported must include a RequestDetails parameter"));
+            "Method annotated with @AsyncSupported must include a ServletRequestDetails parameter"));
   }
-
-  @Nonnull
-  private HttpServletResponse getResponse(@Nonnull final Object[] args) {
-    return (HttpServletResponse) Arrays.stream(args)
-        .filter(a -> a instanceof HttpServletResponse)
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(
-            "Method annotated with @AsyncSupported must include a HttpServletResponse parameter"));
-  }
-
 
   private void cleanUpAfterJob(@Nonnull final SparkSession spark, @Nonnull final String requestId) {
     spark.sparkContext().clearJobGroup();
