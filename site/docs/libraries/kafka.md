@@ -9,7 +9,7 @@ available within the library are able to execute continuously across a stream of
 data.
 
 For more information about Spark's Kafka integration, see
-the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/3.3.1/structured-streaming-kafka-integration.html#content).
+the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/3.3.2/structured-streaming-kafka-integration.html#content).
 
 Here is an example of streaming a source of FHIR data, encoding it and then 
 performing a terminology operation upon it:
