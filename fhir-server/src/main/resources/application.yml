@@ -120,8 +120,8 @@ pathling:
     enabled: true
     
     excludeVary:
-      - Prefer
-      - Authorization
+      - Accept
+      - Accept-Encoding
 
 # Use this section to set or override any Spark configuration parameter. Tuning these parameters is
 # essential to get the optimal performance for your dataset.

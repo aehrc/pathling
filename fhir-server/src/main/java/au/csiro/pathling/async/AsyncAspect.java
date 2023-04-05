@@ -109,7 +109,7 @@ public class AsyncAspect {
   }
 
   @Around("@annotation(asyncSupported)")
-  private IBaseResource maybeExecuteAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
+  protected IBaseResource maybeExecuteAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
       @Nonnull final AsyncSupported asyncSupported) throws Throwable {
     final Object[] args = joinPoint.getArgs();
     final ServletRequestDetails requestDetails = getServletRequestDetails(args);
@@ -121,7 +121,7 @@ public class AsyncAspect {
       processRequestAsynchronously(joinPoint, args, requestDetails, spark);
       throw new ProcessingNotCompletedException("Accepted", buildOperationOutcome());
     } else {
-      return (IBaseResource) joinPoint.proceed(args);
+      return (IBaseResource) joinPoint.proceed();
     }
   }
 
@@ -131,6 +131,7 @@ public class AsyncAspect {
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication);
+    log.debug("Request tag: {}", requestTag);
     final Job job = jobRegistry.getOrCreate(requestTag, jobId -> {
       final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
       final String operation = requestDetails.getOperation().replaceFirst("\\$", "");
@@ -139,7 +140,7 @@ public class AsyncAspect {
           diagnosticContext.configureScope(true);
           SecurityContextHolder.getContext().setAuthentication(authentication);
           spark.sparkContext().setJobGroup(jobId, jobId, true);
-          return (IBaseResource) joinPoint.proceed(args);
+          return (IBaseResource) joinPoint.proceed();
         } catch (final Throwable e) {
           // Unwrap the actual exception from the aspect proxy wrapper, if needed.
           final Throwable actualEx = unwrapFromProxy(e);
