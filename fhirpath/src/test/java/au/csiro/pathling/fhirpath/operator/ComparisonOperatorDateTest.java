@@ -128,7 +128,7 @@ class ComparisonOperatorDateTest {
         RowFactory.create("patient-01", true),   // Equal, years, months and days
         RowFactory.create("patient-02", true),   // Equal, years and months
         RowFactory.create("patient-03", true),   // Equal, years
-        RowFactory.create("patient-04", true),   // Different precisions
+        RowFactory.create("patient-04", null),   // Different precisions
         RowFactory.create("patient-05", false),  // Less than, years, months and days
         RowFactory.create("patient-06", false),  // Less than, years and months
         RowFactory.create("patient-07", false),  // Less than, years
@@ -148,7 +148,7 @@ class ComparisonOperatorDateTest {
         RowFactory.create("patient-01", false),  // Equal, years, months and days
         RowFactory.create("patient-02", false),  // Equal, years and months
         RowFactory.create("patient-03", false),  // Equal, years
-        RowFactory.create("patient-04", false),  // Different precisions
+        RowFactory.create("patient-04", null),   // Different precisions
         RowFactory.create("patient-05", true),   // Less than, years, months and days
         RowFactory.create("patient-06", true),   // Less than, years and months
         RowFactory.create("patient-07", true),   // Less than, years
@@ -188,7 +188,7 @@ class ComparisonOperatorDateTest {
         RowFactory.create("patient-01", true),   // Equal, years, months and days
         RowFactory.create("patient-02", true),   // Equal, years and months
         RowFactory.create("patient-03", true),   // Equal, years
-        RowFactory.create("patient-04", true),   // Different precisions
+        RowFactory.create("patient-04", null),   // Different precisions
         RowFactory.create("patient-05", true),   // Less than, years, months and days
         RowFactory.create("patient-06", true),   // Less than, years and months
         RowFactory.create("patient-07", true),   // Less than, years
@@ -228,7 +228,7 @@ class ComparisonOperatorDateTest {
         RowFactory.create("patient-01", true),   // Equal, years, months and days
         RowFactory.create("patient-02", true),   // Equal, years and months
         RowFactory.create("patient-03", true),   // Equal, years
-        RowFactory.create("patient-04", true),   // Different precisions
+        RowFactory.create("patient-04", null),   // Different precisions
         RowFactory.create("patient-05", false),  // Less than, years, months and days
         RowFactory.create("patient-06", false),  // Less than, years and months
         RowFactory.create("patient-07", false),  // Less than, years
