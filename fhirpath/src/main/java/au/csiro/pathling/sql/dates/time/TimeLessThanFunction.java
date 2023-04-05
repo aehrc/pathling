@@ -18,7 +18,8 @@
 package au.csiro.pathling.sql.dates.time;
 
 import java.time.LocalTime;
-import java.util.function.BiFunction;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Determines whether one time is before another.
@@ -32,8 +33,9 @@ public class TimeLessThanFunction extends TimeComparisonFunction {
   public static final String FUNCTION_NAME = "time_lt";
 
   @Override
-  protected BiFunction<LocalTime, LocalTime, Boolean> getOperationFunction() {
-    return LocalTime::isBefore;
+  @Nullable
+  protected Boolean compare(@Nonnull final LocalTime left, @Nonnull final LocalTime right) {
+    return left.isBefore(right);
   }
 
   @Override

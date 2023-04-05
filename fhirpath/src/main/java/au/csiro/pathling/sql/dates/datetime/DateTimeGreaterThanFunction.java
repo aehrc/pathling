@@ -17,9 +17,8 @@
 
 package au.csiro.pathling.sql.dates.datetime;
 
-import java.util.function.BiFunction;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.r4.model.BaseDateTimeType;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.DateTimeType;
 
 /**
@@ -33,10 +32,10 @@ public class DateTimeGreaterThanFunction extends DateTimeComparisonFunction {
 
   public static final String FUNCTION_NAME = "datetime_gt";
 
-  @Nonnull
   @Override
-  protected BiFunction<DateTimeType, DateTimeType, Boolean> getOperationFunction() {
-    return BaseDateTimeType::after;
+  @Nullable
+  protected Boolean compare(@Nonnull final DateTimeType left, @Nonnull final DateTimeType right) {
+    return left.after(right);
   }
 
   @Override

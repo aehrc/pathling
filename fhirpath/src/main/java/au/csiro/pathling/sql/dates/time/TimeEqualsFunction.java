@@ -18,7 +18,8 @@
 package au.csiro.pathling.sql.dates.time;
 
 import java.time.LocalTime;
-import java.util.function.BiFunction;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Determines the equality of two times.
@@ -32,8 +33,9 @@ public class TimeEqualsFunction extends TimeComparisonFunction {
   public static final String FUNCTION_NAME = "time_eq";
 
   @Override
-  protected BiFunction<LocalTime, LocalTime, Boolean> getOperationFunction() {
-    return LocalTime::equals;
+  @Nullable
+  protected Boolean compare(@Nonnull final LocalTime left, @Nonnull final LocalTime right) {
+    return left.equals(right);
   }
 
   @Override

@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.sql.dates.datetime;
 
-import java.util.function.BiFunction;
-import org.hl7.fhir.r4.model.BaseDateTimeType;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.DateTimeType;
 
 /**
@@ -33,8 +33,9 @@ public class DateTimeEqualsFunction extends DateTimeComparisonFunction {
   public static final String FUNCTION_NAME = "datetime_eq";
 
   @Override
-  protected BiFunction<DateTimeType, DateTimeType, Boolean> getOperationFunction() {
-    return BaseDateTimeType::equalsUsingFhirPathRules;
+  @Nullable
+  protected Boolean compare(@Nonnull final DateTimeType left, @Nonnull final DateTimeType right) {
+    return left.equalsUsingFhirPathRules(right);
   }
 
   @Override
