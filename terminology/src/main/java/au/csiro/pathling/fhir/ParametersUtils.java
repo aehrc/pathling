@@ -79,7 +79,7 @@ public final class ParametersUtils {
   }
 
   /**
-   * Converts ParametersParameterComponent object to a java bean class initializing its properties
+   * Converts ParametersParameterComponent object to a Java bean class initializing its properties
    * from the part properties.
    *
    * @param component the ParametersParameterComponent element.
@@ -121,7 +121,7 @@ public final class ParametersUtils {
   public static ConceptSubsumptionOutcome toSubsumptionOutcome(
       final @Nonnull Parameters parameters) {
     return ConceptSubsumptionOutcome.fromCode(
-        parameters.getParameter("outcome").primitiveValue());
+        parameters.getParameter("outcome").getValue().toString());
   }
 
   /**

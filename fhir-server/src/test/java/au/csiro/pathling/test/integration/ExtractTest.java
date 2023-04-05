@@ -76,7 +76,7 @@ class ExtractTest extends IntegrationTest {
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);
     assertTrue(response.getStatusCode().is2xxSuccessful());
     final Parameters result = (Parameters) jsonParser.parseResource(response.getBody());
-    final URL url = new URL(((UrlType) result.getParameter("url")).getValueAsString());
+    final URL url = new URL(((UrlType) result.getParameter("url").getValue()).getValueAsString());
 
     final String actual;
     try {
