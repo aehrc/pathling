@@ -18,12 +18,12 @@
 package au.csiro.pathling.async;
 
 import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
-import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.DiagnosticContext;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.List;
@@ -36,7 +36,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -131,7 +130,6 @@ public class AsyncAspect {
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     final RequestTag requestTag = requestTagFactory.createTag(requestDetails, authentication);
-    log.debug("Request tag: {}", requestTag);
     final Job job = jobRegistry.getOrCreate(requestTag, jobId -> {
       final DiagnosticContext diagnosticContext = DiagnosticContext.fromSentryScope();
       final String operation = requestDetails.getOperation().replaceFirst("\\$", "");

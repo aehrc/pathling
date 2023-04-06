@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.async;
 
+import static au.csiro.pathling.async.RequestTagFactoryTest.createServerConfiguration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -25,22 +26,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.SparkSession;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -48,14 +51,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 
-@SpringBootTest
-@ActiveProfiles({"unit-test", "core", "server"})
-@TestPropertySource(properties = {"pathling.async.enabled=true"})
-@Tag("UnitTest")
-@Tag("Tranche2")
+@SpringBootUnitTest
 public class AsyncAspectTest {
 
   @MockBean
@@ -64,16 +61,23 @@ public class AsyncAspectTest {
   @MockBean
   private DatabaseComponent databaseComponent;
 
-  @Autowired
-  private JobRegistry jobRegistry;
+  @MockBean
+  StageMap stageMap;
+
+  @MockBean
+  ProceedingJoinPoint proceedingJoinPoint;
 
   @Autowired
+  SparkSession spark;
+
+  private ServerConfiguration serverConfiguration;
+  private JobRegistry jobRegistry;
   private AsyncAspect asyncAspect;
+  private RequestTagFactory requestTagFactory;
 
   private final MockHttpServletRequest servletRequest = new MockHttpServletRequest();
   private final MockHttpServletResponse servletResponse = new MockHttpServletResponse();
   private ServletRequestDetails requestDetails;
-  private ProceedingJoinPoint proceedingJoinPoint;
 
   private static final IBaseResource RESULT_RESOURCE = mock(IBaseResource.class);
   private static final AsyncSupported ASYNC_SUPPORTED = mock(AsyncSupported.class);
@@ -85,6 +89,16 @@ public class AsyncAspectTest {
 
   @BeforeEach
   public void setUp() throws Throwable {
+
+    // Wire the asynAspects and it's dependencied
+    serverConfiguration = createServerConfiguration(List.of("Accept", "Authorization"),
+        List.of("Accept"));
+    requestTagFactory = new RequestTagFactory(databaseComponent, serverConfiguration);
+    jobRegistry = new JobRegistry();
+    asyncAspect = new AsyncAspect(threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap,
+        spark);
+
+    // Initialise mock request and response
     requestDetails = new ServletRequestDetails();
     requestDetails.setServletRequest(servletRequest);
     requestDetails.setServletResponse(servletResponse);
@@ -93,7 +107,6 @@ public class AsyncAspectTest {
     requestDetails.setOperation("$aggregate");
 
     final Object[] args = new Object[]{requestDetails};
-    proceedingJoinPoint = mock(ProceedingJoinPoint.class);
     when(proceedingJoinPoint.getArgs()).thenReturn(args);
     when(proceedingJoinPoint.proceed()).thenReturn(RESULT_RESOURCE);
   }

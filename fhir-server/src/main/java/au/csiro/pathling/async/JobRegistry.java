@@ -17,25 +17,24 @@
 
 package au.csiro.pathling.async;
 
-import java.io.Serializable;
+import au.csiro.pathling.async.Job.JobTag;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
-import java.util.function.Supplier;
-import au.csiro.pathling.async.Job.JobTag;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Used for storing information about running asynchronous tasks.
  *
  * @author John Grimes
  */
+@Slf4j
 @Component
 @Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
@@ -55,14 +54,21 @@ public class JobRegistry {
   @Nonnull
   public synchronized Job getOrCreate(@Nonnull final JobTag tag,
       @Nonnull final Function<String, Job> jobFactory) {
-    return jobsByTags.computeIfAbsent(tag, t -> {
+
+    final Job existingJob = jobsByTags.get(tag);
+    if (existingJob != null) {
+      log.debug("Returning existing job: {} for tag: {}", existingJob.getId(), tag);
+      return existingJob;
+    } else {
       final String jobId = UUID.randomUUID().toString();
       final Job newJob = jobFactory.apply(jobId);
+      log.debug("Created new job: {} for tag: {}", newJob.getId(), tag);
       assert jobId.equals(newJob.getId());
-      final Job existingJob = jobsById.put(newJob.getId(), newJob);
-      assert existingJob == null;
+      final Job replacedJob = jobsById.put(newJob.getId(), newJob);
+      assert replacedJob == null;
+      jobsByTags.put(tag, newJob);
       return newJob;
-    });
+    }
   }
 
   /**
@@ -75,6 +81,4 @@ public class JobRegistry {
   public synchronized Job get(@Nonnull final String id) {
     return jobsById.get(id);
   }
-
-
 }

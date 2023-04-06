@@ -113,7 +113,7 @@ public class RequestTagFactoryTest {
         requestTag);
   }
 
-  private static ServerConfiguration createServerConfiguration(List<String> varyHeaders,
+  static ServerConfiguration createServerConfiguration(List<String> varyHeaders,
       List<String> whiteListedHeaders) {
     final AsyncConfiguration asyncConfiguration = new AsyncConfiguration();
     asyncConfiguration.setEnabled(true);
