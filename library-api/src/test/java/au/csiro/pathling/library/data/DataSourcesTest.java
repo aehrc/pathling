@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.library.data;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
 
@@ -36,6 +38,7 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -142,4 +145,13 @@ public class DataSourcesTest {
         .withAggregation("count()").execute();
     DatasetAssert.of(conditionCount).hasRows(RowFactory.create(71));
   }
+
+  @Test
+  void testS3Uri() {
+    Exception exception = assertThrows(IllegalArgumentException.class,
+        () -> pathlingCtx.datasources()
+            .fromNdjsonDir("s3://pathling-test-data/ndjson/"));
+    assertEquals("bucket is null/empty", exception.getMessage());
+  }
+
 }

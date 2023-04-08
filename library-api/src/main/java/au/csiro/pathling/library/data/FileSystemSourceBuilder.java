@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.data;
 
+import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.library.PathlingContext;
@@ -79,7 +80,7 @@ public class FileSystemSourceBuilder extends AbstractSourceBuilder<FileSystemSou
    */
   @Nonnull
   public FileSystemSourceBuilder withGlob(@Nonnull final String glob) {
-    this.filesGlob = glob;
+    this.filesGlob = convertS3ToS3aUrl(glob);
     return this;
   }
 
