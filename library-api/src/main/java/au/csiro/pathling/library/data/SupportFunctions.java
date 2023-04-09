@@ -41,7 +41,7 @@ public interface SupportFunctions {
    * @return a single-element list containing the resource type
    */
   @Nonnull
-  static List<String> basenameWithQualifierToResource(@Nonnull final String filePath) {
+  static List<String> baseNameWithQualifierToResource(@Nonnull final String filePath) {
     final String baseName = FilenameUtils.getBaseName(filePath);
     final String qualifierRemoved = baseName.replaceFirst("\\.([^\\.]+)$", "");
     return Collections.singletonList(

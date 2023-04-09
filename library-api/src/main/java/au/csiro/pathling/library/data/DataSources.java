@@ -19,6 +19,7 @@ package au.csiro.pathling.library.data;
 
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Function;
@@ -63,7 +64,7 @@ public class DataSources {
    * @return the new builder.
    */
   @Nonnull
-  public FileSystemSourceBuilder filesystemBuilder() {
+  public FileSystemSourceBuilder fileSystemBuilder() {
     return new FileSystemSourceBuilder(pathlingContext);
   }
 
@@ -94,41 +95,41 @@ public class DataSources {
   /**
    * Creates a new data source form a set of files in one of the supported structured data formats.
    *
-   * @param filesGlob the URI with glob pattern for the files.
-   * @param filenameMapper a function that maps the file URI to a list of resource  types it
-   * contains.
-   * @param reader the data frame reader to use.
-   * @return the new data source.
+   * @param filesGlob the URI with glob pattern for the files
+   * @param fileNameMapper a function that maps the file URI to a list of resource  types it
+   * contains
+   * @param reader the data frame reader to use
+   * @return the new data source
    * @see FileSystemSourceBuilder
    */
   @Nonnull
   public ReadableSource fromFiles(@Nonnull final String filesGlob,
-      @Nonnull final Function<String, List<String>> filenameMapper,
+      @Nonnull final Function<String, List<String>> fileNameMapper,
       @Nonnull final DataFrameReader reader) {
-    return this.filesystemBuilder()
+    return this.fileSystemBuilder()
         .withGlob(filesGlob)
-        .withFilePathMapper(filenameMapper)
+        .withFilePathMapper(fileNameMapper)
         .withReader(reader).build();
   }
 
 
   /**
-   * Creates a new data source form a set of files in one of the supported structured data formats.
+   * Creates a new data source from a set of files in one of the supported structured data formats.
    *
-   * @param filesGlob the URI with glob pattern for the files.
-   * @param filenameMapper a function that maps the file URI to a list of resource  types it
-   * contains.
-   * @param format the structured format to use (e.g. "parquet").
-   * @return the new data source.
+   * @param filesGlob the URI with glob pattern for the files
+   * @param fileNameMapper a function that maps the file URI to a list of resource types it
+   * contains
+   * @param format the structured format to use (e.g. "parquet")
+   * @return the new data source
    * @see FileSystemSourceBuilder
    */
   @Nonnull
   public ReadableSource fromFiles(@Nonnull final String filesGlob,
-      @Nonnull final Function<String, List<String>> filenameMapper,
+      @Nonnull final Function<String, List<String>> fileNameMapper,
       @Nonnull final String format) {
-    return this.filesystemBuilder()
+    return this.fileSystemBuilder()
         .withGlob(filesGlob)
-        .withFilePathMapper(filenameMapper)
+        .withFilePathMapper(fileNameMapper)
         .withFormat(format).build();
   }
 
@@ -136,7 +137,7 @@ public class DataSources {
    * Creates a new data source form a set of text files with one of the supported FHIR encodings.
    *
    * @param filesGlob the URI with glob pattern for the files.
-   * @param filenameMapper a function that maps the file URI to a list of resource  types it
+   * @param fileNameMapper a function that maps the file URI to a list of resource  types it
    * contains.
    * @param mimeType the MIME type of the encoding to use.
    * @return the new data source.
@@ -144,11 +145,11 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource fromTextFiles(@Nonnull final String filesGlob,
-      @Nonnull final Function<String, List<String>> filenameMapper,
+      @Nonnull final Function<String, List<String>> fileNameMapper,
       @Nonnull final String mimeType) {
-    return this.filesystemBuilder()
+    return this.fileSystemBuilder()
         .withGlob(filesGlob)
-        .withFilePathMapper(filenameMapper)
+        .withFilePathMapper(fileNameMapper)
         .withTextEncoder(mimeType)
         .build();
 
@@ -168,8 +169,8 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource fromNdjsonDir(@Nonnull final String ndjsonDir) {
-    return fromTextFiles(Path.of(ndjsonDir, "*.ndjson").toString(),
-        SupportFunctions::basenameWithQualifierToResource,
+    return fromTextFiles(addPathToDirectory(ndjsonDir, "*.ndjson"),
+        SupportFunctions::baseNameWithQualifierToResource,
         FhirMimeTypes.FHIR_JSON);
   }
 
@@ -183,9 +184,19 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource fromParquetDir(@Nonnull final String parquetDir) {
-    return fromFiles(Path.of(parquetDir, "*.parquet").toString(),
-        SupportFunctions::basenameWithQualifierToResource,
+    return fromFiles(addPathToDirectory(parquetDir, "*.parquet"),
+        SupportFunctions::baseNameWithQualifierToResource,
         "parquet");
+  }
+
+  private static String addPathToDirectory(@Nonnull final String directory,
+      @Nonnull final String path) {
+    try {
+      final URI uri = URI.create(directory);
+      return uri.toString().replaceFirst("/$", "") + "/" + path;
+    } catch (final IllegalArgumentException e) {
+      return Path.of(directory, path).toString();
+    }
   }
 
 }

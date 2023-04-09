@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.library.data;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.withSettings;
 
@@ -28,6 +28,7 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -92,10 +93,10 @@ public class DataSourcesTest {
             .build()
         ),
         Arguments.arguments("with filesystemBuilder()",
-            pathlingCtx.datasources().filesystemBuilder()
+            pathlingCtx.datasources().fileSystemBuilder()
                 .withGlob(TEST_JSON_DATA_PATH.resolve("*.ndjson").toString())
                 .withReader(spark.read().format("text"))
-                .withFilePathMapper(SupportFunctions::basenameWithQualifierToResource)
+                .withFilePathMapper(SupportFunctions::baseNameWithQualifierToResource)
                 .withDatasetTransformer(
                     SupportFunctions.textEncodingTransformer(pathlingCtx, FhirMimeTypes.FHIR_JSON))
                 .build()
@@ -109,17 +110,17 @@ public class DataSourcesTest {
         Arguments.arguments("fromFiles with reader='delta'",
             pathlingCtx.datasources().fromFiles(
                 TEST_DELTA_DATA_PATH.resolve("*.parquet").toString(),
-                SupportFunctions::basenameWithQualifierToResource, spark.read().format("delta"))
+                SupportFunctions::baseNameWithQualifierToResource, spark.read().format("delta"))
         ),
         Arguments.arguments("fromFiles with format='delta'",
             pathlingCtx.datasources().fromFiles(
                 TEST_DELTA_DATA_PATH.resolve("*.parquet").toString(),
-                SupportFunctions::basenameWithQualifierToResource, "delta")
+                SupportFunctions::baseNameWithQualifierToResource, "delta")
         ),
         Arguments.arguments("fromTextFiles with mimeType='ndjson'",
             pathlingCtx.datasources()
                 .fromTextFiles(TEST_JSON_DATA_PATH.resolve("*.ndjson").toUri().toString(),
-                    SupportFunctions::basenameWithQualifierToResource,
+                    SupportFunctions::baseNameWithQualifierToResource,
                     FhirMimeTypes.FHIR_JSON)
         ),
         Arguments.arguments("fromWarehouse",
@@ -148,10 +149,10 @@ public class DataSourcesTest {
 
   @Test
   void testS3Uri() {
-    Exception exception = assertThrows(IllegalArgumentException.class,
+    Exception exception = assertThrows(RuntimeException.class,
         () -> pathlingCtx.datasources()
             .fromNdjsonDir("s3://pathling-test-data/ndjson/"));
-    assertEquals("bucket is null/empty", exception.getMessage());
+    assertTrue(exception.getCause() instanceof AccessDeniedException);
   }
 
 }

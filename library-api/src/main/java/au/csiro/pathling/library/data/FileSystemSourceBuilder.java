@@ -66,7 +66,7 @@ public class FileSystemSourceBuilder extends AbstractSourceBuilder<FileSystemSou
    */
   public FileSystemSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
-    this.filePathMapper = SupportFunctions::basenameWithQualifierToResource;
+    this.filePathMapper = SupportFunctions::baseNameWithQualifierToResource;
     this.datasetTransformer = SupportFunctions::identityTransformer;
     this.reader = pathlingContext.getSpark().read().format("parquet");
   }

@@ -34,13 +34,13 @@ public class SupportFunctionsTests {
   @Test
   public void testBasenameToResourceTypeMapper() {
     assertEquals(List.of("Patient"),
-        SupportFunctions.basenameWithQualifierToResource("Patient.json"));
+        SupportFunctions.baseNameWithQualifierToResource("Patient.json"));
     assertEquals(List.of("Condition"),
-        SupportFunctions.basenameWithQualifierToResource("/foo.xxx/bar/Condition.xml"));
+        SupportFunctions.baseNameWithQualifierToResource("/foo.xxx/bar/Condition.xml"));
     assertEquals(List.of("Observation"),
-        SupportFunctions.basenameWithQualifierToResource("file:///foo.yyy/bar/Observation"));
+        SupportFunctions.baseNameWithQualifierToResource("file:///foo.yyy/bar/Observation"));
     assertEquals(List.of("Procedure"),
-        SupportFunctions.basenameWithQualifierToResource("file:///foo.yyy/bar/Procedure.ICU.json"));
+        SupportFunctions.baseNameWithQualifierToResource("file:///foo.yyy/bar/Procedure.ICU.json"));
   }
 
   @Test
