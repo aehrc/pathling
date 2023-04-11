@@ -371,7 +371,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
   @Test
   void throwsErrorIfThirdArgumentIsNotBoolean() {
-    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2 or null",
+    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 3 or null",
         input -> Arrays.asList(
             StringLiteralPath.fromString("'foo'", input),
             StringLiteralPath.fromString("'foo'", input),

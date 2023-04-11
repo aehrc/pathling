@@ -81,7 +81,7 @@ public class DisplayFunction implements NamedFunction {
         NAME + " function accepts one optional language argument");
     if (input.getArguments().size()==1) {
       //checkUserInput(StringType.class.cast(((LiteralPath<?>) input.getArguments().get(0)).getValue()) != null, 
-      checkUserInput(input.getArguments().get(0) instanceof StringType,
+      checkUserInput(input.getArguments().get(0) instanceof StringLiteralPath,
           NAME + " function can accept only one optional argument to display, it must be string type");
     }
     

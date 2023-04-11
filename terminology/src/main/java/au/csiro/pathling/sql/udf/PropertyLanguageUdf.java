@@ -55,7 +55,7 @@ import org.hl7.fhir.r4.model.PrimitiveType;
 import org.hl7.fhir.r4.model.Type;
 
 /**
- * The implementation of the 'property()' udf.
+ * The implementation of the 'propertyLanguage()' udf.
  */
 @Slf4j
 public class PropertyLanguageUdf implements SqlFunction,
