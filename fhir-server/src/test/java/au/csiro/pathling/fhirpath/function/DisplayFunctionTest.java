@@ -33,7 +33,9 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
+import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -82,8 +84,6 @@ class DisplayFunctionTest {
   void setUp() {
     SharedMocks.resetAll();
   }
-  
-  static final String MY_LANGUAGE_HEADER = "de";
 
   @Test
   public void displayCoding() {
@@ -188,7 +188,7 @@ class DisplayFunctionTest {
         .build();
 
     final StringLiteralPath argumentExpression = StringLiteralPath
-        .fromString("'" + MY_LANGUAGE_HEADER + "'", inputExpression);
+        .fromString("'de'", inputExpression);
 
     final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, inputExpression,
         Collections.singletonList(argumentExpression));
@@ -236,10 +236,34 @@ class DisplayFunctionTest {
   }
 
   @Test
-  void inputMustNotContainArguments() {
+  void inputMustNotContainTwoArguments() {
     final ElementPath input = new ElementPathBuilder(spark).build();
-    final StringLiteralPath argument = StringLiteralPath
+    final StringLiteralPath argument1 = StringLiteralPath
         .fromString("'some argument'", input);
+    final StringLiteralPath argument2 = StringLiteralPath
+        .fromString("'some argument'", input);
+    List<FhirPath> arguments = new ArrayList<FhirPath>();
+    arguments.add(argument1);
+    arguments.add(argument2);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, input,
+        arguments);
+
+    final NamedFunction displayFunction = NamedFunction.getInstance("display");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> displayFunction.invoke(displayInput));
+    assertEquals(
+        "display function accepts one optional language argument",
+        error.getMessage());
+  }
+
+  @Test
+  void inputMustNotContainNonStringArgument() {
+    final ElementPath input = new ElementPathBuilder(spark).build();
+    final IntegerLiteralPath argument = IntegerLiteralPath
+        .fromString("9493948", input);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, input,
@@ -250,7 +274,7 @@ class DisplayFunctionTest {
         InvalidUserInputError.class,
         () -> displayFunction.invoke(displayInput));
     assertEquals(
-        "Arguments can not be passed to display function",
+        "display function can accept only one optional argument to display, it must be string type",
         error.getMessage());
   }
 

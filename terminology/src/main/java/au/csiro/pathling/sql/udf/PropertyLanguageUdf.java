@@ -62,7 +62,7 @@ public class PropertyLanguageUdf implements SqlFunction,
     SqlFunction3<Row, String, String, Object[]> {
 
   private static final long serialVersionUID = 7605853352299165569L;
-  private static final String FUNCTION_BASE_NAME = "property";
+  private static final String FUNCTION_BASE_NAME = "property_language";
 
   @Nonnull
   public static final Set<FHIRDefinedType> ALLOWED_FHIR_TYPES = ImmutableSet.of(
@@ -215,7 +215,7 @@ public class PropertyLanguageUdf implements SqlFunction,
   public static String getNameForType(final FHIRDefinedType propertyType) {
     if (!ALLOWED_FHIR_TYPES.contains(propertyType)) {
       throw new InvalidUserInputError(
-          String.format("Type: '%s' is not supported for 'property' udf", propertyType.toCode()));
+          String.format("Type: '%s' is not supported for 'property language' udf", propertyType.toCode()));
     }
     return String.format("%s_%s", FUNCTION_BASE_NAME, propertyType.getDisplay());
   }

@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
+import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.udf.PropertyUdf;
@@ -60,23 +61,30 @@ public class PropertyFunction implements NamedFunction {
 
     final Arguments arguments = Arguments.of(input);
     final String propertyCode = arguments.getValue(0, StringType.class).asStringValue();
-    final String propertyTypeAsString = arguments.getValueOr(1,
-        new StringType(PropertyUdf.DEFAULT_PROPERTY_TYPE.toCode())).asStringValue();
-
-    var acceptLanguageStringType = arguments.getNullableValue(2, StringType.class);
-    String acceptLanguage = null;
-    if (acceptLanguageStringType != null) {
-      acceptLanguage = acceptLanguageStringType.asStringValue();
+    String propertyTypeAsString;
+    var defaultPropertyType = new StringType(PropertyUdf.DEFAULT_PROPERTY_TYPE.toCode());
+    if ((input.getArguments().size()>1) && 
+        (input.getArguments().get(1) != null) && 
+        !(input.getArguments().get(1) instanceof NullLiteralPath) ) {
+      //NOTE: probably a better way of checking...
+      propertyTypeAsString = arguments.getValueOr(1, defaultPropertyType).asStringValue();
     } else {
-      acceptLanguage = null;
+      propertyTypeAsString = defaultPropertyType.asStringValue();
     }
+    var acceptLanguageStringType = arguments.getNullableValue(2, StringType.class);
     
     final FHIRDefinedType propertyType = wrapInUserInputError(FHIRDefinedType::fromCode).apply(
         propertyTypeAsString);
 
     final Dataset<Row> dataset = inputPath.getDataset();
-    final Column propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
-        propertyType, acceptLanguage);
+    Column propertyValues;
+    if (acceptLanguageStringType != null) {
+      propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
+          propertyType, acceptLanguageStringType.asStringValue());
+    } else {
+      propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
+          propertyType);
+    }
 
     // // The result is an array of property values per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
@@ -110,11 +118,13 @@ public class PropertyFunction implements NamedFunction {
         "Input to property function must be Coding but is: " + inputPath.getExpression());
 
     final List<FhirPath> arguments = input.getArguments();
-    checkUserInput(arguments.size() >= 1 && arguments.size() <= 2,
+    checkUserInput(arguments.size() >= 1 && arguments.size() <= 3,
         NAME + " function accepts one required and one optional arguments");
     checkUserInput(arguments.get(0) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 1));
-    checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof StringLiteralPath,
-        String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 2));
+    checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof NullLiteralPath || arguments.get(1) instanceof StringLiteralPath,
+        String.format("Function `%s` expects `%s` as argument %s or null", NAME, "String literal", 2));
+    checkUserInput(arguments.size() <= 2 || arguments.get(2) instanceof NullLiteralPath || arguments.get(2) instanceof StringLiteralPath,
+        String.format("Function `%s` expects `%s` as argument %s or null", NAME, "String literal", 3));
   }
 }

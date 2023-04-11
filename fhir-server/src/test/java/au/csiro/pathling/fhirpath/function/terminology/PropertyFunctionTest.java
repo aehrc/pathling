@@ -35,6 +35,7 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
+import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -47,6 +48,7 @@ import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -96,10 +98,16 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
       final Optional<String> maybePropertyType,
       final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
       final FHIRDefinedType expectedResultType,
-      final Dataset<Row> expectedResult) {
-    TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_A, "propertyA", propertyAFhirValues)
-        .withProperty(CODING_B, "propertyB", propertyBFhirValues);
+      final Dataset<Row> expectedResult, final String displayLanguage) {
+    if (displayLanguage == null) {
+      TerminologyServiceHelpers.setupLookup(terminologyService)
+          .withProperty(CODING_A, "propertyA", propertyAFhirValues)
+          .withProperty(CODING_B, "propertyB", propertyBFhirValues);
+    } else {
+      TerminologyServiceHelpers.setupLookup(terminologyService)
+          .withPropertyLanguage(CODING_A, "propertyA", displayLanguage, propertyAFhirValues)
+          .withPropertyLanguage(CODING_B, "propertyB", displayLanguage, propertyBFhirValues);
+    }
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
@@ -133,13 +141,19 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     final StringLiteralPath propertyCodeArgument = StringLiteralPath
         .fromString("'" + propertyCode + "'", inputExpression);
 
-    final List<FhirPath> arguments = maybePropertyType
-        .map(propertyType -> {
-          final StringLiteralPath propertyTypeArgument = StringLiteralPath
-              .fromString("'" + propertyType + "'", inputExpression);
-          return List.<FhirPath>of(propertyCodeArgument, propertyTypeArgument);
-        }).orElse(List.of(propertyCodeArgument));
-
+    List<FhirPath> arguments = new ArrayList<FhirPath>();
+    arguments.add(propertyCodeArgument);
+    if (maybePropertyType.isPresent()) {
+      arguments.add(StringLiteralPath
+          .fromString("'" + maybePropertyType.get() + "'", inputExpression));
+    }
+    if (displayLanguage != null) {
+      if (arguments.size()<2) {
+        arguments.add(NullLiteralPath.build(inputExpression));
+      }
+      arguments.add(StringLiteralPath.fromString(displayLanguage, inputExpression));
+    }
+      
     final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
         arguments);
 
@@ -151,10 +165,14 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
         .hasExpression(
             maybePropertyType
                 .map(
-                    propertyType -> String.format("Encounter.class.property('%s', '%s')",
+                    propertyType -> displayLanguage == null ? String.format("Encounter.class.property('%s', '%s')",
                         propertyCode,
-                        propertyType))
-                .orElse(String.format("Encounter.class.property('%s')", propertyCode)
+                        propertyType) : String.format("Encounter.class.property('%s', '%s', '%s')",
+                        propertyCode,
+                        propertyType, displayLanguage))
+                .orElse(displayLanguage == null ? String.format("Encounter.class.property('%s')", propertyCode) :
+                        String.format("Encounter.class.property('%s', %s, '%s')",
+                            propertyCode, "{}", displayLanguage)
                 ))
         .isElementPath(ElementPath.class)
         .hasFhirType(expectedResultType)
@@ -189,7 +207,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     checkPropertyOfCoding("propertyA", Optional.of(propertyType), propertyAFhirValues,
         propertyBFhirValues,
         FHIRDefinedType.fromCode(propertyType),
-        expectedResult);
+        expectedResult, null);
   }
 
   @SuppressWarnings("unused")
@@ -213,7 +231,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     checkPropertyOfCoding("propertyB", Optional.of(propertyType), propertyAFhirValues,
         propertyBFhirValues,
         FHIRDefinedType.fromCode(propertyType),
-        expectedResult);
+        expectedResult, null);
   }
 
   @Test
@@ -232,9 +250,54 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     checkPropertyOfCoding("propertyA", Optional.empty(),
         new Type[]{new StringType("value_1"), new StringType("value_2")}, new Type[]{},
         FHIRDefinedType.STRING,
-        expectedResult);
+        expectedResult, null);
   }
 
+
+  @SuppressWarnings("unused")
+  @ParameterizedTest
+  @MethodSource("propertyParameters")
+  public void propertyBOfCodingLanguage(final String propertyType, final DataType resultDataType,
+      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
+      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(resultDataType)
+        .withRow("encounter-1", makeEid(0, 0), null)
+        .withRow("encounter-1", makeEid(1, 0), null)
+        .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues[0])
+        .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues[1])
+        .withRow("encounter-3", null, null)
+        .build();
+
+    checkPropertyOfCoding("propertyB", Optional.of(propertyType), propertyAFhirValues,
+        propertyBFhirValues,
+        FHIRDefinedType.fromCode(propertyType),
+        expectedResult, "de");
+  }
+
+  @Test
+  public void propertyAOfCodingWithDefaultTypeLanguage() {
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn()
+        .withEidColumn()
+        .withColumn(DataTypes.StringType)
+        .withRow("encounter-1", makeEid(0, 0), "value_1")
+        .withRow("encounter-1", makeEid(0, 1), "value_2")
+        .withRow("encounter-1", makeEid(1, 0), null)
+        .withRow("encounter-2", makeEid(0, 0), null)
+        .withRow("encounter-3", null, null)
+        .build();
+
+    checkPropertyOfCoding("propertyA", Optional.empty(),
+        new Type[]{new StringType("value_1"), new StringType("value_2")}, new Type[]{},
+        FHIRDefinedType.STRING,
+        expectedResult, "de");
+  }
+  
+  
   @Test
   void throwsErrorIfInputTypeIsUnsupported() {
     final FhirPath mockContext = new ElementPathBuilder(spark).build();
@@ -300,12 +363,20 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
   @Test
   void throwsErrorIfSecondArgumentIsNotBoolean() {
-    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2",
+    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2 or null",
         input -> Arrays.asList(
             StringLiteralPath.fromString("'foo'", input),
             IntegerLiteralPath.fromString("5", input)));
   }
 
+  @Test
+  void throwsErrorIfThirdArgumentIsNotBoolean() {
+    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2 or null",
+        input -> Arrays.asList(
+            StringLiteralPath.fromString("'foo'", input),
+            StringLiteralPath.fromString("'foo'", input),
+            IntegerLiteralPath.fromString("5", input)));
+  }
 
   @Test
   void throwsErrorIfTooManyArguments() {
@@ -313,6 +384,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
         "property function accepts one required and one optional arguments",
         input -> Arrays.asList(
             StringLiteralPath.fromString("'foo'", input),
+            StringLiteralPath.fromString("'false'", input),
             StringLiteralPath.fromString("'false'", input),
             StringLiteralPath.fromString("'false'", input)
         ));

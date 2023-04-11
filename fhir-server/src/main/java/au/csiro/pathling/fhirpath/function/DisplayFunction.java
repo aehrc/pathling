@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.function;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import org.apache.spark.sql.Column;
@@ -59,16 +60,14 @@ public class DisplayFunction implements NamedFunction {
 
     final Arguments arguments = Arguments.of(input);
     var acceptLanguageStringType = arguments.getNullableValue(0, StringType.class);
-    String acceptLanguage = null;
-    if (acceptLanguageStringType != null) {
-    	acceptLanguage = acceptLanguageStringType.asStringValue();
-    } else {
-    	acceptLanguage = null;
-    }
     
     final Dataset<Row> dataset = inputPath.getDataset();
-    final Column resultColumn = display(inputPath.getValueColumn(), acceptLanguage);
-
+    Column resultColumn;
+    if (acceptLanguageStringType != null) {
+      resultColumn = display(inputPath.getValueColumn(), acceptLanguageStringType.asStringValue());
+    } else {
+      resultColumn = display(inputPath.getValueColumn());
+    }
     return ElementPath
         .build(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
             resultColumn, inputPath.isSingular(), inputPath.getCurrentResource(),
@@ -77,6 +76,15 @@ public class DisplayFunction implements NamedFunction {
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
     final ParserContext context = input.getContext();
+
+    checkUserInput(input.getArguments().size() <= 1,
+        NAME + " function accepts one optional language argument");
+    if (input.getArguments().size()==1) {
+      //checkUserInput(StringType.class.cast(((LiteralPath<?>) input.getArguments().get(0)).getValue()) != null, 
+      checkUserInput(input.getArguments().get(0) instanceof StringType,
+          NAME + " function can accept only one optional argument to display, it must be string type");
+    }
+    
     checkUserInput(context.getTerminologyServiceFactory()
         .isPresent(), "Attempt to call terminology function " + NAME
         + " when terminology service has not been configured");
@@ -86,8 +94,5 @@ public class DisplayFunction implements NamedFunction {
             && (((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
         "Input to display function must be Coding but is: " + inputPath.getExpression());
 
-    final List<FhirPath> arguments = input.getArguments();
-    checkUserInput(arguments.size() >= 0 && arguments.size() <= 1,
-        NAME + " function accepts one optional language argument");
   }
 }

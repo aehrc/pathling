@@ -29,6 +29,7 @@ import au.csiro.pathling.sql.udf.DisplayUdf;
 import au.csiro.pathling.sql.udf.DisplayLanguageUdf;
 import au.csiro.pathling.sql.udf.MemberOfUdf;
 import au.csiro.pathling.sql.udf.PropertyUdf;
+import au.csiro.pathling.sql.udf.PropertyLanguageUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
 import au.csiro.pathling.sql.udf.TranslateUdf;
 import java.util.Collection;
@@ -166,7 +167,7 @@ public interface Terminology {
    * name associated with the given code. also accepts language specifying string.
    *
    * @param coding a Column containing a struct representation of a Coding
-   * @param language a Column containing a struct representation of a Coding
+   * @param language the language of the information returned
    * @return the Column containing the result of the operation (String)
    */
   @Nonnull
@@ -185,12 +186,13 @@ public interface Terminology {
    * @param coding a Column containing a struct representation of a Coding
    * @param propertyCode the code of the property to retrieve.
    * @param propertyType the type of the property to retrieve.
+   * @param acceptLanguage the language of the information returned
    * @return the Column containing the result of the operation (array of property values)
    */
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType, @Nullable final String acceptLanguage) {
-    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(acceptLanguage));
+    return call_udf(PropertyLanguageUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(acceptLanguage));
   }
 
   /**
