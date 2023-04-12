@@ -197,3 +197,18 @@ class DataSources(SparkConversionsMixin):
                 mime_type,
             )
         )
+
+    def from_tables(self, resource_types: Sequence[str]) -> DataSource:
+        """
+        Creates a data source from a set of Spark tables, where the table names are the resource
+        type codes.
+
+        :param resource_types: A sequence of resource type codes that should be extracted from the
+               tables.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        return self._wrap_ds(
+            self._jdataSources.fromTables(
+                SetConverter().convert(resource_types, self.spark._jvm._gateway_client)
+            )
+        )

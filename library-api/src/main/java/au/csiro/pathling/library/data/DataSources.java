@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.DataFrameReader;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A factory for creating various data sources.
@@ -217,6 +219,23 @@ public class DataSources {
     return fromFiles(addPathToDirectory(parquetDir, "*.parquet"),
         SupportFunctions::baseNameWithQualifierToResource,
         "parquet");
+  }
+
+  /**
+   * Creates a new data source from a specified set of tables registered within the catalog. The
+   * table names are assumed to be the same as the resource types they contain.
+   *
+   * @param resourceTypes the resource types to extract from the tables
+   * @return the new data source
+   */
+  @Nonnull
+  public ReadableSource fromTables(@Nonnull final Set<String> resourceTypes) {
+    final Set<ResourceType> resourceTypeEnums = resourceTypes.stream()
+        .map(ResourceType::fromCode)
+        .collect(Collectors.toSet());
+    return new CatalogSourceBuilder(pathlingContext)
+        .withResourceTypes(resourceTypeEnums)
+        .build();
   }
 
   private static String addPathToDirectory(@Nonnull final String directory,
