@@ -124,6 +124,12 @@ public class FileSystemSourceBuilder extends AbstractSourceBuilder<FileSystemSou
     return this;
   }
 
+  @Nonnull
+  public FileSystemSourceBuilder withWholeText() {
+    this.reader = this.reader.option("wholetext", true);
+    return this;
+  }
+
   /**
    * Sets the function that transforms the dataset of a resource type before it is added to the data
    * source. By default, no transformation is applied.
@@ -151,6 +157,21 @@ public class FileSystemSourceBuilder extends AbstractSourceBuilder<FileSystemSou
         .withFormat("text")
         .withDatasetTransformer(
             SupportFunctions.textEncodingTransformer(pathlingContext, mimeType));
+  }
+
+  /**
+   * Sets the format of the files to read as FHIR Bundles, and sets the encoding of the Bundles.
+   *
+   * @param mimeType the MIME type of the Bundles
+   * @return this builder
+   */
+  @Nonnull
+  public FileSystemSourceBuilder withBundleEncoder(@Nonnull final String mimeType) {
+    return this
+        .withFormat("text")
+        .withWholeText()
+        .withDatasetTransformer(
+            SupportFunctions.bundleEncodingTransformer(pathlingContext, mimeType));
   }
 
   @Nonnull

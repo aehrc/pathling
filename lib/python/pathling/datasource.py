@@ -16,6 +16,7 @@
 
 from typing import Dict, Sequence, Optional, Callable
 
+from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
@@ -172,4 +173,22 @@ class DataSources(SparkConversionsMixin):
         """
         return self._wrap_ds(
             self._jdataSources.fromWarehouse(warehouse_dir_uri, database_name)
+        )
+
+    def from_bundles(
+        self, bundles_dir_uri: str, resource_types: Sequence[str]
+    ) -> DataSource:
+        """
+        Creates a data source from a directory containing FHIR bundles.
+
+        :param bundles_dir_uri: The URI of the directory containing the bundles.
+        :param resource_types: A sequence of resource type codes that should be extracted from the
+               bundles.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        return self._wrap_ds(
+            self._jdataSources.fromBundlesDir(
+                bundles_dir_uri,
+                SetConverter().convert(resource_types, self.spark._jvm._gateway_client),
+            )
         )

@@ -75,4 +75,20 @@ public interface SupportFunctions {
     return (df, resourceType) ->
         pathlingContext.encode(df, resourceType, mimeType);
   }
+
+  /**
+   * Creates the transformer that encodes the specified resource type from a dataset of FHIR
+   * Bundles.
+   *
+   * @param pathlingContext the Pathling context
+   * @param mimeType the MIME type of the Bundle
+   * @return the transformer
+   */
+  @Nonnull
+  static BiFunction<Dataset<Row>, String, Dataset<Row>> bundleEncodingTransformer(
+      @Nonnull final PathlingContext pathlingContext, @Nonnull final String mimeType) {
+    return (df, resourceType) ->
+        pathlingContext.encodeBundle(df, resourceType, mimeType);
+  }
+
 }

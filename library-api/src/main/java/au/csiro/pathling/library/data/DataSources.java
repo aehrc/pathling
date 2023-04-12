@@ -21,7 +21,9 @@ import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.DataFrameReader;
@@ -172,6 +174,16 @@ public class DataSources {
     return fromTextFiles(addPathToDirectory(ndjsonDir, "*.ndjson"),
         SupportFunctions::baseNameWithQualifierToResource,
         FhirMimeTypes.FHIR_JSON);
+  }
+
+  @Nonnull
+  public ReadableSource fromBundlesDir(@Nonnull final String bundlesDir,
+      @Nonnull final Set<String> resourceTypes) {
+    return this.fileSystemBuilder()
+        .withGlob(addPathToDirectory(bundlesDir, "*.json"))
+        .withFilePathMapper(n -> new ArrayList<>(resourceTypes))
+        .withBundleEncoder(FhirMimeTypes.FHIR_JSON)
+        .build();
   }
 
   /**

@@ -149,7 +149,7 @@ public class DataSourcesTest {
 
   @Test
   void testS3Uri() {
-    Exception exception = assertThrows(RuntimeException.class,
+    final Exception exception = assertThrows(RuntimeException.class,
         () -> pathlingCtx.datasources()
             .fromNdjsonDir("s3://pathling-test-data/ndjson/"));
     assertTrue(exception.getCause() instanceof AccessDeniedException);
