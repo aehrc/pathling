@@ -176,7 +176,10 @@ class DataSources(SparkConversionsMixin):
         )
 
     def from_bundles(
-        self, bundles_dir_uri: str, resource_types: Sequence[str]
+        self,
+        bundles_dir_uri: str,
+        resource_types: Sequence[str],
+        mime_type: str = MimeType.FHIR_JSON,
     ) -> DataSource:
         """
         Creates a data source from a directory containing FHIR bundles.
@@ -184,11 +187,13 @@ class DataSources(SparkConversionsMixin):
         :param bundles_dir_uri: The URI of the directory containing the bundles.
         :param resource_types: A sequence of resource type codes that should be extracted from the
                bundles.
+        :param mime_type: The MIME type of the bundles. Defaults to `application/fhir+json`.
         :return: A DataSource object that can be used to run queries against the data.
         """
         return self._wrap_ds(
             self._jdataSources.fromBundlesDir(
                 bundles_dir_uri,
                 SetConverter().convert(resource_types, self.spark._jvm._gateway_client),
+                mime_type,
             )
         )

@@ -177,21 +177,30 @@ public class DataSources {
   }
 
   /**
-   * Creates a new data source from a directory containing FHIR JSON Bundles. Takes an argument that
+   * Creates a new data source from a directory containing FHIR Bundles. Takes an argument that
    * specifies the resource types that should be extracted from the bundles and added to the data
    * source.
+   * <p>
+   * If the MIME type is "application/fhir+xml", then the bundles are expected to be in XML format,
+   * and the file extensions are expected to be ".xml". If the MIME type is "application/fhir+json",
+   * then the bundles are expected to be in JSON format, and the file extensions are expected to be
+   * ".json".
    *
    * @param bundlesDir The URI of the directory containing the bundles
    * @param resourceTypes The resource types to extract from the bundles
+   * @param mimeType The MIME type of the bundles
    * @return The new data source
    */
   @Nonnull
   public ReadableSource fromBundlesDir(@Nonnull final String bundlesDir,
-      @Nonnull final Set<String> resourceTypes) {
+      @Nonnull final Set<String> resourceTypes, @Nonnull final String mimeType) {
+    final String glob = mimeType.equals(FhirMimeTypes.FHIR_XML)
+                        ? "*.xml"
+                        : "*.json";
     return this.fileSystemBuilder()
-        .withGlob(addPathToDirectory(bundlesDir, "*.json"))
+        .withGlob(addPathToDirectory(bundlesDir, glob))
         .withFilePathMapper(n -> new ArrayList<>(resourceTypes))
-        .withBundleEncoder(FhirMimeTypes.FHIR_JSON)
+        .withBundleEncoder(mimeType)
         .build();
   }
 
