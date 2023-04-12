@@ -176,6 +176,15 @@ public class DataSources {
         FhirMimeTypes.FHIR_JSON);
   }
 
+  /**
+   * Creates a new data source from a directory containing FHIR JSON Bundles. Takes an argument that
+   * specifies the resource types that should be extracted from the bundles and added to the data
+   * source.
+   *
+   * @param bundlesDir The URI of the directory containing the bundles
+   * @param resourceTypes The resource types to extract from the bundles
+   * @return The new data source
+   */
   @Nonnull
   public ReadableSource fromBundlesDir(@Nonnull final String bundlesDir,
       @Nonnull final Set<String> resourceTypes) {
