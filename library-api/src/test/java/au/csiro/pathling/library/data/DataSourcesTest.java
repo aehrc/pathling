@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.library.data;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -28,7 +29,6 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.TestHelpers;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.assertions.DatasetAssert;
-import java.nio.file.AccessDeniedException;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -152,7 +152,9 @@ public class DataSourcesTest {
     final Exception exception = assertThrows(RuntimeException.class,
         () -> pathlingCtx.datasources()
             .fromNdjsonDir("s3://pathling-test-data/ndjson/"));
-    assertTrue(exception.getCause() instanceof AccessDeniedException);
+    assertTrue(exception.getCause() instanceof ClassNotFoundException);
+    assertEquals("Class org.apache.hadoop.fs.s3a.S3AFileSystem not found",
+        ((ClassNotFoundException) exception.getCause()).getMessage());
   }
 
 }
