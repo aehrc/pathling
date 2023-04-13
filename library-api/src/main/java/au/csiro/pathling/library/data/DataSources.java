@@ -238,7 +238,7 @@ public class DataSources {
         .build();
   }
 
-  private static String addPathToDirectory(@Nonnull final String directory,
+  public static String addPathToDirectory(@Nonnull final String directory,
       @Nonnull final String path) {
     try {
       final URI uri = URI.create(directory);

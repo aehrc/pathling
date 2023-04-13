@@ -16,15 +16,14 @@
  */
 package au.csiro.pathling.query;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.storage.StorageLevel;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-
-import javax.annotation.Nonnull;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * A basic immutable data source that allows for explicit mapping of datasets to resource types.
@@ -77,7 +76,7 @@ public class ImmutableDataSource implements EnumerableDataSource {
   public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> resourceDataset = resourceMap.computeIfAbsent(resourceType, key -> {
       throw new IllegalStateException(
-          String.format("Cannot find data for resource of type: %s", key));
+          String.format("Cannot find data for resource of type: %s", key.toCode()));
     });
 
     // NOTE: We exclude streaming datasets from caching, as this results in errors.

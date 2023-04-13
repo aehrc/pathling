@@ -16,7 +16,7 @@
 
 from typing import Dict, Sequence, Optional, Callable
 
-from py4j.java_collections import SetConverter
+from py4j.java_collections import SetConverter, ListConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
@@ -150,16 +150,29 @@ class DataSources(SparkConversionsMixin):
             )
         )
 
-    def from_ndjson_dir(self, ndjson_dir_uri) -> DataSource:
+    def from_ndjson_dir(
+        self, ndjson_dir_uri, filename_mapper: Callable[[str], Sequence[str]] = None
+    ) -> DataSource:
         """
         Creates a data source from a directory containing NDJSON files. The files must be named with
         the resource type code and must have the ".ndjson" extension, e.g. "Patient.ndjson"
         or "Observation.ndjson".
 
         :param ndjson_dir_uri: The URI of the directory containing the NDJSON files.
+        :param filename_mapper: An optional function that maps a filename to the list of resource
+               types that it contains.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        return self._wrap_ds(self._jdataSources.fromNdjsonDir(ndjson_dir_uri))
+        if filename_mapper:
+            files_glob = self.spark._jvm.au.csiro.pathling.library.data.DataSources.addPathToDirectory(
+                ndjson_dir_uri, "*.ndjson"
+            )
+            mapper = FileNameMapper(self.spark._jvm._gateway_client, filename_mapper)
+            return self._wrap_ds(
+                self._jdataSources.fromTextFiles(files_glob, mapper, MimeType.FHIR_JSON)
+            )
+        else:
+            return self._wrap_ds(self._jdataSources.fromNdjsonDir(ndjson_dir_uri))
 
     def from_warehouse(
         self, warehouse_dir_uri: str, database_name="default"
@@ -212,3 +225,20 @@ class DataSources(SparkConversionsMixin):
                 SetConverter().convert(resource_types, self.spark._jvm._gateway_client)
             )
         )
+
+
+class FileNameMapper:
+    """
+    A wrapper for a Python lambda that can be passed as a Java lambda for mapping file names to
+    resource types.
+    """
+
+    def __init__(self, gateway, fn):
+        self._gateway = gateway
+        self._fn = fn
+
+    def apply(self, arg):
+        return ListConverter().convert(self._fn(arg), self._gateway)
+
+    class Java:
+        implements = ["java.util.function.Function"]
