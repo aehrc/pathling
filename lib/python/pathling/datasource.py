@@ -167,9 +167,13 @@ class DataSources(SparkConversionsMixin):
             files_glob = self.spark._jvm.au.csiro.pathling.library.data.DataSources.addPathToDirectory(
                 ndjson_dir_uri, "*.ndjson"
             )
-            mapper = FileNameMapper(self.spark._jvm._gateway_client, filename_mapper)
+            wrapped_mapper = StringToStringListMapper(
+                self.spark._jvm._gateway_client, filename_mapper
+            )
             return self._wrap_ds(
-                self._jdataSources.fromTextFiles(files_glob, mapper, MimeType.FHIR_JSON)
+                self._jdataSources.fromTextFiles(
+                    files_glob, wrapped_mapper, MimeType.FHIR_JSON
+                )
             )
         else:
             return self._wrap_ds(self._jdataSources.fromNdjsonDir(ndjson_dir_uri))
@@ -211,7 +215,11 @@ class DataSources(SparkConversionsMixin):
             )
         )
 
-    def from_tables(self, resource_types: Sequence[str]) -> DataSource:
+    def from_tables(
+        self,
+        resource_types: Sequence[str],
+        table_name_mapper: Callable[[str], str] = None,
+    ) -> DataSource:
         """
         Creates a data source from a set of Spark tables, where the table names are the resource
         type codes.
@@ -220,17 +228,55 @@ class DataSources(SparkConversionsMixin):
                tables.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        return self._wrap_ds(
-            self._jdataSources.fromTables(
-                SetConverter().convert(resource_types, self.spark._jvm._gateway_client)
+        if table_name_mapper:
+            resource_types_enum = SetConverter().convert(
+                map(
+                    lambda resource_type: self.spark._jvm.org.hl7.fhir.r4.model.Enumerations.ResourceType.fromCode(
+                        resource_type
+                    ),
+                    resource_types,
+                ),
+                self.spark._jvm._gateway_client,
             )
-        )
+            wrapped_mapper = StringMapper(
+                self.spark._jvm._gateway_client, table_name_mapper
+            )
+            return (
+                self._jdataSources.catalogSourceBuilder(resource_types_enum)
+                .withTableNameMapper(wrapped_mapper)
+                .build()
+            )
+        else:
+            return self._wrap_ds(
+                self._jdataSources.fromTables(
+                    SetConverter().convert(
+                        resource_types, self.spark._jvm._gateway_client
+                    )
+                )
+            )
 
 
-class FileNameMapper:
+class StringMapper:
     """
-    A wrapper for a Python lambda that can be passed as a Java lambda for mapping file names to
-    resource types.
+    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value to
+    another string value.
+    """
+
+    def __init__(self, gateway, fn):
+        self._gateway = gateway
+        self._fn = fn
+
+    def apply(self, arg):
+        return self._fn(arg)
+
+    class Java:
+        implements = ["java.util.function.Function"]
+
+
+class StringToStringListMapper:
+    """
+    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value
+    to a set of string values.
     """
 
     def __init__(self, gateway, fn):

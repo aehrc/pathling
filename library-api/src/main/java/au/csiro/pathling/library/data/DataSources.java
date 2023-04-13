@@ -55,7 +55,7 @@ public class DataSources {
   /**
    * Creates a new data source builder for database data sources.
    *
-   * @return the new builder.
+   * @return the new builder
    */
   @Nonnull
   public DatabaseSourceBuilder databaseBuilder() {
@@ -65,11 +65,23 @@ public class DataSources {
   /**
    * Creates a new data source builder for filesystem data sources.
    *
-   * @return the new builder.
+   * @return the new builder
    */
   @Nonnull
   public FileSystemSourceBuilder fileSystemBuilder() {
     return new FileSystemSourceBuilder(pathlingContext);
+  }
+
+
+  /**
+   * Creates a new data source builder for catalog data sources.
+   *
+   * @return the new builder
+   */
+  @Nonnull
+  public CatalogSourceBuilder catalogSourceBuilder(final Set<ResourceType> resourceTypeEnums) {
+    return new CatalogSourceBuilder(pathlingContext)
+        .withResourceTypes(resourceTypeEnums);
   }
 
   /**
@@ -233,8 +245,7 @@ public class DataSources {
     final Set<ResourceType> resourceTypeEnums = resourceTypes.stream()
         .map(ResourceType::fromCode)
         .collect(Collectors.toSet());
-    return new CatalogSourceBuilder(pathlingContext)
-        .withResourceTypes(resourceTypeEnums)
+    return catalogSourceBuilder(resourceTypeEnums)
         .build();
   }
 
