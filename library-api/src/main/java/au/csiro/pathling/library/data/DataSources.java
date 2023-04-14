@@ -17,10 +17,11 @@
 
 package au.csiro.pathling.library.data;
 
+import static au.csiro.pathling.utilities.Strings.safelyJoinPaths;
+
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
-import java.net.URI;
-import java.nio.file.Path;
+import au.csiro.pathling.utilities.Strings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -185,7 +186,7 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource fromNdjsonDir(@Nonnull final String ndjsonDir) {
-    return fromTextFiles(addPathToDirectory(ndjsonDir, "*.ndjson"),
+    return fromTextFiles(safelyJoinPaths(ndjsonDir, "*.ndjson"),
         SupportFunctions::baseNameWithQualifierToResource,
         FhirMimeTypes.FHIR_JSON);
   }
@@ -212,7 +213,7 @@ public class DataSources {
                         ? "*.xml"
                         : "*.json";
     return this.fileSystemBuilder()
-        .withGlob(addPathToDirectory(bundlesDir, glob))
+        .withGlob(safelyJoinPaths(bundlesDir, glob))
         .withFilePathMapper(n -> new ArrayList<>(resourceTypes))
         .withBundleEncoder(mimeType)
         .build();
@@ -228,7 +229,7 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource fromParquetDir(@Nonnull final String parquetDir) {
-    return fromFiles(addPathToDirectory(parquetDir, "*.parquet"),
+    return fromFiles(safelyJoinPaths(parquetDir, "*.parquet"),
         SupportFunctions::baseNameWithQualifierToResource,
         "parquet");
   }
@@ -247,16 +248,6 @@ public class DataSources {
         .collect(Collectors.toSet());
     return catalogSourceBuilder(resourceTypeEnums)
         .build();
-  }
-
-  public static String addPathToDirectory(@Nonnull final String directory,
-      @Nonnull final String path) {
-    try {
-      final URI uri = URI.create(directory);
-      return uri.toString().replaceFirst("/$", "") + "/" + path;
-    } catch (final IllegalArgumentException e) {
-      return Path.of(directory, path).toString();
-    }
   }
 
 }

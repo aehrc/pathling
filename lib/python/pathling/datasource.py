@@ -18,7 +18,7 @@ from typing import Dict, Sequence, Optional, Callable
 
 from py4j.java_collections import SetConverter, ListConverter
 from py4j.java_gateway import JavaObject
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
 from pathling.core import ExpOrStr
@@ -31,10 +31,10 @@ class DataSource(SparkConversionsMixin):
     A data source that can be used to run queries against FHIR data.
     """
 
-    def __init__(self, jds: JavaObject, spark: SparkSession):
-        SparkConversionsMixin.__init__(self, spark)
+    def __init__(self, jds: JavaObject, pc: PathlingContext):
+        SparkConversionsMixin.__init__(self, pc.spark)
         self._jds = jds
-        self._spark = spark
+        self.pc = pc
 
     def extract(
         self,
@@ -105,7 +105,7 @@ class DataSources(SparkConversionsMixin):
         self._jdataSources = pc._jpc.datasources()
 
     def _wrap_ds(self, jds: JavaObject) -> DataSource:
-        return DataSource(jds, self.spark)
+        return DataSource(jds, self._pc)
 
     def with_resources(self, resources: Dict[str, DataFrame]) -> DataSource:
         """
@@ -164,8 +164,10 @@ class DataSources(SparkConversionsMixin):
         :return: A DataSource object that can be used to run queries against the data.
         """
         if filename_mapper:
-            files_glob = self.spark._jvm.au.csiro.pathling.library.data.DataSources.addPathToDirectory(
-                ndjson_dir_uri, "*.ndjson"
+            files_glob = (
+                self.spark._jvm.au.csiro.pathling.utilities.Strings.safelyJoinPaths(
+                    ndjson_dir_uri, "*.ndjson"
+                )
             )
             wrapped_mapper = StringToStringListMapper(
                 self.spark._jvm._gateway_client, filename_mapper
@@ -276,7 +278,7 @@ class StringMapper:
 class StringToStringListMapper:
     """
     A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value
-    to a set of string values.
+    to a list of string values.
     """
 
     def __init__(self, gateway, fn):

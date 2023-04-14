@@ -18,20 +18,13 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
-import static java.util.Objects.requireNonNull;
+import static au.csiro.pathling.io.PersistenceScheme.departitionResult;
+import static au.csiro.pathling.io.PersistenceScheme.getFileSystem;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Objects;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
@@ -90,18 +83,7 @@ public class ResultWriter {
 
     // Get a handle for the Hadoop FileSystem representing the result location, and check that it
     // is accessible.
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-        .hadoopConfiguration();
-    requireNonNull(hadoopConfiguration);
-    @Nullable final FileSystem warehouseLocation;
-    try {
-      warehouseLocation = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
-    } catch (final IOException e) {
-      throw new RuntimeException("Problem accessing result location: " + warehouseUrl, e);
-    } catch (final URISyntaxException e) {
-      throw new RuntimeException("Problem parsing result URL: " + warehouseUrl, e);
-    }
-    requireNonNull(warehouseLocation);
+    final FileSystem warehouseLocation = getFileSystem(spark, warehouseUrl);
 
     // Write result dataset to result location.
     final String resultFileUrl = warehouseUrl + "/results/" + name;
@@ -116,24 +98,7 @@ public class ResultWriter {
     }
 
     // Find the single file and copy it into the final location.
-    final String targetUrl = resultFileUrl + ".csv";
-    try {
-      final Path resultPath = new Path(resultFileUrl);
-      final FileStatus[] partitionFiles = warehouseLocation.listStatus(resultPath);
-      final String targetFile = Arrays.stream(partitionFiles)
-          .map(f -> f.getPath().toString())
-          .filter(f -> f.endsWith(".csv"))
-          .findFirst()
-          .orElseThrow(() -> new IOException("Partition file not found"));
-      log.info("Renaming result to: " + targetUrl);
-      warehouseLocation.rename(new Path(targetFile), new Path(targetUrl));
-      log.info("Cleaning up: " + resultFileUrl);
-      warehouseLocation.delete(resultPath, true);
-    } catch (final IOException e) {
-      throw new RuntimeException("Problem copying partition file", e);
-    }
-
-    return targetUrl;
+    return departitionResult(warehouseLocation, resultFileUrl, resultFileUrl + ".csv", "csv");
   }
 
 }

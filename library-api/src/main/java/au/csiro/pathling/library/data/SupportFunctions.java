@@ -76,6 +76,13 @@ public interface SupportFunctions {
         pathlingContext.encode(df, resourceType, mimeType);
   }
 
+  @Nonnull
+  static BiFunction<Dataset<Row>, String, Dataset<String>> textDecodingTransformer(@Nonnull final
+  PathlingContext pathlingContext, @Nonnull final String mimeType) {
+    return (df, resourceType) ->
+        pathlingContext.decode(df, resourceType, mimeType);
+  }
+
   /**
    * Creates the transformer that encodes the specified resource type from a dataset of FHIR
    * Bundles.
