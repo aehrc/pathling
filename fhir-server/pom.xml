@@ -43,21 +43,13 @@
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
       <artifactId>terminology</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>utilities</artifactId>
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>fhirpath</artifactId>
     </dependency>
-    
+
     <!-- Spring Boot -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -203,7 +195,7 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-    
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>

@@ -36,14 +36,6 @@
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>terminology</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
       <artifactId>fhirpath</artifactId>
     </dependency>
     <dependency>

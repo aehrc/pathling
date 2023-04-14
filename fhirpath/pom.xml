@@ -43,15 +43,7 @@
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
       <artifactId>terminology</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>utilities</artifactId>
     </dependency>
 
     <!-- JSR 303 validation -->
