@@ -16,12 +16,12 @@
 
 from typing import Dict, Sequence, Optional, Callable
 
-from py4j.java_collections import SetConverter, ListConverter
+from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
-from pathling.core import ExpOrStr
+from pathling.core import ExpOrStr, StringMapper, StringToStringListMapper
 from pathling.core import SparkConversionsMixin
 from pathling.fhir import MimeType
 
@@ -256,37 +256,3 @@ class DataSources(SparkConversionsMixin):
                     )
                 )
             )
-
-
-class StringMapper:
-    """
-    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value to
-    another string value.
-    """
-
-    def __init__(self, gateway, fn):
-        self._gateway = gateway
-        self._fn = fn
-
-    def apply(self, arg):
-        return self._fn(arg)
-
-    class Java:
-        implements = ["java.util.function.Function"]
-
-
-class StringToStringListMapper:
-    """
-    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value
-    to a list of string values.
-    """
-
-    def __init__(self, gateway, fn):
-        self._gateway = gateway
-        self._fn = fn
-
-    def apply(self, arg):
-        return ListConverter().convert(self._fn(arg), self._gateway)
-
-    class Java:
-        implements = ["java.util.function.Function"]

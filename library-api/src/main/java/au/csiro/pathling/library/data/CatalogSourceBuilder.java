@@ -22,7 +22,7 @@ import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.query.ImmutableDataSource;
 import au.csiro.pathling.query.ImmutableDataSource.Builder;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -31,20 +31,20 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class CatalogSourceBuilder extends AbstractSourceBuilder<CatalogSourceBuilder> {
 
   @Nonnull
-  private Function<String, String> tableNameMapper;
+  private UnaryOperator<String> tableNameMapper;
 
   @Nonnull
   private Set<ResourceType> resourceTypes;
 
   protected CatalogSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
-    tableNameMapper = Function.identity();
+    tableNameMapper = UnaryOperator.identity();
     resourceTypes = Set.of();
   }
 
   @Nonnull
   public CatalogSourceBuilder withTableNameMapper(
-      @Nonnull final Function<String, String> tableNameMapper) {
+      @Nonnull final UnaryOperator<String> tableNameMapper) {
     this.tableNameMapper = tableNameMapper;
     return this;
   }

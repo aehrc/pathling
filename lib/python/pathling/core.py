@@ -14,6 +14,7 @@
 #  limitations under the License.
 from typing import Any, Callable, Sequence, Tuple, Optional, Union
 
+from py4j.java_collections import ListConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
@@ -164,3 +165,37 @@ class Expression:
         return tuple(
             cls.as_expression(exp_or_str) for exp_or_str in sequence_of_exp_or_str
         )
+
+
+class StringMapper:
+    """
+    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value to
+    another string value.
+    """
+
+    def __init__(self, gateway, fn):
+        self._gateway = gateway
+        self._fn = fn
+
+    def apply(self, arg):
+        return self._fn(arg)
+
+    class Java:
+        implements = ["java.util.function.UnaryOperator"]
+
+
+class StringToStringListMapper:
+    """
+    A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value
+    to a list of string values.
+    """
+
+    def __init__(self, gateway, fn):
+        self._gateway = gateway
+        self._fn = fn
+
+    def apply(self, arg):
+        return ListConverter().convert(self._fn(arg), self._gateway)
+
+    class Java:
+        implements = ["java.util.function.Function"]

@@ -23,6 +23,7 @@ import static au.csiro.pathling.utilities.Strings.safelyJoinPaths;
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.EnumerableDataSource;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -42,10 +43,16 @@ public class DataSinks {
   }
 
   public void toNdjsonDir(@Nonnull final String ndjsonDir) {
+    toNdjsonDir(ndjsonDir, (resourceType) -> resourceType + ".ndjson");
+  }
+
+  public void toNdjsonDir(@Nonnull final String ndjsonDir,
+      @Nonnull final UnaryOperator<String> fileNameMapper) {
     for (final ResourceType resourceType : dataSource.getDefinedResources()) {
       final Dataset<String> jsonStrings = pathlingContext.decode(dataSource.read(resourceType),
           resourceType.toCode(), FhirMimeTypes.FHIR_JSON);
-      final String resultUrl = safelyJoinPaths(ndjsonDir, resourceType.toCode() + ".ndjson");
+      final String resultUrl = safelyJoinPaths(ndjsonDir,
+          fileNameMapper.apply(resourceType.toCode()));
       final String resultUrlPartitioned = resultUrl + ".partitioned";
       jsonStrings.coalesce(1).write().text(resultUrlPartitioned);
       departitionResult(pathlingContext.getSpark(), resultUrlPartitioned, resultUrl, "txt");

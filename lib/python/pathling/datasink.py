@@ -12,8 +12,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+from typing import Callable
 
-from pathling.core import SparkConversionsMixin
+from pathling.core import SparkConversionsMixin, StringMapper
 from pathling.datasource import DataSource
 
 
@@ -28,11 +29,21 @@ class DataSink(SparkConversionsMixin):
             datasource.pc._jpc, datasource._jds.getDataSource()
         )
 
-    def to_ndjson_dir(self, ndjson_dir_uri: str):
+    def to_ndjson_dir(
+        self, ndjson_dir_uri: str, file_name_mapper: Callable[[str], str] = None
+    ):
         """
         Writes the data to a directory of NDJSON files. The files will be named using the resource
         type and the ".ndjson" extension.
 
         :param ndjson_dir_uri: The URI of the directory to write the files to.
+        :param file_name_mapper: An optional function that can be used to customise the mapping of
+        the resource type to the file name.
         """
-        self._datasinks.toNdjsonDir(ndjson_dir_uri)
+        if file_name_mapper:
+            wrapped_mapper = StringMapper(
+                self.spark._jvm._gateway_client, file_name_mapper
+            )
+            self._datasinks.toNdjsonDir(ndjson_dir_uri, wrapped_mapper)
+        else:
+            self._datasinks.toNdjsonDir(ndjson_dir_uri)
