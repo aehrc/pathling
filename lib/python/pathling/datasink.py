@@ -47,3 +47,18 @@ class DataSink(SparkConversionsMixin):
             self._datasinks.toNdjsonDir(ndjson_dir_uri, wrapped_mapper)
         else:
             self._datasinks.toNdjsonDir(ndjson_dir_uri)
+
+    def to_tables(self, table_name_mapper: Callable[[str], str] = None):
+        """
+        Writes the data to a set of tables in a database.
+
+        :param table_name_mapper: An optional function that can be used to customise the mapping of
+        the resource type to the table name.
+        """
+        if table_name_mapper:
+            wrapped_mapper = StringMapper(
+                self.spark._jvm._gateway_client, table_name_mapper
+            )
+            self._datasinks.toTables(wrapped_mapper)
+        else:
+            self._datasinks.toTables()

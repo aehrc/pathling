@@ -26,6 +26,7 @@ import au.csiro.pathling.query.EnumerableDataSource;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 public class DataSinks {
@@ -56,6 +57,17 @@ public class DataSinks {
       final String resultUrlPartitioned = resultUrl + ".partitioned";
       jsonStrings.coalesce(1).write().text(resultUrlPartitioned);
       departitionResult(pathlingContext.getSpark(), resultUrlPartitioned, resultUrl, "txt");
+    }
+  }
+
+  public void toTables() {
+    toTables(UnaryOperator.identity());
+  }
+
+  public void toTables(@Nonnull final UnaryOperator<String> tableNameMapper) {
+    for (final ResourceType resourceType : dataSource.getDefinedResources()) {
+      final Dataset<Row> resourceDataset = dataSource.read(resourceType);
+      resourceDataset.write().saveAsTable(tableNameMapper.apply(resourceType.toCode()));
     }
   }
 
