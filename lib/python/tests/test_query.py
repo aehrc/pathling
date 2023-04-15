@@ -24,9 +24,7 @@ from pathling.query import AggregateQuery
 
 @fixture(scope="module")
 def test_data_source(pathling_ctx, test_data_dir):
-    return pathling_ctx.data_source.from_ndjson_dir(
-        os.path.join(test_data_dir, "ndjson")
-    )
+    return pathling_ctx.read.from_ndjson_dir(os.path.join(test_data_dir, "ndjson"))
 
 
 def test_extract(test_data_source):

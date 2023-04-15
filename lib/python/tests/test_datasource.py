@@ -41,7 +41,7 @@ ResultRow = Row("conditionCount")
 
 
 def test_datasource_from_resources(test_query, ndjson_test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.data_source.with_resources(
+    data_source = pathling_ctx.read.from_datasets(
         resources={
             "Patient": pathling_ctx.encode(
                 pathling_ctx.spark.read.text(
@@ -65,7 +65,7 @@ def test_datasource_from_resources(test_query, ndjson_test_data_dir, pathling_ct
 
 
 def test_datasource_from_text_files(test_query, ndjson_test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.data_source.from_text_files(
+    data_source = pathling_ctx.read.from_text_files(
         os.path.join(ndjson_test_data_dir, "*.ndjson"),
         lambda filepath: ["Patient", "Condition"],
     )
@@ -78,7 +78,7 @@ def test_datasource_from_text_files(test_query, ndjson_test_data_dir, pathling_c
 
 
 def test_datasource_from_ndjson_dir(test_query, ndjson_test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.data_source.from_ndjson_dir(ndjson_test_data_dir)
+    data_source = pathling_ctx.read.from_ndjson_dir(ndjson_test_data_dir)
 
     result = test_query.execute(data_source)
     assert result.columns == list(ResultRow)
@@ -88,9 +88,7 @@ def test_datasource_from_ndjson_dir(test_query, ndjson_test_data_dir, pathling_c
 
 
 def test_datasource_from_delta_warehouse(test_query, test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.data_source.from_warehouse(
-        "file://" + test_data_dir, "delta"
-    )
+    data_source = pathling_ctx.read.from_warehouse("file://" + test_data_dir, "delta")
 
     result = test_query.execute(data_source)
     assert result.columns == list(ResultRow)

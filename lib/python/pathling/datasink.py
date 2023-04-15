@@ -12,13 +12,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
 from typing import Callable
 
 from pathling.core import SparkConversionsMixin, StringMapper
 from pathling.datasource import DataSource
 
 
-class DataSink(SparkConversionsMixin):
+class DataSinks(SparkConversionsMixin):
     """
     A class for writing FHIR data to a variety of different targets.
     """

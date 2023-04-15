@@ -52,7 +52,7 @@ patient_count_by_gender_and_status = agg_result = AggregateQuery(
 
 print("Transient ad-hoc data source")
 patient_count_by_gender_and_status.execute(
-    pc.data_source.with_resources(
+    pc.read.from_datasets(
         {
             "Patient": pc.encode(json_resources, "Patient"),
             "Condition": pc.encode(json_resources, "Condition"),
@@ -66,9 +66,7 @@ patient_count_by_gender_and_status.execute(
 
 print("Normalized NDJSON directory data source")
 
-patient_count_by_gender_and_status.execute(
-    pc.data_source.from_ndjson_dir(ndjson_dir)
-).show(10)
+patient_count_by_gender_and_status.execute(pc.read.from_ndjson_dir(ndjson_dir)).show(10)
 
 #
 #  Text files data source
@@ -77,7 +75,7 @@ patient_count_by_gender_and_status.execute(
 print("Text files data source")
 
 patient_count_by_gender_and_status.execute(
-    pc.data_source.from_text_files(
+    pc.read.from_text_files(
         os.path.join("file://" + ndjson_dir, "*.ndjson"),
         lambda filename: [os.path.basename(filename).split(".")[0]],
     )

@@ -15,8 +15,7 @@
 
 # noinspection PyPackageRequirements
 
-from typing import Optional, Sequence
-from typing import TYPE_CHECKING
+from typing import Optional, Sequence, TYPE_CHECKING
 
 from deprecated import deprecated
 from py4j.java_gateway import JavaObject
@@ -434,7 +433,7 @@ class PathlingContext:
         )
 
     @property
-    def data_source(self) -> "DataSources":
+    def read(self) -> "DataSources":
         """
         Provides access to the instance of :class:`DataSource` factory.
         """

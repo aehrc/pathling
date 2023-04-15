@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 
-from typing import Dict, Sequence, Optional, Callable
+from typing import Dict, Sequence, Optional, Callable, TYPE_CHECKING
 
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
@@ -24,6 +24,9 @@ from pathling import PathlingContext
 from pathling.core import ExpOrStr, StringMapper, StringToStringListMapper
 from pathling.core import SparkConversionsMixin
 from pathling.fhir import MimeType
+
+if TYPE_CHECKING:
+    from .datasink import DataSinks
 
 
 class DataSource(SparkConversionsMixin):
@@ -93,6 +96,15 @@ class DataSource(SparkConversionsMixin):
             self
         )
 
+    @property
+    def write(self) -> "DataSinks":
+        """
+        Provides access to a :class:`DataSinks` object that can be used to persist data.
+        """
+        from pathling.datasink import DataSinks
+
+        return DataSinks(self)
+
 
 class DataSources(SparkConversionsMixin):
     """
@@ -107,7 +119,7 @@ class DataSources(SparkConversionsMixin):
     def _wrap_ds(self, jds: JavaObject) -> DataSource:
         return DataSource(jds, self._pc)
 
-    def with_resources(self, resources: Dict[str, DataFrame]) -> DataSource:
+    def from_datasets(self, resources: Dict[str, DataFrame]) -> DataSource:
         """
         Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
         resource type codes.
