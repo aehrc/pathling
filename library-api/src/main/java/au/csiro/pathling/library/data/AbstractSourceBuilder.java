@@ -22,6 +22,7 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
 import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.query.EnumerableDataSource;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -67,6 +68,18 @@ public abstract class AbstractSourceBuilder<T extends AbstractSourceBuilder> {
     return new ReadableSource(pathlingContext.getFhirContext(), pathlingContext.getSpark(),
         buildDataSource(), queryConfiguration,
         Optional.of(pathlingContext.getTerminologyServiceFactory()));
+  }
+
+  /**
+   * @return a new instance of {@link DataSinks} with the configuration defined by this builder.
+   */
+  @Nonnull
+  public DataSinks write() {
+    final DataSource dataSource = buildDataSource();
+    if (dataSource instanceof EnumerableDataSource) {
+      return new DataSinks(pathlingContext, (EnumerableDataSource) dataSource);
+    }
+    throw new IllegalArgumentException("This data source does not support writing");
   }
 
   /**

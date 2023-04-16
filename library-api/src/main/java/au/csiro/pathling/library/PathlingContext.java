@@ -216,7 +216,7 @@ public class PathlingContext {
       @Nonnull final String resourceName, @Nonnull final String outputMimeType) {
     final BaseRuntimeElementDefinition definition = FhirEncoders.contextFor(fhirVersion)
         .getResourceDefinition(resourceName);
-    
+
     @SuppressWarnings("unchecked")
     final Class<T> resourceClass = (Class<T>) definition.getImplementingClass();
 
@@ -430,7 +430,8 @@ public class PathlingContext {
   }
 
   @Nonnull
-  public DataSources datasources() {
+  public DataSources read() {
     return new DataSources(this);
   }
+  
 }

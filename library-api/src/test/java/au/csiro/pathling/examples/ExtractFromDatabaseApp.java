@@ -30,7 +30,7 @@ public class ExtractFromDatabaseApp {
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final ReadableSource readableSource = ptc.datasources()
+    final ReadableSource readableSource = ptc.read()
         .databaseBuilder()
         .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
         .withStorageConfiguration(StorageConfiguration.forDatabase(warehouseUrl, "parquet"))

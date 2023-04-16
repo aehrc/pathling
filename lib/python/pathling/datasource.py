@@ -114,7 +114,7 @@ class DataSources(SparkConversionsMixin):
     def __init__(self, pc: PathlingContext):
         SparkConversionsMixin.__init__(self, pc.spark)
         self._pc = pc
-        self._jdataSources = pc._jpc.datasources()
+        self._jdataSources = pc._jpc.read()
 
     def _wrap_ds(self, jds: JavaObject) -> DataSource:
         return DataSource(jds, self._pc)

@@ -43,7 +43,7 @@ public class QueriesTest {
     pathlingCtx = PathlingContext.create(spark, FhirEncoders.forR4().getOrCreate(),
         terminologyServiceFactory);
 
-    readableSource = pathlingCtx.datasources()
+    readableSource = pathlingCtx.read()
         .fromNdjsonDir(FHIR_JSON_DATA_PATH.toUri().toString());
   }
 

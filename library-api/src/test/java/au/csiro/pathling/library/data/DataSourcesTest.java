@@ -84,7 +84,7 @@ public class DataSourcesTest {
         .text(TEST_JSON_DATA_PATH.resolve("Condition.ndjson").toString());
 
     return Stream.of(
-        Arguments.of("with directBuilder()", pathlingCtx.datasources()
+        Arguments.of("with directBuilder()", pathlingCtx.read()
             .directBuilder()
             .withResource(ResourceType.PATIENT,
                 pathlingCtx.encode(patientJsonDf, "Patient"))
@@ -93,7 +93,7 @@ public class DataSourcesTest {
             .build()
         ),
         Arguments.arguments("with filesystemBuilder()",
-            pathlingCtx.datasources().fileSystemBuilder()
+            pathlingCtx.read().fileSystemBuilder()
                 .withGlob(TEST_JSON_DATA_PATH.resolve("*.ndjson").toString())
                 .withReader(spark.read().format("text"))
                 .withFilePathMapper(SupportFunctions::baseNameWithQualifierToResource)
@@ -102,34 +102,34 @@ public class DataSourcesTest {
                 .build()
         ),
         Arguments.arguments("with databaseBuilder()",
-            pathlingCtx.datasources().databaseBuilder()
+            pathlingCtx.read().databaseBuilder()
                 .withWarehouseUrl(TEST_DATA_PATH.toUri().toString())
                 .withDatabaseName("delta")
                 .build()
         ),
         Arguments.arguments("fromFiles with reader='delta'",
-            pathlingCtx.datasources().fromFiles(
+            pathlingCtx.read().fromFiles(
                 TEST_DELTA_DATA_PATH.resolve("*.parquet").toString(),
                 SupportFunctions::baseNameWithQualifierToResource, spark.read().format("delta"))
         ),
         Arguments.arguments("fromFiles with format='delta'",
-            pathlingCtx.datasources().fromFiles(
+            pathlingCtx.read().fromFiles(
                 TEST_DELTA_DATA_PATH.resolve("*.parquet").toString(),
                 SupportFunctions::baseNameWithQualifierToResource, "delta")
         ),
         Arguments.arguments("fromTextFiles with mimeType='ndjson'",
-            pathlingCtx.datasources()
+            pathlingCtx.read()
                 .fromTextFiles(TEST_JSON_DATA_PATH.resolve("*.ndjson").toUri().toString(),
                     SupportFunctions::baseNameWithQualifierToResource,
                     FhirMimeTypes.FHIR_JSON)
         ),
         Arguments.arguments("fromWarehouse",
-            pathlingCtx.datasources().fromWarehouse(TEST_DATA_PATH.toUri().toString(), "delta")
+            pathlingCtx.read().fromWarehouse(TEST_DATA_PATH.toUri().toString(), "delta")
         ),
-        Arguments.of("fromNdjsonDir", pathlingCtx.datasources()
+        Arguments.of("fromNdjsonDir", pathlingCtx.read()
             .fromNdjsonDir(TEST_JSON_DATA_PATH.toUri().toString())),
         Arguments.arguments("fromParquetDir",
-            pathlingCtx.datasources().fromParquetDir(TEST_DELTA_DATA_PATH.toUri().toString())
+            pathlingCtx.read().fromParquetDir(TEST_DELTA_DATA_PATH.toUri().toString())
         )
     );
   }
@@ -150,7 +150,7 @@ public class DataSourcesTest {
   @Test
   void testS3Uri() {
     final Exception exception = assertThrows(RuntimeException.class,
-        () -> pathlingCtx.datasources()
+        () -> pathlingCtx.read()
             .fromNdjsonDir("s3://pathling-test-data/ndjson/"));
     assertTrue(exception.getCause() instanceof ClassNotFoundException);
     assertEquals("Class org.apache.hadoop.fs.s3a.S3AFileSystem not found",

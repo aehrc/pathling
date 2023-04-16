@@ -26,7 +26,7 @@ public class ExtractFromJsonApp {
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final ReadableSource readableSource = ptc.datasources()
+    final ReadableSource readableSource = ptc.read()
         .fromNdjsonDir(fhirData.toUri().toString());
 
     final Dataset<Row> patientResult = readableSource.extract(ResourceType.PATIENT)
