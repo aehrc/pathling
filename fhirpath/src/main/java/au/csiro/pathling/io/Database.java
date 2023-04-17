@@ -20,6 +20,7 @@ package au.csiro.pathling.io;
 import static au.csiro.pathling.QueryHelpers.createEmptyDataset;
 import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
 import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
+import static au.csiro.pathling.io.PersistenceScheme.safelyJoinPaths;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
@@ -51,10 +52,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class Database implements DataSource {
 
   @Nonnull
-  protected final String warehouseUrl;
-
-  @Nonnull
-  protected final String databaseName;
+  protected final String path;
 
   @Nonnull
   protected final StorageConfiguration configuration;
@@ -64,7 +62,7 @@ public class Database implements DataSource {
 
   @Nonnull
   protected final FhirEncoders fhirEncoders;
-  
+
   /**
    * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
    * database
@@ -75,8 +73,25 @@ public class Database implements DataSource {
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
     this.configuration = configuration;
     this.spark = spark;
-    this.warehouseUrl = convertS3ToS3aUrl(configuration.getWarehouseUrl());
-    this.databaseName = configuration.getDatabaseName();
+    this.path = convertS3ToS3aUrl(
+        safelyJoinPaths(configuration.getWarehouseUrl(), configuration.getDatabaseName()));
+    this.fhirEncoders = fhirEncoders;
+  }
+
+  /**
+   * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
+   * database
+   * @param spark a {@link SparkSession} for interacting with Spark
+   * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
+   * @param path the path to the storage location, overriding the values of warehouse URL and
+   * database name in the configuration
+   */
+  public Database(@Nonnull final StorageConfiguration configuration,
+      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final String path) {
+    this.configuration = configuration;
+    this.spark = spark;
+    this.path = convertS3ToS3aUrl(path);
     this.fhirEncoders = fhirEncoders;
   }
 
@@ -96,8 +111,8 @@ public class Database implements DataSource {
   }
 
   /**
-   * Overwrites the resources for a particular type with the contents of the supplied {@link
-   * Dataset}.
+   * Overwrites the resources for a particular type with the contents of the supplied
+   * {@link Dataset}.
    *
    * @param resourceType the type of the resource to write
    * @param resources the {@link Dataset} containing the resource data
@@ -201,7 +216,7 @@ public class Database implements DataSource {
    * not previously been the subject of write operations.
    */
   private Optional<DeltaTable> attemptDeltaLoad(@Nonnull final ResourceType resourceType) {
-    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+    final String tableUrl = getTableUrl(path, resourceType);
     return DeltaTable.isDeltaTable(spark, tableUrl)
            ? Optional.of(getDeltaTable(resourceType, tableUrl))
            : Optional.empty();
@@ -228,7 +243,7 @@ public class Database implements DataSource {
 
   void write(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
-    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
+    final String tableUrl = getTableUrl(path, resourceType);
 
     log.debug("Overwriting: {}", tableUrl);
     resources
@@ -253,7 +268,7 @@ public class Database implements DataSource {
     // We need to throw an error if the table already exists, otherwise we could get contention 
     // issues on requests that call this method.
     write(resourceType, dataset);
-    return getTableUrl(warehouseUrl, databaseName, resourceType);
+    return getTableUrl(path, resourceType);
   }
 
   /**

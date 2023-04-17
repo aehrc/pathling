@@ -30,7 +30,7 @@ json_resources = pc.spark.read.text(ndjson_dir)
 # "Pythonic" API
 #
 
-data_source = pc.read.from_datasets(
+data_source = pc.read.datasets(
     {
         "Patient": pc.encode(json_resources, "Patient"),
         "Condition": pc.encode(json_resources, "Condition"),

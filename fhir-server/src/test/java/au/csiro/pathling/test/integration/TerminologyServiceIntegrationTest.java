@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.test.integration;
 
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000000000003001;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_2121000032108;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
@@ -28,13 +28,13 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_638160
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_720471000168102;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_720471000168102_VER2021;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_72940011000036107;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000000000003001;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_AUTOMAP_DEFAULT;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_55915_3;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
-import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.newVersionedCoding;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedCoding;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
@@ -47,12 +47,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
-import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Collections;
@@ -102,7 +101,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   // Mocking the Database bean to avoid lengthy initialization
   @SuppressWarnings("unused")
   @MockBean
-  private DatabaseComponent database;
+  private CacheableDatabase database;
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;

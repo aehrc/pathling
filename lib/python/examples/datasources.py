@@ -14,79 +14,133 @@
 #  limitations under the License.
 
 import os
+from tempfile import mkdtemp
 
-from pathling import AggregateQuery
-from pathling import DataSources
-from pathling import PathlingContext, Expression as fpe
+from pyspark.sql import DataFrame, SparkSession
+
+from pathling import PathlingContext, DataSource, find_jar, Expression as exp
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-PROJECT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir)
-)
+DATA_DIR = os.path.join(HERE, "data")
+BUNDLES_DIR = os.path.join(DATA_DIR, "bundles")
+NDJSON_DIR = os.path.join(DATA_DIR, "resources")
 
-TEST_DATA_DIR = os.path.join(
-    PROJECT_DIR, "fhir-server", "src", "test", "resources", "test-data"
-)
-ndjson_dir = os.path.join(TEST_DATA_DIR, "fhir")
-warehouse_dir_uri = "file://" + TEST_DATA_DIR
+TEMP_DIR = mkdtemp()
+PARQUET_DIR = os.path.join(TEMP_DIR, "parquet")
+DELTA_DIR = os.path.join(TEMP_DIR, "delta")
+WAREHOUSE_DIR = os.path.join(TEMP_DIR, "warehouse")
+NDJSON_DIR_2 = os.path.join(TEMP_DIR, "ndjson")
 
-pc = PathlingContext.create(enable_delta=True)
-
-# Read each line from the NDJSON into a row within a Spark data set.
-json_resources = pc.spark.read.text(ndjson_dir, pathGlobFilter="*.ndjson")
-
-#
-# Pythonic API for accessing data sources
-#
-
-patient_count_by_gender_and_status = agg_result = AggregateQuery(
-    "Patient",
-    aggregations=[fpe("count()").alias("countOfPatients")],
-    groupings=["gender", "maritalStatus.coding"],
-    filters=["birthDate > @1957-06-06"],
-)
-
-#
-# Transient ad-hoc data source
-#
-
-print("Transient ad-hoc data source")
-patient_count_by_gender_and_status.execute(
-    pc.read.from_datasets(
-        {
-            "Patient": pc.encode(json_resources, "Patient"),
-            "Condition": pc.encode(json_resources, "Condition"),
-        }
+# Configure Hive, so that we can test out the tables functionality.
+spark = (
+    SparkSession.builder.config("spark.jars", find_jar())
+    .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+    .config(
+        "spark.sql.extensions",
+        "io.delta.sql.DeltaSparkSessionExtension",
     )
-).show(10)
-
-#
-# Normalized NDJSON directory data source
-#
-
-print("Normalized NDJSON directory data source")
-
-patient_count_by_gender_and_status.execute(pc.read.from_ndjson_dir(ndjson_dir)).show(10)
-
-#
-#  Text files data source
-#
-
-print("Text files data source")
-
-patient_count_by_gender_and_status.execute(
-    pc.read.from_text_files(
-        os.path.join("file://" + ndjson_dir, "*.ndjson"),
-        lambda filename: [os.path.basename(filename).split(".")[0]],
+    .config(
+        "spark.sql.catalog.spark_catalog",
+        "org.apache.spark.sql.delta.catalog.DeltaCatalog",
     )
-).show(10)
+    .config("spark.sql.warehouse.dir", WAREHOUSE_DIR)
+    .getOrCreate()
+)
 
-#
-# Delta warehouse data source
-#
+# Enable Delta, so that we can test out the Delta functionality.
+pc = PathlingContext.create(spark)
 
-print("Delta warehouse data source")
+# Use a schema called "datasources" when interacting with the table catalog.
+pc.spark.sql("CREATE SCHEMA IF NOT EXISTS datasources")
+pc.spark.catalog.setCurrentDatabase("datasources")
 
-patient_count_by_gender_and_status.execute(
-    DataSources(pc).from_warehouse(warehouse_dir_uri, "parquet")
-).show(10)
+
+def aggregate(data_source: DataSource) -> DataFrame:
+    """
+    A function for testing out our data sources with an aggregate query.
+    """
+
+    result = data_source.aggregate(
+        "Patient",
+        # Number of patients.
+        aggregations=[exp("count()", "Number of patients")],
+        # Group by gender.
+        groupings=[exp("gender", "Gender")],
+    )
+    result.show()
+    return result
+
+
+def extract(data_source: DataSource) -> DataFrame:
+    """
+    A function for testing out our data sources with an extract query.
+    """
+
+    result = data_source.extract(
+        "Patient",
+        columns=[
+            exp("name.first().given.first()", "Given name"),
+            exp("name.first().family", "Family name"),
+            exp("telecom.where(system = 'phone').value", "Phone number"),
+            exp(
+                "reverseResolve(Condition.subject).exists("
+                "code.subsumedBy(http://snomed.info/sct|404684003))",
+                "Clinical finding",
+            ),
+        ],
+    )
+    result.show()
+    return result
+
+
+# Read from NDJSON files.
+print(f"Reading from NDJSON files: {NDJSON_DIR}")
+ndjson = pc.read.ndjson(NDJSON_DIR)
+aggregate(ndjson)
+extract(ndjson)
+
+# Read from FHIR JSON Bundles.
+print(f"Reading from FHIR JSON Bundles: {BUNDLES_DIR}")
+bundles = pc.read.bundles(BUNDLES_DIR, ["Patient", "Condition"])
+aggregate(bundles)
+extract(bundles)
+
+# Save the NDJSON data as Parquet.
+print(f"Writing to Parquet files: {PARQUET_DIR}")
+ndjson.write.parquet(PARQUET_DIR)
+
+# Read from Parquet files.
+print(f"Reading from Parquet files: {PARQUET_DIR}")
+parquet = pc.read.parquet(PARQUET_DIR)
+aggregate(parquet)
+extract(parquet)
+
+# Save the bundles data as Delta.
+print(f"Writing to Delta files: {DELTA_DIR}")
+bundles.write.delta(DELTA_DIR)
+
+# Read from Delta files.
+print(f"Reading from Delta files: {DELTA_DIR}")
+delta = pc.read.delta(DELTA_DIR)
+aggregate(delta)
+extract(delta)
+
+# Save the NDJSON data to tables.
+print(f"Writing to tables: {WAREHOUSE_DIR}")
+ndjson.write.tables()
+
+# Read from tables.
+print(f"Reading from tables: {WAREHOUSE_DIR}")
+tables = pc.read.tables(["Patient", "Condition"])
+aggregate(tables)
+extract(tables)
+
+# Save the bundles data as NDJSON.
+print(f"Writing to NDJSON files: {NDJSON_DIR_2}")
+ndjson.write.ndjson(NDJSON_DIR_2)
+
+# Read from the written NDJSON files.
+print(f"Reading from NDJSON files: {NDJSON_DIR_2}")
+ndjson2 = pc.read.ndjson(NDJSON_DIR_2)
+aggregate(ndjson2)
+extract(ndjson2)

@@ -49,7 +49,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 @EqualsAndHashCode(callSuper = false)
 @NonFinal
-public class ReadableSource extends QueryExecutor {
+public class ReadableSource extends QueryExecutor implements DataSource {
 
   @Nonnull
   FhirContext fhirContext;
@@ -176,5 +176,11 @@ public class ReadableSource extends QueryExecutor {
         terminologyClientFactory
     ).buildQuery(aggregateRequest).getDataset();
   }
-  
+
+  @Nonnull
+  @Override
+  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
+    return dataSource.read(resourceType);
+  }
+
 }

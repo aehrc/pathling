@@ -39,6 +39,30 @@ class DataSource(SparkConversionsMixin):
         self._jds = jds
         self.pc = pc
 
+    def read(self, resource_type: str) -> DataFrame:
+        """
+        Reads the data for the given resource type from the data source.
+
+        :param resource_type: A string representing the type of FHIR resource to read data from.
+
+        :return: A Spark DataFrame containing the data for the given resource type.
+        """
+        resource_code = (
+            self.spark._jvm.org.hl7.fhir.r4.model.Enumerations.ResourceType.fromCode(
+                resource_type
+            )
+        )
+        return self._jds.read(resource_code)
+
+    @property
+    def write(self) -> "DataSinks":
+        """
+        Provides access to a :class:`DataSinks` object that can be used to persist data.
+        """
+        from pathling.datasink import DataSinks
+
+        return DataSinks(self)
+
     def extract(
         self,
         resource_type: str,
@@ -96,44 +120,135 @@ class DataSource(SparkConversionsMixin):
             self
         )
 
-    @property
-    def write(self) -> "DataSinks":
-        """
-        Provides access to a :class:`DataSinks` object that can be used to persist data.
-        """
-        from pathling.datasink import DataSinks
-
-        return DataSinks(self)
-
 
 class DataSources(SparkConversionsMixin):
     """
     A factory for creating data sources.
     """
 
-    def __init__(self, pc: PathlingContext):
-        SparkConversionsMixin.__init__(self, pc.spark)
-        self._pc = pc
-        self._jdataSources = pc._jpc.read()
+    def __init__(self, pathling: PathlingContext):
+        SparkConversionsMixin.__init__(self, pathling.spark)
+        self._pc = pathling
+        self._jdataSources = pathling._jpc.read()
 
     def _wrap_ds(self, jds: JavaObject) -> DataSource:
         return DataSource(jds, self._pc)
 
-    def from_datasets(self, resources: Dict[str, DataFrame]) -> DataSource:
+    def ndjson(
+        self, path, filename_mapper: Callable[[str], Sequence[str]] = None
+    ) -> DataSource:
         """
-        Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
-        resource type codes.
+        Creates a data source from a directory containing NDJSON files. The files must be named with
+        the resource type code and must have the ".ndjson" extension, e.g. "Patient.ndjson"
+        or "Observation.ndjson".
 
-        :param resources: A dictionary of Spark DataFrames, where the keys are resource type codes
-               and the values are the data frames containing the resource data.
+        :param path: The URI of the directory containing the NDJSON files.
+        :param filename_mapper: An optional function that maps a filename to the list of resource
+               types that it contains.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        jbuilder = self._jdataSources.directBuilder()
-        for resource_code, resource_data in resources.items():
-            jbuilder.withResource(resource_code, resource_data._jdf)
-        return self._wrap_ds(jbuilder.build())
+        if filename_mapper:
+            files_glob = (
+                self.spark._jvm.au.csiro.pathling.io.PersistenceScheme.safelyJoinPaths(
+                    path, "*.ndjson"
+                )
+            )
+            wrapped_mapper = StringToStringListMapper(
+                self.spark._jvm._gateway_client, filename_mapper
+            )
+            return self._wrap_ds(
+                self._jdataSources.text(files_glob, wrapped_mapper, MimeType.FHIR_JSON)
+            )
+        else:
+            return self._wrap_ds(self._jdataSources.ndjson(path))
 
-    def from_text_files(
+    def parquet(self, path: str) -> DataSource:
+        """
+        Creates a data source from a directory containing Parquet tables. Each table must be named
+        according to the name of the resource type that it stores.
+
+        :param path: The URI of the directory containing the Parquet tables.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        return self._wrap_ds(self._jdataSources.parquet(path))
+
+    def delta(self, path: str) -> DataSource:
+        """
+        Creates a data source from a directory containing Delta tables, as used by Pathling Server
+        for persistence. Each table must be named according to the name of the resource type that
+        it stores.
+
+        :param path: The URI of the directory containing the Delta tables.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        return self._wrap_ds(self._jdataSources.delta(path))
+
+    def bundles(
+        self,
+        path: str,
+        resource_types: Sequence[str],
+        mime_type: str = MimeType.FHIR_JSON,
+    ) -> DataSource:
+        """
+        Creates a data source from a directory containing FHIR bundles.
+
+        :param path: The URI of the directory containing the bundles.
+        :param resource_types: A sequence of resource type codes that should be extracted from the
+               bundles.
+        :param mime_type: The MIME type of the bundles. Defaults to `application/fhir+json`.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        return self._wrap_ds(
+            self._jdataSources.bundles(
+                path,
+                SetConverter().convert(resource_types, self.spark._jvm._gateway_client),
+                mime_type,
+            )
+        )
+
+    def tables(
+        self,
+        resource_types: Sequence[str],
+        table_name_mapper: Callable[[str], str] = None,
+    ) -> DataSource:
+        """
+        Creates a data source from a set of Spark tables, where the table names are the resource
+        type codes.
+
+        :param resource_types: A sequence of resource type codes that should be extracted from the
+               tables.
+        :param table_name_mapper: An optional function that can customize the mapping between
+               resource type and the source table name.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        if table_name_mapper:
+            resource_types_enum = SetConverter().convert(
+                map(
+                    lambda resource_type: self.spark._jvm.org.hl7.fhir.r4.model.Enumerations.ResourceType.fromCode(
+                        resource_type
+                    ),
+                    resource_types,
+                ),
+                self.spark._jvm._gateway_client,
+            )
+            wrapped_mapper = StringMapper(
+                self.spark._jvm._gateway_client, table_name_mapper
+            )
+            return (
+                self._jdataSources.tableBuilder(resource_types_enum)
+                .withTableNameMapper(wrapped_mapper)
+                .build()
+            )
+        else:
+            return self._wrap_ds(
+                self._jdataSources.tables(
+                    SetConverter().convert(
+                        resource_types, self.spark._jvm._gateway_client
+                    )
+                )
+            )
+
+    def text(
         self,
         files_glob: str,
         filename_mapper: Callable[[str], Sequence[str]],
@@ -155,116 +270,23 @@ class DataSources(SparkConversionsMixin):
         :return: A DataSource object that can be used to run queries against the data.
         """
         return self._wrap_ds(
-            self._jdataSources.fromTextFiles(
+            self._jdataSources.text(
                 files_glob,
                 self._lambda_to_function(filename_mapper),
                 mime_type or MimeType.FHIR_JSON,
             )
         )
 
-    def from_ndjson_dir(
-        self, ndjson_dir_uri, filename_mapper: Callable[[str], Sequence[str]] = None
-    ) -> DataSource:
+    def datasets(self, resources: Dict[str, DataFrame]) -> DataSource:
         """
-        Creates a data source from a directory containing NDJSON files. The files must be named with
-        the resource type code and must have the ".ndjson" extension, e.g. "Patient.ndjson"
-        or "Observation.ndjson".
+        Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
+        resource type codes.
 
-        :param ndjson_dir_uri: The URI of the directory containing the NDJSON files.
-        :param filename_mapper: An optional function that maps a filename to the list of resource
-               types that it contains.
+        :param resources: A dictionary of Spark DataFrames, where the keys are resource type codes
+               and the values are the data frames containing the resource data.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        if filename_mapper:
-            files_glob = (
-                self.spark._jvm.au.csiro.pathling.utilities.Strings.safelyJoinPaths(
-                    ndjson_dir_uri, "*.ndjson"
-                )
-            )
-            wrapped_mapper = StringToStringListMapper(
-                self.spark._jvm._gateway_client, filename_mapper
-            )
-            return self._wrap_ds(
-                self._jdataSources.fromTextFiles(
-                    files_glob, wrapped_mapper, MimeType.FHIR_JSON
-                )
-            )
-        else:
-            return self._wrap_ds(self._jdataSources.fromNdjsonDir(ndjson_dir_uri))
-
-    def from_warehouse(
-        self, warehouse_dir_uri: str, database_name="default"
-    ) -> DataSource:
-        """
-        Creates a data source from a warehouse directory.
-
-        :param warehouse_dir_uri: The URI of the warehouse directory.
-        :param database_name: The name of the database to use. Defaults to "default".
-        :return: A DataSource object that can be used to run queries against the data.
-        """
-        return self._wrap_ds(
-            self._jdataSources.fromWarehouse(warehouse_dir_uri, database_name)
-        )
-
-    def from_bundles(
-        self,
-        bundles_dir_uri: str,
-        resource_types: Sequence[str],
-        mime_type: str = MimeType.FHIR_JSON,
-    ) -> DataSource:
-        """
-        Creates a data source from a directory containing FHIR bundles.
-
-        :param bundles_dir_uri: The URI of the directory containing the bundles.
-        :param resource_types: A sequence of resource type codes that should be extracted from the
-               bundles.
-        :param mime_type: The MIME type of the bundles. Defaults to `application/fhir+json`.
-        :return: A DataSource object that can be used to run queries against the data.
-        """
-        return self._wrap_ds(
-            self._jdataSources.fromBundlesDir(
-                bundles_dir_uri,
-                SetConverter().convert(resource_types, self.spark._jvm._gateway_client),
-                mime_type,
-            )
-        )
-
-    def from_tables(
-        self,
-        resource_types: Sequence[str],
-        table_name_mapper: Callable[[str], str] = None,
-    ) -> DataSource:
-        """
-        Creates a data source from a set of Spark tables, where the table names are the resource
-        type codes.
-
-        :param resource_types: A sequence of resource type codes that should be extracted from the
-               tables.
-        :return: A DataSource object that can be used to run queries against the data.
-        """
-        if table_name_mapper:
-            resource_types_enum = SetConverter().convert(
-                map(
-                    lambda resource_type: self.spark._jvm.org.hl7.fhir.r4.model.Enumerations.ResourceType.fromCode(
-                        resource_type
-                    ),
-                    resource_types,
-                ),
-                self.spark._jvm._gateway_client,
-            )
-            wrapped_mapper = StringMapper(
-                self.spark._jvm._gateway_client, table_name_mapper
-            )
-            return (
-                self._jdataSources.catalogSourceBuilder(resource_types_enum)
-                .withTableNameMapper(wrapped_mapper)
-                .build()
-            )
-        else:
-            return self._wrap_ds(
-                self._jdataSources.fromTables(
-                    SetConverter().convert(
-                        resource_types, self.spark._jvm._gateway_client
-                    )
-                )
-            )
+        jbuilder = self._jdataSources.datasetBuilder()
+        for resource_code, resource_data in resources.items():
+            jbuilder.withResource(resource_code, resource_data._jdf)
+        return self._wrap_ds(jbuilder.build())

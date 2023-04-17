@@ -34,8 +34,8 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("(core | import) & !ga4gh")
 @Slf4j
-public class DatabaseComponent extends Database implements Cacheable {
-  
+public class CacheableDatabase extends Database implements Cacheable {
+
   @Nonnull
   @Getter
   private Optional<String> cacheKey;
@@ -50,7 +50,7 @@ public class DatabaseComponent extends Database implements Cacheable {
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
    * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
    */
-  public DatabaseComponent(@Nonnull final StorageConfiguration configuration,
+  public CacheableDatabase(@Nonnull final StorageConfiguration configuration,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ThreadPoolTaskExecutor executor) {
     super(configuration, spark, fhirEncoders);
@@ -66,8 +66,7 @@ public class DatabaseComponent extends Database implements Cacheable {
   @Override
   protected void onDataChange(@Nonnull final ResourceType resourceType,
       @Nonnull final Optional<String> maybeTableUrl) {
-    final String tableUrl = maybeTableUrl.orElse(
-        getTableUrl(warehouseUrl, databaseName, resourceType));
+    final String tableUrl = maybeTableUrl.orElse(getTableUrl(path, resourceType));
     invalidateCache(tableUrl);
     compact(resourceType, tableUrl);
   }
@@ -83,7 +82,7 @@ public class DatabaseComponent extends Database implements Cacheable {
   private Optional<String> buildCacheKeyFromTable(@Nonnull final String path) {
     return latestUpdateToTable(path).map(this::cacheKeyFromTimestamp);
   }
-  
+
   private Optional<String> buildCacheKeyFromDatabase() {
     return latestUpdateToDatabase().map(this::cacheKeyFromTimestamp);
   }
@@ -93,28 +92,25 @@ public class DatabaseComponent extends Database implements Cacheable {
    * tables.
    */
   private Optional<Long> latestUpdateToDatabase() {
-    final String databasePath = warehouseUrl + "/" + databaseName;
-    log.info("Querying latest snapshot from database: {}", databasePath);
+    log.info("Querying latest snapshot from database: {}", path);
 
     @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
         .hadoopConfiguration();
     requireNonNull(hadoopConfiguration);
     @Nullable final FileSystem warehouse;
     try {
-      warehouse = FileSystem.get(new URI(warehouseUrl), hadoopConfiguration);
+      warehouse = FileSystem.get(new URI(path), hadoopConfiguration);
     } catch (final IOException | URISyntaxException e) {
-      log.debug("Unable to access warehouse location, returning empty snapshot time: {}",
-          warehouseUrl);
+      log.debug("Unable to access warehouse location, returning empty snapshot time: {}", path);
       return Optional.empty();
     }
     requireNonNull(warehouse);
-    
+
     // Check that the database path exists.
     try {
-      warehouse.exists(new Path(databasePath));
+      warehouse.exists(new Path(path));
     } catch (final IOException e) {
-      log.debug("Unable to access database location, returning empty snapshot time: {}",
-          databasePath);
+      log.debug("Unable to access database location, returning empty snapshot time: {}", path);
       return Optional.empty();
     }
 
@@ -122,10 +118,9 @@ public class DatabaseComponent extends Database implements Cacheable {
     // types.
     @Nullable final FileStatus[] fileStatuses;
     try {
-      fileStatuses = warehouse.listStatus(new Path(databasePath));
+      fileStatuses = warehouse.listStatus(new Path(path));
     } catch (final IOException e) {
-      log.debug("Unable to access database location, returning empty snapshot time: {}",
-          databasePath);
+      log.debug("Unable to access database location, returning empty snapshot time: {}", path);
       return Optional.empty();
     }
     requireNonNull(fileStatuses);

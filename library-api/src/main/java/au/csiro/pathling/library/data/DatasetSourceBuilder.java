@@ -29,12 +29,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * The {@link ReadableSource} builder that binds the client to an {@link
  * ImmutableDataSource}
  */
-public class DirectSourceBuilder extends AbstractSourceBuilder<DirectSourceBuilder> {
+public class DatasetSourceBuilder extends AbstractSourceBuilder<DatasetSourceBuilder> {
 
   @Nonnull
   private final ImmutableDataSource.Builder inMemoryDataSourceBuilder;
 
-  protected DirectSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
+  protected DatasetSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
     this.inMemoryDataSourceBuilder = ImmutableDataSource.builder();
   }
@@ -47,7 +47,7 @@ public class DirectSourceBuilder extends AbstractSourceBuilder<DirectSourceBuild
    * @return this builder.
    */
   @Nonnull
-  public DirectSourceBuilder withResource(@Nonnull final ResourceType resourceType,
+  public DatasetSourceBuilder withResource(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> dataset) {
     inMemoryDataSourceBuilder.withResource(resourceType, dataset);
     return this;
@@ -61,7 +61,7 @@ public class DirectSourceBuilder extends AbstractSourceBuilder<DirectSourceBuild
    * @return this builder.
    */
   @Nonnull
-  public DirectSourceBuilder withResource(@Nonnull final String resourceCode,
+  public DatasetSourceBuilder withResource(@Nonnull final String resourceCode,
       @Nonnull final Dataset<Row> dataset) {
     return withResource(ResourceType.fromCode(resourceCode), dataset);
   }

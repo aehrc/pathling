@@ -27,6 +27,7 @@ import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.io.AccessRules;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.PersistenceScheme;
+import au.csiro.pathling.io.PersistenceScheme.ImportMode;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -34,8 +35,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
@@ -135,8 +134,9 @@ public class ImportExecutor {
           .filter(param -> "mode".equals(param.getName()) &&
               param.getValue() instanceof CodeType)
           .findFirst()
-          .map(param -> ImportMode.fromCode(((CodeType) param.getValue()).asStringValue()))
-          .orElse(ImportMode.OVERWRITE);
+          .map(param -> PersistenceScheme.ImportMode.fromCode(
+              ((CodeType) param.getValue()).asStringValue()))
+          .orElse(PersistenceScheme.ImportMode.OVERWRITE);
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
 
@@ -156,7 +156,7 @@ public class ImportExecutor {
           fhirEncoder);
 
       log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
-      if (importMode == ImportMode.OVERWRITE) {
+      if (importMode == PersistenceScheme.ImportMode.OVERWRITE) {
         database.overwrite(resourceType, resources.toDF());
       } else {
         database.merge(resourceType, resources.toDF());
@@ -205,39 +205,6 @@ public class ImportExecutor {
       checkUserInput(!resource.getIdElement().isEmpty(), "Encountered a resource with no ID");
       return resource;
     };
-  }
-
-  public enum ImportMode {
-    /**
-     * Results in all existing resources of the specified type to be deleted and replaced with the
-     * contents of the source file.
-     */
-    OVERWRITE("overwrite"),
-
-    /**
-     * Matches existing resources with updated resources in the source file based on their ID, and
-     * either update the existing resources or add new resources as appropriate.
-     */
-    MERGE("merge");
-
-    @Nonnull
-    @Getter
-    private final String code;
-
-    ImportMode(@Nonnull final String code) {
-      this.code = code;
-    }
-
-    @Nullable
-    public static ImportMode fromCode(@Nonnull final String code) {
-      for (final ImportMode mode : values()) {
-        if (mode.code.equals(code)) {
-          return mode;
-        }
-      }
-      return null;
-    }
-
   }
 
 }

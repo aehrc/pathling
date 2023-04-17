@@ -19,6 +19,15 @@ from pathling.core import SparkConversionsMixin, StringMapper
 from pathling.datasource import DataSource
 
 
+class ImportMode:
+    """
+    Constants that represent the different import modes.
+    """
+
+    OVERWRITE: str = "overwrite"
+    MERGE: str = "merge"
+
+
 class DataSinks(SparkConversionsMixin):
     """
     A class for writing FHIR data to a variety of different targets.
@@ -30,14 +39,12 @@ class DataSinks(SparkConversionsMixin):
             datasource.pc._jpc, datasource._jds.getDataSource()
         )
 
-    def to_ndjson_dir(
-        self, ndjson_dir_uri: str, file_name_mapper: Callable[[str], str] = None
-    ):
+    def ndjson(self, path: str, file_name_mapper: Callable[[str], str] = None) -> None:
         """
         Writes the data to a directory of NDJSON files. The files will be named using the resource
         type and the ".ndjson" extension.
 
-        :param ndjson_dir_uri: The URI of the directory to write the files to.
+        :param path: The URI of the directory to write the files to.
         :param file_name_mapper: An optional function that can be used to customise the mapping of
         the resource type to the file name.
         """
@@ -45,11 +52,35 @@ class DataSinks(SparkConversionsMixin):
             wrapped_mapper = StringMapper(
                 self.spark._jvm._gateway_client, file_name_mapper
             )
-            self._datasinks.toNdjsonDir(ndjson_dir_uri, wrapped_mapper)
+            self._datasinks.ndjson(path, wrapped_mapper)
         else:
-            self._datasinks.toNdjsonDir(ndjson_dir_uri)
+            self._datasinks.ndjson(path)
 
-    def to_tables(self, table_name_mapper: Callable[[str], str] = None):
+    def parquet(self, path: str) -> None:
+        """
+        Writes the data to a directory of Parquet files.
+
+        :param path: The URI of the directory to write the files to.
+        """
+        self._datasinks.parquet(path)
+
+    def delta(self, path: str, import_mode: ImportMode = ImportMode.OVERWRITE) -> None:
+        """
+        Writes the data to a directory of Delta files.
+
+        :param path: The URI of the directory to write the files to.
+        :param import_mode: The import mode to use when writing the data - "overwrite" will
+        overwrite any existing data, "merge" will merge the new data with the existing data based
+        on resource ID.
+        """
+        import_mode_enum = (
+            self.spark._jvm.au.csiro.pathling.io.PersistenceScheme.ImportMode.fromCode(
+                import_mode
+            )
+        )
+        self._datasinks.delta(path, import_mode_enum)
+
+    def tables(self, table_name_mapper: Callable[[str], str] = None) -> None:
         """
         Writes the data to a set of tables in a database.
 
@@ -60,6 +91,6 @@ class DataSinks(SparkConversionsMixin):
             wrapped_mapper = StringMapper(
                 self.spark._jvm._gateway_client, table_name_mapper
             )
-            self._datasinks.toTables(wrapped_mapper)
+            self._datasinks.tables(wrapped_mapper)
         else:
-            self._datasinks.toTables()
+            self._datasinks.tables()

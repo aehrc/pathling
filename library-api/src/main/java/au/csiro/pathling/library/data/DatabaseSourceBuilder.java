@@ -24,30 +24,37 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.DataSource;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
- * The {@link ReadableSource} builder that binds the client to a persistent data storage using
- * {@link Database} as it's data source. The database is represented as directory with delta files
- * with base names matching the resource types names. The database is referenced to by the warehouse
- * URL and the database name, which combined form the database URL. The database name defaults to
- * 'default'
+ * A {@link ReadableSource} builder that binds the client to a persistent data storage using
+ * {@link Database} as its data source.
+ * <p>
+ * The database is represented as directory with Delta files with base names matching the names of
+ * the resource types they store.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
 public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceBuilder> {
 
   @Nonnull
-  private StorageConfiguration.StorageConfigurationBuilder storageConfigurationBuilder = StorageConfiguration.builder();
+  private StorageConfiguration.StorageConfigurationBuilder storageConfigurationBuilder =
+      StorageConfiguration.builder();
+
+  @Nullable
+  private String path;
 
   protected DatabaseSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
+    this.path = null;
   }
 
   /**
    * Sets the storage configuration for the {@link Database} instance to use with this client.
    *
-   * @param storageConfiguration the storage configuration.
-   * @return this builder.
+   * @param storageConfiguration the storage configuration
+   * @return this builder
    */
   @Nonnull
   public DatabaseSourceBuilder withStorageConfiguration(
@@ -59,33 +66,28 @@ public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceB
   /**
    * Sets the URL of the warehouse use with this source.
    *
-   * @param warehouseUrl the warehouse URL.
-   * @return this builder.
+   * @param path the storage path to use
+   * @return this builder
    */
   @Nonnull
-  public DatabaseSourceBuilder withWarehouseUrl(@Nonnull final String warehouseUrl) {
-    this.storageConfigurationBuilder.warehouseUrl(warehouseUrl);
-    return this;
-  }
-
-  /**
-   * Sets the name of the database to use with this source.
-   *
-   * @param databaseName the database name.
-   * @return this builder.
-   */
-  @Nonnull
-  public DatabaseSourceBuilder withDatabaseName(@Nonnull final String databaseName) {
-    this.storageConfigurationBuilder.databaseName(databaseName);
+  public DatabaseSourceBuilder withPath(@Nonnull final String path) {
+    this.path = path;
     return this;
   }
 
   @Nonnull
   @Override
   protected DataSource buildDataSource() {
-    return new Database(requireNonNull(storageConfigurationBuilder.build()),
-        pathlingContext.getSpark(),
-        pathlingContext.getFhirEncoders());
+    if (path == null) {
+      return new Database(requireNonNull(storageConfigurationBuilder.build()),
+          pathlingContext.getSpark(),
+          pathlingContext.getFhirEncoders());
+    } else {
+      return new Database(requireNonNull(storageConfigurationBuilder.build()),
+          pathlingContext.getSpark(),
+          pathlingContext.getFhirEncoders(),
+          path);
+    }
   }
 
 }

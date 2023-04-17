@@ -44,7 +44,7 @@ public class QueriesTest {
         terminologyServiceFactory);
 
     readableSource = pathlingCtx.read()
-        .fromNdjsonDir(FHIR_JSON_DATA_PATH.toUri().toString());
+        .ndjson(FHIR_JSON_DATA_PATH.toUri().toString());
   }
 
   /**

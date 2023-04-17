@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,15 +42,14 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public abstract class PersistenceScheme {
 
   /**
-   * @param warehouseUrl the URL of the warehouse location
-   * @param databaseName the name of the database within the warehouse
+   * @param path the URL of the warehouse location
    * @param resourceType the resource type to be read or written to
    * @return the URL of the resource within the warehouse
    */
   @Nonnull
-  public static String getTableUrl(@Nonnull final String warehouseUrl,
-      @Nonnull final String databaseName, @Nonnull final ResourceType resourceType) {
-    return String.join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
+  public static String getTableUrl(@Nonnull final String path,
+      @Nonnull final ResourceType resourceType) {
+    return safelyJoinPaths(path, fileNameForResource(resourceType));
   }
 
   /**
@@ -153,4 +153,53 @@ public abstract class PersistenceScheme {
     return warehouseLocation;
   }
 
+  /**
+   * Joins two paths together, taking care that URLs, Unix-style paths and Windows-style paths are
+   * catered for.
+   *
+   * @param first the first path
+   * @param second the second path
+   * @return the joined path
+   */
+  public static String safelyJoinPaths(@Nonnull final String first, @Nonnull final String second) {
+    try {
+      final URI uri = URI.create(first);
+      return uri.toString().replaceFirst("/$", "") + "/" + second;
+    } catch (final IllegalArgumentException e) {
+      return java.nio.file.Path.of(first, second).toString();
+    }
+  }
+
+  public enum ImportMode {
+    /**
+     * Results in all existing resources of the specified type to be deleted and replaced with the
+     * contents of the source file.
+     */
+    OVERWRITE("overwrite"),
+
+    /**
+     * Matches existing resources with updated resources in the source file based on their ID, and
+     * either update the existing resources or add new resources as appropriate.
+     */
+    MERGE("merge");
+
+    @Nonnull
+    @Getter
+    private final String code;
+
+    ImportMode(@Nonnull final String code) {
+      this.code = code;
+    }
+
+    @Nullable
+    public static ImportMode fromCode(@Nonnull final String code) {
+      for (final ImportMode mode : values()) {
+        if (mode.code.equals(code)) {
+          return mode;
+        }
+      }
+      return null;
+    }
+
+  }
 }

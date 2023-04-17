@@ -8,8 +8,6 @@ package au.csiro.pathling.utilities;
 
 import static java.util.function.Predicate.not;
 
-import java.net.URI;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
@@ -81,12 +79,4 @@ public abstract class Strings {
             Collectors.toList());
   }
 
-  public static String safelyJoinPaths(@Nonnull final String first, @Nonnull final String second) {
-    try {
-      final URI uri = URI.create(first);
-      return uri.toString().replaceFirst("/$", "") + "/" + second;
-    } catch (final IllegalArgumentException e) {
-      return Path.of(first, second).toString();
-    }
-  }
 }

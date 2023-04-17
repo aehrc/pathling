@@ -19,7 +19,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.query.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -44,7 +44,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("core & ga4gh")
 @Slf4j
-public class ScopeAwareDatabase extends DatabaseComponent {
+public class ScopeAwareDatabase extends CacheableDatabase {
 
   @Nonnull
   private final ServerConfiguration configuration;
