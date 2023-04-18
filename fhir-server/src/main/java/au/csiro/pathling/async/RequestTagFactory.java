@@ -62,7 +62,8 @@ public final class RequestTagFactory {
 
   RequestTagFactory(@Nonnull Cacheable state, @Nonnull Set<String> salientHeaderNames) {
     this.state = state;
-    this.salientHeaderNames = salientHeaderNames;
+    this.salientHeaderNames = salientHeaderNames.stream().map(String::toLowerCase)
+        .collect(Collectors.toUnmodifiableSet());
   }
 
   /**
@@ -86,7 +87,7 @@ public final class RequestTagFactory {
       @Nullable final Authentication authentication) {
     final Optional<String> currentCacheKey = state.getCacheKey();
     final Map<String, List<String>> salientHeaders = requestDetails.getHeaders().entrySet().stream()
-        .filter(entry -> salientHeaderNames.contains(entry.getKey()))
+        .filter(entry -> salientHeaderNames.contains(entry.getKey().toLowerCase()))
         .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     return new RequestTag(requestDetails.getCompleteUrl(),
         Optional.ofNullable(authentication).flatMap(a -> Optional.ofNullable(a.getPrincipal())),

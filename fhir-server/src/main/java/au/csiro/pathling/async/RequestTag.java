@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import lombok.ToString;
 import lombok.Value;
 
 /**
@@ -43,9 +42,19 @@ public class RequestTag implements JobTag {
   Optional<Object> requestPrincipal;
 
   @Nonnull
-  @ToString.Exclude
   Map<String, List<String>> varyHeaders;
 
   @Nonnull
   Optional<String> cacheKey;
+
+  //toString() is overridden to exclude the varyHeaders field, which can contain sensitive data.
+  @Override
+  public String toString() {
+    return "RequestTag(" +
+        "requestUrl='" + requestUrl + "'" +
+        ", requestPrincipal=" + requestPrincipal +
+        ", varyHeaders=List@" + Integer.toHexString(varyHeaders.hashCode())  +
+        ", cacheKey=" + cacheKey +
+        ')';
+  }
 }
