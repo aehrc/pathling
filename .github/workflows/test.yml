@@ -540,6 +540,7 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
+        id: pythoninstall
         with:
           python-version: 3.8
       - name: Cache Python packages
@@ -558,8 +559,8 @@ jobs:
             -DskipUtilitiesTests
             -DskipTerminologyTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
-          PYSPARK_PYTHON: ${{ env.python-path }}
-          PYSPARK_DRIVER_PYTHON: ${{ env.python-path }}
+          PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
+          PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
         run: >-
           mvn --batch-mode verify
           -pl lib/python -am
