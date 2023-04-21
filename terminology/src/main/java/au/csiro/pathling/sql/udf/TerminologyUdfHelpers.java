@@ -17,18 +17,18 @@
 
 package au.csiro.pathling.sql.udf;
 
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import java.util.Objects;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.hadoop.shaded.org.apache.curator.shaded.com.google.common.collect.Streams;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
 import scala.collection.JavaConverters;
 import scala.collection.mutable.WrappedArray;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.Objects;
-import java.util.stream.Stream;
-
-import static java.util.Objects.nonNull;
 
 /**
  * Helper functions for terminology UDFs.
@@ -46,11 +46,11 @@ public final class TerminologyUdfHelpers {
            : null;
   }
 
+  @SuppressWarnings("unchecked")
   @Nullable
   public static Stream<Coding> decodeOneOrMany(final @Nullable Object codingRowOrArray,
       final int argumentIndex) {
     if (codingRowOrArray instanceof WrappedArray<?>) {
-      //noinspection unchecked
       return decodeMany((WrappedArray<Row>) codingRowOrArray);
     } else if (codingRowOrArray instanceof Row || codingRowOrArray == null) {
       return decodeOne((Row) codingRowOrArray);

@@ -88,7 +88,7 @@ def test_datasource_from_ndjson_dir(test_query, ndjson_test_data_dir, pathling_c
 
 
 def test_datasource_from_delta_warehouse(test_query, test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.read.delta("file://" + test_data_dir)
+    data_source = pathling_ctx.read.delta("file://" + test_data_dir + "/delta")
 
     result = test_query.execute(data_source)
     assert result.columns == list(ResultRow)

@@ -58,6 +58,7 @@ abstract class EncodeMapPartitions<T extends IBaseResource> implements
   protected abstract Stream<IBaseResource> processResources(
       @Nonnull final Stream<IBaseResource> resources);
 
+  @SuppressWarnings("unchecked")
   @Override
   @Nonnull
   public Iterator<T> call(@Nonnull final Iterator<String> iterator) {
@@ -67,7 +68,6 @@ abstract class EncodeMapPartitions<T extends IBaseResource> implements
     final Stream<IBaseResource> parsedResources = StreamSupport.stream(iterable.spliterator(),
             false)
         .map(parser::parseResource);
-    //noinspection unchecked
     return (Iterator<T>) processResources(parsedResources).iterator();
   }
 

@@ -108,6 +108,11 @@ public class PathlingContext {
   /**
    * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession},
    * {@link FhirEncoders} and {@link TerminologyServiceFactory} objects.
+   *
+   * @param spark the Spark session to use
+   * @param fhirEncoders the FHIR encoders to use
+   * @param terminologyServiceFactory the terminology service factory to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark,
@@ -119,6 +124,11 @@ public class PathlingContext {
   /**
    * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
    * {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @param encodingConfiguration the encoding configuration to use
+   * @param terminologyConfiguration the terminology configuration to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -136,6 +146,9 @@ public class PathlingContext {
 
   /**
    * Creates a new {@link PathlingContext} using a pre-configured {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession) {
@@ -147,6 +160,10 @@ public class PathlingContext {
   /**
    * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
    * {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @param encodingConfig the encoding configuration to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -158,6 +175,10 @@ public class PathlingContext {
   /**
    * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
    * {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @param terminologyConfig the terminology configuration to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -433,5 +454,5 @@ public class PathlingContext {
   public DataSources read() {
     return new DataSources(this);
   }
-  
+
 }

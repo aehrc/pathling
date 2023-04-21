@@ -231,7 +231,8 @@ public class DataSources {
 
   /**
    * Creates a new data source builder for catalog data sources.
-   *
+   * 
+   * @param resourceTypeEnums the resource types to extract from the tables
    * @return the new builder
    */
   @Nonnull

@@ -49,7 +49,7 @@ public class ExtractRequest {
   Optional<Integer> limit;
 
   /**
-   * Returns the list of column expressions.
+   * @return The list of column expressions
    */
   @Nonnull
   public List<String> getColumns() {
@@ -63,6 +63,7 @@ public class ExtractRequest {
    * @param columns a set of columns expressions to execute over the data
    * @param filters the criteria by which the data should be filtered
    * @param limit the maximum number of rows to return
+   * @return the constructed instance of {@link ExtractRequest}
    */
   public static ExtractRequest fromUserInput(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<List<String>> columns, @Nonnull final Optional<List<String>> filters,

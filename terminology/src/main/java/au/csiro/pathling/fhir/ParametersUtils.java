@@ -50,6 +50,7 @@ public final class ParametersUtils {
     // Utility class
   }
 
+  @SuppressWarnings("unchecked")
   private static void setProperty(@Nonnull final Object bean, @Nonnull final String name,
       @Nullable final Object value) {
     try {
@@ -66,7 +67,6 @@ public final class ParametersUtils {
             descriptor.getWriteMethod().invoke(bean, value);
           }
         } else if (List.class.isAssignableFrom(descriptor.getPropertyType())) {
-          //noinspection unchecked
           ((List<Object>) currentValue).add(value);
         } else {
           throw new IllegalStateException("Overwriting value of singular property: " + name);

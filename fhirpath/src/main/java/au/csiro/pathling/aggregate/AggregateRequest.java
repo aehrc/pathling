@@ -20,11 +20,11 @@ package au.csiro.pathling.aggregate;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.query.ExpressionWithLabel;
+import au.csiro.pathling.utilities.Lists;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.query.ExpressionWithLabel;
-import au.csiro.pathling.utilities.Lists;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -49,15 +49,15 @@ public class AggregateRequest {
   List<String> filters;
 
   /**
-   * Returns the list of aggregation expressions.
+   * @return The list of aggregation expressions
    */
   @Nonnull
   public List<String> getAggregations() {
     return ExpressionWithLabel.expressionsAsList(aggregationsWithLabels);
   }
-  
+
   /**
-   * Returns the list of grouping expressions.
+   * @return The list of grouping expressions
    */
   @Nonnull
   public List<String> getGroupings() {
@@ -72,6 +72,7 @@ public class AggregateRequest {
    * @param aggregations A set of aggregation expressions to execute over the data
    * @param groupings Instructions on how the data should be grouped when aggregating
    * @param filters The criteria by which the data should be filtered
+   * @return A new instance of {@code AggregateRequest}
    */
   public static AggregateRequest fromUserInput(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<List<String>> aggregations,

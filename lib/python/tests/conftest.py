@@ -24,7 +24,6 @@ from pytest import fixture
 from pathling import PathlingContext
 from pathling.etc import find_jar as find_pathling_jar
 
-
 HERE = os.path.abspath(os.path.dirname(__file__))
 LIB_API_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "..", "library-api"))
 TEST_DATA_DIR = os.path.join(LIB_API_DIR, "src", "test", "resources", "test-data")
@@ -50,7 +49,7 @@ def pathling_ctx(request):
     spark = (
         SparkSession.builder.appName("pathling-test")
         .master("local[1]")
-        .config("spark.jars", find_pathling_jar())
+        .config("spark.jars", find_pathling_jar(verbose=True))
         .config("spark.sql.warehouse.dir", mkdtemp())
         .config("spark.driver.memory", "4g")
         .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")

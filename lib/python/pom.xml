@@ -207,7 +207,7 @@
                   <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <executable>py.test</executable>
+                  <executable>/Users/gri306/Code/pathling/.venv/bin/pytest</executable>
                   <workingDirectory>${project.basedir}</workingDirectory>
                   <arguments>
                     <argument>-x</argument>

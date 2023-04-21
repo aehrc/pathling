@@ -115,6 +115,7 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
+            -DskipFhirPathTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -557,6 +558,8 @@ jobs:
             -DskipUtilitiesTests
             -DskipTerminologyTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+          PYSPARK_PYTHON: ${{ env.python-path }}
+          PYSPARK_DRIVER_PYTHON: ${{ env.python-path }}
         run: >-
           mvn --batch-mode verify
           -pl lib/python -am

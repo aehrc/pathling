@@ -43,12 +43,14 @@ public class SupportFunctionsTests {
         SupportFunctions.baseNameWithQualifierToResource("file:///foo.yyy/bar/Procedure.ICU.json"));
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testIdentityTransformer() {
     final Dataset<Row> mockDataset = mock(Dataset.class);
     assertEquals(mockDataset, SupportFunctions.identityTransformer(mockDataset, "Patient"));
   }
 
+  @SuppressWarnings("unchecked")
   @Test
   public void testTextEncodingTransformer() {
     final Dataset<Row> mockDataset = mock(Dataset.class);
