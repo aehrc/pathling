@@ -30,12 +30,12 @@
       <artifactId>spark-catalyst_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-client-api</artifactId>
+      <groupId>ca.uhn.hapi.fhir</groupId>
+      <artifactId>hapi-fhir-structures-r4</artifactId>
     </dependency>
     <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>org.hl7.fhir.utilities</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-api</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
@@ -64,6 +64,7 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>

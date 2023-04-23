@@ -50,36 +50,26 @@
       <artifactId>fhirpath</artifactId>
     </dependency>
 
-    <!-- Spring Boot -->
+    <!-- Apache Spark -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-configuration-processor</artifactId>
-      <optional>true</optional>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-aop</artifactId>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-core_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-security</artifactId>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aws</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-oauth2-resource-server</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-oauth2-jose</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-test</artifactId>
-      <scope>test</scope>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
     </dependency>
 
     <!-- HAPI FHIR -->
@@ -105,32 +95,36 @@
       <artifactId>woodstox-core</artifactId>
     </dependency>
 
-    <!-- Apache Spark -->
+    <!-- Spring Boot -->
     <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>jakarta.servlet</groupId>
-          <artifactId>jakarta.servlet-api</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.delta</groupId>
-      <artifactId>delta-core_${pathling.scalaVersion}</artifactId>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-aws</artifactId>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-resource-server</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-jose</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <!-- ANTLR -->
@@ -139,10 +133,6 @@
       <artifactId>antlr4</artifactId>
     </dependency>
 
-    <dependency>
-      <artifactId>logback-classic</artifactId>
-      <groupId>ch.qos.logback</groupId>
-    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
@@ -163,7 +153,7 @@
     </dependency>
     <dependency>
       <groupId>com.amazonaws</groupId>
-      <artifactId>aws-java-sdk-s3</artifactId>
+      <artifactId>aws-java-sdk-bundle</artifactId>
     </dependency>
     <dependency>
       <groupId>io.sentry</groupId>
@@ -249,6 +239,14 @@
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
     </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+    </dependency>
 
     <!-- JMH libs for benchmarking-->
     <dependency>
@@ -275,13 +273,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <classifier>exec</classifier>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -313,7 +304,6 @@
                 <spark.logConf>true</spark.logConf>
                 <pathling.storage.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
-                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -331,7 +321,6 @@
                   file://${project.basedir}/src/test/resources/test-data
                 </pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
-                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -504,6 +493,7 @@
             <artifactId>maven-failsafe-plugin</artifactId>
             <executions>
               <execution>
+                <id>system-test</id>
                 <goals>
                   <goal>integration-test</goal>
                   <goal>verify</goal>
@@ -511,6 +501,7 @@
               </execution>
             </executions>
             <configuration>
+              <classesDirectory>${project.build.outputDirectory}</classesDirectory>
               <includes>
                 <include>**/*.java</include>
               </includes>

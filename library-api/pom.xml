@@ -52,6 +52,7 @@
       <artifactId>utilities</artifactId>
     </dependency>
 
+    <!-- Apache Spark -->
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
@@ -80,6 +81,7 @@
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -94,10 +96,6 @@
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-structures-r4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>org.hl7.fhir.r4</artifactId>
     </dependency>
 
     <dependency>

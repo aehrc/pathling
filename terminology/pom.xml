@@ -32,9 +32,6 @@
 
   <name>Pathling Terminology</name>
   <description>Interact with a FHIR terminology server from Spark.</description>
-  <properties>
-    <pathling.infinispanVersion>14.0.5.Final</pathling.infinispanVersion>
-  </properties>
 
   <dependencies>
     <dependency>
@@ -83,12 +80,10 @@
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-core</artifactId>
-      <version>${pathling.infinispanVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.infinispan</groupId>
       <artifactId>infinispan-commons</artifactId>
-      <version>${pathling.infinispanVersion}</version>
     </dependency>
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -145,7 +140,6 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -158,15 +152,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <configuration>
-          <additionalDependencies>
-            <additionalDependency>
-              <groupId>org.infinispan</groupId>
-              <artifactId>infinispan-component-annotations</artifactId>
-              <version>${pathling.infinispanVersion}</version>
-            </additionalDependency>
-          </additionalDependencies>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>net.alchim31.maven</groupId>
