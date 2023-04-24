@@ -28,8 +28,10 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.EnumerableDataSource;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -136,9 +138,24 @@ public class DataSinks {
    * resource type.
    */
   public void tables() {
+    tables(null);
+  }
+
+  /**
+   * Writes the data in the data source to tables within the Spark catalog, named according to the
+   * resource type and prefixed with the provided schema name.
+   * <p>
+   * Any existing data in the tables will be overwritten.
+   *
+   * @param schema the schema name to write the tables to
+   */
+  public void tables(@Nullable final String schema) {
     for (final ResourceType resourceType : dataSource.getDefinedResources()) {
       final Dataset<Row> resourceDataset = dataSource.read(resourceType);
-      resourceDataset.write().saveAsTable(resourceType.toCode());
+      final String tableName = schema == null
+                               ? resourceType.toCode()
+                               : String.join(".", schema, resourceType.toCode());
+      resourceDataset.write().mode(SaveMode.Overwrite).saveAsTable(tableName);
     }
   }
 

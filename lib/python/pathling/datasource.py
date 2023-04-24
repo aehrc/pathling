@@ -203,6 +203,7 @@ class DataSources(SparkConversionsMixin):
         self,
         resource_types: Sequence[str],
         table_name_mapper: Callable[[str], str] = None,
+        schema: Optional[str] = None,
     ) -> DataSource:
         """
         Creates a data source from a set of Spark tables, where the table names are the resource
@@ -212,32 +213,29 @@ class DataSources(SparkConversionsMixin):
                tables.
         :param table_name_mapper: An optional function that can customize the mapping between
                resource type and the source table name.
+        :param schema: An optional schema name that should be used to qualify the table names.
         :return: A DataSource object that can be used to run queries against the data.
         """
         if table_name_mapper:
-            resource_types_enum = SetConverter().convert(
-                map(
-                    lambda resource_type: self.spark._jvm.org.hl7.fhir.r4.model.Enumerations.ResourceType.fromCode(
-                        resource_type
-                    ),
-                    resource_types,
-                ),
-                self.spark._jvm._gateway_client,
-            )
             wrapped_mapper = StringMapper(
                 self.spark._jvm._gateway_client, table_name_mapper
             )
-            return (
-                self._jdataSources.tableBuilder(resource_types_enum)
-                .withTableNameMapper(wrapped_mapper)
-                .build()
+            return self._wrap_ds(
+                self._jdataSources.tables(
+                    SetConverter().convert(
+                        resource_types, self.spark._jvm._gateway_client
+                    ),
+                    wrapped_mapper,
+                    schema,
+                )
             )
         else:
             return self._wrap_ds(
                 self._jdataSources.tables(
                     SetConverter().convert(
                         resource_types, self.spark._jvm._gateway_client
-                    )
+                    ),
+                    schema,
                 )
             )
 

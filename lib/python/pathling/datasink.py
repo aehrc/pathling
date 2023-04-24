@@ -13,7 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Callable
+from typing import Callable, Optional
 
 from pathling.core import SparkConversionsMixin, StringMapper
 from pathling.datasource import DataSource
@@ -80,17 +80,11 @@ class DataSinks(SparkConversionsMixin):
         )
         self._datasinks.delta(path, import_mode_enum)
 
-    def tables(self, table_name_mapper: Callable[[str], str] = None) -> None:
+    def tables(self, schema: Optional[str] = None) -> None:
         """
-        Writes the data to a set of tables in a database.
+        Writes the data to a set of tables in a database. Any existing data in the target tables
+        will be overwritten.
 
-        :param table_name_mapper: An optional function that can be used to customise the mapping of
-        the resource type to the table name.
+        :param schema: The name of the schema to write the tables to.
         """
-        if table_name_mapper:
-            wrapped_mapper = StringMapper(
-                self.spark._jvm._gateway_client, table_name_mapper
-            )
-            self._datasinks.tables(wrapped_mapper)
-        else:
-            self._datasinks.tables()
+        self._datasinks.tables(schema)

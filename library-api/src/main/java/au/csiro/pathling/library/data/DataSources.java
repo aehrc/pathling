@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.DataFrameReader;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -142,10 +144,42 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource tables(@Nonnull final Set<String> resourceTypes) {
+    return tables(resourceTypes, UnaryOperator.identity(), null);
+  }
+
+  /**
+   * Creates a new data source from a specified set of tables registered within the catalog. The
+   * table names are assumed to be the same as the resource types they contain. The schema from
+   * which the tables are read is specified.
+   *
+   * @param resourceTypes the resource types to extract from the tables
+   * @param schema the schema from which the tables are read
+   * @return the new data source
+   */
+  @Nonnull
+  public ReadableSource tables(@Nonnull final Set<String> resourceTypes,
+      @Nullable final String schema) {
+    return tables(resourceTypes, UnaryOperator.identity(), schema);
+  }
+
+  /**
+   * Creates a new data source from a specified set of tables registered within the catalog. The
+   * table names are determined by the provided function.
+   *
+   * @param resourceTypes the resource types to extract from the tables
+   * @param tableNameMapper a function that maps a resource type to a table name
+   * @param schema the schema from which the tables are read
+   * @return the new data source
+   */
+  @Nonnull
+  public ReadableSource tables(@Nonnull final Set<String> resourceTypes,
+      @Nonnull final UnaryOperator<String> tableNameMapper, @Nullable final String schema) {
     final Set<ResourceType> resourceTypeEnums = resourceTypes.stream()
         .map(ResourceType::fromCode)
         .collect(Collectors.toSet());
     return tableBuilder(resourceTypeEnums)
+        .withTableNameMapper(tableNameMapper)
+        .withSchema(schema)
         .build();
   }
 
