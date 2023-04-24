@@ -192,6 +192,7 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
+            -DskipFhirPathTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -284,21 +285,16 @@ jobs:
         with:
           name: terminology-surefire-reports
           path: terminology/target/surefire-reports
+      - name: Upload FHIRPath test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: fhirpath-surefire-reports
+          path: fhirpath/target/surefire-reports
       - name: Upload FHIR server test reports
         uses: actions/upload-artifact@v3
         with:
           name: fhir-server-3-surefire-reports
           path: fhir-server/target/surefire-reports
-      - name: Upload utilities test coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: utilities-coverage
-          path: "**/jacoco.xml"
-      - name: Upload terminology test coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: terminology-coverage
-          path: "**/jacoco.xml"
       - name: Upload FHIR server test coverage report
         uses: actions/upload-artifact@v3
         with:
@@ -635,16 +631,6 @@ jobs:
         with:
           name: encoders-coverage
           path: encoders-coverage
-      - name: Download utilities coverage report
-        uses: actions/download-artifact@v3
-        with:
-          name: utilities-coverage
-          path: utilities-coverage
-      - name: Download terminology coverage report
-        uses: actions/download-artifact@v3
-        with:
-          name: terminology-coverage
-          path: terminology-coverage
       - name: Download library API coverage report
         uses: actions/download-artifact@v3
         with:

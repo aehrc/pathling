@@ -91,6 +91,7 @@
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
     <pathling.slf4jVersion>1.7.36</pathling.slf4jVersion>
     <pathling.logbackVersion>1.2.11</pathling.logbackVersion>
+    <pathling.surefireVersion>2.22.2</pathling.surefireVersion>
   </properties>
 
   <modules>
@@ -704,7 +705,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>${pathling.surefireVersion}</version>
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
@@ -716,7 +717,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>${pathling.surefireVersion}</version>
           <configuration>
             <argLine>-Xmx4g -ea -Duser.timezone=UTC</argLine>
           </configuration>
