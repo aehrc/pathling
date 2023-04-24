@@ -59,8 +59,22 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource ndjson(@Nonnull final String ndjsonDir) {
+    return ndjson(ndjsonDir, SupportFunctions::baseNameWithQualifierToResource);
+  }
+
+  /**
+   * Creates a new data source from a directory containing NDJSON encoded FHIR resource data, with
+   * filenames determined by the provided function.
+   *
+   * @param ndjsonDir the URI of directory containing NDJSON files
+   * @param fileNameMapper a function that maps a filename to a list of resource types
+   * @return the new data source
+   */
+  @Nonnull
+  public ReadableSource ndjson(@Nonnull final String ndjsonDir,
+      @Nonnull final Function<String, List<String>> fileNameMapper) {
     return text(safelyJoinPaths(ndjsonDir, "*.ndjson"),
-        SupportFunctions::baseNameWithQualifierToResource,
+        fileNameMapper,
         FhirMimeTypes.FHIR_JSON);
   }
 
@@ -231,7 +245,7 @@ public class DataSources {
 
   /**
    * Creates a new data source builder for catalog data sources.
-   * 
+   *
    * @param resourceTypeEnums the resource types to extract from the tables
    * @return the new builder
    */

@@ -148,17 +148,10 @@ class DataSources(SparkConversionsMixin):
         :return: A DataSource object that can be used to run queries against the data.
         """
         if filename_mapper:
-            files_glob = (
-                self.spark._jvm.au.csiro.pathling.io.PersistenceScheme.safelyJoinPaths(
-                    path, "*.ndjson"
-                )
-            )
             wrapped_mapper = StringToStringListMapper(
                 self.spark._jvm._gateway_client, filename_mapper
             )
-            return self._wrap_ds(
-                self._jdataSources.text(files_glob, wrapped_mapper, MimeType.FHIR_JSON)
-            )
+            return self._wrap_ds(self._jdataSources.ndjson(path, wrapped_mapper))
         else:
             return self._wrap_ds(self._jdataSources.ndjson(path))
 
