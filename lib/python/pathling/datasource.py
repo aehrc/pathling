@@ -52,7 +52,7 @@ class DataSource(SparkConversionsMixin):
                 resource_type
             )
         )
-        return self._jds.read(resource_code)
+        return self._wrap_df(self._jds.read(resource_code))
 
     @property
     def write(self) -> "DataSinks":
