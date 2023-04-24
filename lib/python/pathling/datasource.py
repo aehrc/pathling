@@ -21,7 +21,7 @@ from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
-from pathling.core import ExpOrStr, StringMapper, StringToStringListMapper
+from pathling.core import ExpOrStr, StringToStringListMapper
 from pathling.core import SparkConversionsMixin
 from pathling.fhir import MimeType
 
@@ -201,43 +201,16 @@ class DataSources(SparkConversionsMixin):
 
     def tables(
         self,
-        resource_types: Sequence[str],
-        table_name_mapper: Callable[[str], str] = None,
         schema: Optional[str] = None,
     ) -> DataSource:
         """
         Creates a data source from a set of Spark tables, where the table names are the resource
         type codes.
 
-        :param resource_types: A sequence of resource type codes that should be extracted from the
-               tables.
-        :param table_name_mapper: An optional function that can customize the mapping between
-               resource type and the source table name.
         :param schema: An optional schema name that should be used to qualify the table names.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        if table_name_mapper:
-            wrapped_mapper = StringMapper(
-                self.spark._jvm._gateway_client, table_name_mapper
-            )
-            return self._wrap_ds(
-                self._jdataSources.tables(
-                    SetConverter().convert(
-                        resource_types, self.spark._jvm._gateway_client
-                    ),
-                    wrapped_mapper,
-                    schema,
-                )
-            )
-        else:
-            return self._wrap_ds(
-                self._jdataSources.tables(
-                    SetConverter().convert(
-                        resource_types, self.spark._jvm._gateway_client
-                    ),
-                    schema,
-                )
-            )
+        return self._wrap_ds(self._jdataSources.tables(schema))
 
     def text(
         self,

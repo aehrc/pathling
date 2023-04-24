@@ -25,12 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.DataFrameReader;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A factory for creating various different data sources capable of preparing FHIR data for query.
@@ -136,15 +133,14 @@ public class DataSources {
   }
 
   /**
-   * Creates a new data source from a specified set of tables registered within the catalog. The
-   * table names are assumed to be the same as the resource types they contain.
+   * Creates a new data source from a tables registered within the catalog. The table names are
+   * assumed to be the same as the resource types they contain.
    *
-   * @param resourceTypes the resource types to extract from the tables
    * @return the new data source
    */
   @Nonnull
-  public ReadableSource tables(@Nonnull final Set<String> resourceTypes) {
-    return tables(resourceTypes, UnaryOperator.identity(), null);
+  public ReadableSource tables() {
+    return tables(null);
   }
 
   /**
@@ -152,33 +148,12 @@ public class DataSources {
    * table names are assumed to be the same as the resource types they contain. The schema from
    * which the tables are read is specified.
    *
-   * @param resourceTypes the resource types to extract from the tables
    * @param schema the schema from which the tables are read
    * @return the new data source
    */
   @Nonnull
-  public ReadableSource tables(@Nonnull final Set<String> resourceTypes,
-      @Nullable final String schema) {
-    return tables(resourceTypes, UnaryOperator.identity(), schema);
-  }
-
-  /**
-   * Creates a new data source from a specified set of tables registered within the catalog. The
-   * table names are determined by the provided function.
-   *
-   * @param resourceTypes the resource types to extract from the tables
-   * @param tableNameMapper a function that maps a resource type to a table name
-   * @param schema the schema from which the tables are read
-   * @return the new data source
-   */
-  @Nonnull
-  public ReadableSource tables(@Nonnull final Set<String> resourceTypes,
-      @Nonnull final UnaryOperator<String> tableNameMapper, @Nullable final String schema) {
-    final Set<ResourceType> resourceTypeEnums = resourceTypes.stream()
-        .map(ResourceType::fromCode)
-        .collect(Collectors.toSet());
-    return tableBuilder(resourceTypeEnums)
-        .withTableNameMapper(tableNameMapper)
+  public ReadableSource tables(@Nullable final String schema) {
+    return new CatalogSourceBuilder(pathlingContext)
         .withSchema(schema)
         .build();
   }
@@ -276,17 +251,5 @@ public class DataSources {
     return new FileSystemSourceBuilder(pathlingContext);
   }
 
-
-  /**
-   * Creates a new data source builder for catalog data sources.
-   *
-   * @param resourceTypeEnums the resource types to extract from the tables
-   * @return the new builder
-   */
-  @Nonnull
-  public CatalogSourceBuilder tableBuilder(final Set<ResourceType> resourceTypeEnums) {
-    return new CatalogSourceBuilder(pathlingContext)
-        .withResourceTypes(resourceTypeEnums);
-  }
 
 }
