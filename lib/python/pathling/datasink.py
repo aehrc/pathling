@@ -64,7 +64,9 @@ class DataSinks(SparkConversionsMixin):
         """
         self._datasinks.parquet(path)
 
-    def delta(self, path: str, import_mode: ImportMode = ImportMode.OVERWRITE) -> None:
+    def delta(
+        self, path: str, import_mode: Optional[str] = ImportMode.OVERWRITE
+    ) -> None:
         """
         Writes the data to a directory of Delta files.
 
@@ -80,11 +82,22 @@ class DataSinks(SparkConversionsMixin):
         )
         self._datasinks.delta(path, import_mode_enum)
 
-    def tables(self, schema: Optional[str] = None) -> None:
+    def tables(
+        self,
+        schema: Optional[str] = None,
+        import_mode: Optional[str] = ImportMode.OVERWRITE,
+    ) -> None:
         """
-        Writes the data to a set of tables in a database. Any existing data in the target tables
-        will be overwritten.
+        Writes the data to a set of tables in the Spark catalog.
 
         :param schema: The name of the schema to write the tables to.
+        :param import_mode: The import mode to use when writing the data - "overwrite" will
+        overwrite any existing data, "merge" will merge the new data with the existing data based
+        on resource ID.
         """
-        self._datasinks.tables(schema)
+        import_mode_enum = (
+            self.spark._jvm.au.csiro.pathling.io.PersistenceScheme.ImportMode.fromCode(
+                import_mode
+            )
+        )
+        self._datasinks.tables(schema, import_mode_enum)

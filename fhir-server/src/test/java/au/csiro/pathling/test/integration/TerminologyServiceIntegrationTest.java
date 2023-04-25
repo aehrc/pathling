@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.CacheableDatabase;
+import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
@@ -101,7 +101,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   // Mocking the Database bean to avoid lengthy initialization
   @SuppressWarnings("unused")
   @MockBean
-  private CacheableDatabase database;
+  private Database database;
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;
@@ -178,10 +178,6 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     final Coding result1 = snomedCoding("267036007", "Dyspnea (finding)", version);
     final Coding result2 = snomedCoding("390870001",
         "Short of breath dressing/undressing (finding)", version);
-    // final Coding result3 = snomedCoding("1217110005",
-    //     "Dyspnea when bending forward (finding)", version);
-    // final Coding result4 = snomedCoding("161941007", "Dyspnea at rest (finding)", version);
-    // final Coding result5 = snomedCoding("60845006", "Dyspnea on exertion (finding)", version);
 
     assertEquals(5, result.size());
     assertEquals(ConceptMapEquivalence.INEXACT, result.get(0).getEquivalence());
@@ -272,13 +268,17 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
         List.of(Property.of("code", new CodeType("55915-3"))),
         terminologyService.lookup(LC_55915_3, "code"));
 
-    // TODO: Unexpected: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: [0dbaeea4-1bcc-40c0-b7b1-61fe4b4e188a]: A usable code system with URL uuid:unknown could not be resolved.
-
+    // TODO: Unexpected: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not 
+    //       Found: [0dbaeea4-1bcc-40c0-b7b1-61fe4b4e188a]: A usable code system with URL 
+    //       uuid:unknown could not be resolved.
     // assertEquals(
     //     Collections.emptyList(),
     //     terminologyService.lookup(UNKNOWN_SYSTEM_CODING, "display", null));
 
-    // TODO: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: [410fa0b5-50c4-42ba-a4f4-6e952d43a46f]: A usable code system with URL http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/19000101 could not be resolved.
+    // TODO: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: 
+    //       [410fa0b5-50c4-42ba-a4f4-6e952d43a46f]: A usable code system with URL 
+    //       http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/19000101 could 
+    //       not be resolved.
     // assertEquals(
     //     Collections.emptyList(),
     //     terminologyService.lookup(CD_SNOMED_403190006_VERSION_UNKN, "display", null));

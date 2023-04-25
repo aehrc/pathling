@@ -19,7 +19,6 @@ package au.csiro.pathling.library.data;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.DataSource;
@@ -36,31 +35,14 @@ import javax.annotation.Nullable;
  * @author Piotr Szul
  * @author John Grimes
  */
-public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceBuilder> {
-
-  @Nonnull
-  private StorageConfiguration.StorageConfigurationBuilder storageConfigurationBuilder =
-      StorageConfiguration.builder();
+public class DeltaSourceBuilder extends AbstractSourceBuilder<DeltaSourceBuilder> {
 
   @Nullable
   private String path;
 
-  protected DatabaseSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
+  public DeltaSourceBuilder(@Nonnull final PathlingContext pathlingContext) {
     super(pathlingContext);
     this.path = null;
-  }
-
-  /**
-   * Sets the storage configuration for the {@link Database} instance to use with this client.
-   *
-   * @param storageConfiguration the storage configuration
-   * @return this builder
-   */
-  @Nonnull
-  public DatabaseSourceBuilder withStorageConfiguration(
-      @Nonnull final StorageConfiguration storageConfiguration) {
-    this.storageConfigurationBuilder = storageConfiguration.toBuilder();
-    return this;
   }
 
   /**
@@ -70,7 +52,7 @@ public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceB
    * @return this builder
    */
   @Nonnull
-  public DatabaseSourceBuilder withPath(@Nonnull final String path) {
+  public DeltaSourceBuilder withPath(@Nonnull final String path) {
     this.path = path;
     return this;
   }
@@ -78,16 +60,8 @@ public class DatabaseSourceBuilder extends AbstractSourceBuilder<DatabaseSourceB
   @Nonnull
   @Override
   protected DataSource buildDataSource() {
-    if (path == null) {
-      return new Database(requireNonNull(storageConfigurationBuilder.build()),
-          pathlingContext.getSpark(),
-          pathlingContext.getFhirEncoders());
-    } else {
-      return new Database(requireNonNull(storageConfigurationBuilder.build()),
-          pathlingContext.getSpark(),
-          pathlingContext.getFhirEncoders(),
-          path);
-    }
+    return Database.forFileSystem(pathlingContext.getSpark(), pathlingContext.getFhirEncoders(),
+        requireNonNull(path), true);
   }
 
 }

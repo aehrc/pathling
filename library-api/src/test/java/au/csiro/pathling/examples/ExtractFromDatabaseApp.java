@@ -1,11 +1,9 @@
 package au.csiro.pathling.examples;
 
-import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.data.DeltaSourceBuilder;
 import au.csiro.pathling.library.data.ReadableSource;
 import au.csiro.pathling.library.query.ExtractQuery;
-import java.nio.file.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -15,10 +13,6 @@ public class ExtractFromDatabaseApp {
 
 
   public static void main(final String[] args) {
-
-    final String warehouseUrl = Path.of("fhir-server/src/test/resources/test-data").toAbsolutePath()
-        .toUri().toString();
-    System.out.printf("Warehouse URL: %s\n", warehouseUrl);
 
     final SparkSession spark = SparkSession.builder()
         .appName(ExtractFromJsonApp.class.getName())
@@ -30,10 +24,8 @@ public class ExtractFromDatabaseApp {
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final ReadableSource readableSource = ptc.read()
-        .databaseBuilder()
-        .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
-        .withStorageConfiguration(StorageConfiguration.forDatabase(warehouseUrl, "parquet"))
+    final ReadableSource readableSource = new DeltaSourceBuilder(ptc)
+        .withPath("fhir-server/src/test/resources/test-data/parquet")
         .build();
 
     final Dataset<Row> patientResult = readableSource.extract(ResourceType.PATIENT)

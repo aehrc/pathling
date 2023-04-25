@@ -17,21 +17,20 @@
 
 package au.csiro.pathling.library.data;
 
-import static au.csiro.pathling.io.PersistenceScheme.departitionResult;
-import static au.csiro.pathling.io.PersistenceScheme.safelyJoinPaths;
+import static au.csiro.pathling.io.FileSystemPersistence.departitionResult;
+import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
 
-import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.PersistenceScheme.ImportMode;
+import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.query.EnumerableDataSource;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SaveMode;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -73,7 +72,7 @@ public class DataSinks {
    */
   public void ndjson(@Nonnull final String path,
       @Nonnull final UnaryOperator<String> fileNameMapper) {
-    for (final ResourceType resourceType : dataSource.getDefinedResources()) {
+    for (final ResourceType resourceType : dataSource.getResourceTypes()) {
       final Dataset<String> jsonStrings = pathlingContext.decode(dataSource.read(resourceType),
           resourceType.toCode(), FhirMimeTypes.FHIR_JSON);
       final String resultUrl = safelyJoinPaths(path,
@@ -91,7 +90,7 @@ public class DataSinks {
    * @param path the directory to write the files to
    */
   public void parquet(@Nonnull final String path) {
-    for (final ResourceType resourceType : dataSource.getDefinedResources()) {
+    for (final ResourceType resourceType : dataSource.getResourceTypes()) {
       final Dataset<Row> dataset = dataSource.read(resourceType);
       final String resultUrl = safelyJoinPaths(path, resourceType.toCode() + ".parquet");
       dataset.write().parquet(resultUrl);
@@ -118,10 +117,39 @@ public class DataSinks {
    * resource ID
    */
   public void delta(@Nonnull final String path, @Nonnull final ImportMode importMode) {
-    final StorageConfiguration storageConfiguration = StorageConfiguration.builder().build();
-    final Database database = new Database(storageConfiguration, pathlingContext.getSpark(),
-        pathlingContext.getFhirEncoders(), path);
-    for (final ResourceType resourceType : dataSource.getDefinedResources()) {
+    final Database database = Database.forFileSystem(pathlingContext.getSpark(),
+        pathlingContext.getFhirEncoders(), path, true);
+    saveAllToDatabase(database, importMode);
+  }
+
+  /**
+   * Writes the data in the data source to tables within the Spark catalog, named according to the
+   * resource type.
+   * <p>
+   * Any existing data in the tables will be overwritten.
+   */
+  public void tables() {
+    final Database database = Database.forCatalog(pathlingContext.getSpark(),
+        pathlingContext.getFhirEncoders(), Optional.empty(), true);
+    saveAllToDatabase(database, ImportMode.OVERWRITE);
+  }
+
+  /**
+   * Writes the data in the data source to tables within the Spark catalog, named according to the
+   * resource type and prefixed with the provided schema name. Existing data in the tables will be
+   * dealt with according to the specified {@link ImportMode}.
+   *
+   * @param schema the schema name to write the tables to
+   */
+  public void tables(@Nullable final String schema, @Nonnull final ImportMode importMode) {
+    final Database database = Database.forCatalog(pathlingContext.getSpark(),
+        pathlingContext.getFhirEncoders(), Optional.ofNullable(schema), true);
+    saveAllToDatabase(database, importMode);
+  }
+
+  private void saveAllToDatabase(final Database database,
+      final @Nonnull ImportMode importMode) {
+    for (final ResourceType resourceType : dataSource.getResourceTypes()) {
       final Dataset<Row> dataset = dataSource.read(resourceType);
       if (importMode.equals(ImportMode.OVERWRITE)) {
         database.overwrite(resourceType, dataset);
@@ -130,32 +158,6 @@ public class DataSinks {
       } else {
         throw new IllegalArgumentException("Unsupported import mode: " + importMode);
       }
-    }
-  }
-
-  /**
-   * Writes the data in the data source to tables within the Spark catalog, named according to the
-   * resource type.
-   */
-  public void tables() {
-    tables(null);
-  }
-
-  /**
-   * Writes the data in the data source to tables within the Spark catalog, named according to the
-   * resource type and prefixed with the provided schema name.
-   * <p>
-   * Any existing data in the tables will be overwritten.
-   *
-   * @param schema the schema name to write the tables to
-   */
-  public void tables(@Nullable final String schema) {
-    for (final ResourceType resourceType : dataSource.getDefinedResources()) {
-      final Dataset<Row> resourceDataset = dataSource.read(resourceType);
-      final String tableName = schema == null
-                               ? resourceType.toCode()
-                               : String.join(".", schema, resourceType.toCode());
-      resourceDataset.write().mode(SaveMode.Overwrite).saveAsTable(tableName);
     }
   }
 

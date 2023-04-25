@@ -25,8 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.PersistenceScheme;
-import au.csiro.pathling.io.PersistenceScheme.ImportMode;
+import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.update.ImportExecutor;
@@ -120,7 +119,7 @@ class ImportTest extends ModificationTest {
   void mergeJsonFile() {
     final URL jsonURL = getResourceAsUrl("import/Patient_updates.ndjson");
     importExecutor.execute(
-        buildImportParameters(jsonURL, ResourceType.PATIENT, PersistenceScheme.ImportMode.MERGE));
+        buildImportParameters(jsonURL, ResourceType.PATIENT, ImportMode.MERGE));
 
     final Dataset<Row> result = database.read(ResourceType.PATIENT);
     final Dataset<Row> expected = new DatasetBuilder(spark)

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.library.data;
 
-import static au.csiro.pathling.io.PersistenceScheme.safelyJoinPaths;
+import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
 
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
@@ -129,7 +129,7 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource delta(@Nonnull final String path) {
-    return databaseBuilder().withPath(path).build();
+    return new DeltaSourceBuilder(pathlingContext).withPath(path).build();
   }
 
   /**
@@ -153,9 +153,7 @@ public class DataSources {
    */
   @Nonnull
   public ReadableSource tables(@Nullable final String schema) {
-    return new CatalogSourceBuilder(pathlingContext)
-        .withSchema(schema)
-        .build();
+    return new CatalogSourceBuilder(pathlingContext).withSchema(schema).build();
   }
 
   /**
@@ -229,16 +227,6 @@ public class DataSources {
   @Nonnull
   public DatasetSourceBuilder datasetBuilder() {
     return new DatasetSourceBuilder(pathlingContext);
-  }
-
-  /**
-   * Creates a new data source builder for database data sources.
-   *
-   * @return the new builder
-   */
-  @Nonnull
-  public DatabaseSourceBuilder databaseBuilder() {
-    return new DatabaseSourceBuilder(pathlingContext);
   }
 
   /**

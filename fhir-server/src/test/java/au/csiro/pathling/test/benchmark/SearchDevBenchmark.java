@@ -21,6 +21,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.ServerDatabase;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -50,9 +51,7 @@ import org.openjdk.jmh.infra.Blackhole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -94,7 +93,8 @@ public class SearchDevBenchmark {
     @ConditionalOnMissingBean
     public static Database database(@Nonnull final ServerConfiguration configuration,
         @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
-      return new Database(configuration.getStorage(), spark, fhirEncoders);
+      return new ServerDatabase(configuration.getStorage(), spark, fhirEncoders,
+          new ThreadPoolTaskExecutor());
     }
 
     public List<IBaseResource> execute(@Nonnull final Optional<StringAndListParam> filters) {

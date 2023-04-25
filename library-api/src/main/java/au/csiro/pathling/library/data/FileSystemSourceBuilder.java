@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.library.data;
 
-import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
+import static au.csiro.pathling.io.FileSystemPersistence.convertS3ToS3aUrl;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.library.PathlingContext;

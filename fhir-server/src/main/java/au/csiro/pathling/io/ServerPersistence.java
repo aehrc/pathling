@@ -1,12 +1,26 @@
+/*
+ * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * Organisation (CSIRO) ABN 41 687 119 230.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package au.csiro.pathling.io;
 
-import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.desc;
 
 import au.csiro.pathling.caching.Cacheable;
-import au.csiro.pathling.config.StorageConfiguration;
-import au.csiro.pathling.encoders.FhirEncoders;
 import io.delta.tables.DeltaTable;
 import java.io.IOException;
 import java.net.URI;
@@ -27,71 +41,53 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.stereotype.Component;
 
-@Component
-@Profile("(core | import) & !ga4gh")
+/**
+ * The file system-based persistence scheme used by Pathling Server.
+ *
+ * @author John Grimes
+ */
 @Slf4j
-public class CacheableDatabase extends Database implements Cacheable {
+public class ServerPersistence extends FileSystemPersistence implements PersistenceScheme,
+    Cacheable {
+
+  @Nonnull
+  private final ThreadPoolTaskExecutor executor;
+
+  private final int compactionThreshold;
 
   @Nonnull
   @Getter
   private Optional<String> cacheKey;
 
-  @Nonnull
-  protected final ThreadPoolTaskExecutor executor;
-
-  /**
-   * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
-   * database
-   * @param spark a {@link SparkSession} for interacting with Spark
-   * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
-   * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
-   */
-  public CacheableDatabase(@Nonnull final StorageConfiguration configuration,
-      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
-      @Nonnull final ThreadPoolTaskExecutor executor) {
-    super(configuration, spark, fhirEncoders);
+  public ServerPersistence(@Nonnull final SparkSession spark,
+      @Nonnull final String path, @Nonnull final ThreadPoolTaskExecutor executor,
+      final int compactionThreshold) {
+    super(spark, path);
     this.executor = executor;
+    this.compactionThreshold = compactionThreshold;
     this.cacheKey = buildCacheKeyFromDatabase();
   }
 
   @Override
-  public boolean cacheKeyMatches(@Nonnull final String otherKey) {
-    return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
+  public void invalidate(@Nonnull final ResourceType resourceType) {
+    super.invalidate(resourceType);
+    invalidateCache(resourceType);
+    compact(resourceType);
   }
 
   @Override
-  protected void onDataChange(@Nonnull final ResourceType resourceType,
-      @Nonnull final Optional<String> maybeTableUrl) {
-    final String tableUrl = maybeTableUrl.orElse(getTableUrl(path, resourceType));
-    invalidateCache(tableUrl);
-    compact(resourceType, tableUrl);
-  }
-
-  private void invalidateCache(final String tableUrl) {
-    executor.execute(() -> {
-      cacheKey = buildCacheKeyFromTable(tableUrl);
-      spark.sqlContext().clearCache();
-    });
-  }
-
-  @Nonnull
-  private Optional<String> buildCacheKeyFromTable(@Nonnull final String path) {
-    return latestUpdateToTable(path).map(this::cacheKeyFromTimestamp);
-  }
-
-  private Optional<String> buildCacheKeyFromDatabase() {
-    return latestUpdateToDatabase().map(this::cacheKeyFromTimestamp);
+  public boolean cacheKeyMatches(final String otherKey) {
+    return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
   }
 
   /**
-   * Checks the warehouse location and gets the latest snapshot timestamp found within all the
-   * tables.
+   * Determines the latest snapshot time from all resource tables within the database.
+   *
+   * @return the latest snapshot time, or empty if no snapshot time could be determined
    */
-  private Optional<Long> latestUpdateToDatabase() {
+  private Optional<Long> latestUpdate() {
     log.info("Querying latest snapshot from database: {}", path);
 
     @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
@@ -135,9 +131,9 @@ public class CacheableDatabase extends Database implements Cacheable {
         // Filter out any file names that don't match the pattern.
         .filter(path -> path.matches("^[^.]+\\.parquet$"))
         // Filter out anything that is not a Delta table.
-        .filter(path -> DeltaTable.isDeltaTable(spark, path))
+        .map(path -> DeltaTable.forPath(spark, path))
         // Get the latest history entry for each Delta table.
-        .map(this::latestUpdateToTable)
+        .map(ServerPersistence::latestUpdateToTable)
         // Filter out any tables which don't have history rows.
         .filter(Optional::isPresent)
         // Get the timestamp from the history row.
@@ -149,10 +145,14 @@ public class CacheableDatabase extends Database implements Cacheable {
            : Optional.ofNullable(Collections.max(timestamps));
   }
 
+  /**
+   * Queries a Delta table for the latest update time.
+   *
+   * @param deltaTable the Delta table to query
+   * @return the latest update time, or empty if no update time could be determined
+   */
   @Nonnull
-  private Optional<Long> latestUpdateToTable(@Nonnull final String path) {
-    log.debug("Querying latest snapshot for table: {}", path);
-    final DeltaTable deltaTable = DeltaTable.forPath(spark, path);
+  private static Optional<Long> latestUpdateToTable(@Nonnull final DeltaTable deltaTable) {
     @SuppressWarnings("RedundantCast") final Row[] head = (Row[]) deltaTable.history()
         .orderBy(desc("version"))
         .select("timestamp")
@@ -164,32 +164,70 @@ public class CacheableDatabase extends Database implements Cacheable {
     }
   }
 
+  /**
+   * Updates the cache key based upon the latest update time of the specified resource type.
+   *
+   * @param resourceType the resource type to update the cache key for
+   */
+  private void invalidateCache(final ResourceType resourceType) {
+    executor.execute(() -> {
+      final DeltaTable table = read(resourceType);
+      cacheKey = buildCacheKeyFromTable(table);
+      this.spark.sqlContext().clearCache();
+    });
+  }
+
+  /**
+   * Generates a new cache key based upon the latest update time of the specified table.
+   *
+   * @param table the table to generate the cache key for
+   * @return the cache key, or empty if no update time could be determined
+   */
+  @Nonnull
+  private Optional<String> buildCacheKeyFromTable(@Nonnull final DeltaTable table) {
+    return latestUpdateToTable(table).map(this::cacheKeyFromTimestamp);
+  }
+
+  /**
+   * Generates a new cache key based upon the latest update time across all resource types within
+   * the database.
+   *
+   * @return the cache key, or empty if no update time could be determined
+   */
+  private Optional<String> buildCacheKeyFromDatabase() {
+    return latestUpdate().map(this::cacheKeyFromTimestamp);
+  }
+
+  /**
+   * Converts a timestamp to a string cache key.
+   *
+   * @param timestamp the timestamp to convert
+   * @return the cache key
+   */
   @Nonnull
   private String cacheKeyFromTimestamp(@Nonnull final Long timestamp) {
     return Long.toString(timestamp, Character.MAX_RADIX);
   }
 
-
   /**
    * Compacts the table if it has a number of partitions that exceed the configured threshold.
    *
    * @param resourceType the resource type of the table to compact
-   * @param tableUrl the URL under which the table is stored
    * @see <a href="https://docs.delta.io/latest/best-practices.html#compact-files">Delta Lake
    * Documentation - Compact files</a>
    */
-  void compact(final @Nonnull ResourceType resourceType, @Nonnull final String tableUrl) {
-    final DeltaTable table = getDeltaTable(resourceType, tableUrl);
-    final int threshold = configuration.getCompactionThreshold();
+  private void compact(final @Nonnull ResourceType resourceType) {
+    final DeltaTable table = read(resourceType);
+    final String tableUrl = getTableUrl(path, resourceType);
     final int numPartitions = table.toDF().rdd().getNumPartitions();
-    if (numPartitions > threshold) {
+    if (numPartitions > compactionThreshold) {
 
       log.debug("Scheduling table compaction (number of partitions: {}, threshold: {}): {}",
-          numPartitions,
-          threshold, tableUrl);
+          numPartitions, compactionThreshold, tableUrl);
       executor.submit(() -> {
         log.debug("Commencing compaction: {}", tableUrl);
         read(resourceType)
+            .toDF()
             .repartition()
             .write()
             .option("dataChange", "false")
@@ -200,7 +238,7 @@ public class CacheableDatabase extends Database implements Cacheable {
       });
     } else {
       log.debug("Compaction not needed (number of partitions: {}, threshold: {})", numPartitions,
-          threshold);
+          compactionThreshold);
     }
   }
 

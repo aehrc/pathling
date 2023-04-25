@@ -26,8 +26,8 @@ import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.io.AccessRules;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.PersistenceScheme;
-import au.csiro.pathling.io.PersistenceScheme.ImportMode;
+import au.csiro.pathling.io.FileSystemPersistence;
+import au.csiro.pathling.io.ImportMode;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -134,9 +134,9 @@ public class ImportExecutor {
           .filter(param -> "mode".equals(param.getName()) &&
               param.getValue() instanceof CodeType)
           .findFirst()
-          .map(param -> PersistenceScheme.ImportMode.fromCode(
+          .map(param -> ImportMode.fromCode(
               ((CodeType) param.getValue()).asStringValue()))
-          .orElse(PersistenceScheme.ImportMode.OVERWRITE);
+          .orElse(ImportMode.OVERWRITE);
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
 
@@ -156,7 +156,7 @@ public class ImportExecutor {
           fhirEncoder);
 
       log.info("Importing {} resources (mode: {})", resourceType.toCode(), importMode.getCode());
-      if (importMode == PersistenceScheme.ImportMode.OVERWRITE) {
+      if (importMode == ImportMode.OVERWRITE) {
         database.overwrite(resourceType, resources.toDF());
       } else {
         database.merge(resourceType, resources.toDF());
@@ -180,7 +180,7 @@ public class ImportExecutor {
   private Dataset<String> readStringsFromUrl(@Nonnull final ParametersParameterComponent urlParam) {
     final String url = ((UrlType) urlParam.getValue()).getValueAsString();
     final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
-    final String convertedUrl = PersistenceScheme.convertS3ToS3aUrl(decodedUrl);
+    final String convertedUrl = FileSystemPersistence.convertS3ToS3aUrl(decodedUrl);
     final Dataset<String> jsonStrings;
     try {
       // Check that the user is authorized to execute the operation.

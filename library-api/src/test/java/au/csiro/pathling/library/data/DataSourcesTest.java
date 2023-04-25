@@ -102,7 +102,7 @@ public class DataSourcesTest {
                 .build()
         ),
         Arguments.arguments("with databaseBuilder()",
-            pathlingCtx.read().databaseBuilder()
+            new DeltaSourceBuilder(pathlingCtx)
                 .withPath(TEST_DELTA_DATA_PATH.toString())
                 .build()
         ),
@@ -135,8 +135,7 @@ public class DataSourcesTest {
 
   @ParameterizedTest(name = "DataSource: {0}")
   @MethodSource("dataSources")
-  public void testBuildsCorrectDataSource(final @Nonnull String name,
-      final @Nonnull ReadableSource readableSource) {
+  public void testBuildsCorrectDataSource(final @Nonnull ReadableSource readableSource) {
     final Dataset<Row> patientCount = readableSource.aggregate(ResourceType.PATIENT)
         .withAggregation("count()").execute();
     DatasetAssert.of(patientCount).hasRows(RowFactory.create(9));
@@ -153,7 +152,7 @@ public class DataSourcesTest {
             .ndjson("s3://pathling-test-data/ndjson/"));
     assertTrue(exception.getCause() instanceof ClassNotFoundException);
     assertEquals("Class org.apache.hadoop.fs.s3a.S3AFileSystem not found",
-        ((ClassNotFoundException) exception.getCause()).getMessage());
+        exception.getCause().getMessage());
   }
 
 }

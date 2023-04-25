@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.io;
 
-import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
-import static au.csiro.pathling.io.PersistenceScheme.departitionResult;
-import static au.csiro.pathling.io.PersistenceScheme.getFileSystem;
+import static au.csiro.pathling.io.FileSystemPersistence.convertS3ToS3aUrl;
+import static au.csiro.pathling.io.FileSystemPersistence.departitionResult;
+import static au.csiro.pathling.io.FileSystemPersistence.getFileSystem;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import javax.annotation.Nonnull;

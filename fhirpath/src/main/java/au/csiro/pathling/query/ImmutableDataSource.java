@@ -88,7 +88,7 @@ public class ImmutableDataSource implements EnumerableDataSource {
 
   @Override
   @Nonnull
-  public Set<ResourceType> getDefinedResources() {
+  public Set<ResourceType> getResourceTypes() {
     return resourceMap.keySet();
   }
 

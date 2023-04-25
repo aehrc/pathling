@@ -17,189 +17,69 @@
 
 package au.csiro.pathling.io;
 
-import static java.util.Objects.requireNonNull;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
+import io.delta.tables.DeltaMergeBuilder;
+import io.delta.tables.DeltaTable;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.DataFrameWriter;
+import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.slf4j.Logger;
 
 /**
- * Methods relating to the persistence of data.
+ * A scheme for the persistence of FHIR resource data to Delta tables.
  *
  * @author John Grimes
  */
-@Slf4j
-public abstract class PersistenceScheme {
+public interface PersistenceScheme {
+
+  Logger log = org.slf4j.LoggerFactory.getLogger(PersistenceScheme.class);
 
   /**
-   * @param path the URL of the warehouse location
-   * @param resourceType the resource type to be read or written to
-   * @return the URL of the resource within the warehouse
-   */
-  @Nonnull
-  public static String getTableUrl(@Nonnull final String path,
-      @Nonnull final ResourceType resourceType) {
-    return safelyJoinPaths(path, fileNameForResource(resourceType));
-  }
-
-  /**
-   * @param resourceType A HAPI {@link ResourceType} describing the type of resource
-   * @return The filename that should be used
-   */
-  @Nonnull
-  public static String fileNameForResource(@Nonnull final ResourceType resourceType) {
-    return resourceType.toCode() + ".parquet";
-  }
-
-  /**
-   * @param s3Url The S3 URL that should be converted
-   * @return A S3A URL
-   */
-  @Nonnull
-  public static String convertS3ToS3aUrl(@Nonnull final String s3Url) {
-    return s3Url.replaceFirst("s3:", "s3a:");
-  }
-
-  /**
-   * @param s3aUrl The S3A URL that should be converted
-   * @return A S3 URL
-   */
-  @Nonnull
-  public static String convertS3aToS3Url(@Nonnull final String s3aUrl) {
-    return s3aUrl.replaceFirst("s3a:", "s3:");
-  }
-
-  /**
-   * Convert a directory containing a single file partition into a single file.
+   * Read the Delta table corresponding to the given resource type.
    *
-   * @param spark the Spark session
-   * @param partitionedLocation the location URL containing the partitioned file
-   * @param departitionedLocation the desired URL of the resulting file
-   * @param extension the file extension used within the partitioned directory
-   * @return the location of the resulting file
+   * @param resourceType the resource type to be read
+   * @return the Delta table
    */
   @Nonnull
-  public static String departitionResult(@Nonnull final SparkSession spark,
-      @Nonnull final String partitionedLocation,
-      @Nonnull final String departitionedLocation, @Nonnull final String extension) {
-    return departitionResult(getFileSystem(spark, partitionedLocation), partitionedLocation,
-        departitionedLocation, extension);
-  }
+  DeltaTable read(@Nonnull ResourceType resourceType);
 
   /**
-   * Convert a directory containing a single file partition into a single file.
+   * Write the given dataset that contains the given resource type.
    *
-   * @param partitionedLocation a Hadoop {@link FileSystem} representing the location that both the
-   * partitioned and departitioned files are located in
-   * @param partitionedUrl the URL of the partitioned file
-   * @param departitionedUrl the desired URL of the resulting file
-   * @param extension the file extension used within the partitioned directory
-   * @return the location of the resulting file
+   * @param resourceType the resource type to be written
+   * @param writer the dataset to be written
+   */
+  void write(@Nonnull ResourceType resourceType, @Nonnull DataFrameWriter<Row> writer);
+
+  /**
+   * Merge the given dataset that contains the given resource type.
+   *
+   * @param resourceType the resource type to be merged
+   * @param merge the merge builder to be executed
+   */
+  void merge(@Nonnull ResourceType resourceType, @Nonnull DeltaMergeBuilder merge);
+
+  /**
+   * Check that the given resource type exists.
+   *
+   * @param resourceType the resource type to be checked
+   * @return true if the resource type exists
+   */
+  boolean exists(@Nonnull ResourceType resourceType);
+
+  /**
+   * Signals to the persistence scheme that the data for the given resource type has changed in a
+   * substantive way.
+   */
+  void invalidate(@Nonnull ResourceType resourceType);
+
+  /**
+   * Returns a set of all the resource types that are currently persisted.
    */
   @Nonnull
-  public static String departitionResult(@Nonnull final FileSystem partitionedLocation,
-      @Nonnull final String partitionedUrl, @Nonnull final String departitionedUrl,
-      @Nonnull final String extension) {
-    try {
-      final Path partitionedPath = new Path(partitionedUrl);
-      final FileStatus[] partitionFiles = partitionedLocation.listStatus(partitionedPath);
-      final String targetFile = Arrays.stream(partitionFiles)
-          .map(f -> f.getPath().toString())
-          .filter(f -> f.endsWith("." + extension))
-          .findFirst()
-          .orElseThrow(() -> new IOException("Partition file not found"));
-      log.info("Renaming result to: " + departitionedUrl);
-      partitionedLocation.rename(new Path(targetFile), new Path(departitionedUrl));
-      log.info("Cleaning up: " + partitionedUrl);
-      partitionedLocation.delete(partitionedPath, true);
-    } catch (final IOException e) {
-      throw new RuntimeException("Problem copying partition file", e);
-    }
-    return departitionedUrl;
-  }
+  Set<ResourceType> list();
 
-  /**
-   * Get a Hadoop {@link FileSystem} for the given location.
-   *
-   * @param spark the Spark session
-   * @param location the location URL to be accessed
-   * @return the {@link FileSystem} for the given location
-   */
-  @Nonnull
-  public static FileSystem getFileSystem(@Nonnull final SparkSession spark,
-      @Nonnull final String location) {
-    @Nullable final org.apache.hadoop.conf.Configuration hadoopConfiguration = spark.sparkContext()
-        .hadoopConfiguration();
-    requireNonNull(hadoopConfiguration);
-    @Nullable final FileSystem warehouseLocation;
-    try {
-      warehouseLocation = FileSystem.get(new URI(location), hadoopConfiguration);
-    } catch (final IOException e) {
-      throw new RuntimeException("Problem accessing location: " + location, e);
-    } catch (final URISyntaxException e) {
-      throw new RuntimeException("Problem parsing URL: " + location, e);
-    }
-    requireNonNull(warehouseLocation);
-    return warehouseLocation;
-  }
-
-  /**
-   * Joins two paths together, taking care that URLs, Unix-style paths and Windows-style paths are
-   * catered for.
-   *
-   * @param first the first path
-   * @param second the second path
-   * @return the joined path
-   */
-  public static String safelyJoinPaths(@Nonnull final String first, @Nonnull final String second) {
-    try {
-      final URI uri = URI.create(first);
-      return uri.toString().replaceFirst("/$", "") + "/" + second;
-    } catch (final IllegalArgumentException e) {
-      return java.nio.file.Path.of(first, second).toString();
-    }
-  }
-
-  public enum ImportMode {
-    /**
-     * Results in all existing resources of the specified type to be deleted and replaced with the
-     * contents of the source file.
-     */
-    OVERWRITE("overwrite"),
-
-    /**
-     * Matches existing resources with updated resources in the source file based on their ID, and
-     * either update the existing resources or add new resources as appropriate.
-     */
-    MERGE("merge");
-
-    @Nonnull
-    @Getter
-    private final String code;
-
-    ImportMode(@Nonnull final String code) {
-      this.code = code;
-    }
-
-    @Nullable
-    public static ImportMode fromCode(@Nonnull final String code) {
-      for (final ImportMode mode : values()) {
-        if (mode.code.equals(code)) {
-          return mode;
-        }
-      }
-      return null;
-    }
-
-  }
 }

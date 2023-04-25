@@ -22,16 +22,14 @@ import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * A {@link DataSource} that can provide the set of resources that it comprises.
+ * A {@link DataSource} that can provide the set of resources that it makes available.
  */
 public interface EnumerableDataSource extends DataSource {
 
   /**
-   * Returns the set of resources that are defined in this data source.
-   *
-   * @return the set of resources that are defined in this data source.
+   * @return the set of resources that are available through this data source
    */
   @Nonnull
-  Set<ResourceType> getDefinedResources();
+  Set<ResourceType> getResourceTypes();
 
 }

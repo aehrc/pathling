@@ -121,7 +121,7 @@ public class FileSystemSourceBuilderTest {
   }
 
   @Nonnull
-  private static String toTestDataUri(String other) {
+  private static String toTestDataUri(final String other) {
     return "file:" + MIXED_TEST_DATA_PATH.resolve(other);
   }
 
@@ -133,7 +133,7 @@ public class FileSystemSourceBuilderTest {
         .withReader(mockDataFrameReader)
         .build();
     assertEquals(Collections.emptySet(),
-        ((EnumerableDataSource) source.getDataSource()).getDefinedResources());
+        ((EnumerableDataSource) source.getDataSource()).getResourceTypes());
     verifyNoInteractions(mockDataFrameReader);
   }
 
@@ -150,7 +150,7 @@ public class FileSystemSourceBuilderTest {
         .build();
 
     assertEquals(ImmutableSet.of(ResourceType.PATIENT, ResourceType.OBSERVATION),
-        ((EnumerableDataSource) source.getDataSource()).getDefinedResources());
+        ((EnumerableDataSource) source.getDataSource()).getResourceTypes());
     assertEquals(patientDf, source.getDataSource().read(ResourceType.PATIENT));
     assertEquals(observationDf, source.getDataSource().read(ResourceType.OBSERVATION));
   }
@@ -184,7 +184,7 @@ public class FileSystemSourceBuilderTest {
 
     assertEquals(
         ImmutableSet.of(ResourceType.PATIENT, ResourceType.OBSERVATION, ResourceType.CONDITION),
-        ((EnumerableDataSource) source.getDataSource()).getDefinedResources());
+        ((EnumerableDataSource) source.getDataSource()).getResourceTypes());
     assertEquals(patientDf, source.getDataSource().read(ResourceType.PATIENT));
     assertEquals(conditionDf, source.getDataSource().read(ResourceType.CONDITION));
     assertEquals(observationDf, source.getDataSource().read(ResourceType.OBSERVATION));
@@ -215,7 +215,7 @@ public class FileSystemSourceBuilderTest {
 
     assertEquals(
         ImmutableSet.of(ResourceType.PATIENT, ResourceType.CONDITION),
-        ((EnumerableDataSource) source.getDataSource()).getDefinedResources());
+        ((EnumerableDataSource) source.getDataSource()).getResourceTypes());
     assertEquals(patientDf, source.getDataSource().read(ResourceType.PATIENT));
     assertEquals(conditionDf, source.getDataSource().read(ResourceType.CONDITION));
   }
