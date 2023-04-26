@@ -76,7 +76,7 @@ class DataSinks(SparkConversionsMixin):
         on resource ID.
         """
         import_mode_enum = (
-            self.spark._jvm.au.csiro.pathling.io.PersistenceScheme.ImportMode.fromCode(
+            self.spark._jvm.au.csiro.pathling.io.ImportMode.fromCode(
                 import_mode
             )
         )
