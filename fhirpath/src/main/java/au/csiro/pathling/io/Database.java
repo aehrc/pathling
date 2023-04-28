@@ -24,7 +24,7 @@ import static org.apache.spark.sql.functions.asc;
 
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.query.EnumerableDataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.ResourceAccess;
 import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
@@ -48,7 +48,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  */
 @Slf4j
-public class Database implements EnumerableDataSource {
+public class Database implements DataSource {
 
   @Nonnull
   protected final SparkSession spark;

@@ -33,64 +33,63 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author Piotr Szul
  */
-public class ExtractQuery extends AbstractQueryWithFilters<ExtractQuery> {
+public class ExtractQuery extends QueryBuilder<ExtractQuery> {
 
   @Nonnull
-  private final List<ExpressionWithLabel> columnsWithLabels = new ArrayList<>();
-
-  private ExtractQuery(@Nonnull final ResourceType subjectResource) {
-    super(subjectResource);
-  }
+  private final List<ExpressionWithLabel> columns = new ArrayList<>();
 
   @Nonnull
-  @Override
-  protected Dataset<Row> doExecute(@Nonnull final QueryExecutor queryExecutor) {
-    return queryExecutor.execute(buildRequest());
+  private Optional<Integer> limit = Optional.empty();
+
+  public ExtractQuery(@Nonnull final QueryDispatcher executor,
+      @Nonnull final ResourceType subjectResource) {
+    super(executor, subjectResource);
   }
 
   /**
-   * Adds a FHIRPath expression that represents a column to be extract in the result.
+   * Adds an expression that represents a column to be extracted in the result.
    *
-   * @param columnFhirpath the column expressions
+   * @param expression the column expression
    * @return this query
    */
   @Nonnull
-  public ExtractQuery withColumn(@Nonnull final String columnFhirpath) {
-    columnsWithLabels.add(ExpressionWithLabel.withExpressionAsLabel(columnFhirpath));
+  public ExtractQuery column(@Nonnull final String expression) {
+    columns.add(ExpressionWithLabel.withExpressionAsLabel(expression));
     return this;
   }
 
   /**
-   * Adds a FHIRPath expression that represents a column to be extract in the result with the
-   * explict label.
+   * Adds an expression that represents a labelled column to be extracted in the result.
    *
-   * @param columnFhirpath the column expressions
+   * @param expression the column expressions
    * @param label the label of the column
    * @return this query
    */
   @Nonnull
-  public ExtractQuery withColumn(@Nonnull final String columnFhirpath,
-      @Nonnull final String label) {
-    columnsWithLabels.add(ExpressionWithLabel.of(columnFhirpath, label));
+  public ExtractQuery column(@Nonnull final String expression, @Nonnull final String label) {
+    columns.add(ExpressionWithLabel.of(expression, label));
     return this;
   }
 
   /**
-   * Construct a new extract query instance for the given subject resource type.
+   * Sets a limit on the number of rows returned by this query.
    *
-   * @param subjectResourceType the type of the subject resource
-   * @return the new instance of (unbound) extract query
+   * @param limit the limit
+   * @return this query
    */
-  @Nonnull
-  public static ExtractQuery of(@Nonnull final ResourceType subjectResourceType) {
-    return new ExtractQuery(subjectResourceType);
+  public ExtractQuery limit(final int limit) {
+    this.limit = Optional.of(limit);
+    return this;
   }
 
   @Nonnull
-  private ExtractRequest buildRequest() {
-    return new ExtractRequest(subjectResource,
-        Lists.normalizeEmpty(columnsWithLabels),
+  @Override
+  public Dataset<Row> execute() {
+    final ExtractRequest request = new ExtractRequest(subjectResource,
+        Lists.normalizeEmpty(columns),
         Lists.normalizeEmpty(filters),
-        Optional.empty());
+        limit);
+    return dispatcher.dispatch(request);
   }
+
 }

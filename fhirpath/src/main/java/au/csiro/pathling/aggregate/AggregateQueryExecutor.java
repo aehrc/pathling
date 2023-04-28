@@ -30,7 +30,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.sql.SqlExpressions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;

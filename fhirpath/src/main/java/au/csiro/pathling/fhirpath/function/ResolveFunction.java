@@ -29,7 +29,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import java.util.Set;
@@ -81,8 +81,8 @@ public class ResolveFunction implements NamedFunction {
     } else {
       final FhirContext fhirContext = input.getContext().getFhirContext();
       final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
-      return resolveMonomorphicReference(inputPath, dataSource, fhirContext, resourceType, expression,
-          input.getContext());
+      return resolveMonomorphicReference(inputPath, dataSource, fhirContext, resourceType,
+          expression, input.getContext());
     }
   }
 

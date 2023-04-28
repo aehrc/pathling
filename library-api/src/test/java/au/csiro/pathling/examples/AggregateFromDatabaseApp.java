@@ -18,8 +18,7 @@
 package au.csiro.pathling.examples;
 
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.data.DeltaSourceBuilder;
-import au.csiro.pathling.library.data.ReadableSource;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -40,15 +39,14 @@ public class AggregateFromDatabaseApp {
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final ReadableSource readableSource = new DeltaSourceBuilder(ptc)
-        .withPath("fhir-server/src/test/resources/test-data/parquet")
-        .build();
+    final QueryableDataSource data = ptc.read()
+        .delta("fhir-server/src/test/resources/test-data/parquet");
 
-    final Dataset<Row> patientResult = readableSource.aggregate(ResourceType.PATIENT)
-        .withGrouping("gender")
-        .withGrouping("maritalStatus.coding")
-        .withAggregation("count()", "countOfPatients")
-        .withFilter("birthDate > @1957-06-06")
+    final Dataset<Row> patientResult = data.aggregate(ResourceType.PATIENT)
+        .grouping("gender")
+        .grouping("maritalStatus.coding")
+        .aggregation("count()", "countOfPatients")
+        .filter("birthDate > @1957-06-06")
         .execute();
 
     patientResult.show(5);

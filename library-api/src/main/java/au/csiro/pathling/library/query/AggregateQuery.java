@@ -32,92 +32,77 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author Piotr Szul
  */
-public class AggregateQuery extends AbstractQueryWithFilters<AggregateQuery> {
+public class AggregateQuery extends QueryBuilder<AggregateQuery> {
 
   @Nonnull
-  private final List<ExpressionWithLabel> groupingsWithLabels = new ArrayList<>();
+  private final List<ExpressionWithLabel> groupings = new ArrayList<>();
 
   @Nonnull
-  private final List<ExpressionWithLabel> aggregationsWithLabels = new ArrayList<>();
+  private final List<ExpressionWithLabel> aggregations = new ArrayList<>();
 
-  private AggregateQuery(@Nonnull final ResourceType subjectResource) {
-    super(subjectResource);
+  public AggregateQuery(@Nonnull final QueryDispatcher dispatcher,
+      @Nonnull final ResourceType subjectResource) {
+    super(dispatcher, subjectResource);
+  }
+
+  /**
+   * Adds an expression that represents an aggregation column.
+   *
+   * @param expression the column expressions
+   * @return this query
+   */
+  @Nonnull
+  public AggregateQuery aggregation(@Nonnull final String expression) {
+    aggregations.add(ExpressionWithLabel.withExpressionAsLabel(expression));
+    return this;
+  }
+
+  /**
+   * Adds an expression that represents a labelled aggregation column.
+   *
+   * @param expression the aggregation expression
+   * @param label the label for the column
+   * @return this query
+   */
+  @Nonnull
+  public AggregateQuery aggregation(@Nonnull final String expression, @Nonnull final String label) {
+    aggregations.add(ExpressionWithLabel.of(expression, label));
+    return this;
+  }
+
+  /**
+   * Adds an expression that represents a grouping column.
+   *
+   * @param expression the column expressions
+   * @return this query
+   */
+  @Nonnull
+  public AggregateQuery grouping(@Nonnull final String expression) {
+    groupings.add(ExpressionWithLabel.withExpressionAsLabel(expression));
+    return this;
+  }
+
+  /**
+   * Adds an expression that represents a labelled grouping column.
+   *
+   * @param expression the grouping expression
+   * @param label the label for the column
+   * @return this query
+   */
+  @Nonnull
+  public AggregateQuery grouping(@Nonnull final String expression, @Nonnull final String label) {
+    groupings.add(ExpressionWithLabel.of(expression, label));
+    return this;
   }
 
   @Nonnull
   @Override
-  protected Dataset<Row> doExecute(@Nonnull final QueryExecutor queryExecutor) {
-    return queryExecutor.execute(buildRequest());
-  }
-
-  /**
-   * Adds a FHIRPath expression that represents a grouping column.
-   *
-   * @param groupingFhirpath the column expressions
-   * @param label the label for the column
-   * @return this query
-   */
-  @Nonnull
-  public AggregateQuery withGrouping(@Nonnull final String groupingFhirpath,
-      @Nonnull final String label) {
-    groupingsWithLabels.add(ExpressionWithLabel.of(groupingFhirpath, label));
-    return this;
-  }
-
-  /**
-   * Adds a FHIRPath expression that represents an aggregation grouping column.
-   *
-   * @param groupingFhirpath the column expressions
-   * @return this query
-   */
-  @Nonnull
-  public AggregateQuery withGrouping(@Nonnull final String groupingFhirpath) {
-    groupingsWithLabels.add(ExpressionWithLabel.withExpressionAsLabel(groupingFhirpath));
-    return this;
-  }
-
-  /**
-   * Adds a FHIRPath expression that represents an aggregation column.
-   *
-   * @param aggregationFhirpath the column expressions
-   * @param label the label for the column
-   * @return this query
-   */
-  @Nonnull
-  public AggregateQuery withAggregation(@Nonnull final String aggregationFhirpath,
-      @Nonnull final String label) {
-    aggregationsWithLabels.add(ExpressionWithLabel.of(aggregationFhirpath, label));
-    return this;
-  }
-
-  /**
-   * Adds a FHIRPath expression that represents an aggregation column.
-   *
-   * @param aggregationFhirpath the column expressions
-   * @return this query
-   */
-  @Nonnull
-  public AggregateQuery withAggregation(@Nonnull final String aggregationFhirpath) {
-    aggregationsWithLabels.add(ExpressionWithLabel.withExpressionAsLabel(aggregationFhirpath));
-    return this;
-  }
-
-  /**
-   * Construct a new aggregate query instance for the given subject resource type.
-   *
-   * @param subjectResourceType the type of the subject resource.
-   * @return the new instance of (unbound) extract query.
-   */
-  @Nonnull
-  public static AggregateQuery of(@Nonnull final ResourceType subjectResourceType) {
-    return new AggregateQuery(subjectResourceType);
-  }
-
-  @Nonnull
-  private AggregateRequest buildRequest() {
-    return new AggregateRequest(subjectResource,
-        Lists.normalizeEmpty(aggregationsWithLabels),
-        Lists.normalizeEmpty(groupingsWithLabels),
+  public Dataset<Row> execute() {
+    final AggregateRequest request = new AggregateRequest(subjectResource,
+        Lists.normalizeEmpty(aggregations),
+        Lists.normalizeEmpty(groupings),
         Lists.normalizeEmpty(filters));
+    return dispatcher.dispatch(request);
   }
+
 }

@@ -1,8 +1,7 @@
 package au.csiro.pathling.examples;
 
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.data.ReadableSource;
-import au.csiro.pathling.library.query.ExtractQuery;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import java.nio.file.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -26,25 +25,25 @@ public class ExtractFromJsonApp {
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final ReadableSource readableSource = ptc.read()
+    final QueryableDataSource data = ptc.read()
         .ndjson(fhirData.toUri().toString());
 
-    final Dataset<Row> patientResult = readableSource.extract(ResourceType.PATIENT)
-        .withColumn("id")
-        .withColumn("gender")
-        .withColumn("reverseResolve(Condition.subject).code.coding.code")
-        .withFilter("gender = 'male'")
+    final Dataset<Row> patientResult = data.extract(ResourceType.PATIENT)
+        .column("id")
+        .column("gender")
+        .column("reverseResolve(Condition.subject).code.coding.code")
+        .filter("gender = 'male'")
         .execute()
         .limit(5);
 
     patientResult.show(5);
 
-    final Dataset<Row> conditionResult = ExtractQuery.of(ResourceType.CONDITION)
-        .withColumn("id")
-        .withColumn("code.coding.code", "code")
-        .withColumn("code.coding.display", "display_name")
-        .withColumn("subject.resolve().ofType(Patient).gender", "patient_gender")
-        .execute(readableSource)
+    final Dataset<Row> conditionResult = data.extract(ResourceType.CONDITION)
+        .column("id")
+        .column("code.coding.code", "code")
+        .column("code.coding.display", "display_name")
+        .column("subject.resolve().ofType(Patient).gender", "patient_gender")
+        .execute()
         .limit(5);
 
     conditionResult.show(5);

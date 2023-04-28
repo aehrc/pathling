@@ -26,7 +26,7 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
-import au.csiro.pathling.library.data.DataSources;
+import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
@@ -80,7 +80,6 @@ public class PathlingContext {
 
   @Nonnull
   private final TerminologyFunctions terminologyFunctions;
-
 
   private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
@@ -451,8 +450,8 @@ public class PathlingContext {
   }
 
   @Nonnull
-  public DataSources read() {
-    return new DataSources(this);
+  public DataSourceBuilder read() {
+    return new DataSourceBuilder(this);
   }
 
 }

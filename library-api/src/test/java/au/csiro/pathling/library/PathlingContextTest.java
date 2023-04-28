@@ -237,7 +237,7 @@ public class PathlingContextTest {
 
     patientsQuery.processAllAvailable();
     final long patientsCount = spark.sql("select count(*) from patients").head().getLong(0);
-    assertEquals(patientsCount, patientsCount);
+    assertEquals(9, patientsCount);
 
     final StreamingQuery conditionQuery = pathling.encode(jsonResources, "Condition",
             FhirMimeTypes.FHIR_JSON)

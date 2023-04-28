@@ -34,7 +34,7 @@ import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -74,7 +74,7 @@ class ResolveFunctionTest {
 
   @MockBean
   DataSource dataSource;
-  
+
   @Test
   void simpleResolve() {
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
