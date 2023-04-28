@@ -75,10 +75,8 @@ class DataSinks(SparkConversionsMixin):
         overwrite any existing data, "merge" will merge the new data with the existing data based
         on resource ID.
         """
-        import_mode_enum = (
-            self.spark._jvm.au.csiro.pathling.io.ImportMode.fromCode(
-                import_mode
-            )
+        import_mode_enum = self.spark._jvm.au.csiro.pathling.io.ImportMode.fromCode(
+            import_mode
         )
         self._datasinks.delta(path, import_mode_enum)
 
@@ -95,9 +93,10 @@ class DataSinks(SparkConversionsMixin):
         overwrite any existing data, "merge" will merge the new data with the existing data based
         on resource ID.
         """
-        import_mode_enum = (
-            self.spark._jvm.au.csiro.pathling.io.ImportMode.fromCode(
-                import_mode
-            )
+        import_mode_enum = self.spark._jvm.au.csiro.pathling.io.ImportMode.fromCode(
+            import_mode
         )
-        self._datasinks.tables(schema, import_mode_enum)
+        if schema:
+            self._datasinks.tables(schema, import_mode_enum)
+        else:
+            self._datasinks.tables(import_mode_enum)

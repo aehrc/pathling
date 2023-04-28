@@ -135,7 +135,10 @@ class DataSources(SparkConversionsMixin):
         return DataSource(jds, self._pc)
 
     def ndjson(
-        self, path, filename_mapper: Callable[[str], Sequence[str]] = None
+        self,
+        path,
+        extension: Optional[str] = "ndjson",
+        filename_mapper: Callable[[str], Sequence[str]] = None,
     ) -> DataSource:
         """
         Creates a data source from a directory containing NDJSON files. The files must be named with
@@ -143,6 +146,7 @@ class DataSources(SparkConversionsMixin):
         or "Observation.ndjson".
 
         :param path: The URI of the directory containing the NDJSON files.
+        :param extension: The file extension to use when searching for files. Defaults to "ndjson".
         :param filename_mapper: An optional function that maps a filename to the list of resource
                types that it contains.
         :return: A DataSource object that can be used to run queries against the data.
@@ -151,30 +155,11 @@ class DataSources(SparkConversionsMixin):
             wrapped_mapper = StringToStringListMapper(
                 self.spark._jvm._gateway_client, filename_mapper
             )
-            return self._wrap_ds(self._jdataSources.ndjson(path, wrapped_mapper))
+            return self._wrap_ds(
+                self._jdataSources.ndjson(path, extension, wrapped_mapper)
+            )
         else:
-            return self._wrap_ds(self._jdataSources.ndjson(path))
-
-    def parquet(self, path: str) -> DataSource:
-        """
-        Creates a data source from a directory containing Parquet tables. Each table must be named
-        according to the name of the resource type that it stores.
-
-        :param path: The URI of the directory containing the Parquet tables.
-        :return: A DataSource object that can be used to run queries against the data.
-        """
-        return self._wrap_ds(self._jdataSources.parquet(path))
-
-    def delta(self, path: str) -> DataSource:
-        """
-        Creates a data source from a directory containing Delta tables, as used by Pathling Server
-        for persistence. Each table must be named according to the name of the resource type that
-        it stores.
-
-        :param path: The URI of the directory containing the Delta tables.
-        :return: A DataSource object that can be used to run queries against the data.
-        """
-        return self._wrap_ds(self._jdataSources.delta(path))
+            return self._wrap_ds(self._jdataSources.ndjson(path, extension))
 
     def bundles(
         self,
@@ -199,48 +184,6 @@ class DataSources(SparkConversionsMixin):
             )
         )
 
-    def tables(
-        self,
-        schema: Optional[str] = None,
-    ) -> DataSource:
-        """
-        Creates a data source from a set of Spark tables, where the table names are the resource
-        type codes.
-
-        :param schema: An optional schema name that should be used to qualify the table names.
-        :return: A DataSource object that can be used to run queries against the data.
-        """
-        return self._wrap_ds(self._jdataSources.tables(schema))
-
-    def text(
-        self,
-        files_glob: str,
-        filename_mapper: Callable[[str], Sequence[str]],
-        mime_type: str = None,
-    ) -> DataSource:
-        """
-        Creates a data source from a set of text files matching the glob expression, that contain
-        FHIR resources encoded as text (e.g. JSON or XML), one resource per line.
-
-        To optimize the encoding process, filename mapping function helps to determine which files
-        contain which resource types.
-
-        :param files_glob: A glob expression that defines the files to be included in the
-               datasource.
-        :param filename_mapper: A function that maps a filename to a list of resource type codes
-              it contains.
-        :param mime_type:  The MIME type of the text file encoding. Defaults to
-               `application/fhir+json`.
-        :return: A DataSource object that can be used to run queries against the data.
-        """
-        return self._wrap_ds(
-            self._jdataSources.text(
-                files_glob,
-                self._lambda_to_function(filename_mapper),
-                mime_type or MimeType.FHIR_JSON,
-            )
-        )
-
     def datasets(self, resources: Dict[str, DataFrame]) -> DataSource:
         """
         Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
@@ -254,3 +197,40 @@ class DataSources(SparkConversionsMixin):
         for resource_code, resource_data in resources.items():
             jbuilder.withResource(resource_code, resource_data._jdf)
         return self._wrap_ds(jbuilder.build())
+
+    def parquet(self, path: str) -> DataSource:
+        """
+        Creates a data source from a directory containing Parquet tables. Each table must be named
+        according to the name of the resource type that it stores.
+
+        :param path: The URI of the directory containing the Parquet tables.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        return self._wrap_ds(self._jdataSources.parquet(path))
+
+    def delta(self, path: str) -> DataSource:
+        """
+        Creates a data source from a directory containing Delta tables, as used by Pathling Server
+        for persistence. Each table must be named according to the name of the resource type that
+        it stores.
+
+        :param path: The URI of the directory containing the Delta tables.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        return self._wrap_ds(self._jdataSources.delta(path))
+
+    def tables(
+        self,
+        schema: Optional[str] = None,
+    ) -> DataSource:
+        """
+        Creates a data source from a set of Spark tables, where the table names are the resource
+        type codes.
+
+        :param schema: An optional schema name that should be used to qualify the table names.
+        :return: A DataSource object that can be used to run queries against the data.
+        """
+        if schema:
+            return self._wrap_ds(self._jdataSources.tables(schema))
+        else:
+            return self._wrap_ds(self._jdataSources.tables())
