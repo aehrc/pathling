@@ -22,7 +22,7 @@ import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -50,7 +50,7 @@ class MultipleAggregationsAndResolveTest extends IntegrationTest {
   SparkSession spark;
 
   @MockBean
-  Database database;
+  CacheableDatabase database;
 
   @LocalServerPort
   int port;

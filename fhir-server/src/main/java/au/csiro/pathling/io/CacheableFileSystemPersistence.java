@@ -44,13 +44,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
- * The file system-based persistence scheme used by Pathling Server.
+ * A file system-based persistence scheme that facilitates caching.
  *
  * @author John Grimes
  */
 @Slf4j
-public class ServerPersistence extends FileSystemPersistence implements PersistenceScheme,
-    Cacheable {
+public class CacheableFileSystemPersistence extends FileSystemPersistence implements Cacheable {
 
   @Nonnull
   private final ThreadPoolTaskExecutor executor;
@@ -61,7 +60,7 @@ public class ServerPersistence extends FileSystemPersistence implements Persiste
   @Getter
   private Optional<String> cacheKey;
 
-  public ServerPersistence(@Nonnull final SparkSession spark,
+  public CacheableFileSystemPersistence(@Nonnull final SparkSession spark,
       @Nonnull final String path, @Nonnull final ThreadPoolTaskExecutor executor,
       final int compactionThreshold) {
     super(spark, path);
@@ -78,7 +77,7 @@ public class ServerPersistence extends FileSystemPersistence implements Persiste
   }
 
   @Override
-  public boolean cacheKeyMatches(final String otherKey) {
+  public boolean cacheKeyMatches(@Nonnull final String otherKey) {
     return cacheKey.map(key -> key.equals(otherKey)).orElse(false);
   }
 
@@ -87,6 +86,7 @@ public class ServerPersistence extends FileSystemPersistence implements Persiste
    *
    * @return the latest snapshot time, or empty if no snapshot time could be determined
    */
+  @Nonnull
   private Optional<Long> latestUpdate() {
     log.info("Querying latest snapshot from database: {}", path);
 
@@ -133,7 +133,7 @@ public class ServerPersistence extends FileSystemPersistence implements Persiste
         // Filter out anything that is not a Delta table.
         .map(path -> DeltaTable.forPath(spark, path))
         // Get the latest history entry for each Delta table.
-        .map(ServerPersistence::latestUpdateToTable)
+        .map(CacheableFileSystemPersistence::latestUpdateToTable)
         // Filter out any tables which don't have history rows.
         .filter(Optional::isPresent)
         // Get the timestamp from the history row.
@@ -169,7 +169,7 @@ public class ServerPersistence extends FileSystemPersistence implements Persiste
    *
    * @param resourceType the resource type to update the cache key for
    */
-  private void invalidateCache(final ResourceType resourceType) {
+  private void invalidateCache(@Nonnull final ResourceType resourceType) {
     executor.execute(() -> {
       final DeltaTable table = read(resourceType);
       cacheKey = buildCacheKeyFromTable(table);
@@ -194,6 +194,7 @@ public class ServerPersistence extends FileSystemPersistence implements Persiste
    *
    * @return the cache key, or empty if no update time could be determined
    */
+  @Nonnull
   private Optional<String> buildCacheKeyFromDatabase() {
     return latestUpdate().map(this::cacheKeyFromTimestamp);
   }

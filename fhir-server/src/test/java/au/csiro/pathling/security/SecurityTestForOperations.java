@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.ResourceProviderFactory;
-import au.csiro.pathling.io.ServerDatabase;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.update.BatchProvider;
@@ -55,7 +55,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
   BatchProvider batchProvider;
 
   @MockBean
-  ServerDatabase database;
+  CacheableDatabase database;
 
   @Autowired
   SparkSession sparkSession;

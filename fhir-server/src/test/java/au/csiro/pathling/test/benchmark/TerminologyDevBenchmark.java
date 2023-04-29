@@ -23,7 +23,7 @@ import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -86,7 +86,7 @@ public class TerminologyDevBenchmark {
     FhirEncoders fhirEncoders;
 
     @MockBean
-    Database database;
+    CacheableDatabase database;
 
     AggregateExecutor defaultExecutor;
 

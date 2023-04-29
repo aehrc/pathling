@@ -14,7 +14,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 /**
- * The database implementation used by Pathling Server.
+ * A database implementation that facilitates caching of results.
  *
  * @author John Grimes
  * @author Piotr Szul
@@ -22,9 +22,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("(core | import) & !ga4gh")
 @Slf4j
-public class ServerDatabase extends Database implements Cacheable {
-
-  protected ServerPersistence persistence;
+public class CacheableDatabase extends Database implements Cacheable {
 
   @Nonnull
   protected final ThreadPoolTaskExecutor executor;
@@ -36,10 +34,10 @@ public class ServerDatabase extends Database implements Cacheable {
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
    * @param executor a {@link ThreadPoolTaskExecutor} for executing asynchronous tasks
    */
-  public ServerDatabase(@Nonnull final StorageConfiguration configuration,
+  public CacheableDatabase(@Nonnull final StorageConfiguration configuration,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final ThreadPoolTaskExecutor executor) {
-    super(spark, fhirEncoders, new ServerPersistence(spark,
+    super(spark, fhirEncoders, new CacheableFileSystemPersistence(spark,
         safelyJoinPaths(configuration.getWarehouseUrl(), configuration.getDatabaseName()), executor,
         configuration.getCompactionThreshold()), configuration.getCacheDatasets());
     this.executor = executor;
@@ -47,12 +45,12 @@ public class ServerDatabase extends Database implements Cacheable {
 
   @Override
   public Optional<String> getCacheKey() {
-    return persistence.getCacheKey();
+    return ((CacheableFileSystemPersistence) persistence).getCacheKey();
   }
 
   @Override
   public boolean cacheKeyMatches(@Nonnull final String otherKey) {
-    return persistence.cacheKeyMatches(otherKey);
+    return ((CacheableFileSystemPersistence) persistence).cacheKeyMatches(otherKey);
   }
 
 }

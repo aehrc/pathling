@@ -20,8 +20,8 @@ package au.csiro.pathling.test.benchmark;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.ServerDatabase;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -93,7 +93,7 @@ public class SearchDevBenchmark {
     @ConditionalOnMissingBean
     public static Database database(@Nonnull final ServerConfiguration configuration,
         @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
-      return new ServerDatabase(configuration.getStorage(), spark, fhirEncoders,
+      return new CacheableDatabase(configuration.getStorage(), spark, fhirEncoders,
           new ThreadPoolTaskExecutor());
     }
 
