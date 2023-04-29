@@ -69,7 +69,8 @@ public class ErrorReportingInterceptor {
    * should be reported for investigation (e.g. to Sentry). We only want to report 500 series
    * errors, not errors such as resource not found and bad request.
    *
-   * @param exception the exception to test.
+   * @param exception the exception to test
+   * @return true if the exception should be reported, false otherwise
    */
   public static boolean isReportableException(
       @Nonnull final BaseServerResponseException exception) {

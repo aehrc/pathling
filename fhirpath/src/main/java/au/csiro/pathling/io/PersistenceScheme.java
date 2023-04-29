@@ -21,8 +21,6 @@ import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
 import java.util.Set;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import lombok.Getter;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -73,11 +71,13 @@ public interface PersistenceScheme {
   /**
    * Signals to the persistence scheme that the data for the given resource type has changed in a
    * substantive way.
+   *
+   * @param resourceType the resource type that has changed
    */
   void invalidate(@Nonnull ResourceType resourceType);
 
   /**
-   * Returns a set of all the resource types that are currently persisted.
+   * @return a set of all the resource types that are currently persisted
    */
   @Nonnull
   Set<ResourceType> list();

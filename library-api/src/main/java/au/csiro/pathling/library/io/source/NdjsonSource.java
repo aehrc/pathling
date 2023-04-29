@@ -26,9 +26,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * A class for making FHIR data within a set of NDJSON files available for query.
@@ -72,11 +69,12 @@ public class NdjsonSource extends FileSource {
    * Extracts the resource type from the provided base name. Allows for an optional qualifier
    * string, which is separated from the resource name by a period. For example, "Procedure.ICU"
    * will return ["Procedure"].
+   * <p>
+   * This method does not validate that the resource type is a valid FHIR resource type.
    *
    * @param baseName the base name of the file
    * @return a single-element set containing the resource type, or an empty set if the base name
    * does not match the expected format
-   * @implNote this method does not validate that the resource type is a valid FHIR resource type
    */
   @Nonnull
   public static Set<String> resourceNameWithQualifierMapper(@Nonnull final String baseName) {

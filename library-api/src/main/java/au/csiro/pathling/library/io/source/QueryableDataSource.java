@@ -32,16 +32,21 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 public interface QueryableDataSource extends DataSource {
 
+  /**
+   * @return a builder capable of writing this data source using various methods
+   */
   @Nonnull
   DataSinkBuilder write();
 
   /**
+   * @param subjectResource the subject resource type
    * @return a query builder for the aggregate operation
    */
   @Nonnull
   AggregateQuery aggregate(@Nonnull ResourceType subjectResource);
 
   /**
+   * @param subjectResource the subject resource type
    * @return a query builder for the extract operation
    */
   @Nonnull
