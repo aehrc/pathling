@@ -81,9 +81,6 @@
             <fileset>
               <directory>${project.basedir}/lib</directory>
             </fileset>
-            <fileset>
-              <directory>${project.basedir}/node_modules</directory>
-            </fileset>
           </filesets>
         </configuration>
       </plugin>

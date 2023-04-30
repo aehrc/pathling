@@ -922,6 +922,7 @@
                   <include>**/spark-warehouse/**</include>
                   <include>**/metastore_db/**</include>
                   <include>**/.ipynb_checkpoints/**</include>
+                  <include>**/node_modules/**</include>
                   <include>**/derby.log</include>
                 </includes>
               </fileset>
