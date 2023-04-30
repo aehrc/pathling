@@ -914,6 +914,19 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
           <version>3.2.0</version>
+          <configuration>
+            <filesets>
+              <fileset>
+                <directory>${project.basedir}</directory>
+                <includes>
+                  <include>**/spark-warehouse/**</include>
+                  <include>**/metastore_db/**</include>
+                  <include>**/.ipynb_checkpoints/**</include>
+                  <include>**/derby.log</include>
+                </includes>
+              </fileset>
+            </filesets>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>

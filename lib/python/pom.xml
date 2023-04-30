@@ -74,14 +74,7 @@
                 <include>.pytest_cache</include>
                 <include>pathling.egg-info</include>
                 <include>**/.ipynb_checkpoints</include>
-                <include>**/derby.log</include>
               </includes>
-            </fileset>
-            <fileset>
-              <directory>${project.basedir}/examples/metastore_db</directory>
-            </fileset>
-            <fileset>
-              <directory>${project.basedir}/examples/spark-warehouse</directory>
             </fileset>
           </filesets>
         </configuration>
