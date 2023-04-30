@@ -251,7 +251,7 @@ class DataSourcesTest {
     queryDeltaData(data);
 
     // Write the data back out to a temporary location.
-    data.write().delta(temporaryDirectory.resolve("delta").toString(), ImportMode.MERGE);
+    data.write().delta(temporaryDirectory.resolve("delta").toString(), ImportMode.MERGE.getCode());
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -287,7 +287,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables.
-    data.write().tables(ImportMode.MERGE);
+    data.write().tables(ImportMode.MERGE.getCode());
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().tables();
@@ -303,7 +303,7 @@ class DataSourcesTest {
         .ndjson(TEST_DATA_PATH.resolve("ndjson").toString());
 
     // Write the data back out to tables.
-    data.write().tables(ImportMode.OVERWRITE, "test");
+    data.write().tables(ImportMode.OVERWRITE.getCode(), "test");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read().tables("test");

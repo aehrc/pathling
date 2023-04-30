@@ -18,8 +18,10 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.QueryHelpers.createEmptyDataset;
+import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
 import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
 
 import au.csiro.pathling.config.StorageConfiguration;
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
@@ -128,11 +131,17 @@ public class Database implements DataSource {
   @ResourceAccess(ResourceAccess.AccessType.READ)
   @Override
   @Nonnull
-  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
-    return getMaybeNonExistentDeltaTable(resourceType)
+  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
+    return getMaybeNonExistentDeltaTable(requireNonNull(resourceType))
         .map(DeltaTable::toDF)
         // If there is no existing table, we return an empty table with the right shape.
         .orElseGet(() -> createEmptyDataset(spark, fhirEncoders, resourceType));
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    return read(getResourceType(resourceCode));
   }
 
   @Nonnull

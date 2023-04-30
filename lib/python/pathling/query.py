@@ -154,10 +154,10 @@ class ExtractQuery(QueryWithFilters):
         """
         jquery = data_source._jds.extract(self._subject_resource)
         for column in self._columns:
-            jquery.withColumn(*column.as_tuple())
+            jquery.column(*column.as_tuple())
         if self._filters:
             for f in self._filters:
-                jquery.withFilter(f)
+                jquery.filter(f)
         return jquery
 
 
@@ -234,12 +234,12 @@ class AggregateQuery(QueryWithFilters):
         """
         jquery = data_source._jds.aggregate(self._subject_resource)
         for aggregation in self._aggregations:
-            jquery.withAggregation(*aggregation.as_tuple())
+            jquery.aggregation(*aggregation.as_tuple())
 
         if self._groupings:
             for grouping in self._groupings:
-                jquery.withGrouping(*grouping.as_tuple())
+                jquery.grouping(*grouping.as_tuple())
         if self._filters:
             for f in self._filters:
-                jquery.withFilter(f)
+                jquery.filter(f)
         return jquery

@@ -64,19 +64,6 @@ def test_datasource_from_resources(test_query, ndjson_test_data_dir, pathling_ct
     ]
 
 
-def test_datasource_from_text_files(test_query, ndjson_test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.read.text(
-        os.path.join(ndjson_test_data_dir, "*.ndjson"),
-        lambda filepath: ["Patient", "Condition"],
-    )
-
-    result = test_query.execute(data_source)
-    assert result.columns == list(ResultRow)
-    assert result.collect() == [
-        ResultRow(71),
-    ]
-
-
 def test_datasource_from_ndjson_dir(test_query, ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
 

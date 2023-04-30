@@ -51,8 +51,8 @@ import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
- * A class designed to provide access to selected Pathling functionality from non-JVM language
- * libraries.
+ * A class designed to provide access to selected Pathling functionality from a language library
+ * context.
  *
  * @author Piotr Szul
  * @author John Grimes

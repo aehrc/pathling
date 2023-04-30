@@ -17,12 +17,16 @@
 
 package au.csiro.pathling.library.io.source;
 
+import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.library.PathlingContext;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -49,18 +53,37 @@ public class DatasetSource extends AbstractSource {
    * @param dataset the dataset
    * @return this data source, for chaining
    */
-  public DatasetSource dataset(@Nonnull final ResourceType resourceType,
-      @Nonnull final Dataset<Row> dataset) {
-    resourceMap.put(resourceType, dataset);
+  public DatasetSource dataset(@Nullable final ResourceType resourceType,
+      @Nullable final Dataset<Row> dataset) {
+    resourceMap.put(requireNonNull(resourceType), requireNonNull(dataset));
+    return this;
+  }
+
+  /**
+   * Add a dataset to this source.
+   *
+   * @param resourceCode the resource code
+   * @param dataset the dataset
+   * @return this data source, for chaining
+   */
+  public DatasetSource dataset(@Nullable final String resourceCode,
+      @Nullable final Dataset<Row> dataset) {
+    resourceMap.put(getResourceType(resourceCode), requireNonNull(dataset));
     return this;
   }
 
   @Nonnull
   @Override
-  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
-    return Optional.ofNullable(resourceMap.get(resourceType))
+  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
+    return Optional.ofNullable(resourceMap.get(requireNonNull(resourceType)))
         .orElseThrow(() -> new IllegalArgumentException(
             "No data found for resource type: " + resourceType));
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    return read(getResourceType(resourceCode));
   }
 
   @Nonnull

@@ -17,12 +17,15 @@
 
 package au.csiro.pathling.library.query;
 
+import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
+
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.utilities.Lists;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -31,6 +34,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * Represents an aggregate query.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
 public class AggregateQuery extends QueryBuilder<AggregateQuery> {
 
@@ -52,8 +56,9 @@ public class AggregateQuery extends QueryBuilder<AggregateQuery> {
    * @return this query
    */
   @Nonnull
-  public AggregateQuery aggregation(@Nonnull final String expression) {
-    aggregations.add(ExpressionWithLabel.withExpressionAsLabel(expression));
+  public AggregateQuery aggregation(@Nullable final String expression) {
+    aggregations.add(ExpressionWithLabel.withExpressionAsLabel(
+        requireNonBlank(expression, "Aggregation expression cannot be blank")));
     return this;
   }
 
@@ -65,8 +70,11 @@ public class AggregateQuery extends QueryBuilder<AggregateQuery> {
    * @return this query
    */
   @Nonnull
-  public AggregateQuery aggregation(@Nonnull final String expression, @Nonnull final String label) {
-    aggregations.add(ExpressionWithLabel.of(expression, label));
+  public AggregateQuery aggregation(@Nullable final String expression,
+      @Nullable final String label) {
+    aggregations.add(ExpressionWithLabel.of(
+        requireNonBlank(expression, "Aggregation expression cannot be blank"),
+        requireNonBlank(label, "Aggregation label cannot be blank")));
     return this;
   }
 
@@ -77,8 +85,9 @@ public class AggregateQuery extends QueryBuilder<AggregateQuery> {
    * @return this query
    */
   @Nonnull
-  public AggregateQuery grouping(@Nonnull final String expression) {
-    groupings.add(ExpressionWithLabel.withExpressionAsLabel(expression));
+  public AggregateQuery grouping(@Nullable final String expression) {
+    groupings.add(ExpressionWithLabel.withExpressionAsLabel(
+        requireNonBlank(expression, "Grouping expression cannot be blank")));
     return this;
   }
 
@@ -90,8 +99,10 @@ public class AggregateQuery extends QueryBuilder<AggregateQuery> {
    * @return this query
    */
   @Nonnull
-  public AggregateQuery grouping(@Nonnull final String expression, @Nonnull final String label) {
-    groupings.add(ExpressionWithLabel.of(expression, label));
+  public AggregateQuery grouping(@Nullable final String expression, @Nullable final String label) {
+    groupings.add(
+        ExpressionWithLabel.of(requireNonBlank(expression, "Grouping expression cannot be blank"),
+            requireNonBlank(label, "Grouping label cannot be blank")));
     return this;
   }
 

@@ -26,6 +26,7 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -89,7 +90,7 @@ public class ScopeAwareDatabase extends CacheableDatabase {
   @Nonnull
   @Override
   @SuppressWarnings("unused")
-  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
+  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
     final Dataset<Row> resources = super.read(resourceType);
 
     // If a passport scope is present, enforce the filters within it before returning the final

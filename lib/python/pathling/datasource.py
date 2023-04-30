@@ -21,8 +21,7 @@ from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
-from pathling.core import ExpOrStr, StringToStringListMapper
-from pathling.core import SparkConversionsMixin
+from pathling.core import ExpOrStr, StringToStringListMapper, SparkConversionsMixin
 from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
@@ -39,19 +38,14 @@ class DataSource(SparkConversionsMixin):
         self._jds = jds
         self.pc = pc
 
-    def read(self, resource_type: str) -> DataFrame:
+    def read(self, resource_code: str) -> DataFrame:
         """
         Reads the data for the given resource type from the data source.
 
-        :param resource_type: A string representing the type of FHIR resource to read data from.
+        :param resource_code: A string representing the type of FHIR resource to read data from.
 
         :return: A Spark DataFrame containing the data for the given resource type.
         """
-        resource_code = (
-            self.spark._jvm.org.hl7.fhir.r4.model.Enumerations.ResourceType.fromCode(
-                resource_type
-            )
-        )
         return self._wrap_df(self._jds.read(resource_code))
 
     @property
@@ -59,8 +53,6 @@ class DataSource(SparkConversionsMixin):
         """
         Provides access to a :class:`DataSinks` object that can be used to persist data.
         """
-        from pathling.datasink import DataSinks
-
         return DataSinks(self)
 
     def extract(
@@ -193,10 +185,10 @@ class DataSources(SparkConversionsMixin):
                and the values are the data frames containing the resource data.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        jbuilder = self._jdataSources.datasetBuilder()
+        jbuilder = self._jdataSources.datasets()
         for resource_code, resource_data in resources.items():
-            jbuilder.withResource(resource_code, resource_data._jdf)
-        return self._wrap_ds(jbuilder.build())
+            jbuilder.dataset(resource_code, resource_data._jdf)
+        return self._wrap_ds(jbuilder)
 
     def parquet(self, path: str) -> DataSource:
         """

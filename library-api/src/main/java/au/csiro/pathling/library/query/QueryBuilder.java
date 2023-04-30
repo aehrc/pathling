@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -58,7 +59,7 @@ public abstract class QueryBuilder<T extends QueryBuilder<?>> {
    * @return this query
    */
   @Nonnull
-  public T filter(@Nonnull final String filter) {
+  public T filter(@Nullable final String filter) {
     filters.add(requireNonBlank(filter, "Filter expression cannot be blank"));
     return (T) this;
   }

@@ -33,6 +33,7 @@ import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,7 +66,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
 
   @BeforeEach
   void setUp() {
-    when(database.read(any()))
+    when(database.read(any(Enumerations.ResourceType.class)))
         .thenReturn(new ResourceDatasetBuilder(sparkSession).withIdColumn().build());
   }
 

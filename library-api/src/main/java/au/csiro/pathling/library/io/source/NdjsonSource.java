@@ -48,7 +48,7 @@ public class NdjsonSource extends FileSource {
   }
 
   public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
-      final String extension) {
+      @Nonnull final String extension) {
     this(context, path, extension,
         // Use the "resource name with qualifier" mapper by default, which takes the resource name
         // from the file name and is tolerant of an optional qualifier string.
@@ -56,7 +56,8 @@ public class NdjsonSource extends FileSource {
   }
 
   public NdjsonSource(@Nonnull final PathlingContext context, @Nonnull final String path,
-      final String extension, final Function<String, Set<String>> fileNameMapper) {
+      @Nonnull final String extension,
+      @Nonnull final Function<String, Set<String>> fileNameMapper) {
     super(context, path, fileNameMapper, extension,
         // Read each line of input separately.
         context.getSpark().read().format("text"),

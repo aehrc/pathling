@@ -21,6 +21,7 @@ import au.csiro.pathling.io.Database;
 import au.csiro.pathling.library.PathlingContext;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -37,8 +38,14 @@ public class DatabaseSource extends AbstractSource {
 
   @Nonnull
   @Override
-  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
+  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
     return database.read(resourceType);
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    return database.read(resourceCode);
   }
 
   @Nonnull

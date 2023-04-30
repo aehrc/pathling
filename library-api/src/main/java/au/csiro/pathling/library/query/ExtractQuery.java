@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.library.query;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
+
 import au.csiro.pathling.extract.ExtractRequest;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.utilities.Lists;
@@ -24,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -32,6 +36,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * Represents an extract query.
  *
  * @author Piotr Szul
+ * @author John Grimes
  */
 public class ExtractQuery extends QueryBuilder<ExtractQuery> {
 
@@ -53,8 +58,9 @@ public class ExtractQuery extends QueryBuilder<ExtractQuery> {
    * @return this query
    */
   @Nonnull
-  public ExtractQuery column(@Nonnull final String expression) {
-    columns.add(ExpressionWithLabel.withExpressionAsLabel(expression));
+  public ExtractQuery column(@Nullable final String expression) {
+    columns.add(ExpressionWithLabel.withExpressionAsLabel(
+        requireNonBlank(expression, "Column expression cannot be blank")));
     return this;
   }
 
@@ -66,8 +72,10 @@ public class ExtractQuery extends QueryBuilder<ExtractQuery> {
    * @return this query
    */
   @Nonnull
-  public ExtractQuery column(@Nonnull final String expression, @Nonnull final String label) {
-    columns.add(ExpressionWithLabel.of(expression, label));
+  public ExtractQuery column(@Nullable final String expression, @Nullable final String label) {
+    columns.add(
+        ExpressionWithLabel.of(requireNonBlank(expression, "Column expression cannot be blank"),
+            requireNonBlank(label, "Column label cannot be blank")));
     return this;
   }
 
@@ -78,6 +86,7 @@ public class ExtractQuery extends QueryBuilder<ExtractQuery> {
    * @return this query
    */
   public ExtractQuery limit(final int limit) {
+    check(limit > 0, "Limit must be positive");
     this.limit = Optional.of(limit);
     return this;
   }

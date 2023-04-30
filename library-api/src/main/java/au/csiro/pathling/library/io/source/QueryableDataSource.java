@@ -21,6 +21,7 @@ import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -43,13 +44,27 @@ public interface QueryableDataSource extends DataSource {
    * @return a query builder for the aggregate operation
    */
   @Nonnull
-  AggregateQuery aggregate(@Nonnull ResourceType subjectResource);
+  AggregateQuery aggregate(@Nullable ResourceType subjectResource);
 
   /**
    * @param subjectResource the subject resource type
    * @return a query builder for the extract operation
    */
   @Nonnull
-  ExtractQuery extract(@Nonnull ResourceType subjectResource);
+  ExtractQuery extract(@Nullable ResourceType subjectResource);
+
+  /**
+   * @param subjectResource the subject resource code
+   * @return a query builder for the aggregate operation
+   */
+  @Nonnull
+  AggregateQuery aggregate(@Nullable String subjectResource);
+
+  /**
+   * @param subjectResource the subject resource code
+   * @return a query builder for the extract operation
+   */
+  @Nonnull
+  ExtractQuery extract(@Nullable String subjectResource);
 
 }

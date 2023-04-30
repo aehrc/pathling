@@ -30,14 +30,14 @@ public enum ImportMode {
     this.code = code;
   }
 
-  @Nullable
-  public static ImportMode fromCode(@Nonnull final String code) {
+  @Nonnull
+  public static ImportMode fromCode(@Nullable final String code) {
     for (final ImportMode mode : values()) {
       if (mode.code.equals(code)) {
         return mode;
       }
     }
-    return null;
+    throw new IllegalArgumentException("Unknown import mode: " + code);
   }
 
 }

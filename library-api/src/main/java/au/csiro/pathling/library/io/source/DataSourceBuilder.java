@@ -17,12 +17,14 @@
 
 package au.csiro.pathling.library.io.source;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
 import au.csiro.pathling.library.PathlingContext;
 import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -54,8 +56,8 @@ public class DataSourceBuilder {
    * @return the new data source
    */
   @Nonnull
-  public NdjsonSource ndjson(@Nonnull final String ndjsonDir) {
-    return new NdjsonSource(context, ndjsonDir);
+  public NdjsonSource ndjson(@Nullable final String ndjsonDir) {
+    return new NdjsonSource(context, requireNonNull(ndjsonDir));
   }
 
   /**
@@ -75,8 +77,8 @@ public class DataSourceBuilder {
    * @return the new data source
    */
   @Nonnull
-  public NdjsonSource ndjson(@Nonnull final String path, @Nonnull final String extension) {
-    return new NdjsonSource(context, path, extension);
+  public NdjsonSource ndjson(@Nullable final String path, @Nullable final String extension) {
+    return new NdjsonSource(context, requireNonNull(path), requireNonNull(extension));
   }
 
   /**
@@ -92,10 +94,11 @@ public class DataSourceBuilder {
    * @return the new data source
    */
   @Nonnull
-  public NdjsonSource ndjson(@Nonnull final String path,
-      @Nonnull final String extension,
-      @Nonnull final Function<String, Set<String>> fileNameMapper) {
-    return new NdjsonSource(context, path, extension, fileNameMapper);
+  public NdjsonSource ndjson(@Nullable final String path,
+      @Nullable final String extension,
+      @Nullable final Function<String, Set<String>> fileNameMapper) {
+    return new NdjsonSource(context, requireNonNull(path), requireNonNull(extension),
+        requireNonNull(fileNameMapper));
   }
 
   /**
@@ -114,12 +117,13 @@ public class DataSourceBuilder {
    * @return the new data source
    */
   @Nonnull
-  public BundlesSource bundles(@Nonnull final String path,
-      @Nonnull final Set<String> resourceTypes, @Nonnull final String mimeType) {
-    final Set<ResourceType> resourceTypeEnums = resourceTypes.stream()
+  public BundlesSource bundles(@Nullable final String path,
+      @Nullable final Set<String> resourceTypes, @Nullable final String mimeType) {
+    final Set<ResourceType> resourceTypeEnums = requireNonNull(resourceTypes).stream()
         .map(ResourceType::fromCode)
         .collect(toSet());
-    return new BundlesSource(context, path, mimeType, resourceTypeEnums);
+    return new BundlesSource(context, requireNonNull(path), requireNonNull(mimeType),
+        resourceTypeEnums);
   }
 
   /**
@@ -142,8 +146,8 @@ public class DataSourceBuilder {
    * @return the new data source
    */
   @Nonnull
-  public ParquetSource parquet(@Nonnull final String path) {
-    return new ParquetSource(context, path);
+  public ParquetSource parquet(@Nullable final String path) {
+    return new ParquetSource(context, requireNonNull(path));
   }
 
   /**
@@ -153,8 +157,8 @@ public class DataSourceBuilder {
    * @return the new data source
    */
   @Nonnull
-  public DeltaSource delta(@Nonnull final String path) {
-    return new DeltaSource(context, path);
+  public DeltaSource delta(@Nullable final String path) {
+    return new DeltaSource(context, requireNonNull(path));
   }
 
   /**
@@ -177,8 +181,8 @@ public class DataSourceBuilder {
    * @return the new data source
    */
   @Nonnull
-  public CatalogSource tables(@Nonnull final String schema) {
-    return new CatalogSource(context, schema);
+  public CatalogSource tables(@Nullable final String schema) {
+    return new CatalogSource(context, requireNonNull(schema));
   }
 
 }

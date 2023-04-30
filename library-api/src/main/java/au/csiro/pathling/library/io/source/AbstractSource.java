@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.library.io.source;
 
+import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
+import static java.util.Objects.requireNonNull;
+
 import au.csiro.pathling.aggregate.AggregateQueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.extract.ExtractQueryExecutor;
@@ -28,6 +31,7 @@ import au.csiro.pathling.library.query.ExtractQuery;
 import au.csiro.pathling.library.query.QueryDispatcher;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -75,14 +79,26 @@ public abstract class AbstractSource implements QueryableDataSource {
 
   @Nonnull
   @Override
-  public AggregateQuery aggregate(@Nonnull final ResourceType subjectResource) {
-    return new AggregateQuery(dispatcher, subjectResource);
+  public AggregateQuery aggregate(@Nullable final ResourceType subjectResource) {
+    return new AggregateQuery(dispatcher, requireNonNull(subjectResource));
   }
 
   @Nonnull
   @Override
-  public ExtractQuery extract(@Nonnull final ResourceType subjectResource) {
-    return new ExtractQuery(dispatcher, subjectResource);
+  public ExtractQuery extract(@Nullable final ResourceType subjectResource) {
+    return new ExtractQuery(dispatcher, requireNonNull(subjectResource));
+  }
+
+  @Nonnull
+  @Override
+  public AggregateQuery aggregate(@Nullable final String subjectResource) {
+    return aggregate(getResourceType(subjectResource));
+  }
+
+  @Nonnull
+  @Override
+  public ExtractQuery extract(@Nullable final String subjectResource) {
+    return extract(getResourceType(subjectResource));
   }
 
 }

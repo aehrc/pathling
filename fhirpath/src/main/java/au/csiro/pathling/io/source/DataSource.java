@@ -18,6 +18,7 @@ package au.csiro.pathling.io.source;
 
 import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -38,7 +39,16 @@ public interface DataSource {
    * @return the dataset with the resource data.
    */
   @Nonnull
-  Dataset<Row> read(@Nonnull final ResourceType resourceType);
+  Dataset<Row> read(@Nullable final ResourceType resourceType);
+
+  /**
+   * Gets the dataset for the specified FHIR resource type.
+   *
+   * @param resourceCode the code for the FHIR resource type
+   * @return the dataset with the resource data
+   */
+  @Nonnull
+  Dataset<Row> read(@Nullable final String resourceCode);
 
   /**
    * @return the set of resources that are available through this data source
