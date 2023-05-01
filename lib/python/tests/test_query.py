@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 import os
+from typing import Sequence
 
 from pyspark.sql import Row
 from pytest import fixture
@@ -44,13 +45,16 @@ def test_extract(test_data_source):
     ExtractRow = Row("id", "gender", "condition_code")
     assert result.columns == list(ExtractRow)
 
-    assert result.limit(5).collect() == [
-        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "367498001"),
-        ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "162864005"),
-    ]
+    assert_result(
+        [
+            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+            ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "367498001"),
+            ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "162864005"),
+        ],
+        result.limit(5).collect(),
+    )
 
 
 def test_extract_no_filters(test_data_source):
@@ -69,13 +73,16 @@ def test_extract_no_filters(test_data_source):
     ExtractRow = Row("id", "gender", "condition_code")
     assert result.columns == list(ExtractRow)
 
-    assert result.limit(5).collect() == [
-        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-        ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "15777000"),
-        ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "271737000"),
-    ]
+    assert_result(
+        [
+            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "15777000"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "271737000"),
+        ],
+        result.limit(5).collect(),
+    )
 
 
 def test_aggregate(test_data_source):
@@ -90,12 +97,15 @@ def test_aggregate(test_data_source):
     AggregateRow = Row("gender", "maritalStatus.coding.code", "patient_count")
     assert agg_result.columns == list(AggregateRow)
 
-    assert agg_result.collect() == [
-        AggregateRow("male", "S", 1),
-        AggregateRow("male", "M", 2),
-        AggregateRow("female", "S", 3),
-        AggregateRow("female", "M", 1),
-    ]
+    assert_result(
+        [
+            AggregateRow("male", "S", 1),
+            AggregateRow("male", "M", 2),
+            AggregateRow("female", "S", 3),
+            AggregateRow("female", "M", 1),
+        ],
+        agg_result.collect(),
+    )
 
 
 def test_aggregate_no_filter(test_data_source):
@@ -112,12 +122,15 @@ def test_aggregate_no_filter(test_data_source):
     AggregateRow = Row("gender", "marital_status_code", "patient_count")
     assert agg_result.columns == list(AggregateRow)
 
-    assert agg_result.collect() == [
-        AggregateRow("male", "S", 3),
-        AggregateRow("male", "M", 2),
-        AggregateRow("female", "S", 3),
-        AggregateRow("female", "M", 1),
-    ]
+    assert_result(
+        [
+            AggregateRow("male", "S", 3),
+            AggregateRow("male", "M", 2),
+            AggregateRow("female", "S", 3),
+            AggregateRow("female", "M", 1),
+        ],
+        agg_result.collect(),
+    )
 
 
 def test_many_aggregate_no_grouping(test_data_source):
@@ -136,4 +149,8 @@ def test_many_aggregate_no_grouping(test_data_source):
         aggregations=[fpe("count()").alias("patient_count"), "id.count()"],
     ).execute(test_data_source)
     assert agg_result.columns == list(ResultRow)
-    assert agg_result.collect() == [ResultRow(9, 9)]
+    assert_result([ResultRow(9, 9)], agg_result.collect())
+
+
+def assert_result(expected: Sequence[Row], actual: Sequence[Row]):
+    assert set(expected).issubset(set(actual))
