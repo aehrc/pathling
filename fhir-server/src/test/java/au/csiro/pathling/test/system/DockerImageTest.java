@@ -359,6 +359,7 @@ class DockerImageTest {
           assertJson("responses/DockerImageTest/importDataAndQuery.Parameters.json",
               writer.toString()
           );
+          log.info("Query completed successfully");
         } else {
           captureLogs();
           final OperationOutcome opOutcome = (OperationOutcome) jsonParser
