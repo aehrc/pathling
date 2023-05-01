@@ -131,7 +131,7 @@ ndjson.write.tables()
 
 # Read from tables.
 print(f"Reading from tables: {WAREHOUSE_DIR}")
-tables = pc.read.tables(["Patient", "Condition"])
+tables = pc.read.tables()
 aggregate(tables)
 extract(tables)
 
