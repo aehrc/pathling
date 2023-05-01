@@ -17,53 +17,69 @@
 
 package au.csiro.pathling.io;
 
+import io.delta.tables.DeltaMergeBuilder;
+import io.delta.tables.DeltaTable;
+import java.util.Set;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.DataFrameWriter;
+import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.slf4j.Logger;
 
 /**
- * Methods relating to the persistence of data.
+ * A scheme for the persistence of FHIR resource data to Delta tables.
  *
  * @author John Grimes
  */
-public abstract class PersistenceScheme {
+public interface PersistenceScheme {
+
+  Logger log = org.slf4j.LoggerFactory.getLogger(PersistenceScheme.class);
 
   /**
-   * @param warehouseUrl the URL of the warehouse location
-   * @param databaseName the name of the database within the warehouse
-   * @param resourceType the resource type to be read or written to
-   * @return the URL of the resource within the warehouse
+   * Read the Delta table corresponding to the given resource type.
+   *
+   * @param resourceType the resource type to be read
+   * @return the Delta table
    */
   @Nonnull
-  public static String getTableUrl(@Nonnull final String warehouseUrl,
-      @Nonnull final String databaseName, @Nonnull final ResourceType resourceType) {
-    return String.join("/", warehouseUrl, databaseName, fileNameForResource(resourceType));
-  }
+  DeltaTable read(@Nonnull ResourceType resourceType);
 
   /**
-   * @param resourceType A HAPI {@link ResourceType} describing the type of resource
-   * @return The filename that should be used
+   * Write the given dataset that contains the given resource type.
+   *
+   * @param resourceType the resource type to be written
+   * @param writer the dataset to be written
    */
-  @Nonnull
-  public static String fileNameForResource(@Nonnull final ResourceType resourceType) {
-    return resourceType.toCode() + ".parquet";
-  }
+  void write(@Nonnull ResourceType resourceType, @Nonnull DataFrameWriter<Row> writer);
 
   /**
-   * @param s3Url The S3 URL that should be converted
-   * @return A S3A URL
+   * Merge the given dataset that contains the given resource type.
+   *
+   * @param resourceType the resource type to be merged
+   * @param merge the merge builder to be executed
    */
-  @Nonnull
-  public static String convertS3ToS3aUrl(@Nonnull final String s3Url) {
-    return s3Url.replaceFirst("s3:", "s3a:");
-  }
+  void merge(@Nonnull ResourceType resourceType, @Nonnull DeltaMergeBuilder merge);
 
   /**
-   * @param s3aUrl The S3A URL that should be converted
-   * @return A S3 URL
+   * Check that the given resource type exists.
+   *
+   * @param resourceType the resource type to be checked
+   * @return true if the resource type exists
+   */
+  boolean exists(@Nonnull ResourceType resourceType);
+
+  /**
+   * Signals to the persistence scheme that the data for the given resource type has changed in a
+   * substantive way.
+   *
+   * @param resourceType the resource type that has changed
+   */
+  void invalidate(@Nonnull ResourceType resourceType);
+
+  /**
+   * @return a set of all the resource types that are currently persisted
    */
   @Nonnull
-  public static String convertS3aToS3Url(@Nonnull final String s3aUrl) {
-    return s3aUrl.replaceFirst("s3a:", "s3:");
-  }
+  Set<ResourceType> list();
 
 }

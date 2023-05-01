@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.config.HttpServerCachingConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
 import java.util.List;
@@ -49,7 +49,7 @@ class EntityTagInterceptorTest {
 
   static final String TAG = "abc123";
 
-  DatabaseComponent database;
+  CacheableDatabase database;
   ConformanceProvider conformanceProvider;
   HttpServletRequest request;
   RequestDetails requestDetails;
@@ -58,7 +58,7 @@ class EntityTagInterceptorTest {
 
   @BeforeEach
   void setUp() {
-    database = mock(DatabaseComponent.class);
+    database = mock(CacheableDatabase.class);
     conformanceProvider = mock(ConformanceProvider.class);
     request = mock(HttpServletRequest.class);
     requestDetails = mock(RequestDetails.class);

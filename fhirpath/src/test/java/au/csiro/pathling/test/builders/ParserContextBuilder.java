@@ -21,10 +21,10 @@ import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.query.DataSource;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.DefaultAnswer;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;

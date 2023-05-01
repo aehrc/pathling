@@ -93,24 +93,15 @@ public class AllResourcesEncodingTest {
 
   @ParameterizedTest
   @MethodSource("input")
-  public void testCanEncodeDecodeResource(
-      @Nonnull final Class<? extends IBaseResource> resourceClass) throws Exception {
-
-    final ExpressionEncoder<? extends IBaseResource> encoder = FHIR_ENCODERS
-        .of(resourceClass);
-
-    final ExpressionEncoder<? extends IBaseResource> resolvedEncoder = EncoderUtils
-        .defaultResolveAndBind(encoder);
-    final IBaseResource resourceInstance = resourceClass.getDeclaredConstructor().newInstance();
+  public <T extends IBaseResource> void testCanEncodeDecodeResource(
+      @Nonnull final Class<T> resourceClass) throws Exception {
+    final ExpressionEncoder<T> encoder = FHIR_ENCODERS.of(resourceClass);
+    final ExpressionEncoder<T> resolvedEncoder = EncoderUtils.defaultResolveAndBind(encoder);
+    final T resourceInstance = resourceClass.getDeclaredConstructor().newInstance();
     resourceInstance.setId("someId");
 
-    final Serializer<? extends IBaseResource> serializer = resolvedEncoder
-        .createSerializer();
-
-    //noinspection unchecked
-    final InternalRow serializedRow = ((Serializer<IBaseResource>) serializer)
-        .apply(resourceInstance);
-
+    final Serializer<T> serializer = resolvedEncoder.createSerializer();
+    final InternalRow serializedRow = serializer.apply(resourceInstance);
     final IBaseResource deserializedResource = resolvedEncoder.createDeserializer()
         .apply(serializedRow);
 

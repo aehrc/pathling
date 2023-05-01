@@ -33,7 +33,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -73,7 +73,7 @@ class ReverseResolveFunctionTest {
 
   @MockBean
   DataSource database;
-  
+
   @Test
   void reverseResolve() {
     final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)

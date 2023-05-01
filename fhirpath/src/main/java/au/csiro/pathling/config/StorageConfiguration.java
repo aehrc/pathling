@@ -32,10 +32,17 @@ import lombok.NoArgsConstructor;
  * Configuration relating to the storage of data.
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
 public class StorageConfiguration {
+
+
+  // Workaround the javadocs issue
+  // See: https://www.miredot.com/docs/faq/q/cannot-find-symbol-during-javadoc-phase/
+  public static class StorageConfigurationBuilder {
+
+  }
 
   /**
    * The base URL at which Pathling will look for data files, and where it will save data received

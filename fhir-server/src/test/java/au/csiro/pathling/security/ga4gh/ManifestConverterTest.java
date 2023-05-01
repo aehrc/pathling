@@ -51,7 +51,7 @@ import org.springframework.test.context.TestPropertySource;
     "pathling.storage.databaseName=parquet"})
 @Tag("Tranche2")
 @Slf4j
-@SpringBootTest(classes = {})
+@SpringBootTest
 class ManifestConverterTest extends AbstractParserTest {
 
   @Autowired
@@ -100,7 +100,7 @@ class ManifestConverterTest extends AbstractParserTest {
 
   @Test
   void convertsManifest() {
-    dataSource = new Database(configuration.getStorage(), spark, fhirEncoders);
+    dataSource = Database.forConfiguration(spark, fhirEncoders, configuration.getStorage());
 
     final PassportScope passportScope = new PassportScope();
     final VisaManifest manifest = new VisaManifest();

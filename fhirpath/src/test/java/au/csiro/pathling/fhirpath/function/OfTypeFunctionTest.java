@@ -32,7 +32,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
@@ -66,7 +66,7 @@ class OfTypeFunctionTest {
 
   @MockBean
   DataSource database;
-  
+
   @Test
   void resolvesPolymorphicReference() {
     final Dataset<Row> inputDataset = new DatasetBuilder(spark)

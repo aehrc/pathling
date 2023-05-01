@@ -28,7 +28,7 @@ import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.EnumSet;
@@ -218,6 +218,7 @@ public class ResourcePath extends NonLiteralPath {
         "Paths cannot be merged into a collection together: " + getExpression() + ", " + target
             .getExpression());
   }
+
   /**
    * @return The set of resource types currently supported by this implementation.
    */

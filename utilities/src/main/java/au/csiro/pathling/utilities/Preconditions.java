@@ -121,21 +121,23 @@ public abstract class Preconditions {
       throw new IllegalStateException(errorMessage);
     }
   }
-  
+
   /**
-   * Ensures that an {@link String} value is not blank, throwing a {@link IllegalArgumentException} if it is.
+   * Ensures that an {@link String} value is not blank, throwing a {@link IllegalArgumentException}
+   * if it is.
    *
    * @param string the object to check
+   * @param msg the message to use if an error is thrown
    * @return non blank string
    */
   @Nonnull
-  public static String requireNonBlank(@Nonnull final String string, @Nonnull final String msg) {
-    if (string.isBlank()) {
+  public static String requireNonBlank(@Nullable final String string, @Nonnull final String msg) {
+    if (string == null || string.isBlank()) {
       throw new IllegalArgumentException(msg);
     }
     return string;
   }
-  
+
   /**
    * Ensures the truth of an expression, throwing an {@link UnexpectedResponseException} with the
    * supplied formatted message if it does not evaluate as true.
@@ -153,8 +155,8 @@ public abstract class Preconditions {
 
 
   /**
-   * Converts a function which throws a {@link FHIRException} to a function that throws an {@link
-   * InvalidUserInputError} in the same situation.
+   * Converts a function which throws a {@link FHIRException} to a function that throws an
+   * {@link InvalidUserInputError} in the same situation.
    *
    * @param func the function throwing {@link FHIRException}
    * @param <T> the type of the function argument.

@@ -79,6 +79,7 @@ public class ExtractExecutor extends ExtractQueryExecutor {
    *
    * @param query an {@link ExtractRequest}
    * @param serverBase the base URL of this server, used to construct result URLs
+   * @param requestId the ID of the request
    * @return an {@link ExtractResponse}
    */
   @Nonnull

@@ -1,6 +1,7 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 
@@ -11,7 +12,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
@@ -26,18 +27,20 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import com.google.common.collect.Streams;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
+@Slf4j
 public class ExtractQueryExecutor extends QueryExecutor {
 
-  public ExtractQueryExecutor(QueryConfiguration configuration, FhirContext fhirContext,
-      SparkSession sparkSession, DataSource dataSource,
-      Optional<TerminologyServiceFactory> terminologyServiceFactory) {
+  public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
+      @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
   }
 
@@ -59,7 +62,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
         Collections.singletonList(inputContext.getIdColumn()));
     final List<FhirPathAndContext> columnParseResult =
         parseMaterializableExpressions(parserContext, query.getColumns(), "Column");
-    final List<FhirPath> columns = columnParseResult.stream()
+    final List<FhirPath> columnPaths = columnParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toUnmodifiableList());
 
@@ -67,7 +70,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
     final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
     final Dataset<Row> trimmedDataset = trimTrailingNulls(inputContext.getIdColumn(),
-        columns, columnJoinResultDataset);
+        columnPaths, columnJoinResultDataset);
 
     // Apply the filters.
     final List<String> filters = query.getFilters();
@@ -76,11 +79,10 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
-    final Column[] columnValues = Streams.zip(
-            columns.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
-            query.getLabels().stream(),
-            (column, maybeLabel) -> (maybeLabel.map(label -> column.alias(label)).orElse(column)))
-        .toArray(Column[]::new);
+    final Column[] columnValues = labelColumns(
+        columnPaths.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
+        labelsAsStream(query.getColumnsWithLabels())
+    ).toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
         .filter(idColumn.isNotNull());
 
