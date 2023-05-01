@@ -31,7 +31,7 @@
   <packaging>jar</packaging>
 
   <name>Pathling Library API</name>
-  <description>An API that exposes Pathling functionality to non-JVM language libraries.</description>
+  <description>An API that exposes Pathling functionality to language libraries.</description>
 
   <dependencies>
 
