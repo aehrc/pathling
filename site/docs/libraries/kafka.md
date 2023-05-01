@@ -4,12 +4,9 @@ sidebar_position: 7
 
 # Kafka integration
 
-Pathling supports Kafka as a streaming data source, and all the operations
-available within the library are able to execute continuously across a stream of
-data.
-
-For more information about Spark's Kafka integration, see
-the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/3.3.2/structured-streaming-kafka-integration.html#content).
+Pathling supports [Kafka](https://kafka.apache.org/) as a streaming data source,
+and all the operations available within the library are able to execute
+continuously across a stream of data.
 
 Here is an example of streaming a source of FHIR data, encoding it and then 
 performing a terminology operation upon it:
@@ -50,3 +47,6 @@ result = med_administrations.select(
     ).alias("is_anticoagulant"),
 )
 ```
+
+For more information about Spark's Kafka integration, see
+the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/3.3.1/structured-streaming-kafka-integration.html#content).

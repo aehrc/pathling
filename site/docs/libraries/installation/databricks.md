@@ -1,19 +1,20 @@
 ---
-sidebar_position: 5
+sidebar_position: 3
 ---
 
-# Installation in Databricks
+# Databricks installation
 
-To make the Pathling encoders available within notebooks, navigate to the
-"Compute" section and click on the cluster. Click on the "Libraries" tab, and
-click "Install new".
+To install the Pathling library on a [Databricks](https://www.databricks.com/)
+cluster, navigate to the "Compute" section and click on the cluster. Click on
+the "Libraries" tab, and click "Install new".
 
 Install both the `pathling` PyPI package, and
 the `au.csiro.pathling:library-api`
 Maven package. Once the cluster is restarted, the libraries should be available
 for import and use within all notebooks.
 
-Pathling has been tested on Databricks Runtime 12.0.
+Pathling has been tested
+on [Databricks Runtime 12.0](https://docs.databricks.com/release-notes/runtime/12.0.html).
 
 ## Spark config
 
