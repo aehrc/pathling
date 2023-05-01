@@ -37,6 +37,16 @@ def bundles_test_data_dir(test_data_dir):
     return os.path.join(test_data_dir, "bundles")
 
 
+@fixture(scope="module")
+def parquet_test_data_dir(test_data_dir):
+    return os.path.join(test_data_dir, "parquet")
+
+
+@fixture(scope="module")
+def delta_test_data_dir(test_data_dir):
+    return os.path.join(test_data_dir, "delta")
+
+
 ResultRow = Row("count")
 
 
@@ -45,31 +55,7 @@ def test_datasource_read(ndjson_test_data_dir, pathling_ctx):
     assert patients.count() == 9
 
 
-def test_datasource_from_resources(ndjson_test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.read.datasets(
-        resources={
-            "Patient": pathling_ctx.encode(
-                pathling_ctx.spark.read.text(
-                    os.path.join(ndjson_test_data_dir, "Patient.ndjson")
-                ),
-                "Patient",
-            ),
-            "Condition": pathling_ctx.encode(
-                pathling_ctx.spark.read.text(
-                    os.path.join(ndjson_test_data_dir, "Condition.ndjson")
-                ),
-                "Condition",
-            ),
-        }
-    )
-    result = ndjson_query(data_source)
-    assert result.columns == list(ResultRow)
-    assert result.collect() == [
-        ResultRow(71),
-    ]
-
-
-def test_datasource_from_ndjson_dir(ndjson_test_data_dir, pathling_ctx):
+def test_datasource_ndjson(ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
 
     result = ndjson_query(data_source)
@@ -79,7 +65,7 @@ def test_datasource_from_ndjson_dir(ndjson_test_data_dir, pathling_ctx):
     ]
 
 
-def test_datasource_ndjson_with_mapper(ndjson_custom_test_data_dir, pathling_ctx):
+def test_datasource_ndjson_mapper(ndjson_custom_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.ndjson(
         ndjson_custom_test_data_dir,
         filename_mapper=lambda x: {x.replace("^Custom", "")},
@@ -104,8 +90,42 @@ def test_datasource_bundles(bundles_test_data_dir, pathling_ctx):
     ]
 
 
-def test_datasource_from_delta_warehouse(test_data_dir, pathling_ctx):
-    data_source = pathling_ctx.read.delta("file://" + test_data_dir + "/delta")
+def test_datasource_datasets(ndjson_test_data_dir, pathling_ctx):
+    data_source = pathling_ctx.read.datasets(
+        resources={
+            "Patient": pathling_ctx.encode(
+                pathling_ctx.spark.read.text(
+                    os.path.join(ndjson_test_data_dir, "Patient.ndjson")
+                ),
+                "Patient",
+            ),
+            "Condition": pathling_ctx.encode(
+                pathling_ctx.spark.read.text(
+                    os.path.join(ndjson_test_data_dir, "Condition.ndjson")
+                ),
+                "Condition",
+            ),
+        }
+    )
+    result = ndjson_query(data_source)
+    assert result.columns == list(ResultRow)
+    assert result.collect() == [
+        ResultRow(71),
+    ]
+
+
+def test_datasource_parquet(parquet_test_data_dir, pathling_ctx):
+    data_source = pathling_ctx.read.parquet(parquet_test_data_dir)
+
+    result = parquet_query(data_source)
+    assert result.columns == list(ResultRow)
+    assert result.collect() == [
+        ResultRow(71),
+    ]
+
+
+def test_datasource_delta(delta_test_data_dir, pathling_ctx):
+    data_source = pathling_ctx.read.delta(delta_test_data_dir)
 
     result = delta_query(data_source)
     assert result.columns == list(ResultRow)
@@ -130,6 +150,10 @@ def bundles_query(data_source: DataSource) -> DataFrame:
             fpe("count()").alias("count"),
         ],
     )
+
+
+def parquet_query(data_source: DataSource) -> DataFrame:
+    return ndjson_query(data_source)
 
 
 def delta_query(data_source: DataSource) -> DataFrame:
