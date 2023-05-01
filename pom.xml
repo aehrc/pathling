@@ -860,6 +860,7 @@
             <dependency>
               <groupId>com.sun.jersey</groupId>
               <artifactId>jersey-core</artifactId>
+              <version>${pathling.jerseyVersion}</version>
             </dependency>
           </dependencies>
         </plugin>
