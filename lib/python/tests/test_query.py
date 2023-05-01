@@ -153,5 +153,5 @@ def test_many_aggregate_no_grouping(test_data_source):
 
 
 def assert_result(expected: Sequence[Row], actual: Sequence[Row]):
-    assert size(expected) == size(actual)
+    assert len(expected) == len(actual)
     assert set(expected).issubset(set(actual))
