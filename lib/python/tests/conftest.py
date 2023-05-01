@@ -16,7 +16,7 @@
 
 import logging
 import os
-from tempfile import mkdtemp
+from tempfile import TemporaryDirectory
 
 from pyspark.sql import SparkSession
 from pytest import fixture
@@ -34,14 +34,27 @@ def test_data_dir():
     return TEST_DATA_DIR
 
 
+@fixture(scope="module", autouse=True)
+def temp_dir():
+    temp_dir = TemporaryDirectory()
+    yield temp_dir.name
+    temp_dir.cleanup()
+
+
+@fixture(scope="module", autouse=True)
+def temp_warehouse_dir(temp_dir):
+    temp_warehouse_dir = TemporaryDirectory(dir=temp_dir, prefix="warehouse")
+    yield temp_warehouse_dir.name
+    temp_warehouse_dir.cleanup()
+
+
 # noinspection PyProtectedMember
 @fixture(scope="module")
-def pathling_ctx(request):
+def pathling_ctx(request, temp_warehouse_dir):
     """
     Fixture for creating a Spark Session available for all tests in this
     testing session.
     """
-
     gateway_log = logging.getLogger("java_gateway")
     gateway_log.setLevel(logging.ERROR)
 
@@ -50,7 +63,6 @@ def pathling_ctx(request):
         SparkSession.builder.appName("pathling-test")
         .master("local[1]")
         .config("spark.jars", find_pathling_jar(verbose=True))
-        .config("spark.sql.warehouse.dir", mkdtemp())
         .config("spark.driver.memory", "4g")
         .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
@@ -58,8 +70,11 @@ def pathling_ctx(request):
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
         )
+        .config("spark.sql.catalogImplementation", "hive")
+        .config("spark.sql.warehouse.dir", temp_warehouse_dir)
         .getOrCreate()
     )
+    spark.sql("CREATE DATABASE IF NOT EXISTS test")
 
     request.addfinalizer(lambda: spark.stop())
 

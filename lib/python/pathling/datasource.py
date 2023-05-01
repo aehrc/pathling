@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 
-from typing import Dict, Sequence, Optional, Callable, TYPE_CHECKING
+from typing import Dict, Sequence, Optional, Callable
 
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
@@ -23,9 +23,6 @@ from pyspark.sql import DataFrame
 from pathling import PathlingContext
 from pathling.core import ExpOrStr, StringToStringSetMapper, SparkConversionsMixin
 from pathling.fhir import MimeType
-
-if TYPE_CHECKING:
-    from .datasink import DataSinks
 
 
 class DataSource(SparkConversionsMixin):
@@ -53,6 +50,8 @@ class DataSource(SparkConversionsMixin):
         """
         Provides access to a :class:`DataSinks` object that can be used to persist data.
         """
+        from pathling.datasink import DataSinks
+
         return DataSinks(self)
 
     def extract(
@@ -130,7 +129,7 @@ class DataSources(SparkConversionsMixin):
         self,
         path,
         extension: Optional[str] = "ndjson",
-        filename_mapper: Callable[[str], Sequence[str]] = None,
+        file_name_mapper: Callable[[str], Sequence[str]] = None,
     ) -> DataSource:
         """
         Creates a data source from a directory containing NDJSON files. The files must be named with
@@ -139,13 +138,13 @@ class DataSources(SparkConversionsMixin):
 
         :param path: The URI of the directory containing the NDJSON files.
         :param extension: The file extension to use when searching for files. Defaults to "ndjson".
-        :param filename_mapper: An optional function that maps a filename to the set of resource
+        :param file_name_mapper: An optional function that maps a filename to the set of resource
                types that it contains.
         :return: A DataSource object that can be used to run queries against the data.
         """
-        if filename_mapper:
+        if file_name_mapper:
             wrapped_mapper = StringToStringSetMapper(
-                self.spark._jvm._gateway_client, filename_mapper
+                self.spark._jvm._gateway_client, file_name_mapper
             )
             return self._wrap_ds(
                 self._jdataSources.ndjson(path, extension, wrapped_mapper)

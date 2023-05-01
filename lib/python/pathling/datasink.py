@@ -35,8 +35,10 @@ class DataSinks(SparkConversionsMixin):
 
     def __init__(self, datasource: DataSource):
         SparkConversionsMixin.__init__(self, datasource.spark)
-        self._datasinks = self.spark._jvm.au.csiro.pathling.library.data.DataSinks(
-            datasource.pc._jpc, datasource._jds.getDataSource()
+        self._datasinks = (
+            self.spark._jvm.au.csiro.pathling.library.io.sink.DataSinkBuilder(
+                datasource.pc._jpc, datasource._jds
+            )
         )
 
     def ndjson(self, path: str, file_name_mapper: Callable[[str], str] = None) -> None:
@@ -91,6 +93,6 @@ class DataSinks(SparkConversionsMixin):
         on resource ID.
         """
         if schema:
-            self._datasinks.tables(schema, import_mode)
+            self._datasinks.tables(import_mode, schema)
         else:
             self._datasinks.tables(import_mode)
