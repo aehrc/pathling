@@ -15,11 +15,11 @@
 
 import os
 
-from pyspark.sql import Row
+from pyspark.sql import Row, DataFrame
 from pytest import fixture
 
 from pathling import Expression as fpe
-from pathling.query import AggregateQuery
+from pathling.datasource import DataSource
 
 
 @fixture(scope="module")
@@ -28,19 +28,24 @@ def ndjson_test_data_dir(test_data_dir):
 
 
 @fixture(scope="module")
-def test_query():
-    return AggregateQuery(
-        "Patient",
-        aggregations=[
-            fpe("reverseResolve(Condition.subject).count()").alias("conditionCount"),
-        ],
-    )
+def ndjson_custom_test_data_dir(test_data_dir):
+    return os.path.join(test_data_dir, "ndjson")
 
 
-ResultRow = Row("conditionCount")
+@fixture(scope="module")
+def bundles_test_data_dir(test_data_dir):
+    return os.path.join(test_data_dir, "bundles")
 
 
-def test_datasource_from_resources(test_query, ndjson_test_data_dir, pathling_ctx):
+ResultRow = Row("count")
+
+
+def test_datasource_read(ndjson_test_data_dir, pathling_ctx):
+    patients = pathling_ctx.read.ndjson(ndjson_test_data_dir).read("Patient")
+    assert patients.count() == 9
+
+
+def test_datasource_from_resources(ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.datasets(
         resources={
             "Patient": pathling_ctx.encode(
@@ -57,28 +62,75 @@ def test_datasource_from_resources(test_query, ndjson_test_data_dir, pathling_ct
             ),
         }
     )
-    result = test_query.execute(data_source)
+    result = ndjson_query(data_source)
     assert result.columns == list(ResultRow)
     assert result.collect() == [
         ResultRow(71),
     ]
 
 
-def test_datasource_from_ndjson_dir(test_query, ndjson_test_data_dir, pathling_ctx):
+def test_datasource_from_ndjson_dir(ndjson_test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.ndjson(ndjson_test_data_dir)
 
-    result = test_query.execute(data_source)
+    result = ndjson_query(data_source)
     assert result.columns == list(ResultRow)
     assert result.collect() == [
         ResultRow(71),
     ]
 
 
-def test_datasource_from_delta_warehouse(test_query, test_data_dir, pathling_ctx):
+def test_datasource_ndjson_with_mapper(ndjson_custom_test_data_dir, pathling_ctx):
+    data_source = pathling_ctx.read.ndjson(
+        ndjson_custom_test_data_dir,
+        filename_mapper=lambda x: {x.replace("^Custom", "")},
+    )
+
+    result = ndjson_query(data_source)
+    assert result.columns == list(ResultRow)
+    assert result.collect() == [
+        ResultRow(71),
+    ]
+
+
+def test_datasource_bundles(bundles_test_data_dir, pathling_ctx):
+    data_source = pathling_ctx.read.bundles(
+        bundles_test_data_dir, ["Patient", "Condition"]
+    )
+
+    result = bundles_query(data_source)
+    assert result.columns == list(ResultRow)
+    assert result.collect() == [
+        ResultRow(10),
+    ]
+
+
+def test_datasource_from_delta_warehouse(test_data_dir, pathling_ctx):
     data_source = pathling_ctx.read.delta("file://" + test_data_dir + "/delta")
 
-    result = test_query.execute(data_source)
+    result = delta_query(data_source)
     assert result.columns == list(ResultRow)
     assert result.collect() == [
         ResultRow(71),
     ]
+
+
+def ndjson_query(data_source: DataSource) -> DataFrame:
+    return data_source.aggregate(
+        "Patient",
+        aggregations=[
+            fpe("reverseResolve(Condition.subject).count()").alias("count"),
+        ],
+    )
+
+
+def bundles_query(data_source: DataSource) -> DataFrame:
+    return data_source.aggregate(
+        "Patient",
+        aggregations=[
+            fpe("count()").alias("count"),
+        ],
+    )
+
+
+def delta_query(data_source: DataSource) -> DataFrame:
+    return ndjson_query(data_source)

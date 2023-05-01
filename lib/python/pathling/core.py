@@ -12,9 +12,10 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+
 from typing import Any, Callable, Sequence, Tuple, Optional, Union
 
-from py4j.java_collections import ListConverter
+from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession
 
@@ -184,7 +185,7 @@ class StringMapper:
         implements = ["java.util.function.UnaryOperator"]
 
 
-class StringToStringListMapper:
+class StringToStringSetMapper:
     """
     A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value
     to a list of string values.
@@ -195,7 +196,7 @@ class StringToStringListMapper:
         self._fn = fn
 
     def apply(self, arg):
-        return ListConverter().convert(self._fn(arg), self._gateway)
+        return SetConverter().convert(self._fn(arg), self._gateway)
 
     class Java:
         implements = ["java.util.function.Function"]

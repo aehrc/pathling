@@ -21,7 +21,7 @@ from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
-from pathling.core import ExpOrStr, StringToStringListMapper, SparkConversionsMixin
+from pathling.core import ExpOrStr, StringToStringSetMapper, SparkConversionsMixin
 from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
@@ -139,12 +139,12 @@ class DataSources(SparkConversionsMixin):
 
         :param path: The URI of the directory containing the NDJSON files.
         :param extension: The file extension to use when searching for files. Defaults to "ndjson".
-        :param filename_mapper: An optional function that maps a filename to the list of resource
+        :param filename_mapper: An optional function that maps a filename to the set of resource
                types that it contains.
         :return: A DataSource object that can be used to run queries against the data.
         """
         if filename_mapper:
-            wrapped_mapper = StringToStringListMapper(
+            wrapped_mapper = StringToStringSetMapper(
                 self.spark._jvm._gateway_client, filename_mapper
             )
             return self._wrap_ds(
