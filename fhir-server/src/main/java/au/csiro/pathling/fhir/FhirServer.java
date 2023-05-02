@@ -27,6 +27,7 @@ import au.csiro.pathling.errors.DiagnosticContextInterceptor;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.extract.ResultProvider;
+import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
@@ -318,7 +319,7 @@ public class FhirServer extends RestfulServer {
       final IBaseResource instance = constructor.newInstance();
       return Enumerations.ResourceType.fromCode(instance.fhirType());
     } catch (final NoSuchMethodException | IllegalAccessException | InstantiationException
-                   | InvocationTargetException e) {
+        | InvocationTargetException e) {
       throw new RuntimeException("Problem determining FHIR type from resource class", e);
     }
   }
@@ -328,18 +329,7 @@ public class FhirServer extends RestfulServer {
    */
   @Nonnull
   public static Set<Enumerations.ResourceType> supportedResourceTypes() {
-    final Set<Enumerations.ResourceType> availableResourceTypes = EnumSet.allOf(
-        Enumerations.ResourceType.class);
-    final Set<Enumerations.ResourceType> unsupportedResourceTypes =
-        JavaConverters.setAsJavaSet(EncoderBuilder.UNSUPPORTED_RESOURCES()).stream()
-            .map(Enumerations.ResourceType::fromCode)
-            .collect(Collectors.toSet());
-    availableResourceTypes.removeAll(unsupportedResourceTypes);
-    availableResourceTypes.remove(Enumerations.ResourceType.RESOURCE);
-    availableResourceTypes.remove(Enumerations.ResourceType.DOMAINRESOURCE);
-    availableResourceTypes.remove(Enumerations.ResourceType.NULL);
-    availableResourceTypes.remove(Enumerations.ResourceType.OPERATIONDEFINITION);
-    return availableResourceTypes;
+    return ResourcePath.supportedResourceTypes();
   }
 
 }

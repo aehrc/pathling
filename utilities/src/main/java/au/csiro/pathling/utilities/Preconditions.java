@@ -123,6 +123,22 @@ public abstract class Preconditions {
   }
 
   /**
+   * Ensures that an {@link String} value is not blank, throwing a {@link IllegalArgumentException}
+   * if it is.
+   *
+   * @param string the object to check
+   * @param msg the message to use if an error is thrown
+   * @return non blank string
+   */
+  @Nonnull
+  public static String requireNonBlank(@Nullable final String string, @Nonnull final String msg) {
+    if (string == null || string.isBlank()) {
+      throw new IllegalArgumentException(msg);
+    }
+    return string;
+  }
+
+  /**
    * Ensures the truth of an expression, throwing an {@link UnexpectedResponseException} with the
    * supplied formatted message if it does not evaluate as true.
    *
@@ -158,6 +174,4 @@ public abstract class Preconditions {
       }
     };
   }
-
-
 }

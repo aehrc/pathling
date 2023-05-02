@@ -200,10 +200,10 @@ public class FhirEncoders {
    * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
+  @SuppressWarnings("unchecked")
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final String resourceName) {
 
     final RuntimeResourceDefinition definition = context.getResourceDefinition(resourceName);
-    //noinspection unchecked
     return of((Class<T>) definition.getImplementingClass());
   }
 
@@ -214,6 +214,7 @@ public class FhirEncoders {
    * @param <T> the type of the resource to be encoded.
    * @return an encoder for the resource.
    */
+  @SuppressWarnings("unchecked")
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
 
     final RuntimeResourceDefinition definition =
@@ -222,7 +223,6 @@ public class FhirEncoders {
     final int key = type.getName().hashCode();
 
     synchronized (encoderCache) {
-      //noinspection unchecked
       return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
           EncoderBuilder.of(definition,
               context,
@@ -241,6 +241,15 @@ public class FhirEncoders {
   public FhirVersionEnum getFhirVersion() {
 
     return context.getVersion().getVersion();
+  }
+
+  /**
+   * Returns the FHIR context used by encoders produced by this instance.
+   *
+   * @return the FHIR context used by encoders produced by this instance.
+   */
+  public FhirContext getContext() {
+    return context;
   }
 
   /**

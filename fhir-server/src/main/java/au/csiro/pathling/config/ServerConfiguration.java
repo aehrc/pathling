@@ -72,10 +72,13 @@ public class ServerConfiguration {
   }
 
   @NotNull
-  private SparkConfiguration spark;
+  private SparkConfiguration spark = SparkConfiguration.builder().build();
 
   @NotNull
-  private StorageConfiguration storage;
+  private StorageConfiguration storage = StorageConfiguration.builder().build();
+
+  @NotNull
+  private QueryConfiguration query = QueryConfiguration.builder().build();
 
   @NotNull
   private EncodingConfiguration encoding = EncodingConfiguration.builder().build();

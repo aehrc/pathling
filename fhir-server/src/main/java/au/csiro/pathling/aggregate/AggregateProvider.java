@@ -95,7 +95,7 @@ public class AggregateProvider implements IResourceProvider {
       @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
       @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
       @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
-    final AggregateRequest query = new AggregateRequest(
+    final AggregateRequest query = AggregateRequest.fromUserInput(
         resourceType, Optional.ofNullable(aggregation), Optional.ofNullable(grouping),
         Optional.ofNullable(filter));
     final AggregateResponse result = aggregateExecutor.execute(query);

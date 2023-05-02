@@ -42,7 +42,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 
 /**
- * JAVA API for terminology UDFs
+ * Provides access to the FHIR terminology UDFs, including overloads where this makes it more
+ * convenient to use them.
  */
 public interface Terminology {
 
@@ -98,8 +99,7 @@ public interface Terminology {
    */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse,
-      @Nullable final Collection<ConceptMapEquivalence> equivalences,
+      final boolean reverse, @Nullable final Collection<ConceptMapEquivalence> equivalences,
       @Nullable final String target) {
     return call_udf(TranslateUdf.FUNCTION_NAME, coding, lit(conceptMapUri),
         lit(reverse),
@@ -112,13 +112,21 @@ public interface Terminology {
   }
 
   /**
-   * Translates coding using a concept map.
+   * Translates a coding using a concept map.
    *
+   * @param coding a Column containing the struct representation of a Coding, or an array of such
+   * structs
+   * @param conceptMapUri an identifier for a FHIR ConceptMap
+   * @param reverse the direction to traverse the map - false results in "source to target"
+   * mappings, while true results in "target to source"
+   * @param equivalences a collection of translation equivalences (ConceptMapEquivalence) to include
+   * in the result
+   * @return the Column containing the result of the operation (an array of Coding structs)
    * @see Terminology#translate(Column, String, boolean, Collection, String)
    */
   @Nonnull
   static Column translate(@Nonnull final Column coding, @Nonnull final String conceptMapUri,
-      boolean reverse, @Nullable final Collection<ConceptMapEquivalence> equivalences) {
+      final boolean reverse, @Nullable final Collection<ConceptMapEquivalence> equivalences) {
     return translate(coding, conceptMapUri, reverse, equivalences, null);
   }
 
@@ -216,6 +224,10 @@ public interface Terminology {
   /**
    * Retrieves properties of a concept.
    *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve
+   * @param propertyType the FHIR data type of the property
+   * @return the Column containing the result of the operation (array of property values)
    * @see Terminology#property_of(Column, String, FHIRDefinedType)
    */
   @Nonnull
@@ -231,6 +243,9 @@ public interface Terminology {
   /**
    * Retrieves properties of a concept.
    *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve
+   * @return the Column containing the result of the operation (array of property values)
    * @see Terminology#property_of(Column, String, FHIRDefinedType)
    */
   @Nonnull
@@ -260,6 +275,11 @@ public interface Terminology {
   /**
    * Retrieves designations of a concept.
    *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param use a Column containing a Coding describing the use of the requested designation
+   * @param language the language of the requested designation
+   * @return the Column containing the result of the operation (array of strings with designation
+   * values)
    * @see Terminology#designation(Column, Column, String)
    */
   @Nonnull
@@ -271,6 +291,10 @@ public interface Terminology {
   /**
    * Retrieves designations of a concept for all languages.
    *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param use a Column containing a Coding describing the use of the requested designation
+   * @return the Column containing the result of the operation (array of strings with designation
+   * values)
    * @see Terminology#designation(Column, Coding, String)
    */
   @Nonnull
@@ -281,6 +305,9 @@ public interface Terminology {
   /**
    * Retrieves designations of a concept for all languages and uses.
    *
+   * @param coding a Column containing a struct representation of a Coding
+   * @return the Column containing the result of the operation (array of strings with designation
+   * values)
    * @see Terminology#designation(Column, Coding, String)
    */
   @Nonnull

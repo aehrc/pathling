@@ -17,8 +17,10 @@
 
 package au.csiro.pathling.test.benchmark;
 
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.search.SearchExecutor;
@@ -50,7 +52,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -63,7 +64,6 @@ public class SearchDevBenchmark {
 
   public static final int PAGE_SIZE = 10;
 
-  @Component
   @State(Scope.Benchmark)
   @ActiveProfiles("unit-test")
   public static class SearchState extends AbstractJmhSpringBootState {
@@ -75,7 +75,7 @@ public class SearchDevBenchmark {
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    ServerConfiguration configuration;
+    QueryConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;
@@ -92,9 +92,9 @@ public class SearchDevBenchmark {
     @Bean
     @ConditionalOnMissingBean
     public static Database database(@Nonnull final ServerConfiguration configuration,
-        @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
-        @Nonnull final ThreadPoolTaskExecutor executor) {
-      return new Database(configuration, spark, fhirEncoders, executor);
+        @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
+      return new CacheableDatabase(configuration.getStorage(), spark, fhirEncoders,
+          new ThreadPoolTaskExecutor());
     }
 
     public List<IBaseResource> execute(@Nonnull final Optional<StringAndListParam> filters) {

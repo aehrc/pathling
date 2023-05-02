@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.test.integration;
 
+import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.AUTOMAP_INPUT_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_AST_VIC;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_107963000;
-import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000000000003001;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_2121000032108;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_284551006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_444814009;
@@ -28,13 +28,13 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_638160
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_720471000168102;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_720471000168102_VER2021;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_72940011000036107;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_900000000000003001;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_403190006;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_AUTOMAP_DEFAULT;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_55915_3;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
-import static au.csiro.pathling.fhirpath.CodingHelpers.codingEquals;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.newVersionedCoding;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.snomedCoding;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
@@ -47,11 +47,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
-import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.Collections;
@@ -101,7 +101,7 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   // Mocking the Database bean to avoid lengthy initialization
   @SuppressWarnings("unused")
   @MockBean
-  private Database database;
+  private CacheableDatabase database;
 
   @Value("${pathling.test.recording.terminologyServerUrl}")
   String recordingTxServerUrl;
@@ -178,10 +178,6 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     final Coding result1 = snomedCoding("267036007", "Dyspnea (finding)", version);
     final Coding result2 = snomedCoding("390870001",
         "Short of breath dressing/undressing (finding)", version);
-    // final Coding result3 = snomedCoding("1217110005",
-    //     "Dyspnea when bending forward (finding)", version);
-    // final Coding result4 = snomedCoding("161941007", "Dyspnea at rest (finding)", version);
-    // final Coding result5 = snomedCoding("60845006", "Dyspnea on exertion (finding)", version);
 
     assertEquals(5, result.size());
     assertEquals(ConceptMapEquivalence.INEXACT, result.get(0).getEquivalence());
@@ -272,13 +268,17 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
         List.of(Property.of("code", new CodeType("55915-3"))),
         terminologyService.lookup(LC_55915_3, "code"));
 
-    // TODO: Unexpected: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: [0dbaeea4-1bcc-40c0-b7b1-61fe4b4e188a]: A usable code system with URL uuid:unknown could not be resolved.
-
+    // TODO: Unexpected: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not 
+    //       Found: [0dbaeea4-1bcc-40c0-b7b1-61fe4b4e188a]: A usable code system with URL 
+    //       uuid:unknown could not be resolved.
     // assertEquals(
     //     Collections.emptyList(),
     //     terminologyService.lookup(UNKNOWN_SYSTEM_CODING, "display", null));
 
-    // TODO: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: [410fa0b5-50c4-42ba-a4f4-6e952d43a46f]: A usable code system with URL http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/19000101 could not be resolved.
+    // TODO: ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException: HTTP 404 Not Found: 
+    //       [410fa0b5-50c4-42ba-a4f4-6e952d43a46f]: A usable code system with URL 
+    //       http://snomed.info/sct|http://snomed.info/sct/32506021000036107/version/19000101 could 
+    //       not be resolved.
     // assertEquals(
     //     Collections.emptyList(),
     //     terminologyService.lookup(CD_SNOMED_403190006_VERSION_UNKN, "display", null));
