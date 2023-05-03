@@ -19,12 +19,11 @@ package au.csiro.pathling.aggregate;
 
 import static au.csiro.pathling.test.TestResources.assertJson;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -76,8 +75,8 @@ abstract class AggregateExecutorTest {
   FhirEncoders fhirEncoders;
 
   @MockBean
-  Database database;
-  
+  CacheableDatabase database;
+
   AggregateExecutor executor;
   ResourceType subjectResource;
   AggregateResponse response = null;

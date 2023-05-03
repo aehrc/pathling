@@ -29,35 +29,35 @@
   <artifactId>fhirpath</artifactId>
   <packaging>jar</packaging>
 
-  <name>Pathling Fhirpath</name>
-  <description>Library that exposes Pathling FhirPath functionality</description>
-
-  <properties>
-    <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
-    <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
-    <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
-    <jmh.version>1.36</jmh.version>
-    <pathling.dockerBaseImage>amazoncorretto:11</pathling.dockerBaseImage>
-  </properties>
+  <name>Pathling FHIRPath Engine</name>
+  <description>A library that can translate FHIRPath expressions into Spark queries.</description>
 
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>encoders</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>au.csiro.pathling</groupId>
       <artifactId>terminology</artifactId>
     </dependency>
+
+    <!-- Apache Spark -->
     <dependency>
-      <groupId>au.csiro.pathling</groupId>
-      <artifactId>utilities</artifactId>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
+      <scope>provided</scope>
     </dependency>
-    
-    <!-- JSR 303 validation -->
     <dependency>
-      <groupId>org.hibernate.validator</groupId>
-      <artifactId>hibernate-validator</artifactId>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.delta</groupId>
+      <artifactId>delta-core_${pathling.scalaVersion}</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-aws</artifactId>
+      <scope>provided</scope>
     </dependency>
 
     <!-- HAPI FHIR -->
@@ -70,36 +70,41 @@
       <artifactId>hapi-fhir-structures-r4</artifactId>
     </dependency>
 
-    <!-- Apache Spark -->
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${pathling.sparkScalaVersion}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${pathling.sparkScalaVersion}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.delta</groupId>
-      <artifactId>delta-core_${pathling.sparkScalaVersion}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-aws</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-
     <!-- ANTLR -->
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4</artifactId>
+    </dependency>
+
+    <!-- JSR 303 validation -->
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
 
     <!-- Testing -->
@@ -115,23 +120,15 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-    
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.junit.vintage</groupId>
-          <artifactId>junit-vintage-engine</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.docker-java</groupId>
@@ -145,7 +142,7 @@
     </dependency>
     <dependency>
       <groupId>com.github.tomakehurst</groupId>
-      <artifactId>wiremock-jre8</artifactId>
+      <artifactId>wiremock-jre8-standalone</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -153,47 +150,6 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
-
-    <!-- Lombok -->
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-    </dependency>
-
-    <!-- Misc -->
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>commons-beanutils</groupId>
-      <artifactId>commons-beanutils</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-    </dependency>
-
-    <!-- JMH libs for benchmarking-->
-    <dependency>
-      <groupId>org.openjdk.jmh</groupId>
-      <artifactId>jmh-core</artifactId>
-      <version>${jmh.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.openjdk.jmh</groupId>
-      <artifactId>jmh-generator-annprocess</artifactId>
-      <version>${jmh.version}</version>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
-      <artifactId>logback-classic</artifactId>
-      <groupId>ch.qos.logback</groupId>
-      <scope>test</scope>
-    </dependency>
-
   </dependencies>
 
   <build>
@@ -251,7 +207,6 @@
                 <spark.logConf>true</spark.logConf>
                 <pathling.storage.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
-                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -269,7 +224,6 @@
                   file://${project.basedir}/src/test/resources/test-data
                 </pathling.storage.warehouseUrl>
                 <pathling.storage.databaseName>parquet</pathling.storage.databaseName>
-                <user.timezone>UTC</user.timezone>
               </systemPropertyVariables>
             </configuration>
           </execution>
@@ -343,6 +297,32 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>skipFhirPathTests</id>
+      <activation>
+        <property>
+          <name>skipFhirPathTests</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>mavenRelease</id>
       <build>

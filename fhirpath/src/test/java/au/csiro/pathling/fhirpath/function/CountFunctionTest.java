@@ -28,7 +28,7 @@ import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -59,10 +59,10 @@ class CountFunctionTest {
 
   @Autowired
   FhirContext fhirContext;
-  
+
   @MockBean
   DataSource dataSource;
-  
+
   @Test
   void countsByResourceIdentity() {
     final Dataset<Row> patientDataset = new ResourceDatasetBuilder(spark)

@@ -23,15 +23,12 @@ import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
@@ -92,7 +89,7 @@ public class AggregateProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "grouping") final List<String> grouping,
       @Nullable @OperationParam(name = "filter") final List<String> filter,
       @SuppressWarnings("unused") @Nullable final ServletRequestDetails requestDetails) {
-    final AggregateRequest query = new AggregateRequest(
+    final AggregateRequest query = AggregateRequest.fromUserInput(
         resourceType, Optional.ofNullable(aggregation), Optional.ofNullable(grouping),
         Optional.ofNullable(filter));
     final AggregateResponse result = aggregateExecutor.execute(query);

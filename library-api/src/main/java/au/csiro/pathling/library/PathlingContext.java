@@ -26,13 +26,14 @@ import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.FhirEncoders.Builder;
-import au.csiro.pathling.library.query.PathlingClient;
+import au.csiro.pathling.library.io.source.DataSourceBuilder;
 import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.sql.udf.TerminologyUdfRegistrar;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.validation.ValidationUtils;
+import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -45,12 +46,13 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
- * A class designed to provide access to selected Pathling functionality from non-JVM language
- * libraries.
+ * A class designed to provide access to selected Pathling functionality from a language library
+ * context.
  *
  * @author Piotr Szul
  * @author John Grimes
@@ -79,7 +81,6 @@ public class PathlingContext {
   @Nonnull
   private final TerminologyFunctions terminologyFunctions;
 
-
   private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
@@ -104,8 +105,13 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession}, {@link
-   * FhirEncoders} and {@link TerminologyServiceFactory} objects.
+   * Creates a new {@link PathlingContext} using pre-configured {@link SparkSession},
+   * {@link FhirEncoders} and {@link TerminologyServiceFactory} objects.
+   *
+   * @param spark the Spark session to use
+   * @param fhirEncoders the FHIR encoders to use
+   * @param terminologyServiceFactory the terminology service factory to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession spark,
@@ -115,8 +121,13 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
-   * SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @param encodingConfiguration the encoding configuration to use
+   * @param terminologyConfiguration the terminology configuration to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -134,6 +145,9 @@ public class PathlingContext {
 
   /**
    * Creates a new {@link PathlingContext} using a pre-configured {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession) {
@@ -143,8 +157,12 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
-   * SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @param encodingConfig the encoding configuration to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -154,8 +172,12 @@ public class PathlingContext {
   }
 
   /**
-   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured {@link
-   * SparkSession}.
+   * Creates a new {@link PathlingContext} using supplied configuration and a pre-configured
+   * {@link SparkSession}.
+   *
+   * @param sparkSession the Spark session to use
+   * @param terminologyConfig the terminology configuration to use
+   * @return a new {@link PathlingContext} instance
    */
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession,
@@ -177,9 +199,10 @@ public class PathlingContext {
   @Nonnull
   public <T extends IBaseResource> Dataset<T> encode(@Nonnull final Dataset<String> stringResources,
       @Nonnull final Class<T> resourceClass, @Nonnull final String inputMimeType) {
+    final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
     return stringResources.mapPartitions(
         new EncodeResourceMapPartitions<>(fhirVersion, inputMimeType, resourceClass),
-        fhirEncoders.of(resourceClass));
+        encoder);
   }
 
 
@@ -206,6 +229,23 @@ public class PathlingContext {
     final RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
         .getResourceDefinition(resourceName);
     return encode(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
+  }
+
+  @Nonnull
+  public <T extends IBaseResource> Dataset<String> decode(@Nonnull final Dataset<Row> resources,
+      @Nonnull final String resourceName, @Nonnull final String outputMimeType) {
+    final BaseRuntimeElementDefinition definition = FhirEncoders.contextFor(fhirVersion)
+        .getResourceDefinition(resourceName);
+
+    @SuppressWarnings("unchecked")
+    final Class<T> resourceClass = (Class<T>) definition.getImplementingClass();
+
+    final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
+    final Dataset<T> typedResources = resources.as(encoder);
+    final DecodeResourceMapPartitions<T> mapper = new DecodeResourceMapPartitions<T>(fhirVersion,
+        outputMimeType, resourceClass);
+
+    return typedResources.mapPartitions(mapper, Encoders.STRING());
   }
 
   /**
@@ -409,7 +449,9 @@ public class PathlingContext {
     return new DefaultTerminologyServiceFactory(fhirVersion, configuration);
   }
 
-  public PathlingClient.Builder newClientBuilder() {
-    return PathlingClient.builder(this);
+  @Nonnull
+  public DataSourceBuilder read() {
+    return new DataSourceBuilder(this);
   }
+
 }

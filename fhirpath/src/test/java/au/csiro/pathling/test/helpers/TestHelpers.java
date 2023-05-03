@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import io.delta.tables.DeltaTable;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;

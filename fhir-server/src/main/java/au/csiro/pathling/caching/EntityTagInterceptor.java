@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.fhir.ConformanceProvider;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.io.Database;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
@@ -54,7 +54,7 @@ public class EntityTagInterceptor {
   private final ServerConfiguration configuration;
 
   @Nonnull
-  private final DatabaseComponent database;
+  private final CacheableDatabase database;
 
   @Nonnull
   private final ConformanceProvider conformanceProvider;
@@ -68,7 +68,7 @@ public class EntityTagInterceptor {
    * @param conformanceProvider for determining the cacheability of conformance statement requests
    */
   public EntityTagInterceptor(@Nonnull final ServerConfiguration configuration,
-      @Nonnull final DatabaseComponent database,
+      @Nonnull final CacheableDatabase database,
       @Nonnull final ConformanceProvider conformanceProvider) {
     this.configuration = configuration;
     this.database = database;

@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.aggregate.AggregateProvider;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhir.ResourceProviderFactory;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.search.SearchProvider;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
 import au.csiro.pathling.update.BatchProvider;
@@ -33,6 +33,7 @@ import au.csiro.pathling.update.UpdateProvider;
 import ca.uhn.fhir.parser.IParser;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +56,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
   BatchProvider batchProvider;
 
   @MockBean
-  DatabaseComponent database;
+  CacheableDatabase database;
 
   @Autowired
   SparkSession sparkSession;
@@ -65,7 +66,7 @@ abstract class SecurityTestForOperations extends SecurityTest {
 
   @BeforeEach
   void setUp() {
-    when(database.read(any()))
+    when(database.read(any(Enumerations.ResourceType.class)))
         .thenReturn(new ResourceDatasetBuilder(sparkSession).withIdColumn().build());
   }
 

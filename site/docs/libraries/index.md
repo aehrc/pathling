@@ -13,24 +13,3 @@ available for Python, Scala and Java.
 
 We also have upcoming support for R, subscribe to
 [this issue](https://github.com/aehrc/pathling/issues/193) for updates.
-
-## Installation
-
-import {
-JavaInstallation,
-PythonInstallation,
-ScalaInstallation
-} from "../../src/components/installation";
-
-### Python
-
-<PythonInstallation/>
-
-### Scala
-
-<ScalaInstallation/>
-
-
-### Java
-
-<JavaInstallation/>

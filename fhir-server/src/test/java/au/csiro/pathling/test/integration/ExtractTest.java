@@ -22,7 +22,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
@@ -60,7 +60,7 @@ class ExtractTest extends IntegrationTest {
   IParser jsonParser;
 
   @MockBean
-  DatabaseComponent database;
+  CacheableDatabase database;
 
   @LocalServerPort
   int port;
@@ -76,7 +76,7 @@ class ExtractTest extends IntegrationTest {
         .exchange(uri, HttpMethod.GET, RequestEntity.get(new URI(uri)).build(), String.class);
     assertTrue(response.getStatusCode().is2xxSuccessful());
     final Parameters result = (Parameters) jsonParser.parseResource(response.getBody());
-    final URL url = new URL(((UrlType) result.getParameter("url")).getValueAsString());
+    final URL url = new URL(((UrlType) result.getParameter("url").getValue()).getValueAsString());
 
     final String actual;
     try {

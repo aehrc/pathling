@@ -22,7 +22,6 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.hl7.fhir.r4.model.BooleanType;
@@ -35,7 +34,6 @@ import org.hl7.fhir.r4.model.Coding;
 @AllArgsConstructor(staticName = "of")
 @ToString
 @Getter
-@EqualsAndHashCode
 public class ImmutableCoding implements Serializable {
 
   private static final long serialVersionUID = -2461921559175440312L;
@@ -119,5 +117,5 @@ public class ImmutableCoding implements Serializable {
   public int hashCode() {
     return Objects.hash(system, version, code);
   }
-  
+
 }

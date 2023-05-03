@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.test.integration;
 
-import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.parallel.ResourceAccessMode;
 import org.junit.jupiter.api.parallel.ResourceLock;
@@ -32,13 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 @Tag("IntegrationTest")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ResourceLock(value = "wiremock", mode = ResourceAccessMode.READ_WRITE)
-@ActiveProfiles({"core","server","integration-test"})
+@ActiveProfiles({"core", "server", "integration-test"})
 public abstract class IntegrationTest {
-
-  @BeforeAll
-  static void beforeAll() {
-    // See: https://github.com/spring-projects/spring-boot/issues/21535#issuecomment-634088332
-    TomcatURLStreamHandlerFactory.disable();
-  }
 
 }
