@@ -26,10 +26,10 @@ public class SharedMocks {
 
   private final static Map<Class<?>, Object> MOCKS = new HashMap<>();
 
+  @SuppressWarnings("unchecked")
   @Nonnull
   public static <T> T getOrCreate(@Nonnull final Class<T> clazz) {
     synchronized (MOCKS) {
-      //noinspection unchecked
       return (T) MOCKS.computeIfAbsent(clazz, Mockito::mock);
     }
   }

@@ -41,7 +41,7 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -74,10 +74,10 @@ class ExtensionFunctionTest {
 
   @Autowired
   private FhirContext fhirContext;
-  
+
   @MockBean
   private DataSource dataSource;
-  
+
   @Test
   public void testExtensionOnResources() {
 

@@ -18,22 +18,25 @@
 package au.csiro.pathling.io;
 
 import static au.csiro.pathling.QueryHelpers.createEmptyDataset;
-import static au.csiro.pathling.io.PersistenceScheme.convertS3ToS3aUrl;
-import static au.csiro.pathling.io.PersistenceScheme.getTableUrl;
+import static au.csiro.pathling.fhir.FhirUtils.getResourceType;
+import static au.csiro.pathling.io.FileSystemPersistence.safelyJoinPaths;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.asc;
 
 import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.ResourceAccess;
+import io.delta.tables.DeltaMergeBuilder;
 import io.delta.tables.DeltaTable;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.DataFrameWriter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Row;
@@ -51,53 +54,105 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class Database implements DataSource {
 
   @Nonnull
-  protected final String warehouseUrl;
-
-  @Nonnull
-  protected final String databaseName;
-
-  @Nonnull
-  protected final StorageConfiguration configuration;
-
-  @Nonnull
   protected final SparkSession spark;
 
   @Nonnull
   protected final FhirEncoders fhirEncoders;
-  
+
+  @Nonnull
+  protected final PersistenceScheme persistence;
+
+  protected final boolean cacheDatasets;
+
   /**
-   * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
-   * database
    * @param spark a {@link SparkSession} for interacting with Spark
    * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
+   * @param persistence a {@link PersistenceScheme} object for reading and writing data
+   * @param cacheDatasets whether to cache datasets in memory
    */
-  public Database(@Nonnull final StorageConfiguration configuration,
-      @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
-    this.configuration = configuration;
+  public Database(@Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders,
+      @Nonnull final PersistenceScheme persistence, final boolean cacheDatasets) {
     this.spark = spark;
-    this.warehouseUrl = convertS3ToS3aUrl(configuration.getWarehouseUrl());
-    this.databaseName = configuration.getDatabaseName();
     this.fhirEncoders = fhirEncoders;
+    this.persistence = persistence;
+    this.cacheDatasets = cacheDatasets;
   }
 
   /**
-   * Reads a set of resources of a particular type from the warehouse location.
+   * @param spark a {@link SparkSession} for interacting with Spark
+   * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
+   * @param configuration a {@link StorageConfiguration} object which controls the behaviour of the
+   * database
+   * @return a new {@link Database} object
+   */
+  @Nonnull
+  public static Database forConfiguration(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final StorageConfiguration configuration) {
+    return new Database(spark, fhirEncoders, new FileSystemPersistence(
+        spark, safelyJoinPaths(configuration.getWarehouseUrl(), configuration.getDatabaseName())),
+        configuration.getCacheDatasets());
+  }
+
+  /**
+   * @param spark a {@link SparkSession} for interacting with Spark
+   * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
+   * @param path the path to the storage location, overriding the values of warehouse URL and
+   * database name in the configuration
+   * @param cacheDatasets whether to cache datasets in memory
+   * @return a new {@link Database} object
+   */
+  public static Database forFileSystem(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final String path,
+      final boolean cacheDatasets) {
+    return new Database(spark, fhirEncoders, new FileSystemPersistence(spark, path),
+        cacheDatasets);
+  }
+
+  /**
+   * @param spark a {@link SparkSession} for interacting with Spark
+   * @param fhirEncoders {@link FhirEncoders} object for creating empty datasets
+   * @param schema the name of the schema to use when qualifying table names
+   * @param cacheDatasets whether to cache datasets in memory
+   * @return a new {@link Database} object
+   */
+  public static Database forCatalog(@Nonnull final SparkSession spark,
+      @Nonnull final FhirEncoders fhirEncoders, @Nonnull final Optional<String> schema,
+      final boolean cacheDatasets) {
+    return new Database(spark, fhirEncoders, new CatalogPersistence(spark, schema),
+        cacheDatasets);
+  }
+
+  /**
+   * Reads a data for the given resource type.
    *
    * @param resourceType the desired {@link ResourceType}
    * @return a {@link Dataset} containing the raw resource, i.e. NOT wrapped in a value column
    */
   @ResourceAccess(ResourceAccess.AccessType.READ)
+  @Override
   @Nonnull
-  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
-    return attemptDeltaLoad(resourceType)
+  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
+    return getMaybeNonExistentDeltaTable(requireNonNull(resourceType))
         .map(DeltaTable::toDF)
         // If there is no existing table, we return an empty table with the right shape.
         .orElseGet(() -> createEmptyDataset(spark, fhirEncoders, resourceType));
   }
 
+  @Nonnull
+  @Override
+  public Dataset<Row> read(@Nullable final String resourceCode) {
+    return read(getResourceType(resourceCode));
+  }
+
+  @Nonnull
+  @Override
+  public Set<ResourceType> getResourceTypes() {
+    return persistence.list();
+  }
+
   /**
-   * Overwrites the resources for a particular type with the contents of the supplied {@link
-   * Dataset}.
+   * Overwrites the resources for a particular type with the contents of the supplied
+   * {@link Dataset}.
    *
    * @param resourceType the type of the resource to write
    * @param resources the {@link Dataset} containing the resource data
@@ -106,6 +161,7 @@ public class Database implements DataSource {
   public void overwrite(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
     write(resourceType, resources);
+    persistence.invalidate(resourceType);
   }
 
   /**
@@ -146,16 +202,15 @@ public class Database implements DataSource {
     final DeltaTable original = readDelta(resourceType);
 
     log.debug("Writing updates: {}", resourceType.toCode());
-    original
+    final DeltaMergeBuilder merge = original
         .as("original")
         .merge(updates.as("updates"), "original.id = updates.id")
         .whenMatched()
         .updateAll()
         .whenNotMatched()
-        .insertAll()
-        .execute();
-
-    onDataChange(resourceType, Optional.empty());
+        .insertAll();
+    persistence.merge(resourceType, merge);
+    persistence.invalidate(resourceType);
   }
 
   /**
@@ -188,11 +243,11 @@ public class Database implements DataSource {
    */
   @Nonnull
   DeltaTable readDelta(@Nonnull final ResourceType resourceType) {
-    return attemptDeltaLoad(resourceType).orElseGet(() -> {
+    return getMaybeNonExistentDeltaTable(resourceType).orElseGet(() -> {
       // If a Delta access is attempted upon a resource which does not yet exist, we create an empty 
       // table. This is because Delta operations cannot be done in absence of a persisted table.
-      final String tableUrl = writeEmpty(resourceType);
-      return getDeltaTable(resourceType, tableUrl);
+      writeEmpty(resourceType);
+      return getDeltaTable(resourceType);
     });
   }
 
@@ -200,10 +255,10 @@ public class Database implements DataSource {
    * Attempts to load a Delta table for the given resource type. Tables may not exist if they have
    * not previously been the subject of write operations.
    */
-  private Optional<DeltaTable> attemptDeltaLoad(@Nonnull final ResourceType resourceType) {
-    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
-    return DeltaTable.isDeltaTable(spark, tableUrl)
-           ? Optional.of(getDeltaTable(resourceType, tableUrl))
+  private Optional<DeltaTable> getMaybeNonExistentDeltaTable(
+      @Nonnull final ResourceType resourceType) {
+    return persistence.exists(resourceType)
+           ? Optional.of(getDeltaTable(resourceType))
            : Optional.empty();
   }
 
@@ -211,13 +266,10 @@ public class Database implements DataSource {
    * Loads a Delta table that we already know exists.
    */
   @Nonnull
-  DeltaTable getDeltaTable(final @Nonnull ResourceType resourceType,
-      final String tableUrl) {
-    log.info("Loading resource {} from: {}", resourceType.toCode(), tableUrl);
-    @Nullable final DeltaTable resources = DeltaTable.forPath(spark, tableUrl);
-    requireNonNull(resources);
+  DeltaTable getDeltaTable(final @Nonnull ResourceType resourceType) {
+    final DeltaTable resources = persistence.read(resourceType);
 
-    if (configuration.getCacheDatasets()) {
+    if (cacheDatasets) {
       // Cache the raw resource data.
       log.debug("Caching resource dataset: {}", resourceType.toCode());
       resources.toDF().cache();
@@ -228,10 +280,8 @@ public class Database implements DataSource {
 
   void write(@Nonnull final ResourceType resourceType,
       @Nonnull final Dataset<Row> resources) {
-    final String tableUrl = getTableUrl(warehouseUrl, databaseName, resourceType);
-
-    log.debug("Overwriting: {}", tableUrl);
-    resources
+    log.debug("Overwriting: {}", resourceType.toCode());
+    final DataFrameWriter<Row> writer = resources
         // We order the resources here to reduce the amount of sorting necessary at query time.
         .orderBy(asc("id"))
         .write()
@@ -241,31 +291,16 @@ public class Database implements DataSource {
         // one. For the purposes of this method, we want to be able to rewrite the schema in cases 
         // where it has changed, e.g. a version upgrade or a configuration change.
         // See: https://docs.delta.io/latest/delta-batch.html#replace-table-schema
-        .option("overwriteSchema", "true")
-        .save(tableUrl);
-    onDataChange(resourceType, Optional.of(tableUrl));
+        .option("overwriteSchema", "true");
+    persistence.write(resourceType, writer);
   }
 
-  @Nonnull
-  String writeEmpty(@Nonnull final ResourceType resourceType) {
+  void writeEmpty(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> dataset = createEmptyDataset(spark, fhirEncoders, resourceType);
     log.debug("Writing empty dataset: {}", resourceType.toCode());
     // We need to throw an error if the table already exists, otherwise we could get contention 
     // issues on requests that call this method.
     write(resourceType, dataset);
-    return getTableUrl(warehouseUrl, databaseName, resourceType);
-  }
-
-  /**
-   * Callback method called when the data for a resourced have been updated (either with merge or
-   * write). Subclasses can override to add extra functionality required on data updates.
-   *
-   * @param resourceType the type of the resource for which the data has changed.
-   * @param maybeTableUrl optionally the URL to the table for this resource (if known).
-   */
-  protected void onDataChange(@Nonnull final ResourceType resourceType,
-      @Nonnull final Optional<String> maybeTableUrl) {
-    // do nothing here
   }
 
 }

@@ -19,11 +19,11 @@ package au.csiro.pathling.fhirpath.literal;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
-import au.csiro.pathling.fhirpath.CalendarDurationUtils;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.element.QuantityPath;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -103,7 +103,8 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
    *
    * @param fhirPath the FHIRPath representation of the literal
    * @param context an input context that can be used to build a {@link Dataset} to represent the
-   * literal A new instance of {@link QuantityLiteralPath}
+   * literal
+   * @return A new instance of {@link QuantityLiteralPath}
    * @see <a href="https://hl7.org/fhirpath/#time-valued-quantities">Time-valued quantities</a>
    */
   @Nonnull

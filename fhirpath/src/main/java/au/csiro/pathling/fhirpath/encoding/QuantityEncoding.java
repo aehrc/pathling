@@ -152,7 +152,7 @@ public final class QuantityEncoding {
 
 
   /**
-   * A {@link StructType} for a Quantity.
+   * @return A {@link StructType} for a Quantity
    */
   @Nonnull
   public static StructType dataType() {

@@ -17,18 +17,14 @@
 
 package au.csiro.pathling.extract;
 
+import static au.csiro.pathling.utilities.Lists.normalizeEmpty;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
-import static java.util.Objects.nonNull;
 
-import java.util.Collections;
+import au.csiro.pathling.query.ExpressionWithLabel;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -39,36 +35,6 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  */
 @Value
 public class ExtractRequest {
-
-  @Value
-  public static class ExpressionWithLabel {
-
-    @Nonnull
-    String expression;
-
-    @Nullable
-    String label;
-
-    private ExpressionWithLabel(@Nonnull final String expression, @Nullable final String label) {
-      this.expression = requireNonBlank(expression, "Column expression cannot be blank");
-      this.label = nonNull(label)
-                   ? requireNonBlank(label, "Column label cannot be blank")
-                   : null;
-    }
-
-    public static ExpressionWithLabel of(@Nonnull final String expression,
-        @Nonnull final String label) {
-      return new ExpressionWithLabel(expression, label);
-    }
-
-    public static ExpressionWithLabel withExpressionAsLabel(@Nonnull final String expression) {
-      return new ExpressionWithLabel(expression, expression);
-    }
-
-    public static ExpressionWithLabel withNoLabel(@Nonnull final String expression) {
-      return new ExpressionWithLabel(expression, null);
-    }
-  }
 
   @Nonnull
   ResourceType subjectResource;
@@ -83,31 +49,11 @@ public class ExtractRequest {
   Optional<Integer> limit;
 
   /**
-   * @param subjectResource the resource which will serve as the input context for each expression
-   * @param columnsWithLabels a set of columns expressions to execute over the data
-   * @param filters the criteria by which the data should be filtered
-   * @param limit the maximum number of rows to return
+   * @return The list of column expressions
    */
-  public ExtractRequest(@Nonnull final ResourceType subjectResource,
-      @Nonnull final List<ExpressionWithLabel> columnsWithLabels,
-      @Nonnull final List<String> filters,
-      @Nonnull final Optional<Integer> limit) {
-    this.limit = limit;
-    this.subjectResource = subjectResource;
-    this.columnsWithLabels = columnsWithLabels;
-    this.filters = filters;
-  }
-
   @Nonnull
   public List<String> getColumns() {
-    return columnsWithLabels.stream().map(ExpressionWithLabel::getExpression)
-        .collect(Collectors.toUnmodifiableList());
-  }
-
-  @Nonnull
-  public List<Optional<String>> getLabels() {
-    return columnsWithLabels.stream().map(ExpressionWithLabel::getLabel).map(Optional::ofNullable)
-        .collect(Collectors.toUnmodifiableList());
+    return ExpressionWithLabel.expressionsAsList(columnsWithLabels);
   }
 
   /**
@@ -117,6 +63,7 @@ public class ExtractRequest {
    * @param columns a set of columns expressions to execute over the data
    * @param filters the criteria by which the data should be filtered
    * @param limit the maximum number of rows to return
+   * @return the constructed instance of {@link ExtractRequest}
    */
   public static ExtractRequest fromUserInput(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<List<String>> columns, @Nonnull final Optional<List<String>> filters,
@@ -129,8 +76,7 @@ public class ExtractRequest {
         "Filter expression cannot be blank"));
     limit.ifPresent(l -> checkUserInput(l > 0, "Limit must be greater than zero"));
     return new ExtractRequest(subjectResource,
-        checkPresent(columns).stream().map(ExpressionWithLabel::withNoLabel)
-            .collect(Collectors.toUnmodifiableList()),
-        filters.orElse(Collections.emptyList()), limit);
+        ExpressionWithLabel.fromUnlabelledExpressions(checkPresent(columns)),
+        normalizeEmpty(filters), limit);
   }
 }

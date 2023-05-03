@@ -48,7 +48,6 @@ import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -238,7 +237,7 @@ public class PathlingContextTest {
 
     patientsQuery.processAllAvailable();
     final long patientsCount = spark.sql("select count(*) from patients").head().getLong(0);
-    assertEquals(patientsCount, patientsCount);
+    assertEquals(9, patientsCount);
 
     final StreamingQuery conditionQuery = pathling.encode(jsonResources, "Condition",
             FhirMimeTypes.FHIR_JSON)

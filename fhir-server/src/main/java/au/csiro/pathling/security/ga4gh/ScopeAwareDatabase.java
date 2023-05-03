@@ -19,13 +19,14 @@ package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.query.DataSource;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -44,7 +45,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("core & ga4gh")
 @Slf4j
-public class ScopeAwareDatabase extends DatabaseComponent {
+public class ScopeAwareDatabase extends CacheableDatabase {
 
   @Nonnull
   private final ServerConfiguration configuration;
@@ -89,7 +90,7 @@ public class ScopeAwareDatabase extends DatabaseComponent {
   @Nonnull
   @Override
   @SuppressWarnings("unused")
-  public Dataset<Row> read(@Nonnull final ResourceType resourceType) {
+  public Dataset<Row> read(@Nullable final ResourceType resourceType) {
     final Dataset<Row> resources = super.read(resourceType);
 
     // If a passport scope is present, enforce the filters within it before returning the final
@@ -98,8 +99,8 @@ public class ScopeAwareDatabase extends DatabaseComponent {
         .map(scope -> {
           // We need to create a non-scope-aware reader here for the parsing of the filters, so that
           // we don't have recursive application of the filters.
-          final DataSource dataSource = new Database(configuration.getStorage(), spark,
-              fhirEncoders);
+          final DataSource dataSource = Database.forConfiguration(spark, fhirEncoders,
+              configuration.getStorage());
           final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(
               configuration.getQuery(),
               fhirContext, spark, dataSource, terminologyServiceFactory, scope);

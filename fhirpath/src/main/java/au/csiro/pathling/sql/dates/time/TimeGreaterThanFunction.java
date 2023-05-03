@@ -18,7 +18,8 @@
 package au.csiro.pathling.sql.dates.time;
 
 import java.time.LocalTime;
-import java.util.function.BiFunction;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Determines whether one time is after another.
@@ -32,8 +33,9 @@ public class TimeGreaterThanFunction extends TimeComparisonFunction {
   public static final String FUNCTION_NAME = "time_gt";
 
   @Override
-  protected BiFunction<LocalTime, LocalTime, Boolean> getOperationFunction() {
-    return LocalTime::isAfter;
+  @Nullable
+  protected Boolean compare(@Nonnull final LocalTime left, @Nonnull final LocalTime right) {
+    return left.isAfter(right);
   }
 
   @Override

@@ -1,24 +1,16 @@
 package au.csiro.pathling.examples;
 
-import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.config.StorageConfiguration;
 import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.query.ExtractQuery;
-import au.csiro.pathling.library.query.PathlingClient;
+import au.csiro.pathling.library.io.source.QueryableDataSource;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import java.nio.file.Path;
 
 public class ExtractFromDatabaseApp {
 
 
-  public static void main(String[] args) {
-
-    final String warehouseUrl = Path.of("fhir-server/src/test/resources/test-data").toAbsolutePath()
-        .toUri().toString();
-    System.out.printf("Warehouse URL: %s\n", warehouseUrl);
+  public static void main(final String[] args) {
 
     final SparkSession spark = SparkSession.builder()
         .appName(ExtractFromJsonApp.class.getName())
@@ -30,29 +22,26 @@ public class ExtractFromDatabaseApp {
 
     final PathlingContext ptc = PathlingContext.create(spark);
 
-    final PathlingClient pathlingClient = ptc.newClientBuilder()
-        .database()
-        .withQueryConfiguration(QueryConfiguration.builder().explainQueries(true).build())
-        .withStorageConfiguration(StorageConfiguration.forDatabase(warehouseUrl, "parquet"))
-        .build();
+    final QueryableDataSource data = ptc.read()
+        .delta("fhir-server/src/test/resources/test-data/parquet");
 
-    final Dataset<Row> patientResult = pathlingClient.newExtractQuery(ResourceType.PATIENT)
-        .withColumn("id")
-        .withColumn("gender")
-        .withColumn("reverseResolve(Condition.subject).code.coding.code")
-        .withFilter("gender = 'male'")
-        .withLimit(10)
-        .execute();
+    final Dataset<Row> patientResult = data.extract(ResourceType.PATIENT)
+        .column("id")
+        .column("gender")
+        .column("reverseResolve(Condition.subject).code.coding.code")
+        .filter("gender = 'male'")
+        .execute()
+        .limit(5);
 
     patientResult.show(5);
 
-    final Dataset<Row> conditionResult = ExtractQuery.of(ResourceType.CONDITION)
-        .withColumn("id")
-        .withColumn("code.coding.code", "code")
-        .withColumn("code.coding.display", "display_name")
-        .withColumn("subject.resolve().ofType(Patient).gender", "patient_gender")
-        .withLimit(10)
-        .execute(pathlingClient);
+    final Dataset<Row> conditionResult = data.extract(ResourceType.CONDITION)
+        .column("id")
+        .column("code.coding.code", "code")
+        .column("code.coding.display", "display_name")
+        .column("subject.resolve().ofType(Patient).gender", "patient_gender")
+        .execute()
+        .limit(5);
 
     conditionResult.show(5);
   }

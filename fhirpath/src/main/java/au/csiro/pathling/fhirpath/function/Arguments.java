@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -61,6 +60,7 @@ public class Arguments {
    * Gets the value of an optional literal argument that does not have a default value.
    *
    * @param index the 0-based index of the argument
+   * @param valueClass the expected Java class of the argument value
    * @param <T> the Java type of the argument value
    * @return the java value of the requested argument
    */
@@ -76,8 +76,10 @@ public class Arguments {
    * Gets the value of an optional literal argument that does not have a default value.
    *
    * @param index the 0-based index of the argument
+   * @param valueClass the expected Java class of the argument value
    * @param <T> the Java type of the argument value
-   * @return the java value of the requested argument
+   * @return an {@link Optional} containing the Java value of the requested argument, or an empty
+   * {@link Optional} if the argument is missing
    */
   @Nonnull
   public <T extends Type> Optional<T> getOptionalValue(final int index,

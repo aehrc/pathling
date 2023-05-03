@@ -15,9 +15,12 @@
 
 from .coding import Coding
 from .context import PathlingContext, StorageType
+from .core import Expression
+from .datasource import DataSources, DataSource
 from .etc import find_jar
 from .fhir import MimeType, Version
 from .functions import to_coding, to_snomed_coding, to_ecl_value_set
+from .query import ExtractQuery, AggregateQuery
 from .udfs import (
     member_of,
     translate,
@@ -49,4 +52,9 @@ __all__ = [
     "to_snomed_coding",
     "to_ecl_value_set",
     "find_jar",
+    "Expression",
+    "ExtractQuery",
+    "AggregateQuery",
+    "DataSources",
+    "DataSource",
 ]

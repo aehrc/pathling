@@ -18,6 +18,7 @@
 package au.csiro.pathling.sql.dates.datetime;
 
 import au.csiro.pathling.sql.dates.TemporalComparisonFunction;
+import ca.uhn.fhir.model.api.TemporalPrecisionEnum;
 import ca.uhn.fhir.parser.DataFormatException;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -41,7 +42,7 @@ public abstract class DateTimeComparisonFunction extends
     try {
       if (value instanceof Timestamp) {
         final Instant instant = ((Timestamp) value).toInstant();
-        return new DateTimeType(Date.from(instant));
+        return new DateTimeType(Date.from(instant), TemporalPrecisionEnum.MILLI);
       } else {
         return new DateTimeType((String) value);
       }
