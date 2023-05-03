@@ -25,7 +25,7 @@ import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.config.AsyncConfiguration;
 import au.csiro.pathling.config.HttpServerCachingConfiguration;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +38,7 @@ import org.springframework.security.core.Authentication;
 
 public class RequestTagFactoryTest {
 
-  private final DatabaseComponent mockDatabase = mock(DatabaseComponent.class);
+  private final CacheableDatabase mockDatabase = mock(CacheableDatabase.class);
   private final Cacheable mockCacheable = mock(Cacheable.class);
   private final ServletRequestDetails mockRequestDetails = mock(ServletRequestDetails.class);
   private final Authentication mockAuthentication = mock(Authentication.class);

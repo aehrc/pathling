@@ -27,7 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.util.List;
@@ -59,7 +59,7 @@ public class AsyncAspectTest {
   private ThreadPoolTaskExecutor threadPoolTaskExecutor;
 
   @MockBean
-  private DatabaseComponent databaseComponent;
+  private CacheableDatabase database;
 
   @MockBean
   StageMap stageMap;
@@ -93,7 +93,7 @@ public class AsyncAspectTest {
     // Wire the asynAspects and it's dependencied
     serverConfiguration = createServerConfiguration(List.of("Accept", "Authorization"),
         List.of("Accept"));
-    requestTagFactory = new RequestTagFactory(databaseComponent, serverConfiguration);
+    requestTagFactory = new RequestTagFactory(database, serverConfiguration);
     jobRegistry = new JobRegistry();
     asyncAspect = new AsyncAspect(threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap,
         spark);
@@ -198,9 +198,9 @@ public class AsyncAspectTest {
 
   @Test
   public void testCreatesNewAsyncJobWhenDatabaseVersionChanges() {
-    when(databaseComponent.getCacheKey()).thenReturn(Optional.of("key1"));
+    when(database.getCacheKey()).thenReturn(Optional.of("key1"));
     final String jobId1 = assertExecutedAsync();
-    when(databaseComponent.getCacheKey()).thenReturn(Optional.of("key2"));
+    when(database.getCacheKey()).thenReturn(Optional.of("key2"));
     final String jobId2 = assertExecutedAsync();
     assertNotEquals(jobId1, jobId2);
   }
