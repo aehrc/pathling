@@ -17,9 +17,11 @@
 
 package au.csiro.pathling.async;
 
+import static java.util.function.Predicate.not;
+
 import au.csiro.pathling.caching.Cacheable;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.io.DatabaseComponent;
+import au.csiro.pathling.io.CacheableDatabase;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.util.HashSet;
 import java.util.List;
@@ -36,8 +38,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
-
-import static java.util.function.Predicate.not;
 
 
 /**
@@ -70,7 +70,7 @@ public final class RequestTagFactory {
    * Public constructor to use for Spring component bean creation.
    */
   @Autowired
-  public RequestTagFactory(@Nonnull final DatabaseComponent database,
+  public RequestTagFactory(@Nonnull final CacheableDatabase database,
       @Nonnull final ServerConfiguration configuration) {
     this(database, getSalientHeaderNames(configuration));
   }
