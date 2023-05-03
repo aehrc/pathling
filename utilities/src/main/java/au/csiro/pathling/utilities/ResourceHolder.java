@@ -17,7 +17,8 @@
 
 package au.csiro.pathling.utilities;
 
-import static org.apache.commons.io.IOUtils.closeQuietly;
+
+import static org.apache.hadoop.shaded.org.apache.commons.io.IOUtils.closeQuietly;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * A class which can be used to manage the lifecycle of a number of resources which need to be
  * closed.
- * 
+ *
  * @author Piotr Szul
  */
 @Slf4j
