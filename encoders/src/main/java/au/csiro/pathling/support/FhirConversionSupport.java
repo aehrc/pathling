@@ -58,17 +58,29 @@ public abstract class FhirConversionSupport implements Serializable {
    * @param <T> the type of the resources to extract
    * @return the list of the resources of the specified type
    */
+  @Nonnull
   public abstract <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
-      IBaseBundle bundle,
-      Class<T> resourceClass);
+      @Nonnull final IBaseBundle bundle,
+      @Nonnull final Class<T> resourceClass);
+
+
+  /**
+   * Resolves URN references in the given bundle to relative references for resources defined in the
+   * bundle. URN references to resources not defined in the bundle are left unchanged. The
+   * references are resolved in-place, that is the input bundle is modified.
+   *
+   * @param bundle the bundle
+   * @return the bundle with references to existing resources resolved
+   */
+  @Nonnull
+  public abstract IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle);
 
   /**
    * Cache of FHIR contexts.
    */
   @Nonnull
   private static final Map<FhirVersionEnum, FhirConversionSupport> FHIR_SUPPORT = new HashMap<>();
-
-
+  
   @Nonnull
   private static FhirConversionSupport newInstance(@Nonnull final FhirVersionEnum fhirVersion) {
     if (!FhirVersionEnum.R4.equals(fhirVersion)) {
