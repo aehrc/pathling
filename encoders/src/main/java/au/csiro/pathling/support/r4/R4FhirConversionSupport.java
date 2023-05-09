@@ -44,7 +44,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
   private static final long serialVersionUID = -367070946615790595L;
 
   @Override
-  public String fhirType(IBase base) {
+  public String fhirType(final IBase base) {
 
     return base.fhirType();
   }
@@ -57,7 +57,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
   public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
       @Nonnull final IBaseBundle bundle,
       @Nonnull final Class<T> resourceClass) {
-    Bundle r4Bundle = (Bundle) bundle;
+    final Bundle r4Bundle = (Bundle) bundle;
 
     return r4Bundle.getEntry().stream()
         .map(BundleEntryComponent::getResource)
@@ -65,11 +65,11 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
         .collect(Collectors.toList());
   }
 
-  private static boolean isURNReference(final Reference reference) {
+  private static boolean isURNReference(@Nonnull final Reference reference) {
     return reference.hasReference() && reference.getReference().startsWith("urn:");
   }
 
-  static void resolveURNReference(final Base base) {
+  static void resolveURNReference(@Nonnull final Base base) {
     if (base instanceof Reference) {
       final Reference reference = (Reference) base;
       final Resource resource = (Resource) reference.getResource();
@@ -79,7 +79,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
     }
   }
 
-  private static void resolveURNReferences(Resource resource) {
+  private static void resolveURNReferences(@Nonnull final Resource resource) {
     FhirTraversal.processRecursive(resource, R4FhirConversionSupport::resolveURNReference);
   }
 
@@ -89,8 +89,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
   @Nonnull
   @Override
   public IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle) {
-
-    Bundle r4Bundle = (Bundle) bundle;
+    final Bundle r4Bundle = (Bundle) bundle;
     r4Bundle.getEntry().stream()
         .map(Bundle.BundleEntryComponent::getResource)
         .forEach(R4FhirConversionSupport::resolveURNReferences);

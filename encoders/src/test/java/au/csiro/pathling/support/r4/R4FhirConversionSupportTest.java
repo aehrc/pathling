@@ -31,7 +31,7 @@ class R4FhirConversionSupportTest {
 
   @Test
   void testRewritesResolvedURNReference() {
-    IBaseResource referenceResource = new Patient().setId(new IdType("Patient", "1234"));
+    final IBaseResource referenceResource = new Patient().setId(new IdType("Patient", "1234"));
     final Reference urnReference = (Reference) new Reference().setReference("urn:uuid:1234")
         .setResource(referenceResource);
     R4FhirConversionSupport.resolveURNReference(urnReference);
@@ -40,7 +40,7 @@ class R4FhirConversionSupportTest {
 
   @Test
   void testKeepsResolvedURNReferenceWithNoId() {
-    IBaseResource referenceResource = new Patient();
+    final IBaseResource referenceResource = new Patient();
     final Reference urnReference = (Reference) new Reference().setReference("urn:uuid:1234")
         .setResource(referenceResource);
     R4FhirConversionSupport.resolveURNReference(urnReference);
