@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.parser.ExecutionContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -91,7 +92,7 @@ public class PathTraversalOperator {
     final Optional<Column> eidColumnCandidate;
     final Dataset<Row> resultDataset;
 
-    if (maxCardinalityOfOne) {
+    if (maxCardinalityOfOne || input.getContext().getExecutionContext() == ExecutionContext.VIEW) {
       valueColumn = field;
       eidColumnCandidate = left.getEidColumn();
       resultDataset = leftDataset;

@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
 import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
 import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
+import au.csiro.pathling.fhirpath.parser.ExecutionContext;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -72,6 +73,34 @@ public interface NamedFunction {
       .build();
 
   /**
+   * Mapping of function names to the instances of those functions.
+   */
+  Map<String, NamedFunction> NAME_TO_INSTANCE_VIEW_CONTEXT = new ImmutableMap.Builder<String, NamedFunction>()
+      .put("count", new CountFunction())
+      .put("ofType", new OfTypeFunction())
+      .put("memberOf", new MemberOfFunction())
+      .put("where", new WhereFunction())
+      .put("subsumes", new SubsumesFunction())
+      .put("subsumedBy", new SubsumesFunction(true))
+      .put("empty", new EmptyFunction())
+      .put("first", new FirstFunction())
+      .put("not", new NotFunction())
+      .put("iif", new IifFunction())
+      .put("translate", new TranslateFunction())
+      .put("sum", new SumFunction())
+      .put("anyTrue", new BooleansTestFunction(ANY_TRUE))
+      .put("anyFalse", new BooleansTestFunction(ANY_FALSE))
+      .put("allTrue", new BooleansTestFunction(ALL_TRUE))
+      .put("allFalse", new BooleansTestFunction(ALL_FALSE))
+      .put("extension", new ExtensionFunction())
+      .put("until", new UntilFunction())
+      .put("exists", new ExistsFunction())
+      .put("display", new DisplayFunction())
+      .put("property", new PropertyFunction())
+      .put("designation", new DesignationFunction())
+      .build();
+
+  /**
    * The FHIRPath expression for the $this keyword, used to access the current item in the
    * collection in functions such as {@code where}.
    *
@@ -89,14 +118,29 @@ public interface NamedFunction {
   FhirPath invoke(@Nonnull NamedFunctionInput input);
 
   /**
-   * Retrieves an instance of the function with the specified name.
+   * Retrieves an instance of the function with the specified name in the specified context.
    *
    * @param name The name of the function
    * @return An instance of a NamedFunction
    */
   @Nonnull
   static NamedFunction getInstance(@Nonnull final String name) {
-    final NamedFunction function = NAME_TO_INSTANCE.get(name);
+    return getInstance(name, ExecutionContext.DEFAULT);
+  }
+
+  /**
+   * Retrieves an instance of the function with the specified name.
+   *
+   * @param name The name of the function
+   * @param context The execution context
+   * @return An instance of a NamedFunction
+   */
+  @Nonnull
+  static NamedFunction getInstance(@Nonnull final String name,
+      @Nonnull final ExecutionContext context) {
+    final NamedFunction function = context == ExecutionContext.VIEW
+                                   ? NAME_TO_INSTANCE_VIEW_CONTEXT.get(name)
+                                   : NAME_TO_INSTANCE.get(name);
     checkUserInput(function != null, "Unsupported function: " + name);
     return function;
   }

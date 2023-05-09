@@ -28,7 +28,9 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
+import au.csiro.pathling.library.query.FhirViewBuilder;
 import au.csiro.pathling.library.query.QueryDispatcher;
+import au.csiro.pathling.views.FhirViewExecutor;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -66,9 +68,12 @@ public abstract class AbstractSource implements QueryableDataSource {
     final ExtractQueryExecutor extractExecutor = new ExtractQueryExecutor(queryConfiguration,
         context.getFhirContext(), context.getSpark(), dataSource,
         Optional.of(context.getTerminologyServiceFactory()));
+    final FhirViewExecutor viewExecutor = new FhirViewExecutor(queryConfiguration,
+        context.getFhirContext(), context.getSpark(), dataSource,
+        Optional.of(context.getTerminologyServiceFactory()));
 
     // Build the dispatcher using the executors.
-    return new QueryDispatcher(aggregateExecutor, extractExecutor);
+    return new QueryDispatcher(aggregateExecutor, extractExecutor, viewExecutor);
   }
 
   @Nonnull
@@ -99,6 +104,18 @@ public abstract class AbstractSource implements QueryableDataSource {
   @Override
   public ExtractQuery extract(@Nullable final String subjectResource) {
     return extract(getResourceType(subjectResource));
+  }
+
+  @Nonnull
+  @Override
+  public FhirViewBuilder view(@Nullable final ResourceType subjectResource) {
+    return new FhirViewBuilder(dispatcher, requireNonNull(subjectResource));
+  }
+
+  @Nonnull
+  @Override
+  public FhirViewBuilder view(@Nullable final String subjectResource) {
+    return view(getResourceType(subjectResource));
   }
 
 }

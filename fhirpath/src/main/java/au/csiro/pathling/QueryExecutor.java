@@ -135,20 +135,27 @@ public abstract class QueryExecutor {
       @Nonnull final Collection<FhirPath> expressions,
       @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
 
-    // We need to remove any trailing null values from non-empty collections, so that aggregations do
-    // not count non-empty collections in the empty collection grouping.
-    // We start from the inputContext's dataset and then outer join subsequent expressions datasets
-    // where the value is not null.
-    final Dataset<Row> combinedGroupings = expressions.stream()
-        .map(expr -> expr.getDataset().filter(expr.getValueColumn().isNotNull()))
-        // the use of RIGHT_OUTER join seems to be necessary to preserve the original
-        // id column in the result
-        .reduce(inputContext.getDataset(),
-            ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
+    final Dataset<Row> combinedGroupings = joinExpressionsWithoutCorrelation(
+        inputContext, expressions, idColumn);
 
     return filters.stream()
         .map(FhirPath::getDataset)
         .reduce(combinedGroupings,
+            ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
+  }
+
+  @Nonnull
+  protected static Dataset<Row> joinExpressionsWithoutCorrelation(final FhirPath inputContext,
+      final @Nonnull Collection<FhirPath> expressions, final @Nonnull Column idColumn) {
+    // We need to remove any trailing null values from non-empty collections, so that aggregations do
+    // not count non-empty collections in the empty collection grouping.
+    // We start from the inputContext's dataset and then outer join subsequent expressions datasets
+    // where the value is not null.
+    return expressions.stream()
+        .map(expr -> expr.getDataset().filter(expr.getValueColumn().isNotNull()))
+        // the use of RIGHT_OUTER join seems to be necessary to preserve the original
+        // id column in the result
+        .reduce(inputContext.getDataset(),
             ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
   }
 

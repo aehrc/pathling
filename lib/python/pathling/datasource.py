@@ -21,7 +21,12 @@ from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
 
 from pathling import PathlingContext
-from pathling.core import ExpOrStr, StringToStringSetMapper, SparkConversionsMixin
+from pathling.core import (
+    ExpOrStr,
+    Expression,
+    StringToStringSetMapper,
+    SparkConversionsMixin,
+)
 from pathling.fhir import MimeType
 
 
@@ -110,6 +115,32 @@ class DataSource(SparkConversionsMixin):
         return AggregateQuery(resource_type, aggregations, groupings, filters).execute(
             self
         )
+
+    def view(
+        self,
+        resource_type: str,
+        columns: Sequence[Expression],
+        variables: Sequence[Expression],
+        filters: Optional[Sequence[Expression]] = None,
+    ) -> DataFrame:
+        """
+        Runs a view query for the given resource type, using the specified columns, variables and
+        filters.
+
+        :param resource_type: A string representing the type of FHIR resource to base the view upon.
+        :param columns: A sequence of FHIRPath expressions that define the columns to include in the
+               view.
+        :param variables: A sequence of FHIRPath expressions that define variables that can be used
+               in the view.
+        :param filters: An optional sequence of FHIRPath expressions that can be evaluated against
+               each resource in the data set to determine whether it is included within the result.
+               The expression must evaluate to a Boolean value. Multiple filters are combined using
+               AND logic.
+        :return: A Spark DataFrame object that represents the view query.
+        """
+        from pathling.query import FhirView
+
+        return FhirView(resource_type, columns, variables, filters).execute(self)
 
 
 class DataSources(SparkConversionsMixin):

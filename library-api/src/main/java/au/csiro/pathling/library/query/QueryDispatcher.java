@@ -21,6 +21,8 @@ import au.csiro.pathling.aggregate.AggregateQueryExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.extract.ExtractQueryExecutor;
 import au.csiro.pathling.extract.ExtractRequest;
+import au.csiro.pathling.views.FhirView;
+import au.csiro.pathling.views.FhirViewExecutor;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -39,10 +41,15 @@ public class QueryDispatcher {
   @Nonnull
   private final ExtractQueryExecutor extractExecutor;
 
+  @Nonnull
+  private final FhirViewExecutor viewExecutor;
+
   public QueryDispatcher(@Nonnull final AggregateQueryExecutor aggregateExecutor,
-      @Nonnull final ExtractQueryExecutor extractExecutor) {
+      @Nonnull final ExtractQueryExecutor extractExecutor,
+      @Nonnull final FhirViewExecutor viewExecutor) {
     this.aggregateExecutor = aggregateExecutor;
     this.extractExecutor = extractExecutor;
+    this.viewExecutor = viewExecutor;
   }
 
   /**
@@ -65,6 +72,17 @@ public class QueryDispatcher {
   @Nonnull
   public Dataset<Row> dispatch(@Nonnull final AggregateRequest aggregateRequest) {
     return aggregateExecutor.buildQuery(aggregateRequest).getDataset();
+  }
+
+  /**
+   * Dispatches the given view request to the relevant executor and returns the result.
+   *
+   * @param view the request to execute
+   * @return the result of the execution
+   */
+  @Nonnull
+  public Dataset<Row> dispatch(@Nonnull final FhirView view) {
+    return viewExecutor.buildQuery(view);
   }
 
 }
