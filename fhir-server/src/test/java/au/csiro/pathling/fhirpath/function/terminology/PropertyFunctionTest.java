@@ -35,9 +35,9 @@ import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
-import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
@@ -99,7 +99,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
       final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
       final FHIRDefinedType expectedResultType,
       final Dataset<Row> expectedResult, final String displayLanguage) {
-    if (displayLanguage == null) {
+    if ((displayLanguage == null)||(!maybePropertyType.isPresent())) {
       TerminologyServiceHelpers.setupLookup(terminologyService)
           .withProperty(CODING_A, "propertyA", propertyAFhirValues)
           .withProperty(CODING_B, "propertyB", propertyBFhirValues);
@@ -148,10 +148,9 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
           .fromString("'" + maybePropertyType.get() + "'", inputExpression));
     }
     if (displayLanguage != null) {
-      if (arguments.size()<2) {
-        arguments.add(NullLiteralPath.build(inputExpression));
+      if (arguments.size()==2) {
+        arguments.add(StringLiteralPath.fromString(displayLanguage, inputExpression));
       }
-      arguments.add(StringLiteralPath.fromString(displayLanguage, inputExpression));
     }
       
     final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
@@ -170,10 +169,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
                         propertyType) : String.format("Encounter.class.property('%s', '%s', '%s')",
                         propertyCode,
                         propertyType, displayLanguage))
-                .orElse(displayLanguage == null ? String.format("Encounter.class.property('%s')", propertyCode) :
-                        String.format("Encounter.class.property('%s', %s, '%s')",
-                            propertyCode, "{}", displayLanguage)
-                ))
+                .orElse(String.format("Encounter.class.property('%s')", propertyCode)))
         .isElementPath(ElementPath.class)
         .hasFhirType(expectedResultType)
         .isNotSingular()
@@ -363,7 +359,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
   @Test
   void throwsErrorIfSecondArgumentIsNotBoolean() {
-    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2 or null",
+    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2",
         input -> Arrays.asList(
             StringLiteralPath.fromString("'foo'", input),
             IntegerLiteralPath.fromString("5", input)));
@@ -371,7 +367,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
   @Test
   void throwsErrorIfThirdArgumentIsNotBoolean() {
-    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 3 or null",
+    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 3",
         input -> Arrays.asList(
             StringLiteralPath.fromString("'foo'", input),
             StringLiteralPath.fromString("'foo'", input),

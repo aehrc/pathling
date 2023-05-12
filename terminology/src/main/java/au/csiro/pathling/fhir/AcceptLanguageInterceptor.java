@@ -26,7 +26,7 @@ import org.apache.http.HttpHeaders;
 
 @Interceptor
 public class AcceptLanguageInterceptor {
-	private String acceptLanguage;
+	private final String acceptLanguage;
 
 	public AcceptLanguageInterceptor(String acceptLanguage) {
 		this.acceptLanguage = acceptLanguage;

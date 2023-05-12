@@ -59,10 +59,10 @@ public class DisplayFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     final Arguments arguments = Arguments.of(input);
-    var acceptLanguageStringType = arguments.getNullableValue(0, StringType.class);
+    final StringType acceptLanguageStringType = arguments.getNullableValue(0, StringType.class);
     
     final Dataset<Row> dataset = inputPath.getDataset();
-    Column resultColumn;
+    final Column resultColumn;
     if (acceptLanguageStringType != null) {
       resultColumn = display(inputPath.getValueColumn(), acceptLanguageStringType.asStringValue());
     } else {
