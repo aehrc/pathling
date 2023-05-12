@@ -26,10 +26,8 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.sql.udf.DesignationUdf;
 import au.csiro.pathling.sql.udf.DisplayUdf;
-import au.csiro.pathling.sql.udf.DisplayLanguageUdf;
 import au.csiro.pathling.sql.udf.MemberOfUdf;
 import au.csiro.pathling.sql.udf.PropertyUdf;
-import au.csiro.pathling.sql.udf.PropertyLanguageUdf;
 import au.csiro.pathling.sql.udf.SubsumesUdf;
 import au.csiro.pathling.sql.udf.TranslateUdf;
 import java.util.Collection;
@@ -166,7 +164,7 @@ public interface Terminology {
    */
   @Nonnull
   static Column display(@Nonnull final Column coding) {
-    return call_udf(DisplayUdf.FUNCTION_NAME, coding);
+    return call_udf(DisplayUdf.FUNCTION_NAME, coding, lit(null));
   }
 
 
@@ -180,7 +178,7 @@ public interface Terminology {
    */
   @Nonnull
   static Column display(@Nonnull final Column coding, @Nonnull final String language) {
-    return call_udf(DisplayLanguageUdf.FUNCTION_NAME, coding, lit(language));
+    return call_udf(DisplayUdf.FUNCTION_NAME, coding, lit(language));
   }
   
 
@@ -200,7 +198,7 @@ public interface Terminology {
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType, @Nullable final String acceptLanguage) {
-    return call_udf(PropertyLanguageUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(acceptLanguage));
+    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(acceptLanguage));
   }
 
   /**

@@ -103,8 +103,8 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
           .withProperty(CODING_B, "propertyB", propertyBFhirValues);
     } else {
       TerminologyServiceHelpers.setupLookup(terminologyService)
-          .withPropertyLanguage(CODING_A, "propertyA", displayLanguage, propertyAFhirValues)
-          .withPropertyLanguage(CODING_B, "propertyB", displayLanguage, propertyBFhirValues);
+          .withProperty(CODING_A, "propertyA", displayLanguage, propertyAFhirValues)
+          .withProperty(CODING_B, "propertyB", displayLanguage, propertyBFhirValues);
     }
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers

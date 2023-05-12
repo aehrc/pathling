@@ -39,12 +39,12 @@ import org.hl7.fhir.r4.model.Coding;
  */
 @Slf4j
 public class DisplayUdf implements SqlFunction,
-    SqlFunction1<Row, String> {
+    SqlFunction2<Row, String, String> {
 
   private static final long serialVersionUID = 7605853352299165569L;
 
   public static final String DISPLAY_PROPERTY_CODE = "display";
-  public static final String FUNCTION_NAME = "display";
+  public static final String FUNCTION_NAME = "display_language";
   public static final DataType RETURN_TYPE = DataTypes.StringType;
 
   @Nonnull
@@ -65,13 +65,13 @@ public class DisplayUdf implements SqlFunction,
   }
 
   @Nullable
-  protected String doCall(@Nullable final Coding coding) {
+  protected String doCall(@Nullable final Coding coding, @Nullable final String language) {
     if (coding == null || !isValidCoding(coding)) {
       return null;
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        coding, DISPLAY_PROPERTY_CODE);
+        coding, DISPLAY_PROPERTY_CODE, language);
 
     final Optional<Property> maybeDisplayName = result.stream()
         .filter(s -> s instanceof Property)
@@ -84,7 +84,7 @@ public class DisplayUdf implements SqlFunction,
 
   @Nullable
   @Override
-  public String call(@Nullable final Row codingRow) {
-    return doCall(decode(codingRow));
+  public String call(@Nullable final Row codingRow, @Nullable final String language) {
+    return doCall(decode(codingRow), language);
   }
 }

@@ -176,8 +176,8 @@ class DisplayFunctionTest {
 
     // Setup mocks
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withDisplayLanguage(LC_55915_3, LC_55915_3.getDisplay(), "de")
-        .withDisplayLanguage(CD_SNOMED_VER_63816008, CD_SNOMED_VER_63816008.getDisplay(), "de");
+        .withDisplay(LC_55915_3, LC_55915_3.getDisplay(), "de")
+        .withDisplay(CD_SNOMED_VER_63816008, CD_SNOMED_VER_63816008.getDisplay(), "de");
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
