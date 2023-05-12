@@ -24,7 +24,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -45,7 +45,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -86,7 +85,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   private Optional<Integer> count;
 
   /**
-   * @param configuration A {@link ServerConfiguration} object to control the behaviour of the
+   * @param configuration A {@link QueryConfiguration} object to control the behaviour of the
    * executor
    * @param fhirContext A {@link FhirContext} for doing FHIR stuff
    * @param sparkSession A {@link SparkSession} for resolving Spark queries
@@ -98,7 +97,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    * @param subjectResource The type of resource that is the subject for this query
    * @param filters A list of filters that should be applied within queries
    */
-  public SearchExecutor(@Nonnull final ServerConfiguration configuration,
+  public SearchExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final Database database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
@@ -121,7 +120,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   @Nonnull
   private Dataset<Row> initializeDataset() {
     final ResourcePath resourcePath = ResourcePath
-        .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
+        .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode(),
             true, true);
     final Dataset<Row> subjectDataset = resourcePath.getDataset();
     final Column subjectIdColumn = resourcePath.getIdColumn();
@@ -138,7 +137,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       @Nullable Column filterColumn = null;
 
       ResourcePath currentContext = ResourcePath
-          .build(getFhirContext(), getDatabase(), subjectResource, subjectResource.toCode(),
+          .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode(),
               true);
 
       // Parse each of the supplied filter expressions, building up a filter column. This captures 
@@ -197,7 +196,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           .join(filteredIds, subjectIdColumn.equalTo(col(filterIdAlias)), "left_semi");
     }
 
-    if (getConfiguration().getSpark().getCacheDatasets()) {
+    if (getConfiguration().getCacheResults()) {
       // We cache the dataset because we know it will be accessed for both the total and the record
       // retrieval.
       log.debug("Caching search dataset");
@@ -243,7 +242,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   }
 
   private void reportQueryPlan(@Nonnull final Dataset<Row> resources) {
-    if (getConfiguration().getSpark().getExplainQueries()) {
+    if (getConfiguration().getExplainQueries()) {
       log.debug("Search query plan:");
       resources.explain(true);
     }

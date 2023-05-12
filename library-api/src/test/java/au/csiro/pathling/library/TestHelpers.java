@@ -19,17 +19,26 @@ package au.csiro.pathling.library;
 
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.SparkSession.Builder;
 
 public class TestHelpers {
 
   @Nonnull
   public static SparkSession spark() {
+    return sparkBuilder()
+        .getOrCreate();
+  }
+
+  @Nonnull
+  public static Builder sparkBuilder() {
     return SparkSession.builder()
         .master("local[*]")
         .appName("testing")
         .config("spark.driver.bindAddress", "localhost")
         .config("spark.driver.host", "localhost")
-        .getOrCreate();
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+        .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog");
   }
 
 }

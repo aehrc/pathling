@@ -21,9 +21,9 @@ import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.helpers.TestHelpers;
@@ -59,7 +59,7 @@ public class TerminologyBenchmarkTest {
   TerminologyServiceFactory terminologyServiceFactory;
 
   @Autowired
-  ServerConfiguration configuration;
+  QueryConfiguration configuration;
 
   @Autowired
   FhirContext fhirContext;
@@ -71,7 +71,7 @@ public class TerminologyBenchmarkTest {
   FhirEncoders fhirEncoders;
 
   @MockBean
-  Database database;
+  CacheableDatabase database;
 
   AggregateExecutor defaultExecutor;
 

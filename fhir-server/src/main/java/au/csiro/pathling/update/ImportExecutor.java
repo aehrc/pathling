@@ -26,7 +26,8 @@ import au.csiro.pathling.errors.SecurityError;
 import au.csiro.pathling.fhir.FhirContextFactory;
 import au.csiro.pathling.io.AccessRules;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.PersistenceScheme;
+import au.csiro.pathling.io.FileSystemPersistence;
+import au.csiro.pathling.io.ImportMode;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -34,8 +35,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
@@ -135,7 +134,8 @@ public class ImportExecutor {
           .filter(param -> "mode".equals(param.getName()) &&
               param.getValue() instanceof CodeType)
           .findFirst()
-          .map(param -> ImportMode.fromCode(((CodeType) param.getValue()).asStringValue()))
+          .map(param -> ImportMode.fromCode(
+              ((CodeType) param.getValue()).asStringValue()))
           .orElse(ImportMode.OVERWRITE);
       final String resourceCode = ((CodeType) resourceTypeParam.getValue()).getCode();
       final ResourceType resourceType = ResourceType.fromCode(resourceCode);
@@ -180,7 +180,7 @@ public class ImportExecutor {
   private Dataset<String> readStringsFromUrl(@Nonnull final ParametersParameterComponent urlParam) {
     final String url = ((UrlType) urlParam.getValue()).getValueAsString();
     final String decodedUrl = URLDecoder.decode(url, StandardCharsets.UTF_8);
-    final String convertedUrl = PersistenceScheme.convertS3ToS3aUrl(decodedUrl);
+    final String convertedUrl = FileSystemPersistence.convertS3ToS3aUrl(decodedUrl);
     final Dataset<String> jsonStrings;
     try {
       // Check that the user is authorized to execute the operation.
@@ -205,39 +205,6 @@ public class ImportExecutor {
       checkUserInput(!resource.getIdElement().isEmpty(), "Encountered a resource with no ID");
       return resource;
     };
-  }
-
-  public enum ImportMode {
-    /**
-     * Results in all existing resources of the specified type to be deleted and replaced with the
-     * contents of the source file.
-     */
-    OVERWRITE("overwrite"),
-
-    /**
-     * Matches existing resources with updated resources in the source file based on their ID, and
-     * either update the existing resources or add new resources as appropriate.
-     */
-    MERGE("merge");
-
-    @Nonnull
-    @Getter
-    private final String code;
-
-    ImportMode(@Nonnull final String code) {
-      this.code = code;
-    }
-
-    @Nullable
-    public static ImportMode fromCode(@Nonnull final String code) {
-      for (final ImportMode mode : values()) {
-        if (mode.code.equals(code)) {
-          return mode;
-        }
-      }
-      return null;
-    }
-
   }
 
 }

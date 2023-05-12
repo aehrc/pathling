@@ -312,5 +312,5 @@ within URLs sent back by the API.
 Pathling can also be run directly within an Apache Spark cluster as a persistent
 application.
 
-For compatibility, Pathling runs Spark 3.3.1 (Scala 2.12), with Hadoop version
+For compatibility, Pathling runs Spark 3.3.2 (Scala 2.12), with Hadoop version
 3.3.3.

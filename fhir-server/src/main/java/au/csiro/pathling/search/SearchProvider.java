@@ -155,7 +155,7 @@ public class SearchProvider implements IResourceProvider {
   @Nonnull
   private IBundleProvider buildSearchExecutor(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<StringAndListParam> filters) {
-    return new SearchExecutor(configuration, fhirContext, sparkSession, database,
+    return new SearchExecutor(configuration.getQuery(), fhirContext, sparkSession, database,
         terminologyServiceFactory, fhirEncoders, subjectResource, filters);
   }
 

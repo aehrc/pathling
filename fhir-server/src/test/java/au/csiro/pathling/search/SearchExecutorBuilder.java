@@ -20,14 +20,13 @@ package au.csiro.pathling.search;
 import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.param.StringAndListParam;
-import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -42,7 +41,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 class SearchExecutorBuilder {
 
   @Nonnull
-  final ServerConfiguration configuration;
+  final QueryConfiguration configuration;
 
   @Nonnull
   final FhirContext fhirContext;
@@ -65,7 +64,7 @@ class SearchExecutorBuilder {
   @Nonnull
   Optional<StringAndListParam> filters = Optional.empty();
 
-  SearchExecutorBuilder(@Nonnull final ServerConfiguration configuration,
+  SearchExecutorBuilder(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {

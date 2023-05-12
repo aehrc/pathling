@@ -2,7 +2,6 @@ FROM jupyter/all-spark-notebook
 
 USER root
 COPY target/py-dist/pathling-*.whl /tmp
-RUN echo "spark.executor.userClassPathFirst true" >> /usr/local/spark/conf/spark-defaults.conf
 
 USER ${NB_UID}
 

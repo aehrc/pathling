@@ -48,8 +48,8 @@ public class AccessRules {
 
     this.allowableSources = configuration.getImport().getAllowableSources().stream()
         .filter(StringUtils::isNotBlank)
-        .map(PersistenceScheme::convertS3ToS3aUrl).collect(
-            Collectors.toList());
+        .map(FileSystemPersistence::convertS3ToS3aUrl)
+        .collect(Collectors.toList());
 
     if (allowableSources.size() < configuration.getImport().getAllowableSources().size()) {
       log.warn("Some empty or blank allowable sources have been ignored in import configuration.");

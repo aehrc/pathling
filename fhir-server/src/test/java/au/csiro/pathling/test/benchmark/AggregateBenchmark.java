@@ -23,7 +23,7 @@ import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
@@ -72,7 +72,7 @@ public class AggregateBenchmark {
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    ServerConfiguration configuration;
+    QueryConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;

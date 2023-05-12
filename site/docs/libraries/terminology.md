@@ -7,8 +7,10 @@ sidebar_position: 3
 The library also provides a set of functions for querying a FHIR terminology
 server from within your queries and transformations.
 
-import Tabs from "@theme/Tabs"; import TabItem from "@theme/TabItem"; import {
-JavaInstallation, PythonInstallation, ScalaInstallation } from "../../src/components/installation";
+import Tabs from "@theme/Tabs"; 
+import TabItem from "@theme/TabItem"; 
+import { JavaInstallation, PythonInstallation, ScalaInstallation } 
+    from "../../src/components/installation";
 
 ### Value set membership
 
