@@ -216,7 +216,7 @@ public interface Terminology {
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType) {
-    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode));
+    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(null));
   }
 
   /**

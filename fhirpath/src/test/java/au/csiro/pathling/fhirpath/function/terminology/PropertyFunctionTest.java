@@ -97,14 +97,14 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
       final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
       final FHIRDefinedType expectedResultType,
       final Dataset<Row> expectedResult, final String displayLanguage) {
-    if ((displayLanguage == null)||(!maybePropertyType.isPresent())) {
-      TerminologyServiceHelpers.setupLookup(terminologyService)
-          .withProperty(CODING_A, "propertyA", propertyAFhirValues)
-          .withProperty(CODING_B, "propertyB", propertyBFhirValues);
-    } else {
+    if ((maybePropertyType.isPresent())&&(displayLanguage != null)) {
       TerminologyServiceHelpers.setupLookup(terminologyService)
           .withProperty(CODING_A, "propertyA", displayLanguage, propertyAFhirValues)
           .withProperty(CODING_B, "propertyB", displayLanguage, propertyBFhirValues);
+    } else {
+      TerminologyServiceHelpers.setupLookup(terminologyService)
+          .withProperty(CODING_A, "propertyA", null, propertyAFhirValues)
+          .withProperty(CODING_B, "propertyB", null, propertyBFhirValues);
     }
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
@@ -144,13 +144,11 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     if (maybePropertyType.isPresent()) {
       arguments.add(StringLiteralPath
           .fromString("'" + maybePropertyType.get() + "'", inputExpression));
-    }
-    if (displayLanguage != null) {
-      if (arguments.size()==2) {
+      if (displayLanguage != null) {
         arguments.add(StringLiteralPath.fromString(displayLanguage, inputExpression));
       }
     }
-      
+    
     final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
         arguments);
 

@@ -215,7 +215,7 @@ public class PropertyUdf implements SqlFunction,
   public static String getNameForType(final FHIRDefinedType propertyType) {
     if (!ALLOWED_FHIR_TYPES.contains(propertyType)) {
       throw new InvalidUserInputError(
-          String.format("Type: '%s' is not supported for 'property language' udf", propertyType.toCode()));
+          String.format("Type: '%s' is not supported for 'property' udf", propertyType.toCode()));
     }
     return String.format("%s_%s", FUNCTION_BASE_NAME, propertyType.getDisplay());
   }

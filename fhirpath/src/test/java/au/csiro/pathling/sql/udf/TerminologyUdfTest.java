@@ -488,8 +488,8 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
       final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
       final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_1, "property_a", propertyAFhirValues)
-        .withProperty(CODING_2, "property_b", propertyBFhirValues);
+        .withProperty(CODING_1, "property_a", (String)null, propertyAFhirValues)
+        .withProperty(CODING_2, "property_b", (String)null, propertyBFhirValues);
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -534,7 +534,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   @Test
   public void testPropertyWithDefaultType() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_1, "property_a", new StringType("value_a"));
+        .withProperty(CODING_1, "property_a", (String)null, new StringType("value_a"));
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")

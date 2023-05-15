@@ -60,7 +60,6 @@ public class PropertyFunction implements NamedFunction {
 
     final Arguments arguments = Arguments.of(input);
     final String propertyCode = arguments.getValue(0, StringType.class).asStringValue();
-    final StringType defaultPropertyType = new StringType(PropertyUdf.DEFAULT_PROPERTY_TYPE.toCode());
     final String propertyTypeAsString = arguments.getValueOr(1,
         new StringType(PropertyUdf.DEFAULT_PROPERTY_TYPE.toCode())).asStringValue();
     final StringType acceptLanguageStringType = arguments.getNullableValue(2, StringType.class);
@@ -75,7 +74,7 @@ public class PropertyFunction implements NamedFunction {
           propertyType, acceptLanguageStringType.asStringValue());
     } else {
       propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
-          propertyType);
+          propertyType, null);
     }
 
     // // The result is an array of property values per each input element, which we now
