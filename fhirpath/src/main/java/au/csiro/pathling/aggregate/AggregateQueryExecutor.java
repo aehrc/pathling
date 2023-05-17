@@ -25,6 +25,7 @@ import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -87,8 +88,8 @@ public class AggregateQueryExecutor extends QueryExecutor {
         Collections.singletonList(inputContext.getIdColumn()));
     final Parser parser = new Parser(groupingAndFilterContext);
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final List<FhirPathAndContext> groupingParseResult = parseMaterializableExpressions(
-        groupingAndFilterContext, query.getGroupings(), "Grouping");
+    final List<FhirPathAndContext> groupingParseResult = parseExpressions(
+        groupingAndFilterContext, query.getGroupings(), "Grouping", true);
     final List<FhirPath> groupings = groupingParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toList());

@@ -163,7 +163,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         .getText();
     requireNonNull(functionIdentifier);
     final NamedFunction function = NamedFunction.getInstance(functionIdentifier,
-        context.getExecutionContext());
+        context.getUnnestBehaviour());
 
     // If there is no invoker, we use either the input context or the this context, depending on
     // whether we are in the context of function arguments.

@@ -1,0 +1,147 @@
+package au.csiro.pathling.views;
+
+import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.SpringBootUnitTest;
+import au.csiro.pathling.test.assertions.DatasetAssert;
+import ca.uhn.fhir.context.FhirContext;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
+import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
+
+@SpringBootUnitTest
+class FhirViewTest {
+
+  @Autowired
+  SparkSession spark;
+
+  @Autowired
+  FhirContext fhirContext;
+
+  @Autowired
+  FhirEncoders fhirEncoders;
+
+  @MockBean
+  TerminologyServiceFactory terminologyServiceFactory;
+
+  FhirViewExecutor executor;
+
+  static final Path TEST_DATA_PATH = Path.of(
+      "src/test/resources/test-data/views").toAbsolutePath().normalize();
+
+  @BeforeEach
+  void setUp() {
+    final QueryConfiguration queryConfiguration = QueryConfiguration.builder().build();
+    final DataSource dataSource = Database.forFileSystem(spark, fhirEncoders,
+        TEST_DATA_PATH.toUri().toString(), true);
+    executor = new FhirViewExecutor(queryConfiguration, fhirContext, spark, dataSource,
+        Optional.of(terminologyServiceFactory));
+  }
+
+  // Test 1:
+  // Select ID, gender and birth date for each patient.
+  // {
+  //   "resource": "Patient",
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "gender",
+  //       "expr": "gender"
+  //     },
+  //     {
+  //       "name": "birth_date",
+  //       "expr": "birthDate"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test1() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("gender", "gender"),
+            new NamedExpression("birthDate", "birth_date")
+        ), List.of(), List.of());
+    final Dataset<Row> result = executor.buildQuery(view);
+
+    // Expected result:
+    // | id | gender | birth_date |
+    // |----|--------|------------|
+    // | 1  | female | 1959-09-27 |
+    // | 2  | male   | 1983-09-06 |
+    DatasetAssert.of(result).hasRows(
+        RowFactory.create("1", "female", "1959-09-27"),
+        RowFactory.create("2", "male", "1983-09-06")
+    );
+  }
+
+  // Test 2:
+  // Select ID, name prefix and family name for each patient.
+  // {
+  //   "resource": "Patient",
+  //   "vars": [
+  //     {
+  //       "name": "name",
+  //       "expr": "name",
+  //       "whenMany": "unnest"
+  //     }
+  //   ],
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "name_use",
+  //       "expr": "%name.use"
+  //     },
+  //     {
+  //       "name": "family_name",
+  //       "expr": "%name.family"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test2() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("%name.use", "name_use"),
+            new NamedExpression("%name.family", "family_name")
+        ),
+        List.of(
+            new VariableExpression("name", "name", WhenMany.UNNEST)
+        ),
+        List.of());
+    final Dataset<Row> result = executor.buildQuery(view);
+
+    // Expected result:
+    // | id | name_use | family_name |
+    // |----|----------|-------------|
+    // | 1  | maiden   | Wuckert     |
+    // | 1  | official | Oberbrunner |
+    // | 2  | nickname | Cleveland   |
+    // | 2  | official | Towne       |
+    DatasetAssert.of(result).hasRowsUnordered(
+        RowFactory.create("1", "maiden", "Wuckert"),
+        RowFactory.create("1", "official", "Oberbrunner"),
+        RowFactory.create("2", "nickname", "Cleveland"),
+        RowFactory.create("2", "official", "Towne")
+    );
+  }
+}

@@ -18,17 +18,16 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
-import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -63,18 +62,27 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitExternalConstantTerm(@Nullable final ExternalConstantTermContext ctx) {
     @Nullable final String term = requireNonNull(ctx).getText();
     requireNonNull(term);
-    checkUserInput(term.equals("%resource") || term.equals("%context"),
-        "Unsupported environment variable: " + term);
-    check(context.getInputContext() instanceof NonLiteralPath);
 
-    // The %resource and %context elements both return the input context.
-    final NonLiteralPath inputContext = (NonLiteralPath) context.getInputContext();
+    if (term.equals("%resource") || term.equals("%context")) {
+      check(context.getInputContext() instanceof NonLiteralPath);
 
-    // In the case of %resource and %context, the new expression will be the input context with the
-    // expression updated to match the external constant term.
-    return inputContext.copy(term, inputContext.getDataset(), inputContext.getIdColumn(),
-        inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-        inputContext.getThisColumn());
+      // The %resource and %context elements both return the input context.
+      final NonLiteralPath inputContext = (NonLiteralPath) context.getInputContext();
+
+      // In the case of %resource and %context, the new expression will be the input context with the
+      // expression updated to match the external constant term.
+      return inputContext.copy(term, inputContext.getDataset(), inputContext.getIdColumn(),
+          inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
+          inputContext.getThisColumn());
+    } else {
+      final String variableName = term.replaceFirst("%", "");
+      final FhirPathAndContext variable = context.getVariables().get(variableName);
+      if (variable == null) {
+        throw new IllegalArgumentException("Unknown variable: " + variableName);
+      }
+      context.getNodeIdColumns().putAll(variable.getContext().getNodeIdColumns());
+      return variable.getFhirPath();
+    }
   }
 
   @Override

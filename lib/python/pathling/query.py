@@ -17,7 +17,7 @@ from typing import Optional, Sequence, Tuple
 
 from py4j.java_gateway import JavaObject
 
-from pathling.core import ExpOrStr, Expression
+from pathling.core import ExpOrStr, Expression, VariableExpression
 from pathling.datasource import DataSource
 
 
@@ -182,8 +182,8 @@ class FhirView(QueryWithFilters):
         self,
         subject_resource: str,
         columns: Sequence[Expression],
-        variables: Sequence[Expression],
-        filters: Optional[Sequence[str]],
+        variables: Optional[Sequence[VariableExpression]] = None,
+        filters: Optional[Sequence[str]] = None,
         data_source: DataSource = None,
     ):
         """
@@ -215,7 +215,7 @@ class FhirView(QueryWithFilters):
         return self._columns
 
     @property
-    def variables(self) -> Sequence[Expression]:
+    def variables(self) -> Sequence[VariableExpression]:
         """
         Gets the variables that can be used in the view.
 
@@ -234,8 +234,9 @@ class FhirView(QueryWithFilters):
         jquery = data_source._jds.view(self._subject_resource)
         for column in self._columns:
             jquery.column(column.expression, column.label)
-        for variable in self._variables:
-            jquery.variable(variable.expression, variable.label)
+        if self._variables:
+            for variable in self._variables:
+                jquery.variable(variable.expression, variable.label, variable.when_many)
         if self._filters:
             for f in self._filters:
                 jquery.filter(f)

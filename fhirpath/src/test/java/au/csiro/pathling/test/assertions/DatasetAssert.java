@@ -91,6 +91,11 @@ public class DatasetAssert {
   }
 
   @Nonnull
+  public DatasetAssert hasRowsUnordered(@Nonnull final Row... expected) {
+    return hasRowsUnordered(Arrays.asList(expected));
+  }
+
+  @Nonnull
   private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
     final List<Row> actualRows = dataset.collectAsList();
     assertEquals(expected.size(), actualRows.size());

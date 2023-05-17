@@ -18,10 +18,12 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -102,7 +104,10 @@ public class ParserContext {
   private final Map<String, Column> nodeIdColumns;
 
   @Nonnull
-  private final ExecutionContext executionContext;
+  private final UnnestBehaviour unnestBehaviour;
+
+  @Nonnull
+  private final Map<String, FhirPathAndContext> variables;
 
   /**
    * @param inputContext the input context from which the FHIRPath is to be evaluated
@@ -122,7 +127,7 @@ public class ParserContext {
       @Nonnull final List<Column> groupingColumns,
       @Nonnull final Map<String, Column> nodeIdColumns) {
     this(inputContext, fhirContext, sparkSession, dataSource, terminologyServiceFactory,
-        groupingColumns, nodeIdColumns, ExecutionContext.DEFAULT);
+        groupingColumns, nodeIdColumns, UnnestBehaviour.UNNEST, new HashMap<>());
   }
 
   /**
@@ -136,14 +141,15 @@ public class ParserContext {
    * @param groupingColumns the list of columns to group on when aggregating
    * @param nodeIdColumns columns relating to the identity of resources and elements for different
    * paths parsed within this context
-   * @param executionContext the execution context to use
+   * @param unnestBehaviour the execution context to use
    */
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final List<Column> groupingColumns,
       @Nonnull final Map<String, Column> nodeIdColumns,
-      @Nonnull final ExecutionContext executionContext) {
+      @Nonnull final UnnestBehaviour unnestBehaviour,
+      @Nonnull final Map<String, FhirPathAndContext> variables) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
@@ -151,11 +157,17 @@ public class ParserContext {
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.groupingColumns = groupingColumns;
     this.nodeIdColumns = nodeIdColumns;
-    this.executionContext = executionContext;
+    this.unnestBehaviour = unnestBehaviour;
+    this.variables = variables;
   }
 
   public void setThisContext(@Nonnull final FhirPath thisContext) {
     this.thisContext = Optional.of(thisContext);
+  }
+
+  public ParserContext withUnnestBehaviour(@Nonnull final UnnestBehaviour unnestBehaviour) {
+    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
+        terminologyServiceFactory, groupingColumns, nodeIdColumns, unnestBehaviour, variables);
   }
 
 }

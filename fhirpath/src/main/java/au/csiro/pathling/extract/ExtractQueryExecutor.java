@@ -9,6 +9,8 @@ import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathAndContext;
+import au.csiro.pathling.fhirpath.FhirPathContextAndResult;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -27,7 +29,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -61,7 +62,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final ParserContext parserContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));
     final List<FhirPathAndContext> columnParseResult =
-        parseMaterializableExpressions(parserContext, query.getColumns(), "Column");
+        parseExpressions(parserContext, query.getColumns(), "Column", true);
     final List<FhirPath> columnPaths = columnParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toUnmodifiableList());
@@ -189,16 +190,4 @@ public class ExtractQueryExecutor extends QueryExecutor {
     }
   }
 
-  @Value
-  private static class FhirPathContextAndResult {
-
-    @Nonnull
-    FhirPath fhirPath;
-
-    @Nonnull
-    ParserContext context;
-
-    @Nonnull
-    Dataset<Row> result;
-  }
 }

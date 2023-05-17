@@ -29,7 +29,7 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.parser.ExecutionContext;
+import au.csiro.pathling.fhirpath.parser.UnnestBehaviour;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.MutablePair;
@@ -91,12 +91,13 @@ public class PathTraversalOperator {
     final Column valueColumn;
     final Optional<Column> eidColumnCandidate;
     final Dataset<Row> resultDataset;
+    final UnnestBehaviour unnestBehaviour = input.getContext().getUnnestBehaviour();
 
-    if (maxCardinalityOfOne || input.getContext().getExecutionContext() == ExecutionContext.VIEW) {
+    if (maxCardinalityOfOne || unnestBehaviour == UnnestBehaviour.NOOP) {
       valueColumn = field;
       eidColumnCandidate = left.getEidColumn();
       resultDataset = leftDataset;
-    } else {
+    } else if (unnestBehaviour == UnnestBehaviour.UNNEST) {
       final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
       final Dataset<Row> explodedDataset = left.explodeArray(leftDataset, field,
           valueAndEidColumns);
@@ -106,6 +107,8 @@ public class PathTraversalOperator {
       valueColumn = datasetWithColumnMap.getColumn(valueAndEidColumns.getLeft());
       eidColumnCandidate = Optional.of(
           datasetWithColumnMap.getColumn(valueAndEidColumns.getRight()));
+    } else {
+      throw new UnsupportedOperationException("Unsupported unnest behaviour: " + unnestBehaviour);
     }
 
     final Optional<Column> eidColumn = resultSingular
@@ -114,7 +117,9 @@ public class PathTraversalOperator {
 
     // If there is an element ID column, we need to add it to the parser context so that it can
     // be used within joins in certain situations, e.g. extract.
-    eidColumn.ifPresent(c -> input.getContext().getNodeIdColumns().putIfAbsent(expression, c));
+    if (unnestBehaviour == UnnestBehaviour.UNNEST && !maxCardinalityOfOne) {
+      eidColumn.ifPresent(c -> input.getContext().getNodeIdColumns().putIfAbsent(expression, c));
+    }
 
     return ElementPath
         .build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,

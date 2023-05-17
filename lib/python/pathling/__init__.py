@@ -15,7 +15,7 @@
 
 from .coding import Coding
 from .context import PathlingContext, StorageType
-from .core import Expression
+from .core import Expression, VariableExpression
 from .datasource import DataSources, DataSource
 from .etc import find_jar
 from .fhir import MimeType, Version
@@ -53,6 +53,7 @@ __all__ = [
     "to_ecl_value_set",
     "find_jar",
     "Expression",
+    "VariableExpression",
     "ExtractQuery",
     "AggregateQuery",
     "DataSources",

@@ -21,6 +21,8 @@ import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
 
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.NamedExpression;
+import au.csiro.pathling.views.VariableExpression;
+import au.csiro.pathling.views.WhenMany;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -40,7 +42,7 @@ public class FhirViewBuilder extends QueryBuilder<FhirViewBuilder> {
   private final List<NamedExpression> columns = new ArrayList<>();
 
   @Nonnull
-  private final List<NamedExpression> variables = new ArrayList<>();
+  private final List<VariableExpression> variables = new ArrayList<>();
 
   public FhirViewBuilder(@Nonnull final QueryDispatcher dispatcher,
       @Nonnull final ResourceType subjectResource) {
@@ -70,10 +72,11 @@ public class FhirViewBuilder extends QueryBuilder<FhirViewBuilder> {
    * @return this query
    */
   @Nonnull
-  public FhirViewBuilder variable(@Nullable final String expression, @Nullable final String name) {
+  public FhirViewBuilder variable(@Nullable final String expression, @Nullable final String name,
+      @Nullable final String whenMany) {
     variables.add(
-        new NamedExpression(requireNonBlank(expression, "Variable expression cannot be blank"),
-            requireNonBlank(name, "Variable name cannot be blank")));
+        new VariableExpression(requireNonBlank(expression, "Variable expression cannot be blank"),
+            requireNonBlank(name, "Variable name cannot be blank"), WhenMany.fromCode(whenMany)));
     return this;
   }
 

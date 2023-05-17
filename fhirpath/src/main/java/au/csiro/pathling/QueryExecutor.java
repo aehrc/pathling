@@ -28,6 +28,7 @@ import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -49,7 +50,6 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
-import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -96,21 +96,24 @@ public abstract class QueryExecutor {
   }
 
   @Nonnull
-  protected List<FhirPathAndContext> parseMaterializableExpressions(
+  protected List<FhirPathAndContext> parseExpressions(
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions,
-      @Nonnull final String display) {
+      @Nonnull final String display, final boolean checkMaterializable) {
     return expressions.stream()
         .map(expression -> {
           final ParserContext currentContext = new ParserContext(parserContext.getInputContext(),
               parserContext.getFhirContext(), parserContext.getSparkSession(),
               parserContext.getDataSource(), parserContext.getTerminologyServiceFactory(),
-              parserContext.getGroupingColumns(), new HashMap<>());
+              parserContext.getGroupingColumns(), new HashMap<>(),
+              parserContext.getUnnestBehaviour(), parserContext.getVariables());
           final Parser parser = new Parser(currentContext);
           final FhirPath result = parser.parse(expression);
-          // Each expression must evaluate to a Materializable path, or a user error will be thrown.
-          // There is no requirement for it to be singular.
-          checkUserInput(result instanceof Materializable,
-              display + " expression is not of a supported type: " + expression);
+          if (checkMaterializable) {
+            // Each expression must evaluate to a Materializable path, or a user error will be thrown.
+            // There is no requirement for it to be singular.
+            checkUserInput(result instanceof Materializable,
+                display + " expression is not of a supported type: " + expression);
+          }
           return new FhirPathAndContext(result, parser.getContext());
         }).collect(Collectors.toList());
   }
@@ -257,17 +260,6 @@ public abstract class QueryExecutor {
     final Dataset<Row> dataset = currentContext.getDataset().select(
         currentContext.getIdColumn().alias(filterIdAlias));
     return new DatasetWithColumn(dataset.filter(filterColumn), col(filterIdAlias));
-  }
-
-  @Value
-  protected static class FhirPathAndContext {
-
-    @Nonnull
-    FhirPath fhirPath;
-
-    @Nonnull
-    ParserContext context;
-
   }
 
 }

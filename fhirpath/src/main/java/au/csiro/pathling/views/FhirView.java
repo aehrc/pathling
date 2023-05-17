@@ -15,7 +15,7 @@ public class FhirView {
   List<NamedExpression> columns;
 
   @Nonnull
-  List<NamedExpression> variables;
+  List<VariableExpression> variables;
 
   @Nonnull
   List<String> filters;

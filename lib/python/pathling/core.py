@@ -168,6 +168,36 @@ class Expression:
         )
 
 
+class VariableExpression(Expression):
+    """
+    Represents a FHIRPath variable expression that has a `when many` attribute, and may have an
+    optional name/alias.
+    """
+
+    def __init__(
+        self, expression: str, label: Optional[str], when_many: Optional[str] = "array"
+    ):
+        """
+        Initializes a new instance of the VariableExpression class.
+
+        :param expression: The FHIRPath expression.
+        :param label: The optional label/alias for the expression.
+        :param when_many: The optional `when many` attribute for the expression, can be "error",
+               "array", "unnest" or "cross".
+        """
+        super().__init__(expression, label)
+        self._when_many = when_many
+
+    @property
+    def when_many(self) -> Optional[str]:
+        """
+        Gets the optional `when many` attribute for the expression.
+
+        :return: The optional `when many` attribute for the expression.
+        """
+        return self._when_many
+
+
 class StringMapper:
     """
     A wrapper for a Python lambda that can be passed as a Java lambda for mapping a string value to

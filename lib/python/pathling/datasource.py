@@ -120,7 +120,7 @@ class DataSource(SparkConversionsMixin):
         self,
         resource_type: str,
         columns: Sequence[Expression],
-        variables: Sequence[Expression],
+        variables: Optional[Sequence[Expression]] = None,
         filters: Optional[Sequence[Expression]] = None,
     ) -> DataFrame:
         """

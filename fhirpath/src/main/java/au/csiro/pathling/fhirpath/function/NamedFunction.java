@@ -29,7 +29,7 @@ import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
 import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
 import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
-import au.csiro.pathling.fhirpath.parser.ExecutionContext;
+import au.csiro.pathling.fhirpath.parser.UnnestBehaviour;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -125,7 +125,7 @@ public interface NamedFunction {
    */
   @Nonnull
   static NamedFunction getInstance(@Nonnull final String name) {
-    return getInstance(name, ExecutionContext.DEFAULT);
+    return getInstance(name, UnnestBehaviour.UNNEST);
   }
 
   /**
@@ -137,8 +137,8 @@ public interface NamedFunction {
    */
   @Nonnull
   static NamedFunction getInstance(@Nonnull final String name,
-      @Nonnull final ExecutionContext context) {
-    final NamedFunction function = context == ExecutionContext.VIEW
+      @Nonnull final UnnestBehaviour context) {
+    final NamedFunction function = context == UnnestBehaviour.NOOP
                                    ? NAME_TO_INSTANCE_VIEW_CONTEXT.get(name)
                                    : NAME_TO_INSTANCE.get(name);
     checkUserInput(function != null, "Unsupported function: " + name);

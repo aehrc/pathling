@@ -152,34 +152,6 @@ def test_many_aggregate_no_grouping(test_data_source):
     assert_result([ResultRow(9, 9)], agg_result.collect())
 
 
-def test_view(test_data_source):
-    result = test_data_source.view(
-        "Patient",
-        columns=[
-            fpe("id", "patient_id"),
-            fpe("name.given", "given_name"),
-            fpe("name.family", "family_name"),
-        ],
-        variables=[fpe("name", "name")],
-        filters=["gender = 'female'"],
-    )
-
-    # noinspection PyPep8Naming
-    ViewRow = Row("patient_id", "given_name", "family_name")
-    assert result.columns == list(ViewRow)
-
-    result.show(truncate=False)
-    assert_result(
-        [
-            ViewRow("121503c8-9564-4b48-9086-a22df717948e", "Lorilee", "Bartolomeazzi"),
-            ViewRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "Lorilee", "Bartolomeazzi"),
-            ViewRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "Lorilee", "Bartolomeazzi"),
-            ViewRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "Lorilee", "Bartolomeazzi"),
-        ],
-        result.limit(4).collect(),
-    )
-
-
 def assert_result(expected: Sequence[Row], actual: Sequence[Row]):
     assert len(expected) == len(actual)
     assert set(expected).issubset(set(actual))
