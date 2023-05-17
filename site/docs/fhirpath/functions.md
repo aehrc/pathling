@@ -137,18 +137,23 @@ currently unique to the Pathling implementation.
 ## display
 
 ```
-collection<Coding> -> display() : collection<String>
+collection<Coding> -> display(language: string|null) : collection<String>
 ```
 
 When invoked on a [Coding](./data-types#coding), returns the preferred display 
 term, according to the terminology server.
+An optional language parameter string can also be specified to control the language of the return
+(formatted as per: https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
 
 Example:
 
 ```
-Condition.code.display()
+Condition.code.display(null)
 ```
-
+or 
+```
+Condition.code.display("de")
+```
 :::note
 The `display` function is a terminology function, which means that it requires
 a configured
@@ -324,7 +329,7 @@ See also: [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 ## property
 
 ```
-collection<Coding> -> property(code: String, type = 'string') : collection<String|Integer|DateTime|Decimal|Coding>
+collection<Coding> -> property(code: String, type = 'string', language: string|null) : collection<String|Integer|DateTime|Decimal|Coding>
 ```
 
 When invoked on a [Coding](./data-types#coding), returns any matching property
@@ -343,6 +348,8 @@ Both the `code` and the `type` of the property must be present within a
 [lookup](https://www.hl7.org/fhir/codesystem-operation-lookup.html) response in 
 order for it to be returned by this function. If there are no matches, the 
 function will return an empty collection.
+An optional language parameter string can also be specified to control the language of the return
+(formatted as per: https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
 
 See [Properties](https://www.hl7.org/fhir/codesystem.html#properties)
 in the FHIR specification for more information.
@@ -350,7 +357,11 @@ in the FHIR specification for more information.
 Example:
 
 ```
-Condition.code.coding.property('parent', 'code')
+Condition.code.coding.property('parent', 'code',null)
+```
+or 
+```
+Condition.code.coding.property('parent', 'code',"de")
 ```
 
 :::note
