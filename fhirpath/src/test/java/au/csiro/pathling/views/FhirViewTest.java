@@ -208,4 +208,88 @@ class FhirViewTest {
     );
   }
 
+  // Test 4:
+  // Select ID, name prefix, family name, marital status system and marital status code for each 
+  // patient.
+  // {
+  //   "resource": "Patient",
+  //   "vars": [
+  //     {
+  //       "name": "name",
+  //       "expr": "name",
+  //       "whenMany": "unnest"
+  //     },
+  //     {
+  //       "name": "namePrefix",
+  //       "expr": "name.prefix",
+  //       "whenMany": "unnest"
+  //     },
+  //     {
+  //       "name": "maritalStatus",
+  //       "expr": "maritalStatus.coding",
+  //       "whenMany": "unnest"
+  //     }
+  //   ],
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "name_prefix",
+  //       "expr": "%namePrefix"
+  //     },
+  //     {
+  //       "name": "family_name",
+  //       "expr": "%name.family"
+  //     },
+  //     {
+  //       "name": "marital_status_system",
+  //       "expr": "%maritalStatus.system"
+  //     },
+  //     {
+  //       "name": "marital_status_code",
+  //       "expr": "%maritalStatus.code"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test4() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("%namePrefix", "name_prefix"),
+            new NamedExpression("%name.family", "family_name"),
+            new NamedExpression("%maritalStatus.system", "marital_status_system"),
+            new NamedExpression("%maritalStatus.code", "marital_status_code")
+        ),
+        List.of(
+            new VariableExpression("name", "name", WhenMany.UNNEST),
+            new VariableExpression("name.prefix", "namePrefix", WhenMany.UNNEST),
+            new VariableExpression("maritalStatus.coding", "maritalStatus", WhenMany.UNNEST)
+        ),
+        List.of());
+    final Dataset<Row> result = executor.buildQuery(view);
+
+    // Expected result:
+    // | id | name_prefix | family_name | marital_status_system                                  | marital_status_code |
+    // |----|-------------|-------------|--------------------------------------------------------|---------------------|
+    // | 1  | Miss.       | Wuckert     | http://terminology.hl7.org/CodeSystem/v3-MaritalStatus | M                   |
+    // | 1  | Miss.       | Wuckert     | http://snomed.info/sct                                 | 87915002            |
+    // | 1  | Mrs.        | Oberbrunner | http://terminology.hl7.org/CodeSystem/v3-MaritalStatus | M                   |
+    // | 1  | Mrs.        | Oberbrunner | http://snomed.info/sct                                 | 87915002            |
+    // | 2  | Mr.         | Towne       | NULL                                                   | NULL                |
+    // | 2  | Prof.       | Cleveland   | NULL                                                   | NULL                |
+    DatasetAssert.of(result).hasRowsUnordered(
+        RowFactory.create("1", "Miss.", "Wuckert",
+            "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "M"),
+        RowFactory.create("1", "Miss.", "Wuckert", "http://snomed.info/sct", "87915002"),
+        RowFactory.create("1", "Mrs.", "Oberbrunner",
+            "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "M"),
+        RowFactory.create("1", "Mrs.", "Oberbrunner", "http://snomed.info/sct", "87915002"),
+        RowFactory.create("2", "Mr.", "Towne", null, null),
+        RowFactory.create("2", "Prof.", "Cleveland", null, null)
+    );
+  }
+
 }
