@@ -101,11 +101,9 @@ public abstract class QueryExecutor {
       @Nonnull final String display, final boolean checkMaterializable) {
     return expressions.stream()
         .map(expression -> {
-          final ParserContext currentContext = new ParserContext(parserContext.getInputContext(),
-              parserContext.getFhirContext(), parserContext.getSparkSession(),
-              parserContext.getDataSource(), parserContext.getTerminologyServiceFactory(),
-              parserContext.getGroupingColumns(), new HashMap<>(),
-              parserContext.getUnnestBehaviour(), parserContext.getVariables());
+          // Create a new copy of the parser context from the previous context, except for node IDs 
+          // which need to be reset each time.
+          final ParserContext currentContext = parserContext.unsetNodeIds();
           final Parser parser = new Parser(currentContext);
           final FhirPath result = parser.parse(expression);
           if (checkMaterializable) {

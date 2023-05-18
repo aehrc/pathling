@@ -91,7 +91,7 @@ class FhirViewTest {
   }
 
   // Test 2:
-  // Select ID, name prefix and family name for each patient.
+  // Select ID, name use and family name for each patient.
   // {
   //   "resource": "Patient",
   //   "vars": [
@@ -144,4 +144,68 @@ class FhirViewTest {
         RowFactory.create("2", "official", "Towne")
     );
   }
+
+  // Test 3:
+  // Select ID, family name and given name for each patient.
+  // {
+  //   "resource": "Patient",
+  //   "vars": [
+  //     {
+  //       "name": "name",
+  //       "expr": "name",
+  //       "whenMany": "unnest"
+  //     },
+  //     {
+  //       "name": "givenName",
+  //       "expr": "name.given",
+  //       "whenMany": "unnest"
+  //     }
+  //   ],
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "family_name",
+  //       "expr": "%name.family"
+  //     },
+  //     {
+  //       "name": "given_name",
+  //       "expr": "%givenName"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test3() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("%name.family", "family_name"),
+            new NamedExpression("%givenName", "given_name")
+        ),
+        List.of(
+            new VariableExpression("name", "name", WhenMany.UNNEST),
+            new VariableExpression("name.given", "givenName", WhenMany.UNNEST)
+        ),
+        List.of());
+    final Dataset<Row> result = executor.buildQuery(view);
+
+    // Expected result:
+    // | id | family_name | given_name |
+    // |----|-------------|------------|
+    // | 1  | Wuckert     | Karina     |
+    // | 1  | Oberbrunner | Karina     |
+    // | 2  | Towne       | Guy        |
+    // | 2  | Cleveland   | Maponos    |
+    // | 2  | Cleveland   | Wilburg    |
+    DatasetAssert.of(result).hasRowsUnordered(
+        RowFactory.create("1", "Wuckert", "Karina"),
+        RowFactory.create("1", "Oberbrunner", "Karina"),
+        RowFactory.create("2", "Towne", "Guy"),
+        RowFactory.create("2", "Cleveland", "Maponos"),
+        RowFactory.create("2", "Cleveland", "Wilburg")
+    );
+  }
+
 }

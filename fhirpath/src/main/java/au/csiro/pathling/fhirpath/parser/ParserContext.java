@@ -165,9 +165,25 @@ public class ParserContext {
     this.thisContext = Optional.of(thisContext);
   }
 
+  /**
+   * Creates a copy of the current parser context, but with the specified unnest behaviour.
+   *
+   * @param unnestBehaviour the {@link UnnestBehaviour} to use
+   * @return a new #{link ParserContext}
+   */
   public ParserContext withUnnestBehaviour(@Nonnull final UnnestBehaviour unnestBehaviour) {
     return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
         terminologyServiceFactory, groupingColumns, nodeIdColumns, unnestBehaviour, variables);
+  }
+
+  /**
+   * Creates a copy of the current parser context, but with the node IDs emptied out.
+   *
+   * @return a new {@link ParserContext}
+   */
+  public ParserContext unsetNodeIds() {
+    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
+        terminologyServiceFactory, groupingColumns, new HashMap<>(), unnestBehaviour, variables);
   }
 
 }
