@@ -52,6 +52,7 @@ class FhirViewTest {
 
   // Test 1:
   // Select ID, gender and birth date for each patient.
+  // Tests the use of singular elements with no unnesting.
   // {
   //   "resource": "Patient",
   //   "columns": [
@@ -92,6 +93,7 @@ class FhirViewTest {
 
   // Test 2:
   // Select ID, name use and family name for each patient.
+  // Tests the unnesting of two elements that are singular relative to their common parent.
   // {
   //   "resource": "Patient",
   //   "vars": [
@@ -147,6 +149,7 @@ class FhirViewTest {
 
   // Test 3:
   // Select ID, family name and given name for each patient.
+  // Tests multiple levels of unnesting that share the same lineage.
   // {
   //   "resource": "Patient",
   //   "vars": [
@@ -211,6 +214,8 @@ class FhirViewTest {
   // Test 4:
   // Select ID, name prefix, family name, marital status system and marital status code for each 
   // patient.
+  // Tests two sets of multi-level nesting that have the root resource as their nearest common 
+  // ancestor.
   // {
   //   "resource": "Patient",
   //   "vars": [
