@@ -24,6 +24,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -97,6 +98,8 @@ public class PathTraversalOperator {
       valueColumn = field;
       eidColumnCandidate = left.getEidColumn();
       resultDataset = leftDataset;
+    } else if (unnestBehaviour == UnnestBehaviour.ERROR) {
+      throw new InvalidUserInputError("Encountered a repeating element: " + expression);
     } else if (unnestBehaviour == UnnestBehaviour.UNNEST) {
       final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
       final Dataset<Row> explodedDataset = left.explodeArray(leftDataset, field,

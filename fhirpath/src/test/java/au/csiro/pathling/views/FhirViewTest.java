@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import scala.collection.mutable.WrappedArray;
 
 @SpringBootUnitTest
 class FhirViewTest {
@@ -93,7 +94,8 @@ class FhirViewTest {
 
   // Test 2:
   // Select ID, name use and family name for each patient.
-  // Tests the unnesting of two elements that are singular relative to their common parent.
+  // Tests the unnesting of two elements that are singular relative to their common repeating 
+  // parent.
   // {
   //   "resource": "Patient",
   //   "vars": [
@@ -270,7 +272,8 @@ class FhirViewTest {
         ),
         List.of(
             new VariableExpression("name", "name", WhenMany.UNNEST),
-            new VariableExpression("name.prefix", "namePrefix", WhenMany.UNNEST),
+            new VariableExpression("name.prefix", "namePrefix",
+                WhenMany.UNNEST),
             new VariableExpression("maritalStatus.coding", "maritalStatus", WhenMany.UNNEST)
         ),
         List.of());
@@ -294,6 +297,173 @@ class FhirViewTest {
         RowFactory.create("1", "Mrs.", "Oberbrunner", "http://snomed.info/sct", "87915002"),
         RowFactory.create("2", "Mr.", "Towne", null, null),
         RowFactory.create("2", "Prof.", "Cleveland", null, null)
+    );
+  }
+
+  // Test case 5:
+  // Select ID and given name for each patient, but leave the given names in an array.
+  // Tests the ability to return columns as arrays, where the expressions that define those columns 
+  // return a collection.
+  // {
+  //   "resource": "Patient",
+  //   "vars": [
+  //     {
+  //       "name": "givenName",
+  //       "expr": "%name.given",
+  //       "whenMany": "array"
+  //     }
+  //   ],
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "given_name",
+  //       "expr": "%givenName"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test5() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("%givenName", "given_name")
+        ),
+        List.of(
+            new VariableExpression("name.given", "givenName", WhenMany.ARRAY)
+        ),
+        List.of());
+    final Dataset<Row> result = executor.buildQuery(view);
+
+    // Expected result:
+    // | id | given_name              |
+    // |----|-------------------------|
+    // | 1  | [Karina, Karina]        |
+    // | 2  | [Guy, Maponos, Wilburg] |
+    DatasetAssert.of(result).hasRowsUnordered(
+        RowFactory.create("1", WrappedArray.make(List.of("Karina", "Karina").toArray())),
+        RowFactory.create("2", WrappedArray.make(List.of("Guy", "Maponos", "Wilburg").toArray()))
+    );
+  }
+
+  // Test case 6:
+  // Select ID and given name for each patient, with a row for each name and the given names for 
+  // each name within an array.
+  // Tests the ability to use the unnest and array directives together.
+  // {
+  //   "resource": "Patient",
+  //   "vars": [
+  //     {
+  //       "name": "name",
+  //       "expr": "name",
+  //       "whenMany": "unnest"
+  //     },
+  //     {
+  //       "name": "givenName",
+  //       "expr": "%name.given",
+  //       "whenMany": "array"
+  //     }
+  //   ],
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "given_name",
+  //       "expr": "%givenName"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test6() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("%name.given", "given_name")
+        ),
+        List.of(
+            new VariableExpression("name", "name", WhenMany.UNNEST),
+            new VariableExpression("name.given", "givenName", WhenMany.ARRAY)
+        ),
+        List.of());
+    final Dataset<Row> result = executor.buildQuery(view);
+
+    // Expected result:
+    // | id | given_name         |
+    // |----|--------------------|
+    // | 1  | [Karina]           |
+    // | 1  | [Karina]           |
+    // | 2  | [Guy]              |
+    // | 2  | [Maponos, Wilburg] |
+    DatasetAssert.of(result).hasRowsUnordered(
+        RowFactory.create("1", WrappedArray.make(List.of("Karina").toArray())),
+        RowFactory.create("1", WrappedArray.make(List.of("Karina").toArray())),
+        RowFactory.create("2", WrappedArray.make(List.of("Guy").toArray())),
+        RowFactory.create("2", WrappedArray.make(List.of("Maponos", "Wilburg").toArray()))
+    );
+  }
+
+  // Test case 7:
+  // Select ID and given name for each patient, with the given names for each name represented 
+  // within a nested array.
+  // Tests the ability to use the multiple array directives together.
+  // {
+  //   "resource": "Patient",
+  //   "vars": [
+  //     {
+  //      
+  //       "name": "name",
+  //       "expr": "name",
+  //       "whenMany": "unnest"
+  //     },
+  //     {
+  //       "name": "givenName",
+  //       "expr": "%name.given",
+  //       "whenMany": "array"
+  //     }
+  //   ],
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "given_name",
+  //       "expr": "%givenName"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test7() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("%name.given", "given_name")
+        ),
+        List.of(
+            new VariableExpression("name", "name", WhenMany.ARRAY),
+            new VariableExpression("name.given", "givenName", WhenMany.ARRAY)
+        ),
+        List.of());
+    final Dataset<Row> result = executor.buildQuery(view);
+
+    // Expected result:
+    // | id | given_name                  |
+    // |----|-----------------------------|
+    // | 1  | [[Karina], [Karina]]        |
+    // | 2  | [[Guy], [Maponos, Wilburg]] |
+    DatasetAssert.of(result).hasRowsUnordered(
+        RowFactory.create("1", WrappedArray.make(List.of(
+            WrappedArray.make(List.of("Karina").toArray()),
+            WrappedArray.make(List.of("Karina").toArray())
+        ).toArray())),
+        RowFactory.create("2", WrappedArray.make(List.of(
+            WrappedArray.make(List.of("Guy").toArray()),
+            WrappedArray.make(List.of("Maponos", "Wilburg").toArray())
+        ).toArray()))
     );
   }
 
