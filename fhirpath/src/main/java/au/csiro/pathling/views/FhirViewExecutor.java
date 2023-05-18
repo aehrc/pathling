@@ -20,10 +20,8 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -137,15 +135,16 @@ public class FhirViewExecutor extends QueryExecutor {
 
     // Move through the list of columns, joining each one to the result of the previous join.
     for (final FhirPathAndContext right : sorted.subList(1, sorted.size())) {
-      final Set<Column> leftJoinColumns = new HashSet<>();
-      final Set<Column> rightJoinColumns = new HashSet<>();
+      final List<Column> leftJoinColumns = new ArrayList<>();
+      final List<Column> rightJoinColumns = new ArrayList<>();
 
       // The join column always includes the resource ID.
       leftJoinColumns.add(left.getFhirPath().getIdColumn());
       rightJoinColumns.add(right.getFhirPath().getIdColumn());
 
       // Add the intersection of the nodes present in both the left and right column contexts.
-      final Set<String> commonNodes = left.getContext().getNodeIdColumns().keySet();
+      final List<String> commonNodes = new ArrayList<>(
+          left.getContext().getNodeIdColumns().keySet());
       commonNodes.retainAll(right.getContext().getNodeIdColumns().keySet());
       final FhirPathAndContext finalLeft = left;
       leftJoinColumns.addAll(commonNodes.stream()
@@ -157,9 +156,8 @@ public class FhirViewExecutor extends QueryExecutor {
 
       // Use a left outer join, so that we don't lose rows that don't have a value for the right
       // column.
-      result = QueryHelpers.join(result, new ArrayList<>(leftJoinColumns),
-          right.getFhirPath().getDataset(), new ArrayList<>(rightJoinColumns),
-          JoinType.LEFT_OUTER);
+      result = QueryHelpers.join(result, leftJoinColumns, right.getFhirPath().getDataset(),
+          rightJoinColumns, JoinType.LEFT_OUTER);
 
       // The result of the join becomes the left side of the next join.
       left = right;
