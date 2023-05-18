@@ -1,7 +1,10 @@
 package au.csiro.pathling.views;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -465,6 +468,48 @@ class FhirViewTest {
             WrappedArray.make(List.of("Maponos", "Wilburg").toArray())
         ).toArray()))
     );
+  }
+
+  // Test case 8:
+  // Select ID and family name for each patient, but force an error through the use of the `error`
+  // value for `whenMany`.
+  // This tests the behaviour of the `error` value for `whenMany`.
+  // {
+  //   "resource": "Patient",
+  //   "vars": [
+  //     {
+  //      
+  //       "name": "name",
+  //       "expr": "name",
+  //       "whenMany": "error"
+  //     }
+  //   ],
+  //   "columns": [
+  //     {
+  //       "name": "id",
+  //       "expr": "id"
+  //     },
+  //     {
+  //       "name": "family_name",
+  //       "expr": "%name.family"
+  //     }
+  //   ]
+  // }
+  @Test
+  void test8() {
+    final FhirView view = new FhirView(ResourceType.PATIENT,
+        List.of(
+            new NamedExpression("id", "id"),
+            new NamedExpression("%name.family", "family_name")
+        ),
+        List.of(
+            new VariableExpression("name", "name", WhenMany.ERROR)
+        ),
+        List.of());
+   
+    assertThrows(InvalidUserInputError.class, () -> {
+      executor.buildQuery(view);
+    });
   }
 
 }
