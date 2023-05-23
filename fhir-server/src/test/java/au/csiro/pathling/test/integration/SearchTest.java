@@ -19,7 +19,7 @@ package au.csiro.pathling.test.integration;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -45,7 +45,7 @@ class SearchTest extends IntegrationTest {
   SparkSession spark;
 
   @MockBean
-  Database database;
+  CacheableDatabase database;
 
   @LocalServerPort
   int port;

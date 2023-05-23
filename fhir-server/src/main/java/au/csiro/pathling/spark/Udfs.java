@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.spark;
 
+import au.csiro.pathling.sql.FhirpathUDFRegistrar;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.sql.udf.*;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -45,14 +46,8 @@ public class Udfs {
 
   @Bean
   @Nonnull
-  @Qualifier("implicit")
-  public static SparkConfigurer implicitUdfRegistrar(
-      @Nonnull final List<SqlFunction1<?, ?>> sqlFunction1,
-      @Nonnull final List<SqlFunction2<?, ?, ?>> sqlFunction2,
-      @Nonnull final List<SqlFunction3<?, ?, ?, ?>> sqlFunction3,
-      @Nonnull final List<SqlFunction4<?, ?, ?, ?, ?>> sqlFunction4,
-      @Nonnull final List<SqlFunction5<?, ?, ?, ?, ?, ?>> sqlFunction5) {
-    return new SqlFunctionRegistrar(sqlFunction1, sqlFunction2, sqlFunction3, sqlFunction4,
-        sqlFunction5);
+  @Qualifier("fhirpath")
+  public static SparkConfigurer fhirpathUdfRegistrar() {
+    return new FhirpathUDFRegistrar();
   }
 }

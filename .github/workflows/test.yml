@@ -115,6 +115,7 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
+            -DskipFhirPathTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -191,6 +192,7 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
+            -DskipFhirPathTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify
@@ -283,21 +285,16 @@ jobs:
         with:
           name: terminology-surefire-reports
           path: terminology/target/surefire-reports
+      - name: Upload FHIRPath test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: fhirpath-surefire-reports
+          path: fhirpath/target/surefire-reports
       - name: Upload FHIR server test reports
         uses: actions/upload-artifact@v3
         with:
           name: fhir-server-3-surefire-reports
           path: fhir-server/target/surefire-reports
-      - name: Upload utilities test coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: utilities-coverage
-          path: "**/jacoco.xml"
-      - name: Upload terminology test coverage report
-        uses: actions/upload-artifact@v3
-        with:
-          name: terminology-coverage
-          path: "**/jacoco.xml"
       - name: Upload FHIR server test coverage report
         uses: actions/upload-artifact@v3
         with:
@@ -538,7 +535,8 @@ jobs:
           restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Set up Python 3.8
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
+        id: pythoninstall
         with:
           python-version: 3.8
       - name: Cache Python packages
@@ -557,11 +555,13 @@ jobs:
             -DskipUtilitiesTests
             -DskipTerminologyTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+          PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
+          PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
         run: >-
           mvn --batch-mode verify
           -pl lib/python -am
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 15
+        timeout-minutes: 30
       - name: Upload library API test reports
         uses: actions/upload-artifact@v3
         with:
@@ -621,7 +621,7 @@ jobs:
   upload-coverage:
     name: Upload coverage
     runs-on: ubuntu-latest
-    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, python-api]
+    needs: [ encoders, fhir-server-1, fhir-server-2, fhir-server-3, python-api ]
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
@@ -631,16 +631,6 @@ jobs:
         with:
           name: encoders-coverage
           path: encoders-coverage
-      - name: Download utilities coverage report
-        uses: actions/download-artifact@v3
-        with:
-          name: utilities-coverage
-          path: utilities-coverage
-      - name: Download terminology coverage report
-        uses: actions/download-artifact@v3
-        with:
-          name: terminology-coverage
-          path: terminology-coverage
       - name: Download library API coverage report
         uses: actions/download-artifact@v3
         with:
@@ -671,7 +661,7 @@ jobs:
 
   deploy-pre-release:
     name: Pre-release deployment
-    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image]
+    needs: [ encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image ]
     runs-on: ubuntu-latest
     # If the branch starts with "release/", we deploy pre-release packages.
     if: startsWith(github.ref, 'refs/heads/release/')

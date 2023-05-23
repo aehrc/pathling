@@ -21,9 +21,9 @@ import au.csiro.pathling.aggregate.AggregateExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
-import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -74,7 +74,7 @@ public class TerminologyDevBenchmark {
     TerminologyServiceFactory terminologyServiceFactory;
 
     @Autowired
-    ServerConfiguration configuration;
+    QueryConfiguration configuration;
 
     @Autowired
     FhirContext fhirContext;
@@ -86,7 +86,7 @@ public class TerminologyDevBenchmark {
     FhirEncoders fhirEncoders;
 
     @MockBean
-    Database database;
+    CacheableDatabase database;
 
     AggregateExecutor defaultExecutor;
 
@@ -96,7 +96,6 @@ public class TerminologyDevBenchmark {
 
     @Setup(Level.Trial)
     public void setUp() {
-      //database = mock(Database.class);
       mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
           ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
           ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,

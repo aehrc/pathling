@@ -78,4 +78,5 @@ public abstract class Strings {
         .map(converter).collect(
             Collectors.toList());
   }
+
 }

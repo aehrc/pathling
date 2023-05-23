@@ -22,6 +22,7 @@ import static au.csiro.pathling.test.SchemaAsserts.assertFieldPresent;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubsumes;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupTranslate;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupValidate;
+import static java.util.function.Predicate.not;
 import static org.apache.spark.sql.functions.col;
 import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.EQUIVALENT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -52,10 +53,16 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import javax.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
@@ -98,6 +105,58 @@ public class PathlingContextTest {
   private TerminologyServiceFactory terminologyServiceFactory;
   private TerminologyService terminologyService;
 
+
+  private static final String GUID_REG_SUBEXPRESSION = "[0-9a-fA-F]{8}"
+      + "-([0-9a-fA-F]{4}-)"
+      + "{3}[0-9a-fA-F]{12}";
+
+
+  public static final Pattern GUID_REGEX = Pattern.compile(
+      "^" + GUID_REG_SUBEXPRESSION + "$");
+
+  private static final Pattern RELATIVE_REF_REGEX = Pattern.compile(
+      "^[A-Z][A-Za-z]+/" + GUID_REG_SUBEXPRESSION + "$");
+
+
+  public static boolean isValidGUID(@Nonnull final String maybeGUID) {
+    Matcher m = GUID_REGEX.matcher(maybeGUID);
+    return m.matches();
+  }
+
+  public static boolean isValidRelativeReference(@Nonnull final String maybeRelativeRef) {
+    Matcher m = RELATIVE_REF_REGEX.matcher(maybeRelativeRef);
+    return m.matches();
+  }
+
+  public void assertAllGUIDs(@Nonnull final Collection<String> maybeGuids) {
+    final List<String> invalidValues = maybeGuids.stream()
+        .filter(not(PathlingContextTest::isValidGUID))
+        .limit(7)
+        .collect(Collectors.toUnmodifiableList());
+    assertTrue(invalidValues.isEmpty(),
+        "All values should be GUIDs, but some are not: " + invalidValues);
+  }
+
+  public void assertAllRelativeReferences(@Nonnull final Collection<String> maybeRelativeRefs) {
+    final List<String> invalidValues = maybeRelativeRefs.stream()
+        .filter(not(PathlingContextTest::isValidRelativeReference))
+        .limit(7)
+        .collect(Collectors.toUnmodifiableList());
+    assertTrue(invalidValues.isEmpty(),
+        "All values should be relative references, but some are not: " + invalidValues);
+  }
+
+  public <T> void assertValidIdColumns(@Nonnull final Dataset<T> df) {
+    assertAllGUIDs(df.select("id").as(Encoders.STRING()).collectAsList());
+    assertAllRelativeReferences(df.select("id_versioned").as(Encoders.STRING()).collectAsList());
+  }
+
+  public <T> void assertValidRelativeRefColumns(@Nonnull final Dataset<T> df,
+      Column... refColumns) {
+    Stream.of(refColumns).forEach(c -> assertAllRelativeReferences(
+        df.select(c.getField("reference")).as(Encoders.STRING()).collectAsList()));
+  }
+
   @BeforeEach
   public void setUp() {
     // setup terminology mocks
@@ -123,20 +182,26 @@ public class PathlingContextTest {
         "Patient", FhirMimeTypes.FHIR_JSON);
     assertEquals(5, patientsDataframe.count());
 
+    assertValidIdColumns(patientsDataframe);
+
     // Test omission of MIME type.
     final Dataset<Row> patientsDataframe2 = pathling.encodeBundle(bundlesDF.toDF(),
         "Patient");
     assertEquals(5, patientsDataframe2.count());
+    assertValidIdColumns(patientsDataframe2);
 
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
         FhirMimeTypes.FHIR_JSON);
     assertEquals(107, conditionsDataframe.count());
+
+    assertValidIdColumns(conditionsDataframe);
+    assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
+    assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
 
 
   @Test
   public void testEncodeResourcesFromXmlBundle() {
-
     final Dataset<String> bundlesDF = spark.read().option("wholetext", true)
         .textFile(testDataUrl + "/bundles/R4/xml");
 
@@ -144,6 +209,10 @@ public class PathlingContextTest {
     final Dataset<Condition> conditionsDataframe = pathling.encodeBundle(bundlesDF, Condition.class,
         FhirMimeTypes.FHIR_XML);
     assertEquals(107, conditionsDataframe.count());
+
+    assertValidIdColumns(conditionsDataframe);
+    assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
+    assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
 
 
@@ -157,10 +226,15 @@ public class PathlingContextTest {
     final Dataset<Row> patientsDataframe = pathling.encode(jsonResources.toDF(), "Patient",
         FhirMimeTypes.FHIR_JSON);
     assertEquals(9, patientsDataframe.count());
+    assertValidIdColumns(patientsDataframe);
 
     final Dataset<Condition> conditionsDataframe = pathling.encode(jsonResources, Condition.class,
         FhirMimeTypes.FHIR_JSON);
     assertEquals(71, conditionsDataframe.count());
+
+    assertValidIdColumns(conditionsDataframe);
+    assertValidRelativeRefColumns(conditionsDataframe, col("subject"));
+    assertValidRelativeRefColumns(conditionsDataframe, col("encounter"));
   }
 
   @Test
@@ -238,7 +312,7 @@ public class PathlingContextTest {
 
     patientsQuery.processAllAvailable();
     final long patientsCount = spark.sql("select count(*) from patients").head().getLong(0);
-    assertEquals(patientsCount, patientsCount);
+    assertEquals(9, patientsCount);
 
     final StreamingQuery conditionQuery = pathling.encode(jsonResources, "Condition",
             FhirMimeTypes.FHIR_JSON)

@@ -25,3 +25,7 @@ __pycache__/
 *.egg-info
 _version.py
 .ipynb_checkpoints/
+
+metastore_db
+derby.log
+spark-warehouse

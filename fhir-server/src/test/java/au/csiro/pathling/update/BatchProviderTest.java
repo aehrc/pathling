@@ -27,7 +27,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.CacheableDatabase;
 import ca.uhn.fhir.parser.IParser;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -41,9 +41,11 @@ import org.mockito.ArgumentMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @Tag("UnitTest")
+@ActiveProfiles("unit-test")
 class BatchProviderTest {
 
   @Autowired
@@ -53,7 +55,7 @@ class BatchProviderTest {
   ServerConfiguration configuration;
 
   @MockBean
-  Database database;
+  CacheableDatabase database;
 
   BatchProvider batchProvider;
 

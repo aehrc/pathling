@@ -29,11 +29,11 @@ public class QuantityParserTest extends AbstractParserTest {
   @Test
   void lengthObservationComparison() {
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
+        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
             true);
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
+        .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
@@ -48,11 +48,11 @@ public class QuantityParserTest extends AbstractParserTest {
   @Test
   void lengthObservationSubtraction() {
     final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, database, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
+        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
             true);
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
-        .database(database)
+        .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();

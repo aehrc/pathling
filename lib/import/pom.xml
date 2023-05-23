@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.1.4</version>
+    <version>6.2.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>import</artifactId>
@@ -80,9 +80,6 @@
           <filesets>
             <fileset>
               <directory>${project.basedir}/lib</directory>
-            </fileset>
-            <fileset>
-              <directory>${project.basedir}/node_modules</directory>
             </fileset>
           </filesets>
         </configuration>

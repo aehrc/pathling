@@ -23,25 +23,24 @@
 
 package au.csiro.pathling.support;
 
+import au.csiro.pathling.support.r4.R4FhirConversionSupport;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 /**
  * Helper functions to allow code to convert FHIR resources independently of the FHIR version.
- * Typically an implementation specific to a FHIR version is provided at runtime.
+ * Typically, an implementation specific to a FHIR version is provided at runtime.
  */
 public abstract class FhirConversionSupport implements Serializable {
 
   private static final long serialVersionUID = -108611742759595166L;
-
-  private static final String R4_SUPPORT_CLASS =
-      "au.csiro.pathling.support.r4.R4FhirConversionSupport";
 
   /**
    * Returns the type of a given FHIR object, such as "Condition" or "Observation".
@@ -59,32 +58,39 @@ public abstract class FhirConversionSupport implements Serializable {
    * @param <T> the type of the resources to extract
    * @return the list of the resources of the specified type
    */
+  @Nonnull
   public abstract <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
-      IBaseBundle bundle,
-      Class<T> resourceClass);
+      @Nonnull final IBaseBundle bundle,
+      @Nonnull final Class<T> resourceClass);
+
+
+  /**
+   * Resolves URN references in the given bundle to relative references for resources defined in the
+   * bundle. URN references to resources not defined in the bundle are left unchanged. The
+   * references are resolved in-place, that is the input bundle is modified. The implementation may
+   * relay on {@link org.hl7.fhir.instance.model.api.IBaseReference@getResource()} being set the
+   * referenced resource.
+   *
+   * @param bundle the bundle
+   * @return the bundle with references to existing resources resolved
+   */
+  @Nonnull
+  public abstract IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle);
 
   /**
    * Cache of FHIR contexts.
    */
+  @Nonnull
   private static final Map<FhirVersionEnum, FhirConversionSupport> FHIR_SUPPORT = new HashMap<>();
 
-
-  private static FhirConversionSupport newInstance(FhirVersionEnum fhirVersion) {
-
-    Class<? extends FhirConversionSupport> fhirSupportClass;
-    if (FhirVersionEnum.R4.equals(fhirVersion)) {
-      try {
-        //noinspection unchecked
-        fhirSupportClass = (Class<? extends FhirConversionSupport>) Class.forName(R4_SUPPORT_CLASS);
-      } catch (ClassNotFoundException exception) {
-        throw new IllegalStateException(exception);
-      }
-    } else {
+  @Nonnull
+  private static FhirConversionSupport newInstance(@Nonnull final FhirVersionEnum fhirVersion) {
+    if (!FhirVersionEnum.R4.equals(fhirVersion)) {
       throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
     }
     try {
-      return fhirSupportClass.getDeclaredConstructor().newInstance();
-    } catch (Exception exception) {
+      return R4FhirConversionSupport.class.getDeclaredConstructor().newInstance();
+    } catch (final Exception exception) {
       throw new IllegalStateException("Unable to create FHIR support class", exception);
     }
   }
@@ -96,7 +102,8 @@ public abstract class FhirConversionSupport implements Serializable {
    * @param fhirVersion the version of FHIR to use
    * @return the FhirContext
    */
-  public static FhirConversionSupport supportFor(FhirVersionEnum fhirVersion) {
+  @Nonnull
+  public static FhirConversionSupport supportFor(@Nonnull final FhirVersionEnum fhirVersion) {
     synchronized (FHIR_SUPPORT) {
       return FHIR_SUPPORT.computeIfAbsent(fhirVersion, FhirConversionSupport::newInstance);
     }

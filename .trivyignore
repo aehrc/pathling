@@ -52,3 +52,15 @@ CVE-2016-1000027
 
 # This vulnerability relates to Freetype, which is not a dependency of Pathling.
 CVE-2022-27404
+
+# This vulnerability relates to YAML deserialization - Pathling does not deserialize untrusted 
+# sources of YAML data.
+CVE-2022-1471
+
+# This vulnerability relates to YAML deserialization - Pathling does not deserialize untrusted 
+# sources of YAML data.
+CVE-2022-1471
+
+# This vulnerability relates to privilege management using spark-submit, which is outside of the
+# scope of this solution.
+CVE-2023-22946
