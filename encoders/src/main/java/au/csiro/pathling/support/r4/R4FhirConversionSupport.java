@@ -26,30 +26,74 @@ package au.csiro.pathling.support.r4;
 import au.csiro.pathling.support.FhirConversionSupport;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Base;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.r4.model.Reference;
+import org.hl7.fhir.r4.model.Resource;
 
+/**
+ * {@link FhirConversionSupport} implementation for FHIR R4.
+ */
 public class R4FhirConversionSupport extends FhirConversionSupport {
 
   private static final long serialVersionUID = -367070946615790595L;
 
   @Override
-  public String fhirType(IBase base) {
+  public String fhirType(final IBase base) {
 
     return base.fhirType();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
-  public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(IBaseBundle bundle,
-      Class<T> resourceClass) {
-    Bundle r4Bundle = (Bundle) bundle;
+  @Nonnull
+  public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
+      @Nonnull final IBaseBundle bundle,
+      @Nonnull final Class<T> resourceClass) {
+    final Bundle r4Bundle = (Bundle) bundle;
 
     return r4Bundle.getEntry().stream()
         .map(BundleEntryComponent::getResource)
         .filter(resourceClass::isInstance)
         .collect(Collectors.toList());
   }
+
+  private static boolean isURNReference(@Nonnull final Reference reference) {
+    return reference.hasReference() && reference.getReference().startsWith("urn:");
+  }
+
+  static void resolveURNReference(@Nonnull final Base base) {
+    if (base instanceof Reference) {
+      final Reference reference = (Reference) base;
+      final Resource resource = (Resource) reference.getResource();
+      if (isURNReference(reference) && resource != null && resource.hasIdElement()) {
+        reference.setReference(resource.getIdElement().getValue());
+      }
+    }
+  }
+
+  private static void resolveURNReferences(@Nonnull final Resource resource) {
+    FhirTraversal.processRecursive(resource, R4FhirConversionSupport::resolveURNReference);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Nonnull
+  @Override
+  public IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle) {
+    final Bundle r4Bundle = (Bundle) bundle;
+    r4Bundle.getEntry().stream()
+        .map(Bundle.BundleEntryComponent::getResource)
+        .forEach(R4FhirConversionSupport::resolveURNReferences);
+    return r4Bundle;
+  }
+
 }
