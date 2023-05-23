@@ -20,6 +20,30 @@ pathling.context module
    :undoc-members:
    :show-inheritance:
 
+pathling.core module
+--------------------
+
+.. automodule:: pathling.core
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.datasink module
+------------------------
+
+.. automodule:: pathling.datasink
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.datasource module
+--------------------------
+
+.. automodule:: pathling.datasource
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pathling.etc module
 -------------------
 
@@ -40,6 +64,14 @@ pathling.functions module
 -------------------------
 
 .. automodule:: pathling.functions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pathling.query module
+---------------------
+
+.. automodule:: pathling.query
    :members:
    :undoc-members:
    :show-inheritance:

@@ -3,9 +3,9 @@
         <head>
           <meta http-equiv="X-UA-Compatible" content="IE=edge" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <title>Pathling Encoders 6.1.4 API  - au.csiro.pathling.encoders.FhirEncoders</title>
-          <meta name="description" content="Pathling Encoders 6.1.4 API - au.csiro.pathling.encoders.FhirEncoders" />
-          <meta name="keywords" content="Pathling Encoders 6.1.4 API au.csiro.pathling.encoders.FhirEncoders" />
+          <title>Pathling Encoders 6.2.0-SNAPSHOT API  - au.csiro.pathling.encoders.FhirEncoders</title>
+          <meta name="description" content="Pathling Encoders 6.2.0 - SNAPSHOT API - au.csiro.pathling.encoders.FhirEncoders" />
+          <meta name="keywords" content="Pathling Encoders 6.2.0 SNAPSHOT API au.csiro.pathling.encoders.FhirEncoders" />
           <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
           
       
@@ -28,7 +28,7 @@
         </head>
         <body>
       <div id="search">
-        <span id="doc-title">Pathling Encoders 6.1.4 API<span id="doc-version"></span></span>
+        <span id="doc-title">Pathling Encoders 6.2.0-SNAPSHOT API<span id="doc-version"></span></span>
         <span class="close-results"><span class="left">&lt;</span> Back</span>
         <div id="textfilter">
           <span class="input">
@@ -501,6 +501,23 @@
                 <span class="name">@HotSpotIntrinsicCandidate</span><span class="args">()</span>
               
         </dd></dl></div>
+    </li><li name="au.csiro.pathling.encoders.FhirEncoders#getContext" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="getContext():ca.uhn.fhir.context.FhirContext"></a><a id="getContext():FhirContext"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/encoders/FhirEncoders.html#getContext():ca.uhn.fhir.context.FhirContext" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getContext</span><span class="params">()</span><span class="result">: <span class="extype" name="ca.uhn.fhir.context.FhirContext">FhirContext</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Returns the FHIR context used by encoders produced by this instance.</p><div class="fullcomment"><div class="comment cmt"><p>Returns the FHIR context used by encoders produced by this instance.
+</p></div><dl class="paramcmts block"><dt>returns</dt><dd class="cmt"><p>the FHIR context used by encoders produced by this instance.</p></dd></dl></div>
     </li><li name="au.csiro.pathling.encoders.FhirEncoders#getFhirVersion" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="getFhirVersion():ca.uhn.fhir.context.FhirVersionEnum"></a><a id="getFhirVersion():FhirVersionEnum"></a>
       <span class="permalink">
@@ -629,7 +646,10 @@
       </span>
       
       <p class="shortcomment cmt">Returns an encoder for the given FHIR resource.</p><div class="fullcomment"><div class="comment cmt"><p>Returns an encoder for the given FHIR resource.
-</p></div><dl class="paramcmts block"><dt class="param">type</dt><dd class="cmt"><p>the type of the resource to encode.</p></dd><dt>returns</dt><dd class="cmt"><p>an encoder for the resource.</p></dd></dl></div>
+</p></div><dl class="paramcmts block"><dt class="param">type</dt><dd class="cmt"><p>the type of the resource to encode.</p></dd><dt>returns</dt><dd class="cmt"><p>an encoder for the resource.</p></dd></dl><dl class="attributes block"> <dt>Annotations</dt><dd>
+                <span class="name">@SuppressWarnings</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="au.csiro.pathling.encoders.FhirEncoders#of" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="of[T&lt;:org.hl7.fhir.instance.model.api.IBaseResource](resourceName:String):org.apache.spark.sql.catalyst.encoders.ExpressionEncoder[T]"></a><a id="of[T&lt;:IBaseResource](String):ExpressionEncoder[T]"></a>
       <span class="permalink">
@@ -646,7 +666,10 @@
       </span>
       
       <p class="shortcomment cmt">Returns an encoder for the given FHIR resource.</p><div class="fullcomment"><div class="comment cmt"><p>Returns an encoder for the given FHIR resource.
-</p></div><dl class="paramcmts block"><dt class="param">resourceName</dt><dd class="cmt"><p>the type of the resource to encode.</p></dd><dt>returns</dt><dd class="cmt"><p>an encoder for the resource.</p></dd></dl></div>
+</p></div><dl class="paramcmts block"><dt class="param">resourceName</dt><dd class="cmt"><p>the type of the resource to encode.</p></dd><dt>returns</dt><dd class="cmt"><p>an encoder for the resource.</p></dd></dl><dl class="attributes block"> <dt>Annotations</dt><dd>
+                <span class="name">@SuppressWarnings</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="scala.AnyRef#synchronized" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="synchronized[T0](x$1:=&gt;T0):T0"></a><a id="synchronized[T0](⇒T0):T0"></a>
       <span class="permalink">

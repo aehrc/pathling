@@ -3,9 +3,9 @@
         <head>
           <meta http-equiv="X-UA-Compatible" content="IE=edge" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <title>Pathling Encoders 6.1.4 API  - au.csiro.pathling.support.FhirConversionSupport</title>
-          <meta name="description" content="Pathling Encoders 6.1.4 API - au.csiro.pathling.support.FhirConversionSupport" />
-          <meta name="keywords" content="Pathling Encoders 6.1.4 API au.csiro.pathling.support.FhirConversionSupport" />
+          <title>Pathling Encoders 6.2.0-SNAPSHOT API  - au.csiro.pathling.support.FhirConversionSupport</title>
+          <meta name="description" content="Pathling Encoders 6.2.0 - SNAPSHOT API - au.csiro.pathling.support.FhirConversionSupport" />
+          <meta name="keywords" content="Pathling Encoders 6.2.0 SNAPSHOT API au.csiro.pathling.support.FhirConversionSupport" />
           <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
           
       
@@ -28,7 +28,7 @@
         </head>
         <body>
       <div id="search">
-        <span id="doc-title">Pathling Encoders 6.1.4 API<span id="doc-version"></span></span>
+        <span id="doc-title">Pathling Encoders 6.2.0-SNAPSHOT API<span id="doc-version"></span></span>
         <span class="close-results"><span class="left">&lt;</span> Back</span>
         <div id="textfilter">
           <span class="input">
@@ -182,7 +182,7 @@
 
       
           <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>Helper functions to allow code to convert FHIR resources independently of the FHIR version.
-Typically an implementation specific to a FHIR version is provided at runtime.
+Typically, an implementation specific to a FHIR version is provided at runtime.
 </p></div><div class="toggleContainer block">
           <span class="toggle">
             Linear Supertypes
@@ -277,7 +277,10 @@ Typically an implementation specific to a FHIR version is provided at runtime.
       </span>
       
       <p class="shortcomment cmt">Extracts resources of the given type from a FHIR bundle.</p><div class="fullcomment"><div class="comment cmt"><p>Extracts resources of the given type from a FHIR bundle.
-</p></div><dl class="paramcmts block"><dt class="param">bundle</dt><dd class="cmt"><p>the bundle</p></dd><dt class="param">resourceClass</dt><dd class="cmt"><p>the class of the resources to extract</p></dd><dt>returns</dt><dd class="cmt"><p>the list of the resources of the specified type</p></dd></dl></div>
+</p></div><dl class="paramcmts block"><dt class="param">bundle</dt><dd class="cmt"><p>the bundle</p></dd><dt class="param">resourceClass</dt><dd class="cmt"><p>the class of the resources to extract</p></dd><dt>returns</dt><dd class="cmt"><p>the list of the resources of the specified type</p></dd></dl><dl class="attributes block"> <dt>Annotations</dt><dd>
+                <span class="name">@Nonnull</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li><li name="au.csiro.pathling.support.FhirConversionSupport#fhirType" visbl="pub" class="indented0 " data-isabs="true" fullComment="yes" group="Ungrouped">
       <a id="fhirType(base:org.hl7.fhir.instance.model.api.IBase):String"></a><a id="fhirType(IBase):String"></a>
       <span class="permalink">
@@ -295,6 +298,31 @@ Typically an implementation specific to a FHIR version is provided at runtime.
       
       <p class="shortcomment cmt">Returns the type of a given FHIR object, such as &quot;Condition&quot; or &quot;Observation&quot;.</p><div class="fullcomment"><div class="comment cmt"><p>Returns the type of a given FHIR object, such as &quot;Condition&quot; or &quot;Observation&quot;.
 </p></div><dl class="paramcmts block"><dt class="param">base</dt><dd class="cmt"><p>a FHIR object</p></dd><dt>returns</dt><dd class="cmt"><p>the FHIR type</p></dd></dl></div>
+    </li><li name="au.csiro.pathling.support.FhirConversionSupport#resolveReferences" visbl="pub" class="indented0 " data-isabs="true" fullComment="yes" group="Ungrouped">
+      <a id="resolveReferences(bundle:org.hl7.fhir.instance.model.api.IBaseBundle):org.hl7.fhir.instance.model.api.IBaseBundle"></a><a id="resolveReferences(IBaseBundle):IBaseBundle"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/support/FhirConversionSupport.html#resolveReferences(bundle:org.hl7.fhir.instance.model.api.IBaseBundle):org.hl7.fhir.instance.model.api.IBaseBundle" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">abstract </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">resolveReferences</span><span class="params">(<span name="bundle">bundle: <span class="extype" name="org.hl7.fhir.instance.model.api.IBaseBundle">IBaseBundle</span></span>)</span><span class="result">: <span class="extype" name="org.hl7.fhir.instance.model.api.IBaseBundle">IBaseBundle</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Resolves URN references in the given bundle to relative references for resources defined in the
+bundle.</p><div class="fullcomment"><div class="comment cmt"><p>Resolves URN references in the given bundle to relative references for resources defined in the
+bundle. URN references to resources not defined in the bundle are left unchanged. The
+references are resolved in-place, that is the input bundle is modified. The implementation may
+relay on <code><span class="extype" name="org.hl7.fhir.instance.model.api.IBaseReference@getResource()">org.hl7.fhir.instance.model.api.IBaseReference@getResource()</span></code> being set the
+referenced resource.
+</p></div><dl class="paramcmts block"><dt class="param">bundle</dt><dd class="cmt"><p>the bundle</p></dd><dt>returns</dt><dd class="cmt"><p>the bundle with references to existing resources resolved</p></dd></dl><dl class="attributes block"> <dt>Annotations</dt><dd>
+                <span class="name">@Nonnull</span><span class="args">()</span>
+              
+        </dd></dl></div>
     </li></ol>
             </div>
 
