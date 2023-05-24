@@ -6,27 +6,15 @@ yet, please [get into contact](https://pathling.csiro.au/#contact) with us
 or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
 understand your use case.
 
-## Library API: `aggregate` and `extract` operations
+## R integration
 
-This change will make it possible to use
-the [aggregate](https://pathling.csiro.au/docs/server/operations/aggregate)
-and [extract](https://pathling.csiro.au/docs/server/operations/extract)
-operations to aggregate and transform FHIR data from Python, Java and Scala
-applications. This feature is currently limited to the server implementation.
+Language-specific APIs will be developed that will allow users of R
+to access the functionality within Pathling within their own language
+environment.
 
-See also:
+See [R integration](https://github.com/aehrc/pathling/issues/193).
 
-- [Add aggregate function to library API](https://github.com/aehrc/pathling/issues/1060)
-- [Add extract operation to library API](https://github.com/aehrc/pathling/issues/1061)
-
-## Ordering
-
-The implementation of an `order` function will allow for the arbitrary
-re-ordering of resources and elements within expressions.
-
-See [FHIRPath function: order](https://github.com/aehrc/pathling/issues/448).
-
-## Improved FHIRPath support
+## Additional FHIRPath functions
 
 Implementation of a number of functions is planned:
 
@@ -56,13 +44,12 @@ Implementation of a number of functions is planned:
 
 See [Arbitrary function construction](https://github.com/aehrc/pathling/issues/510).
 
-## R integration
+## Ordering
 
-Language-specific APIs will be developed that will allow users of R
-to access the functionality within Pathling within their own language
-environment.
+The implementation of an `order` function will allow for the arbitrary
+re-ordering of resources and elements within expressions.
 
-See [R integration](https://github.com/aehrc/pathling/issues/193).
+See [FHIRPath function: order](https://github.com/aehrc/pathling/issues/448).
 
 ## Subscriptions
 
