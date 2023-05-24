@@ -1,5 +1,11 @@
 /*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
+ * This is a modified version of the Bunsen library, originally published at
+ * https://github.com/cerner/bunsen.
+ *
+ * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
+ * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,13 +66,13 @@ class R4FhirConversionSupportTest {
     R4FhirConversionSupport.resolveURNReference(urnReference);
     assertEquals("urn:uuid:1234", urnReference.getReference());
   }
-  
+
   @Test
   void testNoOpForNonReferences() {
     final StringType nonReference = new StringType("someString");
-    final StringType nonReferenceCopy =  nonReference.copy();
+    final StringType nonReferenceCopy = nonReference.copy();
     R4FhirConversionSupport.resolveURNReference(nonReference);
     assertTrue(nonReferenceCopy.equalsDeep(nonReference), "Non-reference should not be modified");
   }
-  
+
 }
