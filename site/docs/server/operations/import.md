@@ -7,12 +7,12 @@ sidebar_position: 1
 [FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-6)
 
 This operation allows FHIR R4 data to be imported into the server, making it
-available for query via other operations such as [search](./search),
-[aggregate](./aggregate) and [extract](./extract). This operation
-accepts the
-[NDJSON](http://ndjson.org/) format, and links to retrieve that data are
-provided rather that sending the data inline within the request itself. This is
-to allow for large data sets to be imported efficiently.
+available for query via other operations such
+as [search](./search), [aggregate](./aggregate) and [extract](./extract). This
+operation accepts the [NDJSON](https://hl7.org/fhir/R4/nd-json.html) format, and
+links to retrieve that data are provided rather that sending the data inline
+within the request itself. This is to allow for large data sets to be imported
+efficiently.
 
 Currently Pathling supports retrieval of NDJSON files from
 [Amazon S3](https://aws.amazon.com/s3/) (`s3://`),
