@@ -267,7 +267,7 @@ NdjsonSource data=pc.read().ndjson("/usr/share/staging/ndjson");
 </Tabs>
 
 You can also accommodate a custom naming scheme within the NDJSON files by using
-the [file_name_mapper](/docs/python/pathling.html#pathling.datasource.DataSources.ndjson)
+the [file_name_mapper](https://pathling.csiro.au/docs/python/pathling.html#pathling.datasource.DataSources.ndjson)
 argument. Here is an example of how to import the
 [MIMIC-IV FHIR data set](https://physionet.org/content/mimic-iv-fhir-demo/2.0/):
 
@@ -408,7 +408,7 @@ have been saved using the schema used by the Pathling encoders
 (see [Writing FHIR data](#delta-lake-1)).
 
 Note that you will need to use
-the [enable_delta](/docs/python/pathling.html#pathling.context.PathlingContext)
+the [enable_delta](https://pathling.csiro.au/docs/python/pathling.html#pathling.context.PathlingContext)
 parameter when initialising the Pathling context.
 
 The files are assumed to be named according to their resource
@@ -555,7 +555,7 @@ tables. Delta tables are a specialisation of Parquet that enable additional
 functionality, such as incremental update and history.
 
 Note that you will need to use
-the [enable_delta](/docs/python/pathling.html#pathling.context.PathlingContext)
+the [enable_delta](https://pathling.csiro.au/docs/python/pathling.html#pathling.context.PathlingContext)
 parameter when initialising the Pathling context.
 
 The files are named according to their resource
