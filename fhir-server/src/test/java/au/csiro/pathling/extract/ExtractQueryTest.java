@@ -316,6 +316,24 @@ class ExtractQueryTest {
   }
 
   @Test
+  void multipleIndependentUnnestings() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.given")
+        .withColumn("name.family")
+        .withColumn("maritalStatus.coding.system")
+        .withColumn("maritalStatus.coding.code")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/multipleIndependentUnnestings.csv");
+  }
+
+  @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.PATIENT);
