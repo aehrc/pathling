@@ -2,15 +2,15 @@ package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
+import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.QueryExecutor;
+import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
-import au.csiro.pathling.fhirpath.FhirPathContextAndResult;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -21,12 +21,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -68,8 +64,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
         .collect(Collectors.toUnmodifiableList());
 
     // Join all the column expressions together.
-    final FhirPathContextAndResult columnJoinResult = joinColumns(columnParseResult);
-    final Dataset<Row> columnJoinResultDataset = columnJoinResult.getResult();
+    final Dataset<Row> columnJoinResultDataset = joinAllColumns(columnParseResult);
     final Dataset<Row> trimmedDataset = trimTrailingNulls(inputContext.getIdColumn(),
         columnPaths, columnJoinResultDataset);
 
@@ -94,67 +89,68 @@ public class ExtractQueryExecutor extends QueryExecutor {
   }
 
   @Nonnull
-  private FhirPathContextAndResult joinColumns(
+  private Dataset<Row> joinAllColumns(
       @Nonnull final Collection<FhirPathAndContext> columnsAndContexts) {
-    // Sort the columns in descending order of expression length.
-    final List<FhirPathAndContext> sortedColumnsAndContexts = columnsAndContexts.stream()
-        .sorted(Comparator.<FhirPathAndContext>comparingInt(p ->
-            p.getFhirPath().getExpression().length()).reversed())
-        .collect(Collectors.toList());
+    if (columnsAndContexts.isEmpty()) {
+      // If there are no columns, throw an error.
+      throw new IllegalArgumentException("No columns to join");
 
-    FhirPathContextAndResult result = null;
-    check(sortedColumnsAndContexts.size() > 0);
-    for (final FhirPathAndContext current : sortedColumnsAndContexts) {
-      if (result != null) {
-        // Get the set of unique prefixes from the two parser contexts, and sort them in descending
-        // order of prefix length.
-        final Set<String> prefixes = new HashSet<>();
-        final Map<String, Column> resultNodeIds = result.getContext().getNodeIdColumns();
-        final Map<String, Column> currentNodeIds = current.getContext().getNodeIdColumns();
-        prefixes.addAll(resultNodeIds.keySet());
-        prefixes.addAll(currentNodeIds.keySet());
-        final List<String> sortedCommonPrefixes = new ArrayList<>(prefixes).stream()
-            .sorted(Comparator.comparingInt(String::length).reversed())
-            .collect(Collectors.toList());
-        final FhirPathContextAndResult finalResult = result;
-
-        // Find the longest prefix that is common to the two expressions.
-        final Optional<String> commonPrefix = sortedCommonPrefixes.stream()
-            .filter(p -> finalResult.getFhirPath().getExpression().startsWith(p) &&
-                current.getFhirPath().getExpression().startsWith(p))
-            .findFirst();
-
-        if (commonPrefix.isPresent() &&
-            resultNodeIds.containsKey(commonPrefix.get()) &&
-            currentNodeIds.containsKey(commonPrefix.get())) {
-          // If there is a common prefix, we add the corresponding node identifier column to the
-          // join condition.
-          final Column previousNodeId = resultNodeIds
-              .get(commonPrefix.get());
-          final List<Column> previousJoinColumns = Arrays.asList(result.getFhirPath().getIdColumn(),
-              previousNodeId);
-          final Column currentNodeId = currentNodeIds
-              .get(commonPrefix.get());
-          final List<Column> currentJoinColumns = Arrays.asList(current.getFhirPath().getIdColumn(),
-              currentNodeId);
-          final Dataset<Row> dataset = join(result.getResult(), previousJoinColumns,
-              current.getFhirPath().getDataset(),
-              currentJoinColumns, JoinType.LEFT_OUTER);
-          result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
-              dataset);
-        } else {
-          // If there is no common prefix, we join using only the resource ID.
-          final Dataset<Row> dataset = join(result.getResult(), result.getFhirPath().getIdColumn(),
-              current.getFhirPath().getDataset(), current.getFhirPath().getIdColumn(),
-              JoinType.LEFT_OUTER);
-          result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
-              dataset);
-        }
-      } else {
-        result = new FhirPathContextAndResult(current.getFhirPath(), current.getContext(),
-            current.getFhirPath().getDataset());
-      }
+    } else if (columnsAndContexts.size() == 1) {
+      // If there is only one column, skip joining and return its dataset.
+      final FhirPathAndContext fhirPathAndContext = columnsAndContexts.iterator().next();
+      return fhirPathAndContext.getFhirPath().getDataset();
     }
+
+    // Sort the columns by the nodes encountered while parsing. This ensures that we join them 
+    // together in order from the general to the specific.
+    final List<FhirPathAndContext> sorted = columnsAndContexts.stream()
+        .sorted((a, b) -> {
+          final List<String> nodesA = a.getContext().getNodeIdColumns().keySet().stream()
+              .sorted()
+              .collect(toList());
+          final List<String> nodesB = b.getContext().getNodeIdColumns().keySet().stream()
+              .sorted()
+              .collect(toList());
+          final String sortStringA = String.join("|", nodesA);
+          final String sortStringB = String.join("|", nodesB);
+          return sortStringA.compareTo(sortStringB);
+        })
+        .collect(toList());
+
+    // Start with the first column and its unjoined dataset.
+    FhirPathAndContext left = sorted.get(0);
+    Dataset<Row> result = left.getFhirPath().getDataset();
+
+    // Move through the list of columns, joining each one to the result of the previous join.
+    for (final FhirPathAndContext right : sorted.subList(1, sorted.size())) {
+      final List<Column> leftJoinColumns = new ArrayList<>();
+      final List<Column> rightJoinColumns = new ArrayList<>();
+
+      // The join column always includes the resource ID.
+      leftJoinColumns.add(left.getFhirPath().getIdColumn());
+      rightJoinColumns.add(right.getFhirPath().getIdColumn());
+
+      // Add the intersection of the nodes present in both the left and right column contexts.
+      final List<String> commonNodes = new ArrayList<>(
+          left.getContext().getNodeIdColumns().keySet());
+      commonNodes.retainAll(right.getContext().getNodeIdColumns().keySet());
+      final FhirPathAndContext finalLeft = left;
+      leftJoinColumns.addAll(commonNodes.stream()
+          .map(key -> finalLeft.getContext().getNodeIdColumns().get(key))
+          .collect(toList()));
+      rightJoinColumns.addAll(commonNodes.stream()
+          .map(key -> right.getContext().getNodeIdColumns().get(key))
+          .collect(toList()));
+
+      // Use a left outer join, so that we don't lose rows that don't have a value for the right
+      // column.
+      result = QueryHelpers.join(result, leftJoinColumns, right.getFhirPath().getDataset(),
+          rightJoinColumns, JoinType.LEFT_OUTER);
+
+      // The result of the join becomes the left side of the next join.
+      left = right;
+    }
+
     return result;
   }
 
