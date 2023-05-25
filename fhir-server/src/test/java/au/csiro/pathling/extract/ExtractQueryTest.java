@@ -334,6 +334,32 @@ class ExtractQueryTest {
   }
 
   @Test
+  void toleranceOfColumnOrdering() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.family")
+        .withColumn("name.given")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.csv");
+
+    final ExtractRequest request2 = new ExtractRequestBuilder(subjectResource)
+        .withColumn("name.given")
+        .withColumn("name.family")
+        .withColumn("id")
+        .build();
+
+    final Dataset<Row> result2 = executor.buildQuery(request2);
+    assertThat(result2)
+        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering2.csv");
+  }
+
+  @Test
   void emptyColumn() {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.PATIENT);
