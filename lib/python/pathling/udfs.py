@@ -219,7 +219,7 @@ def property_of(
     :return: the Column containing the result of the operation (array of property values)
     """
     return _invoke_udf(
-        "property_of", _coding_to_java_column(coding), property_code, property_type, display_langauge
+        "property_of", _coding_to_java_column(coding), property_code, property_type, display_language
     )
 
 
