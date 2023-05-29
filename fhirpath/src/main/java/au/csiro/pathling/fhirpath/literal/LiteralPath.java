@@ -179,11 +179,6 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
     return ORDERING_NULL_VALUE;
   }
 
-  @Nonnull
-  public Column getExtractableColumn() {
-    return getValueColumn();
-  }
-
   /**
    * @return A column representing the value for this literal.
    */

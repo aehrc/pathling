@@ -19,7 +19,7 @@ package au.csiro.pathling.aggregate;
 
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -110,19 +110,19 @@ public class AggregateExecutor extends AggregateQueryExecutor {
       final List<Optional<Type>> results = new ArrayList<>();
 
       for (int i = 0; i < groupings.size(); i++) {
-        final Materializable<Type> grouping = (Materializable<Type>) groupings.get(i);
+        final FhirValue<Type> grouping = (FhirValue<Type>) groupings.get(i);
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.
-        final Optional<Type> label = grouping.getValueFromRow(row, i);
+        final Optional<Type> label = grouping.getFhirValueFromRow(row, i);
         labels.add(label);
       }
 
       for (int i = 0; i < aggregations.size(); i++) {
         //noinspection rawtypes
-        final Materializable aggregation = (Materializable<Type>) aggregations.get(i);
+        final FhirValue aggregation = (FhirValue<Type>) aggregations.get(i);
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.
-        final Optional<Type> result = aggregation.getValueFromRow(row, i + groupings.size());
+        final Optional<Type> result = aggregation.getFhirValueFromRow(row, i + groupings.size());
         results.add(result);
       }
 

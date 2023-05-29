@@ -26,7 +26,7 @@ import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -89,7 +89,8 @@ public class AggregateQueryExecutor extends QueryExecutor {
     final Parser parser = new Parser(groupingAndFilterContext);
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
     final List<FhirPathAndContext> groupingParseResult = parseExpressions(
-        groupingAndFilterContext, query.getGroupings(), "Grouping", true);
+        groupingAndFilterContext, query.getGroupings());
+    validateGroupings(groupingParseResult);
     final List<FhirPath> groupings = groupingParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toList());
@@ -160,14 +161,23 @@ public class AggregateQueryExecutor extends QueryExecutor {
       @Nonnull final Collection<String> aggregations) {
     return aggregations.stream().map(aggregation -> {
       final FhirPath result = parser.parse(aggregation);
-      // Aggregation expressions must evaluate to a singular, Materializable path, or a user error
-      // will be returned.
-      checkUserInput(result instanceof Materializable,
+      // An aggregation expression must be able to be extracted into a FHIR value.
+      checkUserInput(result instanceof FhirValue,
           "Aggregation expression is not of a supported type: " + aggregation);
+      // An aggregation expression must be singular, relative to its input context.
       checkUserInput(result.isSingular(),
           "Aggregation expression does not evaluate to a singular value: " + aggregation);
       return result;
     }).collect(Collectors.toList());
+  }
+
+  private void validateGroupings(final List<FhirPathAndContext> groupingParseResult) {
+    for (final FhirPathAndContext fhirPathAndContext : groupingParseResult) {
+      final FhirPath fhirPath = fhirPathAndContext.getFhirPath();
+      // A grouping expression must be able to be extracted into a FHIR value.
+      checkUserInput(fhirPath instanceof FhirValue,
+          "Grouping expression is not of a supported type: " + fhirPath);
+    }
   }
 
   @Value

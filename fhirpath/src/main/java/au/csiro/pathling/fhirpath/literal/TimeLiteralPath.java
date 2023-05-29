@@ -21,7 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.element.TimePath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -36,7 +36,7 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimeLiteralPath extends LiteralPath<TimeType> implements Materializable<TimeType>,
+public class TimeLiteralPath extends LiteralPath<TimeType> implements FhirValue<TimeType>,
     Comparable {
 
   protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -90,7 +90,7 @@ public class TimeLiteralPath extends LiteralPath<TimeType> implements Materializ
 
   @Nonnull
   @Override
-  public Optional<TimeType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<TimeType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return TimePath.valueFromRow(row, columnNumber);
   }
 

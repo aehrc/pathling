@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.element;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -47,7 +47,7 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  *
  * @author John Grimes
  */
-public class IntegerPath extends ElementPath implements Materializable<PrimitiveType>, Comparable,
+public class IntegerPath extends ElementPath implements FhirValue<PrimitiveType>, Comparable,
     Numeric {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
@@ -65,7 +65,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
+      final int columnNumber) {
     return valueFromRow(row, columnNumber, getFhirType());
   }
 
@@ -151,8 +152,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
    * @param operation The type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
    * @param expression The FHIRPath expression to use in the result
    * @param dataset The {@link Dataset} to use in the result
-   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a {@link
-   * NonLiteralPath}
+   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a
+   * {@link NonLiteralPath}
    */
   @Nonnull
   public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,

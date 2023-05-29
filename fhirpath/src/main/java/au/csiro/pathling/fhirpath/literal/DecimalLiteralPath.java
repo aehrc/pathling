@@ -22,7 +22,7 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
@@ -43,7 +43,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class DecimalLiteralPath extends LiteralPath<DecimalType> implements
-    Materializable<DecimalType>, Comparable, Numeric {
+    FhirValue<DecimalType>, Comparable, Numeric {
 
   protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final DecimalType literalValue) {
@@ -129,7 +129,7 @@ public class DecimalLiteralPath extends LiteralPath<DecimalType> implements
 
   @Nonnull
   @Override
-  public Optional<DecimalType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<DecimalType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return DecimalPath.valueFromRow(row, columnNumber);
   }
 

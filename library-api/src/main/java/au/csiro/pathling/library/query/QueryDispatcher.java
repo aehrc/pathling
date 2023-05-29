@@ -21,6 +21,7 @@ import au.csiro.pathling.aggregate.AggregateQueryExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.extract.ExtractQueryExecutor;
 import au.csiro.pathling.extract.ExtractRequest;
+import au.csiro.pathling.extract.ExtractResultType;
 import au.csiro.pathling.views.FhirView;
 import au.csiro.pathling.views.FhirViewExecutor;
 import javax.annotation.Nonnull;
@@ -60,7 +61,7 @@ public class QueryDispatcher {
    */
   @Nonnull
   public Dataset<Row> dispatch(@Nonnull final ExtractRequest extractRequest) {
-    return extractExecutor.buildQuery(extractRequest);
+    return extractExecutor.buildQuery(extractRequest, ExtractResultType.UNCONSTRAINED);
   }
 
   /**

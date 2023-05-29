@@ -21,7 +21,7 @@ import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.Temporal;
@@ -49,7 +49,7 @@ import org.hl7.fhir.r4.model.InstantType;
  *
  * @author John Grimes
  */
-public class DateTimePath extends ElementPath implements Materializable<BaseDateTimeType>,
+public class DateTimePath extends ElementPath implements FhirValue<BaseDateTimeType>,
     Comparable, Temporal {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
@@ -67,7 +67,7 @@ public class DateTimePath extends ElementPath implements Materializable<BaseDate
 
   @Nonnull
   @Override
-  public Optional<BaseDateTimeType> getValueFromRow(@Nonnull final Row row,
+  public Optional<BaseDateTimeType> getFhirValueFromRow(@Nonnull final Row row,
       final int columnNumber) {
     return valueFromRow(row, columnNumber, getFhirType());
   }

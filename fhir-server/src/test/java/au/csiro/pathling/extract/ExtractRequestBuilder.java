@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.extract;
 
+import au.csiro.pathling.query.ExpressionWithLabel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +34,7 @@ public class ExtractRequestBuilder {
   private final ResourceType subjectResource;
 
   @Nonnull
-  private final List<String> columns;
+  private final List<ExpressionWithLabel> columns;
 
   @Nonnull
   private final List<String> filters;
@@ -49,7 +50,13 @@ public class ExtractRequestBuilder {
   }
 
   public ExtractRequestBuilder withColumn(@Nonnull final String expression) {
-    columns.add(expression);
+    columns.add(ExpressionWithLabel.withNoLabel(expression));
+    return this;
+  }
+
+  public ExtractRequestBuilder withColumn(@Nonnull final String expression,
+      @Nonnull final String label) {
+    columns.add(ExpressionWithLabel.of(expression, label));
     return this;
   }
 
@@ -64,7 +71,6 @@ public class ExtractRequestBuilder {
   }
 
   public ExtractRequest build() {
-    return ExtractRequest.fromUserInput(subjectResource, Optional.of(columns), Optional.of(filters),
-        Optional.ofNullable(limit));
+    return new ExtractRequest(subjectResource, columns, filters, Optional.ofNullable(limit));
   }
 }

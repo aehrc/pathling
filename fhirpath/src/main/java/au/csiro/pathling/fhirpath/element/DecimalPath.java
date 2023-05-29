@@ -21,7 +21,7 @@ import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -44,7 +44,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class DecimalPath extends ElementPath implements Materializable<DecimalType>, Comparable,
+public class DecimalPath extends ElementPath implements FhirValue<DecimalType>, Comparable,
     Numeric {
 
   private static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
@@ -61,7 +61,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
 
   @Nonnull
   @Override
-  public Optional<DecimalType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<DecimalType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return valueFromRow(row, columnNumber);
   }
 

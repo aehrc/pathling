@@ -19,7 +19,8 @@ package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
+import au.csiro.pathling.fhirpath.Flat;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
@@ -46,7 +47,7 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringPath extends ElementPath implements Materializable<PrimitiveType>, Comparable {
+public class StringPath extends ElementPath implements FhirValue<PrimitiveType>, Flat, Comparable {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(StringPath.class, StringLiteralPath.class, NullLiteralPath.class);
@@ -62,7 +63,7 @@ public class StringPath extends ElementPath implements Materializable<PrimitiveT
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row,
+  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
       final int columnNumber) {
     return valueFromRow(row, columnNumber, getFhirType());
   }

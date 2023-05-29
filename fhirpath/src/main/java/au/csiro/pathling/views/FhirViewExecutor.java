@@ -11,7 +11,7 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -82,7 +82,7 @@ public class FhirViewExecutor extends QueryExecutor {
       // If the variable has a `whenMany` value of `array`, we need to flatten the result to remove 
       // accumulated array nesting from the underlying structure.
       if (variable.getWhenMany() == WhenMany.ARRAY && result instanceof NonLiteralPath
-          && result instanceof Materializable) {
+          && result instanceof FhirValue) {
         final NonLiteralPath nonLiteralResult = (NonLiteralPath) result;
         final Column flattenedValue = flatten(nonLiteralResult.getValueColumn());
         result = nonLiteralResult.copy(nonLiteralResult.getExpression(),
@@ -105,7 +105,7 @@ public class FhirViewExecutor extends QueryExecutor {
         .map(NamedExpression::getExpression)
         .collect(toList());
     final List<FhirPathAndContext> columnParseResult =
-        parseExpressions(columnContext, columnExpressions, "Column", true);
+        parseExpressions(columnContext, columnExpressions);
     final List<FhirPath> columnPaths = columnParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(toUnmodifiableList());
@@ -120,7 +120,7 @@ public class FhirViewExecutor extends QueryExecutor {
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
     final Column[] columnValues = labelColumns(
-        columnPaths.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
+        columnPaths.stream().map(FhirPath::getValueColumn),
         view.getColumns().stream().map(NamedExpression::getName).map(Optional::of)
     ).toArray(Column[]::new);
     return filteredDataset.select(columnValues)

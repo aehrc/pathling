@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class BooleanPath extends ElementPath implements Materializable<BooleanType>, Comparable {
+public class BooleanPath extends ElementPath implements FhirValue<BooleanType>, Comparable {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(BooleanPath.class, BooleanLiteralPath.class, NullLiteralPath.class);
@@ -54,7 +54,7 @@ public class BooleanPath extends ElementPath implements Materializable<BooleanTy
 
   @Nonnull
   @Override
-  public Optional<BooleanType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<BooleanType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return valueFromRow(row, columnNumber);
   }
 

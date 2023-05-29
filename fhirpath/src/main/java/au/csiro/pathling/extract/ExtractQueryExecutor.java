@@ -9,9 +9,10 @@ import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.fhirpath.AbstractPath;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.Flat;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
@@ -50,6 +51,20 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
+    return buildQuery(query, ExtractResultType.UNCONSTRAINED);
+  }
+
+  /**
+   * Builds up the query for an extract request.
+   *
+   * @param query an {@link ExtractRequest}
+   * @param resultType the {@link ExtractResultType} that will be required
+   * @return an uncollected {@link Dataset}
+   */
+  @SuppressWarnings("WeakerAccess")
+  @Nonnull
+  public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
+      @Nonnull final ExtractResultType resultType) {
     // Build a new expression parser, and parse all the column expressions within the query.
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getDataSource(), query.getSubjectResource(),
@@ -58,7 +73,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final ParserContext parserContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));
     final List<FhirPathAndContext> columnParseResult =
-        parseExpressions(parserContext, query.getColumns(), "Column", true);
+        parseExpressions(parserContext, query.getColumnsAsStrings());
+    validateColumns(columnParseResult, resultType);
     final List<FhirPath> columnPaths = columnParseResult.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toUnmodifiableList());
@@ -76,8 +92,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
     final Column[] columnValues = labelColumns(
-        columnPaths.stream().map(path -> ((Materializable<?>) path).getExtractableColumn()),
-        labelsAsStream(query.getColumnsWithLabels())
+        columnPaths.stream().map(FhirPath::getValueColumn),
+        labelsAsStream(query.getColumns())
     ).toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
         .filter(idColumn.isNotNull());
@@ -86,6 +102,23 @@ public class ExtractQueryExecutor extends QueryExecutor {
     return query.getLimit().isPresent()
            ? selectedDataset.limit(query.getLimit().get())
            : selectedDataset;
+  }
+
+  private void validateColumns(@Nonnull final List<FhirPathAndContext> columnParseResult,
+      @Nonnull final ExtractResultType resultType) {
+    for (final FhirPathAndContext fhirPathAndContext : columnParseResult) {
+      final FhirPath column = fhirPathAndContext.getFhirPath();
+      final boolean condition;
+      if (resultType == ExtractResultType.FLAT) {
+        // In flat mode, only flat columns are allowed.
+        condition = column instanceof Flat;
+      } else {
+        // Otherwise, a column can be of any type, as long as it has not been specifically flagged 
+        // as being abstract, e.g. an UntypedResourcePath.
+        condition = !(column instanceof AbstractPath);
+      }
+      checkArgument(condition, "Column name is not of a supported type: " + column);
+    }
   }
 
   @Nonnull

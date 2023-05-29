@@ -40,7 +40,7 @@ public class ExtractRequest {
   ResourceType subjectResource;
 
   @Nonnull
-  List<ExpressionWithLabel> columnsWithLabels;
+  List<ExpressionWithLabel> columns;
 
   @Nonnull
   List<String> filters;
@@ -52,8 +52,8 @@ public class ExtractRequest {
    * @return The list of column expressions
    */
   @Nonnull
-  public List<String> getColumns() {
-    return ExpressionWithLabel.expressionsAsList(columnsWithLabels);
+  public List<String> getColumnsAsStrings() {
+    return ExpressionWithLabel.expressionsAsList(columns);
   }
 
   /**

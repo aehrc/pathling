@@ -19,21 +19,20 @@ package au.csiro.pathling.fhirpath;
 
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Type;
 
 /**
- * Designates an expression that is capable of being extracted from a Spark dataset and materialized
- * back into a value featured within a result, e.g. for use in a grouping label or as part of an
- * extract.
+ * Designates an expression that is capable of being extracted into a FHIR value.
  *
+ * @param <T> the {@link Type} of FHIR value that can be extracted
  * @author John Grimes
+ * @see <a href="https://hl7.org/fhir/R4/datatypes.html">Data Types</a>
  */
-public interface Materializable<T extends Type> {
+public interface FhirValue<T extends Type> {
 
   /**
-   * Extracts a value from a {@link Row} within a {@link org.apache.spark.sql.Dataset}.
+   * Extracts a FHIR value from a {@link Row} within a {@link org.apache.spark.sql.Dataset}.
    * <p>
    * Implementations of this method should use {@link Row#isNullAt} to check for a null value.
    *
@@ -42,15 +41,6 @@ public interface Materializable<T extends Type> {
    * @return the value, which may be missing
    */
   @Nonnull
-  Optional<T> getValueFromRow(@Nonnull Row row, int columnNumber);
-
-  /**
-   * Provides a {@link Column} that can be used to materialize a value in the extract operation,
-   * which uses a CSV representation that is not compatible with struct values.
-   *
-   * @return a column which can be written out as part of an extract result
-   */
-  @Nonnull
-  Column getExtractableColumn();
+  Optional<T> getFhirValueFromRow(@Nonnull Row row, int columnNumber);
 
 }

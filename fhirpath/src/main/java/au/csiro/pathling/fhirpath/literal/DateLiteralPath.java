@@ -22,7 +22,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
@@ -44,7 +44,7 @@ import org.hl7.fhir.r4.model.DateType;
  *
  * @author John Grimes
  */
-public class DateLiteralPath extends LiteralPath<DateType> implements Materializable<DateType>,
+public class DateLiteralPath extends LiteralPath<DateType> implements FhirValue<DateType>,
     Comparable, Temporal {
 
   protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -98,7 +98,7 @@ public class DateLiteralPath extends LiteralPath<DateType> implements Materializ
 
   @Nonnull
   @Override
-  public Optional<DateType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<DateType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return DatePath.valueFromRow(row, columnNumber);
   }
 

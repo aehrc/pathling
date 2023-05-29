@@ -22,7 +22,7 @@ import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import java.util.Optional;
@@ -40,7 +40,7 @@ import org.hl7.fhir.r4.model.Coding;
  * @author John Grimes
  */
 @Getter
-public class CodingLiteralPath extends LiteralPath<Coding> implements Materializable<Coding>,
+public class CodingLiteralPath extends LiteralPath<Coding> implements FhirValue<Coding>,
     Comparable {
 
   protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -105,19 +105,13 @@ public class CodingLiteralPath extends LiteralPath<Coding> implements Materializ
 
   @Nonnull
   @Override
-  public Optional<Coding> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<Coding> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return CodingPath.valueFromRow(row, columnNumber);
   }
 
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof CodingPath;
-  }
-
-  @Nonnull
-  @Override
-  public Column getExtractableColumn() {
-    return lit(CodingLiteral.toLiteral(getValue()));
   }
 
 }

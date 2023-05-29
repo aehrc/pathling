@@ -152,12 +152,6 @@ public abstract class NonLiteralPath implements FhirPath {
     return eidColumn.orElse(ORDERING_NULL_VALUE);
   }
 
-  @Nonnull
-  public Column getExtractableColumn() {
-    return getValueColumn();
-  }
-
-
   /**
    * Returns the column with the extension container (the _fid to extension values map).
    *

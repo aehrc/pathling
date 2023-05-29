@@ -29,7 +29,6 @@ import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
-import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
@@ -97,8 +96,7 @@ public abstract class QueryExecutor {
 
   @Nonnull
   protected List<FhirPathAndContext> parseExpressions(
-      @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions,
-      @Nonnull final String display, final boolean checkMaterializable) {
+      @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions) {
     return expressions.stream()
         .map(expression -> {
           // Create a new copy of the parser context from the previous context, except for node IDs 
@@ -106,12 +104,6 @@ public abstract class QueryExecutor {
           final ParserContext currentContext = parserContext.unsetNodeIds();
           final Parser parser = new Parser(currentContext);
           final FhirPath result = parser.parse(expression);
-          if (checkMaterializable) {
-            // Each expression must evaluate to a Materializable path, or a user error will be thrown.
-            // There is no requirement for it to be singular.
-            checkUserInput(result instanceof Materializable,
-                display + " expression is not of a supported type: " + expression);
-          }
           return new FhirPathAndContext(result, parser.getContext());
         }).collect(Collectors.toList());
   }

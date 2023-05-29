@@ -35,7 +35,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class UntypedResourcePath extends ReferencePath {
+public class UntypedResourcePath extends ReferencePath implements AbstractPath {
 
   public UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,

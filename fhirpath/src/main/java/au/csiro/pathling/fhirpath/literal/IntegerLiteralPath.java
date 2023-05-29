@@ -21,7 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
@@ -42,7 +42,7 @@ import org.hl7.fhir.r4.model.PrimitiveType;
  * @author John Grimes
  */
 public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
-    Materializable<PrimitiveType>, Comparable, Numeric {
+    FhirValue<PrimitiveType>, Comparable, Numeric {
 
   @SuppressWarnings("WeakerAccess")
   protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -117,7 +117,8 @@ public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
+      final int columnNumber) {
     return IntegerPath.valueFromRow(row, columnNumber, FHIRDefinedType.INTEGER);
   }
 

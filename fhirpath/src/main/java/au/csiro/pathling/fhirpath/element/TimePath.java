@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimePath extends ElementPath implements Materializable<TimeType>, Comparable {
+public class TimePath extends ElementPath implements FhirValue<TimeType>, Comparable {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(TimePath.class, TimeLiteralPath.class, NullLiteralPath.class);
@@ -54,7 +54,7 @@ public class TimePath extends ElementPath implements Materializable<TimeType>, C
 
   @Nonnull
   @Override
-  public Optional<TimeType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<TimeType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return valueFromRow(row, columnNumber);
   }
 

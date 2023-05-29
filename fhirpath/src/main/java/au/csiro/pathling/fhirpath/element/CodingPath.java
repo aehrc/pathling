@@ -21,7 +21,7 @@ import static org.apache.spark.sql.functions.callUDF;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
@@ -42,7 +42,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class CodingPath extends ElementPath implements Materializable<Coding>, Comparable {
+public class CodingPath extends ElementPath implements FhirValue<Coding>, Comparable {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(CodingPath.class, CodingLiteralPath.class, NullLiteralPath.class);
@@ -58,7 +58,7 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
 
   @Nonnull
   @Override
-  public Optional<Coding> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<Coding> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return valueFromRow(row, columnNumber);
   }
 
@@ -98,7 +98,7 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;
   }
-  
+
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
@@ -113,12 +113,6 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof CodingLiteralPath;
-  }
-
-  @Nonnull
-  @Override
-  public Column getExtractableColumn() {
-    return callUDF(CodingToLiteral.FUNCTION_NAME, getValueColumn());
   }
 
 }

@@ -18,6 +18,8 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.explode_outer;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -414,6 +416,26 @@ class ExtractQueryTest {
               .build());
       assertEquals("Limit must be greater than zero", error.getMessage());
     }
+  }
+
+  @Test
+  void structuredResult() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(ResourceType.PATIENT);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id", "id")
+        .withColumn("name", "name")
+        .build();
+
+    Dataset<Row> result = executor.buildQuery(request, ExtractResultType.UNCONSTRAINED);
+    result = result.select(
+        col("id"),
+        explode_outer(col("name").getField("given")).as("given")
+    );
+
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/structuredResult.csv");
   }
 
   void mockResource(final ResourceType... resourceTypes) {

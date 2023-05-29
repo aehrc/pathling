@@ -21,7 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -37,7 +37,7 @@ import org.hl7.fhir.r4.model.BooleanType;
  * @author John Grimes
  */
 public class BooleanLiteralPath extends LiteralPath<BooleanType> implements
-    Materializable<BooleanType>, Comparable {
+    FhirValue<BooleanType>, Comparable {
 
   @SuppressWarnings("WeakerAccess")
   protected BooleanLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -86,7 +86,7 @@ public class BooleanLiteralPath extends LiteralPath<BooleanType> implements
 
   @Nonnull
   @Override
-  public Optional<BooleanType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<BooleanType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {
     return BooleanPath.valueFromRow(row, columnNumber);
   }
 
