@@ -202,6 +202,8 @@ def display(coding: CodingArg, display_language: Optional[str] = None) -> Column
     return _invoke_udf("display", _coding_to_java_column(coding), display_language)
 
 
+#def property_of(
+#    coding: CodingArg, property_code: str, property_type: str = PropertyType.STRING, display_language: Optional[str] = None) -> Column:
 def property_of(
     coding: CodingArg, property_code: str, property_type: str = PropertyType.STRING, display_language: Optional[str] = None) -> Column:
     """
@@ -215,11 +217,12 @@ def property_of(
     :param coding: a Column containing a struct representation of a Coding
     :param property_code: the code of the property to retrieve.
     :param property_type: the type of the property to retrieve.
-    :param display_language: the of the return requested.
+    :param display_language: the language of the return requested.
     :return: the Column containing the result of the operation (array of property values)
     """
+    FHIRDefinedType_property_type = _get_jvm().org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.fromCode(property_type)
     return _invoke_udf(
-        "property_of", _coding_to_java_column(coding), property_code, property_type, display_language
+        "property_of", _coding_to_java_column(coding), property_code, FHIRDefinedType_property_type, display_language
     )
 
 
