@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.Flat;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -74,8 +75,9 @@ public class ExtractQueryExecutor extends QueryExecutor {
         Collections.singletonList(inputContext.getIdColumn()));
     final List<FhirPathAndContext> columnParseResult =
         parseExpressions(parserContext, query.getColumnsAsStrings());
-    validateColumns(columnParseResult, resultType);
-    final List<FhirPath> columnPaths = columnParseResult.stream()
+    final List<FhirPathAndContext> validatedColumns =
+        validateAndCoerceColumns(columnParseResult, resultType);
+    final List<FhirPath> columnPaths = validatedColumns.stream()
         .map(FhirPathAndContext::getFhirPath)
         .collect(Collectors.toUnmodifiableList());
 
@@ -104,9 +106,27 @@ public class ExtractQueryExecutor extends QueryExecutor {
            : selectedDataset;
   }
 
-  private void validateColumns(@Nonnull final List<FhirPathAndContext> columnParseResult,
+  private List<FhirPathAndContext> validateAndCoerceColumns(
+      @Nonnull final List<FhirPathAndContext> columnParseResult,
       @Nonnull final ExtractResultType resultType) {
-    for (final FhirPathAndContext fhirPathAndContext : columnParseResult) {
+
+    // Perform any necessary String coercion.
+    final List<FhirPathAndContext> coerced = columnParseResult.stream()
+        .map(column -> {
+          final FhirPath fhirPath = column.getFhirPath();
+          if (resultType == ExtractResultType.FLAT && !(fhirPath instanceof Flat)
+              && fhirPath instanceof StringCoercible) {
+            // If the result type is flat and the path is string-coercible, we can coerce it.
+            final StringCoercible stringCoercible = (StringCoercible) fhirPath;
+            final FhirPath stringPath = stringCoercible.asStringPath(fhirPath.getExpression());
+            return new FhirPathAndContext(stringPath, column.getContext());
+          } else {
+            return column;
+          }
+        }).collect(toList());
+
+    // Validate the final set of paths.
+    for (final FhirPathAndContext fhirPathAndContext : coerced) {
       final FhirPath column = fhirPathAndContext.getFhirPath();
       final boolean condition;
       if (resultType == ExtractResultType.FLAT) {
@@ -117,8 +137,10 @@ public class ExtractQueryExecutor extends QueryExecutor {
         // as being abstract, e.g. an UntypedResourcePath.
         condition = !(column instanceof AbstractPath);
       }
-      checkArgument(condition, "Column name is not of a supported type: " + column);
+      checkArgument(condition, "Column is not of a supported type: " + column.getExpression());
     }
+
+    return coerced;
   }
 
   @Nonnull

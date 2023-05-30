@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -49,7 +50,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 @Slf4j
 public class DatePath extends ElementPath implements FhirValue<DateType>, Comparable,
-    Temporal {
+    Temporal, StringCoercible {
 
   protected DatePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
@@ -121,6 +122,14 @@ public class DatePath extends ElementPath implements FhirValue<DateType>, Compar
       @Nonnull final String expression) {
     return buildDateArithmeticOperation(this, operation, dataset, expression,
         DateAddDurationFunction.FUNCTION_NAME, DateSubtractDurationFunction.FUNCTION_NAME);
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(),
+        getValueColumn(), isSingular(), getCurrentResource(), getThisColumn(),
+        FHIRDefinedType.STRING);
   }
 
 }

@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.element.DecimalPath;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import java.math.BigDecimal;
@@ -43,7 +44,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class DecimalLiteralPath extends LiteralPath<DecimalType> implements
-    FhirValue<DecimalType>, Comparable, Numeric {
+    FhirValue<DecimalType>, Comparable, Numeric, StringCoercible {
 
   protected DecimalLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final DecimalType literalValue) {
@@ -138,4 +139,11 @@ public class DecimalLiteralPath extends LiteralPath<DecimalType> implements
     return super.canBeCombinedWith(target) || target instanceof DecimalPath;
   }
 
+  @Override
+  @Nonnull
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final String fhirPath = StringLiteral.stringToFhirPath(getValue().asStringValue());
+    return StringLiteralPath.fromString(fhirPath, this);
+  }
+ 
 }

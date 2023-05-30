@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.element.DatePath;
@@ -45,7 +46,7 @@ import org.hl7.fhir.r4.model.DateType;
  * @author John Grimes
  */
 public class DateLiteralPath extends LiteralPath<DateType> implements FhirValue<DateType>,
-    Comparable, Temporal {
+    Comparable, Temporal, StringCoercible {
 
   protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final DateType literalValue) {
@@ -116,4 +117,11 @@ public class DateLiteralPath extends LiteralPath<DateType> implements FhirValue<
         DateAddDurationFunction.FUNCTION_NAME, DateSubtractDurationFunction.FUNCTION_NAME);
   }
 
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final String fhirPath = StringLiteral.stringToFhirPath(getValue().asStringValue());
+    return StringLiteralPath.fromString(fhirPath, this);
+  }
+ 
 }

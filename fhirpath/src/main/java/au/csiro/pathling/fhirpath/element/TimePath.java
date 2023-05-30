@@ -21,6 +21,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import com.google.common.collect.ImmutableSet;
@@ -38,7 +39,8 @@ import org.hl7.fhir.r4.model.TimeType;
  *
  * @author John Grimes
  */
-public class TimePath extends ElementPath implements FhirValue<TimeType>, Comparable {
+public class TimePath extends ElementPath implements FhirValue<TimeType>, Comparable,
+    StringCoercible {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(TimePath.class, TimeLiteralPath.class, NullLiteralPath.class);
@@ -94,4 +96,11 @@ public class TimePath extends ElementPath implements FhirValue<TimeType>, Compar
     return super.canBeCombinedWith(target) || target instanceof TimeLiteralPath;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(),
+        getValueColumn(), isSingular(), getCurrentResource(), getThisColumn(),
+        FHIRDefinedType.STRING);
+  }
 }

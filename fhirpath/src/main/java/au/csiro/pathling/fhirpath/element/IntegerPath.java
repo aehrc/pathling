@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -48,7 +49,7 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  * @author John Grimes
  */
 public class IntegerPath extends ElementPath implements FhirValue<PrimitiveType>, Comparable,
-    Numeric {
+    Numeric, StringCoercible {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(IntegerPath.class, IntegerLiteralPath.class, DecimalPath.class, DecimalLiteralPath.class,
@@ -193,6 +194,14 @@ public class IntegerPath extends ElementPath implements FhirValue<PrimitiveType>
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof IntegerLiteralPath;
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final Column valueColumn = getValueColumn().cast(DataTypes.StringType);
+    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
+        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
   }
 
 }

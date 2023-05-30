@@ -105,12 +105,12 @@ class ExtractQueryTest {
             ExpressionWithLabel.withExpressionAsLabel("id"),
             ExpressionWithLabel.withExpressionAsLabel("gender"),
             ExpressionWithLabel.of("name.given.first()", "given_name"),
-            ExpressionWithLabel.of("reverseResolve(Condition.subject).count()", "patient_count")
+            ExpressionWithLabel.of("reverseResolve(Condition.subject).count().toString()", "patient_count")
         ),
         List.of("gender = 'female'"),
         Optional.empty()
     );
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertArrayEquals(new String[]{"id", "gender", "given_name", "patient_count"},
         result.columns());
     assertThat(result)
@@ -129,7 +129,7 @@ class ExtractQueryTest {
         .withColumn("serviceProvider.resolve().address.postalCode")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
 
     assertTrue(Stream.of(result.columns()).allMatch(Strings::looksLikeAlias));
     assertThat(result)
@@ -148,7 +148,7 @@ class ExtractQueryTest {
         .withColumn("reverseResolve(Condition.subject).code.coding.code")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.csv");
   }
@@ -166,7 +166,7 @@ class ExtractQueryTest {
         .withColumn("subject.resolve().ofType(Patient).name.family")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.csv");
   }
@@ -181,7 +181,7 @@ class ExtractQueryTest {
         .withColumn("19")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/literalColumn.csv");
   }
@@ -196,7 +196,7 @@ class ExtractQueryTest {
         .withColumn("code.coding")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/codingColumn.csv");
   }
@@ -212,7 +212,7 @@ class ExtractQueryTest {
             "http://snomed.info/sct|'46,2'|http://snomed.info/sct/32506021000036107/version/20201231")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.csv");
   }
@@ -231,7 +231,7 @@ class ExtractQueryTest {
         .withFilter("reverseResolve(Condition.subject).count() >= 10")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multipleFilters.csv");
   }
@@ -248,7 +248,7 @@ class ExtractQueryTest {
         .withLimit(3)
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/limit.csv");
   }
@@ -263,7 +263,7 @@ class ExtractQueryTest {
         .withColumn("reverseResolve(Condition.subject).code.coding.code.where($this = '72892002')")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/eliminatesTrailingNulls.csv");
   }
@@ -279,7 +279,7 @@ class ExtractQueryTest {
         .withFilter("(name.given combine name.family).empty().not()")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.csv");
   }
@@ -295,7 +295,7 @@ class ExtractQueryTest {
         .withColumn("identifier.where(system = 'http://hl7.org/fhir/sid/us-ssn').value")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
   }
@@ -311,7 +311,7 @@ class ExtractQueryTest {
         .withColumn("type.coding")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark,
             "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.csv");
@@ -330,7 +330,7 @@ class ExtractQueryTest {
         .withColumn("maritalStatus.coding.code")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multipleIndependentUnnestings.csv");
   }
@@ -346,7 +346,7 @@ class ExtractQueryTest {
         .withColumn("name.given")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.csv");
 

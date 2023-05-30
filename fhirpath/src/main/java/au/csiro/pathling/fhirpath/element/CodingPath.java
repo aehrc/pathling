@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -42,7 +43,8 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-public class CodingPath extends ElementPath implements FhirValue<Coding>, Comparable {
+public class CodingPath extends ElementPath implements FhirValue<Coding>, Comparable,
+    StringCoercible {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(CodingPath.class, CodingLiteralPath.class, NullLiteralPath.class);
@@ -113,6 +115,14 @@ public class CodingPath extends ElementPath implements FhirValue<Coding>, Compar
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof CodingLiteralPath;
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final Column valueColumn = callUDF(CodingToLiteral.FUNCTION_NAME, this.valueColumn);
+    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
+        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
   }
 
 }

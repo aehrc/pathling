@@ -23,6 +23,7 @@ import static org.apache.spark.sql.functions.struct;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import java.util.Optional;
@@ -41,7 +42,7 @@ import org.hl7.fhir.r4.model.Coding;
  */
 @Getter
 public class CodingLiteralPath extends LiteralPath<Coding> implements FhirValue<Coding>,
-    Comparable {
+    Comparable, StringCoercible {
 
   protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final Coding literalValue) {
@@ -114,4 +115,11 @@ public class CodingLiteralPath extends LiteralPath<Coding> implements FhirValue<
     return super.canBeCombinedWith(target) || target instanceof CodingPath;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final String fhirPath = StringLiteral.stringToFhirPath(CodingLiteral.toLiteral(getValue()));
+    return StringLiteralPath.fromString(fhirPath, this);
+  }
+  
 }

@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.element.TimePath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -37,7 +38,7 @@ import org.hl7.fhir.r4.model.TimeType;
  * @author John Grimes
  */
 public class TimeLiteralPath extends LiteralPath<TimeType> implements FhirValue<TimeType>,
-    Comparable {
+    Comparable, StringCoercible {
 
   protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final TimeType literalValue) {
@@ -99,4 +100,11 @@ public class TimeLiteralPath extends LiteralPath<TimeType> implements FhirValue<
     return super.canBeCombinedWith(target) || target instanceof TimePath;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final String fhirPath = StringLiteral.stringToFhirPath(getValue().asStringValue());
+    return StringLiteralPath.fromString(fhirPath, this);
+  }
+ 
 }

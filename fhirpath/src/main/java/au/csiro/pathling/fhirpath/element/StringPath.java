@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.Flat;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import com.google.common.collect.ImmutableSet;
@@ -47,7 +48,8 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringPath extends ElementPath implements FhirValue<PrimitiveType>, Flat, Comparable {
+public class StringPath extends ElementPath implements FhirValue<PrimitiveType>, Flat, Comparable,
+    StringCoercible {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(StringPath.class, StringLiteralPath.class, NullLiteralPath.class);
@@ -123,4 +125,10 @@ public class StringPath extends ElementPath implements FhirValue<PrimitiveType>,
     return super.canBeCombinedWith(target) || target instanceof StringLiteralPath;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    return this;
+  }
+ 
 }

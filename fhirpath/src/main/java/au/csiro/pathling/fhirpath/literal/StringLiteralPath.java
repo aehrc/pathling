@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathString;
+import static au.csiro.pathling.fhirpath.literal.StringLiteral.stringToFhirPath;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import static org.apache.spark.sql.functions.lit;
 
@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.Flat;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.element.StringPath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -44,7 +45,7 @@ import org.hl7.fhir.r4.model.StringType;
  */
 @Getter
 public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
-    FhirValue<PrimitiveType>, Flat, Comparable {
+    FhirValue<PrimitiveType>, Flat, Comparable, StringCoercible {
 
   protected StringLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final PrimitiveType literalValue) {
@@ -74,7 +75,7 @@ public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
   @Nonnull
   @Override
   public String getExpression() {
-    return "'" + escapeFhirPathString(getValue().getValueAsString()) + "'";
+    return stringToFhirPath(getValue().getValueAsString());
   }
 
   @Nonnull
@@ -123,6 +124,12 @@ public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof StringPath;
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    return this;
   }
 
 }

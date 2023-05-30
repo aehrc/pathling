@@ -18,12 +18,14 @@
 package au.csiro.pathling.fhirpath.element;
 
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
+import static org.apache.spark.sql.functions.date_format;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
@@ -50,11 +52,13 @@ import org.hl7.fhir.r4.model.InstantType;
  * @author John Grimes
  */
 public class DateTimePath extends ElementPath implements FhirValue<BaseDateTimeType>,
-    Comparable, Temporal {
+    Comparable, Temporal, StringCoercible {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DatePath.class, DateTimePath.class, DateLiteralPath.class, DateTimeLiteralPath.class,
           NullLiteralPath.class);
+
+  public static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
   protected DateTimePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
@@ -123,6 +127,19 @@ public class DateTimePath extends ElementPath implements FhirValue<BaseDateTimeT
       @Nonnull final String expression) {
     return buildDateArithmeticOperation(this, operation, dataset, expression,
         DateTimeAddDurationFunction.FUNCTION_NAME, DateTimeSubtractDurationFunction.FUNCTION_NAME);
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final Column valueColumn;
+    if (getFhirType() == FHIRDefinedType.INSTANT) {
+      valueColumn = date_format(getValueColumn(), SPARK_FHIRPATH_DATETIME_FORMAT);
+    } else {
+      valueColumn = getValueColumn();
+    }
+    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
+        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
   }
 
 }

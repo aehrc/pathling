@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,7 +46,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 public class DecimalPath extends ElementPath implements FhirValue<DecimalType>, Comparable,
-    Numeric {
+    Numeric, StringCoercible {
 
   private static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
@@ -177,6 +178,14 @@ public class DecimalPath extends ElementPath implements FhirValue<DecimalType>, 
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof DecimalLiteralPath;
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final Column valueColumn = getValueColumn().cast(DataTypes.StringType);
+    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
+        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
   }
 
 }

@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.element.IntegerPath;
 import java.util.Optional;
 import java.util.function.Function;
@@ -42,7 +43,7 @@ import org.hl7.fhir.r4.model.PrimitiveType;
  * @author John Grimes
  */
 public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
-    FhirValue<PrimitiveType>, Comparable, Numeric {
+    FhirValue<PrimitiveType>, Comparable, Numeric, StringCoercible {
 
   @SuppressWarnings("WeakerAccess")
   protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
@@ -125,6 +126,13 @@ public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
   @Override
   public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
     return super.canBeCombinedWith(target) || target instanceof IntegerPath;
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath asStringPath(@Nonnull final String expression) {
+    final String fhirPath = StringLiteral.stringToFhirPath(getValue().asStringValue());
+    return StringLiteralPath.fromString(fhirPath, this);
   }
 
 }

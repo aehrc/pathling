@@ -70,6 +70,7 @@ public interface NamedFunction {
       .put("display", new DisplayFunction())
       .put("property", new PropertyFunction())
       .put("designation", new DesignationFunction())
+      .put("toString", new ToStringFunction())
       .build();
 
   /**
