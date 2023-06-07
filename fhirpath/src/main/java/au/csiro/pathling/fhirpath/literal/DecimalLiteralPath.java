@@ -145,5 +145,11 @@ public class DecimalLiteralPath extends LiteralPath<DecimalType> implements
     final String fhirPath = StringLiteral.stringToFhirPath(getValue().asStringValue());
     return StringLiteralPath.fromString(fhirPath, this);
   }
- 
+
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new DecimalLiteralPath(dataset, getIdColumn(), getValue());
+  }
+
 }

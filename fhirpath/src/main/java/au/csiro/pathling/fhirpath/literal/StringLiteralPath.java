@@ -132,4 +132,10 @@ public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
     return this;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new StringLiteralPath(dataset, getIdColumn(), getValue());
+  }
+ 
 }

@@ -31,6 +31,7 @@ import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -106,8 +107,8 @@ public class ResolveFunction implements NamedFunction {
 
     // We need to add the resource ID column to the parser context so that it can be used within
     // joins in certain situations, e.g. extract.
-    context.getNodeIdColumns()
-        .putIfAbsent(expression, resourcePath.getElementColumn("id"));
+    final Object nodeKey = List.of(referencePath.getDefinition(), resourcePath.getDefinition());
+    context.addNodeId(nodeKey, resourcePath.getElementColumn("id"));
 
     final ResourcePath result = resourcePath.copy(expression, dataset, inputId, inputEid,
         resourcePath.getValueColumn(), referencePath.isSingular(), referencePath.getThisColumn());

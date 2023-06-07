@@ -45,11 +45,6 @@ public class TimeLiteralPath extends LiteralPath<TimeType> implements FhirValue<
     super(dataset, idColumn, literalValue);
   }
 
-  protected TimeLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final TimeType literalValue, @Nonnull final String expression) {
-    super(dataset, idColumn, literalValue, expression);
-  }
-
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
@@ -63,13 +58,13 @@ public class TimeLiteralPath extends LiteralPath<TimeType> implements FhirValue<
       @Nonnull final FhirPath context) {
     final String timeString = fhirPath.replaceFirst("^@T", "");
     return new TimeLiteralPath(context.getDataset(), context.getIdColumn(),
-        new TimeType(timeString), fhirPath);
+        new TimeType(timeString));
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return expression.orElse("@T" + getValue().getValue());
+    return "@T" + getValue().getValue();
   }
 
   @Nonnull
@@ -106,5 +101,11 @@ public class TimeLiteralPath extends LiteralPath<TimeType> implements FhirValue<
     final String fhirPath = StringLiteral.stringToFhirPath(getValue().asStringValue());
     return StringLiteralPath.fromString(fhirPath, this);
   }
- 
+
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new TimeLiteralPath(dataset, getIdColumn(), getValue());
+  }
+  
 }

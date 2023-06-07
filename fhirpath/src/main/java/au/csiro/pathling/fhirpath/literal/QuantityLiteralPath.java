@@ -57,11 +57,6 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
     super(dataset, idColumn, literalValue);
   }
 
-  protected QuantityLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Quantity literalValue, @Nonnull final String expression) {
-    super(dataset, idColumn, literalValue, expression);
-  }
-
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
@@ -95,7 +90,7 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
     final BigDecimal decimalValue = getQuantityValue(value, context);
     @Nullable final String display = ucumService.getCommonDisplay(unit);
 
-    return buildLiteralPath(decimalValue, unit, Optional.ofNullable(display), context, fhirPath);
+    return buildLiteralPath(decimalValue, unit, Optional.ofNullable(display), context);
   }
 
   /**
@@ -112,7 +107,7 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
       @Nonnull final FhirPath context) {
 
     return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(),
-        CalendarDurationUtils.parseCalendarDuration(fhirPath), fhirPath);
+        CalendarDurationUtils.parseCalendarDuration(fhirPath));
   }
 
   private static BigDecimal getQuantityValue(final String value, final @Nonnull FhirPath context) {
@@ -128,21 +123,20 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
   @Nonnull
   private static QuantityLiteralPath buildLiteralPath(@Nonnull final BigDecimal decimalValue,
       @Nonnull final String unit, @Nonnull final Optional<String> display,
-      final @Nonnull FhirPath context, @Nonnull final String fhirPath) {
+      @Nonnull final FhirPath context) {
     final Quantity quantity = new Quantity();
     quantity.setValue(decimalValue);
     quantity.setSystem(Ucum.SYSTEM_URI);
     quantity.setCode(unit);
     display.ifPresent(quantity::setUnit);
 
-    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity, fhirPath);
+    return new QuantityLiteralPath(context.getDataset(), context.getIdColumn(), quantity);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return expression.orElse(
-        getValue().getValue().toPlainString() + " '" + getValue().getUnit() + "'");
+    return getValue().getValue().toPlainString() + " '" + getValue().getUnit() + "'";
   }
 
   @Nonnull
@@ -186,6 +180,12 @@ public class QuantityLiteralPath extends LiteralPath<Quantity> implements Compar
       @Nonnull final String expression, @Nonnull final Dataset<Row> dataset) {
     return QuantityPath.buildMathOperation(this, operation, expression, dataset,
         Optional.empty());
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new QuantityLiteralPath(dataset, getIdColumn(), getValue());
   }
 
 }

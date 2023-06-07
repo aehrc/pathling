@@ -88,12 +88,11 @@ public class AggregateQueryExecutor extends QueryExecutor {
         Collections.singletonList(inputContext.getIdColumn()));
     final Parser parser = new Parser(groupingAndFilterContext);
     final List<FhirPath> filters = parseFilters(parser, query.getFilters());
-    final List<FhirPathAndContext> groupingParseResult = parseExpressions(
-        groupingAndFilterContext, query.getGroupings());
-    validateGroupings(groupingParseResult);
-    final List<FhirPath> groupings = groupingParseResult.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toList());
+    // final List<FhirPath> groupingParseResult = parseExpressions(
+    //     groupingAndFilterContext, query.getGroupings());
+    final List<FhirPath> groupingParseResult = new ArrayList<>();
+    // validateGroupings(groupingParseResult);
+    final List<FhirPath> groupings = groupingParseResult;
 
     // Join all filter and grouping expressions together.
     final Column idColumn = inputContext.getIdColumn();

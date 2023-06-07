@@ -49,11 +49,6 @@ public class CodingLiteralPath extends LiteralPath<Coding> implements FhirValue<
     super(dataset, idColumn, literalValue);
   }
 
-  protected CodingLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Coding literalValue, @Nonnull final String expression) {
-    super(dataset, idColumn, literalValue, expression);
-  }
-
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
@@ -67,14 +62,13 @@ public class CodingLiteralPath extends LiteralPath<Coding> implements FhirValue<
   public static CodingLiteralPath fromString(@Nonnull final String fhirPath,
       @Nonnull final FhirPath context) throws IllegalArgumentException {
     return new CodingLiteralPath(context.getDataset(), context.getIdColumn(),
-        CodingLiteral.fromString(fhirPath), fhirPath);
+        CodingLiteral.fromString(fhirPath));
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return expression.orElse(CodingLiteral.toLiteral(getValue()));
-
+    return CodingLiteral.toLiteral(getValue());
   }
 
   @Nonnull
@@ -120,6 +114,12 @@ public class CodingLiteralPath extends LiteralPath<Coding> implements FhirValue<
   public FhirPath asStringPath(@Nonnull final String expression) {
     final String fhirPath = StringLiteral.stringToFhirPath(CodingLiteral.toLiteral(getValue()));
     return StringLiteralPath.fromString(fhirPath, this);
+  }
+
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new CodingLiteralPath(dataset, idColumn, getValue());
   }
   
 }

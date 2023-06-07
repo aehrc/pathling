@@ -135,4 +135,10 @@ public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
     return StringLiteralPath.fromString(fhirPath, this);
   }
 
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new IntegerLiteralPath(dataset, getIdColumn(), getValue());
+  }
+
 }

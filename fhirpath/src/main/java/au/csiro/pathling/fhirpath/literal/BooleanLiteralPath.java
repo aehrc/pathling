@@ -95,4 +95,10 @@ public class BooleanLiteralPath extends LiteralPath<BooleanType> implements
     return super.canBeCombinedWith(target) || target instanceof BooleanPath;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new BooleanLiteralPath(dataset, getIdColumn(), getValue());
+  }
+ 
 }

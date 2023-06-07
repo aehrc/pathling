@@ -214,6 +214,12 @@ public abstract class NonLiteralPath implements FhirPath {
     return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
   }
 
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
+  }
+
   /**
    * Construct a $this path based upon this path.
    *

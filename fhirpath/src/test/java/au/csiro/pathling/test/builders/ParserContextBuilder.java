@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -62,7 +63,7 @@ public class ParserContextBuilder {
   private List<Column> groupingColumns;
 
   @Nonnull
-  private final Map<String, Column> nodeIdColumns;
+  private final Map<Object, Set<Column>> nodeIdColumns;
 
   public ParserContextBuilder(@Nonnull final SparkSession spark,
       @Nonnull final FhirContext fhirContext) {

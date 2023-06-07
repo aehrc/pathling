@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
@@ -38,13 +39,13 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -97,15 +98,21 @@ public abstract class QueryExecutor {
   @Nonnull
   protected List<FhirPathAndContext> parseExpressions(
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions) {
-    return expressions.stream()
-        .map(expression -> {
-          // Create a new copy of the parser context from the previous context, except for node IDs 
-          // which need to be reset each time.
-          final ParserContext currentContext = parserContext.unsetNodeIds();
-          final Parser parser = new Parser(currentContext);
-          final FhirPath result = parser.parse(expression);
-          return new FhirPathAndContext(result, parser.getContext());
-        }).collect(Collectors.toList());
+    final List<FhirPathAndContext> parsed = new ArrayList<>();
+    ParserContext currentContext = parserContext;
+    for (final String expression : expressions) {
+      if (parsed.size() > 0) {
+        final FhirPathAndContext lastParsed = parsed.get(parsed.size() - 1);
+        // Create a new copy of the original parser context, except use the dataset from the last 
+        // column parse and reset the node IDs.
+        currentContext = parserContext.withContextDataset(
+            lastParsed.getFhirPath().getDataset());
+      }
+      final Parser parser = new Parser(currentContext);
+      // Add the parse result to the list of parsed expressions.
+      parsed.add(new FhirPathAndContext(parser.parse(expression), currentContext));
+    }
+    return parsed;
   }
 
   @Nonnull
@@ -120,7 +127,7 @@ public abstract class QueryExecutor {
       checkUserInput(result.isSingular(),
           "Filter expression must represent a singular value: " + expression);
       return result;
-    }).collect(Collectors.toList());
+    }).collect(toList());
   }
 
   @Nonnull

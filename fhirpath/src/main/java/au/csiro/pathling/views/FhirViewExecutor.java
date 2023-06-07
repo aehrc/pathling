@@ -2,7 +2,6 @@ package au.csiro.pathling.views;
 
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.apache.spark.sql.functions.flatten;
 
 import au.csiro.pathling.QueryExecutor;
@@ -72,8 +71,7 @@ public class FhirViewExecutor extends QueryExecutor {
 
       // Create a copy of the parser context that uses the specified unnest behaviour.
       final ParserContext variableContext = parserContext
-          .withUnnestBehaviour(unnestBehaviour)
-          .unsetNodeIds();
+          .withUnnestBehaviour(unnestBehaviour);
 
       final Parser parser = new Parser(variableContext);
       FhirPath result = parser.parse(variable.getExpression())
@@ -104,14 +102,13 @@ public class FhirViewExecutor extends QueryExecutor {
     final List<String> columnExpressions = view.getColumns().stream()
         .map(NamedExpression::getExpression)
         .collect(toList());
-    final List<FhirPathAndContext> columnParseResult =
-        parseExpressions(columnContext, columnExpressions);
-    final List<FhirPath> columnPaths = columnParseResult.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(toUnmodifiableList());
+    // final List<FhirPath> columnParseResult =
+    //     parseExpressions(columnContext, columnExpressions);
+    final List<FhirPath> columnParseResult = new ArrayList<>();
+    final List<FhirPath> columnPaths = columnParseResult;
 
     // Join the column expressions together.
-    final Dataset<Row> unfilteredDataset = joinAllColumns(columnParseResult);
+    final Dataset<Row> unfilteredDataset = columnPaths.get(columnPaths.size() - 1).getDataset();
 
     // Filter the dataset.
     final Dataset<Row> filteredDataset = filterDataset(inputContext, view.getFilters(),
@@ -142,19 +139,20 @@ public class FhirViewExecutor extends QueryExecutor {
 
     // Sort the columns by the nodes encountered while parsing. This ensures that we join them 
     // together in order from the general to the specific.
-    final List<FhirPathAndContext> sorted = columnsAndContexts.stream()
-        .sorted((a, b) -> {
-          final List<String> nodesA = a.getContext().getNodeIdColumns().keySet().stream()
-              .sorted()
-              .collect(toList());
-          final List<String> nodesB = b.getContext().getNodeIdColumns().keySet().stream()
-              .sorted()
-              .collect(toList());
-          final String sortStringA = String.join("|", nodesA);
-          final String sortStringB = String.join("|", nodesB);
-          return sortStringA.compareTo(sortStringB);
-        })
-        .collect(toList());
+    // final List<FhirPathAndContext> sorted = columnsAndContexts.stream()
+    //     .sorted((a, b) -> {
+    //       final List<String> nodesA = a.getContext().getNodeIdColumns().keySet().stream()
+    //           .sorted()
+    //           .collect(toList());
+    //       final List<String> nodesB = b.getContext().getNodeIdColumns().keySet().stream()
+    //           .sorted()
+    //           .collect(toList());
+    //       final String sortStringA = String.join("|", nodesA);
+    //       final String sortStringB = String.join("|", nodesB);
+    //       return sortStringA.compareTo(sortStringB);
+    //     })
+    //     .collect(toList());
+    final List<FhirPathAndContext> sorted = new ArrayList<>(columnsAndContexts);
 
     // Start with the first column and its unjoined dataset.
     FhirPathAndContext left = sorted.get(0);
@@ -170,16 +168,16 @@ public class FhirViewExecutor extends QueryExecutor {
       rightJoinColumns.add(right.getFhirPath().getIdColumn());
 
       // Add the intersection of the nodes present in both the left and right column contexts.
-      final List<String> commonNodes = new ArrayList<>(
+      final List<Object> commonNodes = new ArrayList<>(
           left.getContext().getNodeIdColumns().keySet());
       commonNodes.retainAll(right.getContext().getNodeIdColumns().keySet());
       final FhirPathAndContext finalLeft = left;
-      leftJoinColumns.addAll(commonNodes.stream()
-          .map(key -> finalLeft.getContext().getNodeIdColumns().get(key))
-          .collect(toList()));
-      rightJoinColumns.addAll(commonNodes.stream()
-          .map(key -> right.getContext().getNodeIdColumns().get(key))
-          .collect(toList()));
+      // leftJoinColumns.addAll(commonNodes.stream()
+      //     .map(key -> finalLeft.getContext().getNodeIdColumns().get(key))
+      //     .collect(toList()));
+      // rightJoinColumns.addAll(commonNodes.stream()
+      //     .map(key -> right.getContext().getNodeIdColumns().get(key))
+      //     .collect(toList()));
 
       // Use a left outer join, so that we don't lose rows that don't have a value for the right
       // column.

@@ -24,12 +24,16 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
@@ -101,7 +105,7 @@ public class ParserContext {
    * using the string path. This is used for element and resource-identity aware joins.
    */
   @Nonnull
-  private final Map<String, Column> nodeIdColumns;
+  private final Map<Object, Set<Column>> nodeIdColumns;
 
   @Nonnull
   private final UnnestBehaviour unnestBehaviour;
@@ -125,7 +129,7 @@ public class ParserContext {
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final List<Column> groupingColumns,
-      @Nonnull final Map<String, Column> nodeIdColumns) {
+      @Nonnull final Map<Object, Set<Column>> nodeIdColumns) {
     this(inputContext, fhirContext, sparkSession, dataSource, terminologyServiceFactory,
         groupingColumns, nodeIdColumns, UnnestBehaviour.UNNEST, new HashMap<>());
   }
@@ -147,7 +151,7 @@ public class ParserContext {
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final List<Column> groupingColumns,
-      @Nonnull final Map<String, Column> nodeIdColumns,
+      @Nonnull final Map<Object, Set<Column>> nodeIdColumns,
       @Nonnull final UnnestBehaviour unnestBehaviour,
       @Nonnull final Map<String, FhirPathAndContext> variables) {
     this.inputContext = inputContext;
@@ -177,13 +181,19 @@ public class ParserContext {
   }
 
   /**
-   * Creates a copy of the current parser context, but with the node IDs emptied out.
+   * Creates a copy of the current parser context, but with a different input dataset and the node
+   * IDs emptied out.
    *
    * @return a new {@link ParserContext}
    */
-  public ParserContext unsetNodeIds() {
-    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
+  public ParserContext withContextDataset(@Nonnull final Dataset<Row> contextDataset) {
+    final FhirPath newInputContext = inputContext.withDataset(contextDataset);
+    return new ParserContext(newInputContext, fhirContext, sparkSession, dataSource,
         terminologyServiceFactory, groupingColumns, new HashMap<>(), unnestBehaviour, variables);
+  }
+
+  public void addNodeId(@Nonnull final Object key, @Nonnull final Column value) {
+    nodeIdColumns.computeIfAbsent(key, k -> new HashSet<>()).add(value);
   }
 
 }

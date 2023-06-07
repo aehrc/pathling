@@ -76,6 +76,15 @@ public interface FhirPath extends Orderable {
   FhirPath withExpression(@Nonnull String expression);
 
   /**
+   * Creates a copy of the path with a different dataset.
+   *
+   * @param dataset the new dataset
+   * @return the new FhirPath
+   */
+  @Nonnull
+  FhirPath withDataset(@Nonnull Dataset<Row> dataset);
+
+  /**
    * Trims the columns to those common with the target and sorts them, ready for a union operation.
    *
    * @param target the expression that this path will be combined with

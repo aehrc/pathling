@@ -87,4 +87,10 @@ public class NullLiteralPath extends LiteralPath<StringType> implements Comparab
     return true;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new NullLiteralPath(dataset, idColumn);
+  }
+
 }

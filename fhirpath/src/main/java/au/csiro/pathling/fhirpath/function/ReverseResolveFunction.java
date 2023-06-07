@@ -30,6 +30,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -104,7 +105,9 @@ public class ReverseResolveFunction implements NamedFunction {
     // joins in certain situations, e.g. extract.
     final Column syntheticEid = inputPath.expandEid(currentResourceIndex);
     final DatasetWithColumn datasetWithEid = QueryHelpers.createColumn(dataset, syntheticEid);
-    input.getContext().getNodeIdColumns().putIfAbsent(expression, datasetWithEid.getColumn());
+    final List<Object> nodeKey = List.of(referencePath.getDefinition(),
+        currentResource.getDefinition());
+    input.getContext().addNodeId(nodeKey, datasetWithEid.getColumn());
 
     final ResourcePath result = currentResource
         .copy(expression, datasetWithEid.getDataset(), inputPath.getIdColumn(),

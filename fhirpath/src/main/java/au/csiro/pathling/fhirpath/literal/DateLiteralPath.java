@@ -53,11 +53,6 @@ public class DateLiteralPath extends LiteralPath<DateType> implements FhirValue<
     super(dataset, idColumn, literalValue);
   }
 
-  protected DateLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final DateType literalValue, @Nonnull final String expression) {
-    super(dataset, idColumn, literalValue, expression);
-  }
-
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
@@ -71,13 +66,13 @@ public class DateLiteralPath extends LiteralPath<DateType> implements FhirValue<
       @Nonnull final FhirPath context) throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
     final DateType dateType = new DateType(dateString);
-    return new DateLiteralPath(context.getDataset(), context.getIdColumn(), dateType, fhirPath);
+    return new DateLiteralPath(context.getDataset(), context.getIdColumn(), dateType);
   }
 
   @Nonnull
   @Override
   public String getExpression() {
-    return expression.orElse("@" + getValue().asStringValue());
+    return "@" + getValue().asStringValue();
   }
 
   @Nonnull
@@ -123,5 +118,11 @@ public class DateLiteralPath extends LiteralPath<DateType> implements FhirValue<
     final String fhirPath = StringLiteral.stringToFhirPath(getValue().asStringValue());
     return StringLiteralPath.fromString(fhirPath, this);
   }
- 
+
+  @Nonnull
+  @Override
+  public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
+    return new DateLiteralPath(dataset, getIdColumn(), getValue());
+  }
+
 }

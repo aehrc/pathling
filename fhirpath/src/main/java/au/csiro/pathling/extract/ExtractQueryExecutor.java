@@ -4,6 +4,7 @@ import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers;
@@ -15,6 +16,7 @@ import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.Flat;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.TopologicalExpressionSorter;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -66,25 +68,23 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
       @Nonnull final ExtractResultType resultType) {
-    // Build a new expression parser, and parse all the column expressions within the query.
+
+    // The context of evaluation is a single resource.
     final ResourcePath inputContext = ResourcePath
         .build(getFhirContext(), getDataSource(), query.getSubjectResource(),
             query.getSubjectResource().toCode(), true);
-    // The context of evaluation is a single resource.
     final ParserContext parserContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));
-    final List<FhirPathAndContext> columnParseResult =
+    final List<FhirPathAndContext> parsedColumns =
         parseExpressions(parserContext, query.getColumnsAsStrings());
-    final List<FhirPathAndContext> validatedColumns =
-        validateAndCoerceColumns(columnParseResult, resultType);
-    final List<FhirPath> columnPaths = validatedColumns.stream()
-        .map(FhirPathAndContext::getFhirPath)
-        .collect(Collectors.toUnmodifiableList());
+    final List<FhirPathAndContext> coercedColumns =
+        validateAndCoerceColumns(parsedColumns, resultType);
+    final Dataset<Row> queryDataset = joinAllColumns(coercedColumns);
 
-    // Join all the column expressions together.
-    final Dataset<Row> columnJoinResultDataset = joinAllColumns(columnParseResult);
-    final Dataset<Row> trimmedDataset = trimTrailingNulls(inputContext.getIdColumn(),
-        columnPaths, columnJoinResultDataset);
+    // Trim trailing nulls.
+    // final Dataset<Row> trimmedDataset = trimTrailingNulls(
+    //     parserContext.getInputContext().getIdColumn(), coercedColumns, queryDataset);
+    final Dataset<Row> trimmedDataset = queryDataset;
 
     // Apply the filters.
     final List<String> filters = query.getFilters();
@@ -94,7 +94,9 @@ public class ExtractQueryExecutor extends QueryExecutor {
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
     final Column[] columnValues = labelColumns(
-        columnPaths.stream().map(FhirPath::getValueColumn),
+        coercedColumns.stream()
+            .map(FhirPathAndContext::getFhirPath)
+            .map(FhirPath::getValueColumn),
         labelsAsStream(query.getColumns())
     ).toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
@@ -107,27 +109,27 @@ public class ExtractQueryExecutor extends QueryExecutor {
   }
 
   private List<FhirPathAndContext> validateAndCoerceColumns(
-      @Nonnull final List<FhirPathAndContext> columnParseResult,
+      @Nonnull final List<FhirPathAndContext> parsedColumns,
       @Nonnull final ExtractResultType resultType) {
 
     // Perform any necessary String coercion.
-    final List<FhirPathAndContext> coerced = columnParseResult.stream()
-        .map(column -> {
-          final FhirPath fhirPath = column.getFhirPath();
-          if (resultType == ExtractResultType.FLAT && !(fhirPath instanceof Flat)
-              && fhirPath instanceof StringCoercible) {
+    final List<FhirPathAndContext> coercedColumns = parsedColumns.stream()
+        .map(columnAndContext -> {
+          final FhirPath column = columnAndContext.getFhirPath();
+          if (resultType == ExtractResultType.FLAT && !(column instanceof Flat)
+              && column instanceof StringCoercible) {
             // If the result type is flat and the path is string-coercible, we can coerce it.
-            final StringCoercible stringCoercible = (StringCoercible) fhirPath;
-            final FhirPath stringPath = stringCoercible.asStringPath(fhirPath.getExpression());
-            return new FhirPathAndContext(stringPath, column.getContext());
+            final StringCoercible stringCoercible = (StringCoercible) column;
+            return new FhirPathAndContext(stringCoercible.asStringPath(column.getExpression()),
+                columnAndContext.getContext());
           } else {
-            return column;
+            return new FhirPathAndContext(column, columnAndContext.getContext());
           }
         }).collect(toList());
 
     // Validate the final set of paths.
-    for (final FhirPathAndContext fhirPathAndContext : coerced) {
-      final FhirPath column = fhirPathAndContext.getFhirPath();
+    for (final FhirPathAndContext columnAndContext : coercedColumns) {
+      final FhirPath column = columnAndContext.getFhirPath();
       final boolean condition;
       if (resultType == ExtractResultType.FLAT) {
         // In flat mode, only flat columns are allowed.
@@ -140,7 +142,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
       checkArgument(condition, "Column is not of a supported type: " + column.getExpression());
     }
 
-    return coerced;
+    return coercedColumns;
   }
 
   @Nonnull
@@ -159,17 +161,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     // Sort the columns by the nodes encountered while parsing. This ensures that we join them 
     // together in order from the general to the specific.
     final List<FhirPathAndContext> sorted = columnsAndContexts.stream()
-        .sorted((a, b) -> {
-          final List<String> nodesA = a.getContext().getNodeIdColumns().keySet().stream()
-              .sorted()
-              .collect(toList());
-          final List<String> nodesB = b.getContext().getNodeIdColumns().keySet().stream()
-              .sorted()
-              .collect(toList());
-          final String sortStringA = String.join("|", nodesA);
-          final String sortStringB = String.join("|", nodesB);
-          return sortStringA.compareTo(sortStringB);
-        })
+        .sorted(new TopologicalExpressionSorter())
         .collect(toList());
 
     // Start with the first column and its unjoined dataset.
@@ -186,16 +178,16 @@ public class ExtractQueryExecutor extends QueryExecutor {
       rightJoinColumns.add(right.getFhirPath().getIdColumn());
 
       // Add the intersection of the nodes present in both the left and right column contexts.
-      final List<String> commonNodes = new ArrayList<>(
+      final List<Object> commonNodes = new ArrayList<>(
           left.getContext().getNodeIdColumns().keySet());
       commonNodes.retainAll(right.getContext().getNodeIdColumns().keySet());
       final FhirPathAndContext finalLeft = left;
       leftJoinColumns.addAll(commonNodes.stream()
-          .map(key -> finalLeft.getContext().getNodeIdColumns().get(key))
-          .collect(toList()));
+          .flatMap(key -> finalLeft.getContext().getNodeIdColumns().get(key).stream())
+          .collect(toSet()));
       rightJoinColumns.addAll(commonNodes.stream()
-          .map(key -> right.getContext().getNodeIdColumns().get(key))
-          .collect(toList()));
+          .flatMap(key -> right.getContext().getNodeIdColumns().get(key).stream())
+          .collect(toSet()));
 
       // Use a left outer join, so that we don't lose rows that don't have a value for the right
       // column.
@@ -208,6 +200,9 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
     return result;
   }
+
+  // @Nonnull
+  // private Dataset<Row> filterInvalidRowCombinations(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn, )
 
   @Nonnull
   private Dataset<Row> trimTrailingNulls(final @Nonnull Column idColumn,

@@ -121,7 +121,7 @@ public class PathTraversalOperator {
     // If there is an element ID column, we need to add it to the parser context so that it can
     // be used within joins in certain situations, e.g. extract.
     if (unnestBehaviour == UnnestBehaviour.UNNEST && !maxCardinalityOfOne) {
-      eidColumn.ifPresent(c -> input.getContext().getNodeIdColumns().putIfAbsent(expression, c));
+      eidColumn.ifPresent(c -> input.getContext().addNodeId(childDefinition, c));
     }
 
     return ElementPath

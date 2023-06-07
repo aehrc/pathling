@@ -25,6 +25,7 @@ import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import com.google.common.collect.ImmutableMap;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -178,4 +179,21 @@ public class ElementDefinition {
     }
   }
 
+  @Override
+  public boolean equals(final Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final ElementDefinition that = (ElementDefinition) o;
+    return Objects.equals(childDefinition, that.childDefinition);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(childDefinition);
+  }
+  
 }
