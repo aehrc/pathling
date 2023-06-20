@@ -52,7 +52,6 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
       @Nonnull final HttpClientCachingConfiguration configuration,
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, configuration, resourcesToClose);
-    log.warn("Builiding PersistentCachingTerminologyService");
   }
 
   @Override
