@@ -28,24 +28,23 @@ import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * A class which can be used to manage the lifecycle of a number of resources which need to be
- * closed.
+ * A {@link Closeable} that closes a collection of underlying resources.
  *
  * @author Piotr Szul
  */
 @Slf4j
-public class ResourceHolder implements Closeable {
+public class ResourceCloser implements Closeable {
 
   @Nonnull
   private final List<Closeable> resourcesToClose;
 
 
   /**
-   * Constructs a new {@link ResourceHolder} with provided resources to close.
+   * Constructs a new {@link ResourceCloser} with provided resources to close.
    *
    * @param resourcesToClose the resources to close
    */
-  protected ResourceHolder(@Nonnull final Closeable... resourcesToClose) {
+  protected ResourceCloser(@Nonnull final Closeable... resourcesToClose) {
     this.resourcesToClose = new ArrayList<>(Arrays.asList(resourcesToClose));
   }
 
@@ -67,7 +66,7 @@ public class ResourceHolder implements Closeable {
   public void close() {
     log.debug("Closing {} resources for: {}", resourcesToClose.size(), this);
     synchronized (resourcesToClose) {
-      for (Closeable closeable : resourcesToClose) {
+      for (final Closeable closeable : resourcesToClose) {
         log.debug("Closing resource: {} in: {}", closeable, this);
         closeQuietly(closeable,
             ex -> log.warn("Ignoring an error while closing resource: " + closeable, ex));

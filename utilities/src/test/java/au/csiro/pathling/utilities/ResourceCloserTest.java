@@ -17,11 +17,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 
-class ResourceHolderTest {
+class ResourceCloserTest {
 
   @Test
   void testEmptyListOfResourceIsNoop() {
-    new ResourceHolder().close();
+    new ResourceCloser().close();
   }
 
   @Test
@@ -32,9 +32,9 @@ class ResourceHolderTest {
 
     doThrow(new IOException("Test exception")).when(resource2).close();
     
-    final ResourceHolder resourceHolder = new ResourceHolder(resource1, resource2);
-    assertEquals(resource3, resourceHolder.registerResource(resource3));
-    resourceHolder.close();
+    final ResourceCloser resourceCloser = new ResourceCloser(resource1, resource2);
+    assertEquals(resource3, resourceCloser.registerResource(resource3));
+    resourceCloser.close();
     verify(resource1, times(1)).close();
     verify(resource2, times(1)).close();
     verify(resource3, times(1)).close();

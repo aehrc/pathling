@@ -18,7 +18,7 @@
 package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.fhir.TerminologyClient;
-import au.csiro.pathling.utilities.ResourceHolder;
+import au.csiro.pathling.utilities.ResourceCloser;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.io.Closeable;
 import javax.annotation.Nonnull;
@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-public abstract class BaseTerminologyService extends ResourceHolder implements TerminologyService {
+public abstract class BaseTerminologyService extends ResourceCloser implements TerminologyService {
 
   @Nonnull
   protected final TerminologyClient terminologyClient;

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhir;
 
-import au.csiro.pathling.utilities.ResourceHolder;
+import au.csiro.pathling.utilities.ResourceCloser;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import javax.annotation.Nonnull;
@@ -35,7 +35,7 @@ import java.io.Closeable;
 /**
  * An implementation of {@link TerminologyClient} that uses cacheable GET requests.
  */
-class DefaultTerminologyClient extends ResourceHolder implements TerminologyClient {
+class DefaultTerminologyClient extends ResourceCloser implements TerminologyClient {
 
   @Nonnull
   final IGenericClient fhirClient;
