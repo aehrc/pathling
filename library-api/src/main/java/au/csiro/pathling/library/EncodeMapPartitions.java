@@ -62,13 +62,12 @@ abstract class EncodeMapPartitions<T extends IBaseResource> implements
   @Override
   @Nonnull
   public Iterator<T> call(@Nonnull final Iterator<String> iterator) {
-    final IParser parser = ParserBuilder.build(fhirVersion, inputMimeType);
+    final ResourceParser parser = ResourceParser.build(fhirVersion, inputMimeType);
 
     final Iterable<String> iterable = () -> iterator;
     final Stream<IBaseResource> parsedResources = StreamSupport.stream(iterable.spliterator(),
             false)
-        .map(parser::parseResource);
+        .map(parser::parse);
     return (Iterator<T>) processResources(parsedResources).iterator();
   }
-
 }

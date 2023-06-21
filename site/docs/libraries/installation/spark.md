@@ -15,9 +15,10 @@ a `SparkSession` object to the `PathlingContext` constructor.
 This can be useful if you want to set other Spark configuration, for example to
 increase the available memory.
 
-The session that you provide must have the Pathling library on the classpath,
-and it must also have `spark.executor.userClassPathFirst` set to `true`. Here is
-an example of how to configure a custom session:
+The session that you provide must have the Pathling library API on the
+classpath. You can also optionally enable [Delta Lake](https://delta.io/)
+support. Here is an example of how to programmatically configure a session that
+has Delta enabled:
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
@@ -29,13 +30,16 @@ from "../../../src/components/installation";
 <TabItem value="python" label="Python">
 
 ```python
-from pyspark.sql import SparkSession
 from pathling import PathlingContext, find_jar
-    
+from pyspark.sql import SparkSession
+
 spark = (
     SparkSession.builder
     .config("spark.jars", find_jar())
-    .config("spark.executor.userClassPathFirst", "true")
+    .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
     .getOrCreate()
 )
 
@@ -45,14 +49,15 @@ pc = PathlingContext.create(spark)
 </TabItem>
 <TabItem value="scala" label="Scala">
 
-<ScalaInstallation/>
-
 ```scala
 import au.csiro.pathling.library.PathlingContext
 
 val spark = SparkSession.builder
-    .config("spark.executor.userClassPathFirst", "true")
-    .getOrCreate()
+  .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+  .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+  .config("spark.sql.catalog.spark_catalog",
+    "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+  .getOrCreate()
 
 val pc = PathlingContext.create(spark)
 ```
@@ -60,16 +65,19 @@ val pc = PathlingContext.create(spark)
 </TabItem>
 <TabItem value="java" label="Java">
 
-<JavaInstallation/>
-
 ```java
 import au.csiro.pathling.library.PathlingContext;
 import org.apache.spark.sql.SparkSession;
 
 class MyApp {
+
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder()
-            .config("spark.executor.userClassPathFirst", "true")
+            .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+            .config("spark.sql.extensions", 
+                    "io.delta.sql.DeltaSparkSessionExtension")
+            .config("spark.sql.catalog.spark_catalog",
+                    "org.apache.spark.sql.delta.catalog.DeltaCatalog")
             .getOrCreate();
         PathlingContext pc = PathlingContext.create(spark);
     }
@@ -82,7 +90,7 @@ class MyApp {
 ## Cluster configuration
 
 If you are running your own Spark cluster, or using a Docker image (such
-as [jupyter/all-spark-notebook](https://hub.docker.com/r/jupyter/all-spark-notebook)), 
+as [jupyter/all-spark-notebook](https://hub.docker.com/r/jupyter/all-spark-notebook)),
 you will need to configure Pathling as a Spark package.
 
 You can do this by adding the following to your `spark-defaults.conf` file:
@@ -102,7 +110,6 @@ this:
 FROM jupyter/all-spark-notebook
 
 USER root
-RUN echo "spark.executor.userClassPathFirst true" >> /usr/local/spark/conf/spark-defaults.conf
 RUN echo "spark.jars.packages au.csiro.pathling:library-api:[some version]" >> /usr/local/spark/conf/spark-defaults.conf
 
 USER ${NB_UID}

@@ -23,7 +23,7 @@
 
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>6.2.0-SNAPSHOT</version>
+  <version>6.2.1</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -80,7 +80,7 @@
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hapiFhirVersion>6.4.4</pathling.hapiFhirVersion>
     <pathling.springBootVersion>2.7.10</pathling.springBootVersion>
-    <pathling.springSecurityVersion>5.7.5</pathling.springSecurityVersion>
+    <pathling.springSecurityVersion>5.7.8</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.384</pathling.awsSdkVersion>

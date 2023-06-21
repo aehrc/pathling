@@ -29,8 +29,6 @@ process", and a causative agent of "Virus".
 <Tabs>
 <TabItem value="python" label="Python">
 
-<PythonInstallation/>
-
 ```python
 from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set,
     member_of
@@ -58,8 +56,6 @@ csv.select(
 </TabItem>
 <TabItem value="scala" label="Scala">
 
-<ScalaInstallation/>
-
 ```scala
 import au.csiro.pathling.library.PathlingContext
 import au.csiro.pathling.sql.Terminology._
@@ -85,8 +81,6 @@ csv.select(
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import static au.csiro.pathling.library.TerminologyHelpers.*;
@@ -146,8 +140,6 @@ produce multiple results for each input coding.
 <Tabs>
 <TabItem value="python" label="Python">
 
-<PythonInstallation/>
-
 ```python
 from pathling import PathlingContext, to_snomed_coding, translate
 from pyspark.sql.functions import explode_outer
@@ -170,8 +162,6 @@ translate_result.select(
 
 </TabItem>
 <TabItem value="scala" label="Scala">
-
-<ScalaInstallation/>
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
@@ -197,8 +187,6 @@ translate_result.select(
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import static au.csiro.pathling.sql.Terminology.*;
@@ -262,8 +250,6 @@ whether a code is "subsumed by" another code.
 <Tabs>
 <TabItem value="python" label="Python">
 
-<PythonInstallation/>
-
 ```python
 from pathling import PathlingContext, Coding, to_snomed_coding, subsumes
 
@@ -282,8 +268,6 @@ csv.select(
 
 </TabItem>
 <TabItem value="scala" label="Scala">
-
-<ScalaInstallation/>
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
@@ -313,8 +297,6 @@ csv.select(
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import static au.csiro.pathling.sql.Terminology.*;
@@ -372,8 +354,6 @@ display term for each code.
 <Tabs>
 <TabItem value="python" label="Python">
 
-<PythonInstallation/>
-
 ```python
 from pathling import PathlingContext, to_snomed_coding, property_of, display,
     PropertyType
@@ -399,8 +379,6 @@ with_displays.show()
 
 </TabItem>
 <TabItem value="scala" label="Scala">
-
-<ScalaInstallation/>
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
@@ -430,8 +408,6 @@ with_displays.show()
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import static au.csiro.pathling.sql.Terminology.*;
@@ -492,8 +468,6 @@ for language translations, synonyms, and more. You can query these terms using t
 <Tabs>
 <TabItem value="python" label="Python">
 
-<PythonInstallation/>
-
 ```python
 from pathling import PathlingContext, to_snomed_coding, Coding, designation
 
@@ -514,8 +488,6 @@ exploded_synonyms.show()
 
 </TabItem>
 <TabItem value="scala" label="Scala">
-
-<ScalaInstallation/>
 
 ```scala
 import au.csiro.pathling.library.PathlingContext
@@ -541,8 +513,6 @@ exploded_synonyms.show()
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import static au.csiro.pathling.sql.Terminology.*;
@@ -604,8 +574,6 @@ the [NHS terminology server](https://ontology.nhs.uk/):
 <Tabs>
 <TabItem value="python" label="Python">
 
-<PythonInstallation/>
-
 ```python
 from pathling import PathlingContext
 
@@ -619,8 +587,6 @@ pc = PathlingContext.create(
 
 </TabItem>
 <TabItem value="scala" label="Scala">
-
-<ScalaInstallation/>
 
 ```scala
 import au.csiro.pathling.library.{PathlingContext, PathlingContextConfiguration}
@@ -636,8 +602,6 @@ val pc = PathlingContext.create(config)
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import au.csiro.pathling.library.PathlingContext;
