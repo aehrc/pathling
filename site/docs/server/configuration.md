@@ -43,6 +43,11 @@ Additionally, you can set any variable supported by Spring Boot, see
 - `pathling.async.enabled` - (default: `true`) Enables asynchronous processing
   for those operations that support it, when explicitly requested.
 
+- `pathling.async.varyHeadersExcludedFromCacheKey` - (default: `Accept`, 
+  `Accept-Encoding`) A subset  of `pathling.httpCaching.vary` HTTP headers, 
+  which should be excluded from determining that asynchronous requests are 
+  equivalent and can be routed to the same asynchronous job.
+
 ### Encoding
 
 - `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum

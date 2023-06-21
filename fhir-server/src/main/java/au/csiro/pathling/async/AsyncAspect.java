@@ -117,7 +117,7 @@ public class AsyncAspect {
 
     if (prefer != null && prefer.equals(ASYNC_HEADER_VALUE)) {
       log.info("Asynchronous processing requested");
-      processRequestAsynchronously(joinPoint, args, requestDetails, spark);
+      processRequestAsynchronously(joinPoint, requestDetails, spark);
       throw new ProcessingNotCompletedException("Accepted", buildOperationOutcome());
     } else {
       return (IBaseResource) joinPoint.proceed();
@@ -125,7 +125,7 @@ public class AsyncAspect {
   }
 
   private void processRequestAsynchronously(@Nonnull final ProceedingJoinPoint joinPoint,
-      @Nonnull final Object[] args, @Nonnull final ServletRequestDetails requestDetails,
+      @Nonnull final ServletRequestDetails requestDetails,
       @Nonnull final SparkSession spark) {
 
     final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

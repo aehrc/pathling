@@ -20,7 +20,7 @@ pathling:
   spark:
     # The name that Pathling will be identified as within the Spark cluster.
     appName: pathling
-    
+  
   storage:
     # The base URL at which Pathling will look for data files, and where it will save data received
     # within import requests. Can be an Amazon S3 (s3://), HDFS (hdfs://) or filesystem (file://)
@@ -76,7 +76,7 @@ pathling:
 
       # When GA4GH passport authentication is enabled, this option configures the list of endpoints
       # that are allowed to issue visas.
-      allowedVisaIssuers: []
+      allowedVisaIssuers: [ ]
 
   # This section configures HTTP caching response headers.
   httpCaching:
@@ -97,8 +97,8 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: []
-    allowedOriginPatterns: []
+    allowedOrigins: [ ]
+    allowedOriginPatterns: [ ]
     allowedMethods:
       - OPTIONS
       - GET
@@ -116,10 +116,16 @@ pathling:
     allowableSources:
       - "file:///usr/share/staging"
 
+  # This section configures the server's support asynchronous processing of HTTP requests.
   async:
+    # Enables asynchronous processing for those operations that support it,
+    # when explicitly requested by a HTTP client.
     enabled: true
     
-    excludeVary:
+    #  A subset of `pathling.httpCaching.vary` HTTP headers, which should 
+    #  be  excluded from determining that asynchronous requests are the equivalent
+    #  and can be routed to the same asynchronous job.
+    varyHeadersExcludedFromCacheKey:
       - Accept
       - Accept-Encoding
 

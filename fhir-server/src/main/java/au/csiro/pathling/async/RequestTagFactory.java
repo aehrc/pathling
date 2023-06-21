@@ -54,13 +54,14 @@ public final class RequestTagFactory {
 
   private static Set<String> getSalientHeaderNames(
       @Nonnull final ServerConfiguration configuration) {
-    final Set<String> exludedVaryHeades = new HashSet<>(configuration.getAsync().getExcludeVary());
+    final Set<String> excludedVaryHeaders = new HashSet<>(
+        configuration.getAsync().getVaryHeadersExcludedFromCacheKey());
     return configuration.getHttpCaching().getVary().stream()
-        .filter(not(exludedVaryHeades::contains))
+        .filter(not(excludedVaryHeaders::contains))
         .collect(Collectors.toUnmodifiableSet());
   }
 
-  RequestTagFactory(@Nonnull Cacheable state, @Nonnull Set<String> salientHeaderNames) {
+  RequestTagFactory(@Nonnull final Cacheable state, @Nonnull final Set<String> salientHeaderNames) {
     this.state = state;
     this.salientHeaderNames = salientHeaderNames.stream().map(String::toLowerCase)
         .collect(Collectors.toUnmodifiableSet());
@@ -89,8 +90,6 @@ public final class RequestTagFactory {
     final Map<String, List<String>> salientHeaders = requestDetails.getHeaders().entrySet().stream()
         .filter(entry -> salientHeaderNames.contains(entry.getKey().toLowerCase()))
         .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
-    return new RequestTag(requestDetails.getCompleteUrl(),
-        Optional.ofNullable(authentication).flatMap(a -> Optional.ofNullable(a.getPrincipal())),
-        salientHeaders, currentCacheKey);
+    return new RequestTag(requestDetails.getCompleteUrl(), salientHeaders, currentCacheKey);
   }
 }

@@ -36,11 +36,6 @@ public class RequestTag implements JobTag {
   @Nonnull
   String requestUrl;
 
-  // NOTE: This assumes that principals support the notion of equality correctly 
-  // (which seem to be the case at least for AbstractOAuth2Token which is the base class for Jwt. 
-  @Nonnull
-  Optional<Object> requestPrincipal;
-
   @Nonnull
   Map<String, List<String>> varyHeaders;
 
@@ -52,8 +47,7 @@ public class RequestTag implements JobTag {
   public String toString() {
     return "RequestTag(" +
         "requestUrl='" + requestUrl + "'" +
-        ", requestPrincipal=" + requestPrincipal +
-        ", varyHeaders=List@" + Integer.toHexString(varyHeaders.hashCode())  +
+        ", varyHeaders=List@" + Integer.toHexString(varyHeaders.hashCode()) +
         ", cacheKey=" + cacheKey +
         ')';
   }

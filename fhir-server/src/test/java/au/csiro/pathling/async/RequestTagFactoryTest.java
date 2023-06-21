@@ -92,7 +92,7 @@ public class RequestTagFactoryTest {
         salientHeaderNames);
     final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
         mockAuthentication);
-    assertEquals(new RequestTag("uri:requestUri-A", Optional.of(principal),
+    assertEquals(new RequestTag("uri:requestUri-A",
             Map.of("x-single-value", List.of("singleValue"),
                 "x-multi-values", List.of("multiValue1", "multiValue2")),
             Optional.of("cacheKey_A")),
@@ -109,22 +109,25 @@ public class RequestTagFactoryTest {
     when(mockRequestDetails.getCompleteUrl()).thenReturn("uri:requestUri-B");
     when(mockRequestDetails.getHeaders()).thenReturn(requestHeaders);
 
-    final RequestTagFactory requestTagFactory = new RequestTagFactory(mockCacheable,
-        salientHeaderNames);
+    final RequestTagFactory requestTagFactory = new RequestTagFactory(mockDatabase,
+        createServerConfiguration(List.of("X-Single-Value", "X-Multi-Values",
+            "X-Not-Present"), Collections.emptyList()));
+
     final RequestTag requestTag = requestTagFactory.createTag(mockRequestDetails,
         mockAuthentication);
-    assertEquals(new RequestTag("uri:requestUri-B", Optional.empty(),
+    assertEquals(new RequestTag("uri:requestUri-B",
             Map.of("Y-SingleValue", List.of("singleValue"),
                 "Y-MultiValues", List.of("multiValue1", "multiValue2")),
             Optional.empty()),
         requestTag);
   }
 
-  static ServerConfiguration createServerConfiguration(List<String> varyHeaders,
-      List<String> whiteListedHeaders) {
+
+  static ServerConfiguration createServerConfiguration(final List<String> varyHeaders,
+      final List<String> excludeVary) {
     final AsyncConfiguration asyncConfiguration = new AsyncConfiguration();
     asyncConfiguration.setEnabled(true);
-    asyncConfiguration.setExcludeVary(whiteListedHeaders);
+    asyncConfiguration.setVaryHeadersExcludedFromCacheKey(excludeVary);
 
     final HttpServerCachingConfiguration httpServerCachingConfiguration = new HttpServerCachingConfiguration();
     httpServerCachingConfiguration.setVary(varyHeaders);

@@ -40,5 +40,5 @@ public class AsyncConfiguration {
    * of the async request.
    */
   @NotNull
-  private List<String> excludeVary;
+  private List<String> varyHeadersExcludedFromCacheKey;
 }
