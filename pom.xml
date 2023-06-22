@@ -91,7 +91,7 @@
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
     <pathling.slf4jVersion>1.7.36</pathling.slf4jVersion>
     <pathling.logbackVersion>1.2.11</pathling.logbackVersion>
-    <pathling.surefireVersion>2.22.2</pathling.surefireVersion>
+    <pathling.surefireVersion>3.1.2</pathling.surefireVersion>
   </properties>
 
   <modules>
