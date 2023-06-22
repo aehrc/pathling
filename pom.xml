@@ -83,7 +83,7 @@
     <pathling.sparkVersion>3.4.0</pathling.sparkVersion>
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.deltaVersion>2.2.0</pathling.deltaVersion>
+    <pathling.deltaVersion>2.4.0</pathling.deltaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hapiFhirVersion>6.4.4</pathling.hapiFhirVersion>
     <pathling.springBootVersion>2.7.10</pathling.springBootVersion>
