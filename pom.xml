@@ -87,7 +87,7 @@
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hapiFhirVersion>6.6.1</pathling.hapiFhirVersion>
     <pathling.springBootVersion>2.7.12</pathling.springBootVersion>
-    <pathling.springSecurityVersion>5.7.8</pathling.springSecurityVersion>
+    <pathling.springSecurityVersion>5.8.4</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.449</pathling.awsSdkVersion>
@@ -615,6 +615,13 @@
         <groupId>org.apache.ivy</groupId>
         <artifactId>ivy</artifactId>
         <version>2.5.1</version>
+      </dependency>
+      
+      <!-- CVE-2022-31692 -->
+      <dependency>
+        <groupId>org.springframework.security</groupId>
+        <artifactId>spring-security-web</artifactId>
+        <version>5.7.5</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
