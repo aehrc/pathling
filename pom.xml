@@ -93,7 +93,7 @@
     <pathling.awsSdkVersion>1.12.384</pathling.awsSdkVersion>
     <pathling.lombokVersion>1.18.26</pathling.lombokVersion>
     <pathling.guavaVersion>31.0.1-jre</pathling.guavaVersion>
-    <pathling.infinispanVersion>14.0.5.Final</pathling.infinispanVersion>
+    <pathling.infinispanVersion>14.0.8.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.13.4</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
     <pathling.slf4jVersion>1.7.36</pathling.slf4jVersion>
