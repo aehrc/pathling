@@ -70,10 +70,8 @@ public class AsyncAspectTest {
   @Autowired
   SparkSession spark;
 
-  private ServerConfiguration serverConfiguration;
   private JobRegistry jobRegistry;
   private AsyncAspect asyncAspect;
-  private RequestTagFactory requestTagFactory;
 
   private final MockHttpServletRequest servletRequest = new MockHttpServletRequest();
   private final MockHttpServletResponse servletResponse = new MockHttpServletResponse();
@@ -91,9 +89,10 @@ public class AsyncAspectTest {
   public void setUp() throws Throwable {
 
     // Wire the asynAspects and it's dependencied
-    serverConfiguration = createServerConfiguration(List.of("Accept", "Authorization"),
+    final ServerConfiguration serverConfiguration = createServerConfiguration(
+        List.of("Accept", "Authorization"),
         List.of("Accept"));
-    requestTagFactory = new RequestTagFactory(database, serverConfiguration);
+    final RequestTagFactory requestTagFactory = new RequestTagFactory(database, serverConfiguration);
     jobRegistry = new JobRegistry();
     asyncAspect = new AsyncAspect(threadPoolTaskExecutor, requestTagFactory, jobRegistry, stageMap,
         spark);
@@ -147,6 +146,7 @@ public class AsyncAspectTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
   public void testAsyncRequestsSchedulesNewJob() {
     // setup thread pool executor to return a mock future
     final Future<IBaseResource> mockFuture = mock(Future.class);
@@ -215,11 +215,11 @@ public class AsyncAspectTest {
   }
 
   @Test
-  public void testCreatesNewAsyncJobWhenAuthenticationPrincipalChanges() {
+  public void testReusesAsyncJobWhenAuthenticationPrincipalChanges() {
     setAuthenticationPrincipal("principal1");
     final String jobId1 = assertExecutedAsync();
     setAuthenticationPrincipal("principal2");
     final String jobId2 = assertExecutedAsync();
-    assertNotEquals(jobId1, jobId2);
+    assertEquals(jobId1, jobId2);
   }
 }
