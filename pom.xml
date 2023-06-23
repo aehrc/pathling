@@ -83,7 +83,7 @@
     <pathling.springSecurityVersion>5.7.8</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
-    <pathling.awsSdkVersion>1.12.384</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.494</pathling.awsSdkVersion>
     <pathling.lombokVersion>1.18.26</pathling.lombokVersion>
     <pathling.guavaVersion>31.0.1-jre</pathling.guavaVersion>
     <pathling.infinispanVersion>14.0.5.Final</pathling.infinispanVersion>
