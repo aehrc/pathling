@@ -80,10 +80,10 @@
     <project.majorVersion>6</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>3.4.0</pathling.sparkVersion>
+    <pathling.sparkVersion>3.3.2</pathling.sparkVersion>
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.deltaVersion>2.4.0</pathling.deltaVersion>
+    <pathling.deltaVersion>2.3.0</pathling.deltaVersion>
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hapiFhirVersion>6.6.1</pathling.hapiFhirVersion>
     <pathling.springBootVersion>2.7.12</pathling.springBootVersion>
@@ -589,6 +589,18 @@
         <version>${pathling.logbackVersion}</version>
       </dependency>
 
+      <!-- janino -->
+      <dependency>
+        <groupId>org.codehaus.janino</groupId>
+        <artifactId>janino</artifactId>
+        <version>3.0.16</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.janino</groupId>
+        <artifactId>commons-compiler</artifactId>
+        <version>3.0.16</version>
+      </dependency>
+      
       <!-- CVE-2022-42889-->
       <dependency>
         <groupId>org.apache.commons</groupId>
