@@ -155,7 +155,8 @@ result = data.aggregate(
         aggregations=[exp("count()", "Number of patients")],
         groupings=[
             exp("reverseResolve(Condition.subject)"
-                ".exists(code.subsumedBy(http://snomed.info/sct|73211009))",
+                ".where(code.subsumedBy(http://snomed.info/sct|73211009))" +
+                ".code.coding.display()",
                 "Type of diabetes")
         ],
         filters=["gender = 'female'"],
@@ -180,7 +181,8 @@ val data = pc.read.ndjson("s3://somebucket/synthea/ndjson")
 val result = data.aggregate(ResourceType.PATIENT)
         .aggregation("count()", "Number of patients")
         .grouping("reverseResolve(Condition.subject)" +
-                ".exists(code.subsumedBy(http://snomed.info/sct|73211009))",
+                  ".where(code.subsumedBy(http://snomed.info/sct|73211009))" +
+                  ".code.coding.display()",
             "Type of diabetes")
         .filter("gender = 'female'")
         .execute()
@@ -210,7 +212,8 @@ class MyApp {
         Dataset<Row> result = data.aggregate(ResourceType.PATIENT)
                 .aggregation("count()", "Number of patients")
                 .grouping("reverseResolve(Condition.subject)" +
-                                ".exists(code.subsumedBy(http://snomed.info/sct|73211009))",
+                          ".where(code.subsumedBy(http://snomed.info/sct|73211009))" + 
+                          ".code.coding.display()",
                         "Type of diabetes")
                 .filter("gender = 'female'")
                 .execute();
@@ -222,6 +225,15 @@ class MyApp {
 
 </TabItem>
 </Tabs>
+
+The result of this query would look something like this:
+
+| Type of diabetes                         | Number of patients |
+|------------------------------------------|--------------------|
+| Diabetes mellitus due to cystic fibrosis | 3                  |
+| Type 2 diabetes mellitus                 | 122                |
+| Type 1 diabetes mellitus                 | 14                 |
+| NULL                                     | 1472               |
 
 ## Reading FHIR data
 
