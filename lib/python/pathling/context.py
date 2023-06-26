@@ -172,7 +172,7 @@ class PathlingContext:
             spark_builder = (
                 (
                     spark_builder.config(
-                        "spark.jars.packages", "io.delta:delta-core_2.12:2.4.0"
+                        "spark.jars.packages", "io.delta:delta-core_2.12:2.3.0"
                     )
                     .config(
                         "spark.sql.extensions",

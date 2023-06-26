@@ -72,11 +72,11 @@
     <project.majorVersion>6</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>3.4.0</pathling.sparkVersion>
+    <pathling.sparkVersion>3.3.2</pathling.sparkVersion>
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
-    <pathling.deltaVersion>2.4.0</pathling.deltaVersion>
-    <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
+    <pathling.deltaVersion>2.3.0</pathling.deltaVersion>
+    <pathling.hadoopVersion>3.3.2</pathling.hadoopVersion>
     <pathling.hapiFhirVersion>6.6.1</pathling.hapiFhirVersion>
     <pathling.springBootVersion>2.7.13</pathling.springBootVersion>
     <pathling.springSecurityVersion>5.7.9</pathling.springSecurityVersion>
