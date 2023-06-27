@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -103,23 +104,24 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
 
   @Nonnull
   protected final Optional<String> expression;
-
-  protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final ValueType value) {
+  
+  private LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final ValueType value, @Nonnull final Optional<String> expression) {
     this.idColumn = idColumn;
     this.value = value;
     this.dataset = dataset;
-    this.valueColumn = buildValueColumn();
-    this.expression = Optional.empty();
+    this.valueColumn = buildValueColumn().alias(randomAlias());
+    this.expression = expression;
+  }
+
+  protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
+      @Nonnull final ValueType value) {
+    this(dataset, idColumn, value, Optional.empty());
   }
 
   protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final ValueType value, @Nonnull final String expression) {
-    this.idColumn = idColumn;
-    this.value = value;
-    this.dataset = dataset;
-    this.valueColumn = buildValueColumn();
-    this.expression = Optional.of(expression);
+    this(dataset, idColumn, value, Optional.of(expression));
   }
 
   /**

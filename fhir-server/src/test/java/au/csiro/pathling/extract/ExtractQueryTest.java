@@ -185,6 +185,23 @@ class ExtractQueryTest {
   }
 
   @Test
+  void resolveAndCodingLiteralColumn() {
+    subjectResource = ResourceType.DIAGNOSTICREPORT;
+    mockResource(ResourceType.DIAGNOSTICREPORT, ResourceType.OBSERVATION);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("result.resolve().code.coding.system")
+        .withColumn("http://snomed.info/sct|372823004")
+        .withLimit(10)
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request);
+    assertThat(result)
+        .debugAllRows()
+        .hasRows(spark, "responses/ExtractQueryTest/resolveAndCodingLiteralColumn.csv");
+  }
+
+  @Test
   void codingColumn() {
     subjectResource = ResourceType.CONDITION;
     mockResource(ResourceType.CONDITION);
