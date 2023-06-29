@@ -43,8 +43,7 @@
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>library-api</artifactId>
-      <classifier>all</classifier>
+      <artifactId>library-runtime</artifactId>
     </dependency>
   </dependencies>
 
@@ -90,7 +89,6 @@
               <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <classifier>all</classifier>
               <excludeTransitive>true</excludeTransitive>
             </configuration>
           </execution>
