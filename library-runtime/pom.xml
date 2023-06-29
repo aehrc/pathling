@@ -31,7 +31,9 @@
   <packaging>jar</packaging>
 
   <name>Pathling Library Runtime</name>
-  <description>The uber-jar for Pathling Libray API.</description>
+  <description>
+    A Spark package that bundles the Pathling Library API and its runtime dependencies for cluster deployment.
+  </description>
 
   <properties>
     <shaded.dependency.prefix>au.csiro.pathling.shaded</shaded.dependency.prefix>
