@@ -37,12 +37,9 @@
 
   <properties>
     <shaded.dependency.prefix>au.csiro.pathling.shaded</shaded.dependency.prefix>
-    <!-- We contain no source -->
-    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 
   <dependencies>
-
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-api</artifactId>
@@ -72,6 +69,14 @@
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-clean-plugin</artifactId>
         <configuration>
           <filesets>
@@ -83,18 +88,6 @@
             </fileset>
           </filesets>
         </configuration>
-      </plugin>
-      <!-- We contain no source -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <configuration>
-          <skipSource>true</skipSource>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.jacoco</groupId>
-        <artifactId>jacoco-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
