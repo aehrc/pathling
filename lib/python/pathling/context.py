@@ -272,6 +272,12 @@ class PathlingContext:
             self._spark._wrapped if hasattr(self._spark, "_wrapped") else self._spark,
         )
 
+    def version(self):
+        """
+        :return: The version of the Pathling library.
+        """
+        return self._jpc.getVersion()
+
     def encode(
         self,
         df: DataFrame,
