@@ -88,8 +88,7 @@ public interface TerminologyService {
 
   /**
    * Translates a code from one value set to another, based on the existing concept map. Abstracts
-   * the FHIR <a
-   * href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
+   * the FHIR <a href="https://www.hl7.org/fhir/R4/operation-conceptmap-translate.html">ConceptMap/$translate</a>
    * operation.
    *
    * @param coding the code to translate.
@@ -108,8 +107,7 @@ public interface TerminologyService {
 
   /**
    * Tests the subsumption relationship between two codings given the semantics of subsumption in
-   * the underlying code system. Abstracts the <a
-   * href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
+   * the underlying code system. Abstracts the <a href="https://www.hl7.org/fhir/R4/codesystem-operation-subsumes.html">CodeSystem/$subsumes</a>
    * operation.
    *
    * @param codingA the left code to be tested.
@@ -129,10 +127,12 @@ public interface TerminologyService {
    * @param coding the coding to lookup.
    * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
    * with matching codes are returned.
+   * @param preferredLanguage the preferred language for display and other localised properties.
    * @return the list of properties and/or designations.
    */
   @Nonnull
-  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode);
+  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode,
+      @Nullable String preferredLanguage);
 
   /**
    * Gets additional details about the concept, including designations and properties. Abstracts
@@ -146,8 +146,11 @@ public interface TerminologyService {
    * @return the list of properties and/or designations.
    */
   @Nonnull
-  List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode, @Nullable String displayLanguage);
-  
+  default List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
+      @Nullable final String propertyCode) {
+    return lookup(coding, propertyCode, null);
+  }
+
   /**
    * Common interface for properties and designations
    */

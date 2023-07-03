@@ -19,14 +19,14 @@ package au.csiro.pathling.terminology.lookup;
 
 import au.csiro.pathling.fhirpath.encoding.ImmutableCoding;
 import au.csiro.pathling.terminology.TerminologyParameters;
+import javax.annotation.Nullable;
 import lombok.Value;
 
 /**
  * Represents the input parameters to the lookup operation.
  *
  * @author John Grimes
- * @see <a
- * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+ * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
  */
 @Value
 public class LookupParameters implements TerminologyParameters {
@@ -35,6 +35,7 @@ public class LookupParameters implements TerminologyParameters {
 
   ImmutableCoding coding;
   String property;
-  String displayLanguage;
+  @Nullable
+  String preferredLanguage;
 
 }

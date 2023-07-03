@@ -307,7 +307,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
         deepEq(new UriType(SYSTEM_A)),
         isNull(),
         deepEq(new CodeType(CODE_A)),
-        deepEq(new CodeType("display"))))
+        deepEq(new CodeType("display")),
+        isNull()))
         .thenReturn(request);
 
     assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
@@ -331,7 +332,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
         deepEq(new UriType(SYSTEM_B)),
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B)),
-        deepEq(new CodeType("property_A"))
+        deepEq(new CodeType("property_A")),
+        isNull()
     )).thenReturn(request);
 
     assertEquals(List.of(
@@ -358,7 +360,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
         deepEq(new UriType(SYSTEM_C)),
         isNull(),
         deepEq(new CodeType(CODE_C)),
-        any()
+        any(),
+        isNull()
     )).thenReturn(request);
 
     assertEquals(List.of(
@@ -388,7 +391,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
         deepEq(new UriType(SYSTEM_A)),
         isNull(),
         deepEq(new CodeType(CODE_A)),
-        deepEq(new CodeType("designation"))
+        deepEq(new CodeType("designation")),
+        isNull()
     )).thenReturn(request);
 
     assertEquals(List.of(
@@ -414,7 +418,8 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
         deepEq(new UriType(SYSTEM_B)),
         deepEq(new StringType(VERSION_1)),
         deepEq(new CodeType(CODE_B)),
-        deepEq(new CodeType("designation"))
+        deepEq(new CodeType("designation")),
+        isNull()
     )).thenReturn(request);
 
     assertEquals(List.of(
@@ -425,7 +430,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
 
   @Test
   public void testLookupHandles404Exceptions() {
-    when(terminologyClient.buildLookup(any(), any(), any(), any()
+    when(terminologyClient.buildLookup(any(), any(), any(), any(), any()
     )).thenThrow(BaseServerResponseException.newInstance(404, "Resource Not Found"));
 
     assertEquals(Collections.emptyList(),

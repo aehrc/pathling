@@ -84,23 +84,15 @@ public class DefaultTerminologyService extends BaseTerminologyService {
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property) {
-    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property, null);
+      @Nullable final String property, @Nullable final String preferredLanguage) {
+    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property,
+        preferredLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return requireNonNull(execute(executor));
   }
+
 
   @Nonnull
-  @Override
-  public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property, @Nullable final String displayLanguage) {
-    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property, displayLanguage);
-    final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
-    return requireNonNull(execute(executor));
-  }
-
-
-  @Nullable
   private static <ResponseType, ResultType> ResultType execute(
       @Nonnull final TerminologyOperation<ResponseType, ResultType> operation) {
     final Optional<ResultType> invalidResult = operation.validate();
