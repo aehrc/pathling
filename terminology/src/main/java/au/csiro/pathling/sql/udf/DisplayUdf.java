@@ -44,7 +44,7 @@ public class DisplayUdf implements SqlFunction,
   private static final long serialVersionUID = 7605853352299165569L;
 
   public static final String DISPLAY_PROPERTY_CODE = "display";
-  public static final String FUNCTION_NAME = "display_language";
+  public static final String FUNCTION_NAME = "display";
   public static final DataType RETURN_TYPE = DataTypes.StringType;
 
   @Nonnull

@@ -164,23 +164,23 @@ public interface Terminology {
    */
   @Nonnull
   static Column display(@Nonnull final Column coding) {
-    return call_udf(DisplayUdf.FUNCTION_NAME, coding, lit(null));
+    return display(coding, null);
   }
 
 
   /**
    * Takes a Coding column as its input. Returns the Column, which contains the canonical display
-   * name associated with the given code. also accepts language specifying string.
+   * name associated with the given code in preferred language when specified.
    *
    * @param coding a Column containing a struct representation of a Coding
-   * @param language the language of the information returned
+   * @param preferredLanguage the preferred language for the display name
    * @return the Column containing the result of the operation (String)
    */
   @Nonnull
-  static Column display(@Nonnull final Column coding, @Nonnull final String language) {
-    return call_udf(DisplayUdf.FUNCTION_NAME, coding, lit(language));
+  static Column display(@Nonnull final Column coding, @Nullable final String preferredLanguage) {
+    return call_udf(DisplayUdf.FUNCTION_NAME, coding, lit(preferredLanguage));
   }
-  
+
 
   /**
    * Takes a Coding column as its input. Returns the Column, which contains the values of properties
@@ -190,15 +190,37 @@ public interface Terminology {
    * Coding | string | integer | boolean | dateTime | decimal.
    *
    * @param coding a Column containing a struct representation of a Coding
-   * @param propertyCode the code of the property to retrieve.
-   * @param propertyType the type of the property to retrieve.
-   * @param acceptLanguage the language of the information returned
+   * @param propertyCode the code of the property to retrieve
+   * @param propertyType the type of the property to retrieve
+   * @param preferredLanguage the preferred language for the multi-language properties
    * @return the Column containing the result of the operation (array of property values)
    */
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
-      @Nonnull final FHIRDefinedType propertyType, @Nullable final String acceptLanguage) {
-    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(acceptLanguage));
+      @Nonnull final FHIRDefinedType propertyType, @Nullable final String preferredLanguage) {
+    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode),
+        lit(preferredLanguage));
+  }
+
+  /**
+   * Retrieves properties of a concept.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve
+   * @param propertyType the FHIR data type of the property
+   * @param preferredLanguage the preferred language for the multi-language properties
+   * @return the Column containing the result of the operation (array of property values)
+   * @see Terminology#property_of(Column, String, FHIRDefinedType)
+   */
+  @Nonnull
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nullable final String propertyType, @Nullable final String preferredLanguage) {
+
+    return property_of(coding, propertyCode,
+        nonNull(propertyType)
+        ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
+        : PropertyUdf.DEFAULT_PROPERTY_TYPE,
+        preferredLanguage);
   }
 
   /**
@@ -216,7 +238,7 @@ public interface Terminology {
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType) {
-    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode), lit(null));
+    return property_of(coding, propertyCode, propertyType, null);
   }
 
   /**
@@ -231,11 +253,7 @@ public interface Terminology {
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nullable final String propertyType) {
-
-    return property_of(coding, propertyCode,
-        nonNull(propertyType)
-        ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
-        : PropertyUdf.DEFAULT_PROPERTY_TYPE);
+    return property_of(coding, propertyCode, propertyType, null);
   }
 
   /**

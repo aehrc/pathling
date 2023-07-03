@@ -59,15 +59,11 @@ public class DisplayFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     final Arguments arguments = Arguments.of(input);
-    final StringType acceptLanguageStringType = arguments.getNullableValue(0, StringType.class);
-    
+    final Optional<StringType> preferredLanguage = arguments.getOptionalValue(0, StringType.class);
+
     final Dataset<Row> dataset = inputPath.getDataset();
-    final Column resultColumn;
-    if (acceptLanguageStringType != null) {
-      resultColumn = display(inputPath.getValueColumn(), acceptLanguageStringType.asStringValue());
-    } else {
-      resultColumn = display(inputPath.getValueColumn());
-    }
+    final Column resultColumn = display(inputPath.getValueColumn(),
+        preferredLanguage.map(StringType::getValue).orElse(null));
     return ElementPath
         .build(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
             resultColumn, inputPath.isSingular(), inputPath.getCurrentResource(),
@@ -79,12 +75,13 @@ public class DisplayFunction implements NamedFunction {
 
     checkUserInput(input.getArguments().size() <= 1,
         NAME + " function accepts one optional language argument");
-    if (input.getArguments().size()==1) {
+    if (input.getArguments().size() == 1) {
       //checkUserInput(StringType.class.cast(((LiteralPath<?>) input.getArguments().get(0)).getValue()) != null, 
       checkUserInput(input.getArguments().get(0) instanceof StringLiteralPath,
-          NAME + " function can accept only one optional argument to display, it must be string type");
+          NAME
+              + " function can accept only one optional argument to display, it must be string type");
     }
-    
+
     checkUserInput(context.getTerminologyServiceFactory()
         .isPresent(), "Attempt to call terminology function " + NAME
         + " when terminology service has not been configured");

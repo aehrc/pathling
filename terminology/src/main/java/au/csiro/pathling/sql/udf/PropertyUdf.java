@@ -62,7 +62,7 @@ public class PropertyUdf implements SqlFunction,
     SqlFunction3<Row, String, String, Object[]> {
 
   private static final long serialVersionUID = 7605853352299165569L;
-  private static final String FUNCTION_BASE_NAME = "property_language";
+  private static final String FUNCTION_BASE_NAME = "property";
 
   @Nonnull
   public static final Set<FHIRDefinedType> ALLOWED_FHIR_TYPES = ImmutableSet.of(
@@ -137,7 +137,8 @@ public class PropertyUdf implements SqlFunction,
   }
 
   @Nullable
-  protected Object[] doCall(@Nullable final Coding coding, @Nullable final String propertyCode, @Nullable final String language) {
+  protected Object[] doCall(@Nullable final Coding coding, @Nullable final String propertyCode,
+      @Nullable final String language) {
     if (propertyCode == null || !isValidCoding(coding)) {
       return null;
     }
@@ -169,7 +170,8 @@ public class PropertyUdf implements SqlFunction,
 
   @Nullable
   @Override
-  public Object[] call(@Nullable final Row codingRow, @Nullable final String propertyCode, @Nullable final String language) {
+  public Object[] call(@Nullable final Row codingRow, @Nullable final String propertyCode,
+      @Nullable final String language) {
     return encodeArray(doCall(nonNull(codingRow)
                               ? decode(codingRow)
                               : null, propertyCode, language));

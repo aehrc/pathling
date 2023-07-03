@@ -62,21 +62,15 @@ public class PropertyFunction implements NamedFunction {
     final String propertyCode = arguments.getValue(0, StringType.class).asStringValue();
     final String propertyTypeAsString = arguments.getValueOr(1,
         new StringType(PropertyUdf.DEFAULT_PROPERTY_TYPE.toCode())).asStringValue();
-    final StringType acceptLanguageStringType = arguments.getNullableValue(2, StringType.class);
-    
+    final Optional<StringType> preferredLanguage = arguments.getOptionalValue(2, StringType.class);
+
     final FHIRDefinedType propertyType = wrapInUserInputError(FHIRDefinedType::fromCode).apply(
         propertyTypeAsString);
 
     final Dataset<Row> dataset = inputPath.getDataset();
-    final Column propertyValues;
-    if (acceptLanguageStringType != null) {
-      propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
-          propertyType, acceptLanguageStringType.asStringValue());
-    } else {
-      propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
-          propertyType, null);
-    }
-
+    final Column propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
+        propertyType, preferredLanguage.map(StringType::getValue).orElse(null));
+    
     // // The result is an array of property values per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
     final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
