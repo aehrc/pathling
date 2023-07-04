@@ -55,12 +55,10 @@ public class DecodeResourceMapPartitions<T extends IBaseResource> implements
 
   @Override
   public Iterator<String> call(final Iterator<T> iterator) {
-    final IParser parser = ParserBuilder.build(fhirVersion, outputMimeType);
-    parser.setPrettyPrint(false);
-
+    final ResourceParser parser = ResourceParser.build(fhirVersion, outputMimeType);
     final Iterable<T> iterable = () -> iterator;
     return StreamSupport.stream(iterable.spliterator(), false)
-        .map(parser::encodeResourceToString)
+        .map(parser::encode)
         .iterator();
   }
 

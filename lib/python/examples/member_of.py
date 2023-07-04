@@ -15,11 +15,26 @@
 
 import os
 
-from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set, member_of
+from pathling import (
+    PathlingContext,
+    to_snomed_coding,
+    to_ecl_value_set,
+    member_of,
+    find_jar,
+)
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
-pc = PathlingContext.create()
+print(find_jar())
+
+pc = PathlingContext.create(
+    terminology_server_url="http://localhost:8081/fhir",
+    terminology_verbose_request_logging=True,
+    cache_override_expiry=2_628_000,
+    cache_storage_type="disk",
+    cache_storage_path=".local/tx-cache",
+)
+pc.spark.sparkContext.setLogLevel("DEBUG")
 
 csv = pc.spark.read.options(header=True).csv(
     f'file://{os.path.join(HERE, "data/csv/conditions.csv")}'

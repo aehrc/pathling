@@ -39,6 +39,7 @@ import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.io.Closeable;
 
 /**
  * The client interface to FHIR terminology operations.
@@ -46,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * @author John Grimes
  * @author Piotr Szul
  */
-public interface TerminologyClient {
+public interface TerminologyClient extends Closeable {
 
   Logger log = LoggerFactory.getLogger(TerminologyClient.class);
 
@@ -223,9 +224,13 @@ public interface TerminologyClient {
     // sending them.
     final TerminologyAuthConfiguration authConfig = terminologyConfiguration.getAuthentication();
     if (authConfig.isEnabled()) {
-      genericClient.registerInterceptor(new ClientAuthInterceptor(authConfig));
+      final ClientAuthInterceptor clientAuthInterceptor = new ClientAuthInterceptor(authConfig);
+      genericClient.registerInterceptor(clientAuthInterceptor);
+      // pass the client auth interceptor as a resource to close when the client is closed
+      return new DefaultTerminologyClient(genericClient, clientAuthInterceptor);
+    } else {
+      return new DefaultTerminologyClient(genericClient);
     }
-    return new DefaultTerminologyClient(genericClient);
   }
 
   @Nonnull

@@ -64,7 +64,7 @@ def pathling_ctx(request, temp_warehouse_dir):
         .master("local[1]")
         .config("spark.jars", find_pathling_jar(verbose=True))
         .config("spark.driver.memory", "4g")
-        .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+        .config("spark.jars.packages", "io.delta:delta-core_2.12:2.3.0")
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config(
             "spark.sql.catalog.spark_catalog",

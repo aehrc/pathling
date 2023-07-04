@@ -23,6 +23,6 @@ clicking on "Environment Variables". You will need administrator privileges on
 the computer to be able to do this.
 
 As with other operating systems, you also need to have Java 11 installed and
-the `JAVA_HOME` environment variable set to its installation location. See
-[Installation - Java Virtual Machine](./index.md#java-virtual-machine) for more
-information.
+the `JAVA_HOME` environment variable set to its installation location. We
+recommend
+the [Azul Zulu installer for Windows](https://www.azul.com/downloads/?version=java-11-lts&os=windows&package=jdk#zulu).

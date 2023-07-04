@@ -23,17 +23,16 @@ import au.csiro.pathling.config.ServerConfiguration;
 import ca.uhn.fhir.rest.server.exceptions.UnclassifiedServerFailureException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.nimbusds.jose.shaded.json.JSONObject;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hadoop.shaded.com.nimbusds.jose.shaded.json.JSONObject;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -172,8 +171,8 @@ public class PassportAuthenticationConverter extends JwtAuthenticationConverter 
       if (visasClaim == null) {
         throw new UnclassifiedServerFailureException(502, "Visa is wrong type");
       }
-      final String visaType = visasClaim.getAsString(VISA_TYPE_CLAIM);
-      final String visaDatasetId = visasClaim.getAsString(VISA_DATASET_ID_CLAIM);
+      final String visaType = visasClaim.get(VISA_TYPE_CLAIM).toString();
+      final String visaDatasetId = visasClaim.get(VISA_DATASET_ID_CLAIM).toString();
       if (visaType == null || visaDatasetId == null) {
         throw new UnclassifiedServerFailureException(502,
             "Visa is wrong type, or is missing dataset ID");

@@ -4,7 +4,8 @@ sidebar_position: 2
 
 # FHIR encoders
 
-The Pathling library can be used to transform [FHIR](https://hl7.org/fhir) Bundles or NDJSON into Spark
+The Pathling library can be used to transform [FHIR](https://hl7.org/fhir)
+Bundles or NDJSON into Spark
 data sets. Once your data is encoded, it can be queried using SQL, or
 transformed using the full library of functions that Spark provides. It can also
 be written to [Parquet](https://parquet.apache.org/) and other formats that are
@@ -22,15 +23,13 @@ ScalaInstallation
 
 ## Reading in NDJSON
 
-[NDJSON](http://ndjson.org) is a format commonly used for bulk FHIR data, and
-consists of files (one per resource type) that contains one JSON resource per
-line.
+[NDJSON](https://hl7.org/fhir/R4/nd-json.html) is a format commonly used for
+bulk FHIR data, and consists of files (one per resource type) that contains one
+JSON resource per line.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
 <TabItem value="python" label="Python">
-
-<PythonInstallation/>
 
 ```python
 from pathling import PathlingContext
@@ -51,8 +50,6 @@ patients.select('id', 'gender', 'birthDate').show()
 </TabItem>
 <TabItem value="scala" label="Scala">
 
-<ScalaInstallation/>
-
 ```scala
 import au.csiro.pathling.library.PathlingContext
 
@@ -72,8 +69,6 @@ patients.select("id", "gender", "birthDate").show()
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import org.apache.spark.sql.SparkSession;
@@ -112,8 +107,6 @@ resources, perhaps generated as part of the same event.
 <Tabs>
 <TabItem value="python" label="Python">
 
-<PythonInstallation/>
-
 ```python
 from pathling import PathlingContext
 
@@ -135,8 +128,6 @@ patients.select('id', 'gender', 'birthDate').show()
 
 </TabItem>
 <TabItem value="scala" label="Scala">
-
-<ScalaInstallation/>
 
 ```scala
 import org.apache.spark.sql.SparkSession
@@ -161,8 +152,6 @@ patients.select("id", "gender", "birthDate").show()
 
 </TabItem>
 <TabItem value="java" label="Java">
-
-<JavaInstallation/>
 
 ```java
 import org.apache.spark.sql.SparkSession;

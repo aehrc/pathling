@@ -99,7 +99,7 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
   void setUp() {
     terminologyClient = mock(TerminologyClient.class);
     terminologyService = new DefaultTerminologyService(
-        terminologyClient, null);
+        terminologyClient);
   }
 
   @Test

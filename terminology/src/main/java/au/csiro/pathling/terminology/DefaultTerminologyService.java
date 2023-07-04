@@ -49,10 +49,10 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 public class DefaultTerminologyService extends BaseTerminologyService {
 
   public DefaultTerminologyService(@Nonnull final TerminologyClient terminologyClient,
-      @Nullable final Closeable toClose) {
-    super(terminologyClient, toClose);
+      @Nonnull final Closeable... resourcesToClose) {
+    super(terminologyClient, resourcesToClose);
   }
-
+  
   @Override
   public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     final ValidateCodeParameters parameters = new ValidateCodeParameters(valueSetUrl,

@@ -24,7 +24,7 @@ import au.csiro.pathling.fhir.TerminologyClient;
 import java.io.Closeable;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.infinispan.Cache;
 import org.infinispan.commons.marshall.JavaSerializationMarshaller;
 import org.infinispan.configuration.cache.Configuration;
@@ -42,15 +42,16 @@ import org.infinispan.manager.EmbeddedCacheManager;
  *
  * @author John Grimes
  */
+@Slf4j
 public class PersistentCachingTerminologyService extends CachingTerminologyService {
 
   private static final String DATA_DIRECTORY = "data";
   private static final String INDEX_DIRECTORY = "index";
 
   public PersistentCachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
-      @Nullable final Closeable toClose,
-      @Nonnull final HttpClientCachingConfiguration configuration) {
-    super(terminologyClient, toClose, configuration);
+      @Nonnull final HttpClientCachingConfiguration configuration,
+      @Nonnull final Closeable... resourcesToClose) {
+    super(terminologyClient, configuration, resourcesToClose);
   }
 
   @Override

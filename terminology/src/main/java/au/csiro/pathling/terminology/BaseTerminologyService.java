@@ -17,12 +17,10 @@
 
 package au.csiro.pathling.terminology;
 
-import static java.util.Objects.nonNull;
-
 import au.csiro.pathling.fhir.TerminologyClient;
+import au.csiro.pathling.utilities.ResourceCloser;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.io.Closeable;
-import java.io.IOException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -31,18 +29,15 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-public abstract class BaseTerminologyService implements TerminologyService, Closeable {
+public abstract class BaseTerminologyService extends ResourceCloser implements TerminologyService {
 
   @Nonnull
   protected final TerminologyClient terminologyClient;
 
-  @Nullable
-  protected final Closeable toClose;
-
   public BaseTerminologyService(@Nonnull final TerminologyClient terminologyClient,
-      @Nullable final Closeable toClose) {
+      @Nonnull final Closeable... resourcesToClose) {
+    super(resourcesToClose);
     this.terminologyClient = terminologyClient;
-    this.toClose = toClose;
   }
 
   /**
@@ -64,12 +59,4 @@ public abstract class BaseTerminologyService implements TerminologyService, Clos
       throw e;
     }
   }
-
-  @Override
-  public void close() throws IOException {
-    if (nonNull(toClose)) {
-      toClose.close();
-    }
-  }
-
 }

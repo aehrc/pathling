@@ -21,7 +21,6 @@ import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.fhir.TerminologyClient;
 import java.io.Closeable;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
@@ -37,9 +36,9 @@ import org.infinispan.manager.EmbeddedCacheManager;
 public class InMemoryCachingTerminologyService extends CachingTerminologyService {
 
   public InMemoryCachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
-      @Nullable final Closeable toClose,
-      @Nonnull final HttpClientCachingConfiguration configuration) {
-    super(terminologyClient, toClose, configuration);
+      @Nonnull final HttpClientCachingConfiguration configuration,
+      @Nonnull final Closeable... resourcesToClose) {
+    super(terminologyClient, configuration, resourcesToClose);
   }
 
   @Override
