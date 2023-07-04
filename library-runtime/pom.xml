@@ -37,8 +37,6 @@
 
   <properties>
     <shaded.dependency.prefix>au.csiro.pathling.shaded</shaded.dependency.prefix>
-    <maven.source.skip>true</maven.source.skip>
-    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 
   <dependencies>
@@ -120,6 +118,32 @@
             </relocation>
           </relocations>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>empty-sources</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>sources</classifier>
+            </configuration>
+          </execution>
+          <execution>
+            <id>empty-javadoc</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+            </configuration>
+          </execution> 
+        </executions>
       </plugin>
     </plugins>
   </build>
