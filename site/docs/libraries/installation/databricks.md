@@ -12,7 +12,7 @@ cluster, navigate to the "Compute" section and click on the cluster. Click on
 the "Libraries" tab, and click "Install new".
 
 Install both the [PyPI package](https://pypi.org/project/pathling/), and
-the [library API Maven package](https://central.sonatype.com/artifact/au.csiro.pathling/library-runtime).
+the [library runtime Maven package](https://central.sonatype.com/artifact/au.csiro.pathling/library-runtime).
 Once the cluster is restarted, Pathling should be available for use within 
 notebooks.
 
