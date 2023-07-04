@@ -340,6 +340,12 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="o">.</span><span class="n">_wrapped</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">,</span> <span class="s2">&quot;_wrapped&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spark</span><span class="p">,</span>
         <span class="p">)</span>
 
+<div class="viewcode-block" id="PathlingContext.version"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.version">[docs]</a>    <span class="k">def</span> <span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :return: The version of the Pathling library.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jpc</span><span class="o">.</span><span class="n">getVersion</span><span class="p">()</span></div>
+
 <div class="viewcode-block" id="PathlingContext.encode"><a class="viewcode-back" href="../../pathling.html#pathling.context.PathlingContext.encode">[docs]</a>    <span class="k">def</span> <span class="nf">encode</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span>
