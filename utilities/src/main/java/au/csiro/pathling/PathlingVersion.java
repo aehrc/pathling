@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PathlingVersion {
 
-  private static final String GIT_PROPERTIES_FILE_NAME = "git.properties";
+  private static final String GIT_PROPERTIES_FILE_NAME = "pathling-version.properties";
   private static final String BUILD_VERSION_PROPERTY = "git.build.version";
   private static final String GIT_SHA_PROPERTY = "git.commit.id.abbrev";
 

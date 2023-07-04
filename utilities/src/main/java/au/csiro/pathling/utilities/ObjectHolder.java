@@ -26,7 +26,6 @@ import java.io.Serializable;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.curator.utils.CloseableUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 
 /**
@@ -91,7 +90,7 @@ public interface ObjectHolder<C extends Serializable, V> {
     @Override
     public synchronized void reset() {
       if (instance instanceof Closeable) {
-        CloseableUtils.closeQuietly((Closeable) instance);
+        closeQuietly((Closeable) instance);
         instance = null;
         configuration = null;
       }

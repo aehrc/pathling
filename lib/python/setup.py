@@ -41,7 +41,7 @@ if not __version__:
 # Check for existence of uber-jar for packaging
 #
 JARS_DIR = os.path.join(HERE, "target", "dependency")
-UBER_JAR_GLOB = os.path.join(JARS_DIR, "library-api-*-all.jar")
+UBER_JAR_GLOB = os.path.join(JARS_DIR, "library-runtime-*.jar")
 jar_files = glob.glob(UBER_JAR_GLOB)
 if not jar_files:
     print(
@@ -91,7 +91,7 @@ setup(
         "pathling.jars": "target/dependency",
     },
     package_data={
-        "pathling.jars": ["*-all.jar"],
+        "pathling.jars": ["library-runtime-*.jar"],
     },
     data_files=[
         ("share/pathling/examples", glob.glob("examples/*.py")),

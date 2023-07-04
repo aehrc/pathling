@@ -8,7 +8,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>6.2.2</version>
+    <version>6.2.3</version>
   </parent>
   <artifactId>utilities</artifactId>
   <packaging>jar</packaging>
@@ -57,10 +57,6 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.curator</groupId>
-      <artifactId>curator-client</artifactId>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>

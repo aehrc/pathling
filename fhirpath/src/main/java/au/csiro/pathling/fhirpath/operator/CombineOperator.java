@@ -50,13 +50,12 @@ public class CombineOperator implements Operator {
 
     final Dataset<Row> leftTrimmed = left.getUnionableDataset(right);
     final Dataset<Row> rightTrimmed = right.getUnionableDataset(left);
-    final int valueColumnIndex = Arrays.asList(leftTrimmed.columns())
-        .indexOf(left.getValueColumn().toString());
-
+    // the value column is always the last column
+    final int valueColumnIndex = leftTrimmed.columns().length - 1;
     final Dataset<Row> dataset = leftTrimmed.union(rightTrimmed);
-    final String columnName = dataset.columns()[valueColumnIndex];
+    final String valueColumnName = dataset.columns()[valueColumnIndex];
     final DatasetWithColumn datasetWithColumn = createColumn(dataset,
-        dataset.col("`" + columnName + "`"));
+        dataset.col(valueColumnName));
     final Optional<Column> eidColumn = Optional.of(array(monotonically_increasing_id()));
     final Optional<Column> thisColumn = left instanceof NonLiteralPath
                                         ? ((NonLiteralPath) left).getThisColumn()

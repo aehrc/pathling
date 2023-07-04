@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>6.2.2</version>
+  <version>6.2.3</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -100,6 +100,7 @@
   <modules>
     <module>encoders</module>
     <module>library-api</module>
+    <module>library-runtime</module>
     <module>terminology</module>
     <module>fhirpath</module>
     <module>fhir-server</module>
@@ -193,9 +194,8 @@
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
-        <artifactId>library-api</artifactId>
+        <artifactId>library-runtime</artifactId>
         <version>${project.version}</version>
-        <classifier>all</classifier>
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
@@ -581,7 +581,7 @@
         <artifactId>logback-core</artifactId>
         <version>${pathling.logbackVersion}</version>
       </dependency>
-      
+
       <!-- CVE-2022-42889-->
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -595,14 +595,14 @@
         <artifactId>snakeyaml</artifactId>
         <version>1.33</version>
       </dependency>
-      
+
       <!-- CVE-2022-37865 -->
       <dependency>
         <groupId>org.apache.ivy</groupId>
         <artifactId>ivy</artifactId>
         <version>2.5.1</version>
       </dependency>
-      
+
     </dependencies>
   </dependencyManagement>
 
@@ -623,7 +623,7 @@
           <verbose>false</verbose>
           <dateFormat>yyyy-MM-dd'T'HH:mm:ssZ</dateFormat>
           <generateGitPropertiesFile>true</generateGitPropertiesFile>
-          <generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
+          <generateGitPropertiesFilename>${project.build.outputDirectory}/pathling-version.properties</generateGitPropertiesFilename>
         </configuration>
       </plugin>
       <plugin>
