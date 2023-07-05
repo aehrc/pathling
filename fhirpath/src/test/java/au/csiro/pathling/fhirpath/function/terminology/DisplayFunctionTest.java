@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -67,6 +68,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SpringBootUnitTest
 class DisplayFunctionTest {
 
+  public static final String LC_55915_3_DE_DISPLAY = "LC_55915_3 (DE)";
+  public static final String CD_SNOMED_VER_63816008_DE_DISPLAY = "CD_SNOMED_VER_63816008 (DE)";
   @Autowired
   SparkSession spark;
 
@@ -84,8 +87,9 @@ class DisplayFunctionTest {
     SharedMocks.resetAll();
   }
 
-  @Test
-  public void displayCoding() {
+
+  private void checkDisplayCoding(final Optional<String> maybeLanguage,
+      final String display_LC_55915_3, final String display_CD_SNOMED_VER_63816008) {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
@@ -110,19 +114,18 @@ class DisplayFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    // Setup mocks
-    TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withDisplay(LC_55915_3)
-        .withDisplay(CD_SNOMED_VER_63816008);
-
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputExpression.getIdColumn())
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
+    final Optional<StringLiteralPath> maybeArgumentExpression = maybeLanguage.map(
+        lang -> StringLiteralPath
+            .fromString("'" + lang + "'", inputExpression));
+
     final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, inputExpression,
-        Collections.emptyList());
+        maybeArgumentExpression.stream().collect(Collectors.toUnmodifiableList()));
 
     // Invoke the function.
     final FhirPath result = new DisplayFunction().invoke(displayInput);
@@ -131,15 +134,16 @@ class DisplayFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("encounter-1", makeEid(0), LC_55915_3.getDisplay())
+        .withRow("encounter-1", makeEid(0), display_LC_55915_3)
         .withRow("encounter-1", makeEid(1), null)
-        .withRow("encounter-2", makeEid(0), CD_SNOMED_VER_63816008.getDisplay())
+        .withRow("encounter-2", makeEid(0), display_CD_SNOMED_VER_63816008)
         .withRow("encounter-3", null, null)
         .build();
 
     // Check the result.
     assertThat(result)
-        .hasExpression("Encounter.class.display()")
+        .hasExpression("Encounter.class.display(" + maybeArgumentExpression.map(
+            StringLiteralPath::getExpression).orElse("") + ")")
         .isElementPath(ElementPath.class)
         .hasFhirType(FHIRDefinedType.STRING)
         .isNotSingular()
@@ -147,71 +151,25 @@ class DisplayFunctionTest {
         .hasRows(expectedResult);
   }
 
+  @Test
+  public void displayCoding() {
+    // Setup mocks
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDisplay(LC_55915_3)
+        .withDisplay(CD_SNOMED_VER_63816008);
+    checkDisplayCoding(Optional.empty(), LC_55915_3.getDisplay(),
+        CD_SNOMED_VER_63816008.getDisplay());
+  }
 
   @Test
   public void displayCodingLanguage() {
 
-    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource(fhirContext, "Encounter", "class");
-    assertTrue(optionalDefinition.isPresent());
-    final ElementDefinition definition = optionalDefinition.get();
-
-    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withStructTypeColumns(codingStructType())
-        .withRow("encounter-1", makeEid(0), rowFromCoding(LC_55915_3))
-        .withRow("encounter-1", makeEid(1), rowFromCoding(INVALID_CODING_0))
-        .withRow("encounter-2", makeEid(0), rowFromCoding(CD_SNOMED_VER_63816008))
-        .withRow("encounter-3", null, null)
-        .buildWithStructValue();
-
-    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
-        .dataset(inputDataset)
-        .idAndEidAndValueColumns()
-        .expression("Encounter.class")
-        .singular(false)
-        .definition(definition)
-        .buildDefined();
-
     // Setup mocks
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withDisplay(LC_55915_3, LC_55915_3.getDisplay(), "de")
-        .withDisplay(CD_SNOMED_VER_63816008, CD_SNOMED_VER_63816008.getDisplay(), "de");
+        .withDisplay(LC_55915_3, LC_55915_3_DE_DISPLAY, "de")
+        .withDisplay(CD_SNOMED_VER_63816008, CD_SNOMED_VER_63816008_DE_DISPLAY, "de");
 
-    // Prepare the inputs to the function.
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .idColumn(inputExpression.getIdColumn())
-        .terminologyClientFactory(terminologyServiceFactory)
-        .build();
-
-    final StringLiteralPath argumentExpression = StringLiteralPath
-        .fromString("'de'", inputExpression);
-
-    final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, inputExpression,
-        Collections.singletonList(argumentExpression));
-
-    // Invoke the function.
-    final FhirPath result = new DisplayFunction().invoke(displayInput);
-
-    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(DataTypes.StringType)
-        .withRow("encounter-1", makeEid(0), LC_55915_3.getDisplay())
-        .withRow("encounter-1", makeEid(1), null)
-        .withRow("encounter-2", makeEid(0), CD_SNOMED_VER_63816008.getDisplay())
-        .withRow("encounter-3", null, null)
-        .build();
-
-    // Check the result.
-    assertThat(result)
-        .hasExpression("Encounter.class.display('de')")
-        .isElementPath(ElementPath.class)
-        .hasFhirType(FHIRDefinedType.STRING)
-        .isNotSingular()
-        .selectOrderedResultWithEid()
-        .hasRows(expectedResult);
+    checkDisplayCoding(Optional.of("de"), LC_55915_3_DE_DISPLAY, CD_SNOMED_VER_63816008_DE_DISPLAY);
   }
 
   @Test

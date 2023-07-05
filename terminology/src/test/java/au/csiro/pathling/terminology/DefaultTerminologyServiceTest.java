@@ -308,11 +308,11 @@ public class DefaultTerminologyServiceTest extends AbstractTerminologyTestBase {
         isNull(),
         deepEq(new CodeType(CODE_A)),
         deepEq(new CodeType("display")),
-        isNull()))
+        deepEq(new StringType("xx-XX"))))
         .thenReturn(request);
 
     assertEquals(List.of(Property.of("display", new StringType(CODING_AA.getDisplay()))),
-        terminologyService.lookup(CODING_AA, "display"));
+        terminologyService.lookup(CODING_AA, "display", "xx-XX"));
   }
 
   @Test

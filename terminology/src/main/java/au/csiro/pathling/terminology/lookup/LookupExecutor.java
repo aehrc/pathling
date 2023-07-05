@@ -84,7 +84,7 @@ public class LookupExecutor implements
         TerminologyParameters.optional(StringType::new, coding.getVersion()),
         TerminologyParameters.required(CodeType::new, coding.getCode()),
         TerminologyParameters.optional(CodeType::new, parameters.getProperty()),
-        TerminologyParameters.optional(CodeType::new, parameters.getAcceptLanguage())
+        TerminologyParameters.optional(StringType::new, parameters.getAcceptLanguage())
     );
   }
 

@@ -69,10 +69,10 @@ public class DisplayUdfTest extends AbstractTerminologyTestBase {
   void testGetsDisplayName() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDisplay(CODING_A, DISPLAY_NAME_A, null)
-        .withDisplay(CODING_BB_VERSION1, DISPLAY_NAME_B, null);
+        .withDisplay(CODING_BB_VERSION1, DISPLAY_NAME_B, "xx-XX");
 
     assertEquals(DISPLAY_NAME_A, displayUdf.call(encode(CODING_A),null));
-    assertEquals(DISPLAY_NAME_B, displayUdf.call(encode(CODING_BB_VERSION1),null));
+    assertEquals(DISPLAY_NAME_B, displayUdf.call(encode(CODING_BB_VERSION1),"xx-XX"));
 
     // null when display property it not present
     assertNull(displayUdf.call(encode(CODING_C),null));

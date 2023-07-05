@@ -42,6 +42,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.assertions.DatasetAssert;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
+import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.LookupExpectations;
 import ca.uhn.fhir.parser.IParser;
 import java.util.Arrays;
 import java.util.Collections;
@@ -133,9 +134,9 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
 
-  private void setupDisplayExpectations() {
+  private LookupExpectations setupDisplayExpectations() {
 
-    TerminologyServiceHelpers.setupLookup(terminologyService)
+    return TerminologyServiceHelpers.setupLookup(terminologyService)
         .withDisplay(CODING_1)
         .withDisplay(CODING_2);
   }
@@ -359,12 +360,12 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Nullable
-  private static Row toRow(@Nonnull Coding coding) {
+  private static Row toRow(@Nonnull final Coding coding) {
     return CodingEncoding.encode(coding);
   }
 
   @Nonnull
-  private static List<Row> toArray(@Nonnull Coding... codings) {
+  private static List<Row> toArray(@Nonnull final Coding... codings) {
     return Stream.of(codings).map(CodingEncoding::encode).collect(Collectors.toList());
   }
 
@@ -482,14 +483,42 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
     DatasetAssert.of(result).hasRows(expectedResult);
   }
 
+  @Test
+  public void testDisplayWithLanguage() {
+    setupDisplayExpectations()
+        .withDisplay(CODING_1, "display 1 (de)", "de")
+        .withDisplay(CODING_2, "display 2 (de)", "de");
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("coding", CodingEncoding.DATA_TYPE)
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", toRow(INVALID_CODING_0))
+        .withRow("uc-codingA", toRow(CODING_1))
+        .withRow("uc-codingB", toRow(CODING_2))
+        .build();
+
+    final Dataset<Row> result = ds.select(ds.col("id"),
+        display(ds.col("coding"), "de"));
+
+    final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.StringType)
+        .withRow("uc-null", null)
+        .withRow("uc-invalid", null)
+        .withRow("uc-codingA", "display 1 (de)")
+        .withRow("uc-codingB", "display 2 (de)")
+        .build();
+    DatasetAssert.of(result).hasRows(expectedResult);
+  }
+
   @ParameterizedTest
   @MethodSource("propertyParameters")
   public void testProperty(final String propertyType, final DataType resultDataType,
       final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
       final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_1, "property_a", (String)null, propertyAFhirValues)
-        .withProperty(CODING_2, "property_b", (String)null, propertyBFhirValues);
+        .withProperty(CODING_1, "property_a", null, propertyAFhirValues)
+        .withProperty(CODING_2, "property_b", null, propertyBFhirValues);
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -534,7 +563,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   @Test
   public void testPropertyWithDefaultType() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_1, "property_a", (String)null, new StringType("value_a"));
+        .withProperty(CODING_1, "property_a", (String) null, new StringType("value_a"));
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")
