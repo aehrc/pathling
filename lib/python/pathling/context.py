@@ -168,7 +168,7 @@ class PathlingContext:
                preferences as defined in
                https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language. If not provided,
                the header is not sent. The server can use the header to return the result in the
-               preferred language if it is able. The actual behaviour may depended on the server
+               preferred language if it is able. The actual behaviour may depend on the server
                implementation and the code systems used.
         :param enable_delta: enables the use of Delta for storage of FHIR data.
                Only supported when no SparkSession is provided.

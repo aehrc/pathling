@@ -17,14 +17,11 @@
 
 package au.csiro.pathling.config;
 
-import au.csiro.pathling.config.HttpClientCachingConfiguration;
-import au.csiro.pathling.config.HttpClientConfiguration;
-import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import java.io.Serializable;
+import javax.annotation.Nullable;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
-import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
@@ -67,6 +64,23 @@ public class TerminologyConfiguration implements Serializable {
   private boolean verboseLogging = false;
 
   /**
+   * The default value of the Accept-Language HTTP header passed to the terminology server. The
+   * value may contain multiple languages, with weighted preferences as defined in
+   * <a href="https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language">RFC-9110</a>
+   * If not provided, the header is not sent. The server can use the header to return the result in
+   * the preferred language if it is able. The actual behaviour may depend on the server
+   * implementation and the code systems used.
+   */
+  @Nullable
+  public String getAcceptLanguage() {
+    return acceptLanguage;
+  }
+
+  @Nullable
+  @Builder.Default
+  private String acceptLanguage = null;
+
+  /**
    * Configuration relating to the HTTP client used for terminology requests.
    */
   @NotNull
@@ -90,15 +104,4 @@ public class TerminologyConfiguration implements Serializable {
   @Builder.Default
   private TerminologyAuthConfiguration authentication = TerminologyAuthConfiguration.builder()
       .build();
-
-  /**
-   * The language that queries to the terminology server will resond in.
-   * this string is passed in the headers of the HTTP requests to the terminology server
-   * under the 'AcceptLanguage' field. The default value (NULL) is used to leave the field unspecified.
-   * alternatively, this string should be appropriately formatted to designate a known language as per HTTP specification
-   * see: https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language
-   */
-  @Nullable
-  @Builder.Default
-  private String acceptLanguage = null;
 }

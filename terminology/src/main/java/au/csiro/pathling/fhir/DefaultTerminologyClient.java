@@ -141,8 +141,8 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
   public Parameters lookup(@Nonnull final UriType system,
       @Nullable final StringType version, @Nonnull final CodeType code,
       @Nullable final CodeType property,
-      @Nullable final CodeType preferredLanguage) {
-    return buildLookup(system, version, code, property, preferredLanguage).execute();
+      @Nullable final StringType acceptLanguage) {
+    return buildLookup(system, version, code, property, acceptLanguage).execute();
   }
 
   @Nonnull
@@ -150,7 +150,7 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
   public IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull final UriType system,
       @Nullable final StringType version,
       @Nonnull final CodeType code, @Nullable final CodeType property,
-      @Nullable final CodeType preferredLanguage) {
+      @Nullable final StringType preferredLanguage) {
     final Parameters params = new Parameters();
     params.addParameter().setName("system").setValue(system);
     params.addParameter().setName("code").setValue(code);
@@ -168,9 +168,8 @@ class DefaultTerminologyClient extends ResourceCloser implements TerminologyClie
 
     return nonNull(preferredLanguage)
            ? operation.withAdditionalHeader(HttpHeaders.ACCEPT_LANGUAGE,
-        preferredLanguage.getCode())
+        preferredLanguage.getValue())
            : operation;
-
   }
 
 }

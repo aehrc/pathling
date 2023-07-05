@@ -157,7 +157,7 @@ public interface TerminologyClient extends Closeable {
    * @param version the version of the code system
    * @param code the code to lookup
    * @param property the property or properties to be returned to the response
-   * @param preferredLanguage the preferred language for the localizable return values
+   * @param acceptLanguage the preferred language for the localizable return values
    * @return a {@link Parameters} resource
    * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
    */
@@ -168,7 +168,7 @@ public interface TerminologyClient extends Closeable {
       @Nullable @OperationParam(name = "version") StringType version,
       @Nonnull @OperationParam(name = "code") CodeType code,
       @Nullable @OperationParam(name = "property") CodeType property,
-      @Nullable CodeType preferredLanguage
+      @Nullable StringType acceptLanguage
   );
 
   /**
@@ -185,7 +185,7 @@ public interface TerminologyClient extends Closeable {
   @Nonnull
   IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull UriType system,
       @Nullable StringType version, @Nonnull CodeType code, @Nullable CodeType property,
-      @Nullable CodeType acceptLanguage);
+      @Nullable StringType acceptLanguage);
 
   /**
    * Builds a new terminology client.

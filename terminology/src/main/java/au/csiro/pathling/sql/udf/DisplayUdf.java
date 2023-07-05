@@ -65,13 +65,13 @@ public class DisplayUdf implements SqlFunction,
   }
 
   @Nullable
-  protected String doCall(@Nullable final Coding coding, @Nullable final String language) {
+  protected String doCall(@Nullable final Coding coding, @Nullable final String acceptLanguage) {
     if (coding == null || !isValidCoding(coding)) {
       return null;
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        coding, DISPLAY_PROPERTY_CODE, language);
+        coding, DISPLAY_PROPERTY_CODE, acceptLanguage);
 
     final Optional<Property> maybeDisplayName = result.stream()
         .filter(s -> s instanceof Property)
@@ -84,7 +84,7 @@ public class DisplayUdf implements SqlFunction,
 
   @Nullable
   @Override
-  public String call(@Nullable final Row codingRow, @Nullable final String language) {
-    return doCall(decode(codingRow), language);
+  public String call(@Nullable final Row codingRow, @Nullable final String acceptLanguage) {
+    return doCall(decode(codingRow), acceptLanguage);
   }
 }

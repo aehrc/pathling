@@ -127,12 +127,12 @@ public interface TerminologyService {
    * @param coding the coding to lookup.
    * @param propertyCode the code of the propertyCode to lookup. If not null only the properties
    * with matching codes are returned.
-   * @param preferredLanguage the preferred language for display and other localised properties.
+   * @param acceptLanguage the preferred language for display and other localised properties.
    * @return the list of properties and/or designations.
    */
   @Nonnull
   List<PropertyOrDesignation> lookup(@Nonnull Coding coding, @Nullable String propertyCode,
-      @Nullable String preferredLanguage);
+      @Nullable String acceptLanguage);
 
   /**
    * Gets additional details about the concept, including designations and properties. Abstracts

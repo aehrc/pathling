@@ -36,6 +36,6 @@ public class LookupParameters implements TerminologyParameters {
   ImmutableCoding coding;
   String property;
   @Nullable
-  String preferredLanguage;
+  String acceptLanguage;
 
 }

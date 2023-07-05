@@ -174,7 +174,7 @@ public class MockTerminologyService implements TerminologyService {
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String propertyCode, @Nullable final String preferredLanguage) {
+      @Nullable final String propertyCode, @Nullable final String acceptLanguage) {
 
     final Coding snomedCoding = new Coding("http://snomed.info/sct", "439319006",
         null);
@@ -205,8 +205,8 @@ public class MockTerminologyService implements TerminologyService {
     } else if (SystemAndCode.of(loincCoding).equals(SystemAndCode.of(coding))) {
       return List.of(
           Property.of("display", new StringType(
-              loincCodingDisplayNames.get(preferredLanguage != null
-                                          ? preferredLanguage
+              loincCodingDisplayNames.get(acceptLanguage != null
+                                          ? acceptLanguage
                                           : "en"))),
           Property.of("inactive", new BooleanType(false)),
           Designation.of(useDisplay, "en", loincCodingDisplayNames.get("en")),
