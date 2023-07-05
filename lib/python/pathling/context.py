@@ -163,8 +163,13 @@ class PathlingContext:
         :param scope: a scope value for use with the client credentials grant
         :param token_expiry_tolerance: the minimum number of seconds that a token should have
                before expiry when deciding whether to send it with a terminology request
-        :param accept_language: the default language string which is passed as the Accept-Language
-               HTTP header to the terminology server
+        :param accept_language: the default value of the Accept-Language HTTP header passed to
+               the terminology server. The value may contain multiple languages, with weighted
+               preferences as defined in
+               https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language. If not provided,
+               the header is not sent. The server can use the header to return the result in the
+               preferred language if it is able. The actual behaviour may depended on the server
+               implementation and the code systems used.
         :param enable_delta: enables the use of Delta for storage of FHIR data.
                Only supported when no SparkSession is provided.
         :return: a :class:`PathlingContext` instance initialized with the specified configuration

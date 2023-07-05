@@ -360,8 +360,11 @@ def property_df(spark: SparkSession):
 
 def test_display(property_df: DataFrame):
     expected_result = [
-        Result("id-1", "Screening for phenothiazine in serum"),
-        Result("id-2", None),
+        Result("id-1", None),
+        Result(
+            "id-2",
+            "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+        ),
         Result("id-3", None),
     ]
 
@@ -372,10 +375,20 @@ def test_display(property_df: DataFrame):
     assert result_df.collect() == expected_result
 
     result_df = property_df.limit(1).select(
-        "id", display(Coding(SNOMED_URI, "439319006")).alias("result")
+        "id", display(Coding(LOINC_URI, "55915-3")).alias("result")
     )
     assert result_df.collect() == [
-        Result("id-1", "Screening for phenothiazine in serum")
+        Result(
+            "id-1",
+            "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+        )
+    ]
+
+    result_df = property_df.limit(1).select(
+        "id", display(Coding(LOINC_URI, "55915-3"), "fr-FR").alias("result")
+    )
+    assert result_df.collect() == [
+        Result("id-1", "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien")
     ]
 
 
@@ -402,10 +415,30 @@ def test_property_of(property_df: DataFrame):
     ]
 
     result_df = property_df.limit(1).select(
-        "id", property_of(Coding(SNOMED_URI, "439319006"), "display").alias("result")
+        "id", property_of(Coding(LOINC_URI, "55915-3"), "display").alias("result")
     )
     assert result_df.collect() == [
-        Result("id-1", ["Screening for phenothiazine in serum"])
+        Result(
+            "id-1",
+            [
+                "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis"
+            ],
+        )
+    ]
+
+    result_df = property_df.limit(1).select(
+        "id",
+        property_of(
+            Coding(LOINC_URI, "55915-3"), "display", accept_language="de"
+        ).alias("result"),
+    )
+    assert result_df.collect() == [
+        Result(
+            "id-1",
+            [
+                "Beta-2-Globulin [Masse/Volumen] in Zerebrospinalflüssigkeit mit Elektrophorese"
+            ],
+        )
     ]
 
 

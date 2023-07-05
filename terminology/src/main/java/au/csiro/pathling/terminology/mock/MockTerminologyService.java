@@ -177,10 +177,16 @@ public class MockTerminologyService implements TerminologyService {
       @Nullable final String propertyCode, @Nullable final String preferredLanguage) {
 
     final Coding snomedCoding = new Coding("http://snomed.info/sct", "439319006",
-        "Screening for phenothiazine in serum");
+        null);
 
     final Coding loincCoding = new Coding("http://loinc.org", "55915-3",
         null);
+
+    final Map<String, String> loincCodingDisplayNames = Map.of(
+        "en", "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis",
+        "fr-FR", "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien",
+        "de", "Beta-2-Globulin [Masse/Volumen] in Zerebrospinalflüssigkeit mit Elektrophorese"
+    );
 
     final Coding useDisplay = new Coding("http://terminology.hl7.org/CodeSystem/designation-usage",
         "display", null);
@@ -190,7 +196,6 @@ public class MockTerminologyService implements TerminologyService {
 
     if (SystemAndCode.of(snomedCoding).equals(SystemAndCode.of(coding))) {
       return List.of(
-          Property.of("display", new StringType(snomedCoding.getDisplay())),
           Property.of("parent", new CodeType("785673007")),
           Property.of("parent", new CodeType("74754006")),
           Designation.of(useDisplay, "en", "Screening for phenothiazine in serum"),
@@ -199,11 +204,13 @@ public class MockTerminologyService implements TerminologyService {
       );
     } else if (SystemAndCode.of(loincCoding).equals(SystemAndCode.of(coding))) {
       return List.of(
+          Property.of("display", new StringType(
+              loincCodingDisplayNames.get(preferredLanguage != null
+                                          ? preferredLanguage
+                                          : "en"))),
           Property.of("inactive", new BooleanType(false)),
-          Designation.of(useDisplay, "en",
-              "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis"),
-          Designation.of(useDisplay, "fr-FR",
-              "Bêta-2 globulines [Masse/Volume] Liquide céphalorachidien"),
+          Designation.of(useDisplay, "en", loincCodingDisplayNames.get("en")),
+          Designation.of(useDisplay, "fr-FR", loincCodingDisplayNames.get("fr-FR")),
           Designation.of(useFullySpecifiedName, "fr-FR",
               "Beta 2 globulin:MCnc:Pt:CSF:Qn:Electrophoresis")
       );
