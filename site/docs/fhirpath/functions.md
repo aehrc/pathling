@@ -143,8 +143,11 @@ collection<Coding> -> display(language?: String) : collection<String>
 When invoked on a [Coding](./data-types#coding), returns the preferred display 
 term, according to the terminology server.
 
-The optional `language` parameter can be used to specify the preferred language for the display name
-(formatted as per: https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
+The optional `language` parameter can be used to specify the preferred language 
+for the display name. It overrides the default value set in the configuration. 
+See `pathling.terminology.acceptLanguage` in 
+[Terminology Configuration](/docs/server/configuration#terminology-service) 
+for details.
 
 Example:
 
@@ -350,9 +353,11 @@ Both the `code` and the `type` of the property must be present within a
 order for it to be returned by this function. If there are no matches, the 
 function will return an empty collection.
 
-The optional `language` parameter can be used to specify the preferred language 
-for the multilingual values
-(formatted as per: https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
+The optional `language` parameter can be used to specify the preferred language
+for the returned property values. It overrides the default value set in the 
+configuration. See `pathling.terminology.acceptLanguage` in
+[Terminology Configuration](/docs/server/configuration#terminology-service)
+for details.
 
 See [Properties](https://www.hl7.org/fhir/codesystem.html#properties)
 in the FHIR specification for more information.

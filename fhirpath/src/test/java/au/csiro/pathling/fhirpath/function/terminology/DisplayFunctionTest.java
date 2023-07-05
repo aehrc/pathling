@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.test.AbstractTerminologyTestBase.INVALID_CODING_0;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
@@ -33,9 +33,10 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
+import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -47,9 +48,9 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Optional;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -147,7 +148,6 @@ class DisplayFunctionTest {
   }
 
 
-
   @Test
   public void displayCodingLanguage() {
 
@@ -240,7 +240,7 @@ class DisplayFunctionTest {
         .fromString("'some argument'", input);
     final StringLiteralPath argument2 = StringLiteralPath
         .fromString("'some argument'", input);
-    List<FhirPath> arguments = new ArrayList<FhirPath>();
+    final List<FhirPath> arguments = new ArrayList<>();
     arguments.add(argument1);
     arguments.add(argument2);
 
@@ -272,7 +272,7 @@ class DisplayFunctionTest {
         InvalidUserInputError.class,
         () -> displayFunction.invoke(displayInput));
     assertEquals(
-        "display function can accept only one optional argument to display, it must be string type",
+        "Function `display` expects `String literal` as argument 1",
         error.getMessage());
   }
 

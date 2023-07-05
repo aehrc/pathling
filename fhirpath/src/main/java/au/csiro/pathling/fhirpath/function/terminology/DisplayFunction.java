@@ -15,30 +15,26 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function;
+package au.csiro.pathling.fhirpath.function.terminology;
+
+import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.sql.Terminology.display;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.literal.LiteralPath;
+import au.csiro.pathling.fhirpath.function.Arguments;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
+import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import java.util.Optional;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.StringType;
-
-import javax.annotation.Nonnull;
-import java.util.Optional;
-import java.util.List;
-
-import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.display;
-import static au.csiro.pathling.sql.Terminology.member_of;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 /**
  * This function returns the display name for given Coding
@@ -59,11 +55,11 @@ public class DisplayFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     final Arguments arguments = Arguments.of(input);
-    final Optional<StringType> preferredLanguage = arguments.getOptionalValue(0, StringType.class);
+    final Optional<StringType> acceptLanguage = arguments.getOptionalValue(0, StringType.class);
 
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column resultColumn = display(inputPath.getValueColumn(),
-        preferredLanguage.map(StringType::getValue).orElse(null));
+        acceptLanguage.map(StringType::getValue).orElse(null));
     return ElementPath
         .build(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
             resultColumn, inputPath.isSingular(), inputPath.getCurrentResource(),
@@ -76,10 +72,8 @@ public class DisplayFunction implements NamedFunction {
     checkUserInput(input.getArguments().size() <= 1,
         NAME + " function accepts one optional language argument");
     if (input.getArguments().size() == 1) {
-      //checkUserInput(StringType.class.cast(((LiteralPath<?>) input.getArguments().get(0)).getValue()) != null, 
       checkUserInput(input.getArguments().get(0) instanceof StringLiteralPath,
-          NAME
-              + " function can accept only one optional argument to display, it must be string type");
+          String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 1));
     }
 
     checkUserInput(context.getTerminologyServiceFactory()

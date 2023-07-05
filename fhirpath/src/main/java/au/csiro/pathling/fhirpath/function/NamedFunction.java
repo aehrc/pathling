@@ -24,11 +24,7 @@ import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansT
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.function.terminology.DesignationFunction;
-import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
-import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
-import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
-import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
+import au.csiro.pathling.fhirpath.function.terminology.*;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import java.util.stream.Collectors;
