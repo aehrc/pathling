@@ -50,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.io.CacheableDatabase;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
@@ -66,7 +67,9 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -109,6 +112,17 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
   String recordingTxServerUrl;
 
   private TerminologyService terminologyService;
+
+
+  @BeforeAll
+  public static void beforeAll() {
+    DefaultTerminologyServiceFactory.reset();
+  }
+
+  @AfterAll
+  public static void afterAll() {
+    DefaultTerminologyServiceFactory.reset();
+  }
 
   @BeforeEach
   @Override

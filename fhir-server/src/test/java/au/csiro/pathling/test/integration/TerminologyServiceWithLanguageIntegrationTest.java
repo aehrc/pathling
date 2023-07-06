@@ -25,6 +25,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.io.CacheableDatabase;
+import au.csiro.pathling.terminology.DefaultTerminologyService;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Property;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -32,7 +34,9 @@ import com.github.tomakehurst.wiremock.recording.RecordSpecBuilder;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.StringType;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -67,6 +71,17 @@ class TerminologyServiceWithLanguageIntegrationTest extends WireMockTest {
 
   private TerminologyService terminologyService;
 
+  
+  @BeforeAll
+  public static void beforeAll() {
+    DefaultTerminologyServiceFactory.reset();
+  }
+
+  @AfterAll
+  public static void afterAll() {
+    DefaultTerminologyServiceFactory.reset();
+  }
+  
   @BeforeEach
   @Override
   void setUp() {
