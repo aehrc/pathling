@@ -21,22 +21,25 @@ import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.client.api.IHttpRequest;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.http.HttpHeaders;
 
 @Interceptor
 public class AcceptLanguageInterceptor {
-	private final String acceptLanguage;
 
-	public AcceptLanguageInterceptor(String acceptLanguage) {
-		this.acceptLanguage = acceptLanguage;
-	}
+  @Nonnull
+  private final String acceptLanguage;
 
-	@SuppressWarnings("unused")
-	@Hook(Pointcut.CLIENT_REQUEST)
-	public void handleClientRequest(@Nullable final IHttpRequest httpRequest) {
-		if ((httpRequest != null) && (this.acceptLanguage != null)) {
-			httpRequest.addHeader(HttpHeaders.ACCEPT_LANGUAGE, this.acceptLanguage);
-		}
-	}
+  public AcceptLanguageInterceptor(@Nonnull final String acceptLanguage) {
+    this.acceptLanguage = acceptLanguage;
+  }
+
+  @SuppressWarnings("unused")
+  @Hook(Pointcut.CLIENT_REQUEST)
+  public void handleClientRequest(@Nullable final IHttpRequest httpRequest) {
+    if (httpRequest != null) {
+      httpRequest.addHeader(HttpHeaders.ACCEPT_LANGUAGE, this.acceptLanguage);
+    }
+  }
 }

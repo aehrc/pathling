@@ -41,6 +41,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
+
 /**
  * The client interface to FHIR terminology operations.
  *
@@ -210,9 +213,11 @@ public interface TerminologyClient extends Closeable {
     genericClient.registerInterceptor(new UserAgentInterceptor());
 
     // Register an interceptor that sets the appropriate language request header.
-    genericClient.registerInterceptor(
-        new AcceptLanguageInterceptor(terminologyConfiguration.getAcceptLanguage()));
-
+    if (nonNull(terminologyConfiguration.getAcceptLanguage())) {
+      genericClient.registerInterceptor(
+          new AcceptLanguageInterceptor(
+              requireNonNull(terminologyConfiguration.getAcceptLanguage())));
+    }
     // If verbose logging is enabled, register an interceptor that logs the request and response 
     // details.
     if (terminologyConfiguration.isVerboseLogging()) {
