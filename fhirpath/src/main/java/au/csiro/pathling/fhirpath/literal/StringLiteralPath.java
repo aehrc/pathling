@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathString;
+import static au.csiro.pathling.fhirpath.literal.StringLiteral.toLiteral;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import static org.apache.spark.sql.functions.lit;
 
@@ -41,6 +42,7 @@ import org.hl7.fhir.r4.model.StringType;
  *
  * @author John Grimes
  */
+@SuppressWarnings("rawtypes")
 @Getter
 public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
     Materializable<PrimitiveType>, Comparable {
@@ -73,7 +75,7 @@ public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
   @Nonnull
   @Override
   public String getExpression() {
-    return "'" + escapeFhirPathString(getValue().getValueAsString()) + "'";
+    return toLiteral(getValue().getValueAsString());
   }
 
   @Nonnull

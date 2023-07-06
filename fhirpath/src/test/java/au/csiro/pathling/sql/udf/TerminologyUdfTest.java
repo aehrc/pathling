@@ -588,6 +588,50 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   }
 
   @Test
+  public void testPropertyWithLanguage() {
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withProperty(CODING_1, "property_a", "de", new StringType("value_a_de"))
+        .withProperty(CODING_2, "property_b", "fr", new StringType("value_b_fr"));
+
+    final Dataset<Row> ds = DatasetBuilder.of(spark)
+        .withIdColumn("id")
+        .withColumn("coding", CodingEncoding.DATA_TYPE)
+        .withRow("uc-null", null)
+        .withRow("uc-codingA", toRow(CODING_1))
+        .withRow("uc-codingB", toRow(CODING_2))
+        .build();
+
+    final Dataset<Row> resultA = ds.select(ds.col("id"),
+        Terminology.property_of(ds.col("coding"), "property_a", FHIRDefinedType.STRING, "de")
+            .alias("values"));
+
+    final Dataset<Row> expectedResultA = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-codingA", Collections.singletonList("value_a_de"))
+        .withRow("uc-codingB", Collections.emptyList())
+        .build();
+
+    DatasetAssert.of(resultA)
+        .hasRows(expectedResultA);
+
+    final Dataset<Row> resultB = ds.select(ds.col("id"),
+        Terminology.property_of(ds.col("coding"), "property_b", "string", "fr")
+            .alias("values"));
+
+    final Dataset<Row> expectedResultB = DatasetBuilder.of(spark).withIdColumn("id")
+        .withColumn("result", DataTypes.createArrayType(DataTypes.StringType))
+        .withRow("uc-null", null)
+        .withRow("uc-codingA", Collections.emptyList())
+        .withRow("uc-codingB", Collections.singletonList("value_b_fr"))
+        .build();
+
+    DatasetAssert.of(resultB)
+        .hasRows(expectedResultB);
+  }
+
+
+  @Test
   void testInputErrorForPropertyOfUnknownType() {
     assertEquals(
         "Type: 'instant' is not supported for 'property' udf",

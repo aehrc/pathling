@@ -17,28 +17,39 @@
 
 package au.csiro.pathling.sql.udf;
 
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.AbstractTerminologyTestBase;
-import com.google.common.collect.ImmutableMap;
-import org.hl7.fhir.r4.model.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Stream;
-import lombok.Value;
-
 import static au.csiro.pathling.fhirpath.encoding.CodingEncoding.encode;
 import static au.csiro.pathling.sql.udf.PropertyUdfTest.Values.ofPrimitive;
 import static au.csiro.pathling.test.helpers.FhirMatchers.deepEq;
 import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupLookup;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+
+import au.csiro.pathling.terminology.TerminologyService;
+import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.test.AbstractTerminologyTestBase;
+import com.google.common.collect.ImmutableMap;
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Stream;
+import lombok.Value;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.DateTimeType;
+import org.hl7.fhir.r4.model.DecimalType;
+import org.hl7.fhir.r4.model.IntegerType;
+import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Type;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
@@ -161,7 +172,8 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
         propertyUdf.call(encode(CODING_BB_VERSION1), "unknownProperty_1", null));
 
     verify(terminologyService).lookup(deepEq(CODING_A), eq("unknownProperty_0"), eq(null));
-    verify(terminologyService).lookup(deepEq(CODING_BB_VERSION1), eq("unknownProperty_1"), eq(null));
+    verify(terminologyService).lookup(deepEq(CODING_BB_VERSION1), eq("unknownProperty_1"),
+        eq(null));
     verifyNoMoreInteractions(terminologyService);
   }
 
@@ -208,20 +220,21 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
 
   @ParameterizedTest
   @MethodSource("inputs")
-  public void testReturnsManyValueForKnownPropertyLanguage(final Class<? extends Type> udfClass) {
+  public void testReturnsManyValueForKnownPropertyWithLanguage(
+      final Class<? extends Type> udfClass) {
     setupUdf(udfClass);
     setupLookup(terminologyService)
         .withProperty(CODING_AA_VERSION1, "property_a", "de",
             allTestValues().flatMap(Values::fhirRangeOne).toArray(Type[]::new))
-        .withProperty(CODING_B, "property_b", "de",
+        .withProperty(CODING_B, "property_b", "fr",
             allTestValues().flatMap(Values::fhirRangeTwo).toArray(Type[]::new));
-
+    
     final Object[] expectedArrayOne = TEST_VALUES.get(udfClass).objectRangeOne();
     final Object[] expectedArrayTwo = TEST_VALUES.get(udfClass).objectRangeTwo();
 
     assertArrayEquals(expectedArrayOne,
         propertyUdf.call(encode(CODING_AA_VERSION1), "property_a", "de"));
     assertArrayEquals(expectedArrayTwo,
-        propertyUdf.call(encode(CODING_B), "property_b", "de"));
+        propertyUdf.call(encode(CODING_B), "property_b", "fr"));
   }
 }
