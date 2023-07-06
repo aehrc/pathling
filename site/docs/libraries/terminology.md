@@ -624,3 +624,121 @@ class MyApp {
 
 </TabItem>
 </Tabs>
+
+### Multi-Language support
+
+The library allows to communicate the preferred language of the response to the
+terminology server using the `Accept-Language` HTTP header, as described in
+[Multi-Language support in FHIR](https://hl7.org/fhir/languages.html#http). The
+header may contain multiple languages, with weighted preferences as defined in
+[RFC-9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
+The server can use the header to return the result in the preferred
+language if it is able. The actual behaviour may depend on the server
+implementation and the code systems used.
+
+The default value for the header can be configured during the creation of
+the `PathlingContext` with the `accept_language` or `acceptLanguage` parameter.
+The parameter with the same name  can also be used to override the default
+value in `display()` and `property_of()` functions.
+
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import PathlingContext, to_loinc_coding, property_of, display
+
+# Configure the default language preferences prioritising French.
+pc = PathlingContext.create(accept_language="fr;q=0.9,en;q=0.5")
+csv = pc.spark.read.csv("observations.csv")
+
+
+# Get the display names with default language preferences (in French).
+def_display = csv.withColumn(
+    "DISPLAY", display(to_loinc_coding(csv.CODE))
+)
+
+# Get the `display` property values with German as the preferred language.
+def_and_german_display = def_display.withColumn(
+    "DISPLAY_DE",
+    property_of(to_loinc_coding(csv.CODE), "display", accept_lanuage="de-DE"),
+)
+def_and_german_display.show()
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+import au.csiro.pathling.library.PathlingContext
+import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.sql.Terminology
+import au.csiro.pathling.sql.Terminology._
+import au.csiro.pathling.library.TerminologyHelpers._
+
+// Configure the default language preferences prioritising French.
+val pc = PathlingContext.create(
+    TerminologyConfiguration.builder()
+            .acceptLangage("fr;q=0.9,en;q=0.5").build()
+);
+val csv = spark.read.csv("observations.csv")
+
+// Get the display names with default language preferences (in French).
+val defDisplay = csv.withColumn(
+    "DISPLAY",
+    display(toLoincCoding(csv.col("CODE")))
+)
+// Get the `display` property values with German as the preferred language.
+val defAndGermanDisplay = defDisplay.withColumn(
+    "DISPLAY_DE", property_of(toLoincCoding(csv.col("CODE")), "display", "string", "de-DE")
+)
+defAndGermanDisplay.show()
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+import static au.csiro.pathling.sql.Terminology.*;
+import static au.csiro.pathling.library.TerminologyHelpers.*;
+
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.config.TerminologyConfiguration;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
+class MyApp {
+    public static void main(String[] args) {
+        // Configure the default language preferences prioritising French.
+        PathlingContext pc = PathlingContext.create(
+                TerminologyConfiguration.builder()
+                        .acceptLangage("fr;q=0.9,en;q=0.5").build()
+        );
+        Dataset<Row> csv = pc.getSpark().read().csv("observations.csv");
+
+        // Get the display names with default language preferences (in French).
+        Dataset<Row> defDisplay = csv.withColumn(
+                "DISPLAY",
+                display(toLoincCoding(csv.col("CODE")))
+        );
+
+        // Get the `display` property values with German as the preferred language.
+        Dataset<Row> defAndGermanDisplay = defDisplay.withColumn(
+                "DISPLAY_DE", property_of(toLoincCoding(csv.col("CODE")), "display", "string", "de-DE")
+        );
+        defAndGermanDisplay.show();
+    }
+}
+```
+
+</TabItem>
+</Tabs>
+
+Results in:
+
+| CODE         | DESCRIPTION	                      | DISPLAY                                           | DISPLAY_DE
+|--------------|--------------------------------------|---------------------------------------------------|------------------------------------|
+| 8302-2	   | Body Height	                      | Taille du patient \[Longueur] Patient ; Numérique | Körpergröße
+| 29463-7	   | Body Weight	                      | Poids corporel \[Masse] Patient ; Numérique       | Körpergewicht
+| 718-7	       | Hemoglobin \[Mass/volume] in Blood   | Hémoglobine \[Masse/Volume] Sang ; Numérique      | Hämoglobin \[Masse/Volumen] in Blut 
