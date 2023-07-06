@@ -33,6 +33,7 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_40
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_AUTOMAP_DEFAULT;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_29463_7;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_55915_3;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.newVersionedCoding;
@@ -43,6 +44,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static org.apache.http.HttpHeaders.ACCEPT_LANGUAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -126,7 +128,8 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     if (isRecordMode()) {
       log.warn("Recording snapshots to: {}", wireMockServer.getOptions().filesRoot());
       wireMockServer
-          .snapshotRecord(new RecordSpecBuilder().matchRequestBodyWithEqualToJson(true, false));
+          .snapshotRecord(new RecordSpecBuilder().captureHeader(ACCEPT_LANGUAGE)
+              .matchRequestBodyWithEqualToJson(true, false));
     }
     super.tearDown();
   }
@@ -282,6 +285,20 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     // assertEquals(
     //     Collections.emptyList(),
     //     terminologyService.lookup(CD_SNOMED_403190006_VERSION_UNKN, "display", null));
+  }
+
+
+  @Test
+  void testLookupDisplayPropertyWithLanguage() {
+    assertEquals(
+        List.of(Property.of("display", new StringType(
+            "Beta-2-Globulin [Masse/Volumen] in Zerebrospinalflüssigkeit mit Elektrophorese"))),
+        terminologyService.lookup(LC_55915_3, "display", "de-DE;q=0.9,fr-FR;q=0.8"));
+
+    assertEquals(
+        List.of(Property.of("display", new StringType(
+            "Poids corporel [Masse] Patient ; Numérique"))),
+        terminologyService.lookup(LC_29463_7, "display", "fr-FR"));
   }
 
   @Test

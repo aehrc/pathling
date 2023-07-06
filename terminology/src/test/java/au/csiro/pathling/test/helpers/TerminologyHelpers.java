@@ -124,7 +124,9 @@ public final class TerminologyHelpers {
   public static final String LOINC_NAME = "LOINC v2.73";
   public static final Coding LC_55915_3 = new Coding(LOINC_URI, "55915-3",
       "Beta 2 globulin [Mass/volume] in Cerebral spinal fluid by Electrophoresis");
-
+  public static final Coding LC_29463_7 = new Coding(LOINC_URI, "29463-7",
+      "Body weight");
+  
   // Others
 
   public static final Coding HL7_USE_DISPLAY = new Coding(
