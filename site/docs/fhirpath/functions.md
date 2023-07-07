@@ -152,10 +152,10 @@ for details.
 Example:
 
 ```
+// With no argument
 Condition.code.display()
-```
-or 
-```
+
+// Prefer German language.
 Condition.code.display("de")
 ```
 :::note
