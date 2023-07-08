@@ -365,11 +365,11 @@ in the FHIR specification for more information.
 Example:
 
 ```
-Condition.code.coding.property('parent', 'code',null)
-```
-or 
-```
-Condition.code.coding.property('parent', 'code',"de")
+// Select the code-typed property "parent".
+Condition.code.coding.property('parent', 'code')
+
+// Select the "parent" property, preferring the German language.
+Condition.code.coding.property('parent', 'code', 'de')
 ```
 
 :::note
