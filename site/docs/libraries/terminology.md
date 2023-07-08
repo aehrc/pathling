@@ -599,7 +599,7 @@ def_display = csv.withColumn(
 # Get the `display` property values with German as the preferred language.
 def_and_german_display = def_display.withColumn(
     "DISPLAY_DE",
-    property_of(to_loinc_coding(csv.CODE), "display", accept_lanuage="de-DE"),
+    property_of(to_loinc_coding(csv.CODE), "display", accept_language="de-DE"),
 )
 def_and_german_display.show()
 ```
