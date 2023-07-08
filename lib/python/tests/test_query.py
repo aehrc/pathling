@@ -47,13 +47,15 @@ def test_extract(test_data_source):
 
     assert_result(
         [
-            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-            ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "367498001"),
-            ExtractRow("a7eb2ce7-1075-426c-addd-957b861b0e55", "male", "162864005"),
+            ExtractRow("2b36c1e2-bbe1-45ae-8124-4adad2677702", "male", "10509002"),
+            ExtractRow("2b36c1e2-bbe1-45ae-8124-4adad2677702", "male", "38341003"),
+            ExtractRow("2b36c1e2-bbe1-45ae-8124-4adad2677702", "male", "65363002"),
+            ExtractRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "44054006"),
+            ExtractRow(
+                "8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "368581000119106"
+            ),
         ],
-        result.limit(5).collect(),
+        result.orderBy("id").limit(5).collect(),
     )
 
 
@@ -75,13 +77,13 @@ def test_extract_no_filters(test_data_source):
 
     assert_result(
         [
-            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-            ExtractRow("beff242e-580b-47c0-9844-c1a68c36c5bf", "male", "444814009"),
-            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "15777000"),
-            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "271737000"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "444814009"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "195662009"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "10509002"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "444470001"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "68496003"),
         ],
-        result.limit(5).collect(),
+        result.orderBy("id").limit(5).collect(),
     )
 
 
