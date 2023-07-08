@@ -625,21 +625,21 @@ class MyApp {
 </TabItem>
 </Tabs>
 
-### Multi-Language support
+### Multi-language support
 
-The library allows to communicate the preferred language of the response to the
-terminology server using the `Accept-Language` HTTP header, as described in
-[Multi-Language support in FHIR](https://hl7.org/fhir/languages.html#http). The
-header may contain multiple languages, with weighted preferences as defined in
-[RFC-9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
-The server can use the header to return the result in the preferred
-language if it is able. The actual behaviour may depend on the server
-implementation and the code systems used.
+The library enables communication of a preferred language to the terminology
+server using the `Accept-Language` HTTP header, as described
+in [Multi-language support in FHIR](https://hl7.org/fhir/R4/languages.html#http).
+The header may contain multiple languages, with weighted preferences as defined
+in [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
+The server can use the header to return the result in the preferred language if
+it is able. The actual behaviour may depend on the server implementation and the
+code systems used.
 
 The default value for the header can be configured during the creation of
 the `PathlingContext` with the `accept_language` or `acceptLanguage` parameter.
-The parameter with the same name  can also be used to override the default
-value in `display()` and `property_of()` functions.
+The parameter with the same name can also be used to override the default value
+in `display()` and `property_of()` functions.
 
 
 <!--suppress CheckEmptyScriptTag -->
