@@ -92,7 +92,7 @@
     <pathling.infinispanVersion>14.0.11.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.13.4</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
-    <pathling.slf4jVersion>1.7.36</pathling.slf4jVersion>
+    <pathling.slf4jVersion>2.0.7</pathling.slf4jVersion>
     <pathling.logbackVersion>1.2.11</pathling.logbackVersion>
     <pathling.surefireVersion>2.22.2</pathling.surefireVersion>
   </properties>
