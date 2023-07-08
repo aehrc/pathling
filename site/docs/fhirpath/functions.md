@@ -333,7 +333,7 @@ See also: [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 ## property
 
 ```
-collection<Coding> -> property(code: String, type = 'string':String, language?: String) : collection<String|Integer|DateTime|Decimal|Coding>
+collection<Coding> -> property(code: String, type: String = 'string', language?: String) : collection<String|Integer|DateTime|Decimal|Coding>
 ```
 
 When invoked on a [Coding](./data-types#coding), returns any matching property
