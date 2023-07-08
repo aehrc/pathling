@@ -182,7 +182,7 @@ spark:
   used as the value of the `Accept-Language` HTTP header passed to the terminology
   server. The value may contain multiple languages, with weighted preferences 
   as defined in 
-  [RFC-9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language)
+  [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-accept-language).
   If not provided, the header is not sent. 
   The server can use the header to return the result in the preferred language
   if it is able. The actual behaviour may depend on the server implementation 
