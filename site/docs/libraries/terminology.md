@@ -562,69 +562,6 @@ Results in:
 | 43878008  | Streptococcal sore throat (disorder) | Streptococcal angina                       |
 | 43878008  | Streptococcal sore throat (disorder) | Streptococcal pharyngitis                  |
 
-### Authentication
-
-Pathling can be configured to connect to a protected terminology server by
-supplying a set of OAuth2 client credentials and a token endpoint.
-
-Here is an example of how to authenticate to
-the [NHS terminology server](https://ontology.nhs.uk/):
-
-<!--suppress CheckEmptyScriptTag -->
-<Tabs>
-<TabItem value="python" label="Python">
-
-```python
-from pathling import PathlingContext
-
-pc = PathlingContext.create(
-    terminology_server_url='https://ontology.nhs.uk/production1/fhir',
-    token_endpoint='https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token',
-    client_id='[client ID]',
-    client_secret='[client secret]'
-)
-```
-
-</TabItem>
-<TabItem value="scala" label="Scala">
-
-```scala
-import au.csiro.pathling.library.{PathlingContext, PathlingContextConfiguration}
-
-val config = PathlingContextConfiguration.builder()
-        .terminologyServerUrl("https://ontology.nhs.uk/production1/fhir")
-        .tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
-        .clientId("[client ID]")
-        .clientSecret("[client secret]")
-        .build()
-val pc = PathlingContext.create(config)
-```
-
-</TabItem>
-<TabItem value="java" label="Java">
-
-```java
-import au.csiro.pathling.library.PathlingContext;
-import au.csiro.pathling.library.PathlingContextConfiguration;
-
-class MyApp {
-    public static void main(String[] args) {
-        PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-                .terminologyServerUrl("https://ontology.nhs.uk/production1/fhir")
-                .tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
-                .clientId("[client ID]")
-                .clientSecret("[client secret]")
-                .build();
-        PathlingContext pc = PathlingContext.create(config);
-        // ...
-    }
-}
-
-```
-
-</TabItem>
-</Tabs>
-
 ### Multi-language support
 
 The library enables communication of a preferred language to the terminology
@@ -742,3 +679,66 @@ Results in:
 | 8302-2	   | Body Height	                      | Taille du patient \[Longueur] Patient ; Numérique | Körpergröße
 | 29463-7	   | Body Weight	                      | Poids corporel \[Masse] Patient ; Numérique       | Körpergewicht
 | 718-7	       | Hemoglobin \[Mass/volume] in Blood   | Hémoglobine \[Masse/Volume] Sang ; Numérique      | Hämoglobin \[Masse/Volumen] in Blut 
+
+### Authentication
+
+Pathling can be configured to connect to a protected terminology server by
+supplying a set of OAuth2 client credentials and a token endpoint.
+
+Here is an example of how to authenticate to
+the [NHS terminology server](https://ontology.nhs.uk/):
+
+<!--suppress CheckEmptyScriptTag -->
+<Tabs>
+<TabItem value="python" label="Python">
+
+```python
+from pathling import PathlingContext
+
+pc = PathlingContext.create(
+    terminology_server_url='https://ontology.nhs.uk/production1/fhir',
+    token_endpoint='https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token',
+    client_id='[client ID]',
+    client_secret='[client secret]'
+)
+```
+
+</TabItem>
+<TabItem value="scala" label="Scala">
+
+```scala
+import au.csiro.pathling.library.{PathlingContext, PathlingContextConfiguration}
+
+val config = PathlingContextConfiguration.builder()
+        .terminologyServerUrl("https://ontology.nhs.uk/production1/fhir")
+        .tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
+        .clientId("[client ID]")
+        .clientSecret("[client secret]")
+        .build()
+val pc = PathlingContext.create(config)
+```
+
+</TabItem>
+<TabItem value="java" label="Java">
+
+```java
+import au.csiro.pathling.library.PathlingContext;
+import au.csiro.pathling.library.PathlingContextConfiguration;
+
+class MyApp {
+    public static void main(String[] args) {
+        PathlingContextConfiguration config = PathlingContextConfiguration.builder()
+                .terminologyServerUrl("https://ontology.nhs.uk/production1/fhir")
+                .tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
+                .clientId("[client ID]")
+                .clientSecret("[client secret]")
+                .build();
+        PathlingContext pc = PathlingContext.create(config);
+        // ...
+    }
+}
+
+```
+
+</TabItem>
+</Tabs>
