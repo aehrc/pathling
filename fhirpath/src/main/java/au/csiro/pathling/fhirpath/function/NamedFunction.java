@@ -25,6 +25,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.terminology.DesignationFunction;
+import au.csiro.pathling.fhirpath.function.terminology.DisplayFunction;
 import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
 import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
