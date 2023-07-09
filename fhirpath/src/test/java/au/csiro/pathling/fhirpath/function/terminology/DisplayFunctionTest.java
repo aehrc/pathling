@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.function;
+package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.test.AbstractTerminologyTestBase.INVALID_CODING_0;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
@@ -33,6 +33,9 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.CodingPath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
+import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
+import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -45,8 +48,11 @@ import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -62,6 +68,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @SpringBootUnitTest
 class DisplayFunctionTest {
 
+  public static final String LC_55915_3_DE_DISPLAY = "LC_55915_3 (DE)";
+  public static final String CD_SNOMED_VER_63816008_DE_DISPLAY = "CD_SNOMED_VER_63816008 (DE)";
   @Autowired
   SparkSession spark;
 
@@ -80,8 +88,8 @@ class DisplayFunctionTest {
   }
 
 
-  @Test
-  public void displayCoding() {
+  private void checkDisplayCoding(final Optional<String> maybeLanguage,
+      final String display_LC_55915_3, final String display_CD_SNOMED_VER_63816008) {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
@@ -106,19 +114,18 @@ class DisplayFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    // Setup mocks
-    TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withDisplay(LC_55915_3)
-        .withDisplay(CD_SNOMED_VER_63816008);
-
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputExpression.getIdColumn())
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
+    final Optional<StringLiteralPath> maybeArgumentExpression = maybeLanguage.map(
+        lang -> StringLiteralPath
+            .fromString("'" + lang + "'", inputExpression));
+
     final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, inputExpression,
-        Collections.emptyList());
+        maybeArgumentExpression.stream().collect(Collectors.toUnmodifiableList()));
 
     // Invoke the function.
     final FhirPath result = new DisplayFunction().invoke(displayInput);
@@ -127,20 +134,42 @@ class DisplayFunctionTest {
         .withIdColumn()
         .withEidColumn()
         .withColumn(DataTypes.StringType)
-        .withRow("encounter-1", makeEid(0), LC_55915_3.getDisplay())
+        .withRow("encounter-1", makeEid(0), display_LC_55915_3)
         .withRow("encounter-1", makeEid(1), null)
-        .withRow("encounter-2", makeEid(0), CD_SNOMED_VER_63816008.getDisplay())
+        .withRow("encounter-2", makeEid(0), display_CD_SNOMED_VER_63816008)
         .withRow("encounter-3", null, null)
         .build();
 
     // Check the result.
     assertThat(result)
-        .hasExpression("Encounter.class.display()")
+        .hasExpression("Encounter.class.display(" + maybeArgumentExpression.map(
+            StringLiteralPath::getExpression).orElse("") + ")")
         .isElementPath(ElementPath.class)
         .hasFhirType(FHIRDefinedType.STRING)
         .isNotSingular()
         .selectOrderedResultWithEid()
         .hasRows(expectedResult);
+  }
+
+  @Test
+  public void displayCoding() {
+    // Setup mocks
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDisplay(LC_55915_3)
+        .withDisplay(CD_SNOMED_VER_63816008);
+    checkDisplayCoding(Optional.empty(), LC_55915_3.getDisplay(),
+        CD_SNOMED_VER_63816008.getDisplay());
+  }
+
+  @Test
+  public void displayCodingLanguage() {
+
+    // Setup mocks
+    TerminologyServiceHelpers.setupLookup(terminologyService)
+        .withDisplay(LC_55915_3, LC_55915_3_DE_DISPLAY, "de")
+        .withDisplay(CD_SNOMED_VER_63816008, CD_SNOMED_VER_63816008_DE_DISPLAY, "de");
+
+    checkDisplayCoding(Optional.of("de"), LC_55915_3_DE_DISPLAY, CD_SNOMED_VER_63816008_DE_DISPLAY);
   }
 
   @Test
@@ -163,10 +192,34 @@ class DisplayFunctionTest {
   }
 
   @Test
-  void inputMustNotContainArguments() {
+  void inputMustNotContainTwoArguments() {
     final ElementPath input = new ElementPathBuilder(spark).build();
-    final StringLiteralPath argument = StringLiteralPath
+    final StringLiteralPath argument1 = StringLiteralPath
         .fromString("'some argument'", input);
+    final StringLiteralPath argument2 = StringLiteralPath
+        .fromString("'some argument'", input);
+    final List<FhirPath> arguments = new ArrayList<>();
+    arguments.add(argument1);
+    arguments.add(argument2);
+
+    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
+    final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, input,
+        arguments);
+
+    final NamedFunction displayFunction = NamedFunction.getInstance("display");
+    final InvalidUserInputError error = assertThrows(
+        InvalidUserInputError.class,
+        () -> displayFunction.invoke(displayInput));
+    assertEquals(
+        "display function accepts one optional language argument",
+        error.getMessage());
+  }
+
+  @Test
+  void inputMustNotContainNonStringArgument() {
+    final ElementPath input = new ElementPathBuilder(spark).build();
+    final IntegerLiteralPath argument = IntegerLiteralPath
+        .fromString("9493948", input);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, input,
@@ -177,7 +230,7 @@ class DisplayFunctionTest {
         InvalidUserInputError.class,
         () -> displayFunction.invoke(displayInput));
     assertEquals(
-        "Arguments can not be passed to display function",
+        "Function `display` expects `String literal` as argument 1",
         error.getMessage());
   }
 

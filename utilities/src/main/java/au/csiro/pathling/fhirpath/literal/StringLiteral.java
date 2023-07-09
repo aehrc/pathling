@@ -10,6 +10,17 @@ public abstract class StringLiteral {
   }
 
   /**
+   * Converts a string value to a FHIRPath string literal.
+   *
+   * @param value the sting value to convert
+   * @return the FHIRPath string literal
+   */
+  @Nonnull
+  public static String toLiteral(@Nonnull final String value) {
+    return "'" + escapeFhirPathString(value) + "'";
+  }
+
+  /**
    * On the way back out, we only do the minimal escaping to guarantee syntactical correctness.
    *
    * @param value the value to apply escaping to

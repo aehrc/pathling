@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.PathlingVersion;
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -434,6 +435,23 @@ public class PathlingContext {
         idAndCodingSet.col(COL_ARG_CODINGS), outputColumnName, false);
   }
 
+  /**
+   * @return a new {@link DataSourceBuilder} that can be used to read from a variety of different
+   * data sources
+   */
+  @Nonnull
+  public DataSourceBuilder read() {
+    return new DataSourceBuilder(this);
+  }
+
+  /**
+   * @return the version of the Pathling library
+   */
+  @Nonnull
+  public String getVersion() {
+    return new PathlingVersion().getDescriptiveVersion().orElse("UNKNOWN");
+  }
+
   @Nonnull
   private static Builder getEncoderBuilder(@Nonnull final EncodingConfiguration config) {
     return FhirEncoders.forR4()
@@ -447,11 +465,6 @@ public class PathlingContext {
       @Nonnull final TerminologyConfiguration configuration) {
     final FhirVersionEnum fhirVersion = FhirContext.forR4().getVersion().getVersion();
     return new DefaultTerminologyServiceFactory(fhirVersion, configuration);
-  }
-
-  @Nonnull
-  public DataSourceBuilder read() {
-    return new DataSourceBuilder(this);
   }
 
 }

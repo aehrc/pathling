@@ -30,6 +30,25 @@
 <!-- start of server/banner.html -->
 <!-- start of head-include-2.html -->
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+<link rel="stylesheet" type="text/css" href="/server/banners/fundraiser.css" media="screen" />
+<style type="text/css" media="screen"><!--
+.progress-bar {
+  width: 21%;
+}
+.percentage {
+  padding-left: 21%;
+}
+--></style>
+
+<style type="text/css" media="screen">
+<!-- TRANSLATORS: Change direction to rtl if you translate
+     the fundraiser and your script is right-to-left.  -->
+.fundraiser {
+  direction: ltr;
+}
+</style>
 <!-- end of head-include-2.html -->
 
 </head>
@@ -39,28 +58,27 @@
 <div id="top">
 <a class="skip" href="#content"><b>Skip to main text</b></a>
 </div>
+<div id='fundraiser'>
+   <p><a href="https://my.fsf.org/donate?mtm_campaign=spring23&amp;mtm_source=banner">
+  <img id='banner-small' src="/server/banners/banner-small.png" alt="" />
+  <img id='banner-long' src="/server/banners/banner.png" alt="" />
+  <span class="gnun-split"></span></a></p>
+  <div class="message">
+    <p class="headline"><a href="https://my.fsf.org/donate?mtm_campaign=spring23&amp;mtm_source=banner">Let's work
+      together to improve and spread free software. Join the FSF before July 21.
+      <span class="gnun-split"></span></a></p>
+    <div style="clear: right"></div>
+    <p class="button"><a href="https://my.fsf.org/donate?mtm_campaign=spring23&amp;mtm_source=banner">JOIN&nbsp;NOW<span class="gnun-split"></span></a></p>
+  </div><!-- .message -->
+  <div class="progresswidget">
+    <div class="progress">
+      <div class="progress-bar"><span class="percentage"><img src="/server/banners/leaf.png" alt= ""/>37</span></div>
+      <span class="goal">175</span>
+    </div>
+  </div><!-- .progresswidget -->
+</div><!-- #fundraiser -->
 
-<div id="fsf-frame" role="complementary">
-<form id="fssbox" action="https://my.fsf.org/civicrm/profile/create?reset=1&amp;gid=31"
-      method="post">
- <div>
-  <input name="postURL" type="hidden" value="" />
-  <input type="hidden" name="group[25]" value="1" />
-  <input name="cancelURL" type="hidden" value="https://crm.fsf.org/civicrm/profile?reset=1&amp;gid=31" />
-  <input name="_qf_default" type="hidden" value="Edit:cancel" />
-  <label for="frmEmail">
-   <a href="//www.fsf.org/fss">Free Software Supporter</a>:
-  </label>
-  <input type="text" id="frmEmail" name="email-Primary" size="18" maxlength="80"
-         value="email address" onfocus="this.value=''"/>
-  <input type="submit" name="_qf_Edit_next" value="Sign up" />
- </div>
-</form>
-
-<div id="join-fsf" class="button"><a
-href="https://www.fsf.org/associate/support_freedom?referrer=4052">JOIN&nbsp;THE&nbsp;FSF</a>
-</div>
-</div>
+<div style="clear: both"></div>
 
 <div id="header" role="banner">
 <p id="gnu-banner">
@@ -77,7 +95,6 @@ href="https://www.fsf.org/associate/support_freedom?referrer=4052">JOIN&nbsp;THE
   <a href="//www.gnu.org/cgi-bin/estseek.cgi">
   <img id="search-icon" height="30" width="30"
        src="/graphics/icons/search.png"
-       title="Site search"
        alt="&nbsp;[Search www.gnu.org]&nbsp;" /></a>
  </div>
 
@@ -85,7 +102,6 @@ href="https://www.fsf.org/associate/support_freedom?referrer=4052">JOIN&nbsp;THE
   <a href="#language-container">
   <img id="language-icon" height="30" width="37"
        src="/graphics/icons/translations.png"
-       title="Languages"
        alt="&nbsp;[Other languages]&nbsp;" /></a>
  </div>
 
@@ -160,7 +176,9 @@ href="https://www.fsf.org/associate/support_freedom?referrer=4052">JOIN&nbsp;THE
 
 <div class="reduced-width">
 <h2>GNU Lesser General Public License, version&nbsp;2.1</h2>
-<div class="thin"></div>
+
+<p class="button" style="margin: 2em 1.5em">
+  <b><a href="#SEC1">Skip to license text</a></b></p>
 
 <ul>
   <li><a href="/licenses/lgpl.html">The latest version of the LGPL, version
@@ -932,7 +950,7 @@ of this article.</p>
 
 <p class="unprintable">Updated:
 <!-- timestamp start -->
-$Date: 2022/01/10 20:05:44 $
+$Date: 2023/06/11 10:08:19 $
 <!-- timestamp end --></p>
 </div>
 </div><!-- for class="inner", starts in the banner include -->

@@ -43,6 +43,7 @@ import org.hl7.fhir.r4.model.StringType;
  *
  * @author John Grimes
  */
+@SuppressWarnings("rawtypes")
 @Getter
 public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
     FhirValue<PrimitiveType>, Flat, Comparable, StringCoercible {
@@ -137,5 +138,5 @@ public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
   public FhirPath withDataset(@Nonnull final Dataset<Row> dataset) {
     return new StringLiteralPath(dataset, getIdColumn(), getValue());
   }
- 
+
 }

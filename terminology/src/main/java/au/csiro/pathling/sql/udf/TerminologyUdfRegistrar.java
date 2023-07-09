@@ -30,15 +30,16 @@ import org.apache.spark.sql.SparkSession;
 public class TerminologyUdfRegistrar extends SqlFunctionRegistrar {
 
   public TerminologyUdfRegistrar(@Nonnull final TerminologyServiceFactory tsf) {
-    super(List.of(
-            new DisplayUdf(tsf)),
+    super(List.of(),
         ImmutableList.<SqlFunction2<?, ?, ?>>builder()
+        	.add(new DisplayUdf(tsf))
             .add(new MemberOfUdf(tsf))
-            .addAll(PropertyUdf.createAll(tsf))
             .build(),
-        List.of(
-            new SubsumesUdf(tsf),
-            new DesignationUdf(tsf)),
+        ImmutableList.<SqlFunction3<?, ?, ?, ?>>builder()
+        	.add(new SubsumesUdf(tsf))
+        	.add(new DesignationUdf(tsf))
+        	.addAll(PropertyUdf.createAll(tsf))
+        	.build(),
         Collections.emptyList(),
         List.of(new TranslateUdf(tsf)));
   }

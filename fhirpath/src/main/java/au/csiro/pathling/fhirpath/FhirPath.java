@@ -86,6 +86,7 @@ public interface FhirPath extends Orderable {
 
   /**
    * Trims the columns to those common with the target and sorts them, ready for a union operation.
+   * The value column of the path is always included as the last column of the dataset.
    *
    * @param target the expression that this path will be combined with
    * @return a new {@link Dataset} with a subset of columns

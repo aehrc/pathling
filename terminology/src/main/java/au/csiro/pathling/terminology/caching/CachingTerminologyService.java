@@ -91,11 +91,12 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
 
   @SuppressWarnings("unchecked")
   public CachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
-      @Nullable final Closeable toClose,
-      @Nonnull final HttpClientCachingConfiguration configuration) {
-    super(terminologyClient, toClose);
+      @Nonnull final HttpClientCachingConfiguration configuration,
+      @Nonnull final Closeable... resourcesToClose) {
+    super(terminologyClient, resourcesToClose);
     this.configuration = configuration;
-    cacheManager = buildCacheManager();
+    // register manager as a closeable resource
+    cacheManager = registerResource(buildCacheManager());
     validateCodeCache = (Cache<Integer, TerminologyResult<Boolean>>) buildCache(cacheManager,
         VALIDATE_CODE_CACHE_NAME);
     subsumesCache = (Cache<Integer, TerminologyResult<ConceptSubsumptionOutcome>>) buildCache(
@@ -138,8 +139,9 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property) {
-    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property);
+      @Nullable final String property, @Nullable final String acceptLanguage) {
+    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property,
+            acceptLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return getFromCache(lookupCache, parameters, executor);
   }

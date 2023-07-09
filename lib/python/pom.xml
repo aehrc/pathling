@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.3.0-SNAPSHOT</version>
+    <version>6.3.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
@@ -43,8 +43,7 @@
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
-      <artifactId>library-api</artifactId>
-      <classifier>all</classifier>
+      <artifactId>library-runtime</artifactId>
     </dependency>
   </dependencies>
 
@@ -90,7 +89,6 @@
               <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <classifier>all</classifier>
               <excludeTransitive>true</excludeTransitive>
             </configuration>
           </execution>
@@ -243,7 +241,7 @@
                     <argument>--jars</argument>
                     <argument>${project.build.directory}/dependency/*</argument>
                     <argument>--packages</argument>
-                    <argument>io.delta:delta-core_2.12:2.3.0</argument>
+                    <argument>io.delta:delta-core_${pathling.scalaVersion}:${pathling.deltaVersion}</argument>
                     <argument>--conf</argument>
                     <argument>spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension</argument>
                     <argument>--conf</argument>

@@ -24,6 +24,7 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.call_udf;
 import static org.apache.spark.sql.functions.lit;
 
+import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.sql.udf.DesignationUdf;
 import au.csiro.pathling.sql.udf.DisplayUdf;
 import au.csiro.pathling.sql.udf.MemberOfUdf;
@@ -164,7 +165,65 @@ public interface Terminology {
    */
   @Nonnull
   static Column display(@Nonnull final Column coding) {
-    return call_udf(DisplayUdf.FUNCTION_NAME, coding);
+    return display(coding, null);
+  }
+
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the canonical display
+   * name associated with the given code in preferred language when specified.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param acceptLanguage the optional language preferences for the returned display name.
+   * Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
+   * @return the Column containing the result of the operation (String)
+   */
+  @Nonnull
+  static Column display(@Nonnull final Column coding, @Nullable final String acceptLanguage) {
+    return call_udf(DisplayUdf.FUNCTION_NAME, coding, lit(acceptLanguage));
+  }
+
+  /**
+   * Takes a Coding column as its input. Returns the Column, which contains the values of properties
+   * for this coding with specified names and types. The type of the result column depends on the
+   * types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
+   * Complex types are mapped to their corresponding structs. The allowed property types are: code |
+   * Coding | string | integer | boolean | dateTime | decimal.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve
+   * @param propertyType the type of the property to retrieve
+   * @param acceptLanguage the optional language preferences for the returned property values.
+   * Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
+   * @return the Column containing the result of the operation (array of property values)
+   */
+  @Nonnull
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nonnull final FHIRDefinedType propertyType, @Nullable final String acceptLanguage) {
+    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode),
+        lit(acceptLanguage));
+  }
+
+  /**
+   * Retrieves properties of a concept.
+   *
+   * @param coding a Column containing a struct representation of a Coding
+   * @param propertyCode the code of the property to retrieve
+   * @param propertyType the FHIR data type of the property
+   * @param acceptLanguage the optional language preferences for the returned property values.
+   * Overrides the value of {@link TerminologyConfiguration#getAcceptLanguage()}.
+   * @return the Column containing the result of the operation (array of property values)
+   * @see Terminology#property_of(Column, String, FHIRDefinedType)
+   */
+  @Nonnull
+  static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
+      @Nullable final String propertyType, @Nullable final String acceptLanguage) {
+
+    return property_of(coding, propertyCode,
+        nonNull(propertyType)
+        ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
+        : PropertyUdf.DEFAULT_PROPERTY_TYPE,
+        acceptLanguage);
   }
 
   /**
@@ -182,7 +241,7 @@ public interface Terminology {
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nonnull final FHIRDefinedType propertyType) {
-    return call_udf(PropertyUdf.getNameForType(propertyType), coding, lit(propertyCode));
+    return property_of(coding, propertyCode, propertyType, null);
   }
 
   /**
@@ -197,11 +256,7 @@ public interface Terminology {
   @Nonnull
   static Column property_of(@Nonnull final Column coding, @Nonnull final String propertyCode,
       @Nullable final String propertyType) {
-
-    return property_of(coding, propertyCode,
-        nonNull(propertyType)
-        ? wrapInUserInputError(FHIRDefinedType::fromCode).apply(propertyType)
-        : PropertyUdf.DEFAULT_PROPERTY_TYPE);
+    return property_of(coding, propertyCode, propertyType, null);
   }
 
   /**

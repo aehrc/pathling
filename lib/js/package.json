@@ -1,6 +1,6 @@
 {
   "name": "pathling-client",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Client library for the Pathling FHIR API.",
   "type": "module",
   "main": "lib/index.js",

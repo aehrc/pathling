@@ -62,14 +62,15 @@ public class PropertyFunction implements NamedFunction {
     final String propertyCode = arguments.getValue(0, StringType.class).asStringValue();
     final String propertyTypeAsString = arguments.getValueOr(1,
         new StringType(PropertyUdf.DEFAULT_PROPERTY_TYPE.toCode())).asStringValue();
+    final Optional<StringType> preferredLanguage = arguments.getOptionalValue(2, StringType.class);
 
     final FHIRDefinedType propertyType = wrapInUserInputError(FHIRDefinedType::fromCode).apply(
         propertyTypeAsString);
 
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
-        propertyType);
-
+        propertyType, preferredLanguage.map(StringType::getValue).orElse(null));
+    
     // // The result is an array of property values per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
     final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
@@ -102,11 +103,13 @@ public class PropertyFunction implements NamedFunction {
         "Input to property function must be Coding but is: " + inputPath.getExpression());
 
     final List<FhirPath> arguments = input.getArguments();
-    checkUserInput(arguments.size() >= 1 && arguments.size() <= 2,
+    checkUserInput(arguments.size() >= 1 && arguments.size() <= 3,
         NAME + " function accepts one required and one optional arguments");
     checkUserInput(arguments.get(0) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 1));
     checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 2));
+    checkUserInput(arguments.size() <= 2 || arguments.get(2) instanceof StringLiteralPath,
+        String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 3));
   }
 }

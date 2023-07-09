@@ -1,2 +1,2 @@
 pyspark==3.3.2
-deprecated==1.2.13
+deprecated==1.2.14

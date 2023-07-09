@@ -51,7 +51,7 @@ jobs:
       - name: Run the deploy goal with Maven
         run: |
           mvn --batch-mode deploy \
-          -pl fhir-server,library-api -am \
+          -pl fhir-server,library-api,library-runtime -am \
           -PmavenRelease,docs \
           -DskipTests \
           -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"

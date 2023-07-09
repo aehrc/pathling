@@ -59,7 +59,7 @@ import org.hl7.fhir.r4.model.Type;
  */
 @Slf4j
 public class PropertyUdf implements SqlFunction,
-    SqlFunction2<Row, String, Object[]> {
+    SqlFunction3<Row, String, String, Object[]> {
 
   private static final long serialVersionUID = 7605853352299165569L;
   private static final String FUNCTION_BASE_NAME = "property";
@@ -137,13 +137,14 @@ public class PropertyUdf implements SqlFunction,
   }
 
   @Nullable
-  protected Object[] doCall(@Nullable final Coding coding, @Nullable final String propertyCode) {
+  protected Object[] doCall(@Nullable final Coding coding, @Nullable final String propertyCode,
+      @Nullable final String acceptLanguage) {
     if (propertyCode == null || !isValidCoding(coding)) {
       return null;
     }
     final TerminologyService terminologyService = terminologyServiceFactory.build();
     final List<PropertyOrDesignation> result = terminologyService.lookup(
-        requireNonNull(coding), propertyCode);
+        requireNonNull(coding), propertyCode, acceptLanguage);
 
     return result.stream()
         .filter(s -> s instanceof Property)
@@ -169,10 +170,11 @@ public class PropertyUdf implements SqlFunction,
 
   @Nullable
   @Override
-  public Object[] call(@Nullable final Row codingRow, @Nullable final String propertyCode) {
+  public Object[] call(@Nullable final Row codingRow, @Nullable final String propertyCode,
+      @Nullable final String acceptLanguage) {
     return encodeArray(doCall(nonNull(codingRow)
                               ? decode(codingRow)
-                              : null, propertyCode));
+                              : null, propertyCode, acceptLanguage));
   }
 
   /**

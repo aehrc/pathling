@@ -49,10 +49,10 @@ import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 public class DefaultTerminologyService extends BaseTerminologyService {
 
   public DefaultTerminologyService(@Nonnull final TerminologyClient terminologyClient,
-      @Nullable final Closeable toClose) {
-    super(terminologyClient, toClose);
+      @Nonnull final Closeable... resourcesToClose) {
+    super(terminologyClient, resourcesToClose);
   }
-
+  
   @Override
   public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     final ValidateCodeParameters parameters = new ValidateCodeParameters(valueSetUrl,
@@ -84,14 +84,15 @@ public class DefaultTerminologyService extends BaseTerminologyService {
   @Nonnull
   @Override
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
-      @Nullable final String property) {
-    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property);
+      @Nullable final String property, @Nullable final String acceptLanguage) {
+    final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property,
+        acceptLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return requireNonNull(execute(executor));
   }
 
 
-  @Nullable
+  @Nonnull
   private static <ResponseType, ResultType> ResultType execute(
       @Nonnull final TerminologyOperation<ResponseType, ResultType> operation) {
     final Optional<ResultType> invalidResult = operation.validate();

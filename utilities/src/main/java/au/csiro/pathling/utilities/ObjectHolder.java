@@ -19,13 +19,14 @@ package au.csiro.pathling.utilities;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static java.util.Objects.requireNonNull;
+import static org.apache.commons.io.IOUtils.closeQuietly;
 
 import java.io.Closeable;
 import java.io.Serializable;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.curator.utils.CloseableUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
 
 /**
  * Represents a scoped storage for instances of type V that can be created from configuration of
@@ -51,15 +52,23 @@ public interface ObjectHolder<C extends Serializable, V> {
    */
   void reset();
 
-  class SingletonHolder<C extends Serializable, V> implements ObjectHolder<C, V> {
+  class SingletonHolder<C extends Serializable, V> implements ObjectHolder<C, V>, Closeable {
 
     @Nonnull
-    final Function<C, V> constructor;
+    private final Function<C, V> constructor;
 
     @Nullable
     private C configuration;
     @Nullable
     private V instance;
+
+    /**
+     * The default priority of the shutdown hook. This is set to be executed after the SparkContext
+     * shutdown hook (which has priority 50) and before temporary dirs are cleaned up (priority 25).
+     * See {@link org.apache.spark.util.ShutdownHookManager} for more info on Spark related shutdown
+     * hooks.
+     */
+    public static int DEFAULT_SHUTDOWN_HOOK_PRIORITY = 30;
 
     private SingletonHolder(@Nonnull final Function<C, V> constructor) {
       this.constructor = constructor;
@@ -81,10 +90,19 @@ public interface ObjectHolder<C extends Serializable, V> {
     @Override
     public synchronized void reset() {
       if (instance instanceof Closeable) {
-        CloseableUtils.closeQuietly((Closeable) instance);
+        closeQuietly((Closeable) instance);
         instance = null;
         configuration = null;
       }
+    }
+
+    /**
+     * Closes this singleton and releases any system resources associated with it. If the singleton
+     * is already closed then invoking this method has no effect.
+     */
+    @Override
+    public void close() {
+      reset();
     }
   }
 
@@ -93,12 +111,35 @@ public interface ObjectHolder<C extends Serializable, V> {
    * another instance with different configuration will fail.
    *
    * @param constructor the function that creates new instance from the configuration.
+   * @param closeOnShutdown whether to close the instance on JVM shutdown.
+   * @param shutdownHookPriority the priority of the shutdown hook.
+   * @param <C> the type of the configuration.
+   * @param <V> the type of the instance.
+   * @return the singleton holder.
+   */
+  static <C extends Serializable, V> ObjectHolder<C, V> singleton(
+      @Nonnull final Function<C, V> constructor, final boolean closeOnShutdown,
+      final int shutdownHookPriority) {
+    final SingletonHolder<C, V> singletonHolder = new SingletonHolder<>(constructor);
+    if (closeOnShutdown) {
+      ShutdownHookManager.get().addShutdownHook(() -> closeQuietly(singletonHolder),
+          shutdownHookPriority);
+    }
+    return singletonHolder;
+  }
+
+  /**
+   * Creates the holder allowing a single instance to be created per process. Attempts to create
+   * another instance with different configuration will fail. The instance will be closed on JVM
+   * shutdown.
+   *
+   * @param constructor the function that creates new instance from the configuration.
    * @param <C> the type of the configuration.
    * @param <V> the type of the instance.
    * @return the singleton holder.
    */
   static <C extends Serializable, V> ObjectHolder<C, V> singleton(
       @Nonnull final Function<C, V> constructor) {
-    return new SingletonHolder<>(constructor);
+    return singleton(constructor, true, SingletonHolder.DEFAULT_SHUTDOWN_HOOK_PRIORITY);
   }
 }

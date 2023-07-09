@@ -190,19 +190,25 @@ def subsumed_by(left_coding: CodingArg, right_coding: CodingArg) -> Column:
     )
 
 
-def display(coding: CodingArg) -> Column:
+def display(coding: CodingArg, accept_language: Optional[str] = None) -> Column:
     """
     Takes a Coding column as its input. Returns the Column, which contains the canonical display
     name associated with the given code.
 
     :param coding: a Column containing a struct representation of a Coding.
+    :param accept_language: the optional language preferences for the returned display name.
+            Overrides the parameter `accept_language` in
+            :func:`PathlingContext.create <pathling.PathlingContext.create>`.
     :return: a Column containing the result of the operation (String).
     """
-    return _invoke_udf("display", _coding_to_java_column(coding))
+    return _invoke_udf("display", _coding_to_java_column(coding), accept_language)
 
 
 def property_of(
-    coding: CodingArg, property_code: str, property_type: str = PropertyType.STRING
+    coding: CodingArg,
+    property_code: str,
+    property_type: str = PropertyType.STRING,
+    accept_language: Optional[str] = None,
 ) -> Column:
     """
     Takes a Coding column as its input. Returns the Column, which contains the values of properties
@@ -215,10 +221,22 @@ def property_of(
     :param coding: a Column containing a struct representation of a Coding
     :param property_code: the code of the property to retrieve.
     :param property_type: the type of the property to retrieve.
+    :param accept_language: the optional language preferences for the returned property values.
+            Overrides the parameter `accept_language` in
+            :func:`PathlingContext.create <pathling.PathlingContext.create>`.
     :return: the Column containing the result of the operation (array of property values)
     """
+    FHIRDefinedType_property_type = (
+        _get_jvm().org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.fromCode(
+            property_type
+        )
+    )
     return _invoke_udf(
-        "property_of", _coding_to_java_column(coding), property_code, property_type
+        "property_of",
+        _coding_to_java_column(coding),
+        property_code,
+        FHIRDefinedType_property_type,
+        accept_language,
     )
 
 

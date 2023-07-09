@@ -17,10 +17,14 @@
 
 package au.csiro.pathling.fhir;
 
+import static java.util.Objects.nonNull;
+
+import au.csiro.pathling.utilities.ResourceCloser;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.http.HttpHeaders;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.CodeType;
@@ -29,16 +33,19 @@ import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.UriType;
 import org.hl7.fhir.r4.model.ValueSet;
+import java.io.Closeable;
 
 /**
  * An implementation of {@link TerminologyClient} that uses cacheable GET requests.
  */
-class DefaultTerminologyClient implements TerminologyClient {
+class DefaultTerminologyClient extends ResourceCloser implements TerminologyClient {
 
   @Nonnull
   final IGenericClient fhirClient;
 
-  DefaultTerminologyClient(@Nonnull final IGenericClient fhirClient) {
+  DefaultTerminologyClient(@Nonnull final IGenericClient fhirClient, @Nonnull final Closeable...
+      resourcesToAdopt) {
+    super(resourcesToAdopt);
     this.fhirClient = fhirClient;
   }
 
@@ -133,15 +140,17 @@ class DefaultTerminologyClient implements TerminologyClient {
   @Override
   public Parameters lookup(@Nonnull final UriType system,
       @Nullable final StringType version, @Nonnull final CodeType code,
-      @Nullable final CodeType property) {
-    return buildLookup(system, version, code, property).execute();
+      @Nullable final CodeType property,
+      @Nullable final StringType acceptLanguage) {
+    return buildLookup(system, version, code, property, acceptLanguage).execute();
   }
 
   @Nonnull
   @Override
   public IOperationUntypedWithInput<Parameters> buildLookup(@Nonnull final UriType system,
       @Nullable final StringType version,
-      @Nonnull final CodeType code, @Nullable final CodeType property) {
+      @Nonnull final CodeType code, @Nullable final CodeType property,
+      @Nullable final StringType preferredLanguage) {
     final Parameters params = new Parameters();
     params.addParameter().setName("system").setValue(system);
     params.addParameter().setName("code").setValue(code);
@@ -151,11 +160,16 @@ class DefaultTerminologyClient implements TerminologyClient {
     if (property != null) {
       params.addParameter().setName("property").setValue(property);
     }
-    return fhirClient.operation()
+    final IOperationUntypedWithInput<Parameters> operation = fhirClient.operation()
         .onType(CodeSystem.class)
         .named("$lookup")
         .withParameters(params)
         .useHttpGet();
+
+    return nonNull(preferredLanguage)
+           ? operation.withAdditionalHeader(HttpHeaders.ACCEPT_LANGUAGE,
+        preferredLanguage.getValue())
+           : operation;
   }
 
 }

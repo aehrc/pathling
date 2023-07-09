@@ -26,6 +26,5 @@ csv = pc.spark.read.options(header=True).csv(
 )
 
 # Obtain display name for snomed codes
-
 result = csv.withColumn("DISPLAY_NAME", display(to_snomed_coding(csv.CODE)))
 result.select("CODE", "DESCRIPTION", "DISPLAY_NAME").show()

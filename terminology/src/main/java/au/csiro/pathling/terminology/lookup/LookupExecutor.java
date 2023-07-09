@@ -45,8 +45,7 @@ import org.hl7.fhir.r4.model.UriType;
  * An implementation of {@link TerminologyOperation} for the lookup operation.
  *
  * @author John Grimes
- * @see <a
- * href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
+ * @see <a href="https://www.hl7.org/fhir/R4/codesystem-operation-lookup.html">CodeSystem/$lookup</a>
  */
 public class LookupExecutor implements
     TerminologyOperation<Parameters, ArrayList<PropertyOrDesignation>> {
@@ -80,13 +79,12 @@ public class LookupExecutor implements
   @Nonnull
   public IOperationUntypedWithInput<Parameters> buildRequest() {
     final ImmutableCoding coding = parameters.getCoding();
-    final String property = parameters.getProperty();
-   
     return terminologyClient.buildLookup(
         TerminologyParameters.required(UriType::new, coding.getSystem()),
         TerminologyParameters.optional(StringType::new, coding.getVersion()),
         TerminologyParameters.required(CodeType::new, coding.getCode()),
-        TerminologyParameters.optional(CodeType::new, property)
+        TerminologyParameters.optional(CodeType::new, parameters.getProperty()),
+        TerminologyParameters.optional(StringType::new, parameters.getAcceptLanguage())
     );
   }
 

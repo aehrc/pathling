@@ -96,7 +96,7 @@ you will need to configure Pathling as a Spark package.
 You can do this by adding the following to your `spark-defaults.conf` file:
 
 ```
-spark.jars.packages au.csiro.pathling:library-api:[some version]
+spark.jars.packages au.csiro.pathling:library-runtime:[some version]
 ```
 
 See the [Configuration](https://spark.apache.org/docs/latest/configuration.html)
@@ -110,7 +110,7 @@ this:
 FROM jupyter/all-spark-notebook
 
 USER root
-RUN echo "spark.jars.packages au.csiro.pathling:library-api:[some version]" >> /usr/local/spark/conf/spark-defaults.conf
+RUN echo "spark.jars.packages au.csiro.pathling:library-runtime:[some version]" >> /usr/local/spark/conf/spark-defaults.conf
 
 USER ${NB_UID}
 

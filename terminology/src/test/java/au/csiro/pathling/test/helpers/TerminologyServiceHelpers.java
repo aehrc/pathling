@@ -206,7 +206,7 @@ public class TerminologyServiceHelpers {
     @Nonnull
     public LookupExpectations withDisplay(@Nonnull final Coding coding,
         @Nonnull final String displayName) {
-      when(mockService.lookup(codingEq(coding), eq("display")))
+      when(mockService.lookup(codingEq(coding), eq("display"), eq(null)))
           .thenReturn(List.of(
               Property.of("display", new StringType(displayName))));
       return this;
@@ -217,11 +217,32 @@ public class TerminologyServiceHelpers {
       return withDisplay(coding, coding.getDisplay());
     }
 
+    @Nonnull
+    public LookupExpectations withDisplay(@Nonnull final Coding coding,
+        @Nonnull final String displayName, @Nullable final String acceptLanguage) {
+      when(mockService.lookup(codingEq(coding), eq("display"), eq(acceptLanguage)))
+          .thenReturn(List.of(
+              Property.of("display", new StringType(displayName))));
+      return this;
+    }
+    
     @SafeVarargs
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
         @Nonnull final String propertyCode, final T... values) {
       when(mockService.lookup(deepEq(coding), eq(propertyCode))).thenReturn(
+          Stream.of(values)
+              .map(v -> Property.of(propertyCode, v))
+              .collect(Collectors.toUnmodifiableList())
+      );
+      return this;
+    }
+
+    @SafeVarargs
+    @Nonnull
+    public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
+        @Nonnull final String propertyCode, @Nullable final String displayLanguage, final T... values) {
+      when(mockService.lookup(deepEq(coding), eq(propertyCode), eq(displayLanguage))).thenReturn(
           Stream.of(values)
               .map(v -> Property.of(propertyCode, v))
               .collect(Collectors.toUnmodifiableList())

@@ -25,7 +25,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>6.3.0-SNAPSHOT</version>
+    <version>6.3.0</version>
   </parent>
   <artifactId>library-api</artifactId>
   <packaging>jar</packaging>
@@ -221,35 +221,6 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <createDependencyReducedPom>false</createDependencyReducedPom>
-          <shadedArtifactAttached>true</shadedArtifactAttached>
-          <shadedClassifierName>all</shadedClassifierName>
-          <filters>
-            <filter>
-              <artifact>*:*</artifact>
-              <excludes>
-                <exclude>META-INF/MANIFEST.MF</exclude>
-              </excludes>
-            </filter>
-          </filters>
-          <transformers>
-            <transformer
-              implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-          </transformers>
-        </configuration>
       </plugin>
     </plugins>
   </build>

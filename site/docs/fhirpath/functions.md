@@ -137,18 +137,27 @@ currently unique to the Pathling implementation.
 ## display
 
 ```
-collection<Coding> -> display() : collection<String>
+collection<Coding> -> display(language?: String) : collection<String>
 ```
 
 When invoked on a [Coding](./data-types#coding), returns the preferred display 
 term, according to the terminology server.
 
+The optional `language` parameter can be used to specify the preferred language 
+for the display name. It overrides the default value set in the configuration. 
+See `pathling.terminology.acceptLanguage` in 
+[Terminology Configuration](/docs/server/configuration#terminology-service) 
+for details.
+
 Example:
 
 ```
+// With no argument
 Condition.code.display()
-```
 
+// Prefer German language.
+Condition.code.display("de")
+```
 :::note
 The `display` function is a terminology function, which means that it requires
 a configured
@@ -324,7 +333,7 @@ See also: [ofType](https://hl7.org/fhirpath/#oftypetype-identifier-collection)
 ## property
 
 ```
-collection<Coding> -> property(code: String, type = 'string') : collection<String|Integer|DateTime|Decimal|Coding>
+collection<Coding> -> property(code: String, type: String = 'string', language?: String) : collection<String|Integer|DateTime|Decimal|Coding>
 ```
 
 When invoked on a [Coding](./data-types#coding), returns any matching property
@@ -344,13 +353,23 @@ Both the `code` and the `type` of the property must be present within a
 order for it to be returned by this function. If there are no matches, the 
 function will return an empty collection.
 
+The optional `language` parameter can be used to specify the preferred language
+for the returned property values. It overrides the default value set in the 
+configuration. See `pathling.terminology.acceptLanguage` in
+[Terminology Configuration](/docs/server/configuration#terminology-service)
+for details.
+
 See [Properties](https://www.hl7.org/fhir/codesystem.html#properties)
 in the FHIR specification for more information.
 
 Example:
 
 ```
+// Select the code-typed property "parent".
 Condition.code.coding.property('parent', 'code')
+
+// Select the "parent" property, preferring the German language.
+Condition.code.coding.property('parent', 'code', 'de')
 ```
 
 :::note

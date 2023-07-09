@@ -33,6 +33,7 @@ import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_40
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CD_SNOMED_VER_63816008;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_AUTOMAP_DEFAULT;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.CM_HIST_ASSOCIATIONS;
+import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_29463_7;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_55915_3;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.SNOMED_URI;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.newVersionedCoding;
@@ -43,11 +44,13 @@ import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
+import static org.apache.http.HttpHeaders.ACCEPT_LANGUAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.io.CacheableDatabase;
+import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Designation;
 import au.csiro.pathling.terminology.TerminologyService.Property;
@@ -64,7 +67,9 @@ import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.StringType;
 import org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -108,6 +113,17 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
 
   private TerminologyService terminologyService;
 
+
+  @BeforeAll
+  public static void beforeAll() {
+    DefaultTerminologyServiceFactory.reset();
+  }
+
+  @AfterAll
+  public static void afterAll() {
+    DefaultTerminologyServiceFactory.reset();
+  }
+
   @BeforeEach
   @Override
   void setUp() {
@@ -126,7 +142,8 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     if (isRecordMode()) {
       log.warn("Recording snapshots to: {}", wireMockServer.getOptions().filesRoot());
       wireMockServer
-          .snapshotRecord(new RecordSpecBuilder().matchRequestBodyWithEqualToJson(true, false));
+          .snapshotRecord(new RecordSpecBuilder().captureHeader(ACCEPT_LANGUAGE)
+              .matchRequestBodyWithEqualToJson(true, false));
     }
     super.tearDown();
   }
@@ -282,6 +299,20 @@ class TerminologyServiceIntegrationTest extends WireMockTest {
     // assertEquals(
     //     Collections.emptyList(),
     //     terminologyService.lookup(CD_SNOMED_403190006_VERSION_UNKN, "display", null));
+  }
+
+
+  @Test
+  void testLookupDisplayPropertyWithLanguage() {
+    assertEquals(
+        List.of(Property.of("display", new StringType(
+            "Beta-2-Globulin [Masse/Volumen] in Zerebrospinalflüssigkeit mit Elektrophorese"))),
+        terminologyService.lookup(LC_55915_3, "display", "de-DE;q=0.9,fr-FR;q=0.8"));
+
+    assertEquals(
+        List.of(Property.of("display", new StringType(
+            "Poids corporel [Masse] Patient ; Numérique"))),
+        terminologyService.lookup(LC_29463_7, "display", "fr-FR"));
   }
 
   @Test
