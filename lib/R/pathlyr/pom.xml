@@ -34,6 +34,7 @@
   <description>A library for using Pathling with R Sparklyr.</description>
 
   <properties>
+    <skipTests.R>${skipTests}</skipTests.R>
   </properties>
 
   <dependencies>
@@ -74,6 +75,30 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-compile</id>
+            <phase>none</phase>
+          </execution>
+          <execution>
+            <id>default-testCompile</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <phase>none</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
@@ -83,7 +108,6 @@
               <goal>copy-dependencies</goal>
             </goals>
             <configuration>
-              <classifier>all</classifier>
               <excludeTransitive>true</excludeTransitive>
               <outputDirectory>${project.basedir}/inst/java</outputDirectory>
             </configuration>
@@ -106,6 +130,21 @@
               <arguments>
                 <argument>-e</argument>
                 <argument>roxygen2::roxygenise()</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>run-testthat</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>Rscript</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-e</argument>
+                <argument>devtools::test()</argument>
               </arguments>
             </configuration>
           </execution>

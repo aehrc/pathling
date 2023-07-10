@@ -1,6 +1,5 @@
 #' @import sparklyr
 
-
 #' @param sc A sparkyr spark connection
 #' @return The result of some calculation
 #' @export

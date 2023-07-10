@@ -2,7 +2,6 @@
 # This file is part of the Pathlyr package for R.
 # Terminology functions
 #
-#'@import rlang
 
 #' @export
 SNOMED_URI = 'http://snomed.info/sct'

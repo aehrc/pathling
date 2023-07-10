@@ -2,7 +2,7 @@ Package: pathlyr
 Type: Package
 Title: Pathling R API for sparklyr
 Version: 0.0.1
-Authors@R: c(
+Author: c(
     person("Piotr", "Szul", email = "piotr.szul@csiro.u", role = c("aut", "cre"))
     )
 Maintainer: "Piotr Szul" <piotr.szul@csiro.au>
@@ -13,9 +13,10 @@ LazyData: TRUE
 Depends:
     R (>= 3.1.2)
 Imports:
-    rprojroot,
-    digest
+    rlang,
+    sparklyr
 Remotes: rstudio/sparklyr
 Suggests:
-    testthat
+    testthat (>= 3.0.0)
 RoxygenNote: 7.1.1
+Config/testthat/edition: 3

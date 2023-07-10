@@ -34,3 +34,4 @@ spark-warehouse
 #R
 *.Rproj
 
+.Rproj.user
