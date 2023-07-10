@@ -1,0 +1,21 @@
+Package: pathlyr
+Type: Package
+Title: Pathling R API for sparklyr
+Version: 0.0.1
+Authors@R: c(
+    person("Piotr", "Szul", email = "piotr.szul@csiro.u", role = c("aut", "cre"))
+    )
+Maintainer: "Piotr Szul" <piotr.szul@csiro.au>
+Description: sparklyr based API for Pathling 
+    with support for encoding, terminology and queries.
+License: MIT LICENSE
+LazyData: TRUE
+Depends:
+    R (>= 3.1.2)
+Imports:
+    rprojroot,
+    digest
+Remotes: rstudio/sparklyr
+Suggests:
+    testthat
+RoxygenNote: 7.1.1

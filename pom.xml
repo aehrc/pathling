@@ -107,6 +107,7 @@
     <module>lib/import</module>
     <module>lib/js</module>
     <module>lib/python</module>
+    <module>lib/R/pathlyr</module>
     <module>site</module>
     <module>utilities</module>
   </modules>
