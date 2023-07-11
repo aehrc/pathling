@@ -315,8 +315,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .debugAllRows();
-    // .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
   }
 
   @Test
@@ -334,6 +333,24 @@ class ExtractQueryTest {
     assertThat(result)
         .hasRows(spark,
             "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.csv");
+  }
+
+  @Test
+  void linkedUnnesting() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.given")
+        .withColumn("name.family")
+        .withColumn("name.use")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    result.show(false);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/linkedUnnesting.csv");
   }
 
   @Test

@@ -77,14 +77,15 @@ public class ExtractQueryExecutor extends QueryExecutor {
         Collections.singletonList(inputContext.getIdColumn()));
     final List<FhirPathAndContext> parsedColumns =
         parseExpressions(parserContext, query.getColumnsAsStrings());
-    final List<FhirPathAndContext> coercedColumns =
-        validateAndCoerceColumns(parsedColumns, resultType);
-    final Dataset<Row> queryDataset = joinAllColumns(coercedColumns);
+    // final List<FhirPathAndContext> coercedColumns =
+    //     validateAndCoerceColumns(parsedColumns, resultType);
+    // final Dataset<Row> queryDataset = joinAllColumns(coercedColumns);
 
     // Trim trailing nulls.
     // final Dataset<Row> trimmedDataset = trimTrailingNulls(
     //     parserContext.getInputContext().getIdColumn(), coercedColumns, queryDataset);
-    final Dataset<Row> trimmedDataset = queryDataset;
+    final Dataset<Row> trimmedDataset = parsedColumns.get(parsedColumns.size() - 1).getFhirPath()
+        .getDataset();
 
     // Apply the filters.
     final List<String> filters = query.getFilters();
@@ -94,7 +95,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     // Select the column values.
     final Column idColumn = inputContext.getIdColumn();
     final Column[] columnValues = labelColumns(
-        coercedColumns.stream()
+        parsedColumns.stream()
             .map(FhirPathAndContext::getFhirPath)
             .map(FhirPath::getValueColumn),
         labelsAsStream(query.getColumns())
