@@ -21,7 +21,6 @@ StorageType <- list(
 #' will be reused - and it is assumed that the Pathling library API JAR is already on the
 #' classpath. If you are running your own cluster, make sure it is on the list of packages.
 #'
-#' @param cls The class object (not used in the implementation)
 #' @param spark A pre-configured SparkSession instance, use this if you need to control the way
 #'   that the session is set up
 #' @param max_nesting_level Controls the maximum depth of nested element data that is encoded
