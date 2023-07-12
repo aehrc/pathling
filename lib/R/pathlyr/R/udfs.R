@@ -68,7 +68,7 @@ Equivalence <- list(
 #'
 #' @export
 trm_member_of <- function(coding, value_set_uri) {
-  rlang::expr(member_of({{coding}}, {{value_set}}))
+  rlang::expr(member_of({{coding}}, {{value_set_uri}}))
 }
 
 

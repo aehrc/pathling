@@ -35,3 +35,4 @@ spark-warehouse
 *.Rproj
 
 .Rproj.user
+/lib/R/pathlyr/.Rhistory
