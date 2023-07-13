@@ -61,19 +61,22 @@ def pathling_ctx(request, temp_warehouse_dir):
     # Get the shaded JAR for testing purposes.
     spark = (
         SparkSession.builder.appName("pathling-test")
-        .master("local[1]")
-        .config("spark.jars", find_pathling_jar(verbose=True))
-        .config("spark.driver.memory", "4g")
-        .config("spark.jars.packages", "io.delta:delta-core_2.12:2.3.0")
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-        .config(
+            .master("local[1]")
+            .config("spark.jars", find_pathling_jar(verbose=True))
+            .config("spark.driver.memory", "4g")
+            .config("spark.driver.extraJavaOptions",
+                    "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896")
+            .config("spark.jars.packages", "io.delta:delta-core_2.12:2.3.0")
+            .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+            .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
         )
-        .config("spark.sql.catalogImplementation", "hive")
-        .config("spark.sql.warehouse.dir", temp_warehouse_dir)
-        .getOrCreate()
+            .config("spark.sql.catalogImplementation", "hive")
+            .config("spark.sql.warehouse.dir", temp_warehouse_dir)
+            .getOrCreate()
     )
+    # noinspection SqlNoDataSourceInspection
     spark.sql("CREATE DATABASE IF NOT EXISTS test")
 
     request.addfinalizer(lambda: spark.stop())
@@ -81,10 +84,10 @@ def pathling_ctx(request, temp_warehouse_dir):
     jvm = spark._jvm
     encoders = (
         jvm.au.csiro.pathling.encoders.FhirEncoders.forR4()
-        .withMaxNestingLevel(0)
-        .withExtensionsEnabled(False)
-        .withOpenTypes(jvm.java.util.Collections.emptySet())
-        .getOrCreate()
+            .withMaxNestingLevel(0)
+            .withExtensionsEnabled(False)
+            .withOpenTypes(jvm.java.util.Collections.emptySet())
+            .getOrCreate()
     )
     terminology_service_factory = (
         jvm.au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory()
