@@ -14,11 +14,11 @@
 #  limitations under the License.
 
 #' @export
-SNOMED_URI = 'http://snomed.info/sct'
+SNOMED_URI <- 'http://snomed.info/sct'
 
 #' @export
 snomed_code <-function(code) {
-  rlang::expr(struct(NULL, SNOMED_URI, NULL, string({{code}}), NULL, NULL))
+  rlang::expr(if (!is.null(code)) struct(NULL, SNOMED_URI, NULL, string({{code}}), NULL, NULL) else NULL)
 }
 
 #' Allowed property types.
@@ -51,6 +51,17 @@ Equivalence <- list(
 )
 
 
+#' Converts a vector to an expression with the corresponding SQL array litera.
+#' @param value A character or numeric vector to be converted
+#' @return The `quosure` with the SQL array literal that can be used in dplyr::mutate.
+to_array <- function(value) {
+  if (!is.null(value)) {
+    new_quosure(rlang::expr(array(!!!value)))
+  } else {
+    new_quosure(rlang::expr(NULL))
+  }
+}
+
 #' Checks if Coding is a member of ValueSet.
 #'
 #' Takes a Coding or array of Codings column as its input. Returns the column which contains a
@@ -70,7 +81,6 @@ Equivalence <- list(
 trm_member_of <- function(coding, value_set_uri) {
   rlang::expr(member_of({{coding}}, {{value_set_uri}}))
 }
-
 
 #' Translates a Coding column.
 #'
@@ -96,8 +106,8 @@ trm_member_of <- function(coding, value_set_uri) {
 #'
 #' @export
 trm_translate <- function(coding, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
-  rlang::expr(translate({{ coding }}, {{ concept_map_uri }}, {{ reverse }},
-    {{ equivalences }}, {{ target }}))
+  rlang::expr(translate_coding({{ coding }}, {{ concept_map_uri }}, {{ reverse }},
+      !!to_array(equivalences), {{ target }}))
 }
 
 #' Checks if left Coding subsumes right Coding.

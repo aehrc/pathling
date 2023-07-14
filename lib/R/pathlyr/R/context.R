@@ -1,4 +1,11 @@
-#' @import sparklyr
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 
 
 EQ_EQUIVALENT <- "equivalent"
@@ -136,9 +143,8 @@ ptl_connect <- function(
   }
 
   # TODO: Refactor - create  builder in Java for API config
-  encoders_config <- invoke_static(
-    spark, "au.csiro.pathling.config.EncodingConfiguration", "builder"
-  ) %>%
+  encoders_config <- spark %>% invoke_static(
+    "au.csiro.pathling.config.EncodingConfiguration", "builder") %>%
     invoke("maxNestingLevel", as.integer(max_nesting_level)) %>%
     invoke("enableExtensions", as.logical(enable_extensions)) %>%
     #invoke("openTypes", as(jvm$java.util.HashSet(enabled_open_types), "java.util.Set")) %>%

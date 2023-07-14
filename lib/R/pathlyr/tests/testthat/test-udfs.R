@@ -1,4 +1,4 @@
-spark_session <- function() {
+def_spark <- function() {
   # Get the shaded JAR for testing purposes.
   spark <- sparklyr::spark_connect(master = "local[2]", config = list(
     #"spark.sql.warehouse.dir" = fs::dir_create_temp(),
@@ -9,31 +9,61 @@ spark_session <- function() {
   spark
 }
 
+
+def_ptl_context <- function(spark) {
+
+    encoders <- spark %>%
+      invoke_static("au.csiro.pathling.encoders.FhirEncoders", "forR4") %>%
+      invoke("withMaxNestingLevel", as.integer(0)) %>%
+      invoke("withExtensionsEnabled", as.logical(FALSE)) %>%
+      invoke("withOpenTypes", invoke_static(spark, "java.util.Collections", "emptySet")) %>%
+      invoke("getOrCreate")
+
+    terminology_service_factory <- spark %>%
+       invoke_new("au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory")
+
+    spark %>%
+      invoke_static("au.csiro.pathling.library.PathlingContext", "create",
+                   spark_session(spark), encoders, terminology_service_factory)
+}
+
 LOINC_URI <- "http://loinc.org"
 
-snomed_coding_row <- function(code) {
-    list(
-      id = NA,
-      system = SNOMED_URI,
-      version = NA,
-      code = code,
-      display = NA,
-      userSelected = NA,
-      `_fid` = NA
+
+coding_row <- function(system, code) {
+   coding <- list(
+      x0_id = NA,
+      x1_system = system ,
+      x2_version = NA,
+      x3_code = code,
+      x4_display = NA,
+      x5_userSelected = NA,
+      x6__fid = NA
     )
+  jsonlite::toJSON(
+    as.list(coding),
+    na = "null",
+    auto_unbox = TRUE,
+    digits = NA
+  )
+}
+
+snomed_coding_row <- function(code) {
+  coding_row(SNOMED_URI, code)
 }
 
 loinc_coding_row <- function(code) {
+  coding_row(LOINC_URI, code)
+}
 
-    list(
-      id = NA,
-      system = LOINC_URI,
-      version = NA,
-      code = code,
-      display = NA,
-      userSelected = NA,
-      `_fid` = NA
-    )
+
+snomed_coding_result <- function(code) {
+  list(system = SNOMED_URI, code = code)
+}
+
+
+loinc_coding_result <- function(code) {
+  list(system = LOINC_URI, code = code)
 }
 
 
@@ -42,18 +72,17 @@ select_expr <-function(...) {
 }
 
 test_that("member_of", {
-  spark <- spark_session()
-  pc <- ptl_connect(spark)
+  spark <- def_spark()
+  pc <- def_ptl_context(spark)
 
   df <- spark  %>% sdf_copy_to(
     tibble::tibble(
         id = c("code-1", "code-2", "code-3"),
-        code = list(
+        code = c(
           snomed_coding_row("368529001"),
           loinc_coding_row("55915-3"),
-          NULL
-        )
-      )
+          NA)
+      ), overwrite = TRUE, struct_columns = 'code'
     )
 
   result_df_col <- df %>%
@@ -102,3 +131,129 @@ test_that("member_of", {
     )
   )
 })
+
+
+test_that("translate", {
+  spark <- def_spark()
+  pc <- def_ptl_context(spark)
+
+  df <- spark  %>% sdf_copy_to(
+    tibble::tibble(
+      id = c("id-1", "id-2", "id-3"),
+      code = c(
+        snomed_coding_row("368529001"),
+        loinc_coding_row("55915-3"),
+        NA)
+    ), overwrite = TRUE, struct_columns = 'code'
+  )
+
+  result_df <- df %>%
+    select_expr(
+      id,
+      result = !!trm_translate(code, "http://snomed.info/sct?fhir_cm=100")
+    )
+
+  expect_equal(
+    sdf_collect(result_df),
+    tibble::tibble(
+      id = c("id-1", "id-2", "id-3"),
+      result = list(
+        list(snomed_coding_result("368529002")),
+        list(),
+        NA
+      )
+    )
+  )
+
+  result_df <- df %>%
+    select_expr(
+      id,
+      result = !!trm_translate(
+        code,
+        "http://snomed.info/sct?fhir_cm=100",
+        equivalences = c("equivalent", "relatedto")
+      )
+    )
+
+  expect_equal(
+    sdf_collect(result_df),
+    tibble::tibble(
+      id = c("id-1", "id-2", "id-3"),
+      result = list(
+        list(snomed_coding_result("368529002"), loinc_coding_result("55916-3")),
+        list(),
+        NA
+      )
+    )
+  )
+
+  result_df <- df %>%
+    select_expr(
+      id,
+      result = !!trm_translate(
+        code,
+        "http://snomed.info/sct?fhir_cm=100",
+        equivalences = c("equivalent", "relatedto"),
+        target = LOINC_URI
+      )
+    )
+
+  expect_equal(
+    sdf_collect(result_df),
+    tibble::tibble(
+      id = c("id-1", "id-2", "id-3"),
+      result = list(
+        list(loinc_coding_result("55916-3")),
+        list(),
+        NA
+      )
+    )
+  )
+
+  result_df <- df %>%
+    select_expr(
+      id,
+      result = !!trm_translate(
+        code,
+        "http://snomed.info/sct?fhir_cm=200",
+        equivalences = c("equivalent", "relatedto")
+      )
+    )
+
+  expect_equal(
+    sdf_collect(result_df),
+    tibble::tibble(
+      id = c("id-1", "id-2", "id-3"),
+      result = list(
+        list(),
+        list(),
+        NA
+      )
+    )
+  )
+
+  result_df <- df %>%
+    head(1) %>%
+    select_expr(
+      id,
+      result = !!trm_translate(
+        !!trm_to_coding("55915-3", LOINC_URI),
+        "http://snomed.info/sct?fhir_cm=200",
+        reverse = TRUE,
+        equivalences = c("relatedto")
+      )
+    )
+
+  expect_equal(
+    sdf_collect(result_df),
+    tibble::tibble(
+      id = "id-1",
+      result = list(
+        list(snomed_coding_result("368529002"))
+      )
+    )
+  )
+})
+
+
+

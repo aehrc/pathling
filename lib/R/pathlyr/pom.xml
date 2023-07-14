@@ -32,11 +32,7 @@
 
   <name>Pathling R Sparklyr API</name>
   <description>A library for using Pathling with R Sparklyr.</description>
-
-  <properties>
-    <skipTests.R>${skipTests}</skipTests.R>
-  </properties>
-
+  
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
@@ -144,7 +140,7 @@
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
                 <argument>-e</argument>
-                <argument>devtools::test()</argument>
+                <argument>devtools::test(stop_on_failure = TRUE)</argument>
               </arguments>
             </configuration>
           </execution>
