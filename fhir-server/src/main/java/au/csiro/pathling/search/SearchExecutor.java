@@ -173,10 +173,10 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
           }
 
           // Update the context to build the next expression from the same dataset.
-          currentContext = currentContext
-              .copy(currentContext.getExpression(), fhirPath.getDataset(), fhirPath.getIdColumn(),
-                  currentContext.getEidColumn(), fhirPath.getValueColumn(),
-                  currentContext.isSingular(), currentContext.getThisColumn());
+          currentContext = currentContext.copy(currentContext.getExpression(),
+              fhirPath.getDataset(), fhirPath.getIdColumn(), fhirPath.getValueColumn(),
+              fhirPath.getOrderingColumn(), currentContext.isSingular(),
+              currentContext.getThisColumn());
         }
 
         // Combine all the columns at this level with AND logic.

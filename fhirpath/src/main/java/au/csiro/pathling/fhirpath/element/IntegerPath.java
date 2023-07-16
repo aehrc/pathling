@@ -56,11 +56,11 @@ public class IntegerPath extends ElementPath implements FhirValue<PrimitiveType>
           NullLiteralPath.class);
 
   protected IntegerPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
+    super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -165,7 +165,7 @@ public class IntegerPath extends ElementPath implements FhirValue<PrimitiveType>
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getNumericValueColumn(), targetValueColumn);
       final Column idColumn = source.getIdColumn();
-      final Optional<Column> eidColumn = findEidColumn(source, target);
+      final Optional<Column> orderingColumn = findOrderingColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {
@@ -177,14 +177,14 @@ public class IntegerPath extends ElementPath implements FhirValue<PrimitiveType>
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
           return ElementPath
-              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, source.getFhirType());
+              .build(expression, dataset, idColumn, valueColumn, orderingColumn, true,
+                  Optional.empty(), thisColumn, source.getFhirType());
         case DIVISION:
           final Column numerator = source.getValueColumn().cast(DecimalPath.getDecimalType());
           valueColumn = operation.getSparkFunction().apply(numerator, targetValueColumn);
           return ElementPath
-              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, FHIRDefinedType.DECIMAL);
+              .build(expression, dataset, idColumn, valueColumn, orderingColumn, true,
+                  Optional.empty(), thisColumn, FHIRDefinedType.DECIMAL);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -200,8 +200,9 @@ public class IntegerPath extends ElementPath implements FhirValue<PrimitiveType>
   @Nonnull
   public FhirPath asStringPath(@Nonnull final String expression) {
     final Column valueColumn = getValueColumn().cast(DataTypes.StringType);
-    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
-        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
+    return ElementPath.build(expression, getDataset(), getIdColumn(), valueColumn,
+        getOrderingColumn(), isSingular(), getCurrentResource(), getThisColumn(),
+        FHIRDefinedType.STRING);
   }
 
 }

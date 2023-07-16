@@ -61,11 +61,11 @@ public class DateTimePath extends ElementPath implements FhirValue<BaseDateTimeT
   public static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
   protected DateTimePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
+    super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -138,8 +138,9 @@ public class DateTimePath extends ElementPath implements FhirValue<BaseDateTimeT
     } else {
       valueColumn = getValueColumn();
     }
-    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
-        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
+    return ElementPath.build(expression, getDataset(), getIdColumn(), valueColumn,
+        getOrderingColumn(), isSingular(), getCurrentResource(), getThisColumn(),
+        FHIRDefinedType.STRING);
   }
 
 }

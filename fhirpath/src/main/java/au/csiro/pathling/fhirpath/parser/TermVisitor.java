@@ -72,15 +72,14 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
       // In the case of %resource and %context, the new expression will be the input context with the
       // expression updated to match the external constant term.
       return inputContext.copy(term, inputContext.getDataset(), inputContext.getIdColumn(),
-          inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-          inputContext.getThisColumn());
+          inputContext.getValueColumn(), inputContext.getOrderingColumn(),
+          inputContext.isSingular(), inputContext.getThisColumn());
     } else {
       final String variableName = term.replaceFirst("%", "");
       final FhirPathAndContext variable = context.getVariables().get(variableName);
       if (variable == null) {
         throw new IllegalArgumentException("Unknown variable: " + variableName);
       }
-      context.getNodeIdColumns().putAll(variable.getContext().getNodeIdColumns());
       return variable.getFhirPath();
     }
   }

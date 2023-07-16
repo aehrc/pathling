@@ -29,7 +29,6 @@ import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
@@ -42,7 +41,6 @@ import com.google.common.collect.Streams;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BinaryOperator;
@@ -92,25 +90,32 @@ public abstract class QueryExecutor {
   protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
       @Nonnull final List<Column> groupingColumns) {
     return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns, new HashMap<>());
+        terminologyServiceFactory, groupingColumns);
   }
 
   @Nonnull
-  protected List<FhirPathAndContext> parseExpressions(
+  protected List<FhirPath> parseExpressions(
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions) {
-    final List<FhirPathAndContext> parsed = new ArrayList<>();
-    ParserContext currentContext = parserContext;
+    return parseExpressions(parserContext, expressions, Optional.empty());
+  }
+
+  @Nonnull
+  protected List<FhirPath> parseExpressions(
+      @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions,
+      @Nonnull final Optional<Dataset<Row>> contextDataset) {
+    final List<FhirPath> parsed = new ArrayList<>();
+    ParserContext currentContext = contextDataset.map(parserContext::withContextDataset).orElse(
+        parserContext);
     for (final String expression : expressions) {
       if (parsed.size() > 0) {
-        final FhirPathAndContext lastParsed = parsed.get(parsed.size() - 1);
+        final FhirPath lastParsed = parsed.get(parsed.size() - 1);
         // Create a new copy of the original parser context, except use the dataset from the last 
         // column parse and reset the node IDs.
-        currentContext = parserContext.withContextDataset(
-            lastParsed.getFhirPath().getDataset());
+        currentContext = parserContext.withContextDataset(lastParsed.getDataset());
       }
       final Parser parser = new Parser(currentContext);
       // Add the parse result to the list of parsed expressions.
-      parsed.add(new FhirPathAndContext(parser.parse(expression), currentContext));
+      parsed.add(parser.parse(expression));
     }
     return parsed;
   }
@@ -141,7 +146,7 @@ public abstract class QueryExecutor {
     return filters.stream()
         .map(FhirPath::getDataset)
         .reduce(combinedGroupings,
-            ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
+            ((result, element) -> join(result, idColumn, element, idColumn, JoinType.LEFT_OUTER)));
   }
 
   @Nonnull
@@ -156,7 +161,7 @@ public abstract class QueryExecutor {
         // the use of RIGHT_OUTER join seems to be necessary to preserve the original
         // id column in the result
         .reduce(inputContext.getDataset(),
-            ((result, element) -> join(element, idColumn, result, idColumn, JoinType.RIGHT_OUTER)));
+            ((result, element) -> join(result, idColumn, element, idColumn, JoinType.LEFT_OUTER)));
   }
 
 
@@ -245,10 +250,10 @@ public abstract class QueryExecutor {
                      : operator.apply(filterColumn, filterValue);
 
       // Update the context to build the next expression from the same dataset.
-      currentContext = currentContext
-          .copy(currentContext.getExpression(), fhirPath.getDataset(), currentContext.getIdColumn(),
-              currentContext.getEidColumn(), currentContext.getValueColumn(),
-              currentContext.isSingular(), currentContext.getThisColumn());
+      currentContext = currentContext.copy(currentContext.getExpression(), fhirPath.getDataset(),
+          currentContext.getIdColumn(), currentContext.getValueColumn(),
+          currentContext.getOrderingColumn(), currentContext.isSingular(),
+          currentContext.getThisColumn());
     }
     requireNonNull(filterColumn);
 

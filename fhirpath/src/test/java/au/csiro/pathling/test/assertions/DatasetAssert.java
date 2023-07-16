@@ -86,6 +86,8 @@ public class DatasetAssert {
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath) {
+    dataset.explain();
+    dataset.show(1000, false);
     assertDatasetAgainstCsv(spark, expectedCsvPath, dataset);
     return this;
   }

@@ -21,6 +21,7 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
 
+import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -50,12 +51,12 @@ public class ElementPathBuilder {
   private Column idColumn;
 
   @Nonnull
-  private Optional<Column> eidColumn;
-
-  @Nonnull
   private Column valueColumn;
 
   private boolean singular;
+
+  @Nonnull
+  private Nesting nesting;
 
   @Nonnull
   private FHIRDefinedType fhirType;
@@ -77,8 +78,8 @@ public class ElementPathBuilder {
         .build();
     idColumn = col(dataset.columns()[0]);
     valueColumn = col(dataset.columns()[1]);
-    eidColumn = Optional.empty();
     singular = false;
+    nesting = new Nesting();
     fhirType = FHIRDefinedType.NULL;
     definition = mock(ElementDefinition.class);
   }
@@ -95,7 +96,6 @@ public class ElementPathBuilder {
   public ElementPathBuilder idAndEidAndValueColumns() {
     final IdAndValueColumns idAndValueColumns = getIdAndValueColumns(dataset, true);
     idColumn = idAndValueColumns.getId();
-    eidColumn = idAndValueColumns.getEid();
     valueColumn = idAndValueColumns.getValues().get(0);
     return this;
   }
@@ -131,6 +131,12 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
+  public ElementPathBuilder nestingColumns(@Nonnull final Nesting nesting) {
+    this.nesting = nesting;
+    return this;
+  }
+
+  @Nonnull
   public ElementPathBuilder fhirType(@Nonnull final FHIRDefinedType fhirType) {
     this.fhirType = fhirType;
     return this;
@@ -156,17 +162,13 @@ public class ElementPathBuilder {
 
   @Nonnull
   public ElementPath build() {
-    return ElementPath
-        .build(expression, dataset, idColumn, eidColumn,
-            valueColumn, singular, Optional.ofNullable(currentResource),
-            Optional.ofNullable(thisColumn), fhirType);
+    return ElementPath.build(expression, dataset, idColumn, valueColumn, Optional.empty(), singular,
+        Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), fhirType);
   }
 
   @Nonnull
   public ElementPath buildDefined() {
-    return ElementPath
-        .build(expression, dataset, idColumn, eidColumn,
-            valueColumn, singular, Optional.ofNullable(currentResource),
-            Optional.ofNullable(thisColumn), definition);
+    return ElementPath.build(expression, dataset, idColumn, valueColumn, Optional.empty(), singular,
+        Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), definition);
   }
 }

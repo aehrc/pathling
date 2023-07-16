@@ -55,8 +55,8 @@ public class NotFunction implements NamedFunction {
     final Column valueColumn = not(inputPath.getValueColumn());
 
     return ElementPath
-        .build(expression, inputPath.getDataset(), inputPath.getIdColumn(),
-            inputPath.getEidColumn(), valueColumn, inputPath.isSingular(), Optional.empty(),
+        .build(expression, inputPath.getDataset(), inputPath.getIdColumn(), valueColumn,
+            inputPath.getOrderingColumn(), inputPath.isSingular(), Optional.empty(),
             inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 

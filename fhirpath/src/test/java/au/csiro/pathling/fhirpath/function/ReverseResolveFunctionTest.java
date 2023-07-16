@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -44,6 +45,7 @@ import au.csiro.pathling.test.helpers.FhirHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
@@ -242,10 +244,14 @@ class ReverseResolveFunctionTest {
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
-    final BaseRuntimeChildDefinition childDefinition = fhirContext
-        .getResourceDefinition("Encounter").getChildByName("episodeOfCare");
-    final ElementDefinition definition = ElementDefinition
-        .build(childDefinition, "episodeOfCare");
+    final RuntimeResourceDefinition hapiResourceDef = fhirContext.getResourceDefinition(
+        "Encounter");
+    final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.ENCOUNTER,
+        hapiResourceDef, Optional.empty());
+    final BaseRuntimeChildDefinition childDefinition = hapiResourceDef.getChildByName(
+        "episodeOfCare");
+    final ElementDefinition definition = ElementDefinition.build(childDefinition, "episodeOfCare",
+        resourceDefinition);
     final ElementPath argument = new ElementPathBuilder(spark)
         .expression("Encounter.episodeOfCare")
         .fhirType(FHIRDefinedType.REFERENCE)

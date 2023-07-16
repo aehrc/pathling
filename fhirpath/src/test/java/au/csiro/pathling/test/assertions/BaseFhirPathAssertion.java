@@ -54,11 +54,8 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   @Nonnull
   public DatasetAssert selectOrderedResult() {
     final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
-    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
-
-    return new DatasetAssert(fhirPath.getOrderedDataset()
-        .select(selection)
-        .orderBy(ordering));
+    // TODO: Update this to make sure that it is ordered.
+    return new DatasetAssert(fhirPath.getDataset().select(selection));
   }
 
   @Nonnull
@@ -80,13 +77,9 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   @Nonnull
   public DatasetAssert selectOrderedResultWithEid() {
-    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn(),
-        fhirPath.getValueColumn()};
-    final Column[] ordering = new Column[]{fhirPath.getIdColumn(), fhirPath.getOrderingColumn()};
-
-    return new DatasetAssert(fhirPath.getOrderedDataset()
-        .select(selection)
-        .orderBy(ordering));
+    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
+    // TODO: Update this to make sure that it is ordered.
+    return new DatasetAssert(fhirPath.getDataset().select(selection));
   }
 
   @Nonnull

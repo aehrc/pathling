@@ -17,15 +17,15 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.createColumns;
+import static au.csiro.pathling.QueryHelpers.explodeArray;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -54,7 +54,7 @@ public class PathTraversalOperator {
    * @return A {@link FhirPath} object representing the resulting expression
    */
   @Nonnull
-  public ElementPath invoke(@Nonnull final PathTraversalInput input) {
+  public NonLiteralPath invoke(@Nonnull final PathTraversalInput input) {
     checkUserInput(input.getLeft() instanceof NonLiteralPath,
         "Path traversal operator cannot be invoked on a literal value: " + input.getLeft()
             .getExpression());
@@ -74,6 +74,11 @@ public class PathTraversalOperator {
     final ElementDefinition childDefinition = optionalChild.get();
 
     final Dataset<Row> leftDataset = left.getDataset();
+    final Nesting nesting = input.getContext().getNesting();
+
+    // If the element has a max cardinality of more than one, it will need to be unnested.
+    final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
+    final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
 
     final Column field;
     if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(right)) {
@@ -84,49 +89,31 @@ public class PathTraversalOperator {
       field = getValueField(left, right);
     }
 
-    // If the element has a max cardinality of more than one, it will need to be "exploded" out into
-    // multiple rows.
-    final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
-    final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
-
-    final Column valueColumn;
-    final Optional<Column> eidColumnCandidate;
-    final Dataset<Row> resultDataset;
     final UnnestBehaviour unnestBehaviour = input.getContext().getUnnestBehaviour();
 
-    if (maxCardinalityOfOne || unnestBehaviour == UnnestBehaviour.NOOP) {
-      valueColumn = field;
-      eidColumnCandidate = left.getEidColumn();
-      resultDataset = leftDataset;
-    } else if (unnestBehaviour == UnnestBehaviour.ERROR) {
+    if (!maxCardinalityOfOne && unnestBehaviour == UnnestBehaviour.ERROR) {
       throw new InvalidUserInputError("Encountered a repeating element: " + expression);
+
+    } else if (maxCardinalityOfOne || unnestBehaviour == UnnestBehaviour.NOOP) {
+      return ElementPath.build(expression, leftDataset, left.getIdColumn(), field,
+          Optional.empty(), resultSingular, left.getCurrentResource(), left.getThisColumn(),
+          childDefinition);
+
     } else if (unnestBehaviour == UnnestBehaviour.UNNEST) {
-      final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
-      final Dataset<Row> explodedDataset = left.explodeArray(leftDataset, field,
-          valueAndEidColumns);
-      final DatasetWithColumnMap datasetWithColumnMap = createColumns(explodedDataset,
-          valueAndEidColumns.getLeft(), valueAndEidColumns.getRight());
-      resultDataset = datasetWithColumnMap.getDataset();
-      valueColumn = datasetWithColumnMap.getColumn(valueAndEidColumns.getLeft());
-      eidColumnCandidate = Optional.of(
-          datasetWithColumnMap.getColumn(valueAndEidColumns.getRight()));
+      return nesting.updateOrRetrieve(childDefinition, expression, leftDataset, false,
+          left.getThisColumn(), key -> {
+            final MutablePair<Column, Column> valueAndOrderingColumns = new MutablePair<>();
+            final Dataset<Row> resultDataset = explodeArray(left.getDataset(), field,
+                valueAndOrderingColumns);
+            return ElementPath.build(expression, resultDataset, left.getIdColumn(),
+                valueAndOrderingColumns.getLeft(), Optional.of(valueAndOrderingColumns.getRight()),
+                false, left.getCurrentResource(), left.getThisColumn(), childDefinition);
+          });
+
     } else {
       throw new UnsupportedOperationException("Unsupported unnest behaviour: " + unnestBehaviour);
     }
 
-    final Optional<Column> eidColumn = resultSingular
-                                       ? Optional.empty()
-                                       : eidColumnCandidate;
-
-    // If there is an element ID column, we need to add it to the parser context so that it can
-    // be used within joins in certain situations, e.g. extract.
-    if (unnestBehaviour == UnnestBehaviour.UNNEST && !maxCardinalityOfOne) {
-      eidColumn.ifPresent(c -> input.getContext().addNodeId(childDefinition, c));
-    }
-
-    return ElementPath
-        .build(expression, resultDataset, left.getIdColumn(), eidColumn, valueColumn,
-            resultSingular, left.getCurrentResource(), left.getThisColumn(), childDefinition);
   }
 
   @Nonnull

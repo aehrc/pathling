@@ -51,11 +51,11 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
       .of(QuantityPath.class, QuantityLiteralPath.class, NullLiteralPath.class);
 
   protected QuantityPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
+    super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -192,16 +192,15 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
           null).otherwise(validResult);
 
       final Column idColumn = source.getIdColumn();
-      final Optional<Column> eidColumn = findEidColumn(source, target);
+      final Optional<Column> orderingColumn = findOrderingColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
       return
           elementDefinition.map(definition -> ElementPath
-              .build(expression, dataset, idColumn, eidColumn, resultQuantityColumn, true,
-                  Optional.empty(),
-                  thisColumn, definition)).orElseGet(() -> ElementPath
-              .build(expression, dataset, idColumn, eidColumn, resultQuantityColumn, true,
-                  Optional.empty(),
-                  thisColumn, FHIRDefinedType.QUANTITY));
+                  .build(expression, dataset, idColumn, resultQuantityColumn, orderingColumn, true,
+                      Optional.empty(), thisColumn, definition))
+              .orElseGet(() -> ElementPath
+                  .build(expression, dataset, idColumn, resultQuantityColumn, orderingColumn, true,
+                      Optional.empty(), thisColumn, FHIRDefinedType.QUANTITY));
 
     };
   }

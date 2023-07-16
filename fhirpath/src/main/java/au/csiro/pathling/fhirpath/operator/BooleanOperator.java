@@ -17,13 +17,10 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findEidColumn;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -105,14 +102,12 @@ public class BooleanOperator implements Operator {
     }
 
     final String expression = left.getExpression() + " " + type + " " + right.getExpression();
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
     final Column idColumn = left.getIdColumn();
-    final Optional<Column> eidColumn = findEidColumn(left, right);
     final Optional<Column> thisColumn = findThisColumn(left, right);
 
     return ElementPath
-        .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-            thisColumn, FHIRDefinedType.BOOLEAN);
+        .build(expression, right.getDataset(), idColumn, valueColumn, Optional.empty(), true,
+            Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
   }
 
   /**

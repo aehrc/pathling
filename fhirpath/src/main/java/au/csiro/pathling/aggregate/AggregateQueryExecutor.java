@@ -116,10 +116,9 @@ public class AggregateQueryExecutor extends QueryExecutor {
     // instead of just the raw resource. This is so that any aggregations that are performed
     // during the parse can use these columns for grouping, rather than the identity of each
     // resource.
-    final ResourcePath aggregationContext = inputContext
-        .copy(inputContext.getExpression(), groupingsAndFilters, idColumn,
-            inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-            Optional.empty());
+    final ResourcePath aggregationContext = inputContext.copy(inputContext.getExpression(),
+        groupingsAndFilters, idColumn, inputContext.getValueColumn(),
+        inputContext.getOrderingColumn(), inputContext.isSingular(), Optional.empty());
     final ParserContext aggregationParserContext = buildParserContext(aggregationContext,
         groupingColumns);
     final Parser aggregationParser = new Parser(aggregationParserContext);

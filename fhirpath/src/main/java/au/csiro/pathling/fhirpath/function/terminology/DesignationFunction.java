@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.function.terminology;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.designation;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static org.apache.spark.sql.functions.explode_outer;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -33,7 +34,6 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -68,14 +68,11 @@ public class DesignationFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column designations = designation(inputPath.getValueColumn(), use, languageCode);
 
-    // // The result is an array of designations per each input element, which we now
-    // // need to explode in the same way as for path traversal, creating unique element ids.
-    final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
-    final Dataset<Row> resultDataset = inputPath
-        .explodeArray(dataset, designations, valueAndEidColumns);
-    return ElementPath.build(expression, resultDataset, inputPath.getIdColumn(),
-        Optional.of(valueAndEidColumns.getRight()),
-        valueAndEidColumns.getLeft(), inputPath.isSingular(), inputPath.getCurrentResource(),
+    // The result is an array of designations per each input element, which we now need to explode 
+    // in the same way as for path traversal, creating unique element ids.
+    final Column explodedDesignations = explode_outer(designations);
+    return ElementPath.build(expression, dataset, inputPath.getIdColumn(), explodedDesignations,
+        Optional.empty(), inputPath.isSingular(), inputPath.getCurrentResource(),
         inputPath.getThisColumn(), FHIRDefinedType.STRING);
   }
 

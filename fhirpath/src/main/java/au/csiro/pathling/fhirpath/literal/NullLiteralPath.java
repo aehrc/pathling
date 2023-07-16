@@ -41,8 +41,8 @@ public class NullLiteralPath extends LiteralPath<StringType> implements Comparab
     // We put a dummy String value in here as a placeholder so that we can satisfy the nullability 
     // constraints within LiteralValue. It is never accessed.
     super(dataset, idColumn, new StringType(EXPRESSION));
-    // But then we also need to override the value column
-    // to be a null literal rather then the placeholder value literal.
+    // We also need to override the value column to be a null literal rather than the placeholder 
+    // value literal.
     this.valueColumn = lit(null);
   }
 

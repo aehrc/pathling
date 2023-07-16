@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import com.google.common.collect.ImmutableMap;
@@ -104,7 +105,7 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
 
   @Nonnull
   protected final Optional<String> expression;
-  
+
   private LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final ValueType value, @Nonnull final Optional<String> expression) {
     this.idColumn = idColumn;
@@ -164,23 +165,6 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
     return true;
   }
 
-  @Override
-  public boolean hasOrder() {
-    return true;
-  }
-
-  @Nonnull
-  @Override
-  public Dataset<Row> getOrderedDataset() {
-    return getDataset();
-  }
-
-  @Nonnull
-  @Override
-  public Column getOrderingColumn() {
-    return ORDERING_NULL_VALUE;
-  }
-
   /**
    * @return A column representing the value for this literal.
    */
@@ -207,21 +191,18 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
   @Nonnull
   public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
     if (target instanceof LiteralPath && getClass().equals(target.getClass())) {
       // If the target is another LiteralPath, we can merge it if they have the same FHIR type, as
       // decided by our mapping of literal FHIRPath types to FHIR types.
       final FHIRDefinedType fhirType = fhirPathToFhirType(getClass());
-      return ElementPath
-          .build(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
-              thisColumn, fhirType);
+      return ElementPath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),
+          singular, Optional.empty(), thisColumn, fhirType);
     } else if (target instanceof ElementPath) {
       // If the target is an ElementPath, we delegate off to the ElementPath to do the merging.
-      return target
-          .combineWith(this, dataset, expression, idColumn, eidColumn, valueColumn, singular,
-              thisColumn);
+      return target.combineWith(this, dataset, expression, idColumn, valueColumn, singular,
+          thisColumn);
     }
     // Anything else is invalid.
     throw new InvalidUserInputError(
@@ -238,6 +219,17 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
   @Override
   public Dataset<Row> getUnionableDataset(@Nonnull final FhirPath target) {
     return getDataset().select(getUnionableColumns(this, target).toArray(new Column[]{}));
+  }
+
+  @Override
+  public Optional<Column> getOrderingColumn() {
+    return Optional.empty();
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> getOrderedDataset(@Nonnull final Nesting nesting) {
+    return dataset;
   }
 
 }

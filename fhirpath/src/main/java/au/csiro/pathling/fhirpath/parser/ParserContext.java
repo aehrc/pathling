@@ -19,16 +19,15 @@ package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
+import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
@@ -100,18 +99,14 @@ public class ParserContext {
   @Nonnull
   private Optional<FhirPath> thisContext = Optional.empty();
 
-  /**
-   * Stores away columns relating to the identity of resources and elements, for later retrieval
-   * using the string path. This is used for element and resource-identity aware joins.
-   */
-  @Nonnull
-  private final Map<Object, Set<Column>> nodeIdColumns;
-
   @Nonnull
   private final UnnestBehaviour unnestBehaviour;
 
   @Nonnull
   private final Map<String, FhirPathAndContext> variables;
+
+  @Nonnull
+  private final Nesting nesting;
 
   /**
    * @param inputContext the input context from which the FHIRPath is to be evaluated
@@ -121,17 +116,15 @@ public class ParserContext {
    * @param dataSource for retrieving data relating to resource references
    * @param terminologyServiceFactory a factory for {@link TerminologyService} objects, used for
    * parallel processing
-   * @param groupingColumns the list of columns to group on when aggregating
-   * @param nodeIdColumns columns relating to the identity of resources and elements for different
-   * paths parsed within this context
+   * @param groupingColumns the list of columns to group on when aggregating paths parsed within
+   * this context
    */
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
-      @Nonnull final List<Column> groupingColumns,
-      @Nonnull final Map<Object, Set<Column>> nodeIdColumns) {
+      @Nonnull final List<Column> groupingColumns) {
     this(inputContext, fhirContext, sparkSession, dataSource, terminologyServiceFactory,
-        groupingColumns, nodeIdColumns, UnnestBehaviour.UNNEST, new HashMap<>());
+        groupingColumns, UnnestBehaviour.UNNEST, new HashMap<>(), new Nesting());
   }
 
   /**
@@ -143,26 +136,24 @@ public class ParserContext {
    * @param terminologyServiceFactory a factory for {@link TerminologyService} objects, used for
    * parallel processing
    * @param groupingColumns the list of columns to group on when aggregating
-   * @param nodeIdColumns columns relating to the identity of resources and elements for different
-   * paths parsed within this context
    * @param unnestBehaviour the execution context to use
    */
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final List<Column> groupingColumns,
-      @Nonnull final Map<Object, Set<Column>> nodeIdColumns,
       @Nonnull final UnnestBehaviour unnestBehaviour,
-      @Nonnull final Map<String, FhirPathAndContext> variables) {
+      @Nonnull final Map<String, FhirPathAndContext> variables,
+      @Nonnull final Nesting nesting) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.dataSource = dataSource;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.groupingColumns = groupingColumns;
-    this.nodeIdColumns = nodeIdColumns;
     this.unnestBehaviour = unnestBehaviour;
     this.variables = variables;
+    this.nesting = nesting;
   }
 
   public void setThisContext(@Nonnull final FhirPath thisContext) {
@@ -177,7 +168,7 @@ public class ParserContext {
    */
   public ParserContext withUnnestBehaviour(@Nonnull final UnnestBehaviour unnestBehaviour) {
     return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns, nodeIdColumns, unnestBehaviour, variables);
+        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
   }
 
   /**
@@ -189,11 +180,7 @@ public class ParserContext {
   public ParserContext withContextDataset(@Nonnull final Dataset<Row> contextDataset) {
     final FhirPath newInputContext = inputContext.withDataset(contextDataset);
     return new ParserContext(newInputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns, new HashMap<>(), unnestBehaviour, variables);
-  }
-
-  public void addNodeId(@Nonnull final Object key, @Nonnull final Column value) {
-    nodeIdColumns.computeIfAbsent(key, k -> new HashSet<>()).add(value);
+        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
   }
 
 }

@@ -49,9 +49,6 @@ public class UntypedResourcePathBuilder {
   private Column idColumn;
 
   @Nonnull
-  private Optional<Column> eidColumn;
-
-  @Nonnull
   private Column valueColumn;
 
   private boolean singular;
@@ -61,7 +58,6 @@ public class UntypedResourcePathBuilder {
 
   public UntypedResourcePathBuilder(@Nonnull final SparkSession spark) {
     expression = "";
-    eidColumn = Optional.empty();
     dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withColumn(DataTypes.StringType)
@@ -81,7 +77,6 @@ public class UntypedResourcePathBuilder {
   @Nonnull
   public UntypedResourcePathBuilder idEidAndValueColumns() {
     idColumn = functions.col(dataset.columns()[0]);
-    eidColumn = Optional.of(functions.col(dataset.columns()[1]));
     valueColumn = functions.col(dataset.columns()[2]);
     return this;
   }
@@ -120,7 +115,6 @@ public class UntypedResourcePathBuilder {
   public UntypedResourcePath build() {
     final ReferencePath referencePath = mock(ReferencePath.class);
     when(referencePath.getIdColumn()).thenReturn(idColumn);
-    when(referencePath.getEidColumn()).thenReturn(eidColumn);
     when(referencePath.getValueColumn()).thenReturn(valueColumn);
     when(referencePath.getDataset()).thenReturn(dataset);
     when(referencePath.isSingular()).thenReturn(singular);

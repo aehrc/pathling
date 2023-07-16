@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
+import static au.csiro.pathling.QueryHelpers.explodeArray;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.getCodingColumn;
 import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
@@ -101,15 +102,15 @@ public class TranslateFunction implements NamedFunction {
 
     // // The result is an array of translations per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
-    final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
-    final Dataset<Row> resultDataset = inputPath
-        .explodeArray(dataset, translatedCodings, valueAndEidColumns);
+    final MutablePair<Column, Column> valueAndOrderingColumns = new MutablePair<>();
+    final Dataset<Row> resultDataset = explodeArray(dataset, translatedCodings,
+        valueAndOrderingColumns);
 
     final String expression = expressionFromInput(input, NAME);
 
-    return ElementPath.build(expression, resultDataset, idColumn,
-        Optional.of(valueAndEidColumns.getRight()), valueAndEidColumns.getLeft(), false,
-        inputPath.getCurrentResource(), inputPath.getThisColumn(), resultDefinition);
+    return ElementPath.build(expression, resultDataset, idColumn, valueAndOrderingColumns.getLeft(),
+        Optional.of(valueAndOrderingColumns.getRight()), false, inputPath.getCurrentResource(),
+        inputPath.getThisColumn(), resultDefinition);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {
@@ -132,5 +133,5 @@ public class TranslateFunction implements NamedFunction {
     checkUserInput(arguments.size() <= 2 || arguments.get(2) instanceof StringLiteralPath,
         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 3));
   }
-  
+
 }

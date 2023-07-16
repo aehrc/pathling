@@ -40,8 +40,8 @@ public interface Temporal {
   /**
    * Gets a function that can take the {@link QuantityLiteralPath} representing a time duration and
    * return a {@link FhirPath} that contains the result of date arithmetic operation for this path
-   * and the provided duration. The type of operation is controlled by supplying a {@link
-   * MathOperation}.
+   * and the provided duration. The type of operation is controlled by supplying a
+   * {@link MathOperation}.
    *
    * @param operation The {@link MathOperation} type to retrieve a result for
    * @param dataset The {@link Dataset} to use within the result
@@ -77,7 +77,6 @@ public interface Temporal {
       final String additionFunctionName, final String subtractionFunctionName) {
     return target -> {
       final String functionName;
-      final Optional<Column> eidColumn = NonLiteralPath.findEidColumn(source, target);
       final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(source, target);
 
       switch (operation) {
@@ -93,9 +92,8 @@ public interface Temporal {
 
       final Column valueColumn = functions.callUDF(functionName, source.getValueColumn(),
           target.getValueColumn());
-      return ElementPath.build(expression, dataset, source.getIdColumn(), eidColumn, valueColumn,
-          true,
-          Optional.empty(), thisColumn, FHIRDefinedType.DATETIME);
+      return ElementPath.build(expression, dataset, source.getIdColumn(), valueColumn,
+          Optional.empty(), true, Optional.empty(), thisColumn, FHIRDefinedType.DATETIME);
     };
   }
 

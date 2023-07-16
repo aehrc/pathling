@@ -18,16 +18,19 @@
 package au.csiro.pathling.test.helpers;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -134,7 +137,7 @@ public abstract class SparkHelpers {
     requireNonNull(coding);
 
     final List<Row> codings = coding.stream().map(SparkHelpers::rowFromCoding)
-        .collect(Collectors.toList());
+        .collect(toList());
     final Buffer<Row> buffer = JavaConverters.asScalaBuffer(codings);
     requireNonNull(buffer);
 
@@ -175,6 +178,19 @@ public abstract class SparkHelpers {
   public static Row rowForUcumQuantity(@Nonnull final String value,
       @Nonnull final String unit) {
     return rowForUcumQuantity(new BigDecimal(value), unit);
+  }
+
+  @Nonnull
+  public static Dataset<Row> selectValuesAndNodes(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final List<FhirPath> paths, @Nonnull final ParserContext context) {
+    final List<Column> columns = new ArrayList<>();
+    columns.addAll(
+        paths.stream()
+            .map(FhirPath::getValueColumn)
+            .collect(toList())
+    );
+    columns.addAll(new ArrayList<>(context.getNesting().getOrderingColumns()));
+    return dataset.select(columns.toArray(new Column[0]));
   }
 
   @Value

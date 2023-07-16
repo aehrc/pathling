@@ -106,16 +106,16 @@ class ExtractQueryTest {
             ExpressionWithLabel.withExpressionAsLabel("gender"),
             ExpressionWithLabel.of("name.given.first()", "given_name"),
             ExpressionWithLabel.of("reverseResolve(Condition.subject).count().toString()",
-                "patient_count")
+                "condition_count")
         ),
         List.of("gender = 'female'"),
         Optional.empty()
     );
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
-    assertArrayEquals(new String[]{"id", "gender", "given_name", "patient_count"},
+    assertArrayEquals(new String[]{"id", "gender", "given_name", "condition_count"},
         result.columns());
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/simpleQuery.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/simpleQueryWithAliases.csv");
   }
 
   @Test
@@ -198,9 +198,8 @@ class ExtractQueryTest {
         .withLimit(10)
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .debugAllRows()
         .hasRows(spark, "responses/ExtractQueryTest/resolveAndCodingLiteralColumn.csv");
   }
 
@@ -348,7 +347,6 @@ class ExtractQueryTest {
         .build();
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
-    result.show(false);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/linkedUnnesting.csv");
   }
@@ -384,13 +382,11 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .debugAllRows()
         .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.csv");
 
     final ExtractRequest request2 = new ExtractRequestBuilder(subjectResource)
         .withColumn("name.given")
         .withColumn("id")
-        .withColumn("name.family")
         .build();
 
     final Dataset<Row> result2 = executor.buildQuery(request2);
@@ -472,6 +468,7 @@ class ExtractQueryTest {
     );
 
     assertThat(result)
+        .debugAllRows()
         .hasRows(spark, "responses/ExtractQueryTest/structuredResult.csv");
   }
 

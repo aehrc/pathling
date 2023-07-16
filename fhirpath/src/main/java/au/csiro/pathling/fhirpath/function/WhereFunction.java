@@ -63,16 +63,13 @@ public class WhereFunction implements NamedFunction {
     // The result is the input value if it is equal to true, or null otherwise (signifying the
     // absence of a value).
     final Column idColumn = argumentPath.getIdColumn();
-    final Column thisValue = checkPresent(argumentPath.getThisValueColumn());
-    final Column thisEid = checkPresent(argumentPath.getThisOrderingColumn());
+    final Column thisValue = checkPresent(argumentPath.getThisColumn());
 
     final Column valueColumn = when(argumentValue.equalTo(true), thisValue).otherwise(lit(null));
     final String expression = expressionFromInput(input, NAME);
 
-    return inputPath
-        .copy(expression, argumentPath.getDataset(), idColumn,
-            inputPath.getEidColumn().map(c -> thisEid), valueColumn, inputPath.isSingular(),
-            inputPath.getThisColumn());
+    return inputPath.copy(expression, argumentPath.getDataset(), idColumn, valueColumn,
+        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getThisColumn());
   }
 
 }

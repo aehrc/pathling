@@ -25,6 +25,7 @@ import static org.apache.spark.sql.functions.sum;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;

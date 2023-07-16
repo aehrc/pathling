@@ -21,18 +21,19 @@ import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.check;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.ReferenceNestingKey;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
+import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -94,26 +95,29 @@ public class ResolveFunction implements NamedFunction {
       @Nonnull final ParserContext context) {
     // If this is a monomorphic reference, we just need to retrieve the appropriate table and
     // create a dataset with the full resources.
-    final ResourcePath resourcePath = ResourcePath
-        .build(fhirContext, dataSource, resourceType, expression, referencePath.isSingular());
+    final ResourcePath resourcePath = ResourcePath.build(fhirContext, dataSource, resourceType,
+        expression, referencePath.isSingular());
+    final ElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
+    final ReferenceNestingKey referenceNestingKey = new ReferenceNestingKey(referenceDefinition,
+        resourcePath.getDefinition());
 
-    // Join the resource dataset to the reference dataset.
-    final Column joinCondition = referencePath.getResourceEquality(resourcePath);
-    final Dataset<Row> dataset = join(referencePath.getDataset(), resourcePath.getDataset(),
-        joinCondition, JoinType.LEFT_OUTER);
+    return context.getNesting()
+        .updateOrRetrieve(referenceNestingKey, expression, referencePath.getDataset(),
+            referencePath.isSingular(), referencePath.getThisColumn(), key -> {
+              // Join the resource dataset to the reference dataset.
+              final Column joinCondition = referencePath.getResourceEquality(resourcePath);
+              final Dataset<Row> dataset = join(referencePath.getDataset(),
+                  resourcePath.getDataset(),
+                  joinCondition, JoinType.LEFT_OUTER);
 
-    final Column inputId = referencePath.getIdColumn();
-    final Optional<Column> inputEid = referencePath.getEidColumn();
+              final Column inputId = referencePath.getIdColumn();
+              final ResourcePath result = resourcePath.copy(expression, dataset, inputId,
+                  resourcePath.getValueColumn(), resourcePath.getOrderingColumn(),
+                  referencePath.isSingular(), referencePath.getThisColumn());
+              result.setCurrentResource(resourcePath);
 
-    // We need to add the resource ID column to the parser context so that it can be used within
-    // joins in certain situations, e.g. extract.
-    final Object nodeKey = List.of(referencePath.getDefinition(), resourcePath.getDefinition());
-    context.addNodeId(nodeKey, resourcePath.getElementColumn("id"));
-
-    final ResourcePath result = resourcePath.copy(expression, dataset, inputId, inputEid,
-        resourcePath.getValueColumn(), referencePath.isSingular(), referencePath.getThisColumn());
-    result.setCurrentResource(resourcePath);
-    return result;
+              return result;
+            });
   }
 
 }

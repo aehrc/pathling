@@ -128,6 +128,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         // could be:
         // (1) a path traversal from the input context;
         // (2) a reference to a resource type.
+        final FhirPath thisContext = context.getThisContext().get();
 
         // Check if the expression is a reference to a known resource type.
         final ResourceType resourceType;
@@ -137,7 +138,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
           // If the expression is not a resource reference, treat it as a path traversal from the
           // input context.
           final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
-              context.getThisContext().get(), fhirPath);
+              thisContext, fhirPath);
           return new PathTraversalOperator().invoke(pathTraversalInput);
         }
 
@@ -193,14 +194,15 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // aggregations that occur within the arguments are in the context of an element. Otherwise,
       // we add the resource ID column to the groupings.
       final List<Column> argumentGroupings = new ArrayList<>(context.getGroupingColumns());
-      thisPath.getEidColumn().ifPresentOrElse(argumentGroupings::add,
+      thisPath.getOrderingColumn().ifPresentOrElse(argumentGroupings::add,
           () -> argumentGroupings.add(thisPath.getIdColumn()));
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.
       final ParserContext argumentContext = new ParserContext(context.getInputContext(),
           context.getFhirContext(), context.getSparkSession(), context.getDataSource(),
-          context.getTerminologyServiceFactory(), argumentGroupings, context.getNodeIdColumns());
+          context.getTerminologyServiceFactory(), argumentGroupings, context.getUnnestBehaviour(),
+          context.getVariables(), context.getNesting());
       argumentContext.setThisContext(thisPath);
 
       // Parse each of the expressions passed as arguments to the function.

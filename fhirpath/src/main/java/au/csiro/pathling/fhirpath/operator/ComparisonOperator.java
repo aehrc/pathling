@@ -18,15 +18,12 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findEidColumn;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -69,18 +66,18 @@ public class ComparisonOperator implements Operator {
     checkArgumentsAreComparable(input, type.toString());
 
     final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
+    final Dataset<Row> dataset = right.getDataset();
 
     final Comparable leftComparable = (Comparable) left;
     final Comparable rightComparable = (Comparable) right;
     final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
     final Column idColumn = left.getIdColumn();
-    final Optional<Column> eidColumn = findEidColumn(left, right);
     final Optional<Column> thisColumn = findThisColumn(left, right);
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
-    return ElementPath.build(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
-        datasetWithColumn.getColumn(), true, Optional.empty(), thisColumn, FHIRDefinedType.BOOLEAN);
+    return ElementPath.build(expression, datasetWithColumn.getDataset(), idColumn,
+        datasetWithColumn.getColumn(), Optional.empty(), true, Optional.empty(), thisColumn,
+        FHIRDefinedType.BOOLEAN);
   }
 
 }

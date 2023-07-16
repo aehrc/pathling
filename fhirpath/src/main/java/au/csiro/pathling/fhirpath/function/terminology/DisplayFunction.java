@@ -60,10 +60,9 @@ public class DisplayFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column resultColumn = display(inputPath.getValueColumn(),
         acceptLanguage.map(StringType::getValue).orElse(null));
-    return ElementPath
-        .build(expression, dataset, inputPath.getIdColumn(), inputPath.getEidColumn(),
-            resultColumn, inputPath.isSingular(), inputPath.getCurrentResource(),
-            inputPath.getThisColumn(), FHIRDefinedType.STRING);
+    return ElementPath.build(expression, dataset, inputPath.getIdColumn(), resultColumn,
+        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
+        inputPath.getThisColumn(), FHIRDefinedType.STRING);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

@@ -169,7 +169,8 @@ public class ResourcePathBuilder {
     final String resourceCode = resourceType.toCode();
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
-    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition,
+        Optional.empty());
     // in most cases value column should be the same as id
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 

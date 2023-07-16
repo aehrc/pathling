@@ -31,8 +31,6 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -67,10 +65,9 @@ public class MemberOfFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
 
     return ElementPath
-        .build(expression, inputPath.getDataset(), inputPath.getIdColumn(),
-            inputPath.getEidColumn(), resultColumn, inputPath.isSingular(),
-            inputPath.getCurrentResource(), inputPath.getThisColumn(),
-            FHIRDefinedType.BOOLEAN);
+        .build(expression, inputPath.getDataset(), inputPath.getIdColumn(), resultColumn,
+            inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
+            inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 
   private void validateInput(@Nonnull final NamedFunctionInput input) {

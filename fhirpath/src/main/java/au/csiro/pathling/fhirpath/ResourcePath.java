@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.aliasAllColumns;
-import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
@@ -62,11 +61,10 @@ public class ResourcePath extends NonLiteralPath {
   private final Map<String, Column> elementsToColumns;
 
   protected ResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final ResourceDefinition definition,
       @Nonnull final Map<String, Column> elementsToColumns) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
+    super(expression, dataset, idColumn, valueColumn, singular, Optional.empty(),
         thisColumn);
     this.definition = definition;
     this.elementsToColumns = elementsToColumns;
@@ -110,7 +108,8 @@ public class ResourcePath extends NonLiteralPath {
     final String resourceCode = resourceType.toCode();
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
-    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition,
+        Optional.empty());
 
     // Retrieve the dataset for the resource type using the supplied resource reader.
     final Dataset<Row> dataset = dataSource.read(resourceType);
@@ -126,6 +125,7 @@ public class ResourcePath extends NonLiteralPath {
       // search).
       finalDataset = dataset;
       finalIdColumn = idColumn;
+      //noinspection ReturnOfNull
       elementsToColumns = Stream.of(dataset.columns())
           .collect(Collectors.toMap(Function.identity(), functions::col, (a, b) -> null));
     } else {
@@ -134,13 +134,14 @@ public class ResourcePath extends NonLiteralPath {
       final DatasetWithColumnMap datasetWithColumnMap = aliasAllColumns(dataset);
       finalDataset = datasetWithColumnMap.getDataset();
       final Map<Column, Column> columnMap = datasetWithColumnMap.getColumnMap();
+      //noinspection ReturnOfNull
       elementsToColumns = columnMap.keySet().stream()
           .collect(Collectors.toMap(Column::toString, columnMap::get, (a, b) -> null));
       finalIdColumn = elementsToColumns.get(idColumn.toString());
     }
 
     // We use the ID column as the value column for a ResourcePath.
-    return new ResourcePath(expression, finalDataset, finalIdColumn, Optional.empty(),
+    return new ResourcePath(expression, finalDataset, finalIdColumn,
         finalIdColumn, singular, Optional.empty(), definition, elementsToColumns);
   }
 
@@ -180,17 +181,17 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   @Override
   public ResourcePath copy(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
+    return new ResourcePath(expression, dataset, idColumn, valueColumn, singular, thisColumn,
+        definition, elementsToColumns);
+  }
 
-    final DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
-        eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
-
-    return new ResourcePath(expression, datasetWithColumns.getDataset(), idColumn,
-        eidColumn.map(datasetWithColumns::getColumn),
-        datasetWithColumns.getColumn(valueColumn), singular, thisColumn, definition,
-        elementsToColumns);
+  @Nonnull
+  @Override
+  public Optional<Column> getOrderingColumn() {
+    return Optional.empty();
   }
 
   @Override
@@ -205,13 +206,13 @@ public class ResourcePath extends NonLiteralPath {
   @Nonnull
   public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
     if (target instanceof ResourcePath && definition
         .equals(((ResourcePath) target).getDefinition())) {
       // Two ResourcePaths can be merged together if they have the same definition.
-      return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
+      return copy(expression, dataset, idColumn, valueColumn, getOrderingColumn(), singular,
+          thisColumn);
     }
     // Anything else is invalid.
     throw new InvalidUserInputError(

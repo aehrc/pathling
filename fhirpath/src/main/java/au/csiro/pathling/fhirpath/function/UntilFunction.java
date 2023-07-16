@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findEidColumn;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.callUDF;
@@ -33,12 +32,12 @@ import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.sql.misc.TemporalDifferenceFunction;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import java.util.Optional;
 
 /**
  * This function computes the time interval (duration) between two paths representing dates or dates
@@ -84,13 +83,11 @@ public class UntilFunction implements NamedFunction {
         fromArgument.getValueColumn(), toArgument.getValueColumn(),
         calendarDurationArgument.getValueColumn());
     final String expression = NamedFunction.expressionFromInput(input, NAME);
-
-    final Optional<Column> eidColumn = findEidColumn(fromArgument, toArgument);
     final Optional<Column> thisColumn = findThisColumn(fromArgument, toArgument);
 
-    return ElementPath.build(expression, dataset, fromArgument.getIdColumn(),
-        eidColumn, valueColumn, true,
-        fromArgument.getCurrentResource(), thisColumn, FHIRDefinedType.INTEGER);
+    return ElementPath.build(expression, dataset, fromArgument.getIdColumn(), valueColumn,
+        fromArgument.getOrderingColumn(), true, fromArgument.getCurrentResource(), thisColumn,
+        FHIRDefinedType.INTEGER);
   }
 
 }

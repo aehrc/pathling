@@ -19,10 +19,10 @@ package au.csiro.pathling.fhirpath.element;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.fhirpath.NestingKey;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -41,8 +41,8 @@ public class ReferenceDefinition extends ElementDefinition {
   private final RuntimeChildResourceDefinition childDefinition;
 
   protected ReferenceDefinition(@Nonnull final RuntimeChildResourceDefinition childDefinition,
-      @Nonnull final String elementName) {
-    super(childDefinition, elementName);
+      @Nonnull final String elementName, final NestingKey parent) {
+    super(childDefinition, elementName, parent);
     this.childDefinition = childDefinition;
   }
 

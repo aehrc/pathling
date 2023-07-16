@@ -23,7 +23,6 @@ import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.operator.ComparisonOperator;
 import au.csiro.pathling.fhirpath.operator.OperatorInput;
@@ -55,7 +54,7 @@ public class ExtensionFunction implements NamedFunction {
         "extension function must have argument of type String literal: " + expression);
 
     final NonLiteralPath inputPath = input.getInput();
-    final ElementPath extensionPath = new PathTraversalOperator()
+    final NonLiteralPath extensionPath = new PathTraversalOperator()
         .invoke(new PathTraversalInput(input.getContext(), inputPath,
             ExtensionSupport.EXTENSION_ELEMENT_NAME()));
 

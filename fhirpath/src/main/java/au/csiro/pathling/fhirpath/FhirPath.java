@@ -28,7 +28,7 @@ import org.apache.spark.sql.Row;
  *
  * @author John Grimes
  */
-public interface FhirPath extends Orderable {
+public interface FhirPath {
 
   /**
    * @return the FHIRPath expression that represents this path
@@ -43,6 +43,13 @@ public interface FhirPath extends Orderable {
   Dataset<Row> getDataset();
 
   /**
+   * @param nesting the nesting information to use for ordering
+   * @return the {@link Dataset} that can be used to evaluate this path against data, ordered
+   */
+  @Nonnull
+  Dataset<Row> getOrderedDataset(@Nonnull Nesting nesting);
+
+  /**
    * @return a {@link Column} within the dataset containing the identity of the subject resource
    */
   @Nonnull
@@ -53,6 +60,12 @@ public interface FhirPath extends Orderable {
    */
   @Nonnull
   Column getValueColumn();
+
+  /**
+   * @return a {@link Column} that can be used to order the dataset, for paths that have a defined
+   * order
+   */
+  Optional<Column> getOrderingColumn();
 
   /**
    * @return an indicator of whether this path represents a single-valued collection
@@ -103,8 +116,6 @@ public interface FhirPath extends Orderable {
    * @param expression the FHIRPath expression that represents the result
    * @param idColumn a {@link Column} within the dataset containing the identity of the subject
    * resource
-   * @param eidColumn a {@link Column} that represents the unique ID for an element within a
-   * collection
    * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
    * @param singular an indicator of whether this path represents a single-valued collection
    * @param thisColumn for paths that traverse from the {@code $this} keyword, this column refers to
@@ -113,9 +124,8 @@ public interface FhirPath extends Orderable {
    */
   @Nonnull
   NonLiteralPath combineWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
-      @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
-      @Nonnull Column valueColumn, boolean singular, @Nonnull Optional<Column> thisColumn);
-
+      @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Column valueColumn,
+      boolean singular, @Nonnull Optional<Column> thisColumn);
 
   /**
    * Prints out to stdout all the ids and values of all the elements in this path. For debugging

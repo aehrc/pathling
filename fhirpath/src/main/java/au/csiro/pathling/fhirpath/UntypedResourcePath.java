@@ -17,9 +17,6 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static au.csiro.pathling.QueryHelpers.createColumns;
-
-import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
@@ -38,11 +35,11 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class UntypedResourcePath extends ReferencePath implements AbstractPath {
 
   public UntypedResourcePath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
+    super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -55,25 +52,15 @@ public class UntypedResourcePath extends ReferencePath implements AbstractPath {
   public static UntypedResourcePath build(@Nonnull final ReferencePath referencePath,
       @Nonnull final String expression) {
     return new UntypedResourcePath(expression, referencePath.getDataset(),
-        referencePath.getIdColumn(), referencePath.getEidColumn(), referencePath.getValueColumn(),
-        referencePath.isSingular(), referencePath.getCurrentResource(),
-        referencePath.getThisColumn(), referencePath.getFhirType());
+        referencePath.getIdColumn(), referencePath.getValueColumn(),
+        referencePath.getOrderingColumn(), referencePath.isSingular(),
+        referencePath.getCurrentResource(), referencePath.getThisColumn(),
+        referencePath.getFhirType());
   }
 
   @Nonnull
   public Column getReferenceColumn() {
     return valueColumn.getField(Referrer.REFERENCE_FIELD_NAME);
-  }
-
-  @Nonnull
-  public Column getResourceEquality(@Nonnull final ResourcePath resourcePath) {
-    return Referrer.resourceEqualityFor(this, resourcePath);
-  }
-
-  @Nonnull
-  public Column getResourceEquality(@Nonnull final Column targetId,
-      @Nonnull final Column targetCode) {
-    return Referrer.resourceEqualityFor(this, targetCode, targetId);
   }
 
   @Nonnull
@@ -86,14 +73,9 @@ public class UntypedResourcePath extends ReferencePath implements AbstractPath {
   @Override
   public UntypedResourcePath copy(@Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final Optional<Column> eidColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Column valueColumn, @Nonnull final Optional<Column> orderingColumn,
       final boolean singular, @Nonnull final Optional<Column> thisColumn) {
-
-    final DatasetWithColumnMap datasetWithColumns = eidColumn.map(eidCol -> createColumns(dataset,
-        eidCol, valueColumn)).orElseGet(() -> createColumns(dataset, valueColumn));
-
-    return new UntypedResourcePath(expression, datasetWithColumns.getDataset(), idColumn,
-        eidColumn.map(datasetWithColumns::getColumn), datasetWithColumns.getColumn(valueColumn),
+    return new UntypedResourcePath(expression, dataset, idColumn, valueColumn, orderingColumn,
         singular, currentResource, thisColumn, getFhirType());
   }
 
@@ -101,11 +83,11 @@ public class UntypedResourcePath extends ReferencePath implements AbstractPath {
   @Nonnull
   public NonLiteralPath combineWith(@Nonnull final FhirPath target,
       @Nonnull final Dataset<Row> dataset, @Nonnull final String expression,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn, final boolean singular,
       @Nonnull final Optional<Column> thisColumn) {
     if (target instanceof UntypedResourcePath) {
-      return copy(expression, dataset, idColumn, eidColumn, valueColumn, singular, thisColumn);
+      return copy(expression, dataset, idColumn, valueColumn, getOrderingColumn(), singular,
+          thisColumn);
     }
     // Anything else is invalid.
     throw new InvalidUserInputError(

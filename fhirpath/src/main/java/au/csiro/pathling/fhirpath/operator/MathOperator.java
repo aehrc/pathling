@@ -80,11 +80,10 @@ public class MathOperator implements Operator {
             + type + " " + right.getExpression());
 
     final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
     final Numeric leftNumeric = (Numeric) left;
     final Numeric rightNumeric = (Numeric) right;
-    return leftNumeric.getMathOperation(type, expression, dataset).apply(rightNumeric);
+    return leftNumeric.getMathOperation(type, expression, right.getDataset()).apply(rightNumeric);
   }
 
 }

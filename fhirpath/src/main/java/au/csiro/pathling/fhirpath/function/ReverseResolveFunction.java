@@ -18,27 +18,21 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.row_number;
-import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers;
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.ReferenceNestingKey;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.expressions.Window;
-import org.apache.spark.sql.expressions.WindowSpec;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -65,20 +59,6 @@ public class ReverseResolveFunction implements NamedFunction {
     final FhirPath argument = input.getArguments().get(0);
     checkUserInput(argument instanceof ReferencePath,
         "Argument to reverseResolve function must be a Reference: " + argument.getExpression());
-    final ReferencePath referencePath = (ReferencePath) argument;
-
-    // Check that the input type is one of the possible types specified by the argument.
-    final Set<ResourceType> argumentTypes = ((ReferencePath) argument).getResourceTypes();
-    final ResourceType inputType = inputPath.getResourceType();
-    checkUserInput(argumentTypes.contains(inputType),
-        "Reference in argument to reverseResolve does not support input resource type: "
-            + expression);
-
-    // Do a left outer join from the input to the argument dataset using the reference field in the
-    // argument.
-    final Column joinCondition = referencePath.getResourceEquality(inputPath);
-    final Dataset<Row> dataset = join(referencePath.getDataset(), inputPath.getDataset(),
-        joinCondition, JoinType.RIGHT_OUTER);
 
     // Check the argument for information about the current resource that it originated from - if it
     // is not present, reverse reference resolution will not be possible.
@@ -88,31 +68,33 @@ public class ReverseResolveFunction implements NamedFunction {
             + "target resource type: " + expression);
     final ResourcePath currentResource = nonLiteralArgument.getCurrentResource().get();
 
-    final Optional<Column> thisColumn = inputPath.getThisColumn();
-
-    // TODO: Consider removing in the future once we separate ordering from element ID.
-    // Create an synthetic element ID column for reverse resolved resources.
-    final Column currentResourceValue = currentResource.getValueColumn();
-    final WindowSpec windowSpec = Window
-        .partitionBy(inputPath.getIdColumn(), inputPath.getOrderingColumn())
-        .orderBy(currentResourceValue);
-
-    // row_number() is 1-based, and we use 0-based indexes - thus (minus(1)).
-    final Column currentResourceIndex = when(currentResourceValue.isNull(), lit(null))
-        .otherwise(row_number().over(windowSpec).minus(lit(1)));
-
-    // We need to add the synthetic EID column to the parser context so that it can be used within
-    // joins in certain situations, e.g. extract.
-    final Column syntheticEid = inputPath.expandEid(currentResourceIndex);
-    final DatasetWithColumn datasetWithEid = QueryHelpers.createColumn(dataset, syntheticEid);
-    final List<Object> nodeKey = List.of(referencePath.getDefinition(),
+    final ReferencePath referencePath = (ReferencePath) argument;
+    final ElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
+    final ReferenceNestingKey referenceNestingKey = new ReferenceNestingKey(referenceDefinition,
         currentResource.getDefinition());
-    input.getContext().addNodeId(nodeKey, datasetWithEid.getColumn());
 
-    final ResourcePath result = currentResource
-        .copy(expression, datasetWithEid.getDataset(), inputPath.getIdColumn(),
-            Optional.of(syntheticEid), currentResource.getValueColumn(), false, thisColumn);
-    result.setCurrentResource(currentResource);
-    return result;
+    return input.getContext().getNesting()
+        .updateOrRetrieve(referenceNestingKey, expression, inputPath.getDataset(), false,
+            inputPath.getThisColumn(), key -> {
+              // Check that the input type is one of the possible types specified by the argument.
+              final Set<ResourceType> argumentTypes = ((ReferencePath) argument).getResourceTypes();
+              final ResourceType inputType = inputPath.getResourceType();
+              checkUserInput(argumentTypes.contains(inputType),
+                  "Reference in argument to reverseResolve does not support input resource type: "
+                      + expression);
+
+              // Do a left outer join from the input to the argument dataset using the reference field in 
+              // the argument.
+              final Column joinCondition = referencePath.getResourceEquality(inputPath);
+              final Dataset<Row> dataset = join(inputPath.getDataset(), referencePath.getDataset(),
+                  joinCondition, JoinType.LEFT_OUTER);
+
+              final ResourcePath result = currentResource.copy(expression, dataset,
+                  inputPath.getIdColumn(),
+                  currentResource.getValueColumn(), currentResource.getOrderingColumn(), false,
+                  inputPath.getThisColumn());
+              result.setCurrentResource(currentResource);
+              return result;
+            });
   }
 }

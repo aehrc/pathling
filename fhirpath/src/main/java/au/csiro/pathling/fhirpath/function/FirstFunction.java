@@ -19,10 +19,13 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.first;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -47,8 +50,13 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments("first", input);
 
+    final Nesting nesting = input.getContext().getNesting();
+    checkUserInput(nesting.isOrderable(),
+        "The input path to the first function is not orderable: " + input.getInput()
+            .getExpression());
+
     final NonLiteralPath inputPath = input.getInput();
-    final Dataset<Row> dataset = inputPath.getOrderedDataset();
+    final Dataset<Row> dataset = inputPath.getOrderedDataset(nesting);
     final String expression = expressionFromInput(input, NAME);
     final Column finalValueColumn = first(inputPath.getValueColumn(), true);
 

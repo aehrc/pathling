@@ -4,26 +4,20 @@ import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.AbstractPath;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.Flat;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.TopologicalExpressionSorter;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -75,33 +69,37 @@ public class ExtractQueryExecutor extends QueryExecutor {
             query.getSubjectResource().toCode(), true);
     final ParserContext parserContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));
-    final List<FhirPathAndContext> parsedColumns =
+    final List<FhirPath> parsedColumns =
         parseExpressions(parserContext, query.getColumnsAsStrings());
-    // final List<FhirPathAndContext> coercedColumns =
-    //     validateAndCoerceColumns(parsedColumns, resultType);
-    // final Dataset<Row> queryDataset = joinAllColumns(coercedColumns);
+    final List<FhirPath> coercedColumns =
+        validateAndCoerceColumns(parsedColumns, resultType);
+    final Dataset<Row> unfiltered = coercedColumns.get(parsedColumns.size() - 1).getDataset();
 
-    // Trim trailing nulls.
-    // final Dataset<Row> trimmedDataset = trimTrailingNulls(
-    //     parserContext.getInputContext().getIdColumn(), coercedColumns, queryDataset);
-    final Dataset<Row> trimmedDataset = parsedColumns.get(parsedColumns.size() - 1).getFhirPath()
-        .getDataset();
+    final Dataset<Row> trimmed = trimTrailingNulls(inputContext.getIdColumn(), coercedColumns,
+        unfiltered);
 
     // Apply the filters.
-    final List<String> filters = query.getFilters();
-    final Dataset<Row> filteredDataset = filterDataset(inputContext, filters, trimmedDataset,
-        Column::and);
+    final Dataset<Row> filtered;
+    if (query.getFilters().isEmpty()) {
+      filtered = trimmed;
+    } else {
+      final List<String> filters = query.getFilters();
+      final List<FhirPath> filterPaths = parseExpressions(parserContext, filters,
+          Optional.of(trimmed));
+      final Dataset<Row> withFilters = filterPaths.get(filterPaths.size() - 1).getDataset();
+      final Optional<Column> filterConstraint = filterPaths.stream()
+          .map(FhirPath::getValueColumn)
+          .reduce(Column::and);
+      filtered = filterConstraint.map(withFilters::filter).orElse(withFilters);
+    }
 
     // Select the column values.
-    final Column idColumn = inputContext.getIdColumn();
     final Column[] columnValues = labelColumns(
-        parsedColumns.stream()
-            .map(FhirPathAndContext::getFhirPath)
+        coercedColumns.stream()
             .map(FhirPath::getValueColumn),
         labelsAsStream(query.getColumns())
     ).toArray(Column[]::new);
-    final Dataset<Row> selectedDataset = filteredDataset.select(columnValues)
-        .filter(idColumn.isNotNull());
+    final Dataset<Row> selectedDataset = filtered.select(columnValues);
 
     // If there is a limit, apply it.
     return query.getLimit().isPresent()
@@ -109,28 +107,25 @@ public class ExtractQueryExecutor extends QueryExecutor {
            : selectedDataset;
   }
 
-  private List<FhirPathAndContext> validateAndCoerceColumns(
-      @Nonnull final List<FhirPathAndContext> parsedColumns,
+  private List<FhirPath> validateAndCoerceColumns(
+      @Nonnull final List<FhirPath> columnParseResult,
       @Nonnull final ExtractResultType resultType) {
 
     // Perform any necessary String coercion.
-    final List<FhirPathAndContext> coercedColumns = parsedColumns.stream()
-        .map(columnAndContext -> {
-          final FhirPath column = columnAndContext.getFhirPath();
+    final List<FhirPath> coerced = columnParseResult.stream()
+        .map(column -> {
           if (resultType == ExtractResultType.FLAT && !(column instanceof Flat)
               && column instanceof StringCoercible) {
             // If the result type is flat and the path is string-coercible, we can coerce it.
             final StringCoercible stringCoercible = (StringCoercible) column;
-            return new FhirPathAndContext(stringCoercible.asStringPath(column.getExpression()),
-                columnAndContext.getContext());
+            return stringCoercible.asStringPath(column.getExpression());
           } else {
-            return new FhirPathAndContext(column, columnAndContext.getContext());
+            return column;
           }
         }).collect(toList());
 
     // Validate the final set of paths.
-    for (final FhirPathAndContext columnAndContext : coercedColumns) {
-      final FhirPath column = columnAndContext.getFhirPath();
+    for (final FhirPath column : coerced) {
       final boolean condition;
       if (resultType == ExtractResultType.FLAT) {
         // In flat mode, only flat columns are allowed.
@@ -143,82 +138,23 @@ public class ExtractQueryExecutor extends QueryExecutor {
       checkArgument(condition, "Column is not of a supported type: " + column.getExpression());
     }
 
-    return coercedColumns;
+    return coerced;
   }
-
-  @Nonnull
-  private Dataset<Row> joinAllColumns(
-      @Nonnull final Collection<FhirPathAndContext> columnsAndContexts) {
-    if (columnsAndContexts.isEmpty()) {
-      // If there are no columns, throw an error.
-      throw new IllegalArgumentException("No columns to join");
-
-    } else if (columnsAndContexts.size() == 1) {
-      // If there is only one column, skip joining and return its dataset.
-      final FhirPathAndContext fhirPathAndContext = columnsAndContexts.iterator().next();
-      return fhirPathAndContext.getFhirPath().getDataset();
-    }
-
-    // Sort the columns by the nodes encountered while parsing. This ensures that we join them 
-    // together in order from the general to the specific.
-    final List<FhirPathAndContext> sorted = columnsAndContexts.stream()
-        .sorted(new TopologicalExpressionSorter())
-        .collect(toList());
-
-    // Start with the first column and its unjoined dataset.
-    FhirPathAndContext left = sorted.get(0);
-    Dataset<Row> result = left.getFhirPath().getDataset();
-
-    // Move through the list of columns, joining each one to the result of the previous join.
-    for (final FhirPathAndContext right : sorted.subList(1, sorted.size())) {
-      final List<Column> leftJoinColumns = new ArrayList<>();
-      final List<Column> rightJoinColumns = new ArrayList<>();
-
-      // The join column always includes the resource ID.
-      leftJoinColumns.add(left.getFhirPath().getIdColumn());
-      rightJoinColumns.add(right.getFhirPath().getIdColumn());
-
-      // Add the intersection of the nodes present in both the left and right column contexts.
-      final List<Object> commonNodes = new ArrayList<>(
-          left.getContext().getNodeIdColumns().keySet());
-      commonNodes.retainAll(right.getContext().getNodeIdColumns().keySet());
-      final FhirPathAndContext finalLeft = left;
-      leftJoinColumns.addAll(commonNodes.stream()
-          .flatMap(key -> finalLeft.getContext().getNodeIdColumns().get(key).stream())
-          .collect(toSet()));
-      rightJoinColumns.addAll(commonNodes.stream()
-          .flatMap(key -> right.getContext().getNodeIdColumns().get(key).stream())
-          .collect(toSet()));
-
-      // Use a left outer join, so that we don't lose rows that don't have a value for the right
-      // column.
-      result = QueryHelpers.join(result, leftJoinColumns, right.getFhirPath().getDataset(),
-          rightJoinColumns, JoinType.LEFT_OUTER);
-
-      // The result of the join becomes the left side of the next join.
-      left = right;
-    }
-
-    return result;
-  }
-
-  // @Nonnull
-  // private Dataset<Row> filterInvalidRowCombinations(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn, )
 
   @Nonnull
   private Dataset<Row> trimTrailingNulls(final @Nonnull Column idColumn,
       @Nonnull final List<FhirPath> expressions, @Nonnull final Dataset<Row> dataset) {
     checkArgument(!expressions.isEmpty(), "At least one expression is required");
 
-    final Column[] nonSingularColumns = expressions.stream()
+    final List<Column> nonSingularColumns = expressions.stream()
         .filter(fhirPath -> !fhirPath.isSingular())
         .map(FhirPath::getValueColumn)
-        .toArray(Column[]::new);
+        .collect(toList());
 
-    if (nonSingularColumns.length == 0) {
+    if (nonSingularColumns.isEmpty()) {
       return dataset;
     } else {
-      final Column additionalCondition = Arrays.stream(nonSingularColumns)
+      final Column additionalCondition = nonSingularColumns.stream()
           .map(Column::isNotNull)
           .reduce(Column::or)
           .get();

@@ -33,7 +33,7 @@ import org.hl7.fhir.r4.model.ListResource;
  *
  * @author John Grimes
  */
-public class ResourceDefinition {
+public class ResourceDefinition implements NestingKey {
 
   /**
    * The HAPI FHIR resource type.
@@ -46,13 +46,23 @@ public class ResourceDefinition {
   private final RuntimeResourceDefinition definition;
 
   /**
+   * The parent definition of this resource. This may be empty, in the case of the root resource. It
+   * may also be populated with the element definition that linked to this resource, for example a
+   * reference element.
+   */
+  @Nonnull
+  private final Optional<? extends NestingKey> parent;
+
+  /**
    * @param resourceType The {@link ResourceType} that describes this resource
    * @param definition The HAPI {@link RuntimeResourceDefinition} for this resource
    */
   public ResourceDefinition(@Nonnull final ResourceType resourceType,
-      @Nonnull final RuntimeResourceDefinition definition) {
+      @Nonnull final RuntimeResourceDefinition definition,
+      @Nonnull final Optional<? extends NestingKey> parent) {
     this.resourceType = resourceType;
     this.definition = definition;
+    this.parent = parent;
   }
 
   /**
@@ -65,7 +75,7 @@ public class ResourceDefinition {
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
     final Optional<BaseRuntimeChildDefinition> childDefinition = Optional
         .ofNullable(definition.getChildByName(name));
-    return childDefinition.map(definition -> ElementDefinition.build(definition, name));
+    return childDefinition.map(definition -> ElementDefinition.build(definition, name, this));
   }
 
   /**
@@ -95,12 +105,15 @@ public class ResourceDefinition {
       return false;
     }
     final ResourceDefinition that = (ResourceDefinition) o;
-    return resourceType == that.resourceType;
+    return resourceType == that.resourceType
+        // Recursively compare parent definitions.
+        && Objects.equals(parent, that.parent);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(resourceType);
+    // Recursively hash parent definitions.
+    return Objects.hash(resourceType, parent);
   }
 
 }

@@ -52,11 +52,11 @@ public class DecimalPath extends ElementPath implements FhirValue<DecimalType>, 
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
   protected DecimalPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
+    super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -152,7 +152,7 @@ public class DecimalPath extends ElementPath implements FhirValue<DecimalType>, 
       Column valueColumn = operation.getSparkFunction()
           .apply(source.getNumericValueColumn(), target.getNumericValueColumn());
       final Column idColumn = source.getIdColumn();
-      final Optional<Column> eidColumn = findEidColumn(source, target);
+      final Optional<Column> orderingColumn = findOrderingColumn(source, target);
       final Optional<Column> thisColumn = findThisColumn(source, target);
 
       switch (operation) {
@@ -162,13 +162,13 @@ public class DecimalPath extends ElementPath implements FhirValue<DecimalType>, 
         case DIVISION:
           valueColumn = valueColumn.cast(getDecimalType());
           return ElementPath
-              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, source.getFhirType());
+              .build(expression, dataset, idColumn, valueColumn, orderingColumn, true,
+                  Optional.empty(), thisColumn, source.getFhirType());
         case MODULUS:
           valueColumn = valueColumn.cast(DataTypes.LongType);
           return ElementPath
-              .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-                  thisColumn, FHIRDefinedType.INTEGER);
+              .build(expression, dataset, idColumn, valueColumn, orderingColumn, true,
+                  Optional.empty(), thisColumn, FHIRDefinedType.INTEGER);
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -184,8 +184,9 @@ public class DecimalPath extends ElementPath implements FhirValue<DecimalType>, 
   @Nonnull
   public FhirPath asStringPath(@Nonnull final String expression) {
     final Column valueColumn = getValueColumn().cast(DataTypes.StringType);
-    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
-        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
+    return ElementPath.build(expression, getDataset(), getIdColumn(), valueColumn,
+        getOrderingColumn(), isSingular(), getCurrentResource(), getThisColumn(),
+        FHIRDefinedType.STRING);
   }
 
 }

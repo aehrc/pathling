@@ -70,9 +70,8 @@ public class DateArithmeticOperator implements Operator {
 
     final Temporal temporal = (Temporal) left;
     final String expression = buildExpression(input, type.toString());
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
 
-    return temporal.getDateArithmeticOperation(type, dataset, expression)
+    return temporal.getDateArithmeticOperation(type, right.getDataset(), expression)
         .apply(calendarDuration);
   }
 

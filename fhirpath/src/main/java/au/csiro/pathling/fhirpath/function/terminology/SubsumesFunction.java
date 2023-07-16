@@ -22,7 +22,6 @@ import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConc
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.subsumed_by;
 import static au.csiro.pathling.sql.Terminology.subsumes;
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.col;
@@ -30,14 +29,12 @@ import static org.apache.spark.sql.functions.collect_set;
 import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyFunctions;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -100,7 +97,7 @@ public class SubsumesFunction implements NamedFunction {
   public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
 
-    final NonLiteralPath inputFhirPath = input.getInput();
+    final NonLiteralPath inputPath = input.getInput();
     final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
         input.getArguments().get(0));
     final Column leftCodings = idAndCodingSet.col(COL_INPUT_CODINGS);
@@ -111,9 +108,9 @@ public class SubsumesFunction implements NamedFunction {
 
     // Construct a new result expression.
     final String expression = expressionFromInput(input, functionName);
-    return ElementPath.build(expression, idAndCodingSet, inputFhirPath.getIdColumn(),
-        inputFhirPath.getEidColumn(), resultColumn, inputFhirPath.isSingular(),
-        inputFhirPath.getCurrentResource(), inputFhirPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+    return ElementPath.build(expression, idAndCodingSet, inputPath.getIdColumn(), resultColumn,
+        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
+        inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
 
   /**

@@ -24,6 +24,7 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;

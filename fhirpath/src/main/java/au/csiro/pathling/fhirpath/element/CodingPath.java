@@ -50,11 +50,11 @@ public class CodingPath extends ElementPath implements FhirValue<Coding>, Compar
       .of(CodingPath.class, CodingLiteralPath.class, NullLiteralPath.class);
 
   protected CodingPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Optional<Column> eidColumn,
-      @Nonnull final Column valueColumn, final boolean singular,
+      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
+      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
       @Nonnull final Optional<ResourcePath> currentResource,
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, eidColumn, valueColumn, singular, currentResource,
+    super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
         thisColumn, fhirType);
   }
 
@@ -121,8 +121,8 @@ public class CodingPath extends ElementPath implements FhirValue<Coding>, Compar
   @Override
   public FhirPath asStringPath(@Nonnull final String expression) {
     final Column valueColumn = callUDF(CodingToLiteral.FUNCTION_NAME, this.valueColumn);
-    return ElementPath.build(expression, getDataset(), getIdColumn(), getEidColumn(), valueColumn,
-        isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
+    return ElementPath.build(expression, getDataset(), getIdColumn(), valueColumn,
+        getOrderingColumn(), isSingular(), getCurrentResource(), getThisColumn(), FHIRDefinedType.STRING);
   }
 
 }

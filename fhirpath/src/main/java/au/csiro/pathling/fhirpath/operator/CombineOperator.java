@@ -18,13 +18,10 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.monotonically_increasing_id;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import java.util.Arrays;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -50,19 +47,14 @@ public class CombineOperator implements Operator {
 
     final Dataset<Row> leftTrimmed = left.getUnionableDataset(right);
     final Dataset<Row> rightTrimmed = right.getUnionableDataset(left);
-    // the value column is always the last column
-    final int valueColumnIndex = leftTrimmed.columns().length - 1;
+
     final Dataset<Row> dataset = leftTrimmed.union(rightTrimmed);
-    final String valueColumnName = dataset.columns()[valueColumnIndex];
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset,
-        dataset.col(valueColumnName));
-    final Optional<Column> eidColumn = Optional.of(array(monotonically_increasing_id()));
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, left.getValueColumn());
     final Optional<Column> thisColumn = left instanceof NonLiteralPath
                                         ? ((NonLiteralPath) left).getThisColumn()
                                         : Optional.empty();
-    return left
-        .combineWith(right, datasetWithColumn.getDataset(), expression, left.getIdColumn(),
-            eidColumn, datasetWithColumn.getColumn(), false, thisColumn);
+    return left.combineWith(right, datasetWithColumn.getDataset(), expression, left.getIdColumn(),
+        datasetWithColumn.getColumn(), false, thisColumn);
   }
 
 }

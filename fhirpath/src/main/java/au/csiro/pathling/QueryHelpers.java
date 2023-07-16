@@ -19,8 +19,10 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.posexplode_outer;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -44,6 +46,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.Value;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -399,7 +402,7 @@ public abstract class QueryHelpers {
       @Nonnull final List<Column> groupingColumns, @Nonnull final Column fallback) {
     final Set<String> columnList = new HashSet<>(List.of(dataset.columns()));
     final Set<String> groupingColumnNames = groupingColumns.stream().map(Column::toString)
-        .collect(Collectors.toSet());
+        .collect(toSet());
     if (columnList.containsAll(groupingColumnNames)) {
       return groupingColumns;
     } else {
@@ -462,6 +465,32 @@ public abstract class QueryHelpers {
   }
 
   /**
+   * Explodes an array column from a provided dataset, preserving all the columns from this one and
+   * producing a new value and ordering column.
+   *
+   * @param dataset The dataset containing the array column. It should also contain all other
+   * columns that should be preserved alongside the new columns.
+   * @param arrayColumn The array column to explode
+   * @param outputColumns The output pair of columns: `left` is set to the new value column and
+   * `right` to the new ordering column
+   * @return the {@link Dataset} with the exploded array
+   */
+  @Nonnull
+  public static Dataset<Row> explodeArray(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Column arrayColumn,
+      @Nonnull final MutablePair<Column, Column> outputColumns) {
+    final Column[] allColumns = Stream.concat(Arrays.stream(dataset.columns())
+            .map(dataset::col), Stream
+            .of(posexplode_outer(arrayColumn)
+                .as(new String[]{"index", "value"})))
+        .toArray(Column[]::new);
+    final Dataset<Row> resultDataset = dataset.select(allColumns);
+    outputColumns.setLeft(resultDataset.col("value"));
+    outputColumns.setRight(resultDataset.col("index"));
+    return resultDataset;
+  }
+
+  /**
    * Represents a type of join that can be made between two {@link Dataset} objects.
    */
   public enum JoinType {
@@ -494,21 +523,17 @@ public abstract class QueryHelpers {
      */
     LEFT_OUTER("left_outer"),
     /**
-     * Right join.
-     */
-    RIGHT("right"),
-    /**
-     * Right outer join.
-     */
-    RIGHT_OUTER("right_outer"),
-    /**
      * Left semi join.
      */
     LEFT_SEMI("left_semi"),
     /**
      * Left anti join.
      */
-    LEFT_ANTI("left_anti");
+    LEFT_ANTI("left_anti"),
+    /**
+     * Right outer join.
+     */
+    RIGHT_OUTER("right_outer");
 
     @Nonnull
     @Getter
@@ -553,7 +578,7 @@ public abstract class QueryHelpers {
      */
     @Nonnull
     public Column getColumn(@Nonnull final Column originalColumn) {
-      return columnMap.get(originalColumn);
+      return Optional.ofNullable(columnMap.get(originalColumn)).orElse(originalColumn);
     }
 
   }

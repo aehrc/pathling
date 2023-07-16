@@ -17,14 +17,12 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -32,8 +30,6 @@ import au.csiro.pathling.fhirpath.function.AggregateFunction;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -85,14 +81,11 @@ public class MembershipOperator extends AggregateFunction implements Operator {
         .when(collectionValue.isNull(), lit(false))
         .otherwise(equality);
 
-    // We need to join the datasets in order to access values from both operands.
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
-
     // In order to reduce the result to a single Boolean, we take the max of the boolean equality
     // values.
     final Column valueColumn = max(equalityWithNullChecks);
 
-    return buildAggregateResult(dataset, input.getContext(), Arrays.asList(left, right),
+    return buildAggregateResult(right.getDataset(), input.getContext(), Arrays.asList(left, right),
         valueColumn, expression, FHIRDefinedType.BOOLEAN);
   }
 

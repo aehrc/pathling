@@ -39,7 +39,6 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.PolarityExpres
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TermExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
-import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -93,7 +92,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
     // Parse the left and right expressions.
     final FhirPath left = new Visitor(context).visit(leftContext);
-    final FhirPath right = new Visitor(context).visit(rightContext);
+    final FhirPath right = new Visitor(context.withContextDataset(left.getDataset()))
+        .visit(rightContext);
 
     // Retrieve an Operator instance based upon the operator string.
     final Operator operator = Operator.getInstance(operatorName);

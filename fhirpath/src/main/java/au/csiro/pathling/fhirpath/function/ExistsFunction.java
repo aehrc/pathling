@@ -52,13 +52,13 @@ public class ExistsFunction implements NamedFunction {
       final BooleanPath emptyResult = (BooleanPath) new EmptyFunction().invoke(input);
       final Column valueColumn = not(emptyResult.getValueColumn());
       return emptyResult.copy(expression, emptyResult.getDataset(), emptyResult.getIdColumn(),
-          emptyResult.getEidColumn(), valueColumn, emptyResult.isSingular(),
+          valueColumn, emptyResult.getOrderingColumn(), emptyResult.isSingular(),
           emptyResult.getThisColumn());
     } else {
       final FhirPath argument = input.getArguments().get(0);
       checkUserInput(argument.isSingular() && argument instanceof BooleanPath,
           "Argument to exists function must be a singular Boolean: " + argument.getExpression());
-      
+
       // If there is an argument, first invoke the `where` function.
       final NonLiteralPath whereResult = (NonLiteralPath) new WhereFunction().invoke(input);
       // Then invoke the `exists` function on the result, with no arguments.
@@ -66,8 +66,8 @@ public class ExistsFunction implements NamedFunction {
           whereResult, Collections.emptyList());
       final BooleanPath existsResult = (BooleanPath) invoke(existsInput);
       return existsResult.copy(expression, existsResult.getDataset(), existsResult.getIdColumn(),
-          existsResult.getEidColumn(), existsResult.getValueColumn(), existsResult.isSingular(),
-          existsResult.getThisColumn());
+          existsResult.getValueColumn(), existsResult.getOrderingColumn(),
+          existsResult.isSingular(), existsResult.getThisColumn());
     }
 
   }

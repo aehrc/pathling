@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
+import static au.csiro.pathling.QueryHelpers.explodeArray;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.sql.Terminology.property_of;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
@@ -70,24 +71,24 @@ public class PropertyFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
         propertyType, preferredLanguage.map(StringType::getValue).orElse(null));
-    
+
     // // The result is an array of property values per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
-    final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();
-    final Dataset<Row> resultDataset = inputPath
-        .explodeArray(dataset, propertyValues, valueAndEidColumns);
+    final MutablePair<Column, Column> valueAndOrderingColumns = new MutablePair<>();
+    final Dataset<Row> resultDataset = explodeArray(dataset, propertyValues,
+        valueAndOrderingColumns);
 
     if (FHIRDefinedType.CODING.equals(propertyType)) {
       // Special case for CODING properties: we use the Coding definition form 
       // the input path so that the results can be further traversed.
       return inputPath.copy(expression, resultDataset, inputPath.getIdColumn(),
-          Optional.of(valueAndEidColumns.getRight()),
-          valueAndEidColumns.getLeft(), inputPath.isSingular(), inputPath.getThisColumn());
+          valueAndOrderingColumns.getLeft(), Optional.of(valueAndOrderingColumns.getRight()),
+          inputPath.isSingular(), inputPath.getThisColumn());
     } else {
       return ElementPath.build(expression, resultDataset, inputPath.getIdColumn(),
-          Optional.of(valueAndEidColumns.getRight()),
-          valueAndEidColumns.getLeft(), inputPath.isSingular(), inputPath.getCurrentResource(),
-          inputPath.getThisColumn(), propertyType);
+          valueAndOrderingColumns.getLeft(), Optional.of(valueAndOrderingColumns.getRight()),
+          inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
+          propertyType);
     }
   }
 

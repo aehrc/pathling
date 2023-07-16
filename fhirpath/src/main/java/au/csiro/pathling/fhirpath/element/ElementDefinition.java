@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import au.csiro.pathling.fhirpath.NestingKey;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
@@ -40,7 +41,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class ElementDefinition {
+public class ElementDefinition implements NestingKey {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
   @Nonnull
@@ -79,9 +80,18 @@ public class ElementDefinition {
   @Nonnull
   private final Optional<BaseRuntimeElementDefinition> elementDefinition;
 
+  /**
+   * The parent definition for this element. There will always be a parent definition, whether it be
+   * another {@link org.hl7.fhir.r4.model.ElementDefinition} or a
+   * {@link au.csiro.pathling.fhirpath.ResourceDefinition}.
+   */
+  @Nonnull
+  private final NestingKey parent;
+
   protected ElementDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
-      @Nonnull final String elementName) {
+      @Nonnull final String elementName, @Nonnull final NestingKey parent) {
     this.childDefinition = childDefinition;
+    this.parent = parent;
     elementDefinition = Optional.ofNullable(childDefinition.getChildByName(elementName));
   }
 
@@ -92,13 +102,14 @@ public class ElementDefinition {
    */
   @Nonnull
   public static ElementDefinition build(@Nonnull final BaseRuntimeChildDefinition childDefinition,
-      @Nonnull final String elementName) {
+      @Nonnull final String elementName, @Nonnull final NestingKey parent) {
     if (elementName.equals("valueReference") && childDefinition instanceof RuntimeChildAny) {
-      return new ReferenceExtensionDefinition(childDefinition, elementName);
+      return new ReferenceExtensionDefinition(childDefinition, elementName, parent);
     } else if (childDefinition instanceof RuntimeChildResourceDefinition) {
-      return new ReferenceDefinition((RuntimeChildResourceDefinition) childDefinition, elementName);
+      return new ReferenceDefinition((RuntimeChildResourceDefinition) childDefinition, elementName,
+          parent);
     } else {
-      return new ElementDefinition(childDefinition, elementName);
+      return new ElementDefinition(childDefinition, elementName, parent);
     }
   }
 
@@ -118,7 +129,9 @@ public class ElementDefinition {
       if (newChild == null) {
         return Optional.empty();
       }
-      return Optional.of(ElementDefinition.build(newChild, name));
+      // When building a new element definition from a child of this one, specify this element as 
+      // the parent.
+      return Optional.of(ElementDefinition.build(newChild, name, this));
     } else {
       return Optional.empty();
     }
@@ -188,12 +201,15 @@ public class ElementDefinition {
       return false;
     }
     final ElementDefinition that = (ElementDefinition) o;
-    return Objects.equals(childDefinition, that.childDefinition);
+    return Objects.equals(childDefinition, that.childDefinition)
+        // Recursively compare parent definitions.
+        && Objects.equals(parent, that.parent);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(childDefinition);
+    // Recursively hash parent definitions.
+    return Objects.hash(childDefinition, parent);
   }
-  
+
 }

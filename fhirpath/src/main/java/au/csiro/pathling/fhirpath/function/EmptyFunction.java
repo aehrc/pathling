@@ -52,9 +52,9 @@ public class EmptyFunction implements NamedFunction {
     final Dataset<Row> dataset = countResult.getDataset();
     final Column valueColumn = countResult.getValueColumn().equalTo(0);
 
-    return ElementPath
-        .build(expression, dataset, inputPath.getIdColumn(), Optional.empty(), valueColumn, true,
-            Optional.empty(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+    return ElementPath.build(expression, dataset, inputPath.getIdColumn(), valueColumn,
+        Optional.empty(), true, Optional.empty(), inputPath.getThisColumn(),
+        FHIRDefinedType.BOOLEAN);
   }
 
 }

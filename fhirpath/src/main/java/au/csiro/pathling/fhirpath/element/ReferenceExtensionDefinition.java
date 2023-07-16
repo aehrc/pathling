@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import au.csiro.pathling.fhirpath.NestingKey;
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -30,8 +31,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class ReferenceExtensionDefinition extends ElementDefinition {
 
   protected ReferenceExtensionDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
-      @Nonnull final String elementName) {
-    super(childDefinition, elementName);
+      @Nonnull final String elementName, final NestingKey parent) {
+    super(childDefinition, elementName, parent);
   }
 
   @Override

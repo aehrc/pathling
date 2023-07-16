@@ -117,7 +117,7 @@ public class ParserContextBuilder {
   @Nonnull
   public ParserContext build() {
     return new ParserContext(inputContext, fhirContext, spark, dataSource,
-        Optional.ofNullable(terminologyServiceFactory), groupingColumns, nodeIdColumns);
+        Optional.ofNullable(terminologyServiceFactory), groupingColumns);
   }
 
 }

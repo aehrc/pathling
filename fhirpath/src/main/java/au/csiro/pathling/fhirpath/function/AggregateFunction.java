@@ -110,8 +110,8 @@ public abstract class AggregateFunction {
 
     return buildAggregateResult(dataset, parserContext, inputs, valueColumn, expression,
         // Create the result as an ElementPath of the given FHIR type.
-        (exp, ds, id, eid, value, singular, thisColumn) -> ElementPath
-            .build(exp, ds, id, eid, value, true, Optional.empty(), thisColumn, fhirType));
+        (exp, ds, id, value, ordering, singular, thisColumn) -> ElementPath.build(exp, ds, id,
+            value, ordering, true, Optional.empty(), thisColumn, fhirType));
   }
 
   @Nonnull
@@ -152,23 +152,20 @@ public abstract class AggregateFunction {
     final Column[] remainingSelection = selection.stream().skip(1).toArray(Column[]::new);
 
     // Get any this columns that may be present in the inputs.
-    // TODO: This is very error prone as a collection can be passed here instead of an array.
-    //  How can we make it more stringent?
-    @SuppressWarnings("ConfusingArgumentToVarargsMethod")
     final Optional<Column> thisColumn = NonLiteralPath
-        .findThisColumn(inputs.toArray(new FhirPath[0]));
+        .findThisColumn((Object[]) inputs.toArray(new FhirPath[0]));
 
     final Dataset<Row> finalDataset = dataset
         .groupBy(groupBy)
         .agg(firstSelection, remainingSelection);
     final Column finalValueColumn = col("value");
 
-    // Clear out the node ID columns in the parser context - as they are no longer valid for joining.
-    parserContext.getNodeIdColumns().clear();
+    // Remove the last nesting entry, so that it is possible to traverse back into this path again 
+    // without it being rolled up into an aggregation.
+    parserContext.getNesting().removeLast();
 
-    // empty eid column as the result is singular
     return resultPathFactory
-        .create(expression, finalDataset, idColumn, Optional.empty(), finalValueColumn, true,
+        .create(expression, finalDataset, idColumn, finalValueColumn, Optional.empty(), true,
             thisColumn);
   }
 
@@ -185,16 +182,16 @@ public abstract class AggregateFunction {
      * @param expression an updated expression to describe the new FhirPath
      * @param dataset the new Dataset that can be used to evaluate this FhirPath against data
      * @param idColumn the new resource identity column
-     * @param eidColumn the new element identity column
      * @param valueColumn the new expression value column
+     * @param orderingColumn the new ordering column
      * @param singular the new singular value
      * @param thisColumn a column containing the collection being iterated, for cases where a path
      * is being created to represent the {@code $this} keyword
      * @return a new instance of T
      */
-    T create(@Nonnull String expression, @Nonnull Dataset<Row> dataset,
-        @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn, @Nonnull Column valueColumn,
-        boolean singular, @Nonnull Optional<Column> thisColumn);
+    T create(@Nonnull String expression, @Nonnull Dataset<Row> dataset, @Nonnull Column idColumn,
+        @Nonnull Column valueColumn, @Nonnull Optional<Column> orderingColumn, boolean singular,
+        @Nonnull Optional<Column> thisColumn);
   }
 
 }

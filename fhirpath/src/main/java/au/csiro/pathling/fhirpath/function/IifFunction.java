@@ -17,20 +17,15 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
-import java.util.Arrays;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * This function takes three arguments, Returns the second argument if the first argument evaluates
@@ -62,8 +57,6 @@ public class IifFunction implements NamedFunction {
     // Join the three datasets together and create a value column.
     final FhirPath ifTrue = input.getArguments().get(1);
     final FhirPath otherwise = input.getArguments().get(2);
-    final Dataset<Row> dataset = join(input.getContext(),
-        Arrays.asList(conditionBoolean, ifTrue, otherwise), JoinType.LEFT_OUTER);
     final Column valueColumn =
         when(conditionBoolean.getValueColumn().equalTo(true), ifTrue.getValueColumn())
             .otherwise(otherwise.getValueColumn());
@@ -71,8 +64,8 @@ public class IifFunction implements NamedFunction {
     // Build a new ElementPath based on the type of the literal `ifTrue` and `otherwise` arguments,
     // and populate it with the dataset and calculated value column.
     final String expression = expressionFromInput(input, NAME);
-    return ifTrue.combineWith(otherwise, dataset, expression, inputPath.getIdColumn(),
-        inputPath.getEidColumn(), valueColumn, inputPath.isSingular(), inputPath.getThisColumn());
+    return ifTrue.combineWith(otherwise, otherwise.getDataset(), expression,
+        inputPath.getIdColumn(), valueColumn, inputPath.isSingular(), inputPath.getThisColumn());
   }
 
 }
