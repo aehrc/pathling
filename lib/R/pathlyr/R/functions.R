@@ -17,6 +17,10 @@
 #' @export
 SNOMED_URI = "http://snomed.info/sct"
 
+#' The URI of the LOINC code system.
+#' @export
+LOINC_URI <- "http://loinc.org"
+
 #' Converts a Column containing codes into a Column that contains a Coding struct.
 #'
 #' The Coding struct Column can be used as an input to terminology functions such as `member_of` and `translate`.
