@@ -157,7 +157,7 @@ public class DatasetAssert {
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert debugAllRows() {
-    dataset.collectAsList().forEach(System.out::println);
+    dataset.collectAsList().forEach(row -> System.out.println(row.mkString(",")));
     return this;
   }
 

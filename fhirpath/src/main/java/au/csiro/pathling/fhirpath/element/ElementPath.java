@@ -56,7 +56,7 @@ public class ElementPath extends NonLiteralPath {
 
   @Getter(AccessLevel.PUBLIC)
   @Nonnull
-  private Optional<ElementDefinition> definition = Optional.empty();
+  protected Optional<ElementDefinition> definition = Optional.empty();
 
   @Getter
   @Nonnull

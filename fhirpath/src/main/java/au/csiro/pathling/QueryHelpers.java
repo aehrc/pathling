@@ -436,16 +436,14 @@ public abstract class QueryHelpers {
   @Nonnull
   public static List<Column> getUnionableColumns(@Nonnull final FhirPath source,
       @Nonnull final FhirPath target) {
-    // The columns will be those common to both datasets, plus the value column.
+    // The columns will be those common to both datasets.
     final Set<String> commonColumnNames = new HashSet<>(List.of(source.getDataset().columns()));
     commonColumnNames.retainAll(List.of(target.getDataset().columns()));
-    final List<Column> selection = commonColumnNames.stream()
+    return commonColumnNames.stream()
         .map(functions::col)
         // We sort the columns so that they line up when we execute the union.
         .sorted(Comparator.comparing(Column::toString))
         .collect(Collectors.toList());
-    selection.add(source.getValueColumn());
-    return selection;
   }
 
   /**

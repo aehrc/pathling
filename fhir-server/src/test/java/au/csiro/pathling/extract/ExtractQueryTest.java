@@ -169,6 +169,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
+        .debugAllRows()
         .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.csv");
   }
 
@@ -399,7 +400,7 @@ class ExtractQueryTest {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.PATIENT);
 
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+    final IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
         () -> new ExtractRequestBuilder(subjectResource)
             .withColumn("id")
             .withColumn("")

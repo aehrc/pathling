@@ -51,11 +51,14 @@ public class UntypedResourcePath extends ReferencePath implements AbstractPath {
   @Nonnull
   public static UntypedResourcePath build(@Nonnull final ReferencePath referencePath,
       @Nonnull final String expression) {
-    return new UntypedResourcePath(expression, referencePath.getDataset(),
+    final UntypedResourcePath result = new UntypedResourcePath(expression,
+        referencePath.getDataset(),
         referencePath.getIdColumn(), referencePath.getValueColumn(),
         referencePath.getOrderingColumn(), referencePath.isSingular(),
         referencePath.getCurrentResource(), referencePath.getThisColumn(),
         referencePath.getFhirType());
+    result.definition = referencePath.getDefinition();
+    return result;
   }
 
   @Nonnull
