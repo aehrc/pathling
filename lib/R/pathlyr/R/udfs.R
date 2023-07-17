@@ -17,37 +17,37 @@
 SNOMED_URI <- 'http://snomed.info/sct'
 
 #' @export
-snomed_code <-function(code) {
-  rlang::expr(if (!is.null(code)) struct(NULL, SNOMED_URI, NULL, string({{code}}), NULL, NULL) else NULL)
+snomed_code <- function(code) {
+  rlang::expr(if (!is.null(code)) struct(NULL, SNOMED_URI, NULL, string({ { code } }), NULL, NULL) else NULL)
 }
 
 #' Allowed property types.
 #'
 #' @export
 PropertyType <- list(
-  STRING = "string",
-  INTEGER = "integer",
-  BOOLEAN = "boolean",
-  DECIMAL = "decimal",
-  DATETIME = "dateTime",
-  CODE = "code",
-  CODING = "Coding"
+    STRING = "string",
+    INTEGER = "integer",
+    BOOLEAN = "boolean",
+    DECIMAL = "decimal",
+    DATETIME = "dateTime",
+    CODE = "code",
+    CODING = "Coding"
 )
 
 #' Concept map equivalences.
 #'
 #' @export
 Equivalence <- list(
-  RELATEDTO = "relatedto",
-  EQUIVALENT = "equivalent",
-  EQUAL = "equal",
-  WIDER = "wider",
-  SUBSUMES = "subsumes",
-  NARROWER = "narrower",
-  SPECIALIZES = "specializes",
-  INEXACT = "inexact",
-  UNMATCHED = "unmatched",
-  DISJOINT = "disjoint"
+    RELATEDTO = "relatedto",
+    EQUIVALENT = "equivalent",
+    EQUAL = "equal",
+    WIDER = "wider",
+    SUBSUMES = "subsumes",
+    NARROWER = "narrower",
+    SPECIALIZES = "specializes",
+    INEXACT = "inexact",
+    UNMATCHED = "unmatched",
+    DISJOINT = "disjoint"
 )
 
 
@@ -79,7 +79,7 @@ to_array <- function(value) {
 #'
 #' @export
 trm_member_of <- function(coding, value_set_uri) {
-  rlang::expr(member_of({{coding}}, {{value_set_uri}}))
+  rlang::expr(member_of({ { coding } }, { { value_set_uri } }))
 }
 
 #' Translates a Coding column.
@@ -106,8 +106,8 @@ trm_member_of <- function(coding, value_set_uri) {
 #'
 #' @export
 trm_translate <- function(coding, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
-  rlang::expr(translate_coding({{ coding }}, {{ concept_map_uri }}, {{ reverse }},
-      !!to_array(equivalences), {{ target }}))
+  rlang::expr(translate_coding({ { coding } }, { { concept_map_uri } }, { { reverse } },
+                               !!to_array(equivalences), { { target } }))
 }
 
 #' Checks if left Coding subsumes right Coding.
@@ -126,7 +126,7 @@ trm_translate <- function(coding, concept_map_uri, reverse = FALSE, equivalences
 #'
 #' @export
 trm_subsumes <- function(left_coding, right_coding) {
-  rlang::expr(subsumes({{ left_coding }}, {{ right_coding }}))
+  rlang::expr(subsumes({ { left_coding } }, { { right_coding } }, FALSE))
 }
 
 #' Checks if left Coding is subsumed by right Coding.
@@ -145,7 +145,7 @@ trm_subsumes <- function(left_coding, right_coding) {
 #'
 #' @export
 trm_subsumed_by <- function(left_coding, right_coding) {
-  rlang::expr(subsumed_by({{ left_coding }}, {{ right_coding }}))
+  rlang::expr(subsumes({ { left_coding } }, { { right_coding } }, TRUE))
 }
 
 #' Retrieves the canonical display name for a Coding.
@@ -166,7 +166,7 @@ trm_subsumed_by <- function(left_coding, right_coding) {
 #'
 #' @export
 trm_display <- function(coding, accept_language = NULL) {
-  rlang::expr(display({{ coding }}, {{ accept_language }}))
+  rlang::expr(display({ { coding } }, { { accept_language } }))
 }
 
 #' Retrieves the values of properties for a Coding.
@@ -191,10 +191,27 @@ trm_display <- function(coding, accept_language = NULL) {
 #' trm_property_of(coding, property_code, property_type = "string", accept_language = NULL)
 #'
 #' @export
+#' @importFrom dplyr case_when
 trm_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
-  rlang::expr(property_of({{ coding }}, {{ property_code }}, {{property_type}}, {{ accept_language }}))
-}
 
+  if (property_type == PropertyType$CODE) {
+    rlang::expr(property_code({{ coding }}, {{ property_code }}, {{ accept_language }}))
+  } else if(property_type == PropertyType$CODING) {
+    rlang::expr(property_Coding({{ coding }}, {{ property_code }}, {{ accept_language }}))
+  } else if(property_type == PropertyType$STRING) {
+    rlang::expr(property_string({{ coding }}, {{ property_code }}, {{ accept_language }}))
+  } else if(property_type == PropertyType$INTEGER) {
+    rlang::expr(property_integer({{ coding }}, {{ property_code }}, {{ accept_language }}))
+  } else if(property_type == PropertyType$BOOLEAN) {
+    rlang::expr(property_boolean({{ coding }}, {{ property_code }}, {{ accept_language }}))
+  } else if(property_type == PropertyType$DATETIME) {
+    rlang::expr(property_dateTime({{ coding }}, {{ property_code }}, {{ accept_language }}))
+  } else if(property_type == PropertyType$DECIMAL) {
+    rlang::expr(property_decimal({{ coding }}, {{ property_code }}, {{ accept_language }}))
+  } else {
+    stop("Unsupported property type: ", property_type)
+  }
+}
 
 #' Retrieves the values of designations for a Coding.
 #'
@@ -215,5 +232,5 @@ trm_property_of <- function(coding, property_code, property_type = "string", acc
 #'
 #' @export
 trm_designation <- function(coding, use = NULL, language = NULL) {
-  rlang::expr(designation({{ coding }}, {{ use }}, {{ language }}))
+  rlang::expr(designation({ { coding } }, { { use } }, { { language } }))
 }
