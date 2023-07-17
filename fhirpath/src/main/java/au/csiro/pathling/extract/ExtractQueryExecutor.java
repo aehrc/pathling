@@ -29,6 +29,11 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
+/**
+ * Builds the overall query responsible for executing an extract request.
+ *
+ * @author John Grimes
+ */
 @Slf4j
 public class ExtractQueryExecutor extends QueryExecutor {
 
@@ -69,12 +74,19 @@ public class ExtractQueryExecutor extends QueryExecutor {
             query.getSubjectResource().toCode(), true);
     final ParserContext parserContext = buildParserContext(inputContext,
         Collections.singletonList(inputContext.getIdColumn()));
+
+    // Parse each of the column expressions.
     final List<FhirPath> parsedColumns =
         parseExpressions(parserContext, query.getColumnsAsStrings());
+
+    // Validate and coerce the types of the columns where necessary.
     final List<FhirPath> coercedColumns =
         validateAndCoerceColumns(parsedColumns, resultType);
+
+    // Get the dataset from the last column.
     final Dataset<Row> unfiltered = coercedColumns.get(parsedColumns.size() - 1).getDataset();
 
+    // Trim trailing nulls from the dataset.
     final Dataset<Row> trimmed = trimTrailingNulls(inputContext.getIdColumn(), coercedColumns,
         unfiltered);
 
@@ -84,16 +96,24 @@ public class ExtractQueryExecutor extends QueryExecutor {
       filtered = trimmed;
     } else {
       final List<String> filters = query.getFilters();
+
+      // Parse each of the filter expressions,
       final List<FhirPath> filterPaths = parseExpressions(parserContext, filters,
           Optional.of(trimmed));
+
+      // Get the dataset from the last filter.
       final Dataset<Row> withFilters = filterPaths.get(filterPaths.size() - 1).getDataset();
+
+      // Combine all the filter value columns using the and operator.
       final Optional<Column> filterConstraint = filterPaths.stream()
           .map(FhirPath::getValueColumn)
           .reduce(Column::and);
+
+      // Filter the dataset using the constraint.
       filtered = filterConstraint.map(withFilters::filter).orElse(withFilters);
     }
 
-    // Select the column values.
+    // Select the column values from the dataset, applying labelling where requested.
     final Column[] columnValues = labelColumns(
         coercedColumns.stream()
             .map(FhirPath::getValueColumn),
@@ -101,7 +121,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
     ).toArray(Column[]::new);
     final Dataset<Row> selectedDataset = filtered.select(columnValues);
 
-    // If there is a limit, apply it.
+    // If there is a row limit, apply it.
     return query.getLimit().isPresent()
            ? selectedDataset.limit(query.getLimit().get())
            : selectedDataset;
@@ -146,18 +166,23 @@ public class ExtractQueryExecutor extends QueryExecutor {
       @Nonnull final List<FhirPath> expressions, @Nonnull final Dataset<Row> dataset) {
     checkArgument(!expressions.isEmpty(), "At least one expression is required");
 
+    // Get the value columns associated with non-singular paths.
     final List<Column> nonSingularColumns = expressions.stream()
         .filter(fhirPath -> !fhirPath.isSingular())
         .map(FhirPath::getValueColumn)
         .collect(toList());
 
     if (nonSingularColumns.isEmpty()) {
+      // If there are no non-singular paths, there is nothing to do.
       return dataset;
     } else {
+      // Build a condition that checks whether any of the non-singular columns are not null.
       final Column additionalCondition = nonSingularColumns.stream()
           .map(Column::isNotNull)
           .reduce(Column::or)
           .get();
+
+      // Build a dataset that contains the distinct values of all singular columns.
       final List<Column> filteringColumns = new ArrayList<>();
       filteringColumns.add(idColumn);
       final List<Column> singularColumns = expressions.stream()
@@ -168,6 +193,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
       final Dataset<Row> filteringDataset = dataset
           .select(filteringColumns.toArray(new Column[0]))
           .distinct();
+
+      // Join the dataset to the filtering dataset, using a right outer join.
       return join(dataset, filteringColumns, filteringDataset, filteringColumns,
           additionalCondition, JoinType.RIGHT_OUTER);
     }
