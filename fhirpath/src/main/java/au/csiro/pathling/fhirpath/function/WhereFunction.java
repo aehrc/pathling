@@ -17,12 +17,14 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -67,9 +69,12 @@ public class WhereFunction implements NamedFunction {
 
     final Column valueColumn = when(argumentValue.equalTo(true), thisValue).otherwise(lit(null));
     final String expression = expressionFromInput(input, NAME);
+    final DatasetWithColumn datasetWithColumn = createColumn(argumentPath.getDataset(),
+        valueColumn);
 
-    return inputPath.copy(expression, argumentPath.getDataset(), idColumn, valueColumn,
-        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getThisColumn());
+    return inputPath.copy(expression, datasetWithColumn.getDataset(), idColumn,
+        datasetWithColumn.getColumn(), inputPath.getOrderingColumn(), inputPath.isSingular(),
+        inputPath.getThisColumn());
   }
 
 }

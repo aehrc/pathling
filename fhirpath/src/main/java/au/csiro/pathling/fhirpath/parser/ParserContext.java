@@ -161,7 +161,7 @@ public class ParserContext {
   }
 
   /**
-   * Creates a copy of the current parser context, but with the specified unnest behaviour.
+   * Creates a copy of the current parser context with the specified unnest behaviour.
    *
    * @param unnestBehaviour the {@link UnnestBehaviour} to use
    * @return a new #{link ParserContext}
@@ -172,14 +172,23 @@ public class ParserContext {
   }
 
   /**
-   * Creates a copy of the current parser context, but with a different input dataset and the node
-   * IDs emptied out.
+   * Creates a copy of the current parser context with a different input dataset.
    *
    * @return a new {@link ParserContext}
    */
   public ParserContext withContextDataset(@Nonnull final Dataset<Row> contextDataset) {
     final FhirPath newInputContext = inputContext.withDataset(contextDataset);
     return new ParserContext(newInputContext, fhirContext, sparkSession, dataSource,
+        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
+  }
+
+  /**
+   * Creates a copy of the current parser context with a different set of grouping columns.
+   *
+   * @return a new {@link ParserContext}
+   */
+  public ParserContext withGroupingColumns(@Nonnull final List<Column> groupingColumns) {
+    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
         terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
   }
 

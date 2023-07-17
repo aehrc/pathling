@@ -90,6 +90,27 @@
       "part": [
         {
           "name": "label",
+          "valueString": "Arianne"
+        },
+        {
+          "name": "label",
+          "valueString": "Ms."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Arianne') and ((name.prefix) contains 'Ms.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
           "valueString": "Karina848"
         },
         {

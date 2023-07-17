@@ -22,7 +22,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
@@ -121,77 +120,15 @@ public abstract class QueryExecutor {
   }
 
   @Nonnull
-  protected List<FhirPath> parseFilters(@Nonnull final Parser parser,
-      @Nonnull final Collection<String> filters) {
-    return filters.stream().map(expression -> {
-      final FhirPath result = parser.parse(expression);
+  protected void validateFilters(@Nonnull final Collection<FhirPath> filters) {
+    for (final FhirPath filter : filters) {
       // Each filter expression must evaluate to a singular Boolean value, or a user error will be
       // thrown.
-      checkUserInput(result instanceof BooleanPath,
-          "Filter expression is not a non-literal boolean: " + expression);
-      checkUserInput(result.isSingular(),
-          "Filter expression must represent a singular value: " + expression);
-      return result;
-    }).collect(toList());
-  }
-
-  @Nonnull
-  protected Dataset<Row> joinExpressionsAndFilters(final FhirPath inputContext,
-      @Nonnull final Collection<FhirPath> expressions,
-      @Nonnull final Collection<FhirPath> filters, @Nonnull final Column idColumn) {
-
-    final Dataset<Row> combinedGroupings = joinExpressionsWithoutCorrelation(
-        inputContext, expressions, idColumn);
-
-    return filters.stream()
-        .map(FhirPath::getDataset)
-        .reduce(combinedGroupings,
-            ((result, element) -> join(result, idColumn, element, idColumn, JoinType.LEFT_OUTER)));
-  }
-
-  @Nonnull
-  protected static Dataset<Row> joinExpressionsWithoutCorrelation(final FhirPath inputContext,
-      final @Nonnull Collection<FhirPath> expressions, final @Nonnull Column idColumn) {
-    // We need to remove any trailing null values from non-empty collections, so that aggregations do
-    // not count non-empty collections in the empty collection grouping.
-    // We start from the inputContext's dataset and then outer join subsequent expressions datasets
-    // where the value is not null.
-    return expressions.stream()
-        .map(expr -> expr.getDataset().filter(expr.getValueColumn().isNotNull()))
-        // the use of RIGHT_OUTER join seems to be necessary to preserve the original
-        // id column in the result
-        .reduce(inputContext.getDataset(),
-            ((result, element) -> join(result, idColumn, element, idColumn, JoinType.LEFT_OUTER)));
-  }
-
-
-  /**
-   * Joins the datasets in a list together the provided set of shared columns.
-   *
-   * @param expressions a list of expressions to join
-   * @param joinColumns the columns to join by; all columns must be present in all expressions.
-   * @return the joined {@link Dataset}
-   */
-  @Nonnull
-  protected static Dataset<Row> joinExpressionsByColumns(
-      @Nonnull final Collection<FhirPath> expressions, @Nonnull final List<Column> joinColumns) {
-    checkArgument(!expressions.isEmpty(), "expressions must not be empty");
-
-    final Optional<Dataset<Row>> maybeJoinResult = expressions.stream()
-        .map(FhirPath::getDataset)
-        .reduce((l, r) -> join(l, joinColumns, r, joinColumns, JoinType.LEFT_OUTER));
-    return maybeJoinResult.orElseThrow();
-  }
-
-  @Nonnull
-  protected static Dataset<Row> applyFilters(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Collection<FhirPath> filters) {
-    // Get the value column from each filter expression, and combine them with AND logic.
-    return filters.stream()
-        .map(FhirPath::getValueColumn)
-        .reduce(Column::and)
-        .flatMap(filter -> Optional.of(dataset.filter(filter)))
-        .orElse(dataset);
+      checkUserInput(filter instanceof BooleanPath,
+          "Filter expression is not a non-literal boolean: " + filter);
+      checkUserInput(filter.isSingular(),
+          "Filter expression must represent a singular value: " + filter);
+    }
   }
 
   protected Dataset<Row> filterDataset(@Nonnull final ResourcePath inputContext,
