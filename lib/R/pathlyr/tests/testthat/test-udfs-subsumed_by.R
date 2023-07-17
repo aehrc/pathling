@@ -21,7 +21,7 @@ subsumption_df <- function(spark) {
       select_expr(id, codeA, codeB = if (is.null(codeB2)) array(codeB1) else array(codeB1, codeB2))
 }
 
-test_that("subsumes", {
+test_that("subsumed_by", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
@@ -30,7 +30,7 @@ test_that("subsumes", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_subsumes(codeA, codeB)
+          result = !!trm_subsumed_by(codeB, codeA)
       )
 
   expect_equal(
@@ -44,7 +44,10 @@ test_that("subsumes", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_subsumes(codeA, !!trm_to_coding("63816008", SNOMED_URI))
+          result = !!trm_subsumed_by(
+              !!trm_to_coding("63816008", SNOMED_URI),
+              codeA
+          )
       )
 
   expect_equal(
@@ -58,9 +61,9 @@ test_that("subsumes", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_subsumes(
-              !!trm_to_coding("55914-3", LOINC_URI),
-              codeB
+          result = !!trm_subsumed_by(
+              codeB,
+              !!trm_to_coding("55914-3", LOINC_URI)
           )
       )
 
@@ -72,6 +75,3 @@ test_that("subsumes", {
       )
   )
 })
-
-
-

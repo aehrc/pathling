@@ -6,7 +6,7 @@ test_that("designation", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  df <-   spark %>% to_sdf(
+  property_df <-   spark %>% to_sdf(
       id = c("id-1", "id-2", "id-3"),
       code = c(
           snomed_coding_row("439319006"),
@@ -15,7 +15,7 @@ test_that("designation", {
       )
   )
 
-  result_df <- df %>%
+  result_df <- property_df %>%
       select_expr(
           id,
           result = !!trm_designation(code)
@@ -40,7 +40,7 @@ test_that("designation", {
       )
   )
 
-  result_df <- df %>%
+  result_df <- property_df %>%
       select_expr(
           id,
           result = !!trm_designation(code, !!USE_DISPLAY)
@@ -61,7 +61,7 @@ test_that("designation", {
       )
   )
 
-  result_df <- df %>%
+  result_df <- property_df %>%
       select_expr(
           id,
           result = !!trm_designation(code, !!USE_DISPLAY, "fr-FR")
@@ -75,7 +75,7 @@ test_that("designation", {
       )
   )
 
-  result_df <- df %>%
+  result_df <- property_df %>%
       head(1) %>%
       select_expr(
           id,
