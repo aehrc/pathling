@@ -18,9 +18,10 @@
 package au.csiro.pathling.search;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.row_number;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
@@ -49,6 +50,8 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IPrimitiveType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -163,17 +166,20 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
     final Column[] resourceColumns = resourcePath.getElementsToColumns().keySet().stream()
         .map(colName -> resourcePath.getElementsToColumns().get(colName).alias(colName))
         .toArray(Column[]::new);
+    // Resources are ordered by ID to ensure consistent paging.
     final Dataset<Row> result = dataset.select(resourceColumns);
-    result.explain();
+    final WindowSpec window = Window.orderBy(col("id"));
+    final Dataset<Row> withRowNumbers = result.withColumn("row_number",
+        row_number().over(window));
 
     if (getConfiguration().getCacheResults()) {
       // We cache the dataset because we know it will be accessed for both the total and the record
       // retrieval.
       log.debug("Caching search dataset");
-      dataset.cache();
+      withRowNumbers.cache();
     }
 
-    return result;
+    return withRowNumbers;
   }
 
   @Override
@@ -187,26 +193,25 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   public List<IBaseResource> getResources(final int theFromIndex, final int theToIndex) {
     log.info("Retrieving search results ({}-{})", theFromIndex + 1, theToIndex);
 
-    Dataset<Row> resources = result;
+    @Nullable Column filterCondition = null;
     if (theFromIndex != 0) {
-      // Spark does not have an "offset" concept, so we create a list of rows to exclude and
-      // subtract them from the dataset using a left anti-join.
-      final String excludeAlias = randomAlias();
-      final Dataset<Row> exclude = resources.limit(theFromIndex)
-          .select(resources.col("id").alias(excludeAlias));
-      resources = resources
-          .join(exclude, resources.col("id").equalTo(exclude.col(excludeAlias)), "left_anti");
+      filterCondition = col("row_number").geq(theFromIndex + 1);
     }
-    // The dataset is trimmed to the requested size.
     if (theToIndex != 0) {
-      resources = resources.limit(theToIndex - theFromIndex);
+      filterCondition = filterCondition == null
+                        ? col("row_number").lt(theToIndex + 1)
+                        : filterCondition.and(col("row_number").lt(theToIndex + 1));
     }
+    final Dataset<Row> filtered = Optional.ofNullable(filterCondition)
+        .map(result::filter).orElse(result);
+    final Dataset<Row> resources = filtered.drop("row_number");
 
     // The requested resources are encoded into HAPI FHIR objects, and then collected.
     @Nullable final ExpressionEncoder<IBaseResource> encoder = fhirEncoders
         .of(subjectResource.toCode());
     requireNonNull(encoder);
     reportQueryPlan(resources);
+    resources.explain();
 
     return resources.as(encoder).collectAsList();
   }
