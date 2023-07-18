@@ -59,9 +59,9 @@ public class BooleansTestFunction extends AggregateFunction implements NamedFunc
     final Column inputColumn = inputPath.getValueColumn();
     final String expression = expressionFromInput(input, type.getFunctionName());
 
-    final Column valueColumn = type.getEquality().apply(inputColumn);
-    return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
-        expression);
+    final Column aggregateColumn = type.getEquality().apply(inputColumn);
+    return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath,
+        aggregateColumn, UnaryOperator.identity(), expression);
   }
 
   /**

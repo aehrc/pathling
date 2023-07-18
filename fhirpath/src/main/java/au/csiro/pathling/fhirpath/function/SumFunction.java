@@ -54,10 +54,10 @@ public class SumFunction extends AggregateFunction implements NamedFunction {
     final NonLiteralPath inputPath = input.getInput();
     final Dataset<Row> dataset = inputPath.getDataset();
     final String expression = expressionFromInput(input, NAME);
-    final Column finalValueColumn = sum(inputPath.getValueColumn());
+    final Column aggregateColumn = sum(inputPath.getValueColumn());
 
-    return buildAggregateResult(dataset, input.getContext(), inputPath, finalValueColumn,
-        expression);
+    return buildAggregateResult(dataset, input.getContext(), inputPath, aggregateColumn,
+        UnaryOperator.identity(), expression);
   }
 
 }

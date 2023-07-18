@@ -58,6 +58,16 @@ public class Nesting {
   }
 
   /**
+   * @return all value columns within nesting paths that have been traversed
+   */
+  @Nonnull
+  public List<Column> getColumns() {
+    return nesting.values().stream()
+        .map(FhirPath::getValueColumn)
+        .collect(toList());
+  }
+
+  /**
    * @return all ordering columns within nesting paths that have been traversed
    */
   @Nonnull

@@ -58,9 +58,9 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     final NonLiteralPath inputPath = input.getInput();
     final Dataset<Row> dataset = inputPath.getOrderedDataset(nesting);
     final String expression = expressionFromInput(input, NAME);
-    final Column finalValueColumn = first(inputPath.getValueColumn(), true);
+    final Column aggregateColumn = first(inputPath.getValueColumn(), true);
 
-    return buildAggregateResult(dataset, input.getContext(), inputPath, finalValueColumn,
-        expression);
+    return buildAggregateResult(dataset, input.getContext(), inputPath, aggregateColumn,
+        UnaryOperator.identity(), expression);
   }
 }

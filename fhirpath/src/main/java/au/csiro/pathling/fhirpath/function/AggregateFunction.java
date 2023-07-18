@@ -17,11 +17,14 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-import static org.apache.spark.sql.functions.col;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.spark.sql.functions.first;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -31,13 +34,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -55,17 +59,18 @@ public abstract class AggregateFunction {
    * @param dataset the {@link Dataset} that will be used in the result
    * @param parserContext the current {@link ParserContext}
    * @param input the {@link FhirPath} objects being aggregated
-   * @param valueColumn a {@link Column} describing the resulting value
+   * @param aggregateColumn a {@link Column} describing the resulting value
    * @param expression the FHIRPath expression for the result
    * @return a new {@link ElementPath} representing the result
    */
   @Nonnull
   protected NonLiteralPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final NonLiteralPath input,
-      @Nonnull final Column valueColumn, @Nonnull final String expression) {
+      @Nonnull final Column aggregateColumn,
+      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression) {
 
     return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
-        valueColumn, expression, input::copy);
+        aggregateColumn, valueColumnProducer, expression, input::copy);
   }
 
   /**
@@ -74,7 +79,9 @@ public abstract class AggregateFunction {
    * @param dataset the {@link Dataset} that will be used in the result
    * @param parserContext the current {@link ParserContext}
    * @param input the {@link FhirPath} objects being aggregated
-   * @param valueColumn a {@link Column} describing the resulting value
+   * @param aggregateColumn a {@link Column} describing the resulting value
+   * @param valueColumnProducer a {@link UnaryOperator} that produces a {@link Column} describing
+   * the final value
    * @param expression the FHIRPath expression for the result
    * @param fhirType the {@link FHIRDefinedType} of the result
    * @return a new {@link ElementPath} representing the result
@@ -83,11 +90,12 @@ public abstract class AggregateFunction {
   @Nonnull
   protected ElementPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final FhirPath input,
-      @Nonnull final Column valueColumn, @Nonnull final String expression,
+      @Nonnull final Column aggregateColumn,
+      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
     return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
-        valueColumn, expression, fhirType);
+        aggregateColumn, valueColumnProducer, expression, fhirType);
   }
 
   /**
@@ -97,7 +105,9 @@ public abstract class AggregateFunction {
    * @param dataset the {@link Dataset} that will be used in the result
    * @param parserContext the current {@link ParserContext}
    * @param inputs the {@link FhirPath} objects being aggregated
-   * @param valueColumn a {@link Column} describing the resulting value
+   * @param aggregateColumn a {@link Column} describing the aggregation operation
+   * @param valueColumnProducer a {@link UnaryOperator} that produces a {@link Column} describing
+   * the final value
    * @param expression the FHIRPath expression for the result
    * @param fhirType the {@link FHIRDefinedType} of the result
    * @return a new {@link ElementPath} representing the result
@@ -105,10 +115,12 @@ public abstract class AggregateFunction {
   @Nonnull
   protected ElementPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<FhirPath> inputs,
-      @Nonnull final Column valueColumn, @Nonnull final String expression,
+      @Nonnull final Column aggregateColumn,
+      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
-    return buildAggregateResult(dataset, parserContext, inputs, valueColumn, expression,
+    return buildAggregateResult(dataset, parserContext, inputs, aggregateColumn,
+        valueColumnProducer, expression,
         // Create the result as an ElementPath of the given FHIR type.
         (exp, ds, id, value, ordering, singular, thisColumn) -> ElementPath.build(exp, ds, id,
             value, ordering, true, Optional.empty(), thisColumn, fhirType));
@@ -117,7 +129,8 @@ public abstract class AggregateFunction {
   @Nonnull
   private <T extends FhirPath> T buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<FhirPath> inputs,
-      @Nonnull final Column valueColumn, @Nonnull final String expression,
+      @Nonnull final Column aggregateColumn,
+      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression,
       @Nonnull final ResultPathFactory<T> resultPathFactory) {
 
     checkArgument(!inputs.isEmpty(), "Collection of inputs cannot be empty");
@@ -126,47 +139,45 @@ public abstract class AggregateFunction {
     final Column idColumn = inputs.stream().findFirst().get().getIdColumn();
 
     // Get the grouping columns from the parser context.
-    final List<Column> groupByList = parserContext.getGroupingColumns();
+    final List<Column> groupingColumns = parserContext.getGroupingColumns();
+    final Column[] partitionBy = groupingColumns.toArray(new Column[0]);
 
-    // Drop the requested grouping columns that are not present in the provided dataset.
-    // This handles the situation where `%resource` is used in `where()`.
-    // The columns requested for aggregation may include $this element ID, which is not present in
-    // datasets originating from `%resource` and thus should not be actually used for evaluation of
-    // the aggregation.
-    final Set<String> existingColumns = Stream.of(dataset.columns()).collect(Collectors.toSet());
-    final Column[] groupBy = groupByList.stream()
-        .filter(c -> existingColumns.contains(c.toString()))
-        .toArray(Column[]::new);
+    // Use a windowing function to aggregate within the column, while preserving the rest of the 
+    // dataset.
+    final WindowSpec window = Window.partitionBy(partitionBy);
+    final Column valueColumn = valueColumnProducer.apply(aggregateColumn.over(window));
+    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
-    // The selection will be the first function applied to each column except the grouping columns, 
-    // plus the value column.
-    final Predicate<Column> groupingFilter = column -> !groupByList.contains(column);
-    final List<Column> selection = Stream.of(dataset.columns())
+    // Erase the last level of nesting present within the context.
+    parserContext.getNesting().removeLast();
+
+    // Perform a subsequent aggregation that results in a single aggregate result at the current 
+    // nesting level (taking into account the erasure).
+    // Collect the grouping and non-grouping columns into separate collections
+    final Set<Column> nonGroupingColumns = Stream.of(datasetWithColumn.getDataset().columns())
         .map(functions::col)
-        .filter(groupingFilter)
+        .collect(toSet());
+    groupingColumns.forEach(nonGroupingColumns::remove);
+    // Wrap the non-grouping columns in a "first" aggregation.
+    final List<Column> selection = nonGroupingColumns.stream()
         .map(column -> first(column, true).alias(column.toString()))
-        .collect(Collectors.toList());
-    selection.add(valueColumn.alias("value"));
-
+        .collect(toList());
+    // Separate the first column from the rest, so that we can pass all the columns to the "agg" 
+    // method.
     final Column firstSelection = checkPresent(selection.stream().limit(1).findFirst());
     final Column[] remainingSelection = selection.stream().skip(1).toArray(Column[]::new);
+    // Perform the final aggregation, the first row of each non-grouping column grouped by the 
+    // grouping columns.
+    final Dataset<Row> result = datasetWithColumn.getDataset()
+        .groupBy(groupingColumns.toArray(new Column[0]))
+        .agg(firstSelection, remainingSelection);
 
-    // Get any this columns that may be present in the inputs.
+    // Get any "this" columns that may be present in the inputs.
     final Optional<Column> thisColumn = NonLiteralPath
         .findThisColumn((Object[]) inputs.toArray(new FhirPath[0]));
 
-    final Dataset<Row> finalDataset = dataset
-        .groupBy(groupBy)
-        .agg(firstSelection, remainingSelection);
-    final Column finalValueColumn = col("value");
-
-    // Remove the last nesting entry, so that it is possible to traverse back into this path again 
-    // without it being rolled up into an aggregation.
-    parserContext.getNesting().removeLast();
-
-    return resultPathFactory
-        .create(expression, finalDataset, idColumn, finalValueColumn, Optional.empty(), true,
-            thisColumn);
+    return resultPathFactory.create(expression, result, idColumn,
+        datasetWithColumn.getColumn(), Optional.empty(), true, thisColumn);
   }
 
   /**

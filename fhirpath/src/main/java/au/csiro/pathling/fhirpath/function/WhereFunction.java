@@ -22,6 +22,7 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.row_number;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
@@ -30,6 +31,10 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.expressions.Window;
+import org.apache.spark.sql.expressions.WindowSpec;
 
 /**
  * Describes a function which can scope down the previous invocation within a FHIRPath expression,
@@ -66,15 +71,21 @@ public class WhereFunction implements NamedFunction {
     // absence of a value).
     final Column idColumn = argumentPath.getIdColumn();
     final Column thisValue = checkPresent(argumentPath.getThisColumn());
-
     final Column valueColumn = when(argumentValue.equalTo(true), thisValue).otherwise(lit(null));
-    final String expression = expressionFromInput(input, NAME);
-    final DatasetWithColumn datasetWithColumn = createColumn(argumentPath.getDataset(),
-        valueColumn);
 
-    return inputPath.copy(expression, datasetWithColumn.getDataset(), idColumn,
-        datasetWithColumn.getColumn(), inputPath.getOrderingColumn(), inputPath.isSingular(),
-        inputPath.getThisColumn());
+    // We use a windowing function to remove all null values except one. A single null value against 
+    // a resource signifies the absence of a value for a particular element.
+    final WindowSpec window = Window.partitionBy(idColumn).orderBy(valueColumn.asc_nulls_last());
+    final DatasetWithColumn datasetWithRowNumber = createColumn(argumentPath.getDataset(),
+        row_number().over(window));
+    final Dataset<Row> dataset = datasetWithRowNumber.getDataset()
+        .filter(valueColumn.isNotNull().or(datasetWithRowNumber.getColumn().equalTo(1)));
+
+    input.getContext().getNesting().removeLast();
+
+    final String expression = expressionFromInput(input, NAME);
+    return inputPath.copy(expression, dataset, idColumn, valueColumn,
+        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getThisColumn());
   }
 
 }

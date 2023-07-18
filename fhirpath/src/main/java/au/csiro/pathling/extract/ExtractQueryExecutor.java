@@ -1,12 +1,10 @@
 package au.csiro.pathling.extract;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.QueryExecutor;
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.AbstractPath;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -17,11 +15,9 @@ import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.Column;
@@ -86,20 +82,16 @@ public class ExtractQueryExecutor extends QueryExecutor {
     // Get the dataset from the last column.
     final Dataset<Row> unfiltered = coercedColumns.get(parsedColumns.size() - 1).getDataset();
 
-    // Trim trailing nulls from the dataset.
-    final Dataset<Row> trimmed = trimTrailingNulls(inputContext.getIdColumn(), coercedColumns,
-        unfiltered);
-
     // Apply the filters.
     final Dataset<Row> filtered;
     if (query.getFilters().isEmpty()) {
-      filtered = trimmed;
+      filtered = unfiltered;
     } else {
       final List<String> filters = query.getFilters();
 
       // Parse each of the filter expressions,
       final List<FhirPath> filterPaths = parseExpressions(parserContext, filters,
-          Optional.of(trimmed));
+          Optional.of(unfiltered));
 
       // Get the dataset from the last filter.
       final Dataset<Row> withFilters = filterPaths.get(filterPaths.size() - 1).getDataset();
@@ -159,45 +151,6 @@ public class ExtractQueryExecutor extends QueryExecutor {
     }
 
     return coerced;
-  }
-
-  @Nonnull
-  private Dataset<Row> trimTrailingNulls(final @Nonnull Column idColumn,
-      @Nonnull final List<FhirPath> expressions, @Nonnull final Dataset<Row> dataset) {
-    checkArgument(!expressions.isEmpty(), "At least one expression is required");
-
-    // Get the value columns associated with non-singular paths.
-    final List<Column> nonSingularColumns = expressions.stream()
-        .filter(fhirPath -> !fhirPath.isSingular())
-        .map(FhirPath::getValueColumn)
-        .collect(toList());
-
-    if (nonSingularColumns.isEmpty()) {
-      // If there are no non-singular paths, there is nothing to do.
-      return dataset;
-    } else {
-      // Build a condition that checks whether any of the non-singular columns are not null.
-      final Column additionalCondition = nonSingularColumns.stream()
-          .map(Column::isNotNull)
-          .reduce(Column::or)
-          .get();
-
-      // Build a dataset that contains the distinct values of all singular columns.
-      final List<Column> filteringColumns = new ArrayList<>();
-      filteringColumns.add(idColumn);
-      final List<Column> singularColumns = expressions.stream()
-          .filter(FhirPath::isSingular)
-          .map(FhirPath::getValueColumn)
-          .collect(Collectors.toList());
-      filteringColumns.addAll(singularColumns);
-      final Dataset<Row> filteringDataset = dataset
-          .select(filteringColumns.toArray(new Column[0]))
-          .distinct();
-
-      // Join the dataset to the filtering dataset, using a right outer join.
-      return join(dataset, filteringColumns, filteringDataset, filteringColumns,
-          additionalCondition, JoinType.RIGHT_OUTER);
-    }
   }
 
 }

@@ -19,15 +19,14 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
+import static org.apache.spark.sql.functions.count;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -51,21 +50,14 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     final Column subjectColumn = inputPath.getValueColumn();
 
-    // When we are counting resources from the input context, we use the distinct count to account
-    // for the fact that there may be duplicate IDs in the dataset.
-    // When we are counting anything else, we use a non-distinct count, to account for the fact that
-    // it is valid to have multiple of the same value.
-    final Function<Column, Column> countFunction = inputPath == input.getContext().getInputContext()
-                                                   ? functions::countDistinct
-                                                   : functions::count;
-
+    final Column aggregateColumn = count(subjectColumn);
     // According to the FHIRPath specification, the count function must return 0 when invoked on an
     // empty collection.
-    final Column valueColumn = when(countFunction.apply(subjectColumn).isNull(), 0L)
-        .otherwise(countFunction.apply(subjectColumn));
+    final UnaryOperator<Column> valueColumnProducer = column -> when(column.isNull(), 0L)
+        .otherwise(column);
 
-    return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
-        expression, FHIRDefinedType.UNSIGNEDINT);
+    return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath,
+        aggregateColumn, valueColumnProducer, expression, FHIRDefinedType.UNSIGNEDINT);
   }
 
 }
