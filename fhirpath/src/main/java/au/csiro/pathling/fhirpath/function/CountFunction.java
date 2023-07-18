@@ -19,7 +19,8 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static org.apache.spark.sql.functions.count;
+import static org.apache.spark.sql.functions.collect_set;
+import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -50,11 +51,12 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     final Column subjectColumn = inputPath.getValueColumn();
 
-    final Column aggregateColumn = count(subjectColumn);
+    final Column aggregateColumn = collect_set(subjectColumn);
     // According to the FHIRPath specification, the count function must return 0 when invoked on an
     // empty collection.
-    final UnaryOperator<Column> valueColumnProducer = column -> when(column.isNull(), 0L)
-        .otherwise(column);
+    final UnaryOperator<Column> valueColumnProducer = column -> when(
+        size(column).equalTo(-1), 0L
+    ).otherwise(size(column));
 
     return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath,
         aggregateColumn, valueColumnProducer, expression, FHIRDefinedType.UNSIGNEDINT);

@@ -73,6 +73,8 @@ public class AggregateExecutor extends AggregateQueryExecutor {
   public AggregateResponse execute(@Nonnull final AggregateRequest query) {
     final ResultWithExpressions resultWithExpressions = buildQuery(
         query);
+    resultWithExpressions.getDataset().explain();
+    resultWithExpressions.getDataset().show(1_000, false);
 
     // Translate the result into a response object to be passed back to the user.
     return buildResponse(resultWithExpressions);
