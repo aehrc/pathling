@@ -140,7 +140,8 @@ public class AggregateQueryExecutor extends QueryExecutor {
     final List<FhirPath> aggregations = parseExpressions(aggregationContext,
         query.getAggregations(), prunedDataset);
     validateAggregations(aggregations);
-    final List<Column> aggregationColumns = aggregations.stream().map(FhirPath::getValueColumn)
+    final List<Column> aggregationColumns = aggregations.stream()
+        .map(FhirPath::getValueColumn)
         .collect(toList());
     final Dataset<Row> aggregationDataset = aggregations.get(aggregations.size() - 1)
         .getDataset();

@@ -17,15 +17,12 @@
 
 package au.csiro.pathling;
 
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
@@ -124,10 +121,10 @@ public abstract class QueryExecutor {
     for (final FhirPath filter : filters) {
       // Each filter expression must evaluate to a singular Boolean value, or a user error will be
       // thrown.
-      checkUserInput(filter instanceof BooleanPath,
-          "Filter expression is not a non-literal boolean: " + filter);
+      checkUserInput(filter instanceof BooleanPath || filter instanceof BooleanLiteralPath,
+          "Filter expression must be a Boolean: " + filter.getExpression());
       checkUserInput(filter.isSingular(),
-          "Filter expression must represent a singular value: " + filter);
+          "Filter expression must be a singular value: " + filter.getExpression());
     }
   }
 

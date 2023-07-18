@@ -91,7 +91,7 @@ class SearchExecutorTest {
   void simpleSearchWithMemberOf() {
     final StringAndListParam params = new StringAndListParam();
     params.addAnd(new StringParam(
-        "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009')"));
+        "reverseResolve(Condition.subject).code.memberOf('http://snomed.info/sct?fhir_vs=ecl/^ 32570581000036105 : << 263502005 = << 90734009').anyTrue()"));
     final SearchExecutorBuilder builder = searchBuilder()
         .withSubjectResource(ResourceType.PATIENT)
         .withFilters(params);
@@ -143,7 +143,7 @@ class SearchExecutorTest {
             .withSubjectResource(ResourceType.CAREPLAN)
             .withFilters(params)
             .build());
-    assertEquals("Filter expression must be of Boolean type: category.coding", error.getMessage());
+    assertEquals("Filter expression must be a Boolean: category.coding", error.getMessage());
   }
 
   @Test

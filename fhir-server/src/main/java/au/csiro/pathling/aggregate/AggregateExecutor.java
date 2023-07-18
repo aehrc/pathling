@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.aggregate;
 
+import static java.util.stream.Collectors.toList;
+
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirValue;
@@ -97,7 +99,7 @@ public class AggregateExecutor extends AggregateQueryExecutor {
         .map(mapRowToGrouping(resultWithExpressions.getParsedAggregations(),
             resultWithExpressions.getParsedGroupings(),
             resultWithExpressions.getParsedFilters()))
-        .collect(Collectors.toList());
+        .collect(toList());
 
     return new AggregateResponse(groupings);
   }

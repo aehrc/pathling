@@ -59,9 +59,9 @@ public class BooleansTestFunction extends AggregateFunction implements NamedFunc
     final Column inputColumn = inputPath.getValueColumn();
     final String expression = expressionFromInput(input, type.getFunctionName());
 
-    final Column aggregateColumn = type.getEquality().apply(inputColumn);
+    final Column aggregateColumn = type.getAggregateColumnProducer().apply(inputColumn);
     return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath,
-        aggregateColumn, UnaryOperator.identity(), expression);
+        aggregateColumn, type.getValueColumnProducer(), expression);
   }
 
   /**
@@ -73,25 +73,32 @@ public class BooleansTestFunction extends AggregateFunction implements NamedFunc
     /**
      * "Any true" test
      */
-    ANY_TRUE("anyTrue", input -> max(coalesce(input, lit(false))).equalTo(lit(true))),
+    ANY_TRUE("anyTrue", input -> max(coalesce(input, lit(false))),
+        column -> column.equalTo(lit(true))),
     /**
      * "Any false" test
      */
-    ANY_FALSE("anyFalse", input -> min(coalesce(input, lit(true))).equalTo(lit(false))),
+    ANY_FALSE("anyFalse", input -> min(coalesce(input, lit(true))),
+        column -> column.equalTo(lit(false))),
     /**
      * "All true" test
      */
-    ALL_TRUE("allTrue", input -> min(coalesce(input, lit(true))).equalTo(lit(true))),
+    ALL_TRUE("allTrue", input -> min(coalesce(input, lit(true))),
+        column -> column.equalTo(lit(true))),
     /**
      * "All false" test
      */
-    ALL_FALSE("allFalse", input -> max(coalesce(input, lit(false))).equalTo(lit(false)));
+    ALL_FALSE("allFalse", input -> max(coalesce(input, lit(false))),
+        column -> column.equalTo(lit(false)));
 
     @Nonnull
     private final String functionName;
 
     @Nonnull
-    private final UnaryOperator<Column> equality;
+    private final UnaryOperator<Column> aggregateColumnProducer;
+
+    @Nonnull
+    private final UnaryOperator<Column> valueColumnProducer;
 
     @Override
     public String toString() {
