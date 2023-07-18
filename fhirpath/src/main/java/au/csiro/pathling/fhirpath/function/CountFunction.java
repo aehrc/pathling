@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static org.apache.spark.sql.functions.collect_set;
+import static org.apache.spark.sql.functions.count;
 import static org.apache.spark.sql.functions.size;
 import static org.apache.spark.sql.functions.when;
 
@@ -51,7 +52,14 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     final String expression = expressionFromInput(input, NAME);
     final Column subjectColumn = inputPath.getValueColumn();
 
-    final Column aggregateColumn = collect_set(subjectColumn);
+    // When we are counting resources from the input context, we use the distinct count to account
+    // for the fact that there may be duplicate IDs in the dataset.
+    // When we are counting anything else, we use a non-distinct count, to account for the fact that
+    // it is valid to have multiple of the same value.
+    final Column aggregateColumn = inputPath == input.getContext().getInputContext()
+                                   ? collect_set(subjectColumn)
+                                   : count(subjectColumn);
+
     // According to the FHIRPath specification, the count function must return 0 when invoked on an
     // empty collection.
     final UnaryOperator<Column> valueColumnProducer = column -> when(
