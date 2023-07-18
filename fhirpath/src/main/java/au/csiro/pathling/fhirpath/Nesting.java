@@ -80,6 +80,13 @@ public class Nesting {
   }
 
   /**
+   * @return whether the nesting stack is empty
+   */
+  public boolean isEmpty() {
+    return nesting.isEmpty();
+  }
+
+  /**
    * Removes the last element from the nesting stack. This is used when applying aggregate
    * functions, so that subsequent unnestings at this level can be dealt with correctly.
    */

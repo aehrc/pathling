@@ -21,14 +21,14 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static org.apache.spark.sql.functions.collect_set;
 import static org.apache.spark.sql.functions.count;
-import static org.apache.spark.sql.functions.size;
-import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -50,21 +50,28 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
     checkNoArguments("count", input);
     final NonLiteralPath inputPath = input.getInput();
     final String expression = expressionFromInput(input, NAME);
-    final Column subjectColumn = inputPath.getValueColumn();
+    final Nesting nesting = input.getContext().getNesting();
 
-    // When we are counting resources from the input context, we use the distinct count to account
-    // for the fact that there may be duplicate IDs in the dataset.
-    // When we are counting anything else, we use a non-distinct count, to account for the fact that
-    // it is valid to have multiple of the same value.
-    final Column aggregateColumn = inputPath == input.getContext().getInputContext()
-                                   ? collect_set(subjectColumn)
-                                   : count(subjectColumn);
-
-    // According to the FHIRPath specification, the count function must return 0 when invoked on an
-    // empty collection.
-    final UnaryOperator<Column> valueColumnProducer = column -> when(
-        size(column).equalTo(-1), 0L
-    ).otherwise(size(column));
+    final Column aggregateColumn;
+    final UnaryOperator<Column> valueColumnProducer;
+    if (nesting.isEmpty()) {
+      final Column subjectColumn = inputPath.getValueColumn();
+      // When we are counting anything else, we use a non-distinct count, to account for the fact 
+      // that it is valid to have multiple of the same value.
+      aggregateColumn = count(subjectColumn);
+      valueColumnProducer = UnaryOperator.identity();
+    } else {
+      // Use the ordering column if it exists, otherwise use the value column (which should only 
+      // ever be a resource ID).
+      final Column subjectColumn = inputPath.getOrderingColumn()
+          .orElse(inputPath.getValueColumn());
+      // When we are counting values within an unnested dataset, we use a distinct count to account
+      // for the fact that there may be duplicates. This is implemented here using the combination 
+      // of "collect_set" and "size", to work around the fact that Spark does not support 
+      // "countDistinct" with windowing functions.
+      aggregateColumn = collect_set(subjectColumn);
+      valueColumnProducer = functions::size;
+    }
 
     return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath,
         aggregateColumn, valueColumnProducer, expression, FHIRDefinedType.UNSIGNEDINT);
