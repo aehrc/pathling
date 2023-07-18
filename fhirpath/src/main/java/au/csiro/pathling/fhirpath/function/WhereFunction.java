@@ -81,8 +81,8 @@ public class WhereFunction implements NamedFunction {
     final Dataset<Row> dataset = datasetWithRowNumber.getDataset()
         .filter(valueColumn.isNotNull().or(datasetWithRowNumber.getColumn().equalTo(1)));
 
-    // Erase the last level of nesting present within the context.
-    input.getContext().getNesting().removeLast();
+    // Clear the nesting present within the context.
+    input.getContext().getNesting().clear();
 
     final String expression = expressionFromInput(input, NAME);
     return inputPath.copy(expression, dataset, idColumn, valueColumn,

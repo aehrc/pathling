@@ -148,8 +148,8 @@ public abstract class AggregateFunction {
     final Column valueColumn = valueColumnProducer.apply(aggregateColumn.over(window));
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
-    // Erase the last level of nesting present within the context.
-    parserContext.getNesting().removeLast();
+    // Clear the nesting present within the context.
+    parserContext.getNesting().clear();
 
     // Perform a subsequent aggregation that results in a single aggregate result at the current 
     // nesting level (taking into account the erasure).

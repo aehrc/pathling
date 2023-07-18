@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -87,15 +86,10 @@ public class Nesting {
   }
 
   /**
-   * Removes the last element from the nesting stack. This is used when applying aggregate
-   * functions, so that subsequent unnestings at this level can be dealt with correctly.
+   * Clears the nesting stack.
    */
-  public void removeLast() {
-    @Nullable NestingKey last = null;
-    for (final NestingKey key : nesting.keySet()) {
-      last = key;
-    }
-    nesting.remove(last);
+  public void clear() {
+    nesting.clear();
   }
 
 }
