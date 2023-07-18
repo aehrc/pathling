@@ -153,7 +153,8 @@ public abstract class AggregateFunction {
 
     // Perform a subsequent aggregation that results in a single aggregate result at the current 
     // nesting level (taking into account the erasure).
-    // Collect the grouping and non-grouping columns into separate collections
+    // Collect the grouping and non-grouping columns into separate collections so that we can feed 
+    // them to the "agg" method.
     final Set<Column> nonGroupingColumns = Stream.of(datasetWithColumn.getDataset().columns())
         .map(functions::col)
         .collect(toSet());
