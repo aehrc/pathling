@@ -2,31 +2,84 @@
 
 for_each_with_name <-function(sequence, FUN, ...) {
   sequence_names <- names(sequence)
-  for (i in seq_along(sequence)) {
+  char_sequence <- as.character(sequence)
+  for (i in seq_along(char_sequence)) {
     name <- if (is.null(sequence_names)) "" else sequence_names[i]
-    value <- sequence[i]
+    value <- char_sequence[i]
     FUN(value, name, ...)
   }
 }
 
-#'@export
-aggregate <- function(ds, subject_resource, aggregations, groupings = c()) {
-  q <-j_invoke(ds, "aggregate", as.character(subject_resource))
+
+#' Represents an aggregate query for FHIR data.
+#'
+#' The query calculates summary values based on aggregations and groupings of FHIR resources.
+#'
+#' @param ds The DataSource object containing the data to be queried.
+#' @param subject_resource A string representing the type of FHIR resource to aggregate data from.
+#' @param aggregations A named list of FHIRPath expressions that calculate a summary value from each
+#'   grouping. The expressions must be singular.
+#' @param groupings An optional named list of FHIRPath expressions that determine which groupings
+#'   the resources should be counted within.
+#' @param filters An optional sequence of FHIRPath expressions that can be evaluated against each resource
+#'   in the data set to determine whether it is included within the result. The expression must evaluate to a
+#'   Boolean value. Multiple filters are combined using logical AND operation.
+#' @export
+ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), filters = NULL) {
+  q <- j_invoke(ds, "aggregate", as.character(subject_resource))
+
   
+  #TODO: Check why/if this works (i.e.: is the `q` object mutable?)
   for_each_with_name(aggregations, function(expression, name) {
     if (nchar(name) == 0) {
-      q <-j_invoke(q, "withAggregation", expression)
+      q <- j_invoke(q, "aggregation", expression)
     } else {
-      q <-j_invoke(q, "withAggregation", expression, name)
+      q <- j_invoke(q, "aggregation", expression, name)
     }
-  })    
-  
+  })
+
   for_each_with_name(groupings, function(expression, name) {
     if (nchar(name) == 0) {
-      q <-j_invoke(q, "withGrouping", expression)
+      q <- j_invoke(q, "grouping", expression)
     } else {
-      q <-j_invoke(q, "withGrouping", expression, name)
+      q <- j_invoke(q, "grouping", expression, name)
     }
-  })      
+  })
+  
+  if (!is.null(filters)) {
+    for (f in as.character(filters)) {
+      q <- j_invoke(q, "filter", f)
+    }
+  }
+  
+  sdf_register(j_invoke(q, "execute"))
+}
+
+#' Represents an extract query that extracts specified columns from FHIR resources.
+#'
+#' @param ds The DataSource object containing the data to be queried.
+#' @param subject_resource A string representing the type of FHIR resource to extract data from.
+#' @param columns A named list of FHIRPath expressions that define the columns to include in the extract.
+#' @param filters An optional sequence of FHIRPath expressions that can be evaluated against each resource
+#'   in the data set to determine whether it is included within the result. The expression must evaluate to a
+#'   Boolean value. Multiple filters are combined using AND logic.
+#' @export
+ds_extract <- function(ds, subject_resource, columns, filters = NULL) {
+  q <- j_invoke(ds, "extract", as.character(subject_resource))
+
+  for_each_with_name(columns, function(expression, name) {
+    if (nchar(name) == 0) {
+      q <- j_invoke(q, "column", expression)
+    } else {
+      q <- j_invoke(q, "column", expression, name)
+    }
+  })
+
+  if (!is.null(filters)) {
+    for (f in as.character(filters)) {
+      q <- j_invoke(q, "filter", f)
+    }
+  }
+
   sdf_register(j_invoke(q, "execute"))
 }

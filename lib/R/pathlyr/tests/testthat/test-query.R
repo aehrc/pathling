@@ -1,0 +1,131 @@
+json_resources_dir <- function() {
+  test_path("data", "resources", "R4", "json")
+}
+
+test_data_source <- function() {
+  spark <- def_spark()
+  pc <- def_ptl_context(spark)
+  read_ndjson(pc, json_resources_dir())
+}
+
+# test_extract
+test_that("test datasource extract", {
+
+  # ... previous setup code ...
+
+  result <- ds_extract(
+      test_data_source(),
+      "Patient",
+      columns = list("id", "gender", condition_code = "reverseResolve(Condition.subject).code.coding.code"),
+      filters = list("gender = 'male'")
+  )
+
+  expected_result <- tibble::tibble(
+      id = c("2b36c1e2-bbe1-45ae-8124-4adad2677702", "2b36c1e2-bbe1-45ae-8124-4adad2677702", "2b36c1e2-bbe1-45ae-8124-4adad2677702", "8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "8ee183e2-b3c0-4151-be94-b945d6aa8c6d"),
+      gender = c("male", "male", "male", "male", "male"),
+      condition_code = c("10509002", "38341003", "65363002", "44054006", "368581000119106")
+  )
+
+  expect_equal(names(result), names(expected_result))
+  expect_equal(result %>% sdf_sort("id") %>% head(5) %>% sdf_collect(), expected_result)
+})
+
+
+# test_extract_no_filters
+test_that("test datasource extract with no filters", {
+
+  # ... previous setup code ...
+
+  result <- ds_extract(
+      test_data_source(),
+      "Patient",
+      columns = c("id", "gender", condition_code = "reverseResolve(Condition.subject).code.coding.code")
+  )
+
+  expected_result <- tibble::tibble(
+      id = c("121503c8-9564-4b48-9086-a22df717948e", "121503c8-9564-4b48-9086-a22df717948e", "121503c8-9564-4b48-9086-a22df717948e", "121503c8-9564-4b48-9086-a22df717948e", "121503c8-9564-4b48-9086-a22df717948e"),
+      gender = c("female", "female", "female", "female", "female"),
+      condition_code = c("444814009", "195662009", "10509002", "444470001", "68496003")
+  )
+
+  expect_equal(names(result), names(expected_result))
+  expect_equal(result %>% sdf_sort("id") %>% head(5) %>% sdf_collect(), expected_result)
+})
+
+
+# test_aggregate
+test_that("test datasource aggregate", {
+
+  # ... previous setup code ...
+
+  agg_result <- ds_aggregate(
+      test_data_source(),
+      "Patient",
+      aggregations = list(
+          patient_count = "count()"
+      ),
+      groupings = list("gender", marital_status_code = "maritalStatus.coding.code"),
+      filters = list("birthDate > @1957-06-06")
+  )
+
+  expected_result <- tibble::tibble(
+      gender = c("male", "male", "female", "female"),
+      marital_status_code = c("S", "M", "S", "M"),
+      patient_count = c(1, 2, 3, 1)
+  )
+
+  expect_equal(names(agg_result), names(expected_result))
+  expect_equal(agg_result %>% sdf_collect(), expected_result)
+})
+
+
+# test_aggregate_no_filter
+test_that("test datasource aggregate with no filters", {
+
+  # ... previous setup code ...
+
+  agg_result <- ds_aggregate(
+      test_data_source(),
+      "Patient",
+      aggregations = c(
+          patient_count = "count()"
+      ),
+      groupings = c(
+          gender = "gender",
+          marital_status_code = "maritalStatus.coding.code"
+      )
+  )
+
+  expected_result <- tibble::tibble(
+      gender = c("male", "male", "female", "female"),
+      marital_status_code = c("S", "M", "S", "M"),
+      patient_count = c(3, 2, 3, 1)
+  )
+
+  expect_equal(names(agg_result), names(expected_result))
+  expect_equal(agg_result %>% sdf_collect(), expected_result)
+})
+
+
+# test_many_aggregate_no_grouping
+test_that("test datasource aggregate with no grouping", {
+
+  # ... previous setup code ...
+
+  ResultRow <- tibble::tibble(
+      patient_count = c(9),
+      id_count = c(9)
+  )
+
+  agg_result <- ds_aggregate(
+      test_data_source(),
+      "Patient",
+      aggregations = c(
+          patient_count = "count()",
+          id_count = "id.count()"
+      )
+  )
+
+  expect_equal(names(agg_result), names(ResultRow))
+  expect_equal(agg_result %>% sdf_collect(), ResultRow)
+})

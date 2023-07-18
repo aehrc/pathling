@@ -1,10 +1,181 @@
 #'@import sparklyr
-
 data_sources <- function(pc) {
-  j_invoke(pc, "datasources")
+  j_invoke(pc, "read")
 }
 
-#'@export
-ds_from_ndjson_dir <- function(pc, ndjson_dir_uri) {
-  pc %>% data_sources() %>% j_invoke("fromNdjsonDir", ndjson_dir_uri)
+#'@import sparklyr
+invoke_datasource <- function(pc, name, ...) {
+  pc %>%
+      data_sources() %>%
+      j_invoke(name, ...)
+}
+
+#' Creates a data source from a directory containing NDJSON files.
+#'
+#' The files must be named with the resource type code and must have the ".ndjson" extension,
+#' e.g. "Patient.ndjson" or "Observation.ndjson".
+#'
+#' @param pc The PathlingContext object.
+#' @param path The URI of the directory containing the NDJSON files.
+#' @param extension The file extension to use when searching for files. Defaults to "ndjson".
+#' @param file_name_mapper An optional function that maps a filename to the set of resource types
+#'   that it contains.
+#' @return A DataSource object that can be used to run queries against the data.
+#' @export
+read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
+  #TODO: Enable File Mappers (Maybe)
+  stopifnot(file_name_mapper == NULL)
+  pc %>% invoke_datasource("ndjson", as.character(path), as.character(extension))
+}
+
+# #' Creates a data source from a directory containing FHIR bundles.
+# #'
+# #' @param pc The PathlingContext object.
+# #' @param path The URI of the directory containing the bundles.
+# #' @param resource_types A sequence of resource type codes that should be extracted from the bundles.
+# #' @param mime_type The MIME type of the bundles. Defaults to "application/fhir+json".
+# #' @return A DataSource object that can be used to run queries against the data.
+# #' @export
+# read_bundles <- function(pc, path, resource_types, mime_type = "application/fhir+json") {
+# return(_wrap_ds(
+# pc$jpc$read()$bundles(
+# path,
+# SetConverter()$convert(resource_types, spark$._jvm$_gateway_client),
+# mime_type
+# )
+# ))
+# }
+
+# #' Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
+# #' resource type codes.
+# #'
+# #' @param pc The PathlingContext object.
+# #' @param resources A dictionary of Spark DataFrames, where the keys are resource type codes
+# #'   and the values are the data frames containing the resource data.
+# #' @return A DataSource object that can be used to run queries against the data.
+# #' @export
+# read_datasets <- function(pc, resources){
+# jbuilder <- pc$jpc$read()$datasets()
+# for (resource_code in names(resources)) {
+# resource_data <- resources[[resource_code]]
+# jbuilder$dataset(resource_code, resource_data$._jdf)
+# }
+# return(_wrap_ds(jbuilder))
+# }
+
+#' Creates a data source from a directory containing Parquet tables.
+#'
+#' Each table must be named according to the name of the resource type that it stores.
+#'
+#' @param pc The PathlingContext object.
+#' @param path The URI of the directory containing the Parquet tables.
+#' @return A DataSource object that can be used to run queries against the data.
+#' @export
+read_parquet <- function(pc, path) {
+  pc %>% invoke_datasource("parquet", as.character(path))
+}
+
+#' Creates a data source from a directory containing Delta tables.
+#'
+#' Each table must be named according to the name of the resource type that it stores.
+#'
+#' @param pc The PathlingContext object.
+#' @param path The URI of the directory containing the Delta tables.
+#' @return A DataSource object that can be used to run queries against the data.
+#' @export
+read_delta <- function(pc, path) {
+  pc %>% invoke_datasource("delta", as.character(path))
+}
+
+#' Creates a data source from a set of Spark tables, where the table names are the resource type codes.
+#'
+#' @param pc The PathlingContext object.
+#' @param schema An optional schema name that should be used to qualify the table names.
+#' @return A DataSource object that can be used to run queries against the data.
+#' @export
+read_tables <- function(pc, schema = NULL) {
+  if (!is.null(schema)) {
+    pc %>% invoke_datasource("tables", as.character(schema))
+  } else {
+    pc %>% invoke_datasource("tables")
+  }
+}
+
+
+#' Reads the data for the given resource type from the data source.
+#'
+#' @param ds The DataSource object.
+#' @param resource_code A string representing the type of FHIR resource to read data from.
+#'
+#' @return A Spark DataFrame containing the data for the given resource type.
+#' @export
+ds_read <- function(ds, resource_code) {
+  jdf <- j_invoke(ds, "read", resource_code)
+  sdf_register(jdf)
+}
+
+
+data_sinks <-function(ds) {
+  j_invoke(ds, "write")
+}
+
+#'@import sparklyr
+invoke_datasink <- function(ds, name, ...) {
+  ds %>%
+      data_sinks() %>%
+      j_invoke(name, ...)
+}
+
+
+#' Writes the data to a directory of NDJSON files. The files will be named using the resource type and the ".ndjson" extension.
+#'
+#' @param ds The DataSource object.
+#' @param path The URI of the directory to write the files to.
+#' @param file_name_mapper An optional function that can be used to customise the mapping of the resource type to the file name.
+#'
+#' @return NULL
+#' @export
+ds_write_ndjson <- function(ds, path, file_name_mapper = NULL) {
+  #TODO: Enable File Mappers (Maybe)
+  stopifnot(file_name_mapper == NULL)
+  invoke_datasink(ds, "ndjson", path)
+}
+
+#' Writes the data to a directory of Parquet files.
+#'
+#' @param ds The DataSource object.
+#' @param path The URI of the directory to write the files to.
+#'
+#' @return NULL
+#' @export
+ds_write_parquet <- function(ds, path) {
+  invoke_datasink(ds, "parquet", path)
+}
+
+#' Writes the data to a directory of Delta files.
+#'
+#' @param ds The DataSource object.
+#' @param path The URI of the directory to write the files to.
+#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any existing data, "merge" will merge the new data with the existing data based on resource ID.
+#'
+#' @return NULL
+#' @export
+ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
+  invoke_datasink(ds, "delta", path, import_mode)
+}
+
+#' Writes the data to a set of tables in the Spark catalog.
+#'
+#' @param ds The DataSource object.
+#' @param schema The name of the schema to write the tables to.
+#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any existing data, "merge" will merge the new data with the existing data based on resource ID.
+#'
+#' @return NULL
+#' @export
+ds_write_tables <- function(ds, schema = NULL, import_mode = ImportMode$OVERWRITE) {
+  if (!is.null(schema)) {
+    invoke_datasink(ds, "tables", import_mode, schema)
+  } else {
+    invoke_datasink(ds, "tables", import_mode)
+  }
 }
