@@ -80,7 +80,7 @@ StorageType <- list(
 ptl_connect <- function(
   spark = NULL,
   max_nesting_level = 3,
-  enable_extensions = FALSE,
+  enable_extensions = TRUE,
   enabled_open_types = c(
     "boolean", "code", "date", "dateTime", "decimal", "integer",
     "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"

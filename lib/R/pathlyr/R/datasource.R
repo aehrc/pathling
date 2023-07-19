@@ -28,40 +28,39 @@ read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL)
   pc %>% invoke_datasource("ndjson", as.character(path), as.character(extension))
 }
 
-# #' Creates a data source from a directory containing FHIR bundles.
-# #'
-# #' @param pc The PathlingContext object.
-# #' @param path The URI of the directory containing the bundles.
-# #' @param resource_types A sequence of resource type codes that should be extracted from the bundles.
-# #' @param mime_type The MIME type of the bundles. Defaults to "application/fhir+json".
-# #' @return A DataSource object that can be used to run queries against the data.
-# #' @export
-# read_bundles <- function(pc, path, resource_types, mime_type = "application/fhir+json") {
-# return(_wrap_ds(
-# pc$jpc$read()$bundles(
-# path,
-# SetConverter()$convert(resource_types, spark$._jvm$_gateway_client),
-# mime_type
-# )
-# ))
-# }
+#' Creates a data source from a directory containing FHIR bundles.
+#'
+#' @param pc The PathlingContext object.
+#' @param path The URI of the directory containing the bundles.
+#' @param resource_types A sequence of resource type codes that should be extracted from the bundles.
+#' @param mime_type The MIME type of the bundles. Defaults to "application/fhir+json".
+#' @return A DataSource object that can be used to run queries against the data.
+#' @export
+read_bundles <- function(pc, path, resource_types, mime_type = "application/fhir+json") {
 
-# #' Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
-# #' resource type codes.
-# #'
-# #' @param pc The PathlingContext object.
-# #' @param resources A dictionary of Spark DataFrames, where the keys are resource type codes
-# #'   and the values are the data frames containing the resource data.
-# #' @return A DataSource object that can be used to run queries against the data.
-# #' @export
-# read_datasets <- function(pc, resources){
-# jbuilder <- pc$jpc$read()$datasets()
-# for (resource_code in names(resources)) {
-# resource_data <- resources[[resource_code]]
-# jbuilder$dataset(resource_code, resource_data$._jdf)
-# }
-# return(_wrap_ds(jbuilder))
-# }
+  pc %>% invoke_datasource("bundles", as.character(path),
+                           spark_connection(pc) %>%
+                               invoke_static("com.google.common.collect.ImmutableSet", "copyOf", as.list(resource_types)),
+                           as.character(mime_type))
+}
+
+#' Creates an immutable, ad-hoc data source from a dictionary of Spark DataFrames indexed with
+#' resource type codes.
+#'
+#' @param pc The PathlingContext object.
+#' @param resources A dictionary of Spark DataFrames, where the keys are resource type codes
+#'   and the values are the data frames containing the resource data.
+#' @return A DataSource object that can be used to run queries against the data.
+#' @export
+read_datasets <- function(pc, resources) {
+  resources <- as.list(resources)
+  ds <- pc %>% invoke_datasource("datasets")
+  for (resource_code in names(resources)) {
+    resource_df <- resources[[resource_code]]
+    ds %>% j_invoke("dataset", resource_code, spark_dataframe(resource_df))
+  }
+  ds
+}
 
 #' Creates a data source from a directory containing Parquet tables.
 #'
@@ -115,7 +114,7 @@ ds_read <- function(ds, resource_code) {
 }
 
 
-data_sinks <-function(ds) {
+data_sinks <- function(ds) {
   j_invoke(ds, "write")
 }
 

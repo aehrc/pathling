@@ -1,21 +1,32 @@
 def_spark <- function() {
   # Get the shaded JAR for testing purposes.
-  spark <- sparklyr::spark_connect(master = "local[2]", config = list(
-      #"spark.sql.warehouse.dir" = fs::dir_create_temp(),
-      "spark.driver.memory" = "4g"
-  ))
 
+  # TODO: Uncomment
+  #"spark.sql.warehouse.dir" = fs::dir_create_temp(),
+
+  spark <- sparklyr::spark_connect(
+      master = "local[1]",
+      #       config = list(
+      #           "spark.driver.memory" = "4g",
+      #           "spark.driver.extraJavaOptions" = "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896"
+      #           #"spark.sql.extensions" = "io.delta.sql.DeltaSparkSessionExtension",
+      #           #"spark.sql.catalog.spark_catalog" = "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+      #           #"spark.sql.catalogImplementation" = "hive"
+      #           #"spark.sql.warehouse.dir" = temp_warehouse_dir
+      #       
+      # )
+  )
+  # spark.sql("CREATE DATABASE IF NOT EXISTS test")
   #on.exit(sparklyr::spark_disconnect(spark), add = TRUE)
   spark
 }
 
-
 def_ptl_context <- function(spark) {
-
+  
   encoders <- spark %>%
       invoke_static("au.csiro.pathling.encoders.FhirEncoders", "forR4") %>%
       invoke("withMaxNestingLevel", as.integer(0)) %>%
-      invoke("withExtensionsEnabled", as.logical(FALSE)) %>%
+      invoke("withExtensionsEnabled", as.logical(TRUE)) %>%
       invoke("withOpenTypes", invoke_static(spark, "java.util.Collections", "emptySet")) %>%
       invoke("getOrCreate")
 
@@ -28,11 +39,10 @@ def_ptl_context <- function(spark) {
 }
 
 
-
 coding_row <- function(system, code) {
   coding <- list(
       x0_id = NA,
-      x1_system = system ,
+      x1_system = system,
       x2_version = NA,
       x3_code = code,
       x4_display = NA,
@@ -66,8 +76,8 @@ loinc_coding_result <- function(code) {
 }
 
 
-select_expr <-function(...) {
-  mutate(..., .keep='none')
+select_expr <- function(...) {
+  mutate(..., .keep = 'none')
 }
 
 
