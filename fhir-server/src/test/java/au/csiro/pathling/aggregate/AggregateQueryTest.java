@@ -309,7 +309,7 @@ class AggregateQueryTest extends AggregateExecutorTest {
     final AggregateRequest request = new AggregateRequestBuilder(subjectResource)
         .withAggregation("count()")
         .withGrouping("reverseResolve(MedicationRequest.subject).where("
-            + "$this.medicationCodeableConcept.coding" + ""
+            + "$this.medicationCodeableConcept.coding"
             + ".where(system = 'http://www.nlm.nih.gov/research/umls/rxnorm').code contains '313782' "
             + "and $this.authoredOn < @2019-06-21).count() > 0")
         .build();

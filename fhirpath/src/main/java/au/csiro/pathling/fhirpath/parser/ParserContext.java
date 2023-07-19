@@ -171,8 +171,11 @@ public class ParserContext {
    * @return a new #{link ParserContext}
    */
   public ParserContext withUnnestBehaviour(@Nonnull final UnnestBehaviour unnestBehaviour) {
-    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
+    final ParserContext context = new ParserContext(inputContext, fhirContext, sparkSession,
+        dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour, variables,
+        nesting);
+    thisContext.ifPresent(context::setThisContext);
+    return context;
   }
 
   /**
@@ -182,8 +185,12 @@ public class ParserContext {
    */
   public ParserContext withContextDataset(@Nonnull final Dataset<Row> contextDataset) {
     final FhirPath newInputContext = inputContext.withDataset(contextDataset);
-    return new ParserContext(newInputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
+    final ParserContext parserContext = new ParserContext(newInputContext, fhirContext,
+        sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
+        variables, nesting);
+    thisContext.ifPresent(
+        thisContext -> parserContext.setThisContext(thisContext.withDataset(contextDataset)));
+    return parserContext;
   }
 
   /**
@@ -192,8 +199,11 @@ public class ParserContext {
    * @return a new {@link ParserContext}
    */
   public ParserContext withGroupingColumns(@Nonnull final List<Column> groupingColumns) {
-    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
+    final ParserContext context = new ParserContext(inputContext, fhirContext, sparkSession,
+        dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour, variables,
+        nesting);
+    thisContext.ifPresent(context::setThisContext);
+    return context;
   }
 
   /**
@@ -220,8 +230,11 @@ public class ParserContext {
           groupingColumns, JoinType.LEFT_OUTER);
     }
     final FhirPath newInputContext = inputContext.withDataset(newDataset);
-    return new ParserContext(newInputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, new Nesting());
+    final ParserContext parserContext = new ParserContext(newInputContext, fhirContext,
+        sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
+        variables, new Nesting());
+    thisContext.ifPresent(parserContext::setThisContext);
+    return parserContext;
   }
 
 }
