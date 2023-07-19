@@ -126,7 +126,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       } else {
         // If we're in the context of a function's arguments, there are two valid things this
         // could be:
-        // (1) a path traversal from the input context;
+        // (1) a path traversal from the "this" context;
         // (2) a reference to a resource type.
         final FhirPath thisContext = context.getThisContext().get();
 

@@ -192,4 +192,17 @@ public class ParserContext {
         terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, nesting);
   }
 
+  /**
+   * Creates a copy of the current parser context with a clean nesting context.
+   *
+   * @return a new {@link ParserContext}
+   */
+  public ParserContext disaggregate(@Nonnull final FhirPath aggregatedPath) {
+    final Dataset<Row> newDataset = inputContext.getDataset()
+        .crossJoin(aggregatedPath.getDataset().select(aggregatedPath.getValueColumn()));
+    final FhirPath newInputContext = inputContext.withDataset(newDataset);
+    return new ParserContext(newInputContext, fhirContext, sparkSession, dataSource,
+        terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, new Nesting());
+  }
+
 }

@@ -92,7 +92,11 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
 
     // Parse the left and right expressions.
     final FhirPath left = new Visitor(context).visit(leftContext);
-    final FhirPath right = new Visitor(context.withContextDataset(left.getDataset()))
+    // If the root nesting level has been erased by the parsing of the left expression (i.e. there has been aggregation or use of where)
+    final ParserContext rightParserContext = context.getNesting().isRootErased()
+                                             ? context.disaggregate(left)
+                                             : context.withContextDataset(left.getDataset());
+    final FhirPath right = new Visitor(rightParserContext)
         .visit(rightContext);
 
     // Retrieve an Operator instance based upon the operator string.

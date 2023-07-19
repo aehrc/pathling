@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -24,6 +25,13 @@ public class Nesting {
 
   @Nonnull
   private final Map<NestingKey, NonLiteralPath> nesting;
+
+  /**
+   * Indicates whether the root level of the dataset has been rolled up due to aggregation. This is
+   * a trigger to reconstitute the root level when traversing back into the root.
+   */
+  @Getter
+  private boolean rootErased = false;
 
   public Nesting() {
     this.nesting = new LinkedHashMap<>();
@@ -90,6 +98,7 @@ public class Nesting {
    */
   public void clear() {
     nesting.clear();
+    rootErased = true;
   }
 
 }
