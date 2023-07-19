@@ -90,14 +90,24 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
       @Nullable final ParseTree rightContext, @Nullable final String operatorName) {
     requireNonNull(operatorName);
 
-    // Parse the left and right expressions.
+    // Parse the left expression.
     final FhirPath left = new Visitor(context).visit(leftContext);
-    // If the root nesting level has been erased by the parsing of the left expression (i.e. there has been aggregation or use of where)
-    final ParserContext rightParserContext = context.getNesting().isRootErased()
+
+    // If there are no grouping columns and the root nesting level has been erased by the parsing of 
+    // the left expression (i.e. there has been aggregation or use of where), disaggregate the input 
+    // context before parsing the right expression.
+    final boolean disaggregationRequired = context.getNesting().isRootErased() &&
+        // This disaggregation only happens in the root context, not in the context of function 
+        // arguments.
+        context.getThisContext().isEmpty() &&
+        !(context.getGroupingColumns().size() == 1
+            && context.getGroupingColumns().get(0).equals(context.getInputContext().getIdColumn()));
+    final ParserContext rightParserContext = disaggregationRequired
                                              ? context.disaggregate(left)
                                              : context.withContextDataset(left.getDataset());
-    final FhirPath right = new Visitor(rightParserContext)
-        .visit(rightContext);
+
+    // Parse the right expression, using the possibly modified context.
+    final FhirPath right = new Visitor(rightParserContext).visit(rightContext);
 
     // Retrieve an Operator instance based upon the operator string.
     final Operator operator = Operator.getInstance(operatorName);

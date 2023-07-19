@@ -19,16 +19,18 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static org.apache.spark.sql.functions.collect_set;
+import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.apache.spark.sql.functions.count;
+import static org.apache.spark.sql.functions.countDistinct;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -61,16 +63,22 @@ public class CountFunction extends AggregateFunction implements NamedFunction {
       aggregateColumn = count(subjectColumn);
       valueColumnProducer = UnaryOperator.identity();
     } else {
-      // Use the ordering column if it exists, otherwise use the value column (which should only 
-      // ever be a resource ID).
-      final Column subjectColumn = inputPath.getOrderingColumn()
-          .orElse(inputPath.getValueColumn());
+      // Use the ordering columns if they are present, otherwise use the value column (which should 
+      // only ever be a resource ID).
+      final List<Column> orderingColumns = nesting.getOrderingColumns();
+      if (orderingColumns.isEmpty()) {
+        aggregateColumn = countDistinct(inputPath.getValueColumn());
+      } else {
+        final List<Column> countColumns = new ArrayList<>();
+        countColumns.add(inputPath.getIdColumn());
+        countColumns.addAll(orderingColumns);
+        final Column first = checkPresent(countColumns.stream().limit(1).findFirst());
+        final Column[] remaining = countColumns.stream().skip(1).toArray(Column[]::new);
+        aggregateColumn = countDistinct(first, remaining);
+      }
       // When we are counting values within an unnested dataset, we use a distinct count to account
-      // for the fact that there may be duplicates. This is implemented here using the combination 
-      // of "collect_set" and "size", to work around the fact that Spark does not support 
-      // "countDistinct" with windowing functions.
-      aggregateColumn = collect_set(subjectColumn);
-      valueColumnProducer = functions::size;
+      // for the fact that there may be duplicates.
+      valueColumnProducer = UnaryOperator.identity();
     }
 
     return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath,

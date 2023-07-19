@@ -17,14 +17,14 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.first;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
@@ -40,8 +40,6 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.expressions.Window;
-import org.apache.spark.sql.expressions.WindowSpec;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -140,45 +138,45 @@ public abstract class AggregateFunction {
 
     // Get the grouping columns from the parser context.
     final List<Column> groupingColumns = parserContext.getGroupingColumns();
-    final Column[] partitionBy = groupingColumns.toArray(new Column[0]);
-
-    // Use a windowing function to aggregate within the column, while preserving the rest of the 
-    // dataset.
-    final WindowSpec window = Window.partitionBy(partitionBy);
-    final Column valueColumn = valueColumnProducer.apply(aggregateColumn.over(window));
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
+    final Column[] groupBy = groupingColumns.toArray(new Column[0]);
 
     // Clear the nesting present within the context.
     parserContext.getNesting().clear();
 
-    // Perform a subsequent aggregation that results in a single aggregate result at the current 
-    // nesting level (taking into account the erasure).
-    // Collect the grouping and non-grouping columns into separate collections so that we can feed 
-    // them to the "agg" method.
-    final Set<Column> nonGroupingColumns = Stream.of(datasetWithColumn.getDataset().columns())
+    // Perform the aggregation, while also preserving all columns that are not being aggregated 
+    // using the "first()" function.
+    // First, collect the grouping and non-grouping columns into separate collections so that we can 
+    // feed them to the "agg" method.
+    final Set<Column> nonGroupingColumns = Stream.of(dataset.columns())
         .map(functions::col)
         .collect(toSet());
     groupingColumns.forEach(nonGroupingColumns::remove);
+
     // Wrap the non-grouping columns in a "first" aggregation.
     final List<Column> selection = nonGroupingColumns.stream()
         .map(column -> first(column, true).alias(column.toString()))
         .collect(toList());
+    final String valueColumnName = randomAlias();
+    selection.add(valueColumnProducer.apply(aggregateColumn).alias(valueColumnName));
+
     // Separate the first column from the rest, so that we can pass all the columns to the "agg" 
     // method.
     final Column firstSelection = checkPresent(selection.stream().limit(1).findFirst());
     final Column[] remainingSelection = selection.stream().skip(1).toArray(Column[]::new);
+
     // Perform the final aggregation, the first row of each non-grouping column grouped by the 
     // grouping columns.
-    final Dataset<Row> result = datasetWithColumn.getDataset()
-        .groupBy(groupingColumns.toArray(new Column[0]))
+    final Dataset<Row> result = dataset
+        .groupBy(groupBy)
         .agg(firstSelection, remainingSelection);
+    final Column valueColumn = col(valueColumnName);
 
     // Get any "this" columns that may be present in the inputs.
     final Optional<Column> thisColumn = NonLiteralPath
         .findThisColumn((Object[]) inputs.toArray(new FhirPath[0]));
 
-    return resultPathFactory.create(expression, result, idColumn,
-        datasetWithColumn.getColumn(), Optional.empty(), true, thisColumn);
+    return resultPathFactory.create(expression, result, idColumn, valueColumn, Optional.empty(),
+        true, thisColumn);
   }
 
   /**

@@ -190,9 +190,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       // Create and alias the $this column.
       final NonLiteralPath thisPath = nonLiteral.toThisPath();
 
-      // If the this context has an element ID, we need to add this to the grouping columns so that
-      // aggregations that occur within the arguments are in the context of an element. Otherwise,
-      // we add the resource ID column to the groupings.
+      // If the "this" context has an element ID, we need to add this to the grouping columns so 
+      // that aggregations that occur within the arguments are in the context of an element. 
+      // Otherwise, we add the resource ID column to the groupings.
       final List<Column> argumentGroupings = new ArrayList<>(context.getGroupingColumns());
       thisPath.getOrderingColumn().ifPresentOrElse(argumentGroupings::add,
           () -> argumentGroupings.add(thisPath.getIdColumn()));

@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static au.csiro.pathling.QueryHelpers.join;
+
+import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.Nesting;
@@ -24,6 +27,7 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -193,13 +197,28 @@ public class ParserContext {
   }
 
   /**
-   * Creates a copy of the current parser context with a clean nesting context.
+   * Used for the scenario where a dataset is aggregated at the root, and that aggregated result
+   * needs to be used in onward parsing. Takes the aggregated path and joins it to the input context
+   * as an additional column.
    *
    * @return a new {@link ParserContext}
    */
   public ParserContext disaggregate(@Nonnull final FhirPath aggregatedPath) {
-    final Dataset<Row> newDataset = inputContext.getDataset()
-        .crossJoin(aggregatedPath.getDataset().select(aggregatedPath.getValueColumn()));
+    final Dataset<Row> newDataset;
+    if (groupingColumns.isEmpty()) {
+      // If there are no grouping columns, we can do a cross-join as the target should only have one 
+      // row.
+      newDataset = inputContext.getDataset()
+          .crossJoin(aggregatedPath.getDataset().select(aggregatedPath.getValueColumn()));
+    } else {
+      // If there are grouping columns, we need to join on those columns.
+      final List<Column> aggregatedSelection = new ArrayList<>(groupingColumns);
+      aggregatedSelection.add(aggregatedPath.getValueColumn());
+      final Dataset<Row> aggregatedDataset = aggregatedPath.getDataset().select(aggregatedSelection
+          .toArray(new Column[0]));
+      newDataset = join(inputContext.getDataset(), groupingColumns, aggregatedDataset,
+          groupingColumns, JoinType.LEFT_OUTER);
+    }
     final FhirPath newInputContext = inputContext.withDataset(newDataset);
     return new ParserContext(newInputContext, fhirContext, sparkSession, dataSource,
         terminologyServiceFactory, groupingColumns, unnestBehaviour, variables, new Nesting());
