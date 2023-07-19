@@ -105,9 +105,16 @@ public abstract class QueryExecutor {
     for (final String expression : expressions) {
       if (parsed.size() > 0) {
         final FhirPath lastParsed = parsed.get(parsed.size() - 1);
-        // Create a new copy of the original parser context, except use the dataset from the last 
-        // column parse and reset the node IDs.
-        currentContext = parserContext.withContextDataset(lastParsed.getDataset());
+        // If there are no grouping columns and the root nesting level has been erased by the 
+        // parsing of the previous expression (i.e. there has been aggregation or use of where), 
+        // disaggregate the input context before parsing the right expression.
+        final boolean disaggregationRequired = currentContext.getNesting().isRootErased() &&
+            !(currentContext.getGroupingColumns().size() == 1
+                && currentContext.getGroupingColumns().get(0)
+                .equals(currentContext.getInputContext().getIdColumn()));
+        currentContext = disaggregationRequired
+                         ? currentContext.disaggregate(lastParsed)
+                         : currentContext.withContextDataset(lastParsed.getDataset());
       }
       final Parser parser = new Parser(currentContext);
       // Add the parse result to the list of parsed expressions.
