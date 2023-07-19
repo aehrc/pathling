@@ -72,11 +72,13 @@ public class WhereFunction implements NamedFunction {
     final Column idColumn = argumentPath.getIdColumn();
     final Column thisValue = checkPresent(argumentPath.getThisColumn());
     final Column valueColumn = when(argumentValue.equalTo(true), thisValue).otherwise(lit(null));
+    final DatasetWithColumn datasetWithColumn = createColumn(argumentPath.getDataset(),
+        valueColumn);
 
     // We use a windowing function to remove all null values except one. A single null value against 
     // a resource signifies the absence of a value for a particular element.
     final WindowSpec window = Window.partitionBy(idColumn).orderBy(valueColumn.asc_nulls_last());
-    final DatasetWithColumn datasetWithRowNumber = createColumn(argumentPath.getDataset(),
+    final DatasetWithColumn datasetWithRowNumber = createColumn(datasetWithColumn.getDataset(),
         row_number().over(window));
     final Dataset<Row> dataset = datasetWithRowNumber.getDataset()
         .filter(valueColumn.isNotNull().or(datasetWithRowNumber.getColumn().equalTo(1)));
@@ -85,7 +87,7 @@ public class WhereFunction implements NamedFunction {
     input.getContext().getNesting().clear();
 
     final String expression = expressionFromInput(input, NAME);
-    return inputPath.copy(expression, dataset, idColumn, valueColumn,
+    return inputPath.copy(expression, dataset, idColumn, datasetWithColumn.getColumn(),
         inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getThisColumn());
   }
 
