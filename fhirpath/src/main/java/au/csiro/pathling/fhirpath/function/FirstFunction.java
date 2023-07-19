@@ -25,7 +25,6 @@ import static org.apache.spark.sql.functions.first;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -61,6 +60,6 @@ public class FirstFunction extends AggregateFunction implements NamedFunction {
     final Column aggregateColumn = first(inputPath.getValueColumn(), true);
 
     return buildAggregateResult(dataset, input.getContext(), inputPath, aggregateColumn,
-        UnaryOperator.identity(), expression);
+        expression);
   }
 }

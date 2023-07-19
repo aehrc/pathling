@@ -64,11 +64,10 @@ public abstract class AggregateFunction {
   @Nonnull
   protected NonLiteralPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final NonLiteralPath input,
-      @Nonnull final Column aggregateColumn,
-      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression) {
+      @Nonnull final Column aggregateColumn, @Nonnull final String expression) {
 
     return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
-        aggregateColumn, valueColumnProducer, expression, input::copy);
+        aggregateColumn, expression, input::copy);
   }
 
   /**
@@ -78,8 +77,6 @@ public abstract class AggregateFunction {
    * @param parserContext the current {@link ParserContext}
    * @param input the {@link FhirPath} objects being aggregated
    * @param aggregateColumn a {@link Column} describing the resulting value
-   * @param valueColumnProducer a {@link UnaryOperator} that produces a {@link Column} describing
-   * the final value
    * @param expression the FHIRPath expression for the result
    * @param fhirType the {@link FHIRDefinedType} of the result
    * @return a new {@link ElementPath} representing the result
@@ -88,12 +85,11 @@ public abstract class AggregateFunction {
   @Nonnull
   protected ElementPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final FhirPath input,
-      @Nonnull final Column aggregateColumn,
-      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression,
+      @Nonnull final Column aggregateColumn, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
     return buildAggregateResult(dataset, parserContext, Collections.singletonList(input),
-        aggregateColumn, valueColumnProducer, expression, fhirType);
+        aggregateColumn, expression, fhirType);
   }
 
   /**
@@ -104,7 +100,6 @@ public abstract class AggregateFunction {
    * @param parserContext the current {@link ParserContext}
    * @param inputs the {@link FhirPath} objects being aggregated
    * @param aggregateColumn a {@link Column} describing the aggregation operation
-   * @param valueColumnProducer a {@link UnaryOperator} that produces a {@link Column} describing
    * the final value
    * @param expression the FHIRPath expression for the result
    * @param fhirType the {@link FHIRDefinedType} of the result
@@ -113,12 +108,10 @@ public abstract class AggregateFunction {
   @Nonnull
   protected ElementPath buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<FhirPath> inputs,
-      @Nonnull final Column aggregateColumn,
-      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression,
+      @Nonnull final Column aggregateColumn, @Nonnull final String expression,
       @Nonnull final FHIRDefinedType fhirType) {
 
-    return buildAggregateResult(dataset, parserContext, inputs, aggregateColumn,
-        valueColumnProducer, expression,
+    return buildAggregateResult(dataset, parserContext, inputs, aggregateColumn, expression,
         // Create the result as an ElementPath of the given FHIR type.
         (exp, ds, id, value, ordering, singular, thisColumn) -> ElementPath.build(exp, ds, id,
             value, ordering, true, Optional.empty(), thisColumn, fhirType));
@@ -127,8 +120,7 @@ public abstract class AggregateFunction {
   @Nonnull
   private <T extends FhirPath> T buildAggregateResult(@Nonnull final Dataset<Row> dataset,
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<FhirPath> inputs,
-      @Nonnull final Column aggregateColumn,
-      @Nonnull final UnaryOperator<Column> valueColumnProducer, @Nonnull final String expression,
+      @Nonnull final Column aggregateColumn, @Nonnull final String expression,
       @Nonnull final ResultPathFactory<T> resultPathFactory) {
 
     checkArgument(!inputs.isEmpty(), "Collection of inputs cannot be empty");
@@ -157,7 +149,7 @@ public abstract class AggregateFunction {
         .map(column -> first(column, true).alias(column.toString()))
         .collect(toList());
     final String valueColumnName = randomAlias();
-    selection.add(valueColumnProducer.apply(aggregateColumn).alias(valueColumnName));
+    selection.add(aggregateColumn.alias(valueColumnName));
 
     // Separate the first column from the rest, so that we can pass all the columns to the "agg" 
     // method.

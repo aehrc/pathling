@@ -25,7 +25,6 @@ import static org.apache.spark.sql.functions.sum;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
-import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -57,7 +56,7 @@ public class SumFunction extends AggregateFunction implements NamedFunction {
     final Column aggregateColumn = sum(inputPath.getValueColumn());
 
     return buildAggregateResult(dataset, input.getContext(), inputPath, aggregateColumn,
-        UnaryOperator.identity(), expression);
+        expression);
   }
 
 }

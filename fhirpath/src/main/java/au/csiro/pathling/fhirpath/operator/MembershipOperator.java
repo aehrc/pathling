@@ -28,7 +28,6 @@ import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.AggregateFunction;
 import java.util.Arrays;
-import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -87,7 +86,7 @@ public class MembershipOperator extends AggregateFunction implements Operator {
     final Column aggregateColumn = max(equalityWithNullChecks);
 
     return buildAggregateResult(right.getDataset(), input.getContext(), Arrays.asList(left, right),
-        aggregateColumn, UnaryOperator.identity(), expression, FHIRDefinedType.BOOLEAN);
+        aggregateColumn, expression, FHIRDefinedType.BOOLEAN);
   }
 
   /**
