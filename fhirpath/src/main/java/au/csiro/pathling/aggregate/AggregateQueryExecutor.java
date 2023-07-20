@@ -20,7 +20,10 @@ package au.csiro.pathling.aggregate;
 import static au.csiro.pathling.QueryHelpers.createColumns;
 import static au.csiro.pathling.query.ExpressionWithLabel.labelsAsStream;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.stream.Collectors.toList;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.first;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.QueryHelpers;
@@ -143,8 +146,14 @@ public class AggregateQueryExecutor extends QueryExecutor {
     final List<Column> aggregationColumns = aggregations.stream()
         .map(FhirPath::getValueColumn)
         .collect(toList());
-    final Dataset<Row> aggregationDataset = aggregations.get(aggregations.size() - 1)
-        .getDataset();
+    final FhirPath lastAggregation = aggregations.get(aggregations.size() - 1);
+    Dataset<Row> aggregationDataset = lastAggregation.getDataset();
+    // If the result of the aggregation expressions is not actually aggregated, we need to apply
+    // a final aggregation step that reduces it down to one row per group.
+    if (!aggregationContext.getNesting().isRootErased()) {
+      aggregationDataset = applyAggregation(aggregationContext, aggregationColumns, lastAggregation,
+          aggregationDataset);
+    }
 
     // The final column selection will be the grouping columns, followed by the aggregation
     // columns.
@@ -176,6 +185,21 @@ public class AggregateQueryExecutor extends QueryExecutor {
       checkUserInput(grouping instanceof FhirValue,
           "Grouping expression is not of a supported type: " + grouping.getExpression());
     }
+  }
+
+  @Nonnull
+  private static Dataset<Row> applyAggregation(@Nonnull final ParserContext context,
+      @Nonnull final List<Column> aggregationColumns, @Nonnull final FhirPath lastAggregation,
+      @Nonnull final Dataset<Row> disaggregated) {
+    // Group the dataset by the grouping columns, and take the first row.
+    final Column[] groupBy = context.getGroupingColumns().toArray(new Column[0]);
+    final String aggregatedColumnName = randomAlias();
+    final Dataset<Row> aggregated = disaggregated.groupBy(groupBy)
+        .agg(first(lastAggregation.getValueColumn()).as(aggregatedColumnName));
+    // Replace the last column with the aggregated column.
+    aggregationColumns.remove(aggregationColumns.size() - 1);
+    aggregationColumns.add(col(aggregatedColumnName));
+    return aggregated;
   }
 
   @Value

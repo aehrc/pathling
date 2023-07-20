@@ -18,11 +18,13 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.QueryHelpers.join;
+import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathAndContext;
 import au.csiro.pathling.fhirpath.Nesting;
+import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -199,9 +201,18 @@ public class ParserContext {
    * @return a new {@link ParserContext}
    */
   public ParserContext withGroupingColumns(@Nonnull final List<Column> groupingColumns) {
-    final ParserContext context = new ParserContext(inputContext, fhirContext, sparkSession,
-        dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour, variables,
-        nesting);
+    // Make the input context non-singular - when we are grouping, the input context is a collection 
+    // of resources.
+    check(inputContext instanceof NonLiteralPath);
+    final NonLiteralPath nonLiteralInputContext = (NonLiteralPath) inputContext;
+    final NonLiteralPath nonSingularInputContext = nonLiteralInputContext.copy(
+        nonLiteralInputContext.getExpression(),
+        nonLiteralInputContext.getDataset(), nonLiteralInputContext.getIdColumn(),
+        nonLiteralInputContext.getValueColumn(), nonLiteralInputContext.getOrderingColumn(), false,
+        nonLiteralInputContext.getThisColumn());
+    final ParserContext context = new ParserContext(nonSingularInputContext, fhirContext,
+        sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
+        variables, nesting);
     thisContext.ifPresent(context::setThisContext);
     return context;
   }
