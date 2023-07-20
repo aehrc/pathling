@@ -36,7 +36,7 @@ public class DeltaSource extends DatabaseSource {
   @Nonnull
   private static Database buildDatabase(final @Nonnull PathlingContext context,
       final @Nonnull String path) {
-    return Database.forFileSystem(context.getSpark(), context.getFhirEncoders(), path, true);
+    return Database.forFileSystem(context.getSpark(), context.getFhirEncoders(), path, false);
   }
 
 }
