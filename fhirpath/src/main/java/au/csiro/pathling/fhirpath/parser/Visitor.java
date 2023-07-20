@@ -102,9 +102,13 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
         context.getThisContext().isEmpty() &&
         !(context.getGroupingColumns().size() == 1
             && context.getGroupingColumns().get(0).equals(context.getInputContext().getIdColumn()));
-    final ParserContext rightParserContext = disaggregationRequired
-                                             ? context.disaggregate(left)
-                                             : context.withContextDataset(left.getDataset());
+    final ParserContext rightParserContext;
+    if (disaggregationRequired) {
+      rightParserContext = context.disaggregate(left);
+      context.getNesting().setRootErased(false);
+    } else {
+      rightParserContext = context.withContextDataset(left.getDataset());
+    }
 
     // Parse the right expression, using the possibly modified context.
     final FhirPath right = new Visitor(rightParserContext).visit(rightContext);

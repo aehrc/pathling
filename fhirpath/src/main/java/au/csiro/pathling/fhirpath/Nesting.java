@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -31,6 +32,7 @@ public class Nesting {
    * a trigger to reconstitute the root level when traversing back into the root.
    */
   @Getter
+  @Setter
   private boolean rootErased = false;
 
   public Nesting() {
