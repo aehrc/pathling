@@ -19,6 +19,7 @@ package au.csiro.pathling;
 
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
@@ -104,7 +105,7 @@ public abstract class QueryHelpers {
 
     final List<Column> columns = Stream.of(dataset.columns())
         .map(dataset::col)
-        .collect(Collectors.toList());
+        .collect(toList());
     final DatasetWithColumnMap datasetWithColumnMap = aliasColumns(dataset, columns);
 
     final Dataset<Row> finalDataset = datasetWithColumnMap.getDataset();
@@ -130,7 +131,7 @@ public abstract class QueryHelpers {
         // Don't preserve anything that is not already aliased.
         .filter(Strings::looksLikeAlias)
         .map(dataset::col)
-        .collect(Collectors.toList());
+        .collect(toList());
 
     // Create an aliased column for each of the new columns, and add it to the selection and the
     // map.
@@ -171,7 +172,7 @@ public abstract class QueryHelpers {
     final List<String> leftColumnNames = Arrays.asList(aliasedLeft.columns());
     final List<String> rightColumnNames = rightColumns.stream()
         .map(Column::toString)
-        .collect(Collectors.toList());
+        .collect(toList());
 
     // Exclude the columns in the right dataset from the trimmed left dataset.
     final Dataset<Row> trimmedLeft = applySelection(aliasedLeft, Collections.emptyList(),
@@ -314,7 +315,7 @@ public abstract class QueryHelpers {
     // Only non-literal paths will trigger a join.
     final List<FhirPath> nonLiteralTargets = joinTargets.stream()
         .filter(t -> t instanceof NonLiteralPath)
-        .collect(Collectors.toList());
+        .collect(toList());
     if (left instanceof NonLiteralPath && nonLiteralTargets.isEmpty()) {
       // If the only non-literal path is on the left, we can just return the left without any need 
       // to join.
@@ -409,7 +410,7 @@ public abstract class QueryHelpers {
       final Set<String> fallbackGroupingColumnNames = new HashSet<>(groupingColumnNames);
       fallbackGroupingColumnNames.retainAll(columnList);
       fallbackGroupingColumnNames.add(fallback.toString());
-      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(Collectors.toList());
+      return fallbackGroupingColumnNames.stream().map(dataset::col).collect(toList());
     }
   }
 
@@ -436,14 +437,16 @@ public abstract class QueryHelpers {
   @Nonnull
   public static List<Column> getUnionableColumns(@Nonnull final FhirPath source,
       @Nonnull final FhirPath target) {
-    // The columns will be those common to both datasets.
+    // The columns will be those common to both datasets, plus the value column of the source.
     final Set<String> commonColumnNames = new HashSet<>(List.of(source.getDataset().columns()));
     commonColumnNames.retainAll(List.of(target.getDataset().columns()));
-    return commonColumnNames.stream()
+    final List<Column> columns = commonColumnNames.stream()
         .map(functions::col)
         // We sort the columns so that they line up when we execute the union.
         .sorted(Comparator.comparing(Column::toString))
-        .collect(Collectors.toList());
+        .collect(toList());
+    columns.add(source.getValueColumn());
+    return columns;
   }
 
   /**

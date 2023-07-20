@@ -18,6 +18,8 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.explode_outer;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -25,8 +27,6 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * Merges the left and right operands into a single collection.
@@ -45,11 +45,8 @@ public class CombineOperator implements Operator {
     final FhirPath left = input.getLeft();
     final FhirPath right = input.getRight();
 
-    final Dataset<Row> leftTrimmed = left.getUnionableDataset(right);
-    final Dataset<Row> rightTrimmed = right.getUnionableDataset(left);
-
-    final Dataset<Row> dataset = leftTrimmed.union(rightTrimmed);
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, left.getValueColumn());
+    final Column valueColumn = explode_outer(array(left.getValueColumn(), right.getValueColumn()));
+    final DatasetWithColumn datasetWithColumn = createColumn(right.getDataset(), valueColumn);
     final Optional<Column> thisColumn = left instanceof NonLiteralPath
                                         ? ((NonLiteralPath) left).getThisColumn()
                                         : Optional.empty();

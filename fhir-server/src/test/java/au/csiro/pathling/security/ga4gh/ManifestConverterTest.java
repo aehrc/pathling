@@ -18,6 +18,7 @@
 package au.csiro.pathling.security.ga4gh;
 
 import static au.csiro.pathling.test.TestResources.assertJson;
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.config.ServerConfiguration;
@@ -124,7 +125,7 @@ class ManifestConverterTest extends AbstractParserTest {
           final Dataset<Row> dataset = assertThatResultOf(resourceType, filter)
               .isElementPath(BooleanPath.class)
               .selectResult()
-              .apply(result -> result.filter(result.columns()[1]))
+              .apply(result -> result.filter(col(result.columns()[1])))
               .getDataset();
           if (dataset.count() > 0) {
             found = true;
