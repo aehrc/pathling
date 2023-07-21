@@ -17,10 +17,12 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
@@ -60,12 +62,14 @@ public class IifFunction implements NamedFunction {
     final Column valueColumn =
         when(conditionBoolean.getValueColumn().equalTo(true), ifTrue.getValueColumn())
             .otherwise(otherwise.getValueColumn());
+    final DatasetWithColumn datasetWithColumn = createColumn(otherwise.getDataset(), valueColumn);
 
     // Build a new ElementPath based on the type of the literal `ifTrue` and `otherwise` arguments,
     // and populate it with the dataset and calculated value column.
     final String expression = expressionFromInput(input, NAME);
-    return ifTrue.combineWith(otherwise, otherwise.getDataset(), expression,
-        inputPath.getIdColumn(), valueColumn, inputPath.isSingular(), inputPath.getThisColumn());
+    return ifTrue.combineWith(otherwise, datasetWithColumn.getDataset(), expression,
+        inputPath.getIdColumn(), datasetWithColumn.getColumn(), inputPath.isSingular(),
+        inputPath.getThisColumn());
   }
 
 }

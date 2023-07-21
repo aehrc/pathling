@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocationContext;
@@ -37,7 +38,6 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocation
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -199,18 +199,20 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
       // Create a new ParserContext, which includes information about how to evaluate the `$this`
       // expression.
-      final ParserContext argumentContext = new ParserContext(context.getInputContext(),
+      ParserContext argumentContext = new ParserContext(context.getInputContext(),
           context.getFhirContext(), context.getSparkSession(), context.getDataSource(),
           context.getTerminologyServiceFactory(), argumentGroupings, context.getUnnestBehaviour(),
           context.getVariables(), context.getNesting());
       argumentContext.setThisContext(thisPath);
 
-      // Parse each of the expressions passed as arguments to the function.
-      arguments.addAll(
-          paramList.expression().stream()
-              .map(expression -> new Visitor(argumentContext).visit(expression))
-              .collect(Collectors.toList())
-      );
+      for (final ExpressionContext expression : paramList.expression()) {
+        // Parse each of the expressions passed as arguments to the function.
+        final FhirPath argumentResult = new Visitor(argumentContext).visit(expression);
+        arguments.add(argumentResult);
+        // Update the argument context with the updated dataset, for use in parsing subsequent 
+        // arguments.
+        argumentContext = argumentContext.withContextDataset(argumentResult.getDataset());
+      }
     }
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(context, nonLiteral, arguments);
