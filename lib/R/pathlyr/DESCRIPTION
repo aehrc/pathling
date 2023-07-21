@@ -13,10 +13,9 @@ LazyData: TRUE
 Depends:
     R (>= 3.1.2)
 Imports:
-    rlang,
-    sparklyr
+    rlang(>= 1.1.0), sparklyr(== 1.8.1)
 Remotes: rstudio/sparklyr
 Suggests:
-    testthat (>= 3.0.0)
+    testthat(>= 3.0.0)
 RoxygenNote: 7.1.1
 Config/testthat/edition: 3
