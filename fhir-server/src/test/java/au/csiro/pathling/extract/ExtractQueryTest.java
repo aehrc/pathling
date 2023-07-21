@@ -473,6 +473,38 @@ class ExtractQueryTest {
         .hasRows(spark, "responses/ExtractQueryTest/structuredResult.csv");
   }
 
+  @Test
+  void combineWithLiterals() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("'foo' combine 'bar'")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.csv");
+  }
+
+  @Test
+  void combineWithUnequalCardinalities() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.given")
+        .withColumn("name.family")
+        .withColumn("name.given combine name.family")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.csv");
+  }
+
   void mockResource(final ResourceType... resourceTypes) {
     TestHelpers.mockResource(dataSource, spark, resourceTypes);
   }
