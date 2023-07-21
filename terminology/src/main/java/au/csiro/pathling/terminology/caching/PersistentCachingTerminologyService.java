@@ -61,6 +61,9 @@ public class PersistentCachingTerminologyService extends CachingTerminologyServi
         .marshaller(new JavaSerializationMarshaller())
         .allowList()
         .addRegexp(".*");
+    globalConfigBuilder.metrics()
+        .gauges(false)
+        .histograms(false);
     final GlobalConfiguration globalConfig = globalConfigBuilder.build();
     return new DefaultCacheManager(globalConfig);
   }

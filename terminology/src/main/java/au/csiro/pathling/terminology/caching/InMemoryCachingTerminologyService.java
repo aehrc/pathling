@@ -24,6 +24,7 @@ import javax.annotation.Nonnull;
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;
+import org.infinispan.configuration.global.GlobalConfigurationBuilder;
 import org.infinispan.eviction.EvictionStrategy;
 import org.infinispan.manager.DefaultCacheManager;
 import org.infinispan.manager.EmbeddedCacheManager;
@@ -43,7 +44,11 @@ public class InMemoryCachingTerminologyService extends CachingTerminologyService
 
   @Override
   protected EmbeddedCacheManager buildCacheManager() {
-    return new DefaultCacheManager();
+    final GlobalConfigurationBuilder globalConfigBuilder = new GlobalConfigurationBuilder();
+    globalConfigBuilder.metrics()
+        .gauges(false)
+        .histograms(false);
+    return new DefaultCacheManager(globalConfigBuilder.build());
   }
 
   @Override
