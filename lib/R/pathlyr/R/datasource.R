@@ -22,7 +22,7 @@ invoke_datasource <- function(pc, name, ...) {
 #'   that it contains.
 #' @return A DataSource object that can be used to run queries against the data.
 #' @export
-read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
+ptl_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
   #TODO: Enable File Mappers (Maybe)
   stopifnot(file_name_mapper == NULL)
   pc %>% invoke_datasource("ndjson", as.character(path), as.character(extension))
@@ -36,7 +36,7 @@ read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL)
 #' @param mime_type The MIME type of the bundles. Defaults to "application/fhir+json".
 #' @return A DataSource object that can be used to run queries against the data.
 #' @export
-read_bundles <- function(pc, path, resource_types, mime_type = "application/fhir+json") {
+ptl_read_bundles <- function(pc, path, resource_types, mime_type = "application/fhir+json") {
 
   pc %>% invoke_datasource("bundles", as.character(path),
                            spark_connection(pc) %>%
@@ -52,7 +52,7 @@ read_bundles <- function(pc, path, resource_types, mime_type = "application/fhir
 #'   and the values are the data frames containing the resource data.
 #' @return A DataSource object that can be used to run queries against the data.
 #' @export
-read_datasets <- function(pc, resources) {
+ptl_read_datasets <- function(pc, resources) {
   resources <- as.list(resources)
   ds <- pc %>% invoke_datasource("datasets")
   for (resource_code in names(resources)) {
@@ -70,7 +70,7 @@ read_datasets <- function(pc, resources) {
 #' @param path The URI of the directory containing the Parquet tables.
 #' @return A DataSource object that can be used to run queries against the data.
 #' @export
-read_parquet <- function(pc, path) {
+ptl_read_parquet <- function(pc, path) {
   pc %>% invoke_datasource("parquet", as.character(path))
 }
 
@@ -82,7 +82,7 @@ read_parquet <- function(pc, path) {
 #' @param path The URI of the directory containing the Delta tables.
 #' @return A DataSource object that can be used to run queries against the data.
 #' @export
-read_delta <- function(pc, path) {
+ptl_read_delta <- function(pc, path) {
   pc %>% invoke_datasource("delta", as.character(path))
 }
 
@@ -92,7 +92,7 @@ read_delta <- function(pc, path) {
 #' @param schema An optional schema name that should be used to qualify the table names.
 #' @return A DataSource object that can be used to run queries against the data.
 #' @export
-read_tables <- function(pc, schema = NULL) {
+ptl_read_tables <- function(pc, schema = NULL) {
   if (!is.null(schema)) {
     pc %>% invoke_datasource("tables", as.character(schema))
   } else {
@@ -113,7 +113,6 @@ ds_read <- function(ds, resource_code) {
   sdf_register(jdf)
 }
 
-
 data_sinks <- function(ds) {
   j_invoke(ds, "write")
 }
@@ -124,7 +123,6 @@ invoke_datasink <- function(ds, name, ...) {
       data_sinks() %>%
       j_invoke(name, ...)
 }
-
 
 #' Writes the data to a directory of NDJSON files. The files will be named using the resource type and the ".ndjson" extension.
 #'

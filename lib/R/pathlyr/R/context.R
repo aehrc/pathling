@@ -80,7 +80,9 @@ StorageType <- list(
 ptl_connect <- function(
   spark = NULL,
   max_nesting_level = 3,
-  enable_extensions = TRUE,
+  # TODO: Reconsider the default value: the challenge is the the type of column used 
+  # for extensions cannot be repesent deserialised by sparklyr
+  enable_extensions = FALSE,
   enabled_open_types = c(
     "boolean", "code", "date", "dateTime", "decimal", "integer",
     "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"

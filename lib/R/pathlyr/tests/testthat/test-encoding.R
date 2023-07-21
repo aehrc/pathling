@@ -1,12 +1,13 @@
 spark_session <- function() {
-  # Get the shaded JAR for testing purposes.
-  spark <- sparklyr::spark_connect(master = "local[2]", config = list(
-    #"spark.sql.warehouse.dir" = fs::dir_create_temp(),
-    "spark.driver.memory" = "4g"
-  ))
-
-  #on.exit(sparklyr::spark_disconnect(spark), add = TRUE)
-  spark
+  # # Get the shaded JAR for testing purposes.
+  # spark <- sparklyr::spark_connect(master = "local[2]", config = list(
+  #   #"spark.sql.warehouse.dir" = fs::dir_create_temp(),
+  #   "spark.driver.memory" = "4g"
+  # ))
+  # 
+  # #on.exit(sparklyr::spark_disconnect(spark), add = TRUE)
+  # spark
+  def_spark()
 }
 
 json_bundles_dir <- function() {

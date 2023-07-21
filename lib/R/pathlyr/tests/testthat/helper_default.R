@@ -1,32 +1,34 @@
 def_spark <- function() {
-  # Get the shaded JAR for testing purposes.
 
-  # TODO: Uncomment
-  #"spark.sql.warehouse.dir" = fs::dir_create_temp(),
-
+  temp_warehouse_dir <- file.path(tempdir(), 'warehouse')
   spark <- sparklyr::spark_connect(
-      master = "local[1]",
-      #       config = list(
-      #           "spark.driver.memory" = "4g",
-      #           "spark.driver.extraJavaOptions" = "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896"
-      #           #"spark.sql.extensions" = "io.delta.sql.DeltaSparkSessionExtension",
-      #           #"spark.sql.catalog.spark_catalog" = "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-      #           #"spark.sql.catalogImplementation" = "hive"
-      #           #"spark.sql.warehouse.dir" = temp_warehouse_dir
-      #       
-      # )
+    master = "local[1]",
+#    version = "3.3.1",
+#    packages = "io.delta:delta-core_2.12:2.3.0",
+    config = list(
+      "sparklyr.shell.packages" = "io.delta:delta-core_2.12:2.3.0",
+      "sparklyr.shell.driver-memory" = "4G",
+      "sparklyr.shell.driver-java-options" = '"-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896"',
+      "sparklyr.shell.conf" = c(
+        "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+        "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+        "spark.sql.catalogImplementation=hive",
+        sprintf("spark.sql.warehouse.dir=\'%s\'", temp_warehouse_dir)
+      )
+    )
   )
+
   # spark.sql("CREATE DATABASE IF NOT EXISTS test")
   #on.exit(sparklyr::spark_disconnect(spark), add = TRUE)
   spark
 }
 
 def_ptl_context <- function(spark) {
-  
+
   encoders <- spark %>%
       invoke_static("au.csiro.pathling.encoders.FhirEncoders", "forR4") %>%
       invoke("withMaxNestingLevel", as.integer(0)) %>%
-      invoke("withExtensionsEnabled", as.logical(TRUE)) %>%
+      invoke("withExtensionsEnabled", as.logical(FALSE)) %>%
       invoke("withOpenTypes", invoke_static(spark, "java.util.Collections", "emptySet")) %>%
       invoke("getOrCreate")
 

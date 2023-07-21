@@ -5,7 +5,7 @@ json_resources_dir <- function() {
 test_data_source <- function() {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
-  read_ndjson(pc, json_resources_dir())
+  ptl_read_ndjson(pc, json_resources_dir())
 }
 
 # test_extract

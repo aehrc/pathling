@@ -47,7 +47,7 @@ test_that("datasource read ndjson", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  patients <- read_ndjson(pc, ndjson_test_data_dir()) %>% ds_read("Patient")
+  patients <- ptl_read_ndjson(pc, ndjson_test_data_dir()) %>% ds_read("Patient")
   expect_equal(patients %>% sdf_nrow(), 9)
 })
 
@@ -55,7 +55,7 @@ test_that("datasource ndjson", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  ds <- read_ndjson(pc, ndjson_test_data_dir())
+  ds <- ptl_read_ndjson(pc, ndjson_test_data_dir())
 
   # TODO: Uncomment when writing is fixed
   # ds_write_ndjson(ds, temp_ndjson_dir())
@@ -86,7 +86,7 @@ test_that("datasource bundles", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  data_source <- read_bundles(pc, bundles_test_data_dir(), c("Patient", "Condition"))
+  data_source <- ptl_read_bundles(pc, bundles_test_data_dir(), c("Patient", "Condition"))
 
   result <- bundles_query(data_source)
   expect_equal(names(result), "count")
@@ -98,7 +98,7 @@ test_that("datasource datasets", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  data_source <- read_datasets(pc, list(
+  data_source <- ptl_read_datasets(pc, list(
       "Patient" = ptl_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Patient.ndjson")), "Patient"),
       "Condition" = ptl_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Condition.ndjson")), "Condition")
   ))
@@ -112,7 +112,7 @@ test_that("datasource parquet", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  ds <- read_parquet(pc, parquet_test_data_dir())
+  ds <- ptl_read_parquet(pc, parquet_test_data_dir())
 
   # TODO: Uncomment when writing is fixed
   # ds %>% ds_write_parquet(temp_parquet_dir())
@@ -124,19 +124,19 @@ test_that("datasource parquet", {
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
-# TODO: Uncomment when delta is fixed
-# test_that("datasource delta", {
-#   spark <- def_spark()
-#   pc <- def_ptl_context(spark)
-#
-#   # TODO: Uncomment when writing is fixed
-#   # read_delta(pc, delta_test_data_dir()) %>% write_delta(temp_delta_dir())
-#   data_source <- read_delta(pc, delta_test_data_dir())
-#
-#   result <- delta_query(data_source)
-#   expect_equal(names(result), "count")
-#   expect_equal(collect(result), tibble::tibble(count = 71))
-# })
+test_that("datasource delta", {
+  spark <- def_spark()
+  pc <- def_ptl_context(spark)
+
+  # TODO: Uncomment when writing is fixed
+  # read_delta(pc, delta_test_data_dir()) %>% write_delta(temp_delta_dir())
+  data_source <- ptl_read_delta(pc, delta_test_data_dir())
+
+  result <- delta_query(data_source)
+  expect_equal(names(result), "count")
+  expect_equal(collect(result), tibble::tibble(count = 71))
+})
+
 #
 # test_that("datasource delta merge", {
 #   spark <- def_spark()
