@@ -177,6 +177,25 @@
               </arguments>
             </configuration>
           </execution>
+          <execution>
+            <id>check-package</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>R</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>CMD</argument>
+                <argument>check</argument>
+                <argument>--output=${project.basedir}/target</argument>
+                <argument>--as-cran</argument>
+                <!-- TODO: Make sure it works with snapshot version too (x.x.x.9xxxx) -->
+                <argument>target/${project.artifactId}_${project.version}.tar.gz</argument>
+              </arguments>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
     </plugins>
