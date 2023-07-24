@@ -114,6 +114,23 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
+          <!-- Install dependencies -->
+          <execution>
+            <id>install-dependencies</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>Rscript</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>--verbose</argument>
+                <argument>-e</argument>
+                <argument>renv::restore()</argument>
+              </arguments>
+            </configuration>
+          </execution>
           <execution>
             <id>roxygenise</id>
             <phase>generate-resources</phase>
@@ -141,6 +158,22 @@
               <arguments>
                 <argument>-e</argument>
                 <argument>devtools::test(stop_on_failure = TRUE)</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>R-source-package</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>Rscript</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>--verbose</argument>
+                <argument>-e</argument>
+                <argument>devtools::build(path="target")</argument>
               </arguments>
             </configuration>
           </execution>

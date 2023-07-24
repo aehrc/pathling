@@ -191,7 +191,6 @@ trm_display <- function(coding, accept_language = NULL) {
 #' trm_property_of(coding, property_code, property_type = "string", accept_language = NULL)
 #'
 #' @export
-#' @importFrom dplyr case_when
 trm_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
 
   if (property_type == PropertyType$CODE) {
