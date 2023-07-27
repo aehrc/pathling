@@ -1,9 +1,9 @@
-#'@import sparklyr
+ #'@importFrom sparklyr j_invoke
 data_sources <- function(pc) {
   j_invoke(pc, "read")
 }
 
-#'@import sparklyr
+ #'@importFrom sparklyr j_invoke
 invoke_datasource <- function(pc, name, ...) {
   pc %>%
       data_sources() %>%
@@ -40,7 +40,7 @@ ptl_read_bundles <- function(pc, path, resource_types, mime_type = "application/
 
   pc %>% invoke_datasource("bundles", as.character(path),
                            spark_connection(pc) %>%
-                               invoke_static("com.google.common.collect.ImmutableSet", "copyOf", as.list(resource_types)),
+                               j_invoke_static("com.google.common.collect.ImmutableSet", "copyOf", as.list(resource_types)),
                            as.character(mime_type))
 }
 
@@ -117,12 +117,21 @@ data_sinks <- function(ds) {
   j_invoke(ds, "write")
 }
 
-#'@import sparklyr
+ #'@importFrom sparklyr j_invoke
 invoke_datasink <- function(ds, name, ...) {
   ds %>%
       data_sinks() %>%
       j_invoke(name, ...)
 }
+
+
+#' Import modes.
+#'
+#' @export
+ImportMode <- list(
+    OVERWRITE = "overwrite",
+    MERGE = "merge"
+)
 
 #' Writes the data to a directory of NDJSON files. The files will be named using the resource type and the ".ndjson" extension.
 #'

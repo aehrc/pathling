@@ -15,7 +15,7 @@
 
 #' The URI of the SNOMED code system.
 #' @export
-SNOMED_URI = "http://snomed.info/sct"
+SNOMED_URI <- "http://snomed.info/sct"
 
 #' The URI of the LOINC code system.
 #' @export
@@ -37,14 +37,15 @@ LOINC_URI <- "http://loinc.org"
 #'
 #' @export
 trm_to_coding <- function(coding_column, system, version = NULL) {
- rlang::expr(struct(
-    NULL,
-    string({{system}}),
-    string({{version}}),
-    string({{coding_column}}),
-    NULL,
-    NULL
-  ))
+  rlang::expr(if (!is.null({ { coding_column } }))
+                  struct(
+                      NULL,
+                      string({ { system } }),
+                      string({ { version } }),
+                      string({ { coding_column } }),
+                      NULL,
+                      NULL
+                  ) else NULL)
 }
 
 #' Converts a Column containing codes into a Column that contains a SNOMED Coding struct.
@@ -62,7 +63,7 @@ trm_to_coding <- function(coding_column, system, version = NULL) {
 #'
 #' @export
 trm_to_snomed_coding <- function(coding_column, version = NULL) {
-  trm_to_coding(coding_column, SNOMED_URI, version)
+  trm_to_coding({ { coding_column } }, SNOMED_URI, { { version } })
 }
 
 
@@ -76,8 +77,10 @@ trm_to_snomed_coding <- function(coding_column, version = NULL) {
 #'
 #' @examples
 #' # Example usage of trm_to_ecl_value_set function
-#' trm_to_ecl_value_set(ecl)
+#' trm_to_ecl_value_set('<<373265006 |Analgesic (substance)|')
 #'
+#' @importFrom utils URLencode
+#' 
 #' @export
 trm_to_ecl_value_set <- function(ecl) {
   # TODO: Check that reserved true captures: urllib.parse.quote(ecl, safe="()*!'")

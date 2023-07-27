@@ -3,3 +3,9 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^.*target$
+^tests$
+.gitkeep$
+^derby.log$
+^pom.xml$
+^pathlyr.iml$
+^examples$

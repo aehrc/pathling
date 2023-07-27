@@ -27,8 +27,8 @@
 #'   DataFrame is assumed to have one column of type string.
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
-#' @import rlang
-#' @import sparklyr
+#' @importFrom rlang `%||%`
+#' @importFrom sparklyr sdf_register spark_dataframe j_invoke
 #'
 #'@export
 ptl_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
@@ -50,6 +50,9 @@ ptl_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) 
 #'
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
+#' @importFrom rlang `%||%`
+#' @importFrom sparklyr sdf_register spark_dataframe j_invoke
+#' 
 #' @export
 ptl_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
   sdf_register(j_invoke(pc, "encodeBundle",  spark_dataframe(df), resource_name,

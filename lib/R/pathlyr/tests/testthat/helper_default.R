@@ -26,17 +26,17 @@ def_spark <- function() {
 def_ptl_context <- function(spark) {
 
   encoders <- spark %>%
-      invoke_static("au.csiro.pathling.encoders.FhirEncoders", "forR4") %>%
-      invoke("withMaxNestingLevel", as.integer(0)) %>%
-      invoke("withExtensionsEnabled", as.logical(FALSE)) %>%
-      invoke("withOpenTypes", invoke_static(spark, "java.util.Collections", "emptySet")) %>%
-      invoke("getOrCreate")
+      j_invoke_static("au.csiro.pathling.encoders.FhirEncoders", "forR4") %>%
+      j_invoke("withMaxNestingLevel", as.integer(0)) %>%
+      j_invoke("withExtensionsEnabled", as.logical(FALSE)) %>%
+      j_invoke("withOpenTypes", j_invoke_static(spark, "java.util.Collections", "emptySet")) %>%
+      j_invoke("getOrCreate")
 
   terminology_service_factory <- spark %>%
-      invoke_new("au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory")
+      j_invoke_new("au.csiro.pathling.terminology.mock.MockTerminologyServiceFactory")
 
   spark %>%
-      invoke_static("au.csiro.pathling.library.PathlingContext", "create",
+      j_invoke_static("au.csiro.pathling.library.PathlingContext", "create",
                     spark_session(spark), encoders, terminology_service_factory)
 }
 

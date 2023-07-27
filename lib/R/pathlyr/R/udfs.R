@@ -13,13 +13,22 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-#' @export
-SNOMED_URI <- 'http://snomed.info/sct'
-
-#' @export
-snomed_code <- function(code) {
-  rlang::expr(if (!is.null(code)) struct(NULL, SNOMED_URI, NULL, string({ { code } }), NULL, NULL) else NULL)
-}
+#
+# Placeholders for SQL functions and UDFs
+#
+designation <- function(...) { }
+display <- function(...) { }
+struct <- function(...) { }
+string <- function(...) { }
+member_of <- function(...) { }
+translate_coding <- function(...) { }
+subsumes <- function(...) { }
+property_Coding <- function(...) { }
+property_boolean <- function(...) { }
+property_dateTime <- function(...) { }
+property_decimal <- function(...) { }
+property_integer <- function(...) { }
+property_string <- function(...) { }
 
 #' Allowed property types.
 #'
@@ -56,9 +65,9 @@ Equivalence <- list(
 #' @return The `quosure` with the SQL array literal that can be used in dplyr::mutate.
 to_array <- function(value) {
   if (!is.null(value)) {
-    new_quosure(rlang::expr(array(!!!value)))
+    rlang::new_quosure(rlang::expr(array(!!!value)))
   } else {
-    new_quosure(rlang::expr(NULL))
+    rlang::new_quosure(rlang::expr(NULL))
   }
 }
 
@@ -74,8 +83,8 @@ to_array <- function(value) {
 #' @return A Column containing the result of the operation.
 #'
 #' @examples
-#' # Example usage of member_of function
-#' member_of(coding, value_set_uri)
+#' # Example usage of trm_member_of function
+#' trm_member_of(coding, value_set_uri)
 #'
 #' @export
 trm_member_of <- function(coding, value_set_uri) {
@@ -102,7 +111,8 @@ trm_member_of <- function(coding, value_set_uri) {
 #'
 #' @examples
 #' # Example usage of trm_translate function
-#' trm_translate(coding, concept_map_uri, reverse = FALSE, equivalences = c("equivalent", "wider"), target = NULL)
+#' trm_translate(coding, concept_map_uri, reverse = FALSE, equivalences = "equivalent", 
+#'      target = NULL)
 #'
 #' @export
 trm_translate <- function(coding, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
@@ -194,19 +204,19 @@ trm_display <- function(coding, accept_language = NULL) {
 trm_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
 
   if (property_type == PropertyType$CODE) {
-    rlang::expr(property_code({{ coding }}, {{ property_code }}, {{ accept_language }}))
-  } else if(property_type == PropertyType$CODING) {
-    rlang::expr(property_Coding({{ coding }}, {{ property_code }}, {{ accept_language }}))
-  } else if(property_type == PropertyType$STRING) {
-    rlang::expr(property_string({{ coding }}, {{ property_code }}, {{ accept_language }}))
-  } else if(property_type == PropertyType$INTEGER) {
-    rlang::expr(property_integer({{ coding }}, {{ property_code }}, {{ accept_language }}))
-  } else if(property_type == PropertyType$BOOLEAN) {
-    rlang::expr(property_boolean({{ coding }}, {{ property_code }}, {{ accept_language }}))
-  } else if(property_type == PropertyType$DATETIME) {
-    rlang::expr(property_dateTime({{ coding }}, {{ property_code }}, {{ accept_language }}))
-  } else if(property_type == PropertyType$DECIMAL) {
-    rlang::expr(property_decimal({{ coding }}, {{ property_code }}, {{ accept_language }}))
+    rlang::expr(property_code({ { coding } }, { { property_code } }, { { accept_language } }))
+  } else if (property_type == PropertyType$CODING) {
+    rlang::expr(property_Coding({ { coding } }, { { property_code } }, { { accept_language } }))
+  } else if (property_type == PropertyType$STRING) {
+    rlang::expr(property_string({ { coding } }, { { property_code } }, { { accept_language } }))
+  } else if (property_type == PropertyType$INTEGER) {
+    rlang::expr(property_integer({ { coding } }, { { property_code } }, { { accept_language } }))
+  } else if (property_type == PropertyType$BOOLEAN) {
+    rlang::expr(property_boolean({ { coding } }, { { property_code } }, { { accept_language } }))
+  } else if (property_type == PropertyType$DATETIME) {
+    rlang::expr(property_dateTime({ { coding } }, { { property_code } }, { { accept_language } }))
+  } else if (property_type == PropertyType$DECIMAL) {
+    rlang::expr(property_decimal({ { coding } }, { { property_code } }, { { accept_language } }))
   } else {
     stop("Unsupported property type: ", property_type)
   }
@@ -233,3 +243,9 @@ trm_property_of <- function(coding, property_code, property_type = "string", acc
 trm_designation <- function(coding, use = NULL, language = NULL) {
   rlang::expr(designation({ { coding } }, { { use } }, { { language } }))
 }
+
+#
+# TODO: Review the code examples and documentation
+# Check : https://r-pkgs.org/man.html#sec-man-examples 
+# But also: The R Graphics Package (graphics) for the examples of how to include example code.
+#

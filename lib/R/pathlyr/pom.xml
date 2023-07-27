@@ -32,7 +32,7 @@
 
   <name>Pathling R Sparklyr API</name>
   <description>A library for using Pathling with R Sparklyr.</description>
-  
+
   <dependencies>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
@@ -147,21 +147,6 @@
             </configuration>
           </execution>
           <execution>
-            <id>run-testthat</id>
-            <phase>test</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>Rscript</executable>
-              <workingDirectory>${project.basedir}</workingDirectory>
-              <arguments>
-                <argument>-e</argument>
-                <argument>devtools::test(stop_on_failure = TRUE)</argument>
-              </arguments>
-            </configuration>
-          </execution>
-          <execution>
             <id>R-source-package</id>
             <phase>package</phase>
             <goals>
@@ -201,6 +186,39 @@
     </plugins>
   </build>
   <profiles>
+    <profile>
+      <id>R-test</id>
+      <activation>
+        <property>
+          <name>!skipTests</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>run-testthat</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>Rscript</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-e</argument>
+                    <argument>devtools::test(stop_on_failure = TRUE)</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>Rdev</id>
       <build>

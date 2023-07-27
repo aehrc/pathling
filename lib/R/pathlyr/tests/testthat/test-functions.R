@@ -49,3 +49,8 @@ test_that("to_ecl_value_set returns expected ValueSet URI", {
   result <- trm_to_ecl_value_set(ecl)
   expect_equal(result, expected)
 })
+
+
+#
+# TODO: Add tests for 'trm_to_XXXX_coding' functions
+#
