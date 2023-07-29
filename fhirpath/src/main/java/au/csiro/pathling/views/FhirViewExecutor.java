@@ -101,8 +101,9 @@ public class FhirViewExecutor {
       } else if (select instanceof ForEachSelection) {
         final FhirPath forEach = parseExpression(((ForEachSelection) select).getForEach(),
             context.withInputContext(result.getContext()));
+        final FhirPath unnested = forEach.unnest();
         final ContextAndSelection nestedResult = parseSelect(
-            ((ForEachSelection) select).getSelect(), context.withInputContext(forEach),
+            ((ForEachSelection) select).getSelect(), context.withInputContext(unnested),
             result.getSelection());
         result = new ContextAndSelection(nestedResult.getContext(), nestedResult.getSelection());
 

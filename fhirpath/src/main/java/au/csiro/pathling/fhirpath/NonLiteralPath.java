@@ -17,10 +17,13 @@
 
 package au.csiro.pathling.fhirpath;
 
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
+import static org.apache.spark.sql.functions.explode_outer;
 
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
@@ -211,4 +214,13 @@ public abstract class NonLiteralPath implements FhirPath {
     return getDataset().select(getUnionableColumns(this, target).toArray(new Column[]{}));
   }
 
+  @Nonnull
+  @Override
+  public FhirPath unnest() {
+    final DatasetWithColumn datasetWithColumn = createColumn(getDataset(),
+        explode_outer(getValueColumn()));
+    return copy(getExpression(), datasetWithColumn.getDataset(), datasetWithColumn.getColumn(),
+        datasetWithColumn.getColumn(), getOrderingColumn(), isSingular(), getThisColumn());
+  }
+ 
 }

@@ -17,23 +17,18 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.explodeArray;
+import static au.csiro.pathling.QueryHelpers.createColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.col;
 
-import au.csiro.pathling.encoders.ExtensionSupport;
-import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.parser.UnnestBehaviour;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -74,64 +69,20 @@ public class PathTraversalOperator {
     final ElementDefinition childDefinition = optionalChild.get();
 
     final Dataset<Row> leftDataset = left.getDataset();
-    final Nesting nesting = input.getContext().getNesting();
-
-    // If the element has a max cardinality of more than one, it will need to be unnested.
-    final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality() == 1;
-    final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
-
-    final Column field;
-    if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(right)) {
-      // Lookup the extensions by _fid in the extension container.
-      field = left.getExtensionContainerColumn()
-          .apply(getValueField(left, ExtensionSupport.FID_FIELD_NAME()));
+    final Dataset<Row> result;
+    final Column valueColumn;
+    if (left instanceof ResourcePath) {
+      result = leftDataset;
+      valueColumn = ((ResourcePath) left).getElementColumn(right);
     } else {
-      field = getValueField(left, right);
+      final DatasetWithColumn datasetAndColumn = createColumn(leftDataset,
+          col(left.getValueColumn() + "." + right));
+      result = datasetAndColumn.getDataset();
+      valueColumn = datasetAndColumn.getColumn();
     }
 
-    final UnnestBehaviour unnestBehaviour = input.getContext().getUnnestBehaviour();
-
-    if (!maxCardinalityOfOne && unnestBehaviour == UnnestBehaviour.ERROR) {
-      throw new InvalidUserInputError("Encountered a repeating element: " + expression);
-
-    } else if (maxCardinalityOfOne || unnestBehaviour == UnnestBehaviour.NOOP) {
-      return ElementPath.build(expression, leftDataset, left.getIdColumn(), field,
-          Optional.empty(), resultSingular, left.getCurrentResource(), left.getThisColumn(),
-          childDefinition);
-
-    } else if (unnestBehaviour == UnnestBehaviour.UNNEST) {
-      return nesting.updateOrRetrieve(childDefinition, expression, leftDataset, false,
-          left.getThisColumn(), key -> {
-            final MutablePair<Column, Column> valueAndOrderingColumns = new MutablePair<>();
-            final Dataset<Row> resultDataset = explodeArray(left.getDataset(), field,
-                valueAndOrderingColumns);
-            return ElementPath.build(expression, resultDataset, left.getIdColumn(),
-                valueAndOrderingColumns.getLeft(), Optional.of(valueAndOrderingColumns.getRight()),
-                false, left.getCurrentResource(), left.getThisColumn(), childDefinition);
-          });
-
-    } else {
-      throw new UnsupportedOperationException("Unsupported unnest behaviour: " + unnestBehaviour);
-    }
-
-  }
-
-  @Nonnull
-  private static Column getValueField(@Nonnull final NonLiteralPath path,
-      @Nonnull final String fieldName) {
-    // If the input path is a ResourcePath, we look for a bare column. Otherwise, we will need to
-    // extract it from a struct.
-    final Column field;
-    if (path instanceof ResourcePath) {
-      final ResourcePath resourcePath = (ResourcePath) path;
-      // When the value column of the ResourcePath is null, the path traversal results in null. This
-      // can happen when attempting to do a path traversal on the result of a function like when.
-      field = when(resourcePath.getValueColumn().isNull(), lit(null))
-          .otherwise(resourcePath.getElementColumn(fieldName));
-    } else {
-      field = path.getValueColumn().getField(fieldName);
-    }
-    return field;
+    return ElementPath.build(expression, result, left.getIdColumn(), valueColumn, Optional.empty(),
+        false, left.getCurrentResource(), left.getThisColumn(), childDefinition);
   }
 
 }

@@ -232,4 +232,10 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
     return dataset;
   }
 
+  @Nonnull
+  @Override
+  public FhirPath unnest() {
+    return this;
+  }
+
 }

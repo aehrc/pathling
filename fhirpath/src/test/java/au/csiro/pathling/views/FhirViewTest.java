@@ -59,7 +59,7 @@ class FhirViewTest {
   @BeforeEach
   void setUp() {
     final DataSource dataSource = Database.forFileSystem(spark, fhirEncoders,
-        TEST_DATA_PATH.toUri().toString(), true);
+        TEST_DATA_PATH.toUri().toString(), false);
     executor = new FhirViewExecutor(fhirContext, spark, dataSource,
         Optional.of(terminologyServiceFactory));
   }

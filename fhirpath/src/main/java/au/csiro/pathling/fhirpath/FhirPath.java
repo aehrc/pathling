@@ -127,6 +127,9 @@ public interface FhirPath {
       @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Column valueColumn,
       boolean singular, @Nonnull Optional<Column> thisColumn);
 
+  @Nonnull
+  FhirPath unnest();
+
   /**
    * Prints out to stdout all the ids and values of all the elements in this path. For debugging
    * purposes only.
