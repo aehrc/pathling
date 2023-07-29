@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -16,13 +17,14 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class ForEachSelection extends SelectClause {
+public class ForEachSelection extends NestedSelectClause {
 
   /**
    * The FHIRPath expression to unnest.
    */
   @NotNull
-  String forEach;
+  @SerializedName("forEach")
+  String expression;
 
   /**
    * The nested select clauses.

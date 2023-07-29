@@ -11,8 +11,12 @@ public class ContextAndSelection {
 
   @Nonnull
   FhirPath context;
- 
+
   @Nonnull
   List<Column> selection;
+
+  public void show() {
+    context.getDataset().select(selection.toArray(new Column[0])).show(false);
+  }
 
 }

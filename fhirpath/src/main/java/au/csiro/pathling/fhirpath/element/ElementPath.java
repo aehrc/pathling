@@ -17,9 +17,6 @@
 
 package au.csiro.pathling.fhirpath.element;
 
-import static au.csiro.pathling.QueryHelpers.createColumns;
-
-import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
@@ -150,20 +147,14 @@ public class ElementPath extends NonLiteralPath {
     final Class<? extends ElementPath> elementPathClass = ElementDefinition
         .elementClassForType(fhirType).orElse(ElementPath.class);
 
-    final DatasetWithColumnMap datasetWithColumns = orderingColumn
-        .map(column -> createColumns(dataset, column, valueColumn))
-        .orElseGet(() -> createColumns(dataset, valueColumn));
-
     try {
       // Call its constructor and return.
       final Constructor<? extends ElementPath> constructor = elementPathClass
           .getDeclaredConstructor(String.class, Dataset.class, Column.class, Column.class,
               Optional.class, boolean.class, Optional.class, Optional.class, FHIRDefinedType.class);
       return constructor
-          .newInstance(expression, datasetWithColumns.getDataset(), idColumn,
-              datasetWithColumns.getColumn(valueColumn),
-              orderingColumn.map(datasetWithColumns::getColumn), singular, currentResource,
-              thisColumn, fhirType);
+          .newInstance(expression, dataset, idColumn, valueColumn, orderingColumn, singular,
+              currentResource, thisColumn, fhirType);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
                    InvocationTargetException e) {
       throw new RuntimeException("Problem building an ElementPath class", e);

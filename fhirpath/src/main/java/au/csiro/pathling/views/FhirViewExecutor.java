@@ -79,39 +79,57 @@ public class FhirViewExecutor {
       @Nonnull final ParserContext context, @Nonnull final List<Column> selection) {
     @Nonnull ContextAndSelection result = new ContextAndSelection(
         context.getInputContext(), selection);
+    @Nonnull ParserContext currentContext = context;
 
     for (final SelectClause select : selectGroup) {
       if (select instanceof DirectSelection) {
-        final DirectSelection directSelection = (DirectSelection) select;
-        final FhirPath path = parseExpression(directSelection.getExpression(),
-            context.withInputContext(result.getContext()));
-        final List<Column> newColumns = new ArrayList<>(result.getSelection());
-        newColumns.add(path.getValueColumn().alias(directSelection.getName()));
-        result = new ContextAndSelection(context.getInputContext().withDataset(path.getDataset()),
-            newColumns);
+        result = directSelection(currentContext, (DirectSelection) select, result);
 
       } else if (select instanceof FromSelection) {
-        final FromSelection fromSelection = (FromSelection) select;
-        final FhirPath from = parseExpression(fromSelection.getFrom(),
-            context.withInputContext(result.getContext()));
-        final ContextAndSelection nestedResult = parseSelect(fromSelection.getSelect(),
-            context.withInputContext(from), result.getSelection());
-        result = new ContextAndSelection(nestedResult.getContext(), nestedResult.getSelection());
+        result = nestedSelection(currentContext, (FromSelection) select, result, false);
 
       } else if (select instanceof ForEachSelection) {
-        final FhirPath forEach = parseExpression(((ForEachSelection) select).getForEach(),
-            context.withInputContext(result.getContext()));
-        final FhirPath unnested = forEach.unnest();
-        final ContextAndSelection nestedResult = parseSelect(
-            ((ForEachSelection) select).getSelect(), context.withInputContext(unnested),
-            result.getSelection());
-        result = new ContextAndSelection(nestedResult.getContext(), nestedResult.getSelection());
+        result = nestedSelection(currentContext, (ForEachSelection) select, result, true);
 
       } else {
         throw new IllegalStateException("Unknown select clause type: " + select.getClass());
       }
+      currentContext = context.withContextDataset(result.getContext().getDataset());
     }
 
+    return result;
+  }
+
+  @Nonnull
+  private ContextAndSelection directSelection(final @Nonnull ParserContext context,
+      @Nonnull final DirectSelection select, @Nonnull ContextAndSelection result) {
+    final FhirPath path = parseExpression(select.getExpression(),
+        context.withInputContext(result.getContext()));
+    final List<Column> newColumns = new ArrayList<>(result.getSelection());
+    newColumns.add(path.getValueColumn().alias(select.getName()));
+    result = new ContextAndSelection(context.getInputContext().withDataset(path.getDataset()),
+        newColumns);
+    System.out.println("Direct selection: " + select.getName() + " = " + select.getExpression());
+    result.show();
+    return result;
+  }
+
+  @Nonnull
+  private ContextAndSelection nestedSelection(final @Nonnull ParserContext context,
+      @Nonnull final NestedSelectClause select, @Nonnull ContextAndSelection result,
+      final boolean unnest) {
+    final FhirPath from = parseExpression(select.getExpression(),
+        context.withInputContext(result.getContext()));
+    final FhirPath nextInputContext = unnest
+                                      ? from.unnest()
+                                      : from;
+    final ParserContext nextContext = context.withInputContext(nextInputContext);
+    nextContext.setThisContext(nextInputContext);
+    final ContextAndSelection nestedResult = parseSelect(select.getSelect(), nextContext,
+        result.getSelection());
+    result = new ContextAndSelection(nestedResult.getContext(), nestedResult.getSelection());
+    System.out.println("Nested selection: " + select.getExpression());
+    result.show();
     return result;
   }
 

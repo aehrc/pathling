@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
@@ -15,13 +16,14 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class FromSelection extends SelectClause {
+public class FromSelection extends NestedSelectClause {
 
   /**
    * The FHIRPath expression for the parent path to select from.
    */
   @NotNull
-  String from;
+  @SerializedName("from")
+  String expression;
 
   /**
    * The nested select clauses.

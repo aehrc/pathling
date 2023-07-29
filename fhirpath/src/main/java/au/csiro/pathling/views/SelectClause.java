@@ -12,6 +12,6 @@ package au.csiro.pathling.views;
  *
  * @author John Grimes
  */
-public class SelectClause {
-
+public abstract class SelectClause {
+  
 }

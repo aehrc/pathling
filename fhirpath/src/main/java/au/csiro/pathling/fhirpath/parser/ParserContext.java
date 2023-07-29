@@ -186,9 +186,11 @@ public class ParserContext {
    * @return a new {@link ParserContext}
    */
   public ParserContext withInputContext(@Nonnull final FhirPath inputContext) {
-    return new ParserContext(inputContext, fhirContext,
+    final ParserContext parserContext = new ParserContext(inputContext, fhirContext,
         sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
         variables, nesting);
+    thisContext.ifPresent(parserContext::setThisContext);
+    return parserContext;
   }
 
   /**
