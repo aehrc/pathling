@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -67,11 +68,19 @@ public abstract class Assertions {
 
   public static void assertDatasetAgainstCsv(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset) {
+    assertDatasetAgainstCsv(spark, expectedCsvPath, actualDataset, false);
+  }
+
+  public static void assertDatasetAgainstCsv(@Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset,
+      final boolean header) {
     final URL url = getResourceAsUrl(expectedCsvPath);
     final String decodedUrl = URLDecoder.decode(url.toString(), StandardCharsets.UTF_8);
-    final Dataset<Row> expectedDataset = spark.read()
-        .schema(actualDataset.schema())
-        .csv(decodedUrl);
+    final DataFrameReader reader = spark.read().schema(actualDataset.schema());
+    if (header) {
+      reader.option("header", true);
+    }
+    final Dataset<Row> expectedDataset = reader.csv(decodedUrl);
     new DatasetAssert(actualDataset)
         .hasRowsUnordered(expectedDataset);
   }

@@ -181,6 +181,17 @@ public class ParserContext {
   }
 
   /**
+   * Creates a copy of the current parser context with a different input context.
+   *
+   * @return a new {@link ParserContext}
+   */
+  public ParserContext withInputContext(@Nonnull final FhirPath inputContext) {
+    return new ParserContext(inputContext, fhirContext,
+        sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
+        variables, nesting);
+  }
+
+  /**
    * Creates a copy of the current parser context with a different input dataset.
    *
    * @return a new {@link ParserContext}

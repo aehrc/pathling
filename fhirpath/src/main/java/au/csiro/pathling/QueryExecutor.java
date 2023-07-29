@@ -61,16 +61,16 @@ public abstract class QueryExecutor {
   private final QueryConfiguration configuration;
 
   @Nonnull
-  private final FhirContext fhirContext;
+  protected final FhirContext fhirContext;
 
   @Nonnull
-  private final SparkSession sparkSession;
+  protected final SparkSession sparkSession;
 
   @Nonnull
-  private final DataSource dataSource;
+  protected final DataSource dataSource;
 
   @Nonnull
-  private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
+  protected final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   protected QueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,

@@ -58,7 +58,7 @@ public class FhirViewExecutor {
     final ParserContext parserContext = new ParserContext(inputContext, fhirContext, sparkSession,
         dataSource, terminologyServiceFactory, singletonList(inputContext.getIdColumn()));
 
-    final DatasetWithColumns select = parseSelect(view.getSelect(), parserContext,
+    final ContextAndSelection select = parseSelect(view.getSelect(), parserContext,
         Collections.emptyList());
     final List<String> where = view.getWhere() == null
                                ? Collections.emptyList()
@@ -69,42 +69,42 @@ public class FhirViewExecutor {
         .map(FhirPath::getValueColumn)
         .reduce(Column::and);
     return filterCondition
-        .map(select.getDataset()::filter)
-        .orElse(select.getDataset())
-        .select(select.getColumns().toArray(new Column[0]));
+        .map(select.getContext().getDataset()::filter)
+        .orElse(select.getContext().getDataset())
+        .select(select.getSelection().toArray(new Column[0]));
   }
 
   @Nonnull
-  private DatasetWithColumns parseSelect(@Nonnull final List<SelectClause> selectGroup,
-      @Nonnull final ParserContext context, @Nonnull final List<Column> columns) {
-    @Nonnull DatasetWithColumns result = new DatasetWithColumns(
-        context.getInputContext().getDataset(), columns);
+  private ContextAndSelection parseSelect(@Nonnull final List<SelectClause> selectGroup,
+      @Nonnull final ParserContext context, @Nonnull final List<Column> selection) {
+    @Nonnull ContextAndSelection result = new ContextAndSelection(
+        context.getInputContext(), selection);
 
     for (final SelectClause select : selectGroup) {
       if (select instanceof DirectSelection) {
-        final FhirPath path = parseExpression(((DirectSelection) select).getExpression(),
-            context.withContextDataset(result.getDataset()));
-        final List<Column> newColumns = new ArrayList<>(result.getColumns());
-        newColumns.add(path.getValueColumn());
-        result = new DatasetWithColumns(path.getDataset(), newColumns);
+        final DirectSelection directSelection = (DirectSelection) select;
+        final FhirPath path = parseExpression(directSelection.getExpression(),
+            context.withInputContext(result.getContext()));
+        final List<Column> newColumns = new ArrayList<>(result.getSelection());
+        newColumns.add(path.getValueColumn().alias(directSelection.getName()));
+        result = new ContextAndSelection(context.getInputContext().withDataset(path.getDataset()),
+            newColumns);
 
       } else if (select instanceof FromSelection) {
-        final FhirPath from = parseExpression(((FromSelection) select).getFrom(),
-            context.withContextDataset(result.getDataset()));
-        final DatasetWithColumns nestedResult = parseSelect(((FromSelection) select).getSelect(),
-            context.withContextDataset(from.getDataset()), result.getColumns());
-        final List<Column> newColumns = new ArrayList<>(result.getColumns());
-        newColumns.addAll(nestedResult.getColumns());
-        result = new DatasetWithColumns(nestedResult.getDataset(), newColumns);
+        final FromSelection fromSelection = (FromSelection) select;
+        final FhirPath from = parseExpression(fromSelection.getFrom(),
+            context.withInputContext(result.getContext()));
+        final ContextAndSelection nestedResult = parseSelect(fromSelection.getSelect(),
+            context.withInputContext(from), result.getSelection());
+        result = new ContextAndSelection(nestedResult.getContext(), nestedResult.getSelection());
 
       } else if (select instanceof ForEachSelection) {
         final FhirPath forEach = parseExpression(((ForEachSelection) select).getForEach(),
-            context.withContextDataset(result.getDataset()));
-        final DatasetWithColumns nestedResult = parseSelect(((ForEachSelection) select).getSelect(),
-            context.withContextDataset(forEach.getDataset()), result.getColumns());
-        final List<Column> newColumns = new ArrayList<>(result.getColumns());
-        newColumns.addAll(nestedResult.getColumns());
-        result = new DatasetWithColumns(nestedResult.getDataset(), newColumns);
+            context.withInputContext(result.getContext()));
+        final ContextAndSelection nestedResult = parseSelect(
+            ((ForEachSelection) select).getSelect(), context.withInputContext(forEach),
+            result.getSelection());
+        result = new ContextAndSelection(nestedResult.getContext(), nestedResult.getSelection());
 
       } else {
         throw new IllegalStateException("Unknown select clause type: " + select.getClass());

@@ -1,19 +1,18 @@
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.fhirpath.FhirPath;
 import java.util.List;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 @Value
-public class DatasetWithColumns {
+public class ContextAndSelection {
 
   @Nonnull
-  Dataset<Row> dataset;
+  FhirPath context;
  
   @Nonnull
-  List<Column> columns;
+  List<Column> selection;
 
 }
