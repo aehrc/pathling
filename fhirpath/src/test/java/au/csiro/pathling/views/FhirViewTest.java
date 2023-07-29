@@ -1,29 +1,32 @@
 package au.csiro.pathling.views;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 
-import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.assertions.DatasetAssert;
 import ca.uhn.fhir.context.FhirContext;
+import com.google.gson.Gson;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import scala.collection.mutable.WrappedArray;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
 
 @SpringBootUnitTest
 class FhirViewTest {
@@ -37,6 +40,9 @@ class FhirViewTest {
   @Autowired
   FhirEncoders fhirEncoders;
 
+  @Autowired
+  Gson gson;
+
   @MockBean
   TerminologyServiceFactory terminologyServiceFactory;
 
@@ -47,469 +53,34 @@ class FhirViewTest {
 
   @BeforeEach
   void setUp() {
-    final QueryConfiguration queryConfiguration = QueryConfiguration.builder().build();
     final DataSource dataSource = Database.forFileSystem(spark, fhirEncoders,
         TEST_DATA_PATH.toUri().toString(), true);
-    executor = new FhirViewExecutor(queryConfiguration, fhirContext, spark, dataSource,
+    executor = new FhirViewExecutor(fhirContext, spark, dataSource,
         Optional.of(terminologyServiceFactory));
   }
 
-  // Test 1:
-  // Select ID, gender and birth date for each patient.
-  // Tests the use of singular elements with no unnesting.
-  // {
-  //   "resource": "Patient",
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "gender",
-  //       "expr": "gender"
-  //     },
-  //     {
-  //       "name": "birth_date",
-  //       "expr": "birthDate"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test1() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("gender", "gender"),
-            new NamedExpression("birthDate", "birth_date")
-        ), List.of(), List.of());
-    final Dataset<Row> result = executor.buildQuery(view);
-
-    // Expected result:
-    // | id | gender | birth_date |
-    // |----|--------|------------|
-    // | 1  | female | 1959-09-27 |
-    // | 2  | male   | 1983-09-06 |
-    DatasetAssert.of(result).hasRows(
-        RowFactory.create("1", "female", "1959-09-27"),
-        RowFactory.create("2", "male", "1983-09-06")
-    );
+  @Nonnull
+  static Stream<Path> requests() throws IOException {
+    // Get all classpath entries with a prefix of "requests/views", and an extension of ".json".
+    final ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+    final Resource[] resources = resolver.getResources("classpath:requests/views/*.json");
+    return Stream.of(resources).map(resource -> {
+      try {
+        return resource.getFile();
+      } catch (final IOException e) {
+        throw new RuntimeException(e);
+      }
+    }).map(File::toPath);
   }
 
-  // Test 2:
-  // Select ID, name use and family name for each patient.
-  // Tests the unnesting of two elements that are singular relative to their common repeating 
-  // parent.
-  // {
-  //   "resource": "Patient",
-  //   "vars": [
-  //     {
-  //       "name": "name",
-  //       "expr": "name",
-  //       "whenMany": "unnest"
-  //     }
-  //   ],
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "name_use",
-  //       "expr": "%name.use"
-  //     },
-  //     {
-  //       "name": "family_name",
-  //       "expr": "%name.family"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test2() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("%name.use", "name_use"),
-            new NamedExpression("%name.family", "family_name")
-        ),
-        List.of(
-            new VariableExpression("name", "name", WhenMany.UNNEST)
-        ),
-        List.of());
+  @ParameterizedTest
+  @MethodSource("requests")
+  void test(@Nonnull final Path request) throws IOException {
+    final FhirView view = gson.fromJson(new FileReader(request.toFile()), FhirView.class);
     final Dataset<Row> result = executor.buildQuery(view);
-
-    // Expected result:
-    // | id | name_use | family_name |
-    // |----|----------|-------------|
-    // | 1  | maiden   | Wuckert     |
-    // | 1  | official | Oberbrunner |
-    // | 2  | nickname | Cleveland   |
-    // | 2  | official | Towne       |
-    DatasetAssert.of(result).hasRowsUnordered(
-        RowFactory.create("1", "maiden", "Wuckert"),
-        RowFactory.create("1", "official", "Oberbrunner"),
-        RowFactory.create("2", "nickname", "Cleveland"),
-        RowFactory.create("2", "official", "Towne")
-    );
-  }
-
-  // Test 3:
-  // Select ID, family name and given name for each patient.
-  // Tests multiple levels of unnesting that share the same lineage.
-  // {
-  //   "resource": "Patient",
-  //   "vars": [
-  //     {
-  //       "name": "name",
-  //       "expr": "name",
-  //       "whenMany": "unnest"
-  //     },
-  //     {
-  //       "name": "givenName",
-  //       "expr": "name.given",
-  //       "whenMany": "unnest"
-  //     }
-  //   ],
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "family_name",
-  //       "expr": "%name.family"
-  //     },
-  //     {
-  //       "name": "given_name",
-  //       "expr": "%givenName"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test3() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("%name.family", "family_name"),
-            new NamedExpression("%givenName", "given_name")
-        ),
-        List.of(
-            new VariableExpression("name", "name", WhenMany.UNNEST),
-            new VariableExpression("name.given", "givenName", WhenMany.UNNEST)
-        ),
-        List.of());
-    final Dataset<Row> result = executor.buildQuery(view);
-
-    // Expected result:
-    // | id | family_name | given_name |
-    // |----|-------------|------------|
-    // | 1  | Wuckert     | Karina     |
-    // | 1  | Oberbrunner | Karina     |
-    // | 2  | Towne       | Guy        |
-    // | 2  | Cleveland   | Maponos    |
-    // | 2  | Cleveland   | Wilburg    |
-    DatasetAssert.of(result).hasRowsUnordered(
-        RowFactory.create("1", "Wuckert", "Karina"),
-        RowFactory.create("1", "Oberbrunner", "Karina"),
-        RowFactory.create("2", "Towne", "Guy"),
-        RowFactory.create("2", "Cleveland", "Maponos"),
-        RowFactory.create("2", "Cleveland", "Wilburg")
-    );
-  }
-
-  // Test 4:
-  // Select ID, name prefix, family name, marital status system and marital status code for each 
-  // patient.
-  // Tests two sets of multi-level nesting that have the root resource as their nearest common 
-  // ancestor.
-  // {
-  //   "resource": "Patient",
-  //   "vars": [
-  //     {
-  //       "name": "name",
-  //       "expr": "name",
-  //       "whenMany": "unnest"
-  //     },
-  //     {
-  //       "name": "namePrefix",
-  //       "expr": "name.prefix",
-  //       "whenMany": "unnest"
-  //     },
-  //     {
-  //       "name": "maritalStatus",
-  //       "expr": "maritalStatus.coding",
-  //       "whenMany": "unnest"
-  //     }
-  //   ],
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "name_prefix",
-  //       "expr": "%namePrefix"
-  //     },
-  //     {
-  //       "name": "family_name",
-  //       "expr": "%name.family"
-  //     },
-  //     {
-  //       "name": "marital_status_system",
-  //       "expr": "%maritalStatus.system"
-  //     },
-  //     {
-  //       "name": "marital_status_code",
-  //       "expr": "%maritalStatus.code"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test4() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("%namePrefix", "name_prefix"),
-            new NamedExpression("%name.family", "family_name"),
-            new NamedExpression("%maritalStatus.system", "marital_status_system"),
-            new NamedExpression("%maritalStatus.code", "marital_status_code")
-        ),
-        List.of(
-            new VariableExpression("name", "name", WhenMany.UNNEST),
-            new VariableExpression("name.prefix", "namePrefix",
-                WhenMany.UNNEST),
-            new VariableExpression("maritalStatus.coding", "maritalStatus", WhenMany.UNNEST)
-        ),
-        List.of());
-    final Dataset<Row> result = executor.buildQuery(view);
-
-    // Expected result:
-    // | id | name_prefix | family_name | marital_status_system                                  | marital_status_code |
-    // |----|-------------|-------------|--------------------------------------------------------|---------------------|
-    // | 1  | Miss.       | Wuckert     | http://terminology.hl7.org/CodeSystem/v3-MaritalStatus | M                   |
-    // | 1  | Miss.       | Wuckert     | http://snomed.info/sct                                 | 87915002            |
-    // | 1  | Mrs.        | Oberbrunner | http://terminology.hl7.org/CodeSystem/v3-MaritalStatus | M                   |
-    // | 1  | Mrs.        | Oberbrunner | http://snomed.info/sct                                 | 87915002            |
-    // | 2  | Mr.         | Towne       | NULL                                                   | NULL                |
-    // | 2  | Prof.       | Cleveland   | NULL                                                   | NULL                |
-    DatasetAssert.of(result).hasRowsUnordered(
-        RowFactory.create("1", "Miss.", "Wuckert",
-            "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "M"),
-        RowFactory.create("1", "Miss.", "Wuckert", "http://snomed.info/sct", "87915002"),
-        RowFactory.create("1", "Mrs.", "Oberbrunner",
-            "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus", "M"),
-        RowFactory.create("1", "Mrs.", "Oberbrunner", "http://snomed.info/sct", "87915002"),
-        RowFactory.create("2", "Mr.", "Towne", null, null),
-        RowFactory.create("2", "Prof.", "Cleveland", null, null)
-    );
-  }
-
-  // Test case 5:
-  // Select ID and given name for each patient, but leave the given names in an array.
-  // Tests the ability to return columns as arrays, where the expressions that define those columns 
-  // return a collection.
-  // {
-  //   "resource": "Patient",
-  //   "vars": [
-  //     {
-  //       "name": "givenName",
-  //       "expr": "%name.given",
-  //       "whenMany": "array"
-  //     }
-  //   ],
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "given_name",
-  //       "expr": "%givenName"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test5() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("%givenName", "given_name")
-        ),
-        List.of(
-            new VariableExpression("name.given", "givenName", WhenMany.ARRAY)
-        ),
-        List.of());
-    final Dataset<Row> result = executor.buildQuery(view);
-
-    // Expected result:
-    // | id | given_name              |
-    // |----|-------------------------|
-    // | 1  | [Karina, Karina]        |
-    // | 2  | [Guy, Maponos, Wilburg] |
-    DatasetAssert.of(result).hasRowsUnordered(
-        RowFactory.create("1", WrappedArray.make(List.of("Karina", "Karina").toArray())),
-        RowFactory.create("2", WrappedArray.make(List.of("Guy", "Maponos", "Wilburg").toArray()))
-    );
-  }
-
-  // Test case 6:
-  // Select ID and given name for each patient, with a row for each name and the given names for 
-  // each name within an array.
-  // Tests the ability to use the unnest and array directives together.
-  // {
-  //   "resource": "Patient",
-  //   "vars": [
-  //     {
-  //       "name": "name",
-  //       "expr": "name",
-  //       "whenMany": "unnest"
-  //     },
-  //     {
-  //       "name": "givenName",
-  //       "expr": "%name.given",
-  //       "whenMany": "array"
-  //     }
-  //   ],
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "given_name",
-  //       "expr": "%givenName"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test6() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("%name.given", "given_name")
-        ),
-        List.of(
-            new VariableExpression("name", "name", WhenMany.UNNEST),
-            new VariableExpression("name.given", "givenName", WhenMany.ARRAY)
-        ),
-        List.of());
-    final Dataset<Row> result = executor.buildQuery(view);
-
-    // Expected result:
-    // | id | given_name         |
-    // |----|--------------------|
-    // | 1  | [Karina]           |
-    // | 1  | [Karina]           |
-    // | 2  | [Guy]              |
-    // | 2  | [Maponos, Wilburg] |
-    DatasetAssert.of(result).hasRowsUnordered(
-        RowFactory.create("1", WrappedArray.make(List.of("Karina").toArray())),
-        RowFactory.create("1", WrappedArray.make(List.of("Karina").toArray())),
-        RowFactory.create("2", WrappedArray.make(List.of("Guy").toArray())),
-        RowFactory.create("2", WrappedArray.make(List.of("Maponos", "Wilburg").toArray()))
-    );
-  }
-
-  // Test case 7:
-  // Select ID and given name for each patient, with the given names for each name represented 
-  // within a nested array.
-  // Tests the ability to use the multiple array directives together.
-  // {
-  //   "resource": "Patient",
-  //   "vars": [
-  //     {
-  //      
-  //       "name": "name",
-  //       "expr": "name",
-  //       "whenMany": "unnest"
-  //     },
-  //     {
-  //       "name": "givenName",
-  //       "expr": "%name.given",
-  //       "whenMany": "array"
-  //     }
-  //   ],
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "given_name",
-  //       "expr": "%givenName"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test7() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("%name.given", "given_name")
-        ),
-        List.of(
-            new VariableExpression("name", "name", WhenMany.ARRAY),
-            new VariableExpression("name.given", "givenName", WhenMany.ARRAY)
-        ),
-        List.of());
-    final Dataset<Row> result = executor.buildQuery(view);
-
-    // Expected result:
-    // | id | given_name                  |
-    // |----|-----------------------------|
-    // | 1  | [[Karina], [Karina]]        |
-    // | 2  | [[Guy], [Maponos, Wilburg]] |
-    DatasetAssert.of(result).hasRowsUnordered(
-        RowFactory.create("1", WrappedArray.make(List.of(
-            WrappedArray.make(List.of("Karina").toArray()),
-            WrappedArray.make(List.of("Karina").toArray())
-        ).toArray())),
-        RowFactory.create("2", WrappedArray.make(List.of(
-            WrappedArray.make(List.of("Guy").toArray()),
-            WrappedArray.make(List.of("Maponos", "Wilburg").toArray())
-        ).toArray()))
-    );
-  }
-
-  // Test case 8:
-  // Select ID and family name for each patient, but force an error through the use of the `error`
-  // value for `whenMany`.
-  // This tests the behaviour of the `error` value for `whenMany`.
-  // {
-  //   "resource": "Patient",
-  //   "vars": [
-  //     {
-  //      
-  //       "name": "name",
-  //       "expr": "name",
-  //       "whenMany": "error"
-  //     }
-  //   ],
-  //   "columns": [
-  //     {
-  //       "name": "id",
-  //       "expr": "id"
-  //     },
-  //     {
-  //       "name": "family_name",
-  //       "expr": "%name.family"
-  //     }
-  //   ]
-  // }
-  @Test
-  void test8() {
-    final FhirView view = new FhirView(ResourceType.PATIENT,
-        List.of(
-            new NamedExpression("id", "id"),
-            new NamedExpression("%name.family", "family_name")
-        ),
-        List.of(
-            new VariableExpression("name", "name", WhenMany.ERROR)
-        ),
-        List.of());
-   
-    assertThrows(InvalidUserInputError.class, () -> {
-      executor.buildQuery(view);
-    });
+    assertThat(result)
+        .hasRows(spark, "results/views/" +
+            request.getFileName().toString().replace(".json", ".csv"));
   }
 
 }

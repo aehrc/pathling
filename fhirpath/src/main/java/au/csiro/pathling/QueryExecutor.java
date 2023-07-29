@@ -83,12 +83,6 @@ public abstract class QueryExecutor {
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
-  protected ParserContext buildParserContext(@Nonnull final FhirPath inputContext,
-      @Nonnull final List<Column> groupingColumns) {
-    return new ParserContext(inputContext, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, groupingColumns);
-  }
-
   @Nonnull
   protected List<FhirPath> parseExpressions(
       @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions) {
@@ -175,8 +169,9 @@ public abstract class QueryExecutor {
 
     for (final String filter : filters) {
       // Parse the filter expression.
-      final ParserContext parserContext = buildParserContext(currentContext,
-          Collections.singletonList(currentContext.getIdColumn()));
+      final ParserContext parserContext = new ParserContext(currentContext, fhirContext,
+          sparkSession, dataSource,
+          terminologyServiceFactory, Collections.singletonList(currentContext.getIdColumn()));
       final Parser parser = new Parser(parserContext);
       final FhirPath fhirPath = parser.parse(filter);
 

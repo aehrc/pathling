@@ -126,8 +126,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       dataset = subjectDataset;
 
     } else {
-      final ParserContext parserContext = buildParserContext(resourcePath,
-          Collections.singletonList(resourcePath.getIdColumn()));
+      final ParserContext parserContext = new ParserContext(resourcePath, fhirContext, sparkSession,
+          dataSource,
+          terminologyServiceFactory, Collections.singletonList(resourcePath.getIdColumn()));
       Dataset<Row> currentDataset = subjectDataset;
       @Nullable Column filterCondition = null;
 

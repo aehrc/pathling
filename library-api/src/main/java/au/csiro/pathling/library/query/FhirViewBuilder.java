@@ -20,9 +20,6 @@ package au.csiro.pathling.library.query;
 import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
 
 import au.csiro.pathling.views.FhirView;
-import au.csiro.pathling.views.NamedExpression;
-import au.csiro.pathling.views.VariableExpression;
-import au.csiro.pathling.views.WhenMany;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
