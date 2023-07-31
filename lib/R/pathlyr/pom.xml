@@ -40,6 +40,11 @@
     </dependency>
   </dependencies>
 
+  <properties>
+    <!--suppress UnresolvedMavenProperty -->
+    <skipPathlyrTests>${skipTests}</skipPathlyrTests>
+  </properties>
+  
   <build>
     <sourceDirectory>${project.basedir}</sourceDirectory>
     <plugins>
@@ -114,23 +119,6 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
-          <!-- Install dependencies -->
-          <execution>
-            <id>install-dependencies</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>Rscript</executable>
-              <workingDirectory>${project.basedir}</workingDirectory>
-              <arguments>
-                <argument>--verbose</argument>
-                <argument>-e</argument>
-                <argument>renv::restore()</argument>
-              </arguments>
-            </configuration>
-          </execution>
           <execution>
             <id>roxygenise</id>
             <phase>generate-resources</phase>
@@ -147,7 +135,23 @@
             </configuration>
           </execution>
           <execution>
-            <id>R-source-package</id>
+            <id>run-testthat</id>
+            <phase>test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${skipPathlyrTests}</skip>
+              <executable>Rscript</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>-e</argument>
+                <argument>devtools::test(stop_on_failure = TRUE)</argument>
+              </arguments>
+            </configuration>
+          </execution>          
+          <execution>
+            <id>R-build-package</id>
             <phase>package</phase>
             <goals>
               <goal>exec</goal>
@@ -163,7 +167,7 @@
             </configuration>
           </execution>
           <execution>
-            <id>check-package</id>
+            <id>R-check-package</id>
             <phase>verify</phase>
             <goals>
               <goal>exec</goal>
@@ -176,6 +180,8 @@
                 <argument>check</argument>
                 <argument>--output=${project.basedir}/target</argument>
                 <argument>--as-cran</argument>
+                <!-- TODO: enable manual production -->
+                <argument>--no-manual</argument>
                 <!-- TODO: Make sure it works with snapshot version too (x.x.x.9xxxx) -->
                 <argument>target/${project.artifactId}_${project.version}.tar.gz</argument>
               </arguments>
@@ -187,11 +193,9 @@
   </build>
   <profiles>
     <profile>
-      <id>R-test</id>
+      <id>R-install-deps</id>
       <activation>
-        <property>
-          <name>!skipTests</name>
-        </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <build>
         <plugins>
@@ -199,9 +203,10 @@
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>exec-maven-plugin</artifactId>
             <executions>
+              <!-- Install dependencies -->
               <execution>
-                <id>run-testthat</id>
-                <phase>test</phase>
+                <id>R-install-dependencies</id>
+                <phase>initialize</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
@@ -209,8 +214,13 @@
                   <executable>Rscript</executable>
                   <workingDirectory>${project.basedir}</workingDirectory>
                   <arguments>
+                    <!-- TODO: get hadoop and spark version from properties -->
+                    <!-- TODO: maybe use the same mechanism as the R action uses -->
+                    <argument>--verbose</argument>
                     <argument>-e</argument>
-                    <argument>devtools::test(stop_on_failure = TRUE)</argument>
+                    <argument>devtools::install_dev_deps()</argument>
+                    <argument>-e</argument>
+                    <argument>sparklyr::spark_install(version='3.3.1', hadoop='2')</argument>
                   </arguments>
                 </configuration>
               </execution>
