@@ -134,9 +134,8 @@ public interface FhirPath {
    * Prints out to stdout all the ids and values of all the elements in this path. For debugging
    * purposes only.
    */
-  default void dumpAll() {
-    getDataset().select(getIdColumn(), getValueColumn()).collectAsList()
-        .forEach(System.out::println);
+  default void show() {
+    getDataset().select(getIdColumn(), getValueColumn()).show(false);
   }
 
 }

@@ -166,6 +166,10 @@ public class ParserContext {
     this.thisContext = Optional.of(thisContext);
   }
 
+  public void unsetThisContext() {
+    this.thisContext = Optional.empty();
+  }
+
   /**
    * Creates a copy of the current parser context with the specified unnest behaviour.
    *

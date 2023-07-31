@@ -55,6 +55,7 @@ public class FhirViewExecutor {
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
     final ResourcePath inputContext = ResourcePath.build(fhirContext, dataSource, resourceType,
         view.getResource(), true);
+    inputContext.getDataset().printSchema();
     final ParserContext parserContext = new ParserContext(inputContext, fhirContext, sparkSession,
         dataSource, terminologyServiceFactory, singletonList(inputContext.getIdColumn()));
 
@@ -82,6 +83,10 @@ public class FhirViewExecutor {
     @Nonnull ParserContext currentContext = context;
 
     for (final SelectClause select : selectGroup) {
+      System.out.println("Select: " + select);
+      System.out.println("Current context: " + currentContext.getInputContext() + "("
+          + currentContext.getInputContext().getExpression() + ")");
+      currentContext.getInputContext().show();
       if (select instanceof DirectSelection) {
         result = directSelection(currentContext, (DirectSelection) select, result);
 
@@ -94,7 +99,8 @@ public class FhirViewExecutor {
       } else {
         throw new IllegalStateException("Unknown select clause type: " + select.getClass());
       }
-      currentContext = context.withContextDataset(result.getContext().getDataset());
+      currentContext = currentContext.withContextDataset(result.getContext().getDataset());
+      currentContext.unsetThisContext();
     }
 
     return result;
@@ -127,7 +133,8 @@ public class FhirViewExecutor {
     nextContext.setThisContext(nextInputContext);
     final ContextAndSelection nestedResult = parseSelect(select.getSelect(), nextContext,
         result.getSelection());
-    result = new ContextAndSelection(nestedResult.getContext(), nestedResult.getSelection());
+    result = new ContextAndSelection(context.withContextDataset(nestedResult.getContext()
+        .getDataset()).getInputContext(), nestedResult.getSelection());
     System.out.println("Nested selection: " + select.getExpression());
     result.show();
     return result;
