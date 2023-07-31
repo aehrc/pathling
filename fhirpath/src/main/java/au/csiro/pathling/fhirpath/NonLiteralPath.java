@@ -22,6 +22,7 @@ import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static org.apache.spark.sql.functions.explode_outer;
+import static org.apache.spark.sql.functions.flatten;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.element.ElementDefinition;
@@ -36,6 +37,8 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
 
 /**
  * Represents any FHIRPath expression which is not a literal.
@@ -217,10 +220,25 @@ public abstract class NonLiteralPath implements FhirPath {
   @Nonnull
   @Override
   public FhirPath unnest() {
+    final Column flattenedValueColumn = valueIsArrayOfArrays()
+                                        ? flatten(getValueColumn())
+                                        : getValueColumn();
     final DatasetWithColumn datasetWithColumn = createColumn(getDataset(),
-        explode_outer(getValueColumn()));
+        explode_outer(flattenedValueColumn));
     return copy(getExpression(), datasetWithColumn.getDataset(), datasetWithColumn.getColumn(),
         datasetWithColumn.getColumn(), getOrderingColumn(), isSingular(), getThisColumn());
   }
- 
+
+  private boolean valueIsArrayOfArrays() {
+    final boolean arrayOfArrays;
+    final DataType dataType = dataset.select(getValueColumn()).schema().fields()[0].dataType();
+    if (dataType instanceof ArrayType) {
+      final ArrayType arrayType = (ArrayType) dataType;
+      arrayOfArrays = arrayType.elementType() instanceof ArrayType;
+    } else {
+      arrayOfArrays = false;
+    }
+    return arrayOfArrays;
+  }
+
 }
