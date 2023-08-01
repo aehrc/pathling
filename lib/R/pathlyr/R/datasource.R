@@ -117,11 +117,12 @@ data_sinks <- function(ds) {
   j_invoke(ds, "write")
 }
 
- #'@importFrom sparklyr j_invoke
+ #'@importFrom sparklyr invoke
 invoke_datasink <- function(ds, name, ...) {
   ds %>%
       data_sinks() %>%
-      j_invoke(name, ...)
+      invoke(name, ...)
+  return(invisible(NULL))
 }
 
 

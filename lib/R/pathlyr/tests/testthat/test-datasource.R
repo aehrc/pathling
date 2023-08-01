@@ -26,6 +26,11 @@ temp_parquet_dir <- function() {
   file.path(tempdir(), "parquet")
 }
 
+temp_delta_dir <- function() {
+  file.path(tempdir(), "delta")
+}
+
+
 ndjson_query <- function(data_source) {
   data_source %>% ds_aggregate(
       "Patient",
@@ -55,12 +60,10 @@ test_that("datasource ndjson", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  ds <- ptl_read_ndjson(pc, ndjson_test_data_dir())
+  pc %>% ptl_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_ndjson(temp_ndjson_dir())
 
-  # TODO: Uncomment when writing is fixed
-  # ds_write_ndjson(ds, temp_ndjson_dir())
-  # data_source <- read_ndjson(pc, temp_ndjson_dir())
-  data_source <- ds
+  data_source <- pc %>% ptl_read_ndjson(temp_ndjson_dir())
 
   result <- ndjson_query(data_source)
   expect_equal(names(result), "count")
@@ -112,12 +115,10 @@ test_that("datasource parquet", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  ds <- ptl_read_parquet(pc, parquet_test_data_dir())
+  pc %>% ptl_read_parquet(parquet_test_data_dir()) %>%
+    ds_write_parquet(temp_parquet_dir())
 
-  # TODO: Uncomment when writing is fixed
-  # ds %>% ds_write_parquet(temp_parquet_dir())
-  # data_source <- read_parquet(pc, temp_parquet_dir())
-  data_source <- ds
+  data_source <- pc %>% ptl_read_parquet(temp_parquet_dir())
 
   result <- parquet_query(data_source)
   expect_equal(names(result), "count")
@@ -128,51 +129,54 @@ test_that("datasource delta", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  # TODO: Uncomment when writing is fixed
-  # read_delta(pc, delta_test_data_dir()) %>% write_delta(temp_delta_dir())
-  data_source <- ptl_read_delta(pc, delta_test_data_dir())
+  pc %>% ptl_read_delta(delta_test_data_dir()) %>%
+    ds_write_delta(temp_delta_dir())
+
+  data_source <- pc %>% ptl_read_delta(delta_test_data_dir())
 
   result <- delta_query(data_source)
   expect_equal(names(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
-#
-# test_that("datasource delta merge", {
-#   spark <- def_spark()
-#   pc <- def_ptl_context(spark)
-#
-#   # TODO: Uncomment when writing is fixed
-#   # read_delta(pc, delta_test_data_dir()) %>% write_delta(temp_delta_dir(), import_mode = "merge")
-#   # data_source <- read_delta(pc, temp_delta_dir())
-#   data_source <- read_delta(pc, delta_test_data_dir())
-#
-#   result <- delta_query(data_source)
-#   expect_equal(names(result), "count")
-#   expect_equal(collect(result), tibble::tibble(count = 71))
-# })
+test_that("datasource delta merge", {
+  spark <- def_spark()
+  pc <- def_ptl_context(spark)
 
-# TODO: Uncomment when writing is fixed
-# test_that("datasource tables", {
-#   spark <- def_spark()
-#   pc <- def_ptl_context(spark)
-#
-#   read_ndjson(pc, ndjson_test_data_dir()) %>% write_tables()
-#
-#   data_source <- read_tables(pc)
-#   result <- ndjson_query(data_source)
-#   expect_equal(names(result), "count")
-#   expect_equal(collect(result), tibble::tibble(count = 71))
-# })
-#
-# test_that("datasource tables schema", {
-#   spark <- def_spark()
-#   pc <- def_ptl_context(spark)
-#
-#   read_ndjson(pc, ndjson_test_data_dir()) %>% write_tables(schema = "test")
-#
-#   data_source <- read_tables(pc, schema = "test")
-#   result <- ndjson_query(data_source)
-#   expect_equal(names(result), "count")
-#   expect_equal(collect(result), tibble::tibble(count = 71))
-# })
+  ds <- pc %>% ptl_read_delta(delta_test_data_dir())
+
+  ds %>% ds_write_delta(temp_delta_dir(), import_mode = ImportMode$OVERWRITE)
+  ds %>% ds_write_delta(temp_delta_dir(), import_mode = ImportMode$MERGE)
+
+  data_source <- pc %>% ptl_read_delta(delta_test_data_dir())
+
+  result <- delta_query(data_source)
+  expect_equal(names(result), "count")
+  expect_equal(collect(result), tibble::tibble(count = 71))
+})
+
+test_that("datasource tables", {
+  spark <- def_spark()
+  pc <- def_ptl_context(spark)
+
+  pc %>% ptl_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_tables()
+  data_source <- pc %>% ptl_read_tables()
+
+    result <- ndjson_query(data_source)
+  expect_equal(names(result), "count")
+  expect_equal(collect(result), tibble::tibble(count = 71))
+})
+
+test_that("datasource tables with schema", {
+  spark <- def_spark()
+  pc <- def_ptl_context(spark)
+
+  pc %>% ptl_read_ndjson(ndjson_test_data_dir()) %>%
+    ds_write_tables(schema = "test")
+  data_source <- pc %>% ptl_read_tables(schema = "test")
+
+  result <- ndjson_query(data_source)
+  expect_equal(names(result), "count")
+  expect_equal(collect(result), tibble::tibble(count = 71))
+})

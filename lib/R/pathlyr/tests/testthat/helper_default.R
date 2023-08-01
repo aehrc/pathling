@@ -18,8 +18,7 @@ def_spark <- function() {
     )
   )
 
-  # spark.sql("CREATE DATABASE IF NOT EXISTS test")
-  #on.exit(sparklyr::spark_disconnect(spark), add = TRUE)
+  spark %>% sdf_sql("CREATE DATABASE IF NOT EXISTS test")
   spark
 }
 
