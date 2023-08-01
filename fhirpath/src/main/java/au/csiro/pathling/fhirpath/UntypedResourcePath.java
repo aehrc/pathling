@@ -68,6 +68,12 @@ public class UntypedResourcePath extends ReferencePath implements AbstractPath {
 
   @Nonnull
   @Override
+  public Column getReferenceIdColumn() {
+    return Referrer.referenceIdColumnFor(getReferenceColumn());
+  }
+
+  @Nonnull
+  @Override
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
     return Optional.empty();
   }

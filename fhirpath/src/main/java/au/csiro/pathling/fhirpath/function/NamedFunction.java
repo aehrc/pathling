@@ -72,6 +72,7 @@ public interface NamedFunction {
       .put("property", new PropertyFunction())
       .put("designation", new DesignationFunction())
       .put("toString", new ToStringFunction())
+      .put("getId", new GetIdFunction())
       .build();
 
   /**

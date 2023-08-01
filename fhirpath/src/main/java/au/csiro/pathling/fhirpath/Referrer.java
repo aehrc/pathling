@@ -18,7 +18,9 @@
 package au.csiro.pathling.fhirpath;
 
 import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.split;
 
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -46,6 +48,11 @@ public interface Referrer {
   @Nonnull
   static Column referenceColumnFor(@Nonnull final Referrer referrer) {
     return referrer.getValueColumn().getField(REFERENCE_FIELD_NAME);
+  }
+
+  @Nonnull
+  static Column referenceIdColumnFor(@Nonnull final Column referenceColumn) {
+    return element_at(split(referenceColumn, PATH_SEPARATOR, 2), 2);
   }
 
   /**
@@ -93,6 +100,13 @@ public interface Referrer {
    */
   @Nonnull
   Column getReferenceColumn();
+
+  /**
+   * @return the ID component of the {@code reference} element from within the Reference struct in
+   * this path's value column
+   */
+  @Nonnull
+  Column getReferenceIdColumn();
 
   /**
    * Constructs an equality column for matching a resource reference to a {@link ResourcePath}.

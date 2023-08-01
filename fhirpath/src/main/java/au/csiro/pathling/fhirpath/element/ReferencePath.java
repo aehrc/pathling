@@ -60,6 +60,12 @@ public class ReferencePath extends ElementPath implements Referrer {
   }
 
   @Nonnull
+  @Override
+  public Column getReferenceIdColumn() {
+    return Referrer.referenceIdColumnFor(Referrer.referenceColumnFor(this));
+  }
+
+  @Nonnull
   public Column getResourceEquality(@Nonnull final ResourcePath resourcePath) {
     return Referrer.resourceEqualityFor(this, resourcePath);
   }

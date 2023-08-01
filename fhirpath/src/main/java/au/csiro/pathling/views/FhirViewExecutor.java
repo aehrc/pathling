@@ -55,7 +55,6 @@ public class FhirViewExecutor {
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
     final ResourcePath inputContext = ResourcePath.build(fhirContext, dataSource, resourceType,
         view.getResource(), true);
-    inputContext.getDataset().printSchema();
     final ParserContext parserContext = new ParserContext(inputContext, fhirContext, sparkSession,
         dataSource, terminologyServiceFactory, singletonList(inputContext.getIdColumn()));
 
@@ -83,10 +82,6 @@ public class FhirViewExecutor {
     @Nonnull ParserContext currentContext = context;
 
     for (final SelectClause select : selectGroup) {
-      System.out.println("Select: " + select);
-      System.out.println("Current context: " + currentContext.getInputContext() + "("
-          + currentContext.getInputContext().getExpression() + ")");
-      currentContext.getInputContext().show();
       if (select instanceof DirectSelection) {
         result = directSelection(currentContext, (DirectSelection) select, result);
 
@@ -108,21 +103,18 @@ public class FhirViewExecutor {
 
   @Nonnull
   private ContextAndSelection directSelection(final @Nonnull ParserContext context,
-      @Nonnull final DirectSelection select, @Nonnull ContextAndSelection result) {
+      @Nonnull final DirectSelection select, @Nonnull final ContextAndSelection result) {
     final FhirPath path = parseExpression(select.getExpression(),
         context.withInputContext(result.getContext()));
     final List<Column> newColumns = new ArrayList<>(result.getSelection());
     newColumns.add(path.getValueColumn().alias(select.getName()));
-    result = new ContextAndSelection(context.getInputContext().withDataset(path.getDataset()),
+    return new ContextAndSelection(context.getInputContext().withDataset(path.getDataset()),
         newColumns);
-    System.out.println("Direct selection: " + select.getName() + " = " + select.getExpression());
-    result.show();
-    return result;
   }
 
   @Nonnull
   private ContextAndSelection nestedSelection(final @Nonnull ParserContext context,
-      @Nonnull final NestedSelectClause select, @Nonnull ContextAndSelection result,
+      @Nonnull final NestedSelectClause select, @Nonnull final ContextAndSelection result,
       final boolean unnest) {
     final FhirPath from = parseExpression(select.getExpression(),
         context.withInputContext(result.getContext()));
@@ -133,11 +125,8 @@ public class FhirViewExecutor {
     nextContext.setThisContext(nextInputContext);
     final ContextAndSelection nestedResult = parseSelect(select.getSelect(), nextContext,
         result.getSelection());
-    result = new ContextAndSelection(context.withContextDataset(nestedResult.getContext()
+    return new ContextAndSelection(context.withContextDataset(nestedResult.getContext()
         .getDataset()).getInputContext(), nestedResult.getSelection());
-    System.out.println("Nested selection: " + select.getExpression());
-    result.show();
-    return result;
   }
 
   @Nonnull
