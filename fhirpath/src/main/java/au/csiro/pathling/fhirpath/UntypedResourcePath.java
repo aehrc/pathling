@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Optional;
 import javax.annotation.Nonnull;

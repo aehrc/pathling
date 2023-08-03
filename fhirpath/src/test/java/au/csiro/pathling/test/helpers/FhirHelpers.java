@@ -19,8 +19,8 @@ package au.csiro.pathling.test.helpers;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.ResourceDefinition;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Optional;

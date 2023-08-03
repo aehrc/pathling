@@ -21,7 +21,7 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;

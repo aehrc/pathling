@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.element;
+package au.csiro.pathling.fhirpath.definition;
 
-import au.csiro.pathling.fhirpath.NestingKey;
-import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import ca.uhn.fhir.context.RuntimeChildAny;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -28,14 +27,12 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class ReferenceExtensionDefinition extends ElementDefinition {
+public class ReferenceExtensionDefinition extends BasicElementDefinition<RuntimeChildAny> {
 
-  protected ReferenceExtensionDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
-      @Nonnull final String elementName, final NestingKey parent) {
-    super(childDefinition, elementName, parent);
+  protected ReferenceExtensionDefinition(@Nonnull final RuntimeChildAny childDefinition) {
+    super(childDefinition);
   }
 
-  @Override
   @Nonnull
   public Set<ResourceType> getReferenceTypes() {
     // We always treat a reference extension as a reference to any resource, as we don't have enough 

@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.element;
+package au.csiro.pathling.fhirpath.definition;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.NestingKey;
 import ca.uhn.fhir.context.RuntimeChildResourceDefinition;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -35,18 +34,17 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class ReferenceDefinition extends ElementDefinition {
+public class ReferenceDefinition extends BasicElementDefinition<RuntimeChildResourceDefinition> {
 
-  @Nonnull
-  private final RuntimeChildResourceDefinition childDefinition;
-
-  protected ReferenceDefinition(@Nonnull final RuntimeChildResourceDefinition childDefinition,
-      @Nonnull final String elementName, final NestingKey parent) {
-    super(childDefinition, elementName, parent);
-    this.childDefinition = childDefinition;
+  protected ReferenceDefinition(@Nonnull final RuntimeChildResourceDefinition childDefinition) {
+    super(childDefinition);
   }
 
-  @Override
+  /**
+   * Returns the set of resources that a reference can refer to.
+   *
+   * @return A set of {@link ResourceType} objects, if this element is a reference
+   */
   @Nonnull
   public Set<ResourceType> getReferenceTypes() {
     final List<Class<? extends IBaseResource>> resourceTypes = childDefinition.getResourceTypes();

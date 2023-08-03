@@ -26,7 +26,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ReferenceNestingKey;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import java.util.Set;
 import javax.annotation.Nonnull;
@@ -69,7 +69,7 @@ public class ReverseResolveFunction implements NamedFunction {
     final ResourcePath currentResource = nonLiteralArgument.getCurrentResource().get();
 
     final ReferencePath referencePath = (ReferencePath) argument;
-    final ElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
+    final BasicElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
     final ReferenceNestingKey referenceNestingKey = new ReferenceNestingKey(referenceDefinition,
         currentResource.getDefinition());
 

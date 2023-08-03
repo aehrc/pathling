@@ -29,9 +29,8 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
@@ -246,12 +245,9 @@ class ReverseResolveFunctionTest {
         .build();
     final RuntimeResourceDefinition hapiResourceDef = fhirContext.getResourceDefinition(
         "Encounter");
-    final ResourceDefinition resourceDefinition = new ResourceDefinition(ResourceType.ENCOUNTER,
-        hapiResourceDef, Optional.empty());
     final BaseRuntimeChildDefinition childDefinition = hapiResourceDef.getChildByName(
         "episodeOfCare");
-    final ElementDefinition definition = ElementDefinition.build(childDefinition, "episodeOfCare",
-        resourceDefinition);
+    final ElementDefinition definition = ElementDefinition.build(childDefinition);
     final ElementPath argument = new ElementPathBuilder(spark)
         .expression("Encounter.episodeOfCare")
         .fhirType(FHIRDefinedType.REFERENCE)

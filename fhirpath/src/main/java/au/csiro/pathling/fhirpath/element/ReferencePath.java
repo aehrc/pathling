@@ -17,8 +17,12 @@
 
 package au.csiro.pathling.fhirpath.element;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.fhirpath.Referrer;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
@@ -43,6 +47,15 @@ public class ReferencePath extends ElementPath implements Referrer {
       @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
     super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
         thisColumn, fhirType);
+  }
+
+  @Nonnull
+  @Override
+  public Optional<ReferenceDefinition> getDefinition() {
+    final Optional<? extends ElementDefinition> definition = super.getDefinition();
+    check(definition.isEmpty() || definition.get() instanceof ReferenceDefinition);
+    //noinspection unchecked
+    return (Optional<ReferenceDefinition>) definition;
   }
 
   @Nonnull

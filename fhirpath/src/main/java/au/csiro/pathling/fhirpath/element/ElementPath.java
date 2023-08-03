@@ -21,6 +21,8 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Optional;
@@ -53,7 +55,7 @@ public class ElementPath extends NonLiteralPath {
 
   @Getter(AccessLevel.PUBLIC)
   @Nonnull
-  protected Optional<ElementDefinition> definition = Optional.empty();
+  protected Optional<? extends ElementDefinition> definition = Optional.empty();
 
   @Getter
   @Nonnull
@@ -72,7 +74,7 @@ public class ElementPath extends NonLiteralPath {
 
   /**
    * Builds the appropriate subtype of ElementPath based upon the supplied
-   * {@link ElementDefinition}.
+   * {@link BasicElementDefinition}.
    * <p>
    * Use this builder when the path is the child of another path, and will need to be traversable.
    *

@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
@@ -156,7 +157,7 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
   public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,
       @Nonnull final MathOperation operation, @Nonnull final String expression,
       @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Optional<ElementDefinition> elementDefinition) {
+      @Nonnull final Optional<? extends ElementDefinition> elementDefinition) {
     return target -> {
       final BiFunction<Column, Column, Column> mathOperation = getMathOperation(operation);
       final Column sourceComparable = source.getNumericValueColumn();

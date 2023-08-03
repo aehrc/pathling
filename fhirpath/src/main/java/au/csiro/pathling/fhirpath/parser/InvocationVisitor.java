@@ -24,6 +24,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
@@ -42,6 +43,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -134,12 +136,23 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
         final ResourceType resourceType;
         try {
           resourceType = ResourceType.fromCode(fhirPath);
+
         } catch (final FHIRException e) {
-          // If the expression is not a resource reference, treat it as a path traversal from the
-          // input context.
-          final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
-              thisContext, fhirPath);
-          return new PathTraversalOperator().invoke(pathTraversalInput);
+          // If the expression is not a resource type, see if it is one of the other FHIR types.
+          final FHIRDefinedType fhirType;
+          try {
+            fhirType = FHIRDefinedType.fromCode(fhirPath);
+
+          } catch (final FHIRException e2) {
+            // If the expression is not a FHIR type, treat it as a path traversal from the
+            // input context.
+            final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
+                thisContext, fhirPath);
+            return new PathTraversalOperator().invoke(pathTraversalInput);
+          }
+
+          // If the expression is a FHIR type, we build a TypeSpecifier for it.
+          return TypeSpecifier.build(context.getInputContext(), fhirType);
         }
 
         // If the expression is a resource reference, we build a ResourcePath for it - we call this

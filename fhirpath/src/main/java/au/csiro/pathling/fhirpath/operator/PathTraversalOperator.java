@@ -25,8 +25,10 @@ import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ChoiceElementDefinition;
+import au.csiro.pathling.fhirpath.element.ChoiceElementPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -55,14 +57,7 @@ public class PathTraversalOperator {
             .getExpression());
     final NonLiteralPath left = (NonLiteralPath) input.getLeft();
     final String right = input.getRight();
-
-    // If the input expression is the same as the input context, the child will be the start of the
-    // expression. This is to account for where we omit the expression that represents the input
-    // expression, e.g. "gender" instead of "Patient.gender".
-    final String inputContextExpression = input.getContext().getInputContext().getExpression();
-    final String expression = left.getExpression().equals(inputContextExpression)
-                              ? right
-                              : left.getExpression() + "." + right;
+    final String expression = buildExpression(input, left, right);
 
     final Optional<ElementDefinition> optionalChild = left.getChildElement(right);
     checkUserInput(optionalChild.isPresent(), "No such child: " + expression);
@@ -73,16 +68,40 @@ public class PathTraversalOperator {
     final Column valueColumn;
     if (left instanceof ResourcePath) {
       result = leftDataset;
-      valueColumn = ((ResourcePath) left).getElementColumn(right);
+      valueColumn = ((ResourcePath) left).getElementColumn(right).orElse(left.getIdColumn());
     } else {
       final DatasetWithColumn datasetAndColumn = createColumn(leftDataset,
-          col(left.getValueColumn() + "." + right));
+          buildTraversalColumn(left, right));
       result = datasetAndColumn.getDataset();
       valueColumn = datasetAndColumn.getColumn();
     }
 
-    return ElementPath.build(expression, result, left.getIdColumn(), valueColumn, Optional.empty(),
-        false, left.getCurrentResource(), left.getThisColumn(), childDefinition);
+    if (childDefinition instanceof ChoiceElementDefinition) {
+      return ChoiceElementPath.build(expression, left, result, valueColumn, Optional.empty(), false,
+          (ChoiceElementDefinition) childDefinition);
+    } else {
+      return ElementPath.build(expression, result, left.getIdColumn(), valueColumn,
+          Optional.empty(), false, left.getCurrentResource(), left.getThisColumn(),
+          childDefinition);
+    }
+  }
+
+  @Nonnull
+  private static String buildExpression(final @Nonnull PathTraversalInput input,
+      @Nonnull final NonLiteralPath left, @Nonnull final String right) {
+    // If the input expression is the same as the input context, the child will be the start of the
+    // expression. This is to account for where we omit the expression that represents the input
+    // expression, e.g. "gender" instead of "Patient.gender".
+    final String inputContextExpression = input.getContext().getInputContext().getExpression();
+    return left.getExpression().equals(inputContextExpression)
+           ? right
+           : left.getExpression() + "." + right;
+  }
+
+  @Nonnull
+  public static Column buildTraversalColumn(@Nonnull final NonLiteralPath left,
+      @Nonnull final String right) {
+    return col(left.getValueColumn() + "." + right);
   }
 
 }

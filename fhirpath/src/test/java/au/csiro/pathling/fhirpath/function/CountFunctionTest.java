@@ -121,7 +121,7 @@ class CountFunctionTest {
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
-    final Column groupingColumn = inputPath.getElementColumn("gender");
+    final Column groupingColumn = inputPath.getElementColumn("gender").orElseThrow();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(groupingColumn))

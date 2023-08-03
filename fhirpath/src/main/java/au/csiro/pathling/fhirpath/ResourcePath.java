@@ -19,14 +19,14 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.QueryHelpers.aliasAllColumns;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumnMap;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -151,8 +151,8 @@ public class ResourcePath extends NonLiteralPath {
    * @return the {@link Column} within the dataset pertaining to this element
    */
   @Nonnull
-  public Column getElementColumn(@Nonnull final String elementName) {
-    return requireNonNull(elementsToColumns.get(elementName));
+  public Optional<Column> getElementColumn(@Nonnull final String elementName) {
+    return Optional.ofNullable(elementsToColumns.get(elementName));
   }
 
   @Nonnull

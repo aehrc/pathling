@@ -23,8 +23,9 @@ import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
 import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -81,7 +82,7 @@ public class ElementPathBuilder {
     singular = false;
     nesting = new Nesting();
     fhirType = FHIRDefinedType.NULL;
-    definition = mock(ElementDefinition.class);
+    definition = mock(BasicElementDefinition.class);
   }
 
   @Nonnull

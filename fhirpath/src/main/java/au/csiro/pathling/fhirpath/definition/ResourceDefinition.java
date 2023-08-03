@@ -15,10 +15,9 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath;
+package au.csiro.pathling.fhirpath.definition;
 
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
-import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import au.csiro.pathling.fhirpath.NestingKey;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.Objects;
 import java.util.Optional;
@@ -73,9 +72,9 @@ public class ResourceDefinition implements NestingKey {
    */
   @Nonnull
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
-    final Optional<BaseRuntimeChildDefinition> childDefinition = Optional
-        .ofNullable(definition.getChildByName(name));
-    return childDefinition.map(definition -> ElementDefinition.build(definition, name, this));
+    return Optional.ofNullable(definition.getChildByName(name))
+        .or(() -> Optional.ofNullable(definition.getChildByName(name + "[x]")))
+        .map(ElementDefinition::build);
   }
 
   /**

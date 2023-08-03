@@ -25,7 +25,8 @@ import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.flatten;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import java.util.Arrays;
@@ -156,7 +157,7 @@ public abstract class NonLiteralPath implements FhirPath {
    * Returns the specified child of this path, if there is one.
    *
    * @param name The name of the child element
-   * @return an {@link ElementDefinition} object
+   * @return an {@link BasicElementDefinition} object
    */
   @Nonnull
   public abstract Optional<ElementDefinition> getChildElement(@Nonnull final String name);

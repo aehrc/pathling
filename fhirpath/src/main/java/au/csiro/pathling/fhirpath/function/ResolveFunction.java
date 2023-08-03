@@ -29,7 +29,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ReferenceNestingKey;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementDefinition;
+import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
 import au.csiro.pathling.fhirpath.element.ReferencePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
@@ -97,7 +97,7 @@ public class ResolveFunction implements NamedFunction {
     // create a dataset with the full resources.
     final ResourcePath resourcePath = ResourcePath.build(fhirContext, dataSource, resourceType,
         expression, referencePath.isSingular());
-    final ElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
+    final BasicElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
     final ReferenceNestingKey referenceNestingKey = new ReferenceNestingKey(referenceDefinition,
         resourcePath.getDefinition());
 

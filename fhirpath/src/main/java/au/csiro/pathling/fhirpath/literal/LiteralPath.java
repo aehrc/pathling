@@ -111,8 +111,8 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
     this.idColumn = idColumn;
     this.value = value;
     this.dataset = dataset;
-    this.valueColumn = buildValueColumn().alias(randomAlias());
     this.expression = expression;
+    this.valueColumn = buildValueColumn().alias(randomAlias());
   }
 
   protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
