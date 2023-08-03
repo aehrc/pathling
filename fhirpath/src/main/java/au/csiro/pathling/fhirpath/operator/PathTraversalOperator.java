@@ -18,17 +18,17 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.createColumn;
+import static au.csiro.pathling.QueryHelpers.flattenValue;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.definition.ChoiceElementDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.element.ChoiceElementPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -63,6 +63,10 @@ public class PathTraversalOperator {
     checkUserInput(optionalChild.isPresent(), "No such child: " + expression);
     final ElementDefinition childDefinition = optionalChild.get();
 
+    final boolean maxCardinalityOfOne = childDefinition.getMaxCardinality().isPresent()
+        && childDefinition.getMaxCardinality().get() == 1;
+    final boolean resultSingular = left.isSingular() && maxCardinalityOfOne;
+
     final Dataset<Row> leftDataset = left.getDataset();
     final Dataset<Row> result;
     final Column valueColumn;
@@ -77,11 +81,11 @@ public class PathTraversalOperator {
     }
 
     if (childDefinition instanceof ChoiceElementDefinition) {
-      return ChoiceElementPath.build(expression, left, result, valueColumn, Optional.empty(), false,
-          (ChoiceElementDefinition) childDefinition);
+      return ChoiceElementPath.build(expression, left, result, valueColumn, Optional.empty(),
+          resultSingular, (ChoiceElementDefinition) childDefinition);
     } else {
       return ElementPath.build(expression, result, left.getIdColumn(), valueColumn,
-          Optional.empty(), false, left.getCurrentResource(), left.getThisColumn(),
+          Optional.empty(), resultSingular, left.getCurrentResource(), left.getThisColumn(),
           childDefinition);
     }
   }
@@ -101,7 +105,8 @@ public class PathTraversalOperator {
   @Nonnull
   public static Column buildTraversalColumn(@Nonnull final NonLiteralPath left,
       @Nonnull final String right) {
-    return col(left.getValueColumn() + "." + right);
+    final Column flattenedValue = flattenValue(left.getDataset(), left.getValueColumn());
+    return flattenedValue.getField(right);
   }
 
 }

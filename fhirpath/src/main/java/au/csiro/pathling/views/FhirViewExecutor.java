@@ -2,9 +2,11 @@ package au.csiro.pathling.views;
 
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
@@ -51,12 +53,19 @@ public class FhirViewExecutor {
 
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
+    // Get the constants from the query, and build a replacer.
+    final Optional<ConstantReplacer> constantReplacer = Optional.ofNullable(view.getConstants())
+        .map(c -> c.stream()
+            .collect(toMap(ConstantDeclaration::getName, ConstantDeclaration::getValue)))
+        .map(ConstantReplacer::new);
+
     // Build a new expression parser, and parse all the column expressions within the query.
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
     final ResourcePath inputContext = ResourcePath.build(fhirContext, dataSource, resourceType,
         view.getResource(), true);
     final ParserContext parserContext = new ParserContext(inputContext, fhirContext, sparkSession,
-        dataSource, terminologyServiceFactory, singletonList(inputContext.getIdColumn()));
+        dataSource, terminologyServiceFactory, singletonList(inputContext.getIdColumn()),
+        constantReplacer);
 
     final ContextAndSelection select = parseSelect(view.getSelect(), parserContext,
         Collections.emptyList());
@@ -133,7 +142,10 @@ public class FhirViewExecutor {
   private FhirPath parseExpression(@Nonnull final String expression,
       @Nonnull final ParserContext context) {
     final Parser parser = new Parser(context);
-    return parser.parse(expression);
+    final String updatedExpression = context.getConstantReplacer()
+        .map(replacer -> replacer.execute(expression))
+        .orElse(expression);
+    return parser.parse(updatedExpression);
   }
 
   @Nonnull
@@ -146,8 +158,7 @@ public class FhirViewExecutor {
               ? context
               : context.withContextDataset(list.get(list.size() - 1).getDataset());
 
-          final Parser parser = new Parser(currentContext);
-          list.add(parser.parse(expression));
+          list.add(parseExpression(expression, currentContext));
           return list;
 
         }, (list1, list2) -> {

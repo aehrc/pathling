@@ -39,6 +39,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocation
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -126,39 +127,39 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
           return new PathTraversalOperator().invoke(pathTraversalInput);
         }
       } else {
-        // If we're in the context of a function's arguments, there are two valid things this
+        // If we're in the context of a function's arguments, there are three valid things this
         // could be:
         // (1) a path traversal from the "this" context;
-        // (2) a reference to a resource type.
-        final FhirPath thisContext = context.getThisContext().get();
+        // (2) a resource type specifier, or;
+        // (3) a data type specifier.
 
-        // Check if the expression is a reference to a known resource type.
-        final ResourceType resourceType;
         try {
-          resourceType = ResourceType.fromCode(fhirPath);
+          // Check if the expression is a reference to a known resource type.
+          final ResourceType resourceType = ResourceType.fromCode(fhirPath);
+          return ResourcePath
+              .build(context.getFhirContext(), context.getDataSource(), resourceType, fhirPath,
+                  true);
 
         } catch (final FHIRException e) {
-          // If the expression is not a resource type, see if it is one of the other FHIR types.
-          final FHIRDefinedType fhirType;
           try {
-            fhirType = FHIRDefinedType.fromCode(fhirPath);
-
-          } catch (final FHIRException e2) {
-            // If the expression is not a FHIR type, treat it as a path traversal from the
-            // input context.
+            // If the expression is not a resource type, attempt path traversal.
             final PathTraversalInput pathTraversalInput = new PathTraversalInput(context,
-                thisContext, fhirPath);
+                context.getThisContext().get(), fhirPath);
             return new PathTraversalOperator().invoke(pathTraversalInput);
-          }
 
-          // If the expression is a FHIR type, we build a TypeSpecifier for it.
-          return TypeSpecifier.build(context.getInputContext(), fhirType);
+          } catch (final InvalidUserInputError e2) {
+            try {
+              // If it is not a valid path traversal, see if it is a valid data type specifier.
+              final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
+              return TypeSpecifier.build(context.getInputContext(), fhirType);
+
+            } catch (final FHIRException e3) {
+              throw new InvalidUserInputError(
+                  "Invocation is not a valid path or type specifier: " + fhirPath);
+            }
+          }
         }
 
-        // If the expression is a resource reference, we build a ResourcePath for it - we call this
-        // the current resource reference.
-        return ResourcePath
-            .build(context.getFhirContext(), context.getDataSource(), resourceType, fhirPath, true);
       }
     }
   }
@@ -215,7 +216,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
       ParserContext argumentContext = new ParserContext(context.getInputContext(),
           context.getFhirContext(), context.getSparkSession(), context.getDataSource(),
           context.getTerminologyServiceFactory(), argumentGroupings, context.getUnnestBehaviour(),
-          context.getVariables(), context.getNesting());
+          context.getVariables(), context.getNesting(), Optional.empty());
       argumentContext.setThisContext(thisPath);
 
       for (final ExpressionContext expression : paramList.expression()) {

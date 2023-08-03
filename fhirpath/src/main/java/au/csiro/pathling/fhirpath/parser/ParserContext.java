@@ -114,6 +114,9 @@ public class ParserContext {
   @Nonnull
   private final Nesting nesting;
 
+  @Nonnull
+  private final Optional<ConstantReplacer> constantReplacer;
+
   /**
    * @param inputContext the input context from which the FHIRPath is to be evaluated
    * @param fhirContext a {@link FhirContext} that can be used to do FHIR stuff
@@ -128,9 +131,10 @@ public class ParserContext {
   public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
-      @Nonnull final List<Column> groupingColumns) {
+      @Nonnull final List<Column> groupingColumns,
+      final Optional<ConstantReplacer> constantReplacer) {
     this(inputContext, fhirContext, sparkSession, dataSource, terminologyServiceFactory,
-        groupingColumns, UnnestBehaviour.UNNEST, new HashMap<>(), new Nesting());
+        groupingColumns, UnnestBehaviour.UNNEST, new HashMap<>(), new Nesting(), constantReplacer);
   }
 
   /**
@@ -150,7 +154,7 @@ public class ParserContext {
       @Nonnull final List<Column> groupingColumns,
       @Nonnull final UnnestBehaviour unnestBehaviour,
       @Nonnull final Map<String, FhirPathAndContext> variables,
-      @Nonnull final Nesting nesting) {
+      @Nonnull final Nesting nesting, @Nonnull final Optional<ConstantReplacer> constantReplacer) {
     this.inputContext = inputContext;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
@@ -160,6 +164,7 @@ public class ParserContext {
     this.unnestBehaviour = unnestBehaviour;
     this.variables = variables;
     this.nesting = nesting;
+    this.constantReplacer = constantReplacer;
   }
 
   public void setThisContext(@Nonnull final FhirPath thisContext) {
@@ -179,7 +184,7 @@ public class ParserContext {
   public ParserContext withUnnestBehaviour(@Nonnull final UnnestBehaviour unnestBehaviour) {
     final ParserContext context = new ParserContext(inputContext, fhirContext, sparkSession,
         dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour, variables,
-        nesting);
+        nesting, constantReplacer);
     thisContext.ifPresent(context::setThisContext);
     return context;
   }
@@ -192,7 +197,7 @@ public class ParserContext {
   public ParserContext withInputContext(@Nonnull final FhirPath inputContext) {
     final ParserContext parserContext = new ParserContext(inputContext, fhirContext,
         sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
-        variables, nesting);
+        variables, nesting, constantReplacer);
     thisContext.ifPresent(parserContext::setThisContext);
     return parserContext;
   }
@@ -206,7 +211,7 @@ public class ParserContext {
     final FhirPath newInputContext = inputContext.withDataset(contextDataset);
     final ParserContext parserContext = new ParserContext(newInputContext, fhirContext,
         sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
-        variables, nesting);
+        variables, nesting, constantReplacer);
     thisContext.ifPresent(
         thisContext -> parserContext.setThisContext(thisContext.withDataset(contextDataset)));
     return parserContext;
@@ -229,7 +234,7 @@ public class ParserContext {
         nonLiteralInputContext.getThisColumn());
     final ParserContext context = new ParserContext(nonSingularInputContext, fhirContext,
         sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
-        variables, nesting);
+        variables, nesting, constantReplacer);
     thisContext.ifPresent(context::setThisContext);
     return context;
   }
@@ -260,7 +265,7 @@ public class ParserContext {
     final FhirPath newInputContext = inputContext.withDataset(newDataset);
     final ParserContext parserContext = new ParserContext(newInputContext, fhirContext,
         sparkSession, dataSource, terminologyServiceFactory, groupingColumns, unnestBehaviour,
-        variables, new Nesting());
+        variables, new Nesting(), constantReplacer);
     thisContext.ifPresent(parserContext::setThisContext);
     return parserContext;
   }

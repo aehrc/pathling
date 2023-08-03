@@ -22,6 +22,7 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.flatten;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.posexplode_outer;
 
@@ -54,6 +55,8 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -489,6 +492,25 @@ public abstract class QueryHelpers {
     outputColumns.setLeft(resultDataset.col("value"));
     outputColumns.setRight(resultDataset.col("index"));
     return resultDataset;
+  }
+
+  public static Column flattenValue(final Dataset<Row> dataset, @Nonnull final Column value) {
+    return valueIsArrayOfArrays(dataset, value)
+           ? flatten(value)
+           : value;
+  }
+
+  private static boolean valueIsArrayOfArrays(@Nonnull final Dataset<Row> dataset,
+      final Column value) {
+    final boolean arrayOfArrays;
+    final DataType dataType = dataset.select(value).schema().fields()[0].dataType();
+    if (dataType instanceof ArrayType) {
+      final ArrayType arrayType = (ArrayType) dataType;
+      arrayOfArrays = arrayType.elementType() instanceof ArrayType;
+    } else {
+      arrayOfArrays = false;
+    }
+    return arrayOfArrays;
   }
 
   /**

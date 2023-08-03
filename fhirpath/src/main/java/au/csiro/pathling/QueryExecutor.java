@@ -171,7 +171,8 @@ public abstract class QueryExecutor {
       // Parse the filter expression.
       final ParserContext parserContext = new ParserContext(currentContext, fhirContext,
           sparkSession, dataSource,
-          terminologyServiceFactory, Collections.singletonList(currentContext.getIdColumn()));
+          terminologyServiceFactory, Collections.singletonList(currentContext.getIdColumn()),
+          Optional.empty());
       final Parser parser = new Parser(parserContext);
       final FhirPath fhirPath = parser.parse(filter);
 
