@@ -21,7 +21,6 @@ import static au.csiro.pathling.fhirpath.parser.Parser.buildParser;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
 import java.util.Map;
@@ -30,6 +29,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+/**
+ * A special type of parser that goes through an expression and replaces any constants with the
+ * corresponding values specified within a map.
+ *
+ * @author John Grimes
+ */
 public class ConstantReplacer extends FhirPathBaseVisitor<String> {
 
   private final Map<String, String> constants;
@@ -40,9 +45,7 @@ public class ConstantReplacer extends FhirPathBaseVisitor<String> {
 
   @Nonnull
   public String execute(@Nonnull final String expression) {
-    final FhirPathParser parser = buildParser(expression);
-
-    return visit(parser.expression());
+    return visit(buildParser(expression).expression());
   }
 
   @Override

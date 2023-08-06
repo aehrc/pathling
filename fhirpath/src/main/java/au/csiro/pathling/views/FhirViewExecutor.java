@@ -1,6 +1,5 @@
 package au.csiro.pathling.views;
 
-import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
@@ -63,79 +62,70 @@ public class FhirViewExecutor {
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
     final ResourcePath inputContext = ResourcePath.build(fhirContext, dataSource, resourceType,
         view.getResource(), true);
-    final ParserContext parserContext = new ParserContext(inputContext, fhirContext, sparkSession,
-        dataSource, terminologyServiceFactory, singletonList(inputContext.getIdColumn()),
-        constantReplacer);
+    final ParserContext parserContext = new ParserContext(inputContext, inputContext, fhirContext,
+        sparkSession, dataSource, terminologyServiceFactory, constantReplacer);
 
-    final ContextAndSelection select = parseSelect(view.getSelect(), parserContext,
+    final List<Column> select = parseSelect(view.getSelect(), parserContext,
         Collections.emptyList());
     final List<String> where = view.getWhere() == null
                                ? Collections.emptyList()
                                : view.getWhere().stream()
                                    .map(WhereClause::getExpression)
                                    .collect(toList());
-    final Optional<Column> filterCondition = parseExpressions(where, parserContext).stream()
+    final Optional<Column> filterCondition = where.stream()
+        .map(e -> parseExpression(e, parserContext))
         .map(FhirPath::getValueColumn)
         .reduce(Column::and);
     return filterCondition
-        .map(select.getContext().getDataset()::filter)
-        .orElse(select.getContext().getDataset())
-        .select(select.getSelection().toArray(new Column[0]));
+        .map(inputContext.getDataset()::filter)
+        .orElse(inputContext.getDataset())
+        .select(select.toArray(new Column[0]));
   }
 
   @Nonnull
-  private ContextAndSelection parseSelect(@Nonnull final List<SelectClause> selectGroup,
-      @Nonnull final ParserContext context, @Nonnull final List<Column> selection) {
-    @Nonnull ContextAndSelection result = new ContextAndSelection(
-        context.getInputContext(), selection);
-    @Nonnull ParserContext currentContext = context;
+  private List<Column> parseSelect(@Nonnull final List<SelectClause> selectGroup,
+      @Nonnull final ParserContext context, @Nonnull final List<Column> currentSelection) {
+    final List<Column> newSelection = new ArrayList<>(currentSelection);
 
     for (final SelectClause select : selectGroup) {
       if (select instanceof DirectSelection) {
-        result = directSelection(currentContext, (DirectSelection) select, result);
+        newSelection.addAll(directSelection(context, (DirectSelection) select, currentSelection));
 
       } else if (select instanceof FromSelection) {
-        result = nestedSelection(currentContext, (FromSelection) select, result, false);
+        newSelection.addAll(
+            nestedSelection(context, (FromSelection) select, currentSelection, false));
 
       } else if (select instanceof ForEachSelection) {
-        result = nestedSelection(currentContext, (ForEachSelection) select, result, true);
+        newSelection.addAll(
+            nestedSelection(context, (ForEachSelection) select, currentSelection, true));
 
       } else {
         throw new IllegalStateException("Unknown select clause type: " + select.getClass());
       }
-      currentContext = currentContext.withContextDataset(result.getContext().getDataset());
-      currentContext.unsetThisContext();
     }
 
-    return result;
+    return newSelection;
   }
 
   @Nonnull
-  private ContextAndSelection directSelection(final @Nonnull ParserContext context,
-      @Nonnull final DirectSelection select, @Nonnull final ContextAndSelection result) {
-    final FhirPath path = parseExpression(select.getExpression(),
-        context.withInputContext(result.getContext()));
-    final List<Column> newColumns = new ArrayList<>(result.getSelection());
+  private List<Column> directSelection(@Nonnull final ParserContext context,
+      @Nonnull final DirectSelection select, @Nonnull final List<Column> currentSelection) {
+    final FhirPath path = parseExpression(select.getExpression(), context);
+    final List<Column> newColumns = new ArrayList<>(currentSelection);
     newColumns.add(path.getValueColumn().alias(select.getName()));
-    return new ContextAndSelection(context.getInputContext().withDataset(path.getDataset()),
-        newColumns);
+    return newColumns;
   }
 
   @Nonnull
-  private ContextAndSelection nestedSelection(final @Nonnull ParserContext context,
-      @Nonnull final NestedSelectClause select, @Nonnull final ContextAndSelection result,
+  private List<Column> nestedSelection(final @Nonnull ParserContext context,
+      @Nonnull final NestedSelectClause select, @Nonnull final List<Column> currentSelection,
       final boolean unnest) {
-    final FhirPath from = parseExpression(select.getExpression(),
-        context.withInputContext(result.getContext()));
+    final FhirPath from = parseExpression(select.getExpression(), context);
     final FhirPath nextInputContext = unnest
                                       ? from.unnest()
                                       : from;
     final ParserContext nextContext = context.withInputContext(nextInputContext);
-    nextContext.setThisContext(nextInputContext);
-    final ContextAndSelection nestedResult = parseSelect(select.getSelect(), nextContext,
-        result.getSelection());
-    return new ContextAndSelection(context.withContextDataset(nestedResult.getContext()
-        .getDataset()).getInputContext(), nestedResult.getSelection());
+    return parseSelect(select.getSelect(), nextContext, currentSelection);
   }
 
   @Nonnull
@@ -145,26 +135,7 @@ public class FhirViewExecutor {
     final String updatedExpression = context.getConstantReplacer()
         .map(replacer -> replacer.execute(expression))
         .orElse(expression);
-    return parser.parse(updatedExpression);
-  }
-
-  @Nonnull
-  private List<FhirPath> parseExpressions(@Nonnull final List<String> expressions,
-      @Nonnull final ParserContext context) {
-    return expressions.stream()
-        .reduce(new ArrayList<>(), (list, expression) -> {
-          final ParserContext currentContext =
-              list.isEmpty()
-              ? context
-              : context.withContextDataset(list.get(list.size() - 1).getDataset());
-
-          list.add(parseExpression(expression, currentContext));
-          return list;
-
-        }, (list1, list2) -> {
-          list1.addAll(list2);
-          return list1;
-        });
+    return parser.parse(updatedExpression).apply(context.getInputContext());
   }
 
 }

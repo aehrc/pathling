@@ -117,4 +117,14 @@ public class ParserContext {
     this.constantReplacer = constantReplacer;
   }
 
+  /**
+   * @return a new {@link ParserContext} with the same properties as this one, but with a different
+   * input context
+   */
+  @Nonnull
+  public ParserContext withInputContext(@Nonnull final FhirPath inputContext) {
+    return new ParserContext(inputContext, resource, fhirContext, sparkSession, dataSource,
+        terminologyServiceFactory, constantReplacer);
+  }
+
 }
