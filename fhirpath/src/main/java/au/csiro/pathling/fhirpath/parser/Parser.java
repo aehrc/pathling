@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathTransformation;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import javax.annotation.Nonnull;
@@ -52,7 +53,15 @@ public class Parser {
    * @return a new {@link FhirPath} object
    */
   @Nonnull
-  public FhirPath parse(@Nonnull final String expression) {
+  public FhirPathTransformation parse(@Nonnull final String expression) {
+    final FhirPathParser parser = buildParser(expression);
+
+    final Visitor visitor = new Visitor(context);
+    return visitor.visit(parser.expression());
+  }
+
+  @Nonnull
+  static FhirPathParser buildParser(final @Nonnull String expression) {
     final FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     final CommonTokenStream tokens = new CommonTokenStream(lexer);
     final FhirPathParser parser = new FhirPathParser(tokens);
@@ -64,9 +73,7 @@ public class Parser {
     // an invalid request exception.
     parser.removeErrorListeners();
     parser.addErrorListener(new ParserErrorListener());
-
-    final Visitor visitor = new Visitor(context);
-    return visitor.visit(parser.expression());
+    return parser;
   }
 
 }

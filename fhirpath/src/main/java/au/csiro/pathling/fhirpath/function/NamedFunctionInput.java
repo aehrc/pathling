@@ -39,7 +39,7 @@ public class NamedFunctionInput extends FunctionInput {
    * of the dot preceding the function invocation.
    */
   @Nonnull
-  private final NonLiteralPath input;
+  private final FhirPath input;
 
   /**
    * A list of expressions representing the arguments to the function, i.e. the expressions inside
@@ -63,7 +63,7 @@ public class NamedFunctionInput extends FunctionInput {
    * @param overrideExpression Override expression to use instead of the default one.
    */
   public NamedFunctionInput(@Nonnull final ParserContext context,
-      @Nonnull final NonLiteralPath input, @Nonnull final List<FhirPath> arguments,
+      @Nonnull final FhirPath input, @Nonnull final List<FhirPath> arguments,
       @Nonnull final String overrideExpression) {
     super(context);
     this.input = input;
@@ -79,7 +79,7 @@ public class NamedFunctionInput extends FunctionInput {
    * function within the parentheses
    */
   public NamedFunctionInput(@Nonnull final ParserContext context,
-      @Nonnull final NonLiteralPath input, @Nonnull final List<FhirPath> arguments) {
+      @Nonnull final FhirPath input, @Nonnull final List<FhirPath> arguments) {
     super(context);
     this.input = input;
     this.arguments = arguments;

@@ -17,12 +17,10 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathAndContext;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.FhirPathTransformation;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
@@ -36,7 +34,7 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
+class TermVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Nonnull
   private final ParserContext context;
@@ -47,49 +45,44 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
+  public FhirPathTransformation visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
     return new InvocationVisitor(context).visit(requireNonNull(ctx).invocation());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
-    return new LiteralTermVisitor(context).visit(requireNonNull(ctx).literal());
+  public FhirPathTransformation visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
+    return new LiteralTermVisitor().visit(requireNonNull(ctx).literal());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitExternalConstantTerm(@Nullable final ExternalConstantTermContext ctx) {
+  public FhirPathTransformation visitExternalConstantTerm(
+      @Nullable final ExternalConstantTermContext ctx) {
     @Nullable final String term = requireNonNull(ctx).getText();
     requireNonNull(term);
 
-    if (term.equals("%resource") || term.equals("%context")) {
-      check(context.getInputContext() instanceof NonLiteralPath);
-
-      // The %resource and %context elements both return the input context.
-      final NonLiteralPath inputContext = (NonLiteralPath) context.getInputContext();
-
-      // In the case of %resource and %context, the new expression will be the input context with the
-      // expression updated to match the external constant term.
-      return inputContext.copy(term, inputContext.getDataset(), inputContext.getIdColumn(),
-          inputContext.getValueColumn(), inputContext.getOrderingColumn(),
-          inputContext.isSingular(), inputContext.getThisColumn());
-    } else {
-      final String variableName = term.replaceFirst("%", "");
-      final FhirPathAndContext variable = context.getVariables().get(variableName);
-      if (variable == null) {
-        throw new IllegalArgumentException("Unknown variable: " + variableName);
+    return input -> {
+      if (term.equals("%context")) {
+        return context.getInputContext();
+      } else if (term.equals("%resource") || term.equals("%rootResource")) {
+        return context.getResource();
+      } else {
+        throw new IllegalArgumentException("Unknown constant: " + term);
       }
-      return variable.getFhirPath();
-    }
+    };
   }
 
   @Override
   @Nonnull
-  public FhirPath visitParenthesizedTerm(@Nullable final ParenthesizedTermContext ctx) {
-    // Parentheses are ignored in the standalone term case.
-    final FhirPath result = new Visitor(context).visit(requireNonNull(ctx).expression());
-    return result.withExpression("(" + result.getExpression() + ")");
+  public FhirPathTransformation visitParenthesizedTerm(
+      @Nullable final ParenthesizedTermContext ctx) {
+    return input -> {
+      // Parentheses are ignored in the standalone term case.
+      final FhirPath result = new Visitor(context).visit(
+          requireNonNull(ctx).expression()).apply(input);
+      return result.withExpression("(" + result.getExpression() + ")");
+    };
   }
 
 }

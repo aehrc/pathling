@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.literal;
 
 import static au.csiro.pathling.QueryHelpers.getUnionableColumns;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -112,7 +111,7 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
     this.value = value;
     this.dataset = dataset;
     this.expression = expression;
-    this.valueColumn = buildValueColumn().alias(randomAlias());
+    this.valueColumn = buildValueColumn();
   }
 
   protected LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,

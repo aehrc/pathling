@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;

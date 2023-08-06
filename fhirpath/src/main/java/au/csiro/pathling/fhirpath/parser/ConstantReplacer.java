@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static au.csiro.pathling.fhirpath.parser.Parser.buildParser;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
-import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 public class ConstantReplacer extends FhirPathBaseVisitor<String> {
@@ -42,17 +40,7 @@ public class ConstantReplacer extends FhirPathBaseVisitor<String> {
 
   @Nonnull
   public String execute(@Nonnull final String expression) {
-    final FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
-    final CommonTokenStream tokens = new CommonTokenStream(lexer);
-    final FhirPathParser parser = new FhirPathParser(tokens);
-
-    lexer.removeErrorListeners();
-    lexer.addErrorListener(new ParserErrorListener());
-
-    // Remove the default console error reporter, and add a listener that wraps each parse error in
-    // an invalid request exception.
-    parser.removeErrorListeners();
-    parser.addErrorListener(new ParserErrorListener());
+    final FhirPathParser parser = buildParser(expression);
 
     return visit(parser.expression());
   }
