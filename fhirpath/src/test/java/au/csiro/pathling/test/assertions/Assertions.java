@@ -66,17 +66,19 @@ public abstract class Assertions {
     }
   }
 
-  public static void assertDatasetAgainstCsv(@Nonnull final SparkSession spark,
+  public static void assertDatasetAgainstTsv(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset) {
-    assertDatasetAgainstCsv(spark, expectedCsvPath, actualDataset, false);
+    assertDatasetAgainstTsv(spark, expectedCsvPath, actualDataset, false);
   }
 
-  public static void assertDatasetAgainstCsv(@Nonnull final SparkSession spark,
+  public static void assertDatasetAgainstTsv(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath, @Nonnull final Dataset<Row> actualDataset,
       final boolean header) {
     final URL url = getResourceAsUrl(expectedCsvPath);
     final String decodedUrl = URLDecoder.decode(url.toString(), StandardCharsets.UTF_8);
-    final DataFrameReader reader = spark.read().schema(actualDataset.schema());
+    final DataFrameReader reader = spark.read()
+        .schema(actualDataset.schema())
+        .option("delimiter", "\t");
     if (header) {
       reader.option("header", true);
     }

@@ -91,7 +91,7 @@ class FhirViewTest {
     final Dataset<Row> result = executor.buildQuery(parameters.getView());
     assertThat(result)
         .hasRows(spark, "results/views/" +
-            parameters.getRequestFile().getFileName().toString().replace(".json", ".csv"), true);
+            parameters.getRequestFile().getFileName().toString().replace(".json", ".tsv"), true);
   }
 
   @Value

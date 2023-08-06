@@ -42,7 +42,7 @@ public class QuantityParserTest extends AbstractParserTest {
     assertThatResultOf("valueQuantity < 1.5 'm'")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/lengthObservationComparison.csv");
+        .hasRows(spark, "responses/ParserTest/lengthObservationComparison.tsv");
   }
 
   @Test
@@ -61,7 +61,7 @@ public class QuantityParserTest extends AbstractParserTest {
     assertThatResultOf("valueQuantity > (valueQuantity - 2 'g/dL')")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/lengthObservationSubtraction.csv");
+        .hasRows(spark, "responses/ParserTest/lengthObservationSubtraction.tsv");
   }
 
 }

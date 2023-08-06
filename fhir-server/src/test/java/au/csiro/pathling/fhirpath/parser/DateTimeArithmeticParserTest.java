@@ -42,7 +42,7 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
     assertThatResultOf("(period.start + 20 minutes) > period.end")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/lengthOfEncounter.csv");
+        .hasRows(spark, "responses/ParserTest/lengthOfEncounter.tsv");
   }
 
   @Test
@@ -61,7 +61,7 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
     assertThatResultOf("period.start > (subject.resolve().ofType(Patient).birthDate + 60 years)")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/ageAtTimeOfEncounter.csv");
+        .hasRows(spark, "responses/ParserTest/ageAtTimeOfEncounter.tsv");
   }
 
 }

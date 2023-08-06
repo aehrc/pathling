@@ -302,31 +302,31 @@ public class ParserTest extends AbstractParserTest {
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.tsv");
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanPath.class)
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.tsv");
 
     // on the same collection should return all True (even though one is CodeableConcept)
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.coding.subsumes(%resource.reverseResolve(Condition.subject).code)")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-self.tsv");
 
     setupSubsumes(terminologyService).withSubsumes(
         CD_SNOMED_444814009, CD_SNOMED_40055000);
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes.tsv");
 
     assertThatResultOf("reverseResolve(Condition.subject).code.subsumedBy"
         + "(http://snomed.info/sct|40055000|http://snomed.info/sct/32506021000036107/version/20200229)")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.csv");
+        .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.tsv");
   }
 
   @Test
@@ -375,7 +375,7 @@ public class ParserTest extends AbstractParserTest {
             + "$this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'))"
             + ".recordedDate")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testWhereWithMemberOf.csv");
+        .hasRows(spark, "responses/ParserTest/testWhereWithMemberOf.tsv");
   }
 
   /**
@@ -389,7 +389,7 @@ public class ParserTest extends AbstractParserTest {
         "where(name.where(use = 'official').first().given.first() in "
             + "name.where(use = 'maiden').first().given).gender")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testAggregationFollowingNestedWhere.csv");
+        .hasRows(spark, "responses/ParserTest/testAggregationFollowingNestedWhere.tsv");
   }
 
   @Test
@@ -397,7 +397,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "name.where('Karina848' in where(use contains 'maiden').given).family")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testNestedWhereWithAggregationOnElement.csv");
+        .hasRows(spark, "responses/ParserTest/testNestedWhereWithAggregationOnElement.tsv");
   }
 
   @Test
@@ -411,17 +411,17 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "name.family.where($this = %resource.name.family.first())")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.tsv");
 
     assertThatResultOf(
         "name.family.where($this = %context.name.family.first())")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.tsv");
 
     assertThatResultOf(
         "name.family.where(%resource.name.family.first() = $this)")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.csv");
+        .hasRows(spark, "responses/ParserTest/testQueryWithExternalConstantInWhere.tsv");
   }
 
   @Test
@@ -438,7 +438,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "(name.given contains 'Su690').not()")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testNotFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testNotFunction.tsv");
   }
 
   @Test
@@ -446,7 +446,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "gender.iif($this = 'male', 'Male', 'Not male')")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testIfFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testIfFunction.tsv");
   }
 
   @Test
@@ -454,7 +454,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "iif(gender = 'male', contact.name, name).given")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testIfFunctionWithComplexTypeResult.csv");
+        .hasRows(spark, "responses/ParserTest/testIfFunctionWithComplexTypeResult.tsv");
   }
 
   @Test
@@ -483,7 +483,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').code")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testTranslateFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testTranslateFunction.tsv");
   }
 
   @Test
@@ -492,7 +492,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.display()")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testDisplayFunction.tsv");
   }
 
 
@@ -502,7 +502,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.property('display')")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testDisplayFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testDisplayFunction.tsv");
   }
 
   @Test
@@ -511,7 +511,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.property('child', 'Coding').code")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testPropertyFunctionWithCodingType.csv");
+        .hasRows(spark, "responses/ParserTest/testPropertyFunctionWithCodingType.tsv");
   }
 
 
@@ -522,7 +522,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.designation(http://snomed.info/sct|900000000000003001, 'en')")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithLanguage.csv");
+        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithLanguage.tsv");
   }
 
   @Test
@@ -533,7 +533,7 @@ public class ParserTest extends AbstractParserTest {
         "code.coding.designation(http://terminology.hl7.org/CodeSystem/designation-usage|display)")
         .selectOrderedResult()
         .debugAllRows()
-        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithNoLanguage.csv");
+        .hasRows(spark, "responses/ParserTest/testDesignationFunctionWithNoLanguage.tsv");
   }
 
   @Test
@@ -548,7 +548,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.translate('uuid:cm=1', false, 'equivalent').where($this.translate('uuid:cm=2', false, 'equivalent').code.count()=13).code")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.csv");
+        .hasRows(spark, "responses/ParserTest/testTranslateWithWhereAndTranslate.tsv");
   }
 
   @Test
@@ -556,7 +556,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S||S")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testWithCodingLiteral.csv");
+        .hasRows(spark, "responses/ParserTest/testWithCodingLiteral.tsv");
   }
 
   @Test
@@ -564,7 +564,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf("name.family combine name.given")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testCombineOperator.csv");
+        .hasRows(spark, "responses/ParserTest/testCombineOperator.tsv");
   }
 
   @Test
@@ -572,7 +572,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf("where((name.family combine name.given) contains 'Gleichner915').birthDate")
         .isElementPath(DatePath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithWhereFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithWhereFunction.tsv");
   }
 
   @Test
@@ -581,7 +581,7 @@ public class ParserTest extends AbstractParserTest {
         "reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'active') combine reverseResolve(Condition.subject).where(clinicalStatus.coding.code contains 'resolved')")
         .isResourcePath()
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithResourcePaths.csv");
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithResourcePaths.tsv");
   }
 
   @Test
@@ -592,7 +592,7 @@ public class ParserTest extends AbstractParserTest {
         .isElementPath(StringPath.class)
         .selectResult()
         .hasRows(spark,
-            "responses/ParserTest/testCombineOperatorWithDifferentlyTypedStringPaths.csv");
+            "responses/ParserTest/testCombineOperatorWithDifferentlyTypedStringPaths.tsv");
   }
 
   @Test
@@ -601,7 +601,7 @@ public class ParserTest extends AbstractParserTest {
         .isElementPath(StringPath.class)
         .selectResult()
         .hasRows(spark,
-            "responses/ParserTest/testCombineOperatorWithComplexTypeAndNull.csv");
+            "responses/ParserTest/testCombineOperatorWithComplexTypeAndNull.tsv");
   }
 
   @Test
@@ -609,7 +609,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf("1 combine 2")
         .isElementPath(IntegerPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoLiterals.csv");
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoLiterals.tsv");
   }
 
   @Test
@@ -620,7 +620,7 @@ public class ParserTest extends AbstractParserTest {
         .isResourcePath()
         .hasResourceType(ResourceType.PATIENT)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoUntypedResourcePaths.csv");
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoUntypedResourcePaths.tsv");
   }
 
   @Test
@@ -630,7 +630,7 @@ public class ParserTest extends AbstractParserTest {
             + "http://snomed.info/sct|230690007||'Stroke').empty()")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithCodingLiterals.csv");
+        .hasRows(spark, "responses/ParserTest/testCombineOperatorWithCodingLiterals.tsv");
   }
 
   @Test
@@ -638,7 +638,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf("@1970-11-22 = birthDate")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testBooleanOperatorWithLeftLiteral.csv");
+        .hasRows(spark, "responses/ParserTest/testBooleanOperatorWithLeftLiteral.tsv");
   }
 
   @Test
@@ -657,7 +657,7 @@ public class ParserTest extends AbstractParserTest {
         "extension.url")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testExtensionsOnResources.csv");
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnResources.tsv");
   }
 
   @Test
@@ -667,7 +667,7 @@ public class ParserTest extends AbstractParserTest {
         "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testExtensionFunction.csv");
+        .hasRows(spark, "responses/ParserTest/testExtensionFunction.tsv");
   }
 
   @Test
@@ -676,7 +676,7 @@ public class ParserTest extends AbstractParserTest {
         "address.extension.url")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testExtensionsOnElements.csv");
+        .hasRows(spark, "responses/ParserTest/testExtensionsOnElements.tsv");
   }
 
   @Test
@@ -685,7 +685,7 @@ public class ParserTest extends AbstractParserTest {
         "extension.extension.url")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testNestedExtensions.csv");
+        .hasRows(spark, "responses/ParserTest/testNestedExtensions.tsv");
   }
 
   @Test
@@ -694,7 +694,7 @@ public class ParserTest extends AbstractParserTest {
         "subject.resolve().ofType(Patient).extension.url")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testExtensionsCurrentResource.csv");
+        .hasRows(spark, "responses/ParserTest/testExtensionsCurrentResource.tsv");
   }
 
   @Test
@@ -705,7 +705,7 @@ public class ParserTest extends AbstractParserTest {
             + ".extension('latitude').valueDecimal")
         .isElementPath(DecimalPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.csv");
+        .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.tsv");
   }
 
   @Test
@@ -714,7 +714,7 @@ public class ParserTest extends AbstractParserTest {
         "address.where($this.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal contains 42.391383).city")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.csv");
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.tsv");
   }
 
 
@@ -729,7 +729,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.translate('http://snomed.info/sct?fhir_cm=900000000000526001', false, 'equivalent').extension('uuid:any').url")
         .selectOrderedResult()
-        .hasRows(spark, "responses/ParserTest/testExtensionFunctionOnTranslateResult.csv");
+        .hasRows(spark, "responses/ParserTest/testExtensionFunctionOnTranslateResult.tsv");
   }
 
   @Test
@@ -747,7 +747,7 @@ public class ParserTest extends AbstractParserTest {
         "serviceProvider.resolve().reverseResolve(Encounter.serviceProvider).id")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingMonomorphicResolve.csv");
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingMonomorphicResolve.tsv");
   }
 
   @Test
@@ -758,7 +758,7 @@ public class ParserTest extends AbstractParserTest {
             + "contains '2aff9edd-def2-487a-b435-a162e11a303c'")
         .isElementPath(BooleanPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingPolymorphicResolve.csv");
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingPolymorphicResolve.tsv");
   }
 
   @Test
@@ -767,7 +767,7 @@ public class ParserTest extends AbstractParserTest {
         "reverseResolve(Encounter.subject).reverseResolve(CarePlan.encounter).id")
         .isElementPath(StringPath.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingReverseResolve.csv");
+        .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingReverseResolve.tsv");
   }
 
   @Test

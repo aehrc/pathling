@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -93,7 +92,7 @@ public class DatasetAssert {
       @Nonnull final String expectedCsvPath, final boolean header) {
     dataset.explain();
     dataset.show(1000, false);
-    assertDatasetAgainstCsv(spark, expectedCsvPath, dataset, header);
+    Assertions.assertDatasetAgainstTsv(spark, expectedCsvPath, dataset, header);
     return this;
   }
 

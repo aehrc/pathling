@@ -115,7 +115,7 @@ class ExtractQueryTest {
     assertArrayEquals(new String[]{"id", "gender", "given_name", "condition_count"},
         result.columns());
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/simpleQueryWithAliases.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/simpleQueryWithAliases.tsv");
   }
 
   @Test
@@ -134,7 +134,7 @@ class ExtractQueryTest {
 
     assertTrue(Stream.of(result.columns()).allMatch(Strings::looksLikeAlias));
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multipleResolves.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleResolves.tsv");
   }
 
   @Test
@@ -151,7 +151,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.tsv");
   }
 
   @Test
@@ -170,7 +170,7 @@ class ExtractQueryTest {
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .debugAllRows()
-        .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.tsv");
   }
 
   @Test
@@ -185,7 +185,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/literalColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/literalColumn.tsv");
   }
 
   @Test
@@ -201,7 +201,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/resolveAndCodingLiteralColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/resolveAndCodingLiteralColumn.tsv");
   }
 
   @Test
@@ -216,7 +216,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/codingColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/codingColumn.tsv");
   }
 
   @Test
@@ -232,7 +232,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.tsv");
   }
 
   @Test
@@ -251,7 +251,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multipleFilters.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleFilters.tsv");
   }
 
   @Test
@@ -268,7 +268,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/limit.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/limit.tsv");
   }
 
   @Test
@@ -283,7 +283,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/eliminatesTrailingNulls.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/eliminatesTrailingNulls.tsv");
   }
 
   @Test
@@ -299,7 +299,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.tsv");
   }
 
   @Test
@@ -315,7 +315,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.tsv");
   }
 
   @Test
@@ -332,7 +332,7 @@ class ExtractQueryTest {
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark,
-            "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.csv");
+            "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.tsv");
   }
 
   @Test
@@ -349,7 +349,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/linkedUnnesting.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/linkedUnnesting.tsv");
   }
 
   @Test
@@ -367,7 +367,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multipleIndependentUnnestings.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleIndependentUnnestings.tsv");
   }
 
   @Test
@@ -383,7 +383,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.tsv");
 
     final ExtractRequest request2 = new ExtractRequestBuilder(subjectResource)
         .withColumn("name.given")
@@ -392,7 +392,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result2 = executor.buildQuery(request2);
     assertThat(result2)
-        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering2.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering2.tsv");
   }
 
   @Test
@@ -470,7 +470,7 @@ class ExtractQueryTest {
 
     assertThat(result)
         .debugAllRows()
-        .hasRows(spark, "responses/ExtractQueryTest/structuredResult.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/structuredResult.tsv");
   }
 
   @Test
@@ -485,7 +485,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.tsv");
   }
 
   @Test
@@ -502,7 +502,7 @@ class ExtractQueryTest {
 
     final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.tsv");
   }
 
   void mockResource(final ResourceType... resourceTypes) {
