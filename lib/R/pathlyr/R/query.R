@@ -43,26 +43,25 @@ for_each_with_name <-function(sequence, FUN, ...) {
 ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), filters = NULL) {
   q <- j_invoke(ds, "aggregate", as.character(subject_resource))
   
-  #TODO: Check why/if this works (i.e.: is the `q` object mutable?)
   for_each_with_name(aggregations, function(expression, name) {
     if (nchar(name) == 0) {
-      q <- j_invoke(q, "aggregation", expression)
+      j_invoke(q, "aggregation", expression)
     } else {
-      q <- j_invoke(q, "aggregation", expression, name)
+      j_invoke(q, "aggregation", expression, name)
     }
   })
 
   for_each_with_name(groupings, function(expression, name) {
     if (nchar(name) == 0) {
-      q <- j_invoke(q, "grouping", expression)
+      j_invoke(q, "grouping", expression)
     } else {
-      q <- j_invoke(q, "grouping", expression, name)
+      j_invoke(q, "grouping", expression, name)
     }
   })
   
   if (!is.null(filters)) {
     for (f in as.character(filters)) {
-      q <- j_invoke(q, "filter", f)
+      j_invoke(q, "filter", f)
     }
   }
   
@@ -83,15 +82,15 @@ ds_extract <- function(ds, subject_resource, columns, filters = NULL) {
 
   for_each_with_name(columns, function(expression, name) {
     if (nchar(name) == 0) {
-      q <- j_invoke(q, "column", expression)
+      j_invoke(q, "column", expression)
     } else {
-      q <- j_invoke(q, "column", expression, name)
+      j_invoke(q, "column", expression, name)
     }
   })
 
   if (!is.null(filters)) {
     for (f in as.character(filters)) {
-      q <- j_invoke(q, "filter", f)
+      j_invoke(q, "filter", f)
     }
   }
 

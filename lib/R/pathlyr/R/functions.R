@@ -83,7 +83,6 @@ trm_to_snomed_coding <- function(coding_column, version = NULL) {
 #' 
 #' @export
 trm_to_ecl_value_set <- function(ecl) {
-  # TODO: Check that reserved true captures: urllib.parse.quote(ecl, safe="()*!'")
   paste0(SNOMED_URI, "?fhir_vs=ecl/", URLencode(ecl, reserved = TRUE))
 }
 

@@ -1,3 +1,4 @@
 inst/java/*.jar
 man/*.Rd
 NAMESPACE
+DESCRIPTION

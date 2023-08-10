@@ -1,3 +1,9 @@
+#  Copyright 2023 Commonwealth Scientific and Industrial Research
+#  Organisation (CSIRO) ABN 41 687 119 230.
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
 #
 #      http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -8,13 +14,12 @@
 #  limitations under the License.
 
 
-EQ_EQUIVALENT <- "equivalent"
-
+#' The type of storage to use for the terminology cache
+#' @export
 StorageType <- list(
     MEMORY = "memory",
     DISK = "disk"
 )
-
 
 #' Creates a PathlingContext with the given configuration options.
 #'
@@ -27,6 +32,8 @@ StorageType <- list(
 #' If a SparkSession is not provided, and one is already running within the current process, it
 #' will be reused - and it is assumed that the Pathling library API JAR is already on the
 #' classpath. If you are running your own cluster, make sure it is on the list of packages.
+#' 
+#' TODO: Add a note about extensions
 #'
 #' @param spark A pre-configured SparkSession instance, use this if you need to control the way
 #'   that the session is set up
@@ -74,9 +81,7 @@ StorageType <- list(
 ptl_connect <- function(
     spark = NULL,
     max_nesting_level = 3,
-    # TODO: Reconsider the default value: the challenge is the the type of column used 
-    # for extensions cannot be repesent deserialised by sparklyr
-    enable_extensions = FALSE,
+    enable_extensions = FALSE, 
     enabled_open_types = c(
         "boolean", "code", "date", "dateTime", "decimal", "integer",
         "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
@@ -104,45 +109,34 @@ ptl_connect <- function(
     accept_language = NULL,
     enable_delta = FALSE
 ) {
-  # TODO: Re-enable this to support delta
-  #   def_new_spark_session <- function() {
-  #     spark_builder <- SparkSession.builder.config("spark.jars", find_jar())
-  #     spark_builder <- if (enable_delta) {
-  #       spark_builder %>%
-  #         j_invoke(
-  #           "config",
-  #           "spark.jars.packages",
-  #           "io.delta:delta-core_2.12:2.3.0"
-  #         ) %>%
-  #         j_invoke(
-  #           "config",
-  #           "spark.sql.extensions",
-  #           "io.delta.sql.DeltaSparkSessionExtension"
-  #         ) %>%
-  #         j_invoke(
-  #           "config",
-  #           "spark.sql.catalog.spark_catalog",
-  #           "org.apache.spark.sql.delta.catalog.DeltaCatalog"
-  #         )
-  #     } else {
-  #       spark_builder
-  #     }
-  #     spark_builder$getOrCreate()
-  #   }
+
+  new_spark_connection <- function() {
+    config <- if (enable_delta) {
+      list(
+          "sparklyr.shell.packages" = "io.delta:delta-core_2.12:2.3.0",
+          "sparklyr.shell.conf" = c(
+              "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+              "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+          )
+      )
+    } else {
+      sparklyr::spark_config()
+    }
+    sparklyr::spark_connect(master = "local", config = config)
+  }
 
   spark <- if (!is.null(spark)) {
     spark
   } else {
-    spark_connect(master = "local")
+    new_spark_connection()
   }
-
-  # TODO: Refactor - create  builder in Java for API config
+  
   encoders_config <- spark %>%
       j_invoke_static(
           "au.csiro.pathling.config.EncodingConfiguration", "builder") %>%
       j_invoke("maxNestingLevel", as.integer(max_nesting_level)) %>%
       j_invoke("enableExtensions", as.logical(enable_extensions)) %>%
-      #invoke("openTypes", as(jvm$java.util.HashSet(enabled_open_types), "java.util.Set")) %>%
+      j_invoke("openTypes", spark %>% j_to_set(enabled_open_types)) %>%
       j_invoke("build")
 
   client_config <- j_invoke_static(
@@ -195,5 +189,15 @@ ptl_connect <- function(
       j_invoke("build")
 
   j_invoke_static(spark, "au.csiro.pathling.library.PathlingContext", "create",
-                spark_session(spark), encoders_config, terminology_config)
+                  spark_session(spark), encoders_config, terminology_config)
+}
+
+
+#' Obtains the Spark connection associated with a Pathling context.
+#'
+#' @param pc The PathlingContext object.
+#' @return The spark connection associated with this Pathling context.
+#' @export
+ptl_spark <- function(pc) {
+  sparklyr::spark_connection(pc)
 }

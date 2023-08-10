@@ -41,6 +41,9 @@
   </dependencies>
 
   <properties>
+    <pathling.pathlyr.version.base>6.3.0</pathling.pathlyr.version.base>
+    <pathling.pathlyr.version.qualifier>.9000</pathling.pathlyr.version.qualifier>
+    <pathling.pathlyr.version>${pathling.pathlyr.version.base}${pathling.pathlyr.version.qualifier}</pathling.pathlyr.version>
     <!--suppress UnresolvedMavenProperty -->
     <skipPathlyrTests>${skipTests}</skipPathlyrTests>
   </properties>
@@ -69,6 +72,7 @@
               <directory>${project.basedir}/</directory>
               <includes>
                 <include>NAMESPACE</include>
+                <include>DESCRIPTION</include>
               </includes>
             </fileset>
           </filesets>
@@ -119,6 +123,22 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <executions>
+          <execution>
+            <id>R-generate-DESCRIPTION</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>sed</executable>
+              <workingDirectory>${project.basedir}</workingDirectory>
+              <arguments>
+                <argument>s/%pathling.pathlyr.version%/${pathling.pathlyr.version}/</argument>
+                <argument>${project.basedir}/DESCRIPTION.src</argument>
+              </arguments>
+              <outputFile>${project.basedir}/DESCRIPTION</outputFile>
+            </configuration>
+          </execution>
           <execution>
             <id>roxygenise</id>
             <phase>generate-resources</phase>
@@ -181,9 +201,9 @@
                 <argument>--output=${project.basedir}/target</argument>
                 <argument>--as-cran</argument>
                 <!-- TODO: enable manual production -->
-                <argument>--no-manual</argument>
+                <!--argument>- -no-manual</argument-->
                 <!-- TODO: Make sure it works with snapshot version too (x.x.x.9xxxx) -->
-                <argument>target/${project.artifactId}_${project.version}.tar.gz</argument>
+                <argument>target/${project.artifactId}_${pathling.pathlyr.version}.tar.gz</argument>
               </arguments>
             </configuration>
           </execution>
@@ -206,7 +226,7 @@
               <!-- Install dependencies -->
               <execution>
                 <id>R-install-dependencies</id>
-                <phase>initialize</phase>
+                <phase>generate-sources</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>

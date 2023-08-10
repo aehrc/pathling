@@ -60,8 +60,9 @@ test_that("datasource ndjson", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  pc %>% ptl_read_ndjson(ndjson_test_data_dir()) %>%
-    ds_write_ndjson(temp_ndjson_dir())
+  pc %>%
+      ptl_read_ndjson(ndjson_test_data_dir()) %>%
+      ds_write_ndjson(temp_ndjson_dir())
 
   data_source <- pc %>% ptl_read_ndjson(temp_ndjson_dir())
 
@@ -69,21 +70,6 @@ test_that("datasource ndjson", {
   expect_equal(names(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
-
-# TODO: Uncomment when file_name_mapper is implemented
-#
-# test_that("datasource ndjson mapper", {
-#   spark <- def_spark()
-#   pc <- def_ptl_context(spark)
-#
-#   ds <- read_ndjson(pc, ndjson_test_data_dir())
-#   write_ndjson(ds, temp_ndjson_dir(), file_name_mapper = function(x) paste0("Custom", x))
-#   data_source <- read_ndjson(pc, temp_ndjson_dir(), file_name_mapper = function(x) str_replace(x, "\\^Custom", ""))
-#
-#   result <- ndjson_query(data_source)
-#   expect_equal(names(result), "count")
-#   expect_equal(collect(result), tibble::tibble(count = 71))
-# })
 
 test_that("datasource bundles", {
   spark <- def_spark()
@@ -115,8 +101,9 @@ test_that("datasource parquet", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  pc %>% ptl_read_parquet(parquet_test_data_dir()) %>%
-    ds_write_parquet(temp_parquet_dir())
+  pc %>%
+      ptl_read_parquet(parquet_test_data_dir()) %>%
+      ds_write_parquet(temp_parquet_dir())
 
   data_source <- pc %>% ptl_read_parquet(temp_parquet_dir())
 
@@ -129,8 +116,9 @@ test_that("datasource delta", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  pc %>% ptl_read_delta(delta_test_data_dir()) %>%
-    ds_write_delta(temp_delta_dir())
+  pc %>%
+      ptl_read_delta(delta_test_data_dir()) %>%
+      ds_write_delta(temp_delta_dir())
 
   data_source <- pc %>% ptl_read_delta(delta_test_data_dir())
 
@@ -159,11 +147,12 @@ test_that("datasource tables", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  pc %>% ptl_read_ndjson(ndjson_test_data_dir()) %>%
-    ds_write_tables()
+  pc %>%
+      ptl_read_ndjson(ndjson_test_data_dir()) %>%
+      ds_write_tables()
   data_source <- pc %>% ptl_read_tables()
 
-    result <- ndjson_query(data_source)
+  result <- ndjson_query(data_source)
   expect_equal(names(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
@@ -172,8 +161,9 @@ test_that("datasource tables with schema", {
   spark <- def_spark()
   pc <- def_ptl_context(spark)
 
-  pc %>% ptl_read_ndjson(ndjson_test_data_dir()) %>%
-    ds_write_tables(schema = "test")
+  pc %>%
+      ptl_read_ndjson(ndjson_test_data_dir()) %>%
+      ds_write_tables(schema = "test")
   data_source <- pc %>% ptl_read_tables(schema = "test")
 
   result <- ndjson_query(data_source)

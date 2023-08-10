@@ -1,7 +1,7 @@
 Package: pathlyr
 Type: Package
 Title: Pathling R API for Sparklyr
-Version: 6.3.0
+Version: %pathling.pathlyr.version%
 Authors@R:
     c(
       person(given = "Piotr",
