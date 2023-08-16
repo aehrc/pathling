@@ -89,7 +89,7 @@
          This has been fixed in the main branch but not released yet -->
     <pathling.lombokVersion>1.18.28</pathling.lombokVersion>
     <pathling.guavaVersion>31.0.1-jre</pathling.guavaVersion>
-    <pathling.infinispanVersion>14.0.11.Final</pathling.infinispanVersion>
+    <pathling.infinispanVersion>14.0.14.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.13.4</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
     <pathling.slf4jVersion>2.0.7</pathling.slf4jVersion>
