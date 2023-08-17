@@ -240,7 +240,7 @@
                     <argument>-e</argument>
                     <argument>devtools::install_dev_deps()</argument>
                     <argument>-e</argument>
-                    <argument>sparklyr::spark_install(version='3.3.1', hadoop='2')</argument>
+                    <argument>sparklyr::spark_install(version='${pathling.sparkVersion}', hadoop='${pathling.hadoopMajorVersion}')</argument>
                   </arguments>
                 </configuration>
               </execution>
