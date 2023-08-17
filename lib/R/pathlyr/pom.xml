@@ -38,6 +38,18 @@
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-runtime</artifactId>
     </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>encoders</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>library-api</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <properties>
@@ -47,7 +59,7 @@
     <!--suppress UnresolvedMavenProperty -->
     <skipPathlyrTests>${skipTests}</skipPathlyrTests>
   </properties>
-  
+
   <build>
     <sourceDirectory>${project.basedir}</sourceDirectory>
     <plugins>
@@ -73,6 +85,12 @@
               <includes>
                 <include>NAMESPACE</include>
                 <include>DESCRIPTION</include>
+              </includes>
+            </fileset>
+            <fileset>
+              <directory>${project.basedir}/tests/testthat</directory>
+              <includes>
+                <include>testdata</include>
               </includes>
             </fileset>
           </filesets>
@@ -115,6 +133,33 @@
             <configuration>
               <excludeTransitive>true</excludeTransitive>
               <outputDirectory>${project.basedir}/inst/java</outputDirectory>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-test-data</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <type>test-jar</type>
+              <includeTypes>test-jar</includeTypes>
+              <includeArtifactIds>library-api,encoders</includeArtifactIds>
+              <includeGroupIds>${project.groupId}</includeGroupIds>
+              <includeScope>test</includeScope>
+              <excludeTransitive>true</excludeTransitive>
+              <includes>/test-data/**,/data/**</includes>
+              <fileMappers>
+                <org.codehaus.plexus.components.io.filemappers.RegExpFileMapper>
+                  <pattern>^test-data/</pattern>
+                  <replacement>testdata/</replacement>
+                </org.codehaus.plexus.components.io.filemappers.RegExpFileMapper>
+                <org.codehaus.plexus.components.io.filemappers.RegExpFileMapper>
+                  <pattern>^data/</pattern>
+                  <replacement>testdata/encoders/</replacement>
+                </org.codehaus.plexus.components.io.filemappers.RegExpFileMapper>
+              </fileMappers>
+              <outputDirectory>${project.basedir}/tests/testthat</outputDirectory>
             </configuration>
           </execution>
         </executions>
@@ -169,7 +214,7 @@
                 <argument>devtools::test(stop_on_failure = TRUE)</argument>
               </arguments>
             </configuration>
-          </execution>          
+          </execution>
           <execution>
             <id>R-build-package</id>
             <phase>package</phase>

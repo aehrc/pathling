@@ -1,20 +1,17 @@
-json_resources_dir <- function() {
-  test_path("data", "resources", "R4", "json")
+ndjson_test_data_dir <- function() {
+  test_path("testdata", "ndjson")
 }
 
 bundles_test_data_dir <- function() {
-  test_path("data", "bundles", "R4", "json")
+  test_path("testdata", "bundles")
 }
 
 parquet_test_data_dir <- function() {
-  test_path("data", "parquet")
+  test_path("testdata", "parquet")
 }
 
-ndjson_test_data_dir <- json_resources_dir
-
-
 delta_test_data_dir <- function() {
-  test_path("data", "delta")
+  test_path("testdata", "delta")
 }
 
 
@@ -79,8 +76,7 @@ test_that("datasource bundles", {
 
   result <- bundles_query(data_source)
   expect_equal(names(result), "count")
-  # TODO: (should be 10): Unify the test data
-  expect_equal(collect(result), tibble::tibble(count = 5))
+  expect_equal(collect(result), tibble::tibble(count = 10))
 })
 
 test_that("datasource datasets", {

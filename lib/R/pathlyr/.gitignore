@@ -2,3 +2,4 @@ inst/java/*.jar
 man/*.Rd
 NAMESPACE
 DESCRIPTION
+tests/testthat/testdata

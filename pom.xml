@@ -196,6 +196,12 @@
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
+        <artifactId>library-api</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
         <artifactId>library-runtime</artifactId>
         <version>${project.version}</version>
       </dependency>

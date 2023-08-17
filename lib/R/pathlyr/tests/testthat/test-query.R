@@ -1,5 +1,5 @@
 json_resources_dir <- function() {
-  test_path("data", "resources", "R4", "json")
+  test_path("testdata", "ndjson")
 }
 
 test_data_source <- function() {

@@ -10,16 +10,21 @@ spark_session <- function() {
   def_spark()
 }
 
+
+encoders_test_data_dir <- function(...) {
+  test_path("testdata", "encoders", ...)
+}
+
 json_bundles_dir <- function() {
-  test_path("data", "bundles", "R4", "json")
+  encoders_test_data_dir("bundles", "R4", "json")
 }
 
 json_resources_dir <- function() {
-  test_path("data", "resources", "R4", "json")
+  encoders_test_data_dir("resources", "R4", "json")
 }
 
 xml_bundles_dir <- function() {
-  test_path("data", "bundles", "R4", "xml")
+  encoders_test_data_dir( "bundles", "R4", "xml")
 }
 
 def_pathling <- function(spark_session) {
