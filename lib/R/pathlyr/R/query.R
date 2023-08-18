@@ -23,7 +23,7 @@ for_each_with_name <-function(sequence, FUN, ...) {
   }
 }
 
-#' Represents an aggregate query for FHIR data.
+#' Executes an aggregate query for FHIR data.
 #'
 #' The query calculates summary values based on aggregations and groupings of FHIR resources.
 #'
@@ -36,7 +36,9 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #' @param filters An optional sequence of FHIRPath expressions that can be evaluated against each resource
 #'   in the data set to determine whether it is included within the result. The expression must evaluate to a
 #'   Boolean value. Multiple filters are combined using logical AND operation.
-#' @return A spark DataFrame containing the aggregated data.
+#' @return A Spark DataFrame containing the aggregated data.
+#' 
+#' @family Pathling queries
 #' 
 #' @importFrom sparklyr j_invoke sdf_register
 #'
@@ -44,11 +46,11 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
 #' data_source <- pc %>% ptl_read_ndjson(system.file('extdata','ndjson', package='pathlyr'))
-#' result <- data_source %>% ds_aggregate('Patient',
+#' data_source %>% ds_aggregate('Patient',
 #'      aggregations = c(patientCount='count()', 'id.count()'),
-#'      groupings = c('gender', givenName='name.given')
+#'      groupings = c('gender', givenName='name.given'),
+#'      filters = c('active = true')
 #' )
-#' result %>% show()
 #' ptl_disconnect(pc)
 ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), filters = NULL) {
   q <- j_invoke(ds, "aggregate", as.character(subject_resource))
@@ -78,7 +80,9 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), fi
   sdf_register(j_invoke(q, "execute"))
 }
 
-#' Represents an extract query that extracts specified columns from FHIR resources.
+#' Executes an extract query for FHIR data.
+#' 
+#' The query extracts specified columns from FHIR resources in the tabular format.
 #'
 #' @param ds The DataSource object containing the data to be queried.
 #' @param subject_resource A string representing the type of FHIR resource to extract data from.
@@ -88,9 +92,19 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), fi
 #'   Boolean value. Multiple filters are combined using AND logic.
 #' @return A Spark DataFrame containing the extracted data.
 #' 
+#' @family Pathling queries
+#' 
 #' @importFrom sparklyr j_invoke sdf_register
 #' 
 #' @export 
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' data_source <- pc %>% ptl_read_ndjson(system.file('extdata','ndjson', package='pathlyr'))
+#' data_source %>% ds_extract('Patient',
+#'      columns = c('gender', givenName='name.given'),
+#'      filters = c('active = true')
+#' )
+#' ptl_disconnect(pc)
 ds_extract <- function(ds, subject_resource, columns, filters = NULL) {
   q <- j_invoke(ds, "extract", as.character(subject_resource))
 
