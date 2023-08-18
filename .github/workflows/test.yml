@@ -621,7 +621,7 @@ jobs:
       - name: Run the init goal with Maven
         run: >-
           mvn --batch-mode initialize -P '!R-install-deps'
-          -pl lib/R/pathlyr
+          -pl lib/R/pathlyr -am -DskipTests
         timeout-minutes: 30          
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
