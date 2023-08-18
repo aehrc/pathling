@@ -178,7 +178,12 @@
               <executable>sed</executable>
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
+                <argument>-e</argument>
                 <argument>s/%pathling.pathlyr.version%/${pathling.pathlyr.version}/</argument>
+                <argument>-e</argument>
+                <argument>s/%pathling.pathlyr.sparkVersion%/${pathling.sparkVersion}/</argument>
+                <argument>-e</argument>
+                <argument>s/%pathling.pathlyr.hadoopVersion%/${pathling.hadoopMajorVersion}/</argument>
                 <argument>${project.basedir}/DESCRIPTION.src</argument>
               </arguments>
               <outputFile>${project.basedir}/DESCRIPTION</outputFile>
@@ -245,9 +250,6 @@
                 <argument>check</argument>
                 <argument>--output=${project.basedir}/target</argument>
                 <argument>--as-cran</argument>
-                <!-- TODO: enable manual production -->
-                <!--argument>- -no-manual</argument-->
-                <!-- TODO: Make sure it works with snapshot version too (x.x.x.9xxxx) -->
                 <argument>target/${project.artifactId}_${pathling.pathlyr.version}.tar.gz</argument>
               </arguments>
             </configuration>

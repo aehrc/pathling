@@ -30,3 +30,5 @@ Suggests:
 Config/testthat/edition: 3
 RoxygenNote: 7.2.3
 SystemRequirements: Spark: 3.3.x
+Config/pathlyr/SparkVersion: %pathling.pathlyr.sparkVersion%
+Config/pathlyr/HadoopVersion: %pathling.pathlyr.hadoopVersion%
