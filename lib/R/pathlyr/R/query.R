@@ -13,8 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-#' @import sparklyr
-
 for_each_with_name <-function(sequence, FUN, ...) {
   sequence_names <- names(sequence)
   char_sequence <- as.character(sequence)
@@ -24,7 +22,6 @@ for_each_with_name <-function(sequence, FUN, ...) {
     FUN(value, name, ...)
   }
 }
-
 
 #' Represents an aggregate query for FHIR data.
 #'
@@ -39,7 +36,20 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #' @param filters An optional sequence of FHIRPath expressions that can be evaluated against each resource
 #'   in the data set to determine whether it is included within the result. The expression must evaluate to a
 #'   Boolean value. Multiple filters are combined using logical AND operation.
+#' @return A spark DataFrame containing the aggregated data.
+#' 
+#' @importFrom sparklyr j_invoke sdf_register
+#'
 #' @export
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' data_source <- pc %>% ptl_read_ndjson(system.file('extdata','ndjson', package='pathlyr'))
+#' result <- data_source %>% ds_aggregate('Patient',
+#'      aggregations = c(patientCount='count()', 'id.count()'),
+#'      groupings = c('gender', givenName='name.given')
+#' )
+#' result %>% show()
+#' ptl_disconnect(pc)
 ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), filters = NULL) {
   q <- j_invoke(ds, "aggregate", as.character(subject_resource))
   
@@ -76,7 +86,11 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), fi
 #' @param filters An optional sequence of FHIRPath expressions that can be evaluated against each resource
 #'   in the data set to determine whether it is included within the result. The expression must evaluate to a
 #'   Boolean value. Multiple filters are combined using AND logic.
-#' @export
+#' @return A Spark DataFrame containing the extracted data.
+#' 
+#' @importFrom sparklyr j_invoke sdf_register
+#' 
+#' @export 
 ds_extract <- function(ds, subject_resource, columns, filters = NULL) {
   q <- j_invoke(ds, "extract", as.character(subject_resource))
 
@@ -96,3 +110,7 @@ ds_extract <- function(ds, subject_resource, columns, filters = NULL) {
 
   sdf_register(j_invoke(q, "execute"))
 }
+
+
+
+

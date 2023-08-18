@@ -295,6 +295,61 @@
       </build>
     </profile>
     <profile>
+      <id>docs</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <!-- Build Python documentation -->
+              <execution>
+                <id>R-generate-site</id>
+                <phase>process-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>Rscript</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>--verbose</argument>
+                    <argument>-e</argument>
+                    <argument>devtools::build_site(override = list(destination = '${project.basedir}/target/docs'))</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>R-generate-manual</id>
+                <phase>process-resources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>Rscript</executable>
+                  <workingDirectory>${project.basedir}</workingDirectory>
+                  <arguments>
+                    <argument>--verbose</argument>
+                    <argument>-e</argument>
+                    <argument>devtools::build_manual(path='${project.basedir}/target')</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!-- Create a JAR containing the Pathlyr docs -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <configuration>
+              <classesDirectory>${project.build.directory}/docs</classesDirectory>
+              <classifier>docs</classifier>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <id>Rdev</id>
       <build>
         <plugins>

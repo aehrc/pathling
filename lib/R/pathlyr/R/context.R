@@ -78,6 +78,10 @@ StorageType <- list(
 #' @importFrom sparklyr j_invoke_static j_invoke
 #'
 #' @export
+#' @examplesIf ptl_is_spark_installed()
+#' sc <- sparklyr::spark_connect(master = "local")
+#' pc <- ptl_connect(spark = sc)
+#' ptl_disconnect(pc)
 ptl_connect <- function(
     spark = NULL,
     max_nesting_level = 3,
@@ -189,7 +193,8 @@ ptl_connect <- function(
       j_invoke("build")
 
   j_invoke_static(spark, "au.csiro.pathling.library.PathlingContext", "create",
-                  spark_session(spark), encoders_config, terminology_config)
+                  sparklyr::spark_session(spark), 
+                  encoders_config, terminology_config)
 }
 
 
@@ -198,6 +203,28 @@ ptl_connect <- function(
 #' @param pc The PathlingContext object.
 #' @return The spark connection associated with this Pathling context.
 #' @export
+#' @examplesIf FALSE
+#' pc <- ptl_connect()
+#' spark <- ptl_spark(pc)
+#' ptl_disconnect(pc)
 ptl_spark <- function(pc) {
   sparklyr::spark_connection(pc)
 }
+
+#' Disconnects the Spark connection associated with a Pathling context.
+#' @param pc The PathlingContext object.
+#' @return NULL
+#' @export
+ptl_disconnect <- function(pc) {
+  sparklyr::spark_disconnect(ptl_spark(pc))
+  invisible(NULL)
+}
+
+#' Disconnects all Pathling contexts.
+#' @return NULL
+#' @export
+ptl_disconnect_all <-function () {
+  sparklyr::spark_disconnect_all()
+  invisible(NULL)
+}
+

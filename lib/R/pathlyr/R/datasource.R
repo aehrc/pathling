@@ -55,7 +55,7 @@ ptl_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = N
 ptl_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR_JSON) {
 
   pc %>% invoke_datasource("bundles", as.character(path),
-                           spark_connection(pc) %>% j_to_set(resource_types),
+                           sparklyr::spark_connection(pc) %>% j_to_set(resource_types),
                            as.character(mime_type))
 }
 

@@ -1,3 +1,4 @@
+library(sparklyr)
 def_spark <- function() {
 
   temp_warehouse_dir <- file.path(tempdir(), 'warehouse')
