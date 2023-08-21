@@ -14,10 +14,10 @@
 #  limitations under the License.
 
 
-read_dcf <- function (path)
+read_dcf <- function(path)
 {
   fields <- colnames(read.dcf(path))
-  as.list(read.dcf(path, keep.white = fields)[1, ])
+  as.list(read.dcf(path, keep.white = fields)[1,])
 }
 
 package_info <- function(pkgname) {
@@ -29,8 +29,8 @@ package_info <- function(pkgname) {
 ptl_spark_info <- function() {
   metadata <- package_info("pathlyr")
   list(
-    spark_version = metadata[["Config/pathlyr/SparkVersion"]],
-    hadoop_version = metadata[["Config/pathlyr/HadoopVersion"]]
+      spark_version = metadata[["Config/pathlyr/SparkVersion"]],
+      hadoop_version = metadata[["Config/pathlyr/HadoopVersion"]]
   )
 }
 
@@ -46,7 +46,23 @@ ptl_spark_install <- function() {
 #' @export
 ptl_is_spark_installed <- function() {
   spark_info <- ptl_spark_info()
-  sparklyr::spark_installed_versions() %>% 
-      sparklyr::filter(.data$spark==spark_info$spark_version, .data$hadoop==spark_info$hadoop_version) %>% 
-      nrow() > 0 
+  sparklyr::spark_installed_versions() %>%
+      sparklyr::filter(.data$spark == spark_info$spark_version, .data$hadoop == spark_info$hadoop_version) %>%
+      nrow() > 0
+}
+
+
+#' Constructs the path to the package example data.
+#' 
+#' Construct the path to the package example data from components in a platform-independent way.
+#' 
+#' @param ... character vector of the path components.
+#' @return The path to the examples data.
+#' 
+#' @export
+#' 
+#' @examples
+#' pathlyr_examples('ndjson', 'Condition.ndjson')
+pathlyr_examples <- function(...) {
+  system.file("extdata", ..., package = "pathlyr")
 }

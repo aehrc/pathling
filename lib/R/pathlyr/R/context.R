@@ -21,11 +21,16 @@ StorageType <- list(
     DISK = "disk"
 )
 
-#' Creates a PathlingContext with the given configuration options.
+
+#' Pathling context lifecycle management functions. 
+#' 
+#' @rdname ptl_context
+#' @name ptl_context
+#' 
+#' @description
+#' \code{ptl_connect()} creates a PathlingContext with the given configuration options.
 #'
-#' This should only be done once within a SparkSession - subsequent calls with different
-#' configuration may produce an error.
-#'
+#' @details
 #' If no SparkSession is provided, and there is not one already present in this process - a new
 #' SparkSession will be created.
 #'
@@ -33,8 +38,6 @@ StorageType <- list(
 #' will be reused - and it is assumed that the Pathling library API JAR is already on the
 #' classpath. If you are running your own cluster, make sure it is on the list of packages.
 #' 
-#' TODO: Add a note about extensions
-#'
 #' @param spark A pre-configured SparkSession instance, use this if you need to control the way
 #'   that the session is set up
 #' @param max_nesting_level Controls the maximum depth of nested element data that is encoded
@@ -73,15 +76,22 @@ StorageType <- list(
 #'   terminology server
 #' @param enable_delta Enables the use of Delta for storage of FHIR data
 #'
-#' @return A PathlingContext instance initialized with the specified configuration
+#' @return \code{ptl_connect()} returns a PathlingContext instance initialized with the specified configuration.
 #'
 #' @importFrom sparklyr j_invoke_static j_invoke
 #'
 #' @export
+#' 
 #' @examplesIf ptl_is_spark_installed()
+#' # Create PathlingContext for an existing Spark connecton.
 #' sc <- sparklyr::spark_connect(master = "local")
 #' pc <- ptl_connect(spark = sc)
 #' ptl_disconnect(pc)
+#' 
+#' # Create PathlingContext with a new Spark connection.
+#' pc <- ptl_connect()
+#' spark <- ptl_spark(pc)
+#' ptl_disconnect_all()
 ptl_connect <- function(
     spark = NULL,
     max_nesting_level = 3,
@@ -197,31 +207,41 @@ ptl_connect <- function(
                   encoders_config, terminology_config)
 }
 
-
-#' Obtains the Spark connection associated with a Pathling context.
+#' @description
+#' \code{ptl_spark()} obtains the Spark connection associated with a Pathling context.
 #'
 #' @param pc The PathlingContext object.
-#' @return The spark connection associated with this Pathling context.
+#' 
+#' @return \code{ptl_spark()} returns spark connection associated with this Pathling context.
+#'
+#' @rdname ptl_context
+#' 
 #' @export
-#' @examplesIf FALSE
-#' pc <- ptl_connect()
-#' spark <- ptl_spark(pc)
-#' ptl_disconnect(pc)
 ptl_spark <- function(pc) {
   sparklyr::spark_connection(pc)
 }
 
-#' Disconnects the Spark connection associated with a Pathling context.
+#' @description
+#' \code{ptl_disconnect()} disconnects the Spark connection associated with a Pathling context.
 #' @param pc The PathlingContext object.
+#' 
 #' @return NULL
+#' 
+#' @rdname ptl_context
+#'
 #' @export
 ptl_disconnect <- function(pc) {
   sparklyr::spark_disconnect(ptl_spark(pc))
   invisible(NULL)
 }
 
-#' Disconnects all Pathling contexts.
+#' @description
+#' \code{ptl_disconnect_all()} disconnects all Spark connections.
+#' 
 #' @return NULL
+#'
+#' @rdname ptl_context
+#' 
 #' @export
 ptl_disconnect_all <-function () {
   sparklyr::spark_disconnect_all()
