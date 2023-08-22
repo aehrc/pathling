@@ -17,8 +17,9 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -46,7 +47,7 @@ public class ParserContext {
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#variables">FHIR Specific Variables</a>
    */
   @Nonnull
-  private final FhirPath inputContext;
+  private final Collection inputContext;
 
   /**
    * The resource that contains the input context, referred to through {@code %resource} or
@@ -58,7 +59,7 @@ public class ParserContext {
    * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#variables">FHIR Specific Variables</a>
    */
   @Nonnull
-  private final ResourcePath resource;
+  private final ResourceCollection resource;
 
   /**
    * A FHIR context that can be used to do FHIR stuff.
@@ -77,6 +78,12 @@ public class ParserContext {
    */
   @Nonnull
   private final DataSource dataSource;
+
+  /**
+   * A registry of FHIRPath function implementations.
+   */
+  @Nonnull
+  private final FunctionRegistry functionRegistry;
 
   /**
    * A factory for creating new {@link TerminologyService} objects, which is needed within blocks of
@@ -103,9 +110,10 @@ public class ParserContext {
    * @param constantReplacer a list of constants and the expressions that they should be replaced
    * with
    */
-  public ParserContext(@Nonnull final FhirPath inputContext, @Nonnull final ResourcePath resource,
+  public ParserContext(@Nonnull final Collection inputContext, @Nonnull final ResourceCollection resource,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
+      @Nonnull final FunctionRegistry functionRegistry,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final Optional<ConstantReplacer> constantReplacer) {
     this.inputContext = inputContext;
@@ -113,6 +121,7 @@ public class ParserContext {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.dataSource = dataSource;
+    this.functionRegistry = functionRegistry;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.constantReplacer = constantReplacer;
   }
@@ -122,9 +131,9 @@ public class ParserContext {
    * input context
    */
   @Nonnull
-  public ParserContext withInputContext(@Nonnull final FhirPath inputContext) {
+  public ParserContext withInputContext(@Nonnull final Collection inputContext) {
     return new ParserContext(inputContext, resource, fhirContext, sparkSession, dataSource,
-        terminologyServiceFactory, constantReplacer);
+        functionRegistry, terminologyServiceFactory, constantReplacer);
   }
 
 }

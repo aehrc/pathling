@@ -15,29 +15,25 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.definition;
+package au.csiro.pathling.fhirpath.operator;
 
-import ca.uhn.fhir.context.RuntimeChildAny;
-import java.util.Set;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
- * Encapsulates the FHIR definitions for a Reference-typed extension.
+ * Represents a binary operator in FHIRPath.
  *
  * @author John Grimes
  */
-public class ReferenceExtensionDefinition extends BasicElementDefinition<RuntimeChildAny> {
+public interface BinaryOperator {
 
-  protected ReferenceExtensionDefinition(@Nonnull final RuntimeChildAny childDefinition) {
-    super(childDefinition);
-  }
-
+  /**
+   * Invokes this operator with the specified inputs.
+   *
+   * @param input An {@link BinaryOperatorInput} object
+   * @return A {@link Collection} object representing the resulting expression
+   */
   @Nonnull
-  public Set<ResourceType> getReferenceTypes() {
-    // We always treat a reference extension as a reference to any resource, as we don't have enough 
-    // information to constrain it further.
-    return Set.of(ResourceType.RESOURCE);
-  }
+  Collection invoke(@Nonnull BinaryOperatorInput input);
 
 }

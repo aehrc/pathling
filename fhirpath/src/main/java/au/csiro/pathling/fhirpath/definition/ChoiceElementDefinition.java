@@ -9,11 +9,19 @@ import javax.annotation.Nonnull;
 import org.apache.commons.lang.WordUtils;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * Represents the definition of an element that can be represented by multiple different data
+ * types.
+ *
+ * @author John Grimes
+ * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#polymorphism">Polymorphism in FHIR</a>
+ */
 public class ChoiceElementDefinition implements ElementDefinition {
 
   @Nonnull
   private final RuntimeChildChoiceDefinition childDefinition;
 
+  @Nonnull
   private final Map<String, BaseRuntimeElementDefinition<?>> elementNameToDefinition;
 
   protected ChoiceElementDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
@@ -21,6 +29,19 @@ public class ChoiceElementDefinition implements ElementDefinition {
     elementNameToDefinition = new HashMap<>();
     childDefinition.getValidChildNames()
         .forEach(name -> elementNameToDefinition.put(name, childDefinition.getChildByName(name)));
+  }
+
+  /**
+   * Returns the column name for a given type.
+   *
+   * @param elementName the name of the parent element
+   * @param type the type of the child element
+   * @return the column name
+   */
+  @Nonnull
+  public static String getColumnName(@Nonnull final String elementName,
+      @Nonnull final String type) {
+    return elementName + WordUtils.capitalize(type);
   }
 
   @Nonnull
@@ -46,17 +67,28 @@ public class ChoiceElementDefinition implements ElementDefinition {
     return Optional.empty();
   }
 
+  /**
+   * Returns the child element definition for the given type, if it exists.
+   *
+   * @param type the type of the child element
+   * @return the child element definition, if it exists
+   */
   @Nonnull
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
     final String key = ChoiceElementDefinition.getColumnName(getElementName(), type);
-    return Optional.ofNullable(elementNameToDefinition.get(key))
-        .map(def -> new ResolvedChoiceDefinition(def, this));
+    return getChildByElementName(key);
   }
 
+  /**
+   * Returns the child element definition for the given element name, if it exists.
+   *
+   * @param name the name of the child element
+   * @return the child element definition, if it exists
+   */
   @Nonnull
-  public static String getColumnName(@Nonnull final String elementName,
-      @Nonnull final String type) {
-    return elementName + WordUtils.capitalize(type);
+  public Optional<ElementDefinition> getChildByElementName(final String name) {
+    return Optional.ofNullable(elementNameToDefinition.get(name))
+        .map(def -> new ResolvedChoiceDefinition(def, this));
   }
 
 }

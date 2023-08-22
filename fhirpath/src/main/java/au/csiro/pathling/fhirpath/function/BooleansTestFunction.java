@@ -25,9 +25,9 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.min;
 
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
@@ -51,13 +51,13 @@ public class BooleansTestFunction extends AggregateFunction implements NamedFunc
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments(type.getFunctionName(), input);
     final NonLiteralPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof BooleanPath,
+    checkUserInput(inputPath instanceof BooleanCollection,
         "Input to " + type + " function must be Boolean");
     final Column inputColumn = inputPath.getValueColumn();
-    final String expression = expressionFromInput(input, type.getFunctionName());
+    final String expression = expressionFromInput(input, type.getFunctionName(), input.getInput());
 
     final Column valueColumn = type.getEquality().apply(inputColumn);
     return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,

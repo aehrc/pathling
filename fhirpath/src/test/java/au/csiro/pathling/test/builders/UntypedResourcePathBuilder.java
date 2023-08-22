@@ -21,8 +21,8 @@ import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.element.ReferencePath;
+import au.csiro.pathling.fhirpath.collection.UntypedResourcePath;
+import au.csiro.pathling.fhirpath.collection.ReferencePath;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

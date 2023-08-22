@@ -19,7 +19,7 @@ package au.csiro.pathling.test.fixtures;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.test.helpers.SparkHelpers;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import com.google.common.collect.ImmutableMap;
@@ -70,18 +70,18 @@ public interface ExtensionFixture {
   }
 
   static Dataset<Row> toElementDataset(final Dataset<Row> resourceLikeDataset,
-      final ResourcePath baseResourcePath) {
+      final ResourceCollection baseResourceCollection) {
     // Construct element dataset from the resource dataset so that the resource path
     // can be used as the current resource for this element path.
 
     final IdAndValueColumns idAndValueColumns = SparkHelpers
         .getIdAndValueColumns(resourceLikeDataset, true);
-    final Dataset<Row> resourceDataset = baseResourcePath.getDataset();
+    final Dataset<Row> resourceDataset = baseResourceCollection.getDataset();
     final Column[] elementColumns = Stream.of(
             idAndValueColumns.getId().named().name(),
             checkPresent(idAndValueColumns.getEid()).named().name(),
             idAndValueColumns.getValues().get(0).named().name(), "_extension")
-        .map(baseResourcePath::getElementColumn)
+        .map(baseResourceCollection::getElementColumn)
         .toArray(Column[]::new);
 
     return resourceDataset.select(elementColumns);

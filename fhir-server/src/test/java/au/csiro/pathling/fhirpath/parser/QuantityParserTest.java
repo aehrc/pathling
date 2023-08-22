@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import java.util.Collections;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -28,9 +28,9 @@ public class QuantityParserTest extends AbstractParserTest {
 
   @Test
   void lengthObservationComparison() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
-            true);
+    final ResourceCollection subjectResource = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode()
+        );
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
@@ -40,16 +40,16 @@ public class QuantityParserTest extends AbstractParserTest {
     parser = new Parser(parserContext);
 
     assertThatResultOf("valueQuantity < 1.5 'm'")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/lengthObservationComparison.tsv");
   }
 
   @Test
   void lengthObservationSubtraction() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode(),
-            true);
+    final ResourceCollection subjectResource = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode()
+        );
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
@@ -59,7 +59,7 @@ public class QuantityParserTest extends AbstractParserTest {
     parser = new Parser(parserContext);
 
     assertThatResultOf("valueQuantity > (valueQuantity - 2 'g/dL')")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/lengthObservationSubtraction.tsv");
   }

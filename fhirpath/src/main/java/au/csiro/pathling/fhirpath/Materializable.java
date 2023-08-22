@@ -23,13 +23,13 @@ import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Type;
 
 /**
- * Designates an expression that is capable of being extracted into a FHIR value.
+ * Designates an expression for which we can extract a FHIR value for inclusion in responses.
  *
- * @param <T> the {@link Type} of FHIR value that can be extracted
+ * @param <T> the {@link Type} of FHIR value that the expression can have
  * @author John Grimes
- * @see <a href="https://hl7.org/fhir/R4/datatypes.html">Data Types</a>
+ * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#types">Using FHIR types in expressions</a>
  */
-public interface FhirValue<T extends Type> {
+public interface Materializable<T extends Type> {
 
   /**
    * Extracts a FHIR value from a {@link Row} within a {@link org.apache.spark.sql.Dataset}.

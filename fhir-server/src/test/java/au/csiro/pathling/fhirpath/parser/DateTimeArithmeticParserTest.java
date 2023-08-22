@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import java.util.Collections;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -28,9 +28,9 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
 
   @Test
   void lengthOfEncounter() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
+    final ResourceCollection subjectResource = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode()
+        );
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
@@ -40,16 +40,16 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
     parser = new Parser(parserContext);
 
     assertThatResultOf("(period.start + 20 minutes) > period.end")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/lengthOfEncounter.tsv");
   }
 
   @Test
   void ageAtTimeOfEncounter() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
+    final ResourceCollection subjectResource = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode()
+        );
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
@@ -59,7 +59,7 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
     parser = new Parser(parserContext);
 
     assertThatResultOf("period.start > (subject.resolve().ofType(Patient).birthDate + 60 years)")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/ageAtTimeOfEncounter.tsv");
   }

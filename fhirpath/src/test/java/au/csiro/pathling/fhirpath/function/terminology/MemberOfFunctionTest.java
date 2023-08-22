@@ -37,12 +37,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.CodingPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -121,7 +121,7 @@ class MemberOfFunctionTest {
         .withRow("encounter-6", null, null)
         .buildWithStructValue();
 
-    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
+    final CodingCollection inputExpression = (CodingCollection) new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("Encounter.class")
@@ -129,8 +129,8 @@ class MemberOfFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final StringLiteralPath argumentExpression = StringLiteralPath
-        .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
+    final StringLiteralPath argumentExpression = StringCollection
+        .fromLiteral("'" + MY_VALUE_SET_URL + "'", inputExpression);
 
     // Setup mocks
     TerminologyServiceHelpers.setupValidate(terminologyService)
@@ -145,7 +145,7 @@ class MemberOfFunctionTest {
         Collections.singletonList(argumentExpression));
 
     // Invoke the function.
-    final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
+    final Collection result = new MemberOfFunction().invoke(memberOfInput);
 
     // The outcome is somehow random with regard to the sequence passed to MemberOfMapperAnswerer.
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
@@ -164,7 +164,7 @@ class MemberOfFunctionTest {
     // Check the result.
     assertThat(result)
         .hasExpression("Encounter.class.memberOf('" + MY_VALUE_SET_URL + "')")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .hasFhirType(FHIRDefinedType.BOOLEAN)
         .isNotSingular()
         .selectOrderedResultWithEid()
@@ -193,7 +193,7 @@ class MemberOfFunctionTest {
         .withStructTypeColumns(codingStructType())
         .buildWithStructValue();
 
-    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
+    final CodingCollection inputExpression = (CodingCollection) new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("Encounter.class")
@@ -201,8 +201,8 @@ class MemberOfFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final StringLiteralPath argumentExpression = StringLiteralPath
-        .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
+    final StringLiteralPath argumentExpression = StringCollection
+        .fromLiteral("'" + MY_VALUE_SET_URL + "'", inputExpression);
 
     // Prepare the inputs to the function.
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
@@ -214,7 +214,7 @@ class MemberOfFunctionTest {
         Collections.singletonList(argumentExpression));
 
     // Invoke the function.
-    final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
+    final Collection result = new MemberOfFunction().invoke(memberOfInput);
 
     // The outcome is somehow random with regard to the sequence passed to MemberOfMapperAnswerer.
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
@@ -226,7 +226,7 @@ class MemberOfFunctionTest {
     // Check the result.
     assertThat(result)
         .hasExpression("Encounter.class.memberOf('" + MY_VALUE_SET_URL + "')")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .hasFhirType(FHIRDefinedType.BOOLEAN)
         .isNotSingular()
         .selectOrderedResultWithEid()
@@ -272,7 +272,7 @@ class MemberOfFunctionTest {
         .withRow("diagnosticreport-7", null)
         .buildWithStructValue();
 
-    final ElementPath inputExpression = new ElementPathBuilder(spark)
+    final PrimitivePath inputExpression = new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndValueColumns()
         .expression("DiagnosticReport.code")
@@ -280,8 +280,8 @@ class MemberOfFunctionTest {
         .definition(definition)
         .buildDefined();
 
-    final StringLiteralPath argumentExpression = StringLiteralPath
-        .fromString("'" + MY_VALUE_SET_URL + "'", inputExpression);
+    final StringLiteralPath argumentExpression = StringCollection
+        .fromLiteral("'" + MY_VALUE_SET_URL + "'", inputExpression);
 
     // Setup mocks: true for (codeableConcept1, codeableConcept3, codeableConcept4)
     TerminologyServiceHelpers.setupValidate(terminologyService)
@@ -295,7 +295,7 @@ class MemberOfFunctionTest {
         Collections.singletonList(argumentExpression));
 
     // Invoke the function.
-    final FhirPath result = new MemberOfFunction().invoke(memberOfInput);
+    final Collection result = new MemberOfFunction().invoke(memberOfInput);
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
@@ -310,12 +310,12 @@ class MemberOfFunctionTest {
         .build();
 
     // Check the result.
-    assertTrue(result instanceof BooleanPath);
-    assertThat((BooleanPath) result)
+    assertTrue(result instanceof BooleanCollection);
+    assertThat((BooleanCollection) result)
         .hasExpression("DiagnosticReport.code.memberOf('" + MY_VALUE_SET_URL + "')")
         .isSingular()
         .hasFhirType(FHIRDefinedType.BOOLEAN)
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(expectedResult);
 
@@ -328,12 +328,12 @@ class MemberOfFunctionTest {
 
   @Test
   void throwsErrorIfInputTypeIsUnsupported() {
-    final FhirPath mockContext = new ElementPathBuilder(spark).build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final Collection mockContext = new ElementPathBuilder(spark).build();
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .expression("name.given")
         .build();
-    final FhirPath argument = StringLiteralPath.fromString(MY_VALUE_SET_URL, mockContext);
+    final Collection argument = StringCollection.fromLiteral(MY_VALUE_SET_URL, mockContext);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
@@ -350,7 +350,7 @@ class MemberOfFunctionTest {
 
   @Test
   void throwsErrorIfArgumentIsNotString() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
     final IntegerLiteralPath argument = IntegerLiteralPath.fromString("4", input);
@@ -370,11 +370,11 @@ class MemberOfFunctionTest {
 
   @Test
   void throwsErrorIfMoreThanOneArgument() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final StringLiteralPath argument1 = StringLiteralPath.fromString("'foo'", input),
-        argument2 = StringLiteralPath.fromString("'bar'", input);
+    final StringLiteralPath argument1 = StringCollection.fromLiteral("'foo'", input),
+        argument2 = StringCollection.fromLiteral("'bar'", input);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
@@ -391,10 +391,10 @@ class MemberOfFunctionTest {
 
   @Test
   void throwsErrorIfTerminologyServiceNotConfigured() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final FhirPath argument = StringLiteralPath.fromString("some string", input);
+    final Collection argument = StringCollection.fromLiteral("some string", input);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .build();

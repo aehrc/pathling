@@ -22,9 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -151,7 +152,7 @@ class BooleansTestFunctionTest {
         .withRow("observation-6", null)
         .withRow("observation-7", null)
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(dataset)
         .idAndValueColumns()
@@ -164,12 +165,12 @@ class BooleansTestFunctionTest {
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
         Collections.emptyList());
     final NamedFunction function = NamedFunction.getInstance(parameters.getFunctionName());
-    final FhirPath result = function.invoke(functionInput);
+    final Collection result = function.invoke(functionInput);
 
     assertThat(result)
         .hasExpression("valueBoolean." + parameters.getFunctionName() + "()")
         .isSingular()
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(parameters.getExpectedResult());
   }
@@ -177,9 +178,9 @@ class BooleansTestFunctionTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void inputMustNotContainArguments(@Nonnull final TestParameters parameters) {
-    final ElementPath input = new ElementPathBuilder(spark).build();
-    final StringLiteralPath argument = StringLiteralPath
-        .fromString("'some argument'", input);
+    final PrimitivePath input = new ElementPathBuilder(spark).build();
+    final StringLiteralPath argument = StringCollection
+        .fromLiteral("'some argument'", input);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
@@ -196,7 +197,7 @@ class BooleansTestFunctionTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void inputMustBeBoolean(@Nonnull final TestParameters parameters) {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .expression("valueString")
         .fhirType(FHIRDefinedType.STRING)
         .build();

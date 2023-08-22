@@ -22,13 +22,11 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.TypeSpecifier;
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.element.ChoiceElementPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.MixedCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -46,62 +44,43 @@ public class OfTypeFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
-    final String expression = NamedFunction.expressionFromInput(input, NAME);
-    final NonLiteralPath inputPath = input.getInput();
-    final boolean untypedResource = inputPath instanceof UntypedResourcePath;
-    final boolean choiceElement = inputPath instanceof ChoiceElementPath;
-    checkUserInput(untypedResource || choiceElement,
-        "Input to ofType function must be a polymorphic resource type or choice element path: "
-            + inputPath.getExpression());
+  public String getName() {
+    return NAME;
+  }
+
+  @Nonnull
+  @Override
+  public Collection invoke(@Nonnull final FunctionInput input) {
+    final Collection inputCollection = input.getInput();
+    final boolean choiceElement = inputCollection instanceof MixedCollection;
+    checkUserInput(choiceElement,
+        "Input to ofType function must be a mixed collection");
     checkUserInput(input.getArguments().size() == 1,
-        "ofType function must have one argument: " + expression);
+        "ofType function must have one argument");
 
-    return untypedResource
-           ? resolveUntypedResource(input, expression)
-           : resolveChoiceElement(input, expression);
-  }
-
-  @Nonnull
-  private static FhirPath resolveUntypedResource(final @Nonnull NamedFunctionInput input,
-      final String expression) {
-    final UntypedResourcePath inputPath = (UntypedResourcePath) input.getInput();
-    final FhirPath argumentPath = input.getArguments().get(0);
-
-    // If the input is a polymorphic resource reference, check that the argument is a resource 
-    // type.
-    checkUserInput(argumentPath instanceof ResourcePath,
-        "Argument to ofType function must be a resource type: " + argumentPath.getExpression());
-    final ResourcePath resourcePath = (ResourcePath) argumentPath;
-
-    return ResolveFunction.resolveMonomorphicReference(inputPath,
-        input.getContext().getDataSource(), input.getContext().getFhirContext(),
-        resourcePath.getResourceType(), expression, input.getContext());
-  }
-
-  @Nonnull
-  private FhirPath resolveChoiceElement(@Nonnull final NamedFunctionInput input,
-      @Nonnull final String expression) {
-    final ChoiceElementPath inputPath = (ChoiceElementPath) input.getInput();
-    final FhirPath argumentPath = input.getArguments().get(0);
+    final MixedCollection mixedCollection = (MixedCollection) inputCollection;
+    final Collection argument = input.getArguments().get(0).apply(inputCollection);
 
     // If the input is a choice element, check that the argument is a type specifier.
-    checkUserInput(argumentPath instanceof TypeSpecifier,
-        "Argument to ofType function must be a type specifier: " + argumentPath.getExpression());
-    final TypeSpecifier typeSpecifier = (TypeSpecifier) argumentPath;
-    final String type = typeSpecifier.getExpression();
-    final Optional<ElementDefinition> maybeDefinition = inputPath.resolveChoice(type);
+    checkUserInput(argument.getType().isPresent() && FhirPathType.TYPE_SPECIFIER.equals(
+            argument.getType().get()),
+        "Argument to ofType function must be a type specifier");
+    final Optional<ElementDefinition> maybeDefinition = mixedCollection.resolveChoiceDefinition(
+        type);
     checkUserInput(maybeDefinition.isPresent(),
         "Choice element does not have a child element with name " + type + ": "
-            + inputPath.getExpression());
+            + mixedCollection.getExpression());
     final ElementDefinition definition = maybeDefinition.get();
-    final Column valueColumn = checkPresent(inputPath.resolveChoiceColumn(type));
-    final DatasetWithColumn datasetWithColumn = createColumn(inputPath.getDataset(),
+    final Column valueColumn = checkPresent(
+        mixedCollection.resolveChoice(type, mixedCollection.getExpression()));
+    final DatasetWithColumn datasetWithColumn = createColumn(mixedCollection.getDataset(),
         valueColumn);
 
-    return ElementPath.build(expression, datasetWithColumn.getDataset(), inputPath.getIdColumn(),
-        datasetWithColumn.getColumn(), inputPath.getOrderingColumn(), inputPath.isSingular(),
-        inputPath.getCurrentResource(), inputPath.getThisColumn(), definition);
+    return PrimitivePath.build(expression, datasetWithColumn.getDataset(),
+        mixedCollection.getIdColumn(),
+        datasetWithColumn.getColumn(), mixedCollection.getOrderingColumn(),
+        mixedCollection.isSingular(),
+        mixedCollection.getCurrentResource(), mixedCollection.getThisColumn(), definition);
   }
 
 }

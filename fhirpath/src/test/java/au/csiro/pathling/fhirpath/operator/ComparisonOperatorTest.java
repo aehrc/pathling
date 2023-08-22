@@ -19,11 +19,12 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
@@ -73,13 +74,13 @@ class ComparisonOperatorTest {
     String name;
 
     @Nonnull
-    FhirPath left;
+    Collection left;
 
     @Nonnull
-    FhirPath right;
+    Collection right;
 
     @Nonnull
-    FhirPath literal;
+    Collection literal;
 
     @Nonnull
     ParserContext context;
@@ -147,7 +148,7 @@ class ComparisonOperatorTest {
         .withRow("patient-5", "Evelyn")
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(leftDataset)
         .idAndValueColumns()
@@ -163,13 +164,13 @@ class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(rightDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final StringLiteralPath literal = StringLiteralPath.fromString("'Evelyn'", left);
+    final StringLiteralPath literal = StringCollection.fromLiteral("'Evelyn'", left);
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(left.getIdColumn()))
         .build();
@@ -187,7 +188,7 @@ class ComparisonOperatorTest {
         .withRow("patient-5", 1)
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(leftDataset)
         .idAndValueColumns()
@@ -203,7 +204,7 @@ class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(rightDataset)
         .idAndValueColumns()
@@ -226,7 +227,7 @@ class ComparisonOperatorTest {
         .withRow("patient-5", new BigDecimal("1.0"))
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DECIMAL)
         .dataset(leftDataset)
         .idAndValueColumns()
@@ -242,13 +243,13 @@ class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DECIMAL)
         .dataset(rightDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final DecimalLiteralPath literal = DecimalLiteralPath.fromString("1.0", left);
+    final DecimalCollection literal = DecimalCollection.fromLiteral("1.0", left);
     final ParserContext context = new ParserContextBuilder(spark, fhirContext).groupingColumns(
         Collections.singletonList(left.getIdColumn())).build();
     return new TestParameters(name, left, right, literal, context);
@@ -268,7 +269,7 @@ class ComparisonOperatorTest {
         .withRow("patient-5", lesserDate)
         .withRow("patient-6", null)
         .build();
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(fhirType)
         .dataset(leftDataset)
         .idAndValueColumns()
@@ -284,7 +285,7 @@ class ComparisonOperatorTest {
         .withRow("patient-5", null)
         .withRow("patient-6", null)
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(fhirType)
         .dataset(rightDataset)
         .idAndValueColumns()
@@ -294,7 +295,7 @@ class ComparisonOperatorTest {
     try {
       literal = (fhirType == FHIRDefinedType.DATETIME)
                 ? DateTimeLiteralPath.fromString(lesserDate, left)
-                : DateLiteralPath.fromString(lesserDate, left);
+                : DateCollection.fromLiteral(lesserDate, left);
     } catch (final ParseException e) {
       throw new RuntimeException("Error parsing literal date or date time");
     }
@@ -307,10 +308,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void lessThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance("<=");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance("<=");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -325,10 +327,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void lessThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance("<");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance("<");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -343,10 +346,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void greaterThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance(">=");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">=");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -361,10 +365,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void greaterThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance(">");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -379,10 +384,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void literalLessThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLiteral(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance("<=");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance("<=");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -397,10 +403,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void literalLessThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLiteral(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance("<");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance("<");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -415,10 +422,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void literalGreaterThanOrEqualTo(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLiteral(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance(">=");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">=");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -433,10 +441,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void literalGreaterThan(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLiteral(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLiteral(),
         parameters.getRight());
-    final Operator comparisonOperator = Operator.getInstance(">");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -451,10 +460,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void lessThanOrEqualToLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getLiteral());
-    final Operator comparisonOperator = Operator.getInstance("<=");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance("<=");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -469,10 +479,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void lessThanLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getLiteral());
-    final Operator comparisonOperator = Operator.getInstance("<");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance("<");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -487,10 +498,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void greaterThanOrEqualToLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getLiteral());
-    final Operator comparisonOperator = Operator.getInstance(">=");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">=");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -505,10 +517,11 @@ class ComparisonOperatorTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void greaterThanLiteral(final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(), parameters.getLeft(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
+        parameters.getLeft(),
         parameters.getLiteral());
-    final Operator comparisonOperator = Operator.getInstance(">");
-    final FhirPath result = comparisonOperator.invoke(input);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">");
+    final Collection result = comparisonOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),

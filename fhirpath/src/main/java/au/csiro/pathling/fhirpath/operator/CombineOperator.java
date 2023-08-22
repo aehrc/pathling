@@ -24,7 +24,7 @@ import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -36,16 +36,16 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#combine">combine</a>
  */
-public class CombineOperator implements Operator {
+public class CombineOperator implements BinaryOperator {
 
   private static final String NAME = "combine";
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final OperatorInput input) {
-    final String expression = Operator.buildExpression(input, NAME);
-    final FhirPath left = input.getLeft();
-    final FhirPath right = input.getRight();
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final String expression = BinaryOperator.buildExpression(input, NAME);
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
 
     // Create an array of the two operands, excluding nulls, then explode it into rows.
     final Column valueColumn = explode_outer(

@@ -21,11 +21,10 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.sql.Terminology.display;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.Optional;
@@ -48,11 +47,11 @@ public class DisplayFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
 
     validateInput(input);
-    final ElementPath inputPath = (ElementPath) input.getInput();
-    final String expression = expressionFromInput(input, NAME);
+    final PrimitivePath inputPath = (PrimitivePath) input.getInput();
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
     final Arguments arguments = Arguments.of(input);
     final Optional<StringType> acceptLanguage = arguments.getOptionalValue(0, StringType.class);
@@ -60,7 +59,7 @@ public class DisplayFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column resultColumn = display(inputPath.getValueColumn(),
         acceptLanguage.map(StringType::getValue).orElse(null));
-    return ElementPath.build(expression, dataset, inputPath.getIdColumn(), resultColumn,
+    return PrimitivePath.build(expression, dataset, inputPath.getIdColumn(), resultColumn,
         inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
         inputPath.getThisColumn(), FHIRDefinedType.STRING);
   }
@@ -79,9 +78,9 @@ public class DisplayFunction implements NamedFunction {
         .isPresent(), "Attempt to call terminology function " + NAME
         + " when terminology service has not been configured");
 
-    final FhirPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof ElementPath
-            && (((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
+    final Collection inputPath = input.getInput();
+    checkUserInput(inputPath instanceof PrimitivePath
+            && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
         "Input to display function must be Coding but is: " + inputPath.getExpression());
 
   }

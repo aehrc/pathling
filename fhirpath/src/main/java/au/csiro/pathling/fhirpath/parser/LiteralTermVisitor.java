@@ -21,17 +21,18 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPathTransformation;
-import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.NullPath;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
-import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
-import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.CodingLiteralContext;
@@ -53,40 +54,26 @@ import org.fhir.ucum.UcumException;
  *
  * @author John Grimes
  */
-class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
+class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitCodingLiteral(@Nullable final CodingLiteralContext ctx) {
+  public FhirPath<Collection, Collection> visitStringLiteral(
+      @Nullable final StringLiteralContext ctx) {
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
+
+    return input -> StringCollection.fromLiteral(fhirPath);
+  }
+
+  @Override
+  public FhirPath<Collection, Collection> visitDateLiteral(@Nullable final DateLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
 
     return input -> {
       try {
-        return CodingLiteralPath.fromString(fhirPath, input);
-      } catch (final IllegalArgumentException e) {
-        throw new InvalidUserInputError(e.getMessage(), e);
-      }
-    };
-  }
-
-  @Override
-  @Nonnull
-  public FhirPathTransformation visitStringLiteral(@Nullable final StringLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    return input -> StringLiteralPath.fromString(fhirPath, input);
-  }
-
-  @Override
-  public FhirPathTransformation visitDateLiteral(@Nullable final DateLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    return input -> {
-      try {
-        return DateLiteralPath.fromString(fhirPath, input);
+        return DateCollection.fromLiteral(fhirPath);
       } catch (final ParseException e) {
         throw new InvalidUserInputError("Unable to parse date format: " + fhirPath);
       }
@@ -95,13 +82,14 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitDateTimeLiteral(@Nullable final DateTimeLiteralContext ctx) {
+  public FhirPath<Collection, Collection> visitDateTimeLiteral(
+      @Nullable final DateTimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
 
     return input -> {
       try {
-        return DateTimeLiteralPath.fromString(fhirPath, input);
+        return DateTimeLiteralPath.fromString(fhirPath);
       } catch (final ParseException e) {
         throw new InvalidUserInputError("Unable to parse date/time format: " + fhirPath);
       }
@@ -110,16 +98,17 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
+  public FhirPath<Collection, Collection> visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
 
-    return input -> TimeLiteralPath.fromString(fhirPath, input);
+    return input -> TimeCollection.fromLiteral(fhirPath);
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitNumberLiteral(@Nullable final NumberLiteralContext ctx) {
+  public FhirPath<Collection, Collection> visitNumberLiteral(
+      @Nullable final NumberLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
 
@@ -127,10 +116,10 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
       // The FHIRPath grammar lumps these two types together, so we tease them apart by trying to 
       // parse them.
       try {
-        return IntegerLiteralPath.fromString(fhirPath, input);
+        return IntegerCollection.fromLiteral(fhirPath);
       } catch (final NumberFormatException e) {
         try {
-          return DecimalLiteralPath.fromString(fhirPath, input);
+          return DecimalCollection.fromLiteral(fhirPath);
         } catch (final NumberFormatException ex) {
           throw new InvalidUserInputError("Invalid date format: " + fhirPath);
         }
@@ -140,23 +129,25 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitBooleanLiteral(@Nullable final BooleanLiteralContext ctx) {
+  public FhirPath<Collection, Collection> visitBooleanLiteral(
+      @Nullable final BooleanLiteralContext ctx) {
     requireNonNull(ctx);
     @Nullable final String fhirPath = ctx.getText();
     requireNonNull(fhirPath);
 
-    return input -> BooleanLiteralPath.fromString(fhirPath, input);
+    return input -> BooleanCollection.fromLiteral(fhirPath);
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitNullLiteral(@Nullable final NullLiteralContext ctx) {
-    return NullLiteralPath::build;
+  public FhirPath<Collection, Collection> visitNullLiteral(@Nullable final NullLiteralContext ctx) {
+    return input -> NullPath.build();
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitQuantityLiteral(@Nullable final QuantityLiteralContext ctx) {
+  public FhirPath<Collection, Collection> visitQuantityLiteral(
+      @Nullable final QuantityLiteralContext ctx) {
     requireNonNull(ctx);
     @Nullable final String number = ctx.quantity().NUMBER().getText();
     requireNonNull(number);
@@ -166,15 +157,31 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
       if (ucumUnit == null) {
         // Create a calendar duration literal.
         final String fhirPath = String.format("%s %s", number, ctx.quantity().unit().getText());
-        return QuantityLiteralPath.fromCalendarDurationString(fhirPath, input);
+        return QuantityCollection.fromCalendarDurationString(fhirPath);
       } else {
         // Create a UCUM Quantity literal.
         final String fhirPath = String.format("%s %s", number, ucumUnit.getText());
         try {
-          return QuantityLiteralPath.fromUcumString(fhirPath, input, Ucum.service());
+          return QuantityCollection.fromUcumString(fhirPath, Ucum.service());
         } catch (final UcumException e) {
           throw new RuntimeException(e);
         }
+      }
+    };
+  }
+
+  @Override
+  @Nonnull
+  public FhirPath<Collection, Collection> visitCodingLiteral(
+      @Nullable final CodingLiteralContext ctx) {
+    @Nullable final String fhirPath = requireNonNull(ctx).getText();
+    requireNonNull(fhirPath);
+
+    return input -> {
+      try {
+        return CodingCollection.fromLiteral(fhirPath);
+      } catch (final IllegalArgumentException e) {
+        throw new InvalidUserInputError(e.getMessage(), e);
       }
     };
   }

@@ -22,7 +22,8 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowForUcumQuantity;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -59,8 +60,8 @@ public class EqualityOperatorQuantityTest {
 
   static final String ID_ALIAS = "_abc123";
 
-  FhirPath left;
-  FhirPath right;
+  Collection left;
+  Collection right;
   ParserContext parserContext;
   QuantityLiteralPath ucumQuantityLiteral1;
   QuantityLiteralPath ucumQuantityLiteral2;
@@ -172,14 +173,14 @@ public class EqualityOperatorQuantityTest {
         .idAndValueColumns()
         .build();
 
-    ucumQuantityLiteral1 = QuantityLiteralPath.fromUcumString("500 'mg'", left, ucumService);
-    ucumQuantityLiteral2 = QuantityLiteralPath.fromUcumString("0.5 'g'", left, ucumService);
-    ucumQuantityLiteral3 = QuantityLiteralPath.fromUcumString("1.8 'm'", left, ucumService);
-    ucumQuantityLiteralNoUnit = QuantityLiteralPath.fromUcumString("0.49 '1'", left, ucumService);
+    ucumQuantityLiteral1 = QuantityCollection.fromUcumString("500 'mg'", left, ucumService);
+    ucumQuantityLiteral2 = QuantityCollection.fromUcumString("0.5 'g'", left, ucumService);
+    ucumQuantityLiteral3 = QuantityCollection.fromUcumString("1.8 'm'", left, ucumService);
+    ucumQuantityLiteralNoUnit = QuantityCollection.fromUcumString("0.49 '1'", left, ucumService);
 
-    calendarDurationLiteral1 = QuantityLiteralPath.fromCalendarDurationString("30 days", left);
-    calendarDurationLiteral2 = QuantityLiteralPath.fromCalendarDurationString("60 seconds", left);
-    calendarDurationLiteral3 = QuantityLiteralPath.fromCalendarDurationString("1000 milliseconds",
+    calendarDurationLiteral1 = QuantityCollection.fromCalendarDurationString("30 days", left);
+    calendarDurationLiteral2 = QuantityCollection.fromCalendarDurationString("60 seconds", left);
+    calendarDurationLiteral3 = QuantityCollection.fromCalendarDurationString("1000 milliseconds",
         left);
 
     parserContext = new ParserContextBuilder(spark, fhirContext)
@@ -189,10 +190,10 @@ public class EqualityOperatorQuantityTest {
 
   @Test
   void equals() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance("=");
-    final FhirPath result = equalityOperator.invoke(input);
-    
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("=");
+    final Collection result = equalityOperator.invoke(input);
+
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),  // 500 mg = 500 mg
         RowFactory.create("patient-2", true),  // 500 mg = 0.5 g
@@ -211,9 +212,9 @@ public class EqualityOperatorQuantityTest {
 
   @Test
   void notEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance("!=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("!=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),  // 500 mg != 500 mg
@@ -233,9 +234,9 @@ public class EqualityOperatorQuantityTest {
 
   @Test
   void ucumLiteralEquals() {
-    OperatorInput input = new OperatorInput(parserContext, left, ucumQuantityLiteral1);
-    final Operator equalityOperator = Operator.getInstance("=");
-    FhirPath result = equalityOperator.invoke(input);
+    BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteral1);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("=");
+    Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),   // 500 mg = 500 mg
@@ -252,7 +253,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)    // non-ucum = 500 mg
     );
 
-    input = new OperatorInput(parserContext, left, ucumQuantityLiteral2);
+    input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteral2);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -270,7 +271,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)    //  non-ucum = 0.5 mg        
     );
 
-    input = new OperatorInput(parserContext, left, ucumQuantityLiteral3);
+    input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteral3);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -288,7 +289,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)    //  non-ucum = 1.8 m   
     );
 
-    input = new OperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
+    input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -306,7 +307,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)    //  non-ucum = 0.49 '1'   
     );
 
-    input = new OperatorInput(parserContext, ucumQuantityLiteral1, ucumQuantityLiteral1);
+    input = new BinaryOperatorInput(parserContext, ucumQuantityLiteral1, ucumQuantityLiteral1);
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allTrue = new DatasetBuilder(spark)
@@ -321,9 +322,9 @@ public class EqualityOperatorQuantityTest {
 
   @Test
   void ucumLiteralNotEquals() {
-    OperatorInput input = new OperatorInput(parserContext, left, ucumQuantityLiteral1);
-    final Operator equalityOperator = Operator.getInstance("!=");
-    FhirPath result = equalityOperator.invoke(input);
+    BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteral1);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("!=");
+    Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),   // 500 mg != 500 mg
@@ -340,7 +341,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum != 500 mg
     );
 
-    input = new OperatorInput(parserContext, left, ucumQuantityLiteral2);
+    input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteral2);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -358,7 +359,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum != 0.5 mg
     );
 
-    input = new OperatorInput(parserContext, left, ucumQuantityLiteral3);
+    input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteral3);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -376,7 +377,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum != 1.8 m
     );
 
-    input = new OperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
+    input = new BinaryOperatorInput(parserContext, left, ucumQuantityLiteralNoUnit);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -394,7 +395,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum != 0.49 ''
     );
 
-    input = new OperatorInput(parserContext, ucumQuantityLiteral1, ucumQuantityLiteral1);
+    input = new BinaryOperatorInput(parserContext, ucumQuantityLiteral1, ucumQuantityLiteral1);
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allFalse = new DatasetBuilder(spark)
@@ -409,9 +410,10 @@ public class EqualityOperatorQuantityTest {
 
   @Test
   void calendarLiteralEquals() {
-    OperatorInput input = new OperatorInput(parserContext, left, calendarDurationLiteral1);
-    final Operator equalityOperator = Operator.getInstance("=");
-    FhirPath result = equalityOperator.invoke(input);
+    BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left,
+        calendarDurationLiteral1);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("=");
+    Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", null),   // 500 mg = 30 days
@@ -428,7 +430,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum = 30 days
     );
 
-    input = new OperatorInput(parserContext, left, calendarDurationLiteral2);
+    input = new BinaryOperatorInput(parserContext, left, calendarDurationLiteral2);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -446,7 +448,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum = 60 seconds
     );
 
-    input = new OperatorInput(parserContext, left, calendarDurationLiteral3);
+    input = new BinaryOperatorInput(parserContext, left, calendarDurationLiteral3);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -464,7 +466,8 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum = 1000 milliseconds
     );
 
-    input = new OperatorInput(parserContext, calendarDurationLiteral2, calendarDurationLiteral2);
+    input = new BinaryOperatorInput(parserContext, calendarDurationLiteral2,
+        calendarDurationLiteral2);
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allTrue = new DatasetBuilder(spark)
@@ -479,9 +482,10 @@ public class EqualityOperatorQuantityTest {
 
   @Test
   void calendarLiteralNotEquals() {
-    OperatorInput input = new OperatorInput(parserContext, left, calendarDurationLiteral1);
-    final Operator equalityOperator = Operator.getInstance("!=");
-    FhirPath result = equalityOperator.invoke(input);
+    BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left,
+        calendarDurationLiteral1);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("!=");
+    Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", null),   // 500 mg != 30 days
@@ -498,7 +502,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)    //  non-ucum != 30 days
     );
 
-    input = new OperatorInput(parserContext, left, calendarDurationLiteral2);
+    input = new BinaryOperatorInput(parserContext, left, calendarDurationLiteral2);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -516,7 +520,7 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)    //  non-ucum != 60 seconds
     );
 
-    input = new OperatorInput(parserContext, left, calendarDurationLiteral3);
+    input = new BinaryOperatorInput(parserContext, left, calendarDurationLiteral3);
     result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
@@ -534,7 +538,8 @@ public class EqualityOperatorQuantityTest {
         RowFactory.create("patient-c", null)     //  non-ucum != 1000 milliseconds
     );
 
-    input = new OperatorInput(parserContext, calendarDurationLiteral2, calendarDurationLiteral2);
+    input = new BinaryOperatorInput(parserContext, calendarDurationLiteral2,
+        calendarDurationLiteral2);
     result = equalityOperator.invoke(input);
 
     final Dataset<Row> allFalse = new DatasetBuilder(spark)

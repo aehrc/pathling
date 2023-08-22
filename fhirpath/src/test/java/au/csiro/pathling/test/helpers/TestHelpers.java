@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.QueryHelpers;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.io.source.DataSource;
 import io.delta.tables.DeltaTable;
 import java.net.URLDecoder;
@@ -83,7 +83,7 @@ public abstract class TestHelpers {
 
   public static void mockAllEmptyResources(@Nonnull final DataSource dataSource,
       @Nonnull final SparkSession spark, @Nonnull final FhirEncoders fhirEncoders) {
-    final Set<ResourceType> resourceTypes = ResourcePath.supportedResourceTypes();
+    final Set<ResourceType> resourceTypes = ResourceCollection.supportedResourceTypes();
     for (final ResourceType resourceType : resourceTypes) {
       final Dataset<Row> dataset = QueryHelpers.createEmptyDataset(spark, fhirEncoders,
           resourceType);

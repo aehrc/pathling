@@ -17,41 +17,40 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 
 /**
- * Represents the inputs to a binary operator in FHIRPath.
+ * Represents the inputs to the path traversal operator in FHIRPath.
  *
  * @author John Grimes
  */
+@Getter
 public class PathTraversalInput extends FunctionInput {
 
   /**
    * An expression representing the left operand.
    */
   @Nonnull
-  @Getter
-  private final FhirPath left;
+  private final Collection left;
 
   /**
    * An expression representing the right operand.
    */
   @Nonnull
-  @Getter
   private final String right;
 
   /**
    * @param context the {@link ParserContext} that the operator should be executed within
-   * @param left the {@link FhirPath} representing the left operand
+   * @param left the {@link Collection} representing the left operand
    * @param right the FHIRPath expression on the right-hand side of the operator
    */
-  public PathTraversalInput(@Nonnull final ParserContext context, @Nonnull final FhirPath left,
+  public PathTraversalInput(@Nonnull final ParserContext context, @Nonnull final Collection left,
       @Nonnull final String right) {
-    super(context);
+    super(context, input, arguments);
     this.left = left;
     this.right = right;
   }

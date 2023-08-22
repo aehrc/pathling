@@ -26,11 +26,12 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -95,7 +96,7 @@ class ResolveFunctionTest {
         .withRow("encounter-4", makeEid(0),
             RowFactory.create(null, "EpisodeOfCare/episodeofcare-2", null))
         .buildWithStructValue();
-    final ElementPath referencePath = new ElementPathBuilder(spark)
+    final PrimitivePath referencePath = new ElementPathBuilder(spark)
         .expression("Encounter.episodeOfCare")
         .dataset(referenceDataset)
         .idAndEidAndValueColumns()
@@ -113,10 +114,10 @@ class ResolveFunctionTest {
     when(dataSource.read(ResourceType.EPISODEOFCARE)).thenReturn(episodeOfCareDataset);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
-    final FhirPath result = invokeResolve(resolveInput);
+    final Collection result = invokeResolve(resolveInput);
 
-    assertTrue(result instanceof ResourcePath);
-    assertThat((ResourcePath) result)
+    assertTrue(result instanceof ResourceCollection);
+    assertThat((ResourceCollection) result)
         .hasExpression("Encounter.episodeOfCare.resolve()")
         .isNotSingular()
         .hasResourceType(ResourceType.EPISODEOFCARE);
@@ -150,7 +151,7 @@ class ResolveFunctionTest {
         .withRow("encounter-4", RowFactory.create(null, "Patient/patient-2", null))
         .withRow("encounter-5", RowFactory.create(null, "Group/group-1", null))
         .buildWithStructValue();
-    final ElementPath referencePath = new ElementPathBuilder(spark)
+    final PrimitivePath referencePath = new ElementPathBuilder(spark)
         .expression("Encounter.subject")
         .dataset(referenceDataset)
         .idAndValueColumns()
@@ -179,7 +180,7 @@ class ResolveFunctionTest {
         .thenReturn(groupDataset);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
-    final FhirPath result = invokeResolve(resolveInput);
+    final Collection result = invokeResolve(resolveInput);
 
     assertTrue(result instanceof UntypedResourcePath);
     assertThat(result)
@@ -218,7 +219,7 @@ class ResolveFunctionTest {
         .withRow("condition-2", makeEid(0),
             RowFactory.create(null, "ClinicalImpression/clinicalimpression-1", null))
         .buildWithStructValue();
-    final ElementPath referencePath = new ElementPathBuilder(spark)
+    final PrimitivePath referencePath = new ElementPathBuilder(spark)
         .expression("Condition.evidence.detail")
         .dataset(referenceDataset)
         .idAndEidAndValueColumns()
@@ -243,7 +244,7 @@ class ResolveFunctionTest {
         .thenReturn(clinicalImpressionDataset);
 
     final NamedFunctionInput resolveInput = buildFunctionInput(referencePath);
-    final FhirPath result = invokeResolve(resolveInput);
+    final Collection result = invokeResolve(resolveInput);
 
     assertTrue(result instanceof UntypedResourcePath);
     assertThat(result)
@@ -269,7 +270,7 @@ class ResolveFunctionTest {
         .withIdColumn()
         .withColumn(DataTypes.StringType)
         .build();
-    final ElementPath genderPath = new ElementPathBuilder(spark)
+    final PrimitivePath genderPath = new ElementPathBuilder(spark)
         .expression("Patient.gender")
         .dataset(patientDataset)
         .idAndValueColumns()
@@ -285,14 +286,14 @@ class ResolveFunctionTest {
 
   @Test
   void throwExceptionWhenArgumentSupplied() {
-    final ElementPath referencePath = new ElementPathBuilder(spark)
+    final PrimitivePath referencePath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .build();
-    final StringLiteralPath stringLiteralPath = StringLiteralPath
-        .fromString("'foo'", parserContext.getInputContext());
+    final StringLiteralPath stringLiteralPath = StringCollection
+        .fromLiteral("'foo'", parserContext.getInputContext());
     final NamedFunctionInput resolveInput = new NamedFunctionInput(parserContext, referencePath,
         Collections.singletonList(stringLiteralPath));
 
@@ -310,7 +311,7 @@ class ResolveFunctionTest {
   }
 
   @Nonnull
-  FhirPath invokeResolve(@Nonnull final NamedFunctionInput resolveInput) {
+  Collection invokeResolve(@Nonnull final NamedFunctionInput resolveInput) {
     final NamedFunction resolve = NamedFunction.getInstance("resolve");
     return resolve.invoke(resolveInput);
   }

@@ -17,20 +17,19 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.callUDF;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.DatePath;
-import au.csiro.pathling.fhirpath.element.DateTimePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.sql.misc.TemporalDifferenceFunction;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -52,17 +51,19 @@ public class UntilFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     checkUserInput(input.getArguments().size() == 2,
         "until function must have two arguments");
     final NonLiteralPath fromArgument = input.getInput();
-    final FhirPath toArgument = input.getArguments().get(0);
-    final FhirPath calendarDurationArgument = input.getArguments().get(1);
+    final Collection toArgument = input.getArguments().get(0);
+    final Collection calendarDurationArgument = input.getArguments().get(1);
 
-    checkUserInput(fromArgument instanceof DateTimePath || fromArgument instanceof DatePath,
+    checkUserInput(
+        fromArgument instanceof DateTimeCollection || fromArgument instanceof DateCollection,
         "until function must be invoked on a DateTime or Date");
-    checkUserInput(toArgument instanceof DateTimePath || toArgument instanceof DateTimeLiteralPath
-            || toArgument instanceof DatePath || toArgument instanceof DateLiteralPath,
+    checkUserInput(
+        toArgument instanceof DateTimeCollection || toArgument instanceof DateTimeLiteralPath
+            || toArgument instanceof DateCollection || toArgument instanceof DateLiteralPath,
         "until function must have a DateTime or Date as the first argument");
 
     checkUserInput(fromArgument.isSingular(),
@@ -82,10 +83,10 @@ public class UntilFunction implements NamedFunction {
     final Column valueColumn = callUDF(TemporalDifferenceFunction.FUNCTION_NAME,
         fromArgument.getValueColumn(), toArgument.getValueColumn(),
         calendarDurationArgument.getValueColumn());
-    final String expression = NamedFunction.expressionFromInput(input, NAME);
+    final String expression = NamedFunction.expressionFromInput(input, NAME, input.getInput());
     final Optional<Column> thisColumn = findThisColumn(fromArgument, toArgument);
 
-    return ElementPath.build(expression, dataset, fromArgument.getIdColumn(), valueColumn,
+    return PrimitivePath.build(expression, dataset, fromArgument.getIdColumn(), valueColumn,
         fromArgument.getOrderingColumn(), true, fromArgument.getCurrentResource(), thisColumn,
         FHIRDefinedType.INTEGER);
   }

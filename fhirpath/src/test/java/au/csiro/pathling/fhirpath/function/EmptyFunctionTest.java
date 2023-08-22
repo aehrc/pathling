@@ -24,9 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -77,7 +78,7 @@ class EmptyFunctionTest {
         .withRow("observation-5", rowFromCodeableConcept(concept1))
         .withRow("observation-5", rowFromCodeableConcept(concept2))
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndValueColumns()
@@ -93,7 +94,7 @@ class EmptyFunctionTest {
 
     // Invoke the function.
     final NamedFunction emptyFunction = NamedFunction.getInstance("empty");
-    final FhirPath result = emptyFunction.invoke(emptyInput);
+    final Collection result = emptyFunction.invoke(emptyInput);
 
     // Check the result.
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
@@ -108,16 +109,16 @@ class EmptyFunctionTest {
     assertThat(result)
         .hasExpression("code.empty()")
         .isSingular()
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
   @Test
   void inputMustNotContainArguments() {
-    final ElementPath input = new ElementPathBuilder(spark).build();
-    final StringLiteralPath argument = StringLiteralPath
-        .fromString("'some argument'", input);
+    final PrimitivePath input = new ElementPathBuilder(spark).build();
+    final StringLiteralPath argument = StringCollection
+        .fromLiteral("'some argument'", input);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput emptyInput = new NamedFunctionInput(parserContext, input,

@@ -19,7 +19,7 @@ package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -29,9 +29,9 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 public class ResourcePathAssertion extends BaseFhirPathAssertion<ResourcePathAssertion> {
 
   @Nonnull
-  private final ResourcePath fhirPath;
+  private final ResourceCollection fhirPath;
 
-  ResourcePathAssertion(@Nonnull final ResourcePath fhirPath) {
+  ResourcePathAssertion(@Nonnull final ResourceCollection fhirPath) {
     super(fhirPath);
     this.fhirPath = fhirPath;
   }

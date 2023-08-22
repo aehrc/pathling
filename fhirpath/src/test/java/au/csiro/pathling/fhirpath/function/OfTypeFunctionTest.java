@@ -27,9 +27,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.UntypedResourcePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
@@ -99,7 +100,7 @@ class OfTypeFunctionTest {
         .build();
     when(database.read(eq(ResourceType.PATIENT)))
         .thenReturn(argumentDataset);
-    final ResourcePath argumentPath = new ResourcePathBuilder(spark)
+    final ResourceCollection argumentPath = new ResourcePathBuilder(spark)
         .database(database)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
@@ -112,10 +113,10 @@ class OfTypeFunctionTest {
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));
     final NamedFunction ofType = NamedFunction.getInstance("ofType");
-    final FhirPath result = ofType.invoke(ofTypeInput);
+    final Collection result = ofType.invoke(ofTypeInput);
 
-    assertTrue(result instanceof ResourcePath);
-    assertThat((ResourcePath) result)
+    assertTrue(result instanceof ResourceCollection);
+    assertThat((ResourceCollection) result)
         .hasExpression("subject.resolve().ofType(Patient)")
         .isNotSingular()
         .hasResourceType(ResourceType.PATIENT);
@@ -140,10 +141,10 @@ class OfTypeFunctionTest {
 
   @Test
   void throwsErrorIfInputNotPolymorphic() {
-    final ResourcePath input = new ResourcePathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
-    final ResourcePath argument = new ResourcePathBuilder(spark).build();
+    final ResourceCollection argument = new ResourcePathBuilder(spark).build();
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,
@@ -163,10 +164,10 @@ class OfTypeFunctionTest {
     final UntypedResourcePath input = new UntypedResourcePathBuilder(spark)
         .expression("subject")
         .build();
-    final ResourcePath argument1 = new ResourcePathBuilder(spark)
+    final ResourceCollection argument1 = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
-    final ResourcePath argument2 = new ResourcePathBuilder(spark)
+    final ResourceCollection argument2 = new ResourcePathBuilder(spark)
         .expression("Condition")
         .build();
 
@@ -188,8 +189,8 @@ class OfTypeFunctionTest {
     final UntypedResourcePath input = new UntypedResourcePathBuilder(spark)
         .expression("subject")
         .build();
-    final StringLiteralPath argument = StringLiteralPath
-        .fromString("'some string'", input);
+    final StringLiteralPath argument = StringCollection
+        .fromLiteral("'some string'", input);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput ofTypeInput = new NamedFunctionInput(parserContext, input,

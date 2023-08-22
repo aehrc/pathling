@@ -2,6 +2,7 @@ package au.csiro.pathling.fhirpath;
 
 import static java.util.stream.Collectors.toList;
 
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +73,7 @@ public class Nesting {
   @Nonnull
   public List<Column> getColumns() {
     return nesting.values().stream()
-        .map(FhirPath::getValueColumn)
+        .map(Collection::getValueColumn)
         .collect(toList());
   }
 
@@ -82,7 +83,7 @@ public class Nesting {
   @Nonnull
   public List<Column> getOrderingColumns() {
     return nesting.values().stream()
-        .map(FhirPath::getOrderingColumn)
+        .map(Collection::getOrderingColumn)
         .filter(Optional::isPresent)
         .map(Optional::get)
         .collect(toList());

@@ -22,10 +22,10 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.not;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -44,17 +44,17 @@ public class NotFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments(NAME, input);
     final NonLiteralPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof BooleanPath,
+    checkUserInput(inputPath instanceof BooleanCollection,
         "Input to not function must be Boolean: " + inputPath.getExpression());
-    final String expression = expressionFromInput(input, NAME);
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
     // The not function is just a thin wrapper over the Spark not function.
     final Column valueColumn = not(inputPath.getValueColumn());
 
-    return ElementPath
+    return PrimitivePath
         .build(expression, inputPath.getDataset(), inputPath.getIdColumn(), valueColumn,
             inputPath.getOrderingColumn(), inputPath.isSingular(), Optional.empty(),
             inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);

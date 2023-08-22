@@ -20,8 +20,8 @@ package au.csiro.pathling.aggregate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.helpers.TestHelpers;
@@ -148,11 +148,11 @@ class DrillDownBuilderTest {
   @MethodSource("parameters")
   void labelTypes(@Nonnull final TestParameters parameters) {
     final List<Optional<Type>> labels = List.of(Optional.of(parameters.getLabel()));
-    final ElementPath grouping = new ElementPathBuilder(spark)
+    final PrimitivePath grouping = new ElementPathBuilder(spark)
         .expression("someElement")
         .singular(true)
         .build();
-    final List<FhirPath> groupings = List.of(grouping);
+    final List<Collection> groupings = List.of(grouping);
     final DrillDownBuilder builder = new DrillDownBuilder(labels, groupings,
         Collections.emptyList());
     final Optional<String> drillDown = builder.build();

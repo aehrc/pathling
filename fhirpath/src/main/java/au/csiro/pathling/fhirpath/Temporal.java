@@ -18,16 +18,14 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a path that represents a temporal value such as DateTime or Date, and can be the
@@ -38,46 +36,40 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public interface Temporal {
 
   /**
-   * Gets a function that can take the {@link QuantityLiteralPath} representing a time duration and
-   * return a {@link FhirPath} that contains the result of date arithmetic operation for this path
+   * Gets a function that can take the {@link QuantityCollection} representing a time duration and
+   * return a {@link Collection} that contains the result of date arithmetic operation for this path
    * and the provided duration. The type of operation is controlled by supplying a
    * {@link MathOperation}.
    *
    * @param operation The {@link MathOperation} type to retrieve a result for
-   * @param dataset The {@link Dataset} to use within the result
-   * @param expression The FHIRPath expression to use within the result
-   * @return A {@link Function} that takes a {@link QuantityLiteralPath} as its parameter, and
-   * returns a {@link FhirPath}.
+   * @return A {@link Function} that takes a {@link QuantityCollection} as its parameter, and
+   * returns a {@link Collection}.
    */
   @Nonnull
-  Function<QuantityLiteralPath, FhirPath> getDateArithmeticOperation(
-      @Nonnull MathOperation operation, @Nonnull Dataset<Row> dataset,
-      @Nonnull String expression);
+  Function<QuantityCollection, Collection> getDateArithmeticOperation(
+      @Nonnull MathOperation operation);
 
   /**
-   * Gets a function that can take the {@link QuantityLiteralPath} representing a time duration and
-   * return a {@link FhirPath} that contains the result of applying the date arithmetic operation
+   * Gets a function that can take the {@link QuantityCollection} representing a time duration and
+   * return a {@link Collection} that contains the result of applying the date arithmetic operation
    * for to the source path and the provided duration. The type of operation is controlled by
    * supplying a {@link MathOperation}.
    *
-   * @param source the {@link FhirPath} to which the operation should be applied to. Should be a
+   * @param source the {@link Collection} to which the operation should be applied to. Should be a
    * {@link Temporal} path.
    * @param operation The {@link MathOperation} type to retrieve a result for
-   * @param dataset The {@link Dataset} to use within the result
-   * @param expression the FHIRPath expression to use within the result
    * @param additionFunctionName the name of the UDF to use for additions.
    * @param subtractionFunctionName the name of the UDF to use for subtractions.
-   * @return A {@link Function} that takes a {@link QuantityLiteralPath} as its parameter, and
-   * returns a {@link FhirPath}.
+   * @return A {@link Function} that takes a {@link QuantityCollection} as its parameter, and
+   * returns a {@link Collection}.
    */
   @Nonnull
-  static Function<QuantityLiteralPath, FhirPath> buildDateArithmeticOperation(
-      @Nonnull final FhirPath source, final @Nonnull MathOperation operation,
-      final @Nonnull Dataset<Row> dataset, final @Nonnull String expression,
-      final String additionFunctionName, final String subtractionFunctionName) {
+  static Function<QuantityCollection, Collection> buildDateArithmeticOperation(
+      @Nonnull final Collection source, final @Nonnull MathOperation operation,
+      final String additionFunctionName,
+      final String subtractionFunctionName) {
     return target -> {
       final String functionName;
-      final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(source, target);
 
       switch (operation) {
         case ADDITION:
@@ -90,10 +82,9 @@ public interface Temporal {
           throw new AssertionError("Unsupported date arithmetic operation: " + operation);
       }
 
-      final Column valueColumn = functions.callUDF(functionName, source.getValueColumn(),
-          target.getValueColumn());
-      return ElementPath.build(expression, dataset, source.getIdColumn(), valueColumn,
-          Optional.empty(), true, Optional.empty(), thisColumn, FHIRDefinedType.DATETIME);
+      final Column valueColumn = functions.callUDF(functionName, source.getColumn(),
+          target.getColumn());
+      return DateTimeCollection.build(valueColumn, expression, Optional.empty());
     };
   }
 

@@ -20,9 +20,8 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.sum;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.Numeric;
 import javax.annotation.Nonnull;
@@ -40,19 +39,19 @@ public class SumFunction extends AggregateFunction implements NamedFunction {
 
   private static final String NAME = "sum";
 
-  protected SumFunction() {
+  public SumFunction() {
   }
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments("sum", input);
     checkUserInput(input.getInput() instanceof Numeric,
         "Input to sum function must be numeric: " + input.getInput().getExpression());
 
     final NonLiteralPath inputPath = input.getInput();
     final Dataset<Row> dataset = inputPath.getDataset();
-    final String expression = expressionFromInput(input, NAME);
+    final String expression = expressionFromInput(input, NAME, input.getInput());
     final Column aggregateColumn = sum(inputPath.getValueColumn());
 
     return buildAggregateResult(dataset, input.getContext(), inputPath, aggregateColumn,

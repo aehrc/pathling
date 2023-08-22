@@ -29,11 +29,10 @@ import static org.apache.spark.sql.functions.collect_set;
 import static org.apache.spark.sql.functions.explode_outer;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -94,7 +93,7 @@ public class SubsumesFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
 
     final NonLiteralPath inputPath = input.getInput();
@@ -107,8 +106,8 @@ public class SubsumesFunction implements NamedFunction {
                                 : subsumes(leftCodings, rightCodings);
 
     // Construct a new result expression.
-    final String expression = expressionFromInput(input, functionName);
-    return ElementPath.build(expression, idAndCodingSet, inputPath.getIdColumn(), resultColumn,
+    final String expression = expressionFromInput(input, functionName, input.getInput());
+    return PrimitivePath.build(expression, idAndCodingSet, inputPath.getIdColumn(), resultColumn,
         inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
         inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
   }
@@ -117,15 +116,15 @@ public class SubsumesFunction implements NamedFunction {
    * Creates a dataset that preserves previous columns and adds three new ones: resource ID, input
    * codings and argument codings.
    *
-   * @see #toInputDataset(FhirPath)
-   * @see #toArgDataset(FhirPath)
+   * @see #toInputDataset(Collection)
+   * @see #toArgDataset(Collection)
    */
   @Nonnull
-  private Dataset<Row> createJoinedDataset(@Nonnull final FhirPath inputFhirPath,
-      @Nonnull final FhirPath argFhirPath) {
+  private Dataset<Row> createJoinedDataset(@Nonnull final Collection inputResult,
+      @Nonnull final Collection argResult) {
 
-    final Dataset<Row> inputCodingSet = toInputDataset(inputFhirPath);
-    final Dataset<Row> argCodingSet = toArgDataset(argFhirPath);
+    final Dataset<Row> inputCodingSet = toInputDataset(inputResult);
+    final Dataset<Row> argCodingSet = toArgDataset(argResult);
 
     return inputCodingSet.join(argCodingSet, col(COL_ID).equalTo(col(COL_ARG_ID)), "left_outer");
   }
@@ -137,18 +136,18 @@ public class SubsumesFunction implements NamedFunction {
    * <p>
    * Null Codings and CodeableConcepts are represented as null.
    *
-   * @param fhirPath the {@link FhirPath} object to convert
+   * @param result the {@link Collection} object to convert
    * @return the resulting Dataset
    */
   @Nonnull
-  private Dataset<Row> toInputDataset(@Nonnull final FhirPath fhirPath) {
-    final Column valueColumn = fhirPath.getValueColumn();
+  private Dataset<Row> toInputDataset(@Nonnull final Collection result) {
+    final Column valueColumn = result.getValueColumn();
 
-    assert (isCodingOrCodeableConcept(fhirPath));
+    assert (isCodingOrCodeableConcept(result));
 
-    final Dataset<Row> expressionDataset = fhirPath.getDataset()
-        .withColumn(COL_ID, fhirPath.getIdColumn());
-    final Column codingArrayCol = (isCodeableConcept(fhirPath))
+    final Dataset<Row> expressionDataset = result.getDataset()
+        .withColumn(COL_ID, result.getIdColumn());
+    final Column codingArrayCol = (isCodeableConcept(result))
                                   ? valueColumn.getField(FIELD_CODING)
                                   : array(valueColumn);
 
@@ -157,7 +156,7 @@ public class SubsumesFunction implements NamedFunction {
   }
 
   /**
-   * Converts the argument {@link FhirPath} to a Dataset with the schema: STRING id, ARRAY(struct
+   * Converts the argument {@link Collection} to a Dataset with the schema: STRING id, ARRAY(struct
    * CODING) codingSet.
    * <p>
    * All codings are collected in a single `array` per resource.
@@ -165,22 +164,22 @@ public class SubsumesFunction implements NamedFunction {
    * Null Codings and CodeableConcepts are ignored. In the case where the resource does not have any
    * non-null elements, an empty array will be created.
    *
-   * @param fhirPath to convert
+   * @param result to convert
    * @return input dataset
    */
   @Nonnull
-  private Dataset<Row> toArgDataset(@Nonnull final FhirPath fhirPath) {
-    final Column valueColumn = fhirPath.getValueColumn();
+  private Dataset<Row> toArgDataset(@Nonnull final Collection result) {
+    final Column valueColumn = result.getValueColumn();
 
-    assert (isCodingOrCodeableConcept(fhirPath));
+    assert (isCodingOrCodeableConcept(result));
 
-    final Dataset<Row> expressionDataset = fhirPath.getDataset();
-    final Column codingCol = (isCodeableConcept(fhirPath))
+    final Dataset<Row> expressionDataset = result.getDataset();
+    final Column codingCol = (isCodeableConcept(result))
                              ? explode_outer(valueColumn.getField(FIELD_CODING))
                              : valueColumn;
 
     final Dataset<Row> systemAndCodeDataset = expressionDataset.select(
-        fhirPath.getIdColumn().alias(COL_ARG_ID), codingCol.alias(COL_CODING));
+        result.getIdColumn().alias(COL_ARG_ID), codingCol.alias(COL_CODING));
 
     return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ARG_ID))
         .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_ARG_CODINGS));
@@ -200,7 +199,7 @@ public class SubsumesFunction implements NamedFunction {
     validateExpressionType(input.getArguments().get(0), "argument");
   }
 
-  private void validateExpressionType(@Nonnull final FhirPath inputPath,
+  private void validateExpressionType(@Nonnull final Collection inputPath,
       @Nonnull final String pathRole) {
     checkUserInput(isCodingOrCodeableConcept(inputPath),
         functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept");

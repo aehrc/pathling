@@ -22,12 +22,12 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.ReferenceNestingKey;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
-import au.csiro.pathling.fhirpath.element.ReferencePath;
+import au.csiro.pathling.fhirpath.collection.ReferencePath;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -49,14 +49,14 @@ public class ReverseResolveFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
-    checkUserInput(input.getInput() instanceof ResourcePath,
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
+    checkUserInput(input.getInput() instanceof ResourceCollection,
         "Input to " + NAME + " function must be a resource: " + input.getInput().getExpression());
-    final ResourcePath inputPath = (ResourcePath) input.getInput();
-    final String expression = NamedFunction.expressionFromInput(input, NAME);
+    final ResourceCollection inputPath = (ResourceCollection) input.getInput();
+    final String expression = NamedFunction.expressionFromInput(input, NAME, input.getInput());
     checkUserInput(input.getArguments().size() == 1,
         "reverseResolve function accepts a single argument: " + expression);
-    final FhirPath argument = input.getArguments().get(0);
+    final Collection argument = input.getArguments().get(0);
     checkUserInput(argument instanceof ReferencePath,
         "Argument to reverseResolve function must be a Reference: " + argument.getExpression());
 
@@ -66,7 +66,7 @@ public class ReverseResolveFunction implements NamedFunction {
     checkUserInput(nonLiteralArgument.getCurrentResource().isPresent(),
         "Argument to reverseResolve must be an element that is navigable from a "
             + "target resource type: " + expression);
-    final ResourcePath currentResource = nonLiteralArgument.getCurrentResource().get();
+    final ResourceCollection currentResource = nonLiteralArgument.getCurrentResource().get();
 
     final ReferencePath referencePath = (ReferencePath) argument;
     final BasicElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
@@ -89,7 +89,7 @@ public class ReverseResolveFunction implements NamedFunction {
               final Dataset<Row> dataset = join(inputPath.getDataset(), referencePath.getDataset(),
                   joinCondition, JoinType.LEFT_OUTER);
 
-              final ResourcePath result = currentResource.copy(expression, dataset,
+              final ResourceCollection result = currentResource.copy(expression, dataset,
                   inputPath.getIdColumn(),
                   currentResource.getValueColumn(), currentResource.getOrderingColumn(), false,
                   inputPath.getThisColumn());

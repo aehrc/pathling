@@ -22,7 +22,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.math.BigDecimal;
@@ -182,11 +182,11 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static Dataset<Row> selectValuesAndNodes(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<FhirPath> paths, @Nonnull final ParserContext context) {
+      @Nonnull final List<Collection> paths, @Nonnull final ParserContext context) {
     final List<Column> columns = new ArrayList<>();
     columns.addAll(
         paths.stream()
-            .map(FhirPath::getValueColumn)
+            .map(Collection::getValueColumn)
             .collect(toList())
     );
     columns.addAll(new ArrayList<>(context.getNesting().getOrderingColumns()));

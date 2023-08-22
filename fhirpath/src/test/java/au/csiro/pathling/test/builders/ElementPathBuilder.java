@@ -22,10 +22,10 @@ import static org.apache.spark.sql.functions.col;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.fhirpath.Nesting;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
-import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -63,7 +63,7 @@ public class ElementPathBuilder {
   private FHIRDefinedType fhirType;
 
   @Nullable
-  private ResourcePath currentResource;
+  private ResourceCollection currentResource;
 
   @Nullable
   private Column thisColumn;
@@ -144,7 +144,7 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
-  public ElementPathBuilder currentResource(@Nonnull final ResourcePath currentResource) {
+  public ElementPathBuilder currentResource(@Nonnull final ResourceCollection currentResource) {
     this.currentResource = currentResource;
     return this;
   }
@@ -162,14 +162,16 @@ public class ElementPathBuilder {
   }
 
   @Nonnull
-  public ElementPath build() {
-    return ElementPath.build(expression, dataset, idColumn, valueColumn, Optional.empty(), singular,
+  public PrimitivePath build() {
+    return PrimitivePath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),
+        singular,
         Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), fhirType);
   }
 
   @Nonnull
-  public ElementPath buildDefined() {
-    return ElementPath.build(expression, dataset, idColumn, valueColumn, Optional.empty(), singular,
+  public PrimitivePath buildDefined() {
+    return PrimitivePath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),
+        singular,
         Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), definition);
   }
 }

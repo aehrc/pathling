@@ -17,9 +17,7 @@
 
 package au.csiro.pathling.fhirpath.definition;
 
-import au.csiro.pathling.fhirpath.NestingKey;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -32,36 +30,26 @@ import org.hl7.fhir.r4.model.ListResource;
  *
  * @author John Grimes
  */
-public class ResourceDefinition implements NestingKey {
+@Getter
+public class ResourceDefinition implements NodeDefinition {
 
   /**
    * The HAPI FHIR resource type.
    */
   @Nonnull
-  @Getter
   private final ResourceType resourceType;
 
   @Nonnull
   private final RuntimeResourceDefinition definition;
 
   /**
-   * The parent definition of this resource. This may be empty, in the case of the root resource. It
-   * may also be populated with the element definition that linked to this resource, for example a
-   * reference element.
-   */
-  @Nonnull
-  private final Optional<? extends NestingKey> parent;
-
-  /**
    * @param resourceType The {@link ResourceType} that describes this resource
    * @param definition The HAPI {@link RuntimeResourceDefinition} for this resource
    */
   public ResourceDefinition(@Nonnull final ResourceType resourceType,
-      @Nonnull final RuntimeResourceDefinition definition,
-      @Nonnull final Optional<? extends NestingKey> parent) {
+      @Nonnull final RuntimeResourceDefinition definition) {
     this.resourceType = resourceType;
     this.definition = definition;
-    this.parent = parent;
   }
 
   /**
@@ -71,6 +59,7 @@ public class ResourceDefinition implements NestingKey {
    * @return A new ElementDefinition describing the child
    */
   @Nonnull
+  @Override
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
     return Optional.ofNullable(definition.getChildByName(name))
         .or(() -> Optional.ofNullable(definition.getChildByName(name + "[x]")))
@@ -93,26 +82,6 @@ public class ResourceDefinition implements NestingKey {
                                 ? "List"
                                 : resourceClass.getSimpleName();
     return ResourceType.fromCode(resourceName);
-  }
-
-  @Override
-  public boolean equals(final Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    final ResourceDefinition that = (ResourceDefinition) o;
-    return resourceType == that.resourceType
-        // Recursively compare parent definitions.
-        && Objects.equals(parent, that.parent);
-  }
-
-  @Override
-  public int hashCode() {
-    // Recursively hash parent definitions.
-    return Objects.hash(resourceType, parent);
   }
 
 }

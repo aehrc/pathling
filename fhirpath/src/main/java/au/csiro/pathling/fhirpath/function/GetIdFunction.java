@@ -6,9 +6,9 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.ReferencePath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.ReferencePath;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -18,15 +18,15 @@ public class GetIdFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     checkNoArguments(NAME, input);
     checkUserInput(input.getInput() instanceof ReferencePath, "Input to getId must be a Reference");
     final ReferencePath referencePath = (ReferencePath) input.getInput();
     final DatasetWithColumn datasetWithColumn = createColumn(referencePath.getDataset(),
         referencePath.getReferenceIdColumn());
-    final String expression = expressionFromInput(input, NAME);
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
-    return ElementPath.build(expression, datasetWithColumn.getDataset(),
+    return PrimitivePath.build(expression, datasetWithColumn.getDataset(),
         referencePath.getIdColumn(), datasetWithColumn.getColumn(),
         referencePath.getOrderingColumn(), referencePath.isSingular(),
         referencePath.getCurrentResource(), referencePath.getThisColumn(), FHIRDefinedType.STRING);

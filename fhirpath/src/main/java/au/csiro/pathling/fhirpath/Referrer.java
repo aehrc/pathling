@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.split;
 
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -56,19 +57,20 @@ public interface Referrer {
   }
 
   /**
-   * Constructs an equality column for matching a resource reference to a {@link ResourcePath}.
+   * Constructs an equality column for matching a resource reference to a
+   * {@link ResourceCollection}.
    *
    * @param referrer the Referrer that is the subject of the operation
-   * @param resourcePath the target ResourcePath
+   * @param resourceCollection the target ResourcePath
    * @return a {@link Column} representing the matching condition
    */
   @Nonnull
   static Column resourceEqualityFor(@Nonnull final Referrer referrer,
-      @Nonnull final ResourcePath resourcePath) {
-    final Column targetId = resourcePath.getCurrentResource()
-        .map(ResourcePath::getIdColumn)
-        .orElse(resourcePath.getIdColumn());
-    final Column targetCode = lit(resourcePath.getResourceType().toCode());
+      @Nonnull final ResourceCollection resourceCollection) {
+    final Column targetId = resourceCollection.getCurrentResource()
+        .map(ResourceCollection::getIdColumn)
+        .orElse(resourceCollection.getIdColumn());
+    final Column targetCode = lit(resourceCollection.getResourceType().toCode());
 
     return Referrer.resourceEqualityFor(referrer, targetCode, targetId);
   }
@@ -109,13 +111,14 @@ public interface Referrer {
   Column getReferenceIdColumn();
 
   /**
-   * Constructs an equality column for matching a resource reference to a {@link ResourcePath}.
+   * Constructs an equality column for matching a resource reference to a
+   * {@link ResourceCollection}.
    *
-   * @param resourcePath the target ResourcePath
+   * @param resourceCollection the target ResourcePath
    * @return a {@link Column} representing the matching condition
    */
   @Nonnull
-  Column getResourceEquality(@Nonnull ResourcePath resourcePath);
+  Column getResourceEquality(@Nonnull ResourceCollection resourceCollection);
 
   /**
    * Constructs an equality column for matching a resource reference to a dataset with a target

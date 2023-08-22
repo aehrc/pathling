@@ -28,15 +28,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.CodingPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteral;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -122,7 +121,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
         .withRow("encounter-3", null, null)
         .buildWithStructValue();
 
-    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
+    final CodingCollection inputExpression = (CodingCollection) new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("Encounter.class")
@@ -141,21 +140,21 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
             maybeLanguage).flatMap(Optional::stream)
         .map(StringLiteral::toLiteral).collect(Collectors.toUnmodifiableList());
 
-    final List<FhirPath> arguments = parameterLiterals.stream()
-        .map(lit -> StringLiteralPath.fromString(lit, inputExpression))
+    final List<Collection> arguments = parameterLiterals.stream()
+        .map(lit -> StringCollection.fromLiteral(lit, inputExpression))
         .collect(Collectors.toUnmodifiableList());
 
     final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
         arguments);
 
     // Invoke the function.
-    final FhirPath result = NamedFunction.getInstance("property").invoke(propertyInput);
+    final Collection result = NamedFunction.getInstance("property").invoke(propertyInput);
 
     // Check the result.
     assertThat(result).hasExpression(
             String.format("Encounter.class.property(%s)",
                 String.join(", ", parameterLiterals)))
-        .isElementPath(ElementPath.class)
+        .isElementPath(PrimitivePath.class)
         .hasFhirType(expectedResultType)
         .isNotSingular()
         .selectOrderedResultWithEid()
@@ -164,7 +163,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     // Check that the ElementPath for CODING type has the correct Coding definition.
     if (FHIRDefinedType.CODING.equals(expectedResultType)) {
       assertThat(result)
-          .isElementPath(ElementPath.class)
+          .isElementPath(PrimitivePath.class)
           .hasDefinition(definition);
     }
   }
@@ -271,12 +270,12 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
   @Test
   void throwsErrorIfInputTypeIsUnsupported() {
-    final FhirPath mockContext = new ElementPathBuilder(spark).build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final Collection mockContext = new ElementPathBuilder(spark).build();
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .expression("name.given")
         .build();
-    final FhirPath argument = StringLiteralPath.fromString("some-property", mockContext);
+    final Collection argument = StringCollection.fromLiteral("some-property", mockContext);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
@@ -292,14 +291,14 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   }
 
   void assertThrowsErrorForArguments(@Nonnull final String expectedError,
-      @Nonnull final Function<ElementPath, List<FhirPath>> argsFactory) {
+      @Nonnull final Function<PrimitivePath, List<Collection>> argsFactory) {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .definition(definition)
         .buildDefined();
@@ -336,7 +335,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   void throwsErrorIfSecondArgumentIsNotBoolean() {
     assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2",
         input -> Arrays.asList(
-            StringLiteralPath.fromString("'foo'", input),
+            StringCollection.fromLiteral("'foo'", input),
             IntegerLiteralPath.fromString("5", input)));
   }
 
@@ -344,8 +343,8 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   void throwsErrorIfThirdArgumentIsNotBoolean() {
     assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 3",
         input -> Arrays.asList(
-            StringLiteralPath.fromString("'foo'", input),
-            StringLiteralPath.fromString("'foo'", input),
+            StringCollection.fromLiteral("'foo'", input),
+            StringCollection.fromLiteral("'foo'", input),
             IntegerLiteralPath.fromString("5", input)));
   }
 
@@ -354,10 +353,10 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     assertThrowsErrorForArguments(
         "property function accepts one required and one optional arguments",
         input -> Arrays.asList(
-            StringLiteralPath.fromString("'foo'", input),
-            StringLiteralPath.fromString("'false'", input),
-            StringLiteralPath.fromString("'false'", input),
-            StringLiteralPath.fromString("'false'", input)
+            StringCollection.fromLiteral("'foo'", input),
+            StringCollection.fromLiteral("'false'", input),
+            StringCollection.fromLiteral("'false'", input),
+            StringCollection.fromLiteral("'false'", input)
         ));
   }
 
@@ -366,17 +365,17 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     assertThrowsErrorForArguments(
         "Unknown FHIRDefinedType code 'not-an-fhir-type'",
         input -> Arrays.asList(
-            StringLiteralPath.fromString("'foo'", input),
-            StringLiteralPath.fromString("'not-an-fhir-type'", input)
+            StringCollection.fromLiteral("'foo'", input),
+            StringCollection.fromLiteral("'not-an-fhir-type'", input)
         ));
   }
 
   @Test
   void throwsErrorIfTerminologyServiceNotConfigured() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .build();
-    final FhirPath argument = StringLiteralPath.fromString("some string", input);
+    final Collection argument = StringCollection.fromLiteral("some string", input);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .build();

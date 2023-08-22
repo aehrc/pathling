@@ -22,12 +22,11 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import au.csiro.pathling.async.JobProvider;
 import au.csiro.pathling.caching.EntityTagInterceptor;
 import au.csiro.pathling.config.ServerConfiguration;
-import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.errors.DiagnosticContextInterceptor;
 import au.csiro.pathling.errors.ErrorHandlingInterceptor;
 import au.csiro.pathling.errors.ErrorReportingInterceptor;
 import au.csiro.pathling.extract.ResultProvider;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.security.OidcConfiguration;
 import au.csiro.pathling.update.BatchProvider;
 import au.csiro.pathling.update.ImportProvider;
@@ -43,11 +42,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -59,7 +56,6 @@ import org.hl7.fhir.r4.model.ResourceType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
-import scala.collection.JavaConverters;
 
 /**
  * A HAPI RestfulServer that provides the FHIR interface to the functionality within Pathling.
@@ -329,7 +325,7 @@ public class FhirServer extends RestfulServer {
    */
   @Nonnull
   public static Set<Enumerations.ResourceType> supportedResourceTypes() {
-    return ResourcePath.supportedResourceTypes();
+    return ResourceCollection.supportedResourceTypes();
   }
 
 }

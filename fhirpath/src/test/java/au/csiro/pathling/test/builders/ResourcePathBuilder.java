@@ -23,8 +23,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
-import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
 import ca.uhn.fhir.context.FhirContext;
@@ -160,12 +160,12 @@ public class ResourcePathBuilder {
   }
 
   @Nonnull
-  public ResourcePath build() {
-    return ResourcePath.build(fhirContext, dataSource, resourceType, expression, singular);
+  public ResourceCollection build() {
+    return ResourceCollection.build(fhirContext, dataSource, resourceType, expression);
   }
 
   @Nonnull
-  public ResourcePath buildCustom() {
+  public ResourceCollection buildCustom() {
     final String resourceCode = resourceType.toCode();
     final RuntimeResourceDefinition hapiDefinition = fhirContext
         .getResourceDefinition(resourceCode);
@@ -180,7 +180,7 @@ public class ResourcePathBuilder {
     }
 
     try {
-      final Constructor<ResourcePath> constructor = ResourcePath.class
+      final Constructor<ResourceCollection> constructor = ResourceCollection.class
           .getDeclaredConstructor(String.class, Dataset.class, Column.class, Optional.class,
               Column.class, boolean.class, Optional.class, ResourceDefinition.class, Map.class);
       constructor.setAccessible(true);

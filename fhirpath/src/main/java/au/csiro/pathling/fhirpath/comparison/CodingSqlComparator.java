@@ -21,8 +21,8 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.Comparable.ColumnComparator;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
-import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -35,7 +35,7 @@ import org.apache.spark.sql.functions;
  *
  * @author Piotr Szul
  */
-public class CodingSqlComparator implements SqlComparator {
+public class CodingSqlComparator implements ColumnComparator {
 
   private static final List<String> EQUALITY_COLUMNS = Arrays
       .asList("system", "code", "version", "display", "userSelected");

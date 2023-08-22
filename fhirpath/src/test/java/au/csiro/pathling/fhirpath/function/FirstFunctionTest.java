@@ -26,10 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.StringPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -79,8 +79,8 @@ class FirstFunctionTest {
         .build();
     when(dataSource.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
-    final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.PATIENT, "Patient", true);
+    final ResourceCollection inputPath = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.PATIENT, "Patient");
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(inputPath.getIdColumn()))
@@ -89,10 +89,10 @@ class FirstFunctionTest {
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
     final NamedFunction firstFunction = NamedFunction.getInstance("first");
-    final FhirPath result = firstFunction.invoke(firstInput);
+    final Collection result = firstFunction.invoke(firstInput);
 
-    assertTrue(result instanceof ResourcePath);
-    assertThat((ResourcePath) result)
+    assertTrue(result instanceof ResourceCollection);
+    assertThat((ResourceCollection) result)
         .hasExpression("Patient.first()")
         .isSingular()
         .hasResourceType(ResourceType.PATIENT);
@@ -126,7 +126,7 @@ class FirstFunctionTest {
         .withRow("patient-2", makeEid(0), "Encounter/3", "in-progress")
         .withRow("patient-3", null, null, null)
         .build();
-    final ResourcePath inputPath = new ResourcePathBuilder(spark)
+    final ResourceCollection inputPath = new ResourcePathBuilder(spark)
         .expression("reverseResolve(Encounter.subject)")
         .dataset(inputDataset)
         .idEidAndValueColumns()
@@ -141,7 +141,7 @@ class FirstFunctionTest {
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
     final NamedFunction firstFunction = NamedFunction.getInstance("first");
-    final FhirPath result = firstFunction.invoke(firstInput);
+    final Collection result = firstFunction.invoke(firstInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -183,7 +183,7 @@ class FirstFunctionTest {
         .withRow("patient-6", null, null)
         .build();
 
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
@@ -198,10 +198,10 @@ class FirstFunctionTest {
         Collections.emptyList());
 
     final NamedFunction firstFunction = NamedFunction.getInstance("first");
-    final FhirPath result = firstFunction.invoke(firstInput);
+    final Collection result = firstFunction.invoke(firstInput);
 
-    assertTrue(result instanceof StringPath);
-    assertThat((ElementPath) result)
+    assertTrue(result instanceof StringCollection);
+    assertThat((PrimitivePath) result)
         .hasExpression("name.first()")
         .isSingular()
         .hasFhirType(FHIRDefinedType.STRING);
@@ -235,7 +235,7 @@ class FirstFunctionTest {
         .withRow("patient-2", "male", true)
         .build();
     when(dataSource.read(ResourceType.PATIENT)).thenReturn(inputDataset);
-    final ResourcePath inputPath = new ResourcePathBuilder(spark)
+    final ResourceCollection inputPath = new ResourcePathBuilder(spark)
         .database(dataSource)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
@@ -261,8 +261,8 @@ class FirstFunctionTest {
 
   @Test
   void inputMustNotContainArguments() {
-    final ElementPath inputPath = new ElementPathBuilder(spark).build();
-    final ElementPath argumentPath = new ElementPathBuilder(spark).build();
+    final PrimitivePath inputPath = new ElementPathBuilder(spark).build();
+    final PrimitivePath argumentPath = new ElementPathBuilder(spark).build();
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
     final NamedFunctionInput firstInput = new NamedFunctionInput(parserContext, inputPath,

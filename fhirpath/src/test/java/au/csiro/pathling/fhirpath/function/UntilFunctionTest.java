@@ -25,14 +25,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.DatePath;
-import au.csiro.pathling.fhirpath.element.DateTimePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.IntegerPath;
-import au.csiro.pathling.fhirpath.element.ReferencePath;
-import au.csiro.pathling.fhirpath.element.StringPath;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.ReferencePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
@@ -47,7 +47,6 @@ import com.google.common.collect.ImmutableMap.Builder;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -139,7 +138,7 @@ class UntilFunctionTest {
     NonLiteralPath input;
 
     @Nonnull
-    List<FhirPath> arguments;
+    List<Collection> arguments;
 
     @Nonnull
     ParserContext context;
@@ -156,15 +155,15 @@ class UntilFunctionTest {
 
   @Nonnull
   Stream<TestParameters> parameters() {
-    final Collection<TestParameters> parameters = new ArrayList<>();
+    final java.util.Collection<TestParameters> parameters = new ArrayList<>();
     for (final String calendarDuration : CALENDAR_DURATION_TO_RESULT.keySet()) {
-      final ElementPath input = new ElementPathBuilder(spark)
+      final PrimitivePath input = new ElementPathBuilder(spark)
           .fhirType(FHIRDefinedType.DATETIME)
           .dataset(leftDataset())
           .idAndValueColumns()
           .singular(true)
           .build();
-      final ElementPath argument = new ElementPathBuilder(spark)
+      final PrimitivePath argument = new ElementPathBuilder(spark)
           .fhirType(FHIRDefinedType.DATETIME)
           .dataset(rightDataset())
           .idAndValueColumns()
@@ -182,8 +181,8 @@ class UntilFunctionTest {
             assertNotNull(results);
             return results[index];
           }).build();
-      final List<FhirPath> arguments = List.of(argument,
-          StringLiteralPath.fromString(calendarDuration, input));
+      final List<Collection> arguments = List.of(argument,
+          StringCollection.fromLiteral(calendarDuration, input));
       parameters.add(
           new TestParameters(calendarDuration, input, arguments, context, expectedResult));
     }
@@ -195,9 +194,9 @@ class UntilFunctionTest {
   void test(@Nonnull final TestParameters parameters) {
     final NamedFunctionInput input = new NamedFunctionInput(parameters.getContext(),
         parameters.getInput(), parameters.getArguments());
-    final FhirPath result = NamedFunction.getInstance("until").invoke(input);
+    final Collection result = NamedFunction.getInstance("until").invoke(input);
     assertThat(result)
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRows(parameters.getExpectedResult());
   }
@@ -214,13 +213,13 @@ class UntilFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "2020-01-02")
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATE)
         .dataset(rightDataset)
         .idAndValueColumns()
@@ -234,15 +233,15 @@ class UntilFunctionTest {
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", 86400000)
         .build();
-    final List<FhirPath> arguments1 = List.of(argument,
-        StringLiteralPath.fromString("millisecond", input));
-    final List<FhirPath> arguments2 = List.of(argument,
-        StringLiteralPath.fromString("millisecond", input));
-    for (final List<FhirPath> arguments : List.of(arguments1, arguments2)) {
+    final List<Collection> arguments1 = List.of(argument,
+        StringCollection.fromLiteral("millisecond", input));
+    final List<Collection> arguments2 = List.of(argument,
+        StringCollection.fromLiteral("millisecond", input));
+    for (final List<Collection> arguments : List.of(arguments1, arguments2)) {
       final NamedFunctionInput functionInput = new NamedFunctionInput(context, input, arguments);
-      final FhirPath result = NamedFunction.getInstance("until").invoke(functionInput);
+      final Collection result = NamedFunction.getInstance("until").invoke(functionInput);
       assertThat(result)
-          .isElementPath(IntegerPath.class)
+          .isElementPath(IntegerCollection.class)
           .selectResult()
           .hasRows(expectedResult);
     }
@@ -255,13 +254,13 @@ class UntilFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "2020-01-01")
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
-    final DateLiteralPath argument = DateLiteralPath.fromString("2020-01-02", input);
+    final DateLiteralPath argument = DateCollection.fromLiteral("2020-01-02", input);
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(input.getIdColumn()))
         .build();
@@ -270,12 +269,12 @@ class UntilFunctionTest {
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", 86400000)
         .build();
-    final List<FhirPath> arguments = List.of(argument,
-        StringLiteralPath.fromString("millisecond", input));
+    final List<Collection> arguments = List.of(argument,
+        StringCollection.fromLiteral("millisecond", input));
     final NamedFunctionInput functionInput = new NamedFunctionInput(context, input, arguments);
-    final FhirPath result = NamedFunction.getInstance("until").invoke(functionInput);
+    final Collection result = NamedFunction.getInstance("until").invoke(functionInput);
     assertThat(result)
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRows(expectedResult);
   }
@@ -287,7 +286,7 @@ class UntilFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "2020-01-01")
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
@@ -303,12 +302,12 @@ class UntilFunctionTest {
         .withColumn(DataTypes.IntegerType)
         .withRow("patient-1", 86400000)
         .build();
-    final List<FhirPath> arguments = List.of(argument,
-        StringLiteralPath.fromString("millisecond", input));
+    final List<Collection> arguments = List.of(argument,
+        StringCollection.fromLiteral("millisecond", input));
     final NamedFunctionInput functionInput = new NamedFunctionInput(context, input, arguments);
-    final FhirPath result = NamedFunction.getInstance("until").invoke(functionInput);
+    final Collection result = NamedFunction.getInstance("until").invoke(functionInput);
     assertThat(result)
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRows(expectedResult);
   }
@@ -320,19 +319,19 @@ class UntilFunctionTest {
         .withColumn(DataTypes.StringType)
         .withRow("patient-1", "2020-01-01")
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATE)
         .dataset(leftDataset)
         .idAndValueColumns()
         .singular(true)
         .build();
 
-    final DateTimePath argument = mock(DateTimePath.class);
+    final DateTimeCollection argument = mock(DateTimeCollection.class);
     when(argument.isSingular()).thenReturn(true);
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(mock(ParserContext.class),
         input,
-        List.of(argument, StringLiteralPath.fromString("nanosecond", input)));
+        List.of(argument, StringCollection.fromLiteral("nanosecond", input)));
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> NamedFunction.getInstance("until").invoke(functionInput));
     assertEquals("Invalid calendar duration: nanosecond", error.getMessage());
@@ -341,7 +340,7 @@ class UntilFunctionTest {
   @Test
   void wrongNumberOfArguments() {
     final NamedFunctionInput input = new NamedFunctionInput(mock(ParserContext.class),
-        mock(DateTimePath.class), List.of(mock(DateTimePath.class)));
+        mock(DateTimeCollection.class), List.of(mock(DateTimeCollection.class)));
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> NamedFunction.getInstance("until").invoke(input));
     assertEquals("until function must have two arguments", error.getMessage());
@@ -350,7 +349,8 @@ class UntilFunctionTest {
   @Test
   void wrongInputType() {
     final NamedFunctionInput input = new NamedFunctionInput(mock(ParserContext.class),
-        mock(StringPath.class), List.of(mock(DateTimePath.class), mock(StringLiteralPath.class)));
+        mock(StringCollection.class),
+        List.of(mock(DateTimeCollection.class), mock(StringLiteralPath.class)));
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> NamedFunction.getInstance("until").invoke(input));
     assertEquals("until function must be invoked on a DateTime or Date", error.getMessage());
@@ -359,7 +359,8 @@ class UntilFunctionTest {
   @Test
   void wrongArgumentType() {
     final NamedFunctionInput input = new NamedFunctionInput(mock(ParserContext.class),
-        mock(DatePath.class), List.of(mock(ReferencePath.class), mock(StringLiteralPath.class)));
+        mock(DateCollection.class),
+        List.of(mock(ReferencePath.class), mock(StringLiteralPath.class)));
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> NamedFunction.getInstance("until").invoke(input));
     assertEquals("until function must have a DateTime or Date as the first argument",
@@ -368,10 +369,10 @@ class UntilFunctionTest {
 
   @Test
   void inputNotSingular() {
-    final DateTimePath input = mock(DateTimePath.class);
+    final DateTimeCollection input = mock(DateTimeCollection.class);
     final NamedFunctionInput functionInput = new NamedFunctionInput(mock(ParserContext.class),
         input, List.of(mock(DateTimeLiteralPath.class),
-        StringLiteralPath.fromString("nanosecond", input)));
+        StringCollection.fromLiteral("nanosecond", input)));
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> NamedFunction.getInstance("until").invoke(functionInput));
     assertEquals("until function must be invoked on a singular path", error.getMessage());
@@ -379,12 +380,12 @@ class UntilFunctionTest {
 
   @Test
   void argumentNotSingular() {
-    final DateTimePath input = mock(DateTimePath.class);
+    final DateTimeCollection input = mock(DateTimeCollection.class);
     when(input.isSingular()).thenReturn(true);
     final NamedFunctionInput functionInput = new NamedFunctionInput(mock(ParserContext.class),
         input,
         List.of(mock(DateTimeLiteralPath.class),
-            StringLiteralPath.fromString("nanosecond", input)));
+            StringCollection.fromLiteral("nanosecond", input)));
     final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
         () -> NamedFunction.getInstance("until").invoke(functionInput));
     assertEquals("until function must have the singular path as its first argument",

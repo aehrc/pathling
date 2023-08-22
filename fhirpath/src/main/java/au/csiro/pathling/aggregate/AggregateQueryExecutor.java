@@ -20,18 +20,16 @@ package au.csiro.pathling.aggregate;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.first;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirValue;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -160,10 +158,10 @@ public class AggregateQueryExecutor extends QueryExecutor {
     return null;
   }
 
-  private void validateAggregations(@Nonnull final Collection<FhirPath> aggregations) {
-    for (final FhirPath aggregation : aggregations) {
+  private void validateAggregations(@Nonnull final java.util.Collection<Collection> aggregations) {
+    for (final Collection aggregation : aggregations) {
       // An aggregation expression must be able to be extracted into a FHIR value.
-      checkUserInput(aggregation instanceof FhirValue,
+      checkUserInput(aggregation instanceof Materializable,
           "Aggregation expression is not of a supported type: " + aggregation.getExpression());
       // An aggregation expression must be singular, relative to its input context.
       checkUserInput(aggregation.isSingular(),
@@ -172,17 +170,17 @@ public class AggregateQueryExecutor extends QueryExecutor {
     }
   }
 
-  private void validateGroupings(@Nonnull final Collection<FhirPath> groupings) {
-    for (final FhirPath grouping : groupings) {
+  private void validateGroupings(@Nonnull final java.util.Collection<Collection> groupings) {
+    for (final Collection grouping : groupings) {
       // A grouping expression must be able to be extracted into a FHIR value.
-      checkUserInput(grouping instanceof FhirValue,
+      checkUserInput(grouping instanceof Materializable,
           "Grouping expression is not of a supported type: " + grouping.getExpression());
     }
   }
 
   @Nonnull
   private static Dataset<Row> applyAggregation(@Nonnull final ParserContext context,
-      @Nonnull final List<Column> aggregationColumns, @Nonnull final FhirPath lastAggregation,
+      @Nonnull final List<Column> aggregationColumns, @Nonnull final Collection lastAggregation,
       @Nonnull final Dataset<Row> disaggregated) {
     // Group the dataset by the grouping columns, and take the first row.
     final Column[] groupBy = context.getGroupingColumns().toArray(new Column[0]);
@@ -202,13 +200,13 @@ public class AggregateQueryExecutor extends QueryExecutor {
     Dataset<Row> dataset;
 
     @Nonnull
-    List<FhirPath> parsedAggregations;
+    List<Collection> parsedAggregations;
 
     @Nonnull
-    List<FhirPath> parsedGroupings;
+    List<Collection> parsedGroupings;
 
     @Nonnull
-    Collection<FhirPath> parsedFilters;
+    java.util.Collection<Collection> parsedFilters;
 
   }
 }

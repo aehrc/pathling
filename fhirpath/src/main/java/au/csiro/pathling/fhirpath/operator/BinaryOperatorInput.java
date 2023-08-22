@@ -17,42 +17,35 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
-import lombok.Getter;
+import lombok.Value;
 
 /**
  * Represents the inputs to a binary operator in FHIRPath.
  *
  * @author John Grimes
  */
-@Getter
-public class OperatorInput extends FunctionInput {
+@Value
+public class BinaryOperatorInput {
+
+  /**
+   * Context and dependencies for use in evaluating the function.
+   */
+  @Nonnull
+  ParserContext context;
 
   /**
    * An expression representing the left operand.
    */
   @Nonnull
-  private final FhirPath left;
+  Collection left;
 
   /**
    * An expression representing the right operand.
    */
   @Nonnull
-  private final FhirPath right;
-
-  /**
-   * @param context The {@link ParserContext} that the operator should be executed within
-   * @param left The {@link FhirPath} representing the left operand
-   * @param right The {@link FhirPath} representing the right operand
-   */
-  public OperatorInput(@Nonnull final ParserContext context, @Nonnull final FhirPath left,
-      @Nonnull final FhirPath right) {
-    super(context);
-    this.left = left;
-    this.right = right;
-  }
+  Collection right;
 
 }

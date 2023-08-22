@@ -24,9 +24,9 @@ import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -35,7 +35,6 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -84,21 +83,23 @@ public abstract class QueryExecutor {
   }
 
   @Nonnull
-  protected List<FhirPath> parseExpressions(
-      @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions) {
+  protected List<Collection> parseExpressions(
+      @Nonnull final ParserContext parserContext,
+      @Nonnull final java.util.Collection<String> expressions) {
     return parseExpressions(parserContext, expressions, Optional.empty());
   }
 
   @Nonnull
-  protected List<FhirPath> parseExpressions(
-      @Nonnull final ParserContext parserContext, @Nonnull final Collection<String> expressions,
+  protected List<Collection> parseExpressions(
+      @Nonnull final ParserContext parserContext,
+      @Nonnull final java.util.Collection<String> expressions,
       @Nonnull final Optional<Dataset<Row>> contextDataset) {
-    final List<FhirPath> parsed = new ArrayList<>();
+    final List<Collection> parsed = new ArrayList<>();
     ParserContext currentContext = contextDataset.map(parserContext::withContextDataset).orElse(
         parserContext);
     for (final String expression : expressions) {
       if (parsed.size() > 0) {
-        final FhirPath lastParsed = parsed.get(parsed.size() - 1);
+        final Collection lastParsed = parsed.get(parsed.size() - 1);
         // If there are no grouping columns and the root nesting level has been erased by the 
         // parsing of the previous expression (i.e. there has been aggregation or use of where), 
         // disaggregate the input context before parsing the right expression.
@@ -118,25 +119,25 @@ public abstract class QueryExecutor {
   }
 
   @Nonnull
-  protected void validateFilters(@Nonnull final Collection<FhirPath> filters) {
-    for (final FhirPath filter : filters) {
+  protected void validateFilters(@Nonnull final java.util.Collection<Collection> filters) {
+    for (final Collection filter : filters) {
       // Each filter expression must evaluate to a singular Boolean value, or a user error will be
       // thrown.
-      checkUserInput(filter instanceof BooleanPath || filter instanceof BooleanLiteralPath,
+      checkUserInput(filter instanceof BooleanCollection || filter instanceof BooleanLiteralPath,
           "Filter expression must be a Boolean: " + filter.getExpression());
       checkUserInput(filter.isSingular(),
           "Filter expression must be a singular value: " + filter.getExpression());
     }
   }
 
-  protected Dataset<Row> filterDataset(@Nonnull final ResourcePath inputContext,
-      @Nonnull final Collection<String> filters, @Nonnull final Dataset<Row> dataset,
+  protected Dataset<Row> filterDataset(@Nonnull final ResourceCollection inputContext,
+      @Nonnull final java.util.Collection<String> filters, @Nonnull final Dataset<Row> dataset,
       @Nonnull final BinaryOperator<Column> operator) {
     return filterDataset(inputContext, filters, dataset, inputContext.getIdColumn(), operator);
   }
 
-  protected Dataset<Row> filterDataset(@Nonnull final ResourcePath inputContext,
-      @Nonnull final Collection<String> filters, @Nonnull final Dataset<Row> dataset,
+  protected Dataset<Row> filterDataset(@Nonnull final ResourceCollection inputContext,
+      @Nonnull final java.util.Collection<String> filters, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final BinaryOperator<Column> operator) {
     final Dataset<Row> filteredDataset;
     if (filters.isEmpty()) {
@@ -163,31 +164,33 @@ public abstract class QueryExecutor {
 
   @Nonnull
   private DatasetWithColumn getFilteredIds(@Nonnull final Iterable<String> filters,
-      @Nonnull final ResourcePath inputContext, @Nonnull final BinaryOperator<Column> operator) {
-    ResourcePath currentContext = inputContext;
+      @Nonnull final ResourceCollection inputContext,
+      @Nonnull final BinaryOperator<Column> operator) {
+    ResourceCollection currentContext = inputContext;
     @Nullable Column filterColumn = null;
 
     for (final String filter : filters) {
       // Parse the filter expression.
       final ParserContext parserContext = new ParserContext(currentContext, fhirContext,
           sparkSession, dataSource,
-          terminologyServiceFactory, Collections.singletonList(currentContext.getIdColumn()),
+          terminologyServiceFactory, functionRegistry,
+          Collections.singletonList(currentContext.getIdColumn()),
           Optional.empty());
       final Parser parser = new Parser(parserContext);
-      final FhirPath fhirPath = parser.parse(filter);
+      final Collection result = parser.parse(filter);
 
       // Check that it is a Boolean expression.
-      checkUserInput(fhirPath instanceof BooleanPath || fhirPath instanceof BooleanLiteralPath,
-          "Filter expression must be of Boolean type: " + fhirPath.getExpression());
+      checkUserInput(result instanceof BooleanCollection || result instanceof BooleanLiteralPath,
+          "Filter expression must be of Boolean type: " + result.getExpression());
 
       // Add the filter column to the overall filter expression using the supplied operator.
-      final Column filterValue = fhirPath.getValueColumn();
+      final Column filterValue = result.getValueColumn();
       filterColumn = filterColumn == null
                      ? filterValue
                      : operator.apply(filterColumn, filterValue);
 
       // Update the context to build the next expression from the same dataset.
-      currentContext = currentContext.copy(currentContext.getExpression(), fhirPath.getDataset(),
+      currentContext = currentContext.copy(currentContext.getExpression(), result.getDataset(),
           currentContext.getIdColumn(), currentContext.getValueColumn(),
           currentContext.getOrderingColumn(), currentContext.isSingular(),
           currentContext.getThisColumn());

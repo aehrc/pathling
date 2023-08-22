@@ -21,7 +21,7 @@ import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -45,7 +45,7 @@ import org.mockito.Mockito;
 public class ParserContextBuilder {
 
   @Nonnull
-  private FhirPath inputContext;
+  private Collection inputContext;
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -69,7 +69,7 @@ public class ParserContextBuilder {
       @Nonnull final FhirContext fhirContext) {
     this.fhirContext = fhirContext;
     this.spark = spark;
-    inputContext = mock(FhirPath.class);
+    inputContext = mock(Collection.class);
     when(inputContext.getIdColumn()).thenReturn(lit(null));
     when(inputContext.getDataset()).thenReturn(spark.emptyDataFrame());
     dataSource = Mockito.mock(DataSource.class, new DefaultAnswer());
@@ -78,7 +78,7 @@ public class ParserContextBuilder {
   }
 
   @Nonnull
-  public ParserContextBuilder inputContext(@Nonnull final FhirPath inputContext) {
+  public ParserContextBuilder inputContext(@Nonnull final Collection inputContext) {
     this.inputContext = inputContext;
     return this;
   }
@@ -117,7 +117,8 @@ public class ParserContextBuilder {
   @Nonnull
   public ParserContext build() {
     return new ParserContext(inputContext, fhirContext, spark, dataSource,
-        Optional.ofNullable(terminologyServiceFactory), groupingColumns, Optional.empty());
+        Optional.ofNullable(terminologyServiceFactory), functionRegistry, groupingColumns,
+        Optional.empty());
   }
 
 }

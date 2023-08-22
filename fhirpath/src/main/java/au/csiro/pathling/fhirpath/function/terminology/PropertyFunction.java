@@ -19,15 +19,13 @@ package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.QueryHelpers.explodeArray;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.property_of;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static au.csiro.pathling.utilities.Preconditions.wrapInUserInputError;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.udf.PropertyUdf;
@@ -53,11 +51,11 @@ public class PropertyFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
 
     validateInput(input);
-    final ElementPath inputPath = (ElementPath) input.getInput();
-    final String expression = expressionFromInput(input, NAME);
+    final PrimitivePath inputPath = (PrimitivePath) input.getInput();
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
     final Arguments arguments = Arguments.of(input);
     final String propertyCode = arguments.getValue(0, StringType.class).asStringValue();
@@ -85,7 +83,7 @@ public class PropertyFunction implements NamedFunction {
           valueAndOrderingColumns.getLeft(), Optional.of(valueAndOrderingColumns.getRight()),
           inputPath.isSingular(), inputPath.getThisColumn());
     } else {
-      return ElementPath.build(expression, resultDataset, inputPath.getIdColumn(),
+      return PrimitivePath.build(expression, resultDataset, inputPath.getIdColumn(),
           valueAndOrderingColumns.getLeft(), Optional.of(valueAndOrderingColumns.getRight()),
           inputPath.isSingular(), inputPath.getCurrentResource(), inputPath.getThisColumn(),
           propertyType);
@@ -98,12 +96,12 @@ public class PropertyFunction implements NamedFunction {
         .isPresent(), "Attempt to call terminology function " + NAME
         + " when terminology service has not been configured");
 
-    final FhirPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof ElementPath
-            && (((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
+    final Collection inputPath = input.getInput();
+    checkUserInput(inputPath instanceof PrimitivePath
+            && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
         "Input to property function must be Coding but is: " + inputPath.getExpression());
 
-    final List<FhirPath> arguments = input.getArguments();
+    final List<Collection> arguments = input.getArguments();
     checkUserInput(arguments.size() >= 1 && arguments.size() <= 3,
         NAME + " function accepts one required and one optional arguments");
     checkUserInput(arguments.get(0) instanceof StringLiteralPath,

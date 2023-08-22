@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -54,19 +54,19 @@ class ComparisonOperatorValidationTest {
 
   @Test
   void operandsAreNotComparable() {
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(true)
         .expression("foo")
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .singular(true)
         .expression("bar")
         .build();
 
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator comparisonOperator = Operator.getInstance(">");
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> comparisonOperator.invoke(input));
@@ -74,7 +74,7 @@ class ComparisonOperatorValidationTest {
         error.getMessage());
 
     // Now test the right operand.
-    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
     final InvalidUserInputError reversedError = assertThrows(
         InvalidUserInputError.class,
         () -> comparisonOperator.invoke(reversedInput));

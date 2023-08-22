@@ -18,7 +18,7 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathTransformation;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import javax.annotation.Nonnull;
@@ -50,10 +50,10 @@ public class Parser {
    * Parses a FHIRPath expression.
    *
    * @param expression The String representation of the FHIRPath expression
-   * @return a new {@link FhirPath} object
+   * @return a new {@link Collection} object
    */
   @Nonnull
-  public FhirPathTransformation parse(@Nonnull final String expression) {
+  public FhirPath parse(@Nonnull final String expression) {
     final FhirPathParser parser = buildParser(expression);
 
     final Visitor visitor = new Visitor(context);

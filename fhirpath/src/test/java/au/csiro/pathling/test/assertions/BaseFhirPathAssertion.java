@@ -22,9 +22,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,23 +39,23 @@ import org.apache.spark.sql.Column;
 public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> {
 
   @Nonnull
-  private final FhirPath fhirPath;
+  private final Collection result;
 
-  BaseFhirPathAssertion(@Nonnull final FhirPath fhirPath) {
-    this.fhirPath = fhirPath;
+  BaseFhirPathAssertion(@Nonnull final Collection result) {
+    this.result = result;
   }
 
   @Nonnull
   public DatasetAssert selectResult() {
-    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
-    return new DatasetAssert(fhirPath.getDataset().select(selection));
+    final Column[] selection = new Column[]{result.getIdColumn(), result.getValueColumn()};
+    return new DatasetAssert(result.getDataset().select(selection));
   }
 
   @Nonnull
   public DatasetAssert selectOrderedResult() {
-    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
+    final Column[] selection = new Column[]{result.getIdColumn(), result.getValueColumn()};
     // TODO: Update this to make sure that it is ordered.
-    return new DatasetAssert(fhirPath.getDataset().select(selection));
+    return new DatasetAssert(result.getDataset().select(selection));
   }
 
   @Nonnull
@@ -68,55 +68,55 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
       final boolean preserveOrder) {
     check(!groupingColumns.isEmpty());
     final ArrayList<Column> allColumnsList = new ArrayList<>(groupingColumns);
-    allColumnsList.add(fhirPath.getValueColumn());
+    allColumnsList.add(result.getValueColumn());
     final Column[] allColumns = allColumnsList.toArray(new Column[0]);
     return new DatasetAssert(preserveOrder
-                             ? fhirPath.getDataset().select(allColumns)
-                             : fhirPath.getDataset().select(allColumns).orderBy(allColumns));
+                             ? result.getDataset().select(allColumns)
+                             : result.getDataset().select(allColumns).orderBy(allColumns));
   }
 
   @Nonnull
   public DatasetAssert selectOrderedResultWithEid() {
-    final Column[] selection = new Column[]{fhirPath.getIdColumn(), fhirPath.getValueColumn()};
+    final Column[] selection = new Column[]{result.getIdColumn(), result.getValueColumn()};
     // TODO: Update this to make sure that it is ordered.
-    return new DatasetAssert(fhirPath.getDataset().select(selection));
+    return new DatasetAssert(result.getDataset().select(selection));
   }
 
   @Nonnull
   public T hasExpression(@Nonnull final String expression) {
-    assertEquals(expression, fhirPath.getExpression());
+    assertEquals(expression, result.getExpression());
     return self();
   }
 
   public T isSingular() {
-    assertTrue(fhirPath.isSingular());
+    assertTrue(result.isSingular());
     return self();
   }
 
   public T isNotSingular() {
-    assertFalse(fhirPath.isSingular());
+    assertFalse(result.isSingular());
     return self();
   }
 
-  public T preservesCardinalityOf(final FhirPath otherFhirPath) {
-    assertEquals(otherFhirPath.isSingular(), fhirPath.isSingular());
+  public T preservesCardinalityOf(final Collection otherResult) {
+    assertEquals(otherResult.isSingular(), result.isSingular());
     return self();
   }
 
 
-  public ElementPathAssertion isElementPath(final Class<? extends ElementPath> ofType) {
-    assertTrue(ofType.isAssignableFrom(fhirPath.getClass()));
-    return new ElementPathAssertion((ElementPath) fhirPath);
+  public ElementPathAssertion isElementPath(final Class<? extends PrimitivePath> ofType) {
+    assertTrue(ofType.isAssignableFrom(result.getClass()));
+    return new ElementPathAssertion((PrimitivePath) result);
   }
 
   public ResourcePathAssertion isResourcePath() {
-    assertTrue(ResourcePath.class.isAssignableFrom(fhirPath.getClass()));
-    return new ResourcePathAssertion((ResourcePath) fhirPath);
+    assertTrue(ResourceCollection.class.isAssignableFrom(result.getClass()));
+    return new ResourcePathAssertion((ResourceCollection) result);
   }
 
   public LiteralPathAssertion isLiteralPath(final Class<? extends LiteralPath> ofType) {
-    assertTrue(ofType.isAssignableFrom(fhirPath.getClass()));
-    return new LiteralPathAssertion((LiteralPath) fhirPath);
+    assertTrue(ofType.isAssignableFrom(result.getClass()));
+    return new LiteralPathAssertion((LiteralPath) result);
   }
 
   @SuppressWarnings("unchecked")

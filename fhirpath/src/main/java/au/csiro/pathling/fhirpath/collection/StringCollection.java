@@ -15,22 +15,18 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.element;
+package au.csiro.pathling.fhirpath.collection;
 
-import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirValue;
-import au.csiro.pathling.fhirpath.Flat;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import com.google.common.collect.ImmutableSet;
+import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathString;
+import static au.csiro.pathling.utilities.Strings.unSingleQuote;
+import static org.apache.spark.sql.functions.lit;
+
+import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
-import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
@@ -48,26 +44,39 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringPath extends ElementPath implements FhirValue<PrimitiveType>, Flat, Comparable,
-    StringCoercible {
+public class StringCollection extends Collection implements Materializable<PrimitiveType> {
 
-  private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
-      .of(StringPath.class, StringLiteralPath.class, NullLiteralPath.class);
-
-  protected StringPath(@Nonnull final String expression, @Nonnull final Dataset<Row> dataset,
-      @Nonnull final Column idColumn, @Nonnull final Column valueColumn,
-      @Nonnull final Optional<Column> orderingColumn, final boolean singular,
-      @Nonnull final Optional<ResourcePath> currentResource,
-      @Nonnull final Optional<Column> thisColumn, @Nonnull final FHIRDefinedType fhirType) {
-    super(expression, dataset, idColumn, valueColumn, orderingColumn, singular, currentResource,
-        thisColumn, fhirType);
+  public StringCollection(@Nonnull final Column column,
+      @Nonnull final Optional<NodeDefinition> definition) {
+    super(column, Optional.of(FhirPathType.STRING), Optional.of(FHIRDefinedType.STRING),
+        definition);
   }
 
   @Nonnull
-  @Override
-  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
-      final int columnNumber) {
-    return valueFromRow(row, columnNumber, getFhirType());
+  public static StringCollection build(@Nonnull final Column column,
+      @Nonnull final Optional<NodeDefinition> definition) {
+    return new StringCollection(column, definition);
+  }
+
+  /**
+   * Returns a new instance, parsed from a FHIRPath literal.
+   *
+   * @param fhirPath The FHIRPath representation of the literal
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromLiteral(@Nonnull final String fhirPath) {
+    final String value = parseStringLiteral(fhirPath);
+    return StringCollection.build(lit(value), Optional.empty());
+  }
+
+  @Nonnull
+  public static String parseStringLiteral(final @Nonnull String fhirPath) {
+    // Remove the surrounding single quotes and unescape the string according to the rules within
+    // the FHIRPath specification.
+    String value = unSingleQuote(fhirPath);
+    value = unescapeFhirPathString(value);
+    return value;
   }
 
   /**
@@ -80,11 +89,14 @@ public class StringPath extends ElementPath implements FhirValue<PrimitiveType>,
    */
   @Nonnull
   public static Optional<PrimitiveType> valueFromRow(@Nonnull final Row row, final int columnNumber,
-      final FHIRDefinedType fhirType) {
+      @Nonnull final Optional<FHIRDefinedType> fhirType) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    switch (fhirType) {
+    if (fhirType.isEmpty()) {
+      return Optional.of(new StringType(row.getString(columnNumber)));
+    }
+    switch (fhirType.get()) {
       case URI:
         return Optional.of(new UriType(row.getString(columnNumber)));
       case CODE:
@@ -105,30 +117,10 @@ public class StringPath extends ElementPath implements FhirValue<PrimitiveType>,
   }
 
   @Nonnull
-  public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
-    return COMPARABLE_TYPES;
-  }
-
   @Override
-  @Nonnull
-  public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {
-    return Comparable.buildComparison(this, operation);
-  }
-
-  @Override
-  public boolean isComparableTo(@Nonnull final Class<? extends Comparable> type) {
-    return COMPARABLE_TYPES.contains(type);
-  }
-
-  @Override
-  public boolean canBeCombinedWith(@Nonnull final FhirPath target) {
-    return super.canBeCombinedWith(target) || target instanceof StringLiteralPath;
-  }
-
-  @Nonnull
-  @Override
-  public FhirPath asStringPath(@Nonnull final String expression) {
-    return this;
+  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
+      final int columnNumber) {
+    return valueFromRow(row, columnNumber, getFhirType());
   }
 
 }

@@ -29,12 +29,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.CodingPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -106,7 +106,7 @@ class DisplayFunctionTest {
         .withRow("encounter-3", null, null)
         .buildWithStructValue();
 
-    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
+    final CodingCollection inputExpression = (CodingCollection) new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("Encounter.class")
@@ -121,14 +121,14 @@ class DisplayFunctionTest {
         .build();
 
     final Optional<StringLiteralPath> maybeArgumentExpression = maybeLanguage.map(
-        lang -> StringLiteralPath
-            .fromString("'" + lang + "'", inputExpression));
+        lang -> StringCollection
+            .fromLiteral("'" + lang + "'", inputExpression));
 
     final NamedFunctionInput displayInput = new NamedFunctionInput(parserContext, inputExpression,
         maybeArgumentExpression.stream().collect(Collectors.toUnmodifiableList()));
 
     // Invoke the function.
-    final FhirPath result = new DisplayFunction().invoke(displayInput);
+    final Collection result = new DisplayFunction().invoke(displayInput);
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
@@ -144,7 +144,7 @@ class DisplayFunctionTest {
     assertThat(result)
         .hasExpression("Encounter.class.display(" + maybeArgumentExpression.map(
             StringLiteralPath::getExpression).orElse("") + ")")
-        .isElementPath(ElementPath.class)
+        .isElementPath(PrimitivePath.class)
         .hasFhirType(FHIRDefinedType.STRING)
         .isNotSingular()
         .selectOrderedResultWithEid()
@@ -174,7 +174,7 @@ class DisplayFunctionTest {
 
   @Test
   void throwsErrorIfTerminologyServiceNotConfigured() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .build();
 
@@ -193,12 +193,12 @@ class DisplayFunctionTest {
 
   @Test
   void inputMustNotContainTwoArguments() {
-    final ElementPath input = new ElementPathBuilder(spark).build();
-    final StringLiteralPath argument1 = StringLiteralPath
-        .fromString("'some argument'", input);
-    final StringLiteralPath argument2 = StringLiteralPath
-        .fromString("'some argument'", input);
-    final List<FhirPath> arguments = new ArrayList<>();
+    final PrimitivePath input = new ElementPathBuilder(spark).build();
+    final StringLiteralPath argument1 = StringCollection
+        .fromLiteral("'some argument'", input);
+    final StringLiteralPath argument2 = StringCollection
+        .fromLiteral("'some argument'", input);
+    final List<Collection> arguments = new ArrayList<>();
     arguments.add(argument1);
     arguments.add(argument2);
 
@@ -217,7 +217,7 @@ class DisplayFunctionTest {
 
   @Test
   void inputMustNotContainNonStringArgument() {
-    final ElementPath input = new ElementPathBuilder(spark).build();
+    final PrimitivePath input = new ElementPathBuilder(spark).build();
     final IntegerLiteralPath argument = IntegerLiteralPath
         .fromString("9493948", input);
 
@@ -236,7 +236,7 @@ class DisplayFunctionTest {
 
   @Test
   void throwsErrorIfInputNotCoding() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .expression("valueInteger")
         .build();

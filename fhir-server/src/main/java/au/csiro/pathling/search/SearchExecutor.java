@@ -26,8 +26,8 @@ import static org.apache.spark.sql.functions.row_number;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -116,9 +116,9 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
   @Nonnull
   private Dataset<Row> initializeDataset() {
-    final ResourcePath resourcePath = ResourcePath
-        .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode(), true);
-    final Dataset<Row> subjectDataset = resourcePath.getDataset();
+    final ResourceCollection resourceCollection = ResourceCollection
+        .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode());
+    final Dataset<Row> subjectDataset = resourceCollection.getDataset();
     final Dataset<Row> dataset;
 
     if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
@@ -126,9 +126,10 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       dataset = subjectDataset;
 
     } else {
-      final ParserContext parserContext = new ParserContext(resourcePath, fhirContext, sparkSession,
+      final ParserContext parserContext = new ParserContext(resourceCollection, fhirContext, sparkSession,
           dataSource, terminologyServiceFactory,
-          Collections.singletonList(resourcePath.getIdColumn()), Optional.empty());
+          functionRegistry, Collections.singletonList(resourceCollection.getIdColumn()),
+          Optional.empty());
       Dataset<Row> currentDataset = subjectDataset;
       @Nullable Column filterCondition = null;
 
@@ -143,7 +144,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
             .collect(toList());
         checkUserInput(filterExpressions.stream().noneMatch(String::isBlank),
             "Filter expression cannot be blank");
-        final List<FhirPath> filters = parseExpressions(parserContext, filterExpressions,
+        final List<Collection> filters = parseExpressions(parserContext, filterExpressions,
             Optional.of(currentDataset));
         validateFilters(filters);
 
@@ -152,7 +153,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
 
         // Combine all the columns with OR logic.
         final Column orColumn = filters.stream()
-            .map(FhirPath::getValueColumn)
+            .map(Collection::getValueColumn)
             .reduce(Column::or)
             .orElseThrow();
 
@@ -164,8 +165,8 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
       dataset = currentDataset.filter(filterCondition);
     }
 
-    final Column[] resourceColumns = resourcePath.getElementsToColumns().keySet().stream()
-        .map(colName -> resourcePath.getElementsToColumns().get(colName).alias(colName))
+    final Column[] resourceColumns = resourceCollection.getElementsToColumns().keySet().stream()
+        .map(colName -> resourceCollection.getElementsToColumns().get(colName).alias(colName))
         .toArray(Column[]::new);
     // Resources are ordered by ID to ensure consistent paging.
     final Dataset<Row> result = dataset.select(resourceColumns);

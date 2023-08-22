@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import java.util.List;
 import java.util.Optional;
@@ -33,9 +33,9 @@ import org.hl7.fhir.r4.model.Type;
 public class Arguments {
 
   @Nonnull
-  private final List<FhirPath> arguments;
+  private final List<Collection> arguments;
 
-  private Arguments(@Nonnull final List<FhirPath> arguments) {
+  private Arguments(@Nonnull final List<Collection> arguments) {
     this.arguments = arguments;
   }
 

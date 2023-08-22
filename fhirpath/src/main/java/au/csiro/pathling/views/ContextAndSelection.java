@@ -1,6 +1,6 @@
 package au.csiro.pathling.views;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.List;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -10,7 +10,7 @@ import org.apache.spark.sql.Column;
 public class ContextAndSelection {
 
   @Nonnull
-  FhirPath context;
+  Collection context;
 
   @Nonnull
   List<Column> selection;

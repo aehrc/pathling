@@ -37,12 +37,12 @@ import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubs
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.DatePath;
-import au.csiro.pathling.fhirpath.element.DecimalPath;
-import au.csiro.pathling.fhirpath.element.IntegerPath;
-import au.csiro.pathling.fhirpath.element.StringPath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
@@ -110,13 +110,13 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testContainsOperator() {
     assertThatResultOf("name.family contains 'Wuckert783'")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, false)
             .changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("name.suffix contains 'MD'")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, false)
             .changeValue(PATIENT_ID_8ee183e2, true));
@@ -125,13 +125,13 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testInOperator() {
     assertThatResultOf("'Wuckert783' in name.family")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, false)
             .changeValue(PATIENT_ID_9360820c, true));
 
     assertThatResultOf("'MD' in name.suffix")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, false)
             .changeValue(PATIENT_ID_8ee183e2, true));
@@ -143,14 +143,14 @@ public class ParserTest extends AbstractParserTest {
     // test unversioned
     assertThatResultOf(
         "maritalStatus.coding contains http://terminology.hl7.org/CodeSystem/v3-MaritalStatus|S")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, false));
 
     // test versioned
     assertThatResultOf(
         "http://terminology.hl7.org/CodeSystem/v2-0203|v2.0.3|PPN in identifier.type.coding")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(allPatientsWithValue(spark, false));
   }
@@ -256,7 +256,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testCountWithReverseResolve() {
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()")
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .isSingular()
         .selectOrderedResult()
         .hasRows(
@@ -300,13 +300,13 @@ public class ParserTest extends AbstractParserTest {
     // With empty concept map subsume should work as member of
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumes(http://snomed.info/sct|40055000)")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumes-empty.tsv");
 
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.subsumedBy(http://snomed.info/sct|40055000)")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy-empty.tsv");
 
@@ -562,7 +562,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testCombineOperator() {
     assertThatResultOf("name.family combine name.given")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testCombineOperator.tsv");
   }
@@ -570,7 +570,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testCombineOperatorWithWhereFunction() {
     assertThatResultOf("where((name.family combine name.given) contains 'Gleichner915').birthDate")
-        .isElementPath(DatePath.class)
+        .isElementPath(DateCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testCombineOperatorWithWhereFunction.tsv");
   }
@@ -589,7 +589,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "reverseResolve(Condition.subject).code.coding.system combine "
             + "reverseResolve(Condition.subject).code.coding.code")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark,
             "responses/ParserTest/testCombineOperatorWithDifferentlyTypedStringPaths.tsv");
@@ -598,7 +598,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testCombineOperatorWithComplexTypeAndNull() {
     assertThatResultOf("(name combine {}).given")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark,
             "responses/ParserTest/testCombineOperatorWithComplexTypeAndNull.tsv");
@@ -607,7 +607,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testCombineOperatorWithTwoLiterals() {
     assertThatResultOf("1 combine 2")
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testCombineOperatorWithTwoLiterals.tsv");
   }
@@ -628,7 +628,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "(http://snomed.info/sct|410429000||'Cardiac Arrest' combine "
             + "http://snomed.info/sct|230690007||'Stroke').empty()")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testCombineOperatorWithCodingLiterals.tsv");
   }
@@ -636,7 +636,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testBooleanOperatorWithLeftLiteral() {
     assertThatResultOf("@1970-11-22 = birthDate")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testBooleanOperatorWithLeftLiteral.tsv");
   }
@@ -655,7 +655,7 @@ public class ParserTest extends AbstractParserTest {
   void testExtensionsOnResources() {
     assertThatResultOf(
         "extension.url")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionsOnResources.tsv");
   }
@@ -665,7 +665,7 @@ public class ParserTest extends AbstractParserTest {
     // This should be the same as: "extension.where($this.url='http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString"
     assertThatResultOf(
         "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionFunction.tsv");
   }
@@ -674,7 +674,7 @@ public class ParserTest extends AbstractParserTest {
   void testExtensionsOnElements() {
     assertThatResultOf(
         "address.extension.url")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionsOnElements.tsv");
   }
@@ -683,7 +683,7 @@ public class ParserTest extends AbstractParserTest {
   void testNestedExtensions() {
     assertThatResultOf(
         "extension.extension.url")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testNestedExtensions.tsv");
   }
@@ -692,7 +692,7 @@ public class ParserTest extends AbstractParserTest {
   void testExtensionsCurrentResource() {
     assertThatResultOf(ResourceType.CONDITION,
         "subject.resolve().ofType(Patient).extension.url")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionsCurrentResource.tsv");
   }
@@ -703,7 +703,7 @@ public class ParserTest extends AbstractParserTest {
         "address.where($this.city = 'Boston')"
             + ".extension('http://hl7.org/fhir/StructureDefinition/geolocation')"
             + ".extension('latitude').valueDecimal")
-        .isElementPath(DecimalPath.class)
+        .isElementPath(DecimalCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.tsv");
   }
@@ -712,7 +712,7 @@ public class ParserTest extends AbstractParserTest {
   void testExtensionFunctionInWhere() {
     assertThatResultOf(
         "address.where($this.extension('http://hl7.org/fhir/StructureDefinition/geolocation').extension('latitude').valueDecimal contains 42.391383).city")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionFunctionInWhere.tsv");
   }
@@ -745,7 +745,7 @@ public class ParserTest extends AbstractParserTest {
     setSubjectResource(ResourceType.ENCOUNTER);
     assertThatResultOf(
         "serviceProvider.resolve().reverseResolve(Encounter.serviceProvider).id")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingMonomorphicResolve.tsv");
   }
@@ -756,7 +756,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "subject.resolve().ofType(Patient).reverseResolve(Encounter.subject).id "
             + "contains '2aff9edd-def2-487a-b435-a162e11a303c'")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingPolymorphicResolve.tsv");
   }
@@ -765,7 +765,7 @@ public class ParserTest extends AbstractParserTest {
   void testReverseResolveFollowingReverseResolve() {
     assertThatResultOf(
         "reverseResolve(Encounter.subject).reverseResolve(CarePlan.encounter).id")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testReverseResolveFollowingReverseResolve.tsv");
   }
@@ -773,7 +773,7 @@ public class ParserTest extends AbstractParserTest {
   @Test
   void testIifWithNullLiteral() {
     assertThatResultOf("iif(gender='male', birthDate, {})")
-        .isElementPath(DatePath.class)
+        .isElementPath(DateCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testIifWithNullLiteral.csv");
   }
@@ -783,16 +783,16 @@ public class ParserTest extends AbstractParserTest {
     setSubjectResource(ResourceType.ENCOUNTER);
     assertThatResultOf(
         "subject.resolve().ofType(Patient).birthDate.until(%resource.period.start, 'years')")
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testUntilFunction.csv");
   }
 
   @SuppressWarnings("SameParameterValue")
   private void setSubjectResource(@Nonnull final ResourceType resourceType) {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, resourceType, resourceType.toCode(),
-            true);
+    final ResourceCollection subjectResource = ResourceCollection
+        .build(fhirContext, dataSource, resourceType, resourceType.toCode()
+        );
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
@@ -808,7 +808,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "((reverseResolve(Observation.subject).where(valueQuantity < 150 'cm').valueQuantity.first() * 2 '1')"
             + " / reverseResolve(Observation.subject).where(valueQuantity < 1.50 'm').valueQuantity.first()).value")
-        .isElementPath(DecimalPath.class)
+        .isElementPath(DecimalCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityMultiplicationAndDivision.csv");
   }
@@ -819,7 +819,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "((reverseResolve(Observation.subject).where(valueQuantity > 1 'mmol/L').valueQuantity.first() + 33 'mmol/L')"
             + " - reverseResolve(Observation.subject).where(valueQuantity > 1 'mmol/L').valueQuantity.first()) = 19873051110000000000000000 'm-3'")
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionSubtractionAndEquality.csv");
   }
@@ -829,12 +829,12 @@ public class ParserTest extends AbstractParserTest {
     // values for 121503c8-9564-4b48-9086-a22df717948e and a7eb2ce7-1075-426c-addd-957b861b0e55 exceed 10^26 m-3
     assertThatResultOf(
         "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').value")
-        .isElementPath(DecimalPath.class)
+        .isElementPath(DecimalCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_value.csv");
     assertThatResultOf(
         "(reverseResolve(Observation.subject).where(valueQuantity > 100 'mmol/L').valueQuantity.first() + 33 'mmol/L').code")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
   }
@@ -853,7 +853,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
             + ".valueReference.resolve().ofType(Goal).description.text")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReference.csv");
   }
@@ -864,7 +864,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "reverseResolve(Encounter.subject).extension.where(url = 'urn:test:associated-goal')"
             + ".valueReference.resolve().ofType(Condition).id")
-        .isElementPath(StringPath.class)
+        .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testResolutionOfExtensionReferenceWithWrongType.csv");
   }

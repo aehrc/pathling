@@ -19,7 +19,7 @@ package au.csiro.pathling.security.ga4gh;
 
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -83,9 +83,9 @@ public class PassportScopeEnforcer extends QueryExecutor {
       log.debug("Enforcing scope {} on {} resources", filters, subjectResource.toCode());
 
       // Build a new expression parser, and parse all the column expressions within the query.
-      final ResourcePath inputContext = ResourcePath
+      final ResourceCollection inputContext = ResourceCollection
           .build(getFhirContext(), getDataSource(), subjectResource,
-              subjectResource.toCode(), true);
+              subjectResource.toCode());
 
       return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);
     }

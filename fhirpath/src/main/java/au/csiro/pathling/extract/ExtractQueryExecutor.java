@@ -6,8 +6,7 @@ import static java.util.stream.Collectors.toList;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.AbstractPath;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Flat;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -116,25 +115,26 @@ public class ExtractQueryExecutor extends QueryExecutor {
     return null;
   }
 
-  private List<FhirPath> validateAndCoerceColumns(
-      @Nonnull final List<FhirPath> columnParseResult,
+  private List<Collection> validateAndCoerceColumns(
+      @Nonnull final List<Collection> columnParseResult,
       @Nonnull final ExtractResultType resultType) {
 
     // Perform any necessary String coercion.
-    final List<FhirPath> coerced = columnParseResult.stream()
+    final List<Collection> coerced = columnParseResult.stream()
         .map(column -> {
           if (resultType == ExtractResultType.FLAT && !(column instanceof Flat)
               && column instanceof StringCoercible) {
             // If the result type is flat and the path is string-coercible, we can coerce it.
             final StringCoercible stringCoercible = (StringCoercible) column;
-            return stringCoercible.asStringPath(column.getExpression());
+            return stringCoercible.asStringPath(column.getExpression(),
+                stringCoercible.getExpression());
           } else {
             return column;
           }
         }).collect(toList());
 
     // Validate the final set of paths.
-    for (final FhirPath column : coerced) {
+    for (final Collection column : coerced) {
       final boolean condition;
       if (resultType == ExtractResultType.FLAT) {
         // In flat mode, only flat columns are allowed.

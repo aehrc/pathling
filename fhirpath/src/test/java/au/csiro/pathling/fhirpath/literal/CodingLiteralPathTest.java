@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ResourceDatasetBuilder;
@@ -46,7 +47,7 @@ class CodingLiteralPathTest {
   @Autowired
   SparkSession spark;
 
-  ResourcePath inputContext;
+  ResourceCollection inputContext;
 
   @BeforeEach
   void setUp() {
@@ -71,7 +72,7 @@ class CodingLiteralPathTest {
   @Test
   void roundTrip() {
     final String expression = "http://snomed.info/sct|166056000|http://snomed.info/sct/32506021000036107/version/20201231";
-    final CodingLiteralPath codingLiteralPath = CodingLiteralPath.fromString(
+    final CodingLiteralPath codingLiteralPath = CodingCollection.fromLiteral(
         expression,
         inputContext);
     final Coding literalValue = codingLiteralPath.getValue();
@@ -87,8 +88,8 @@ class CodingLiteralPathTest {
   @Test
   void roundTripNoVersion() {
     final String expression = "http://snomed.info/sct|166056000";
-    final CodingLiteralPath codingLiteralPath = CodingLiteralPath
-        .fromString(expression, inputContext);
+    final CodingLiteralPath codingLiteralPath = CodingCollection
+        .fromLiteral(expression, inputContext);
     final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("http://snomed.info/sct", literalValue.getSystem());
     assertNull(literalValue.getVersion());
@@ -105,8 +106,8 @@ class CodingLiteralPathTest {
             + "|'397956004 |Prosthetic arthroplasty of the hip|: 363704007 |Procedure site| = "
             + "( 24136001 |Hip joint structure|: 272741003 |Laterality| =  7771000 |Left| )'"
             + "|http://snomed.info/sct/32506021000036107/version/20201231";
-    final CodingLiteralPath codingLiteralPath = CodingLiteralPath
-        .fromString(expression, inputContext);
+    final CodingLiteralPath codingLiteralPath = CodingCollection
+        .fromLiteral(expression, inputContext);
     final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("http://snomed.info/sct", literalValue.getSystem());
     assertEquals("http://snomed.info/sct/32506021000036107/version/20201231",
@@ -124,8 +125,8 @@ class CodingLiteralPathTest {
   void roundTripWithQuotedComponentWithComma() {
     final String expression =
         "http://snomed.info/sct|'46,2'|http://snomed.info/sct/32506021000036107/version/20201231";
-    final CodingLiteralPath codingLiteralPath = CodingLiteralPath
-        .fromString(expression, inputContext);
+    final CodingLiteralPath codingLiteralPath = CodingCollection
+        .fromLiteral(expression, inputContext);
     final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("http://snomed.info/sct", literalValue.getSystem());
     assertEquals("http://snomed.info/sct/32506021000036107/version/20201231",
@@ -139,8 +140,8 @@ class CodingLiteralPathTest {
   @Test
   void roundTripWithQuotedComponentWithSingleQuote() {
     final String expression = "'Someone\\'s CodeSystem'|166056000";
-    final CodingLiteralPath codingLiteralPath = CodingLiteralPath
-        .fromString(expression, inputContext);
+    final CodingLiteralPath codingLiteralPath = CodingCollection
+        .fromLiteral(expression, inputContext);
     final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("Someone's CodeSystem", literalValue.getSystem());
     assertEquals("166056000", literalValue.getCode());
@@ -152,8 +153,8 @@ class CodingLiteralPathTest {
   @Test
   void roundTripWithQuotedComponentWithSpace() {
     final String expression = "'Some CodeSystem'|166056000";
-    final CodingLiteralPath codingLiteralPath = CodingLiteralPath
-        .fromString(expression, inputContext);
+    final CodingLiteralPath codingLiteralPath = CodingCollection
+        .fromLiteral(expression, inputContext);
     final Coding literalValue = codingLiteralPath.getValue();
     assertEquals("Some CodeSystem", literalValue.getSystem());
     assertEquals("166056000", literalValue.getCode());
@@ -164,7 +165,7 @@ class CodingLiteralPathTest {
 
   @Test
   void fromMalformedString() {
-    assertThrows(IllegalArgumentException.class, () -> CodingLiteralPath.fromString(
+    assertThrows(IllegalArgumentException.class, () -> CodingCollection.fromLiteral(
         "http://snomed.info/sct", inputContext));
   }
 

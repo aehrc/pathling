@@ -25,13 +25,12 @@ import static au.csiro.pathling.sql.Terminology.translate;
 import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.TerminologyUtils;
-import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -73,10 +72,10 @@ public class TranslateFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
 
-    final ElementPath inputPath = (ElementPath) input.getInput();
+    final PrimitivePath inputPath = (PrimitivePath) input.getInput();
 
     final Column idColumn = inputPath.getIdColumn();
     final boolean isCodeableConcept = isCodeableConcept(inputPath);
@@ -106,9 +105,10 @@ public class TranslateFunction implements NamedFunction {
     final Dataset<Row> resultDataset = explodeArray(dataset, translatedCodings,
         valueAndOrderingColumns);
 
-    final String expression = expressionFromInput(input, NAME);
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
-    return ElementPath.build(expression, resultDataset, idColumn, valueAndOrderingColumns.getLeft(),
+    return PrimitivePath.build(expression, resultDataset, idColumn,
+        valueAndOrderingColumns.getLeft(),
         Optional.of(valueAndOrderingColumns.getRight()), false, inputPath.getCurrentResource(),
         inputPath.getThisColumn(), resultDefinition);
   }
@@ -119,11 +119,11 @@ public class TranslateFunction implements NamedFunction {
         "Attempt to call terminology function " + NAME
             + " when terminology service has not been configured");
 
-    final FhirPath inputPath = input.getInput();
+    final Collection inputPath = input.getInput();
     checkUserInput(TerminologyUtils.isCodingOrCodeableConcept(inputPath),
         String.format("Input to %s function is of unsupported type: %s", NAME,
             inputPath.getExpression()));
-    final List<FhirPath> arguments = input.getArguments();
+    final List<Collection> arguments = input.getArguments();
     checkUserInput(arguments.size() >= 1 && arguments.size() <= 3,
         NAME + " function accepts one required and two optional arguments");
     checkUserInput(arguments.get(0) instanceof StringLiteralPath,

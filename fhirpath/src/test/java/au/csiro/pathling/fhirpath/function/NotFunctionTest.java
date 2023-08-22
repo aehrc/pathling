@@ -23,11 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -69,7 +70,7 @@ class NotFunctionTest {
         .withRow("observation-5", makeEid(0), null)
         .withRow("observation-5", makeEid(1), null)
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(dataset)
         .idAndEidAndValueColumns()
@@ -80,7 +81,7 @@ class NotFunctionTest {
     final NamedFunctionInput notInput = new NamedFunctionInput(parserContext, input,
         Collections.emptyList());
     final NamedFunction notFunction = NamedFunction.getInstance("not");
-    final FhirPath result = notFunction.invoke(notInput);
+    final Collection result = notFunction.invoke(notInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -96,16 +97,16 @@ class NotFunctionTest {
     assertThat(result)
         .hasExpression("valueBoolean.not()")
         .isNotSingular()
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(expectedDataset);
   }
 
   @Test
   void inputMustNotContainArguments() {
-    final ElementPath input = new ElementPathBuilder(spark).build();
-    final StringLiteralPath argument = StringLiteralPath
-        .fromString("'some argument'", input);
+    final PrimitivePath input = new ElementPathBuilder(spark).build();
+    final StringLiteralPath argument = StringCollection
+        .fromLiteral("'some argument'", input);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
     final NamedFunctionInput notInput = new NamedFunctionInput(parserContext, input,
@@ -122,7 +123,7 @@ class NotFunctionTest {
 
   @Test
   void throwsErrorIfInputNotBoolean() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .expression("valueInteger")
         .build();

@@ -28,16 +28,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.CodingPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -122,7 +120,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
         .withRow("encounter-3", null, null)
         .buildWithStructValue();
 
-    final CodingPath inputExpression = (CodingPath) new ElementPathBuilder(spark)
+    final CodingCollection inputExpression = (CodingCollection) new ElementPathBuilder(spark)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
         .expression("Encounter.class")
@@ -139,18 +137,18 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
     final Optional<String> maybeUseLiteral = maybeUse.map(CodingLiteral::toLiteral);
     final Optional<String> maybeLanguageLiteral = maybeLanguage.map(lang -> "'" + lang + "'");
 
-    final List<FhirPath> arguments = Stream.of(
+    final List<Collection> arguments = Stream.of(
         maybeUseLiteral
-            .map(useLiteral -> CodingLiteralPath.fromString(useLiteral, inputExpression)),
+            .map(useLiteral -> CodingCollection.fromLiteral(useLiteral, inputExpression)),
         maybeLanguageLiteral.map(
-            languageLiteral -> StringLiteralPath.fromString(languageLiteral, inputExpression))
+            languageLiteral -> StringCollection.fromLiteral(languageLiteral, inputExpression))
     ).flatMap(Optional::stream).collect(Collectors.toUnmodifiableList());
 
     final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
         arguments);
 
     // Invoke the function.
-    final FhirPath result = NamedFunction.getInstance("designation").invoke(propertyInput);
+    final Collection result = NamedFunction.getInstance("designation").invoke(propertyInput);
 
     final String expectedExpression = String.format("Encounter.class.designation(%s)",
         Stream.of(maybeUseLiteral, maybeLanguageLiteral)
@@ -158,7 +156,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
     // Check the result.
     assertThat(result)
         .hasExpression(expectedExpression)
-        .isElementPath(ElementPath.class)
+        .isElementPath(PrimitivePath.class)
         .hasFhirType(FHIRDefinedType.STRING)
         .isNotSingular()
         .selectOrderedResultWithEid()
@@ -239,12 +237,12 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
 
   @Test
   void throwsErrorIfInputTypeIsUnsupported() {
-    final FhirPath mockContext = new ElementPathBuilder(spark).build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final Collection mockContext = new ElementPathBuilder(spark).build();
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .expression("name.given")
         .build();
-    final FhirPath argument = StringLiteralPath.fromString("some-property", mockContext);
+    final Collection argument = StringCollection.fromLiteral("some-property", mockContext);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
@@ -260,14 +258,14 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
   }
 
   void assertThrowsErrorForArguments(@Nonnull final String expectedError,
-      @Nonnull final Function<ElementPath, List<FhirPath>> argsFactory) {
+      @Nonnull final Function<PrimitivePath, List<Collection>> argsFactory) {
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "class");
     assertTrue(optionalDefinition.isPresent());
     final ElementDefinition definition = optionalDefinition.get();
 
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .definition(definition)
         .buildDefined();
@@ -296,7 +294,7 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
   void throwsErrorIfSecondArgumentIsNotBoolean() {
     assertThrowsErrorForArguments("Function `designation` expects `String literal` as argument 2",
         input -> Arrays.asList(
-            CodingLiteralPath.fromString("system|code", input),
+            CodingCollection.fromLiteral("system|code", input),
             IntegerLiteralPath.fromString("5", input)));
   }
 
@@ -306,18 +304,18 @@ class DesignationFunctionTest extends AbstractTerminologyTestBase {
     assertThrowsErrorForArguments(
         "designation function accepts two optional arguments",
         input -> Arrays.asList(
-            CodingLiteralPath.fromString("system|code", input),
-            StringLiteralPath.fromString("'false'", input),
-            StringLiteralPath.fromString("'false'", input)
+            CodingCollection.fromLiteral("system|code", input),
+            StringCollection.fromLiteral("'false'", input),
+            StringCollection.fromLiteral("'false'", input)
         ));
   }
 
   @Test
   void throwsErrorIfTerminologyServiceNotConfigured() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .build();
-    final FhirPath argument = StringLiteralPath.fromString("some string", input);
+    final Collection argument = StringCollection.fromLiteral("some string", input);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .build();

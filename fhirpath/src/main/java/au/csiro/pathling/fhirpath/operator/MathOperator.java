@@ -18,19 +18,16 @@
 package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.operator.Operator.buildExpression;
+import static au.csiro.pathling.fhirpath.operator.BinaryOperator.buildExpression;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.Temporal;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 
 /**
  * Provides the functionality of the family of math operators within FHIRPath, i.e. +, -, *, / and
@@ -39,7 +36,7 @@ import org.apache.spark.sql.Row;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#math">Math</a>
  */
-public class MathOperator implements Operator {
+public class MathOperator implements BinaryOperator {
 
   @Nonnull
   private final MathOperation type;
@@ -53,9 +50,9 @@ public class MathOperator implements Operator {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final OperatorInput input) {
-    final FhirPath left = input.getLeft();
-    final FhirPath right = input.getRight();
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
 
     // Check whether this needs to be delegated off to the DateArithmeticOperator.
     if (left instanceof Temporal && right instanceof QuantityLiteralPath) {

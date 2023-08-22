@@ -21,9 +21,10 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathTransformation;
-import au.csiro.pathling.fhirpath.operator.Operator;
-import au.csiro.pathling.fhirpath.operator.OperatorInput;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.operator.BinaryOperator;
+import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
+import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
@@ -50,7 +51,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
  *
  * @author John Grimes
  */
-class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
+class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
 
   @Nonnull
   private final ParserContext context;
@@ -63,11 +64,11 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
    * A term is typically a standalone literal or function invocation.
    *
    * @param ctx The {@link TermExpressionContext}
-   * @return A {@link FhirPathTransformation} expression
+   * @return A {@link FhirPath} expression
    */
   @Override
   @Nonnull
-  public FhirPathTransformation visitTermExpression(@Nullable final TermExpressionContext ctx) {
+  public FhirPath<Collection, Collection> visitTermExpression(@Nullable final TermExpressionContext ctx) {
     return requireNonNull(ctx).term().accept(new TermVisitor(context));
   }
 
@@ -75,14 +76,14 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
    * An invocation expression is one expression invoking another using the dot notation.
    *
    * @param ctx The {@link InvocationExpressionContext}
-   * @return A {@link FhirPathTransformation} expression
+   * @return A {@link FhirPath} expression
    */
   @Override
   @Nonnull
-  public FhirPathTransformation visitInvocationExpression(
+  public FhirPath<Collection, Collection> visitInvocationExpression(
       @Nullable final InvocationExpressionContext ctx) {
     return (input) -> {
-      final FhirPath expression = new Visitor(context).visit(requireNonNull(ctx).expression())
+      final Collection expression = new Visitor(context).visit(requireNonNull(ctx).expression())
           .apply(input);
       // The input context is passed through to the invocation visitor as the invoker.
       return ctx.invocation().accept(new InvocationVisitor(context)).apply(expression);
@@ -90,31 +91,30 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
   }
 
   @Nonnull
-  private FhirPathTransformation visitBinaryOperator(@Nullable final ParseTree leftContext,
+  private FhirPath<Collection, Collection> visitBinaryOperator(@Nullable final ParseTree leftContext,
       @Nullable final ParseTree rightContext, @Nullable final String operatorName) {
     requireNonNull(operatorName);
     return (input) -> {
-      final FhirPath left = new Visitor(context).visit(leftContext).apply(input);
-      final FhirPath right = new Visitor(context).visit(rightContext)
-          .apply(input.withDataset(left.getDataset()));
+      final Collection left = new Visitor(context).visit(leftContext).apply(input);
+      final Collection right = new Visitor(context).visit(rightContext).apply(input);
 
-      final Operator operator = Operator.getInstance(operatorName);
+      final BinaryOperator operator = BinaryOperatorType.fromSymbol(operatorName).getInstance();
 
-      final OperatorInput operatorInput = new OperatorInput(context, left, right);
+      final BinaryOperatorInput operatorInput = new BinaryOperatorInput(context, left, right);
       return operator.invoke(operatorInput);
     };
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitEqualityExpression(
+  public FhirPath<Collection, Collection> visitEqualityExpression(
       @Nullable final EqualityExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
-  public FhirPathTransformation visitInequalityExpression(
+  public FhirPath<Collection, Collection> visitInequalityExpression(
       @Nullable final InequalityExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
@@ -122,21 +122,21 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitAndExpression(@Nullable final AndExpressionContext ctx) {
+  public FhirPath<Collection, Collection> visitAndExpression(@Nullable final AndExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitOrExpression(@Nullable final OrExpressionContext ctx) {
+  public FhirPath<Collection, Collection> visitOrExpression(@Nullable final OrExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitImpliesExpression(
+  public FhirPath<Collection, Collection> visitImpliesExpression(
       @Nullable final ImpliesExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
@@ -144,7 +144,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitMembershipExpression(
+  public FhirPath<Collection, Collection> visitMembershipExpression(
       @Nullable final MembershipExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
@@ -152,7 +152,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitMultiplicativeExpression(
+  public FhirPath<Collection, Collection> visitMultiplicativeExpression(
       @Nullable final MultiplicativeExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
@@ -160,14 +160,14 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitAdditiveExpression(
+  public FhirPath<Collection, Collection> visitAdditiveExpression(
       @Nullable final AdditiveExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
   }
 
   @Override
-  public FhirPathTransformation visitCombineExpression(
+  public FhirPath<Collection, Collection> visitCombineExpression(
       @Nullable final CombineExpressionContext ctx) {
     return visitBinaryOperator(requireNonNull(ctx).expression(0), ctx.expression(1),
         ctx.children.get(1).toString());
@@ -177,25 +177,25 @@ class Visitor extends FhirPathBaseVisitor<FhirPathTransformation> {
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitIndexerExpression(final IndexerExpressionContext ctx) {
+  public FhirPath<Collection, Collection> visitIndexerExpression(final IndexerExpressionContext ctx) {
     throw new InvalidUserInputError("Indexer operation is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitPolarityExpression(final PolarityExpressionContext ctx) {
+  public FhirPath<Collection, Collection> visitPolarityExpression(final PolarityExpressionContext ctx) {
     throw new InvalidUserInputError("Polarity operator is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitUnionExpression(final UnionExpressionContext ctx) {
+  public FhirPath<Collection, Collection> visitUnionExpression(final UnionExpressionContext ctx) {
     throw new InvalidUserInputError("Union expressions are not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitTypeExpression(final TypeExpressionContext ctx) {
+  public FhirPath<Collection, Collection> visitTypeExpression(final TypeExpressionContext ctx) {
     throw new InvalidUserInputError("Type expressions are not supported");
   }
 

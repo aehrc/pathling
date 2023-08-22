@@ -19,15 +19,22 @@ package au.csiro.pathling.fhirpath;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.ReferencePath;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DateCollection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.NullPath;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.ReferencePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.collection.TimeCollection;
+import au.csiro.pathling.fhirpath.collection.UntypedResourcePath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
-import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -35,7 +42,6 @@ import au.csiro.pathling.test.builders.ElementPathBuilder;
 import au.csiro.pathling.test.builders.ResourcePathBuilder;
 import java.text.ParseException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -58,34 +64,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 @TestInstance(Lifecycle.PER_CLASS)
 class CanBeCombinedWithTest {
 
-  final ResourcePath resourcePath;
+  final ResourceCollection resourceCollection;
   final UntypedResourcePath untypedResourcePath;
 
-  final ElementPath booleanPath;
-  final ElementPath codingPath;
-  final ElementPath datePath;
-  final ElementPath dateTimePath;
-  final ElementPath decimalPath;
-  final ElementPath integerPath;
+  final PrimitivePath booleanPath;
+  final PrimitivePath codingPath;
+  final PrimitivePath datePath;
+  final PrimitivePath dateTimePath;
+  final PrimitivePath decimalPath;
+  final PrimitivePath integerPath;
   final ReferencePath referencePath;
-  final ElementPath stringPath;
-  final ElementPath timePath;
+  final PrimitivePath stringPath;
+  final PrimitivePath timePath;
 
   final BooleanLiteralPath booleanLiteralPath;
   final CodingLiteralPath codingLiteralPath;
   final DateLiteralPath dateLiteralPath;
   final DateTimeLiteralPath dateTimeLiteralPath;
-  final DecimalLiteralPath decimalLiteralPath;
+  final DecimalCollection decimalLiteralPath;
   final IntegerLiteralPath integerLiteralPath;
-  final NullLiteralPath nullLiteralPath;
+  final NullPath nullPath;
   final StringLiteralPath stringLiteralPath;
   final TimeLiteralPath timeLiteralPath;
 
-  final Set<FhirPath> paths;
+  final Set<Collection> paths;
 
   @Autowired
   CanBeCombinedWithTest(@Nonnull final SparkSession spark) throws ParseException {
-    resourcePath = new ResourcePathBuilder(spark)
+    resourceCollection = new ResourcePathBuilder(spark)
         .build();
 
     booleanPath = new ElementPathBuilder(spark)
@@ -117,20 +123,20 @@ class CanBeCombinedWithTest {
         .fhirType(FHIRDefinedType.TIME)
         .build();
 
-    booleanLiteralPath = BooleanLiteralPath.fromString("true", resourcePath);
-    codingLiteralPath = CodingLiteralPath
-        .fromString("http://snomed.info/sct|27699000", resourcePath);
-    dateLiteralPath = DateLiteralPath.fromString("@1983-06-21", resourcePath);
+    booleanLiteralPath = BooleanLiteralPath.fromString("true", resourceCollection);
+    codingLiteralPath = CodingCollection
+        .fromLiteral("http://snomed.info/sct|27699000", resourceCollection);
+    dateLiteralPath = DateCollection.fromLiteral("@1983-06-21", resourceCollection);
     dateTimeLiteralPath = DateTimeLiteralPath
-        .fromString("@2015-02-08T13:28:17-05:00", resourcePath);
-    decimalLiteralPath = DecimalLiteralPath.fromString("9.5", resourcePath);
-    integerLiteralPath = IntegerLiteralPath.fromString("14", resourcePath);
-    nullLiteralPath = NullLiteralPath.build(resourcePath);
-    stringLiteralPath = StringLiteralPath.fromString("'foo'", resourcePath);
-    timeLiteralPath = TimeLiteralPath.fromString("T12:30", resourcePath);
+        .fromString("@2015-02-08T13:28:17-05:00", resourceCollection);
+    decimalLiteralPath = DecimalCollection.fromLiteral("9.5", resourceCollection);
+    integerLiteralPath = IntegerLiteralPath.fromString("14", resourceCollection);
+    nullPath = NullPath.build(resourceCollection);
+    stringLiteralPath = StringCollection.fromLiteral("'foo'", resourceCollection);
+    timeLiteralPath = TimeCollection.fromLiteral("T12:30", resourceCollection);
 
     paths = new HashSet<>(Arrays.asList(
-        resourcePath,
+        resourceCollection,
         untypedResourcePath,
         booleanPath,
         codingPath,
@@ -147,7 +153,7 @@ class CanBeCombinedWithTest {
         dateTimeLiteralPath,
         decimalLiteralPath,
         integerLiteralPath,
-        nullLiteralPath,
+        nullPath,
         stringLiteralPath,
         timeLiteralPath
     ));
@@ -158,10 +164,10 @@ class CanBeCombinedWithTest {
   static class TestParameters {
 
     @Nonnull
-    FhirPath source;
+    Collection source;
 
     @Nonnull
-    FhirPath target;
+    Collection target;
 
     boolean expectation;
 
@@ -175,7 +181,7 @@ class CanBeCombinedWithTest {
 
   Stream<TestParameters> parameters() {
     return Stream.of(
-        buildParameters(resourcePath, Collections.singletonList(resourcePath)),
+        buildParameters(resourceCollection, Collections.singletonList(resourceCollection)),
         buildParameters(untypedResourcePath, Collections.singletonList(untypedResourcePath)),
         buildParameters(booleanPath, Arrays.asList(booleanPath, booleanLiteralPath)),
         buildParameters(codingPath, Arrays.asList(codingPath, codingLiteralPath)),
@@ -194,14 +200,14 @@ class CanBeCombinedWithTest {
         buildParameters(integerLiteralPath, Arrays.asList(integerLiteralPath, integerPath)),
         buildParameters(stringLiteralPath, Arrays.asList(stringLiteralPath, stringPath)),
         buildParameters(timeLiteralPath, Arrays.asList(timeLiteralPath, timePath)),
-        buildParameters(nullLiteralPath, paths)
+        buildParameters(nullPath, paths)
     ).flatMap(x -> x).distinct();
   }
 
-  Stream<TestParameters> buildParameters(@Nonnull final FhirPath source,
-      @Nonnull final Collection<FhirPath> canBeCombined) {
+  Stream<TestParameters> buildParameters(@Nonnull final Collection source,
+      @Nonnull final java.util.Collection<Collection> canBeCombined) {
     return paths.stream().map(path -> new TestParameters(source, path,
-        canBeCombined.contains(path) || path == nullLiteralPath));
+        canBeCombined.contains(path) || path == nullPath));
   }
 
   @ParameterizedTest

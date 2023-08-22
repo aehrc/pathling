@@ -28,13 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.CodingPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -119,7 +119,7 @@ class SubsumesFunctionTest {
         .withSubsumes(CODING_LARGE, CODING_SMALL);
   }
 
-  CodingPath createCodingInput() {
+  CodingCollection createCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -134,17 +134,17 @@ class SubsumesFunctionTest {
         .withRow(RES_ID3, makeEid(0), rowFromCoding(CODING_OTHER2))
         .withRow(RES_ID4, makeEid(0), rowFromCoding(CODING_OTHER2))
         .buildWithStructValue();
-    final ElementPath inputExpression = new ElementPathBuilder(spark)
+    final PrimitivePath inputExpression = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndEidAndValueColumns()
         .singular(false)
         .build();
 
-    return (CodingPath) inputExpression;
+    return (CodingCollection) inputExpression;
   }
 
-  CodingPath createSingularCodingInput() {
+  CodingCollection createSingularCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
@@ -154,18 +154,18 @@ class SubsumesFunctionTest {
         .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
         .withRow(RES_ID5, null /* NULL coding value */)
         .buildWithStructValue();
-    final ElementPath inputExpression = new ElementPathBuilder(spark)
+    final PrimitivePath inputExpression = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndValueColumns()
         .singular(true)
         .build();
 
-    return (CodingPath) inputExpression;
+    return (CodingCollection) inputExpression;
   }
 
 
-  ElementPath createCodeableConceptInput() {
+  PrimitivePath createCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -195,32 +195,32 @@ class SubsumesFunctionTest {
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(false, ALL_RES_IDS)
         .build();
-    final ElementPath literalContext = new ElementPathBuilder(spark)
+    final PrimitivePath literalContext = new ElementPathBuilder(spark)
         .dataset(literalContextDataset)
         .idAndValueColumns()
         .build();
 
-    return CodingLiteralPath.fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+    return CodingCollection.fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
         literalContext);
   }
 
-  CodingPath createCodingArg() {
+  CodingCollection createCodingArg() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_MEDIUM))
         .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_OTHER3))
         .buildWithStructValue();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndValueColumns()
         .build();
 
-    return (CodingPath) argument;
+    return (CodingCollection) argument;
   }
 
-  ElementPath createCodeableConceptArg() {
+  PrimitivePath createCodeableConceptArg() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codeableConceptStructType())
@@ -237,23 +237,23 @@ class SubsumesFunctionTest {
         .build();
   }
 
-  CodingPath createEmptyCodingInput() {
+  CodingCollection createEmptyCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withStructTypeColumns(codingStructType())
         .buildWithStructValue();
 
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndEidAndValueColumns()
         .build();
 
-    return (CodingPath) argument;
+    return (CodingCollection) argument;
   }
 
-  CodingPath createNullCodingInput() {
+  CodingCollection createNullCodingInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -261,16 +261,16 @@ class SubsumesFunctionTest {
         .withStructTypeColumns(codingStructType())
         .buildWithStructValue();
 
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndEidAndValueColumns()
         .build();
 
-    return (CodingPath) argument;
+    return (CodingCollection) argument;
   }
 
-  ElementPath createEmptyCodeableConceptInput() {
+  PrimitivePath createEmptyCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -284,7 +284,7 @@ class SubsumesFunctionTest {
         .build();
   }
 
-  ElementPath createNullCodeableConceptInput() {
+  PrimitivePath createNullCodeableConceptInput() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
@@ -299,20 +299,20 @@ class SubsumesFunctionTest {
         .build();
   }
 
-  CodingPath createNullCodingArg() {
+  CodingCollection createNullCodingArg() {
     final Dataset<Row> dataset = new DatasetBuilder(spark)
         .withIdColumn()
         .withStructTypeColumns(codingStructType())
         .withIdValueRows(ALL_RES_IDS, id -> null)
         .buildWithStructValue();
 
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(dataset)
         .idAndValueColumns()
         .build();
 
-    return (CodingPath) argument;
+    return (CodingCollection) argument;
   }
 
   DatasetBuilder expectedSubsumes() {
@@ -382,28 +382,28 @@ class SubsumesFunctionTest {
   }
 
   ElementPathAssertion assertCallSuccess(final NamedFunction function,
-      final NonLiteralPath inputExpression, final FhirPath argumentExpression) {
+      final NonLiteralPath inputExpression, final Collection argumentExpression) {
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .build();
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, inputExpression,
         Collections.singletonList(argumentExpression));
-    final FhirPath result = function.invoke(functionInput);
+    final Collection result = function.invoke(functionInput);
 
     return assertThat(result)
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .preservesCardinalityOf(inputExpression);
   }
 
   DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
-      final FhirPath argumentExpression) {
+      final Collection argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
         argumentExpression).selectOrderedResultWithEid();
   }
 
   DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
-      final FhirPath argumentExpression) {
+      final Collection argumentExpression) {
     return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
         argumentExpression).selectOrderedResultWithEid();
   }
@@ -532,11 +532,11 @@ class SubsumesFunctionTest {
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
 
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .build();
 
@@ -557,11 +557,11 @@ class SubsumesFunctionTest {
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final StringLiteralPath argument = StringLiteralPath
-        .fromString("'str'", input);
+    final StringLiteralPath argument = StringCollection
+        .fromLiteral("'str'", input);
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
         Collections.singletonList(argument));
@@ -581,16 +581,16 @@ class SubsumesFunctionTest {
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))
         .build();
 
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
 
-    final CodingLiteralPath argument1 = CodingLiteralPath
-        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+    final CodingLiteralPath argument1 = CodingCollection
+        .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
             input);
 
-    final CodingLiteralPath argument2 = CodingLiteralPath
-        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+    final CodingLiteralPath argument2 = CodingCollection
+        .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
             input);
 
     final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
@@ -605,12 +605,12 @@ class SubsumesFunctionTest {
 
   @Test
   void throwsErrorIfTerminologyServiceNotConfigured() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
 
-    final CodingLiteralPath argument = CodingLiteralPath
-        .fromString(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+    final CodingLiteralPath argument = CodingCollection
+        .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
             input);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext).build();

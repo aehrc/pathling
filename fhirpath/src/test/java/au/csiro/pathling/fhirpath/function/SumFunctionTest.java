@@ -23,10 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.DecimalPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.DecimalCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -70,7 +70,7 @@ class SumFunctionTest {
         .withRow("observation-3", makeEid(0), -1)
         .withRow("observation-3", makeEid(1), null)
         .build();
-    final ElementPath inputPath = new ElementPathBuilder(spark)
+    final PrimitivePath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
@@ -83,7 +83,7 @@ class SumFunctionTest {
 
     final NamedFunctionInput sumInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
-    final FhirPath result = NamedFunction.getInstance("sum").invoke(sumInput);
+    final Collection result = NamedFunction.getInstance("sum").invoke(sumInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -95,7 +95,7 @@ class SumFunctionTest {
     assertThat(result)
         .hasExpression("valueInteger.sum()")
         .isSingular()
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRows(expectedDataset);
   }
@@ -112,7 +112,7 @@ class SumFunctionTest {
         .withRow("observation-2", null, null)
         .withRow("observation-3", makeEid(0), new BigDecimal("-2.50"))
         .build();
-    final ElementPath inputPath = new ElementPathBuilder(spark)
+    final PrimitivePath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DECIMAL)
         .dataset(inputDataset)
         .idAndEidAndValueColumns()
@@ -125,7 +125,7 @@ class SumFunctionTest {
 
     final NamedFunctionInput sumInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
-    final FhirPath result = NamedFunction.getInstance("sum").invoke(sumInput);
+    final Collection result = NamedFunction.getInstance("sum").invoke(sumInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -137,14 +137,14 @@ class SumFunctionTest {
     assertThat(result)
         .hasExpression("valueDecimal.sum()")
         .isSingular()
-        .isElementPath(DecimalPath.class)
+        .isElementPath(DecimalCollection.class)
         .selectResult()
         .hasRows(expectedDataset);
   }
 
   @Test
   void throwsErrorIfInputNotNumeric() {
-    final ElementPath inputPath = new ElementPathBuilder(spark)
+    final PrimitivePath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .expression("valueString")
         .build();

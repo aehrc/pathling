@@ -17,24 +17,18 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.lit;
-import static org.apache.spark.sql.functions.row_number;
-import static org.apache.spark.sql.functions.when;
+import static org.apache.spark.sql.functions.filter;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.expressions.Window;
-import org.apache.spark.sql.expressions.WindowSpec;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * Describes a function which can scope down the previous invocation within a FHIRPath expression,
@@ -44,51 +38,36 @@ import org.apache.spark.sql.expressions.WindowSpec;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#where">where</a>
  */
-public class WhereFunction implements NamedFunction {
+public class WhereFunction implements NamedFunction<Collection> {
 
   private static final String NAME = "where";
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public String getName() {
+    return NAME;
+  }
+
+  @Nonnull
+  @Override
+  public Collection invoke(@Nonnull final FunctionInput input) {
     checkUserInput(input.getArguments().size() == 1,
-        "where function accepts one argument");
-    final NonLiteralPath inputPath = input.getInput();
-    checkUserInput(input.getArguments().get(0) instanceof NonLiteralPath,
-        "Argument to where function cannot be a literal: " + input.getArguments().get(0)
-            .getExpression());
-    final NonLiteralPath argumentPath = (NonLiteralPath) input.getArguments().get(0);
+        getName() + " function accepts one argument");
+    final Collection previous = input.getInput();
+    final FhirPath<Collection, Collection> argument = input.getArguments().get(0);
 
-    checkUserInput(argumentPath instanceof BooleanPath && argumentPath.isSingular(),
-        "Argument to where function must be a singular Boolean: " + argumentPath.getExpression());
+    final Column column = filter(previous.getColumn(), element -> {
+      final Collection result = argument.apply(
+          new Collection(element, previous.getType(), previous.getFhirType(),
+              Optional.empty()));
+      final SparkSession spark = input.getContext().getSparkSession();
+      final FhirPathType type = checkPresent(result.getType());
+      checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(spark),
+          "Argument to " + getName() + " function must be a singular Boolean");
+      return result.getColumn();
+    });
 
-    checkUserInput(argumentPath.getThisColumn().isPresent(),
-        "Argument to where function must be navigable from collection item (use $this): "
-            + argumentPath.getExpression());
-    final Column argumentValue = argumentPath.getValueColumn();
-
-    // The result is the input value if it is equal to true, or null otherwise (signifying the
-    // absence of a value).
-    final Column idColumn = argumentPath.getIdColumn();
-    final Column thisValue = checkPresent(argumentPath.getThisColumn());
-    final Column valueColumn = when(argumentValue.equalTo(true), thisValue).otherwise(lit(null));
-    final DatasetWithColumn datasetWithColumn = createColumn(argumentPath.getDataset(),
-        valueColumn);
-
-    // We use a windowing function to remove all null values except one. A single null value against 
-    // a resource signifies the absence of a value for a particular element.
-    final WindowSpec window = Window.partitionBy(idColumn).orderBy(valueColumn.asc_nulls_last());
-    final DatasetWithColumn datasetWithRowNumber = createColumn(datasetWithColumn.getDataset(),
-        row_number().over(window));
-    final Dataset<Row> dataset = datasetWithRowNumber.getDataset()
-        .filter(valueColumn.isNotNull().or(datasetWithRowNumber.getColumn().equalTo(1)));
-
-    // Clear the nesting present within the context.
-    input.getContext().getNesting().clear();
-
-    final String expression = expressionFromInput(input, NAME);
-    return inputPath.copy(expression, dataset, idColumn, datasetWithColumn.getColumn(),
-        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getThisColumn());
+    return new Collection(column, previous.getType(), previous.getFhirType(), Optional.empty());
   }
 
 }

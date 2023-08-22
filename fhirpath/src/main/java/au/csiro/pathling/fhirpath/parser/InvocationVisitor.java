@@ -17,17 +17,17 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathTransformation;
-import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
-import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
-import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
+import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -49,7 +50,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-class InvocationVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
+class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
 
   @Nonnull
   private final ParserContext context;
@@ -70,26 +71,28 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
    * or when an identifier is referred to as a term (e.g. "Encounter" or "type").
    *
    * @param ctx The {@link MemberInvocationContext}
-   * @return A {@link FhirPathTransformation} expression
+   * @return A {@link FhirPath} expression
    */
   @Override
   @Nonnull
-  public FhirPathTransformation visitMemberInvocation(@Nullable final MemberInvocationContext ctx) {
+  public FhirPath<Collection, Collection> visitMemberInvocation(
+      @Nullable final MemberInvocationContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
 
     return input -> {
       try {
         // Attempt path traversal.
-        final PathTraversalInput pathTraversalInput = new PathTraversalInput(context, input,
-            fhirPath);
-        return new PathTraversalOperator().invoke(pathTraversalInput);
+        final Optional<Collection> result = input.traverse(fhirPath);
+        checkUserInput(result.isPresent(), "No such child: " + fhirPath);
+        return result.get();
 
       } catch (final InvalidUserInputError e) {
         try {
           // If it is not a valid path traversal, see if it is a valid type specifier.
           final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
-          return TypeSpecifier.build(context.getInputContext(), fhirType);
+          return new Collection(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),
+              Optional.of(fhirType), Optional.empty());
 
         } catch (final FHIRException e2) {
           throw new InvalidUserInputError(
@@ -104,47 +107,51 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPathTransformation> {
    * expression.
    *
    * @param ctx The {@link FunctionInvocationContext}
-   * @return A {@link FhirPathTransformation} expression
+   * @return A {@link FhirPath} expression
    */
   @Override
   @Nonnull
-  public FhirPathTransformation visitFunctionInvocation(
+  public FhirPath<Collection, Collection> visitFunctionInvocation(
       @Nullable final FunctionInvocationContext ctx) {
     final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
     @Nullable final ParamListContext paramList = ctx.function().paramList();
 
     return input -> {
-      final NamedFunction function = NamedFunction.getInstance(functionIdentifier);
+      final NamedFunction function;
+      try {
+        function = context.getFunctionRegistry().getInstance(functionIdentifier);
+      } catch (final NoSuchFunctionException e) {
+        throw new InvalidUserInputError(e.getMessage());
+      }
       final Visitor paramListVisitor = new Visitor(context);
 
-      final List<FhirPath> arguments = Optional.ofNullable(paramList)
+      final List<FhirPath<Collection, Collection>> arguments = Optional.ofNullable(paramList)
           .map(ParamListContext::expression)
           .map(p -> p.stream()
               .map(paramListVisitor::visit)
-              .map(fpt -> fpt.apply(input))
               .collect(toList())
           ).orElse(new ArrayList<>());
 
-      final NamedFunctionInput functionInput = new NamedFunctionInput(context, input, arguments);
+      final FunctionInput functionInput = new FunctionInput(context, input, arguments);
       return function.invoke(functionInput);
     };
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
+  public FhirPath<Collection, Collection> visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
     return input -> context.getInputContext();
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitIndexInvocation(@Nullable final IndexInvocationContext ctx) {
+  public FhirPath<Collection, Collection> visitIndexInvocation(@Nullable final IndexInvocationContext ctx) {
     throw new InvalidUserInputError("$index is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPathTransformation visitTotalInvocation(@Nullable final TotalInvocationContext ctx) {
+  public FhirPath<Collection, Collection> visitTotalInvocation(@Nullable final TotalInvocationContext ctx) {
     throw new InvalidUserInputError("$total is not supported");
   }
 

@@ -34,9 +34,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
@@ -95,11 +96,11 @@ class ExtensionFunctionTest {
         .build();
     when(dataSource.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
-    final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.PATIENT, "Patient", false);
+    final ResourceCollection inputPath = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.PATIENT, "Patient");
 
-    final StringLiteralPath argumentExpression = StringLiteralPath
-        .fromString("'" + "uuid:myExtension" + "'", inputPath);
+    final StringLiteralPath argumentExpression = StringCollection
+        .fromLiteral("'" + "uuid:myExtension" + "'", inputPath);
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
@@ -107,12 +108,12 @@ class ExtensionFunctionTest {
         Collections.singletonList(argumentExpression));
 
     final NamedFunction extension = NamedFunction.getInstance("extension");
-    final FhirPath result = extension.invoke(extensionInput);
+    final Collection result = extension.invoke(extensionInput);
 
     assertThat(result)
         .hasExpression("Patient.extension('uuid:myExtension')")
         .isNotSingular()
-        .isElementPath(ElementPath.class)
+        .isElementPath(PrimitivePath.class)
         .hasFhirType(FHIRDefinedType.EXTENSION)
         .selectOrderedResult()
         .hasRows(
@@ -166,32 +167,33 @@ class ExtensionFunctionTest {
 
     when(dataSource.read(ResourceType.OBSERVATION))
         .thenReturn(resourceLikeDataset);
-    final ResourcePath baseResourcePath = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.OBSERVATION, "Observation", false);
+    final ResourceCollection baseResourceCollection = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.OBSERVATION, "Observation");
 
-    final Dataset<Row> elementDataset = toElementDataset(resourceLikeDataset, baseResourcePath);
+    final Dataset<Row> elementDataset = toElementDataset(resourceLikeDataset,
+        baseResourceCollection);
 
     final ElementDefinition codeDefinition = checkPresent(FhirHelpers
         .getChildOfResource(fhirContext, "Observation", "code"));
 
-    final ElementPath inputPath = new ElementPathBuilder(spark)
+    final PrimitivePath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .definition(codeDefinition)
         .dataset(elementDataset)
         .idAndEidAndValueColumns()
         .expression("code")
         .singular(false)
-        .currentResource(baseResourcePath)
+        .currentResource(baseResourceCollection)
         .buildDefined();
 
-    final StringLiteralPath argumentExpression = StringLiteralPath
-        .fromString("'" + "uuid:myExtension" + "'", inputPath);
+    final StringLiteralPath argumentExpression = StringCollection
+        .fromLiteral("'" + "uuid:myExtension" + "'", inputPath);
 
     final NamedFunctionInput extensionInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentExpression));
 
     final NamedFunction extension = NamedFunction.getInstance("extension");
-    final FhirPath result = extension.invoke(extensionInput);
+    final Collection result = extension.invoke(extensionInput);
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
@@ -215,7 +217,7 @@ class ExtensionFunctionTest {
     assertThat(result)
         .hasExpression("code.extension('uuid:myExtension')")
         .isNotSingular()
-        .isElementPath(ElementPath.class)
+        .isElementPath(PrimitivePath.class)
         .hasFhirType(FHIRDefinedType.EXTENSION)
         .selectOrderedResultWithEid()
         .hasRows(expectedResult);
@@ -223,7 +225,7 @@ class ExtensionFunctionTest {
 
   @Test
   public void throwsErrorIfArgumentIsNotString() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
     final IntegerLiteralPath argument = IntegerLiteralPath.fromString("4", input);
@@ -242,11 +244,11 @@ class ExtensionFunctionTest {
 
   @Test
   public void throwsErrorIfMoreThanOneArgument() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .build();
-    final StringLiteralPath argument1 = StringLiteralPath.fromString("'foo'", input),
-        argument2 = StringLiteralPath.fromString("'bar'", input);
+    final StringLiteralPath argument1 = StringCollection.fromLiteral("'foo'", input),
+        argument2 = StringCollection.fromLiteral("'bar'", input);
 
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(mock(TerminologyServiceFactory.class))

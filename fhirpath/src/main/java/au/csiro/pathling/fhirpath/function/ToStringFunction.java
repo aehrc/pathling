@@ -4,7 +4,7 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import javax.annotation.Nonnull;
 
@@ -19,10 +19,10 @@ public class ToStringFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     // Check that the function has no arguments.
     checkNoArguments(NAME, input);
-    final FhirPath inputPath = input.getInput();
+    final Collection inputPath = input.getInput();
 
     // Check that the input is coercible to a String.
     checkUserInput(inputPath instanceof StringCoercible,
@@ -30,10 +30,10 @@ public class ToStringFunction implements NamedFunction {
     final StringCoercible stringCoercible = (StringCoercible) inputPath;
 
     // Create an expression for the new path.
-    final String expression = expressionFromInput(input, NAME);
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
     // Coerce the input to a String.
-    return stringCoercible.asStringPath(expression);
+    return stringCoercible.asStringPath(expression, stringCoercible.getExpression());
   }
 
 }

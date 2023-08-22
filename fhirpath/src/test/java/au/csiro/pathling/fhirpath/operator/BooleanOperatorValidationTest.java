@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -54,20 +54,20 @@ class BooleanOperatorValidationTest {
 
   @Test
   void operandIsNotSingular() {
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(false)
         .expression("estimatedAge")
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(true)
         .expression("deceasedBoolean")
         .build();
 
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
 
-    final Operator booleanOperator = Operator.getInstance("and");
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> booleanOperator.invoke(input));
@@ -76,7 +76,7 @@ class BooleanOperatorValidationTest {
         error.getMessage());
 
     // Now test the right operand.
-    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
     final InvalidUserInputError reversedError = assertThrows(
         InvalidUserInputError.class,
         () -> booleanOperator.invoke(reversedInput));
@@ -87,20 +87,20 @@ class BooleanOperatorValidationTest {
 
   @Test
   void operandIsNotBoolean() {
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .singular(true)
         .expression("estimatedAge")
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(true)
         .expression("deceasedBoolean")
         .build();
 
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
 
-    final Operator booleanOperator = Operator.getInstance("and");
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> booleanOperator.invoke(input));
@@ -109,7 +109,7 @@ class BooleanOperatorValidationTest {
         error.getMessage());
 
     // Now test the right operand.
-    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
     final InvalidUserInputError reversedError = assertThrows(
         InvalidUserInputError.class,
         () -> booleanOperator.invoke(reversedInput));

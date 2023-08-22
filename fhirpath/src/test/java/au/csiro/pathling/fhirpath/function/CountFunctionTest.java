@@ -23,10 +23,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -75,8 +75,8 @@ class CountFunctionTest {
         .build();
     when(dataSource.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
-    final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.PATIENT, "Patient", false);
+    final ResourceCollection inputPath = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.PATIENT, "Patient");
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .idColumn(inputPath.getIdColumn())
@@ -86,7 +86,7 @@ class CountFunctionTest {
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
     final NamedFunction count = NamedFunction.getInstance("count");
-    final FhirPath result = count.invoke(countInput);
+    final Collection result = count.invoke(countInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -99,7 +99,7 @@ class CountFunctionTest {
     assertThat(result)
         .hasExpression("count()")
         .isSingular()
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
         .selectOrderedResult()
         .hasRows(expectedDataset);
@@ -116,7 +116,7 @@ class CountFunctionTest {
         .withRow("patient-2", "male", true)
         .build();
     when(dataSource.read(ResourceType.PATIENT)).thenReturn(inputDataset);
-    final ResourcePath inputPath = new ResourcePathBuilder(spark)
+    final ResourceCollection inputPath = new ResourcePathBuilder(spark)
         .database(dataSource)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
@@ -130,7 +130,7 @@ class CountFunctionTest {
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
     final NamedFunction count = NamedFunction.getInstance("count");
-    final FhirPath result = count.invoke(countInput);
+    final Collection result = count.invoke(countInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withColumn(DataTypes.StringType)
@@ -142,7 +142,7 @@ class CountFunctionTest {
     assertThat(result)
         .hasExpression("count()")
         .isSingular()
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
         .selectGroupingResult(Collections.singletonList(groupingColumn))
         .hasRows(expectedDataset);
@@ -158,7 +158,7 @@ class CountFunctionTest {
         .withRow("patient-2", null)
         .withRow("patient-3", "male")
         .build();
-    final ElementPath inputPath = new ElementPathBuilder(spark)
+    final PrimitivePath inputPath = new ElementPathBuilder(spark)
         .expression("gender")
         .fhirType(FHIRDefinedType.CODE)
         .dataset(dataset)
@@ -172,7 +172,7 @@ class CountFunctionTest {
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.emptyList());
     final NamedFunction count = NamedFunction.getInstance("count");
-    final FhirPath result = count.invoke(countInput);
+    final Collection result = count.invoke(countInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -183,7 +183,7 @@ class CountFunctionTest {
     assertThat(result)
         .hasExpression("gender.count()")
         .isSingular()
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .hasFhirType(FHIRDefinedType.UNSIGNEDINT)
         .selectOrderedResult()
         .hasRows(expectedDataset);
@@ -191,8 +191,8 @@ class CountFunctionTest {
 
   @Test
   void inputMustNotContainArguments() {
-    final ElementPath inputPath = new ElementPathBuilder(spark).build();
-    final ElementPath argumentPath = new ElementPathBuilder(spark).build();
+    final PrimitivePath inputPath = new ElementPathBuilder(spark).build();
+    final PrimitivePath argumentPath = new ElementPathBuilder(spark).build();
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext).build();
 
     final NamedFunctionInput countInput = new NamedFunctionInput(parserContext, inputPath,

@@ -25,14 +25,13 @@ import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.apache.spark.sql.functions.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -81,7 +80,7 @@ public class ExistsFunctionTest {
         .withRow("observation-5", rowFromCodeableConcept(concept1))
         .withRow("observation-5", rowFromCodeableConcept(concept2))
         .build();
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODEABLECONCEPT)
         .dataset(dataset)
         .idAndValueColumns()
@@ -97,7 +96,7 @@ public class ExistsFunctionTest {
 
     // Invoke the empty function.
     final NamedFunction emptyFunction = NamedFunction.getInstance("empty");
-    final FhirPath emptyResult = emptyFunction.invoke(emptyInput);
+    final Collection emptyResult = emptyFunction.invoke(emptyInput);
 
     // Create an expected dataset from the result of the empty function, with an inverted value.
     final Dataset<Row> emptyResultDataset = emptyResult.getDataset();
@@ -107,13 +106,13 @@ public class ExistsFunctionTest {
 
     // Invoke the exists function.
     final NamedFunction existsFunction = NamedFunction.getInstance("exists");
-    final FhirPath existsResult = existsFunction.invoke(emptyInput);
+    final Collection existsResult = existsFunction.invoke(emptyInput);
 
     // Check the result.
     assertThat(existsResult)
         .hasExpression("code.exists()")
         .isSingular()
-        .isElementPath(BooleanPath.class)
+        .isElementPath(BooleanCollection.class)
         .selectOrderedResult()
         .hasRows(expectedDataset);
   }
@@ -137,7 +136,7 @@ public class ExistsFunctionTest {
         .withRow("patient-5", makeEid(0), "encounter-9", "in-progress")
         .withRow("patient-6", null, null, null)
         .build();
-    final ResourcePath inputPath = new ResourcePathBuilder(spark)
+    final ResourceCollection inputPath = new ResourcePathBuilder(spark)
         .expression("reverseResolve(Encounter.subject)")
         .dataset(inputDataset)
         .idEidAndValueColumns()
@@ -153,7 +152,7 @@ public class ExistsFunctionTest {
             thisPath.getDataset().col(statusColumn).equalTo("in-progress"));
 
     assertTrue(thisPath.getThisColumn().isPresent());
-    final ElementPath argumentPath = new ElementPathBuilder(spark)
+    final PrimitivePath argumentPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
@@ -169,7 +168,7 @@ public class ExistsFunctionTest {
 
     // Execute the where function.
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
-    final FhirPath whereResult = whereFunction.invoke(whereInput);
+    final Collection whereResult = whereFunction.invoke(whereInput);
 
     // Prepare the input to the exists function.
     final NamedFunctionInput existsInput = new NamedFunctionInput(parserContext,
@@ -177,12 +176,12 @@ public class ExistsFunctionTest {
 
     // Execute the exists function.
     final NamedFunction existsFunction = NamedFunction.getInstance("exists");
-    final FhirPath whereExistsResult = existsFunction.invoke(existsInput);
+    final Collection whereExistsResult = existsFunction.invoke(existsInput);
 
     // Prepare the input to the exists function (with argument).
     final NamedFunctionInput existsWithArgumentInput = new NamedFunctionInput(parserContext,
         inputPath, Collections.singletonList(argumentPath));
-    final FhirPath existsWithArgumentResult = existsFunction.invoke(existsWithArgumentInput);
+    final Collection existsWithArgumentResult = existsFunction.invoke(existsWithArgumentInput);
 
     // Check the results.
     assertThat(existsWithArgumentResult.getDataset()
@@ -193,8 +192,8 @@ public class ExistsFunctionTest {
 
   @Test
   void throwsErrorIfArgumentNotBoolean() {
-    final ResourcePath input = new ResourcePathBuilder(spark).build();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark).build();
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .expression("$this.gender")
         .fhirType(FHIRDefinedType.STRING)
         .build();
@@ -214,8 +213,8 @@ public class ExistsFunctionTest {
 
   @Test
   void throwsErrorIfArgumentNotSingular() {
-    final ResourcePath input = new ResourcePathBuilder(spark).build();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark).build();
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .expression("$this.communication.preferred")
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(false)

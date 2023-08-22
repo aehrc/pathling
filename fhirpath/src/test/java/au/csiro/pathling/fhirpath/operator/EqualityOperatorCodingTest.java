@@ -23,8 +23,8 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
 import static au.csiro.pathling.test.helpers.TestHelpers.LOINC_URL;
 import static au.csiro.pathling.test.helpers.TestHelpers.SNOMED_URL;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -56,10 +56,10 @@ class EqualityOperatorCodingTest {
 
   static final String ID_ALIAS = "_abc123";
 
-  FhirPath left;
-  FhirPath right;
-  FhirPath literalSnomedAll;
-  FhirPath literalLoincSystemCode;
+  Collection left;
+  Collection right;
+  Collection literalSnomedAll;
+  Collection literalLoincSystemCode;
   ParserContext parserContext;
 
   @BeforeEach
@@ -126,10 +126,10 @@ class EqualityOperatorCodingTest {
         .dataset(rightDataset)
         .idAndValueColumns()
         .build();
-    literalSnomedAll = CodingLiteralPath.fromString(
+    literalSnomedAll = CodingCollection.fromLiteral(
         "http://snomed.info/sct|56459004|http://snomed.info/sct/32506021000036107/version/20191231|'Display name'|true",
         left);
-    literalLoincSystemCode = CodingLiteralPath.fromString("http://loinc.org|'222|33'", left);
+    literalLoincSystemCode = CodingCollection.fromLiteral("http://loinc.org|'222|33'", left);
 
     parserContext = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(left.getIdColumn()))
@@ -138,9 +138,9 @@ class EqualityOperatorCodingTest {
 
   @Test
   void equals() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance("=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -155,9 +155,9 @@ class EqualityOperatorCodingTest {
 
   @Test
   void notEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance("!=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("!=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -172,9 +172,10 @@ class EqualityOperatorCodingTest {
 
   @Test
   void literalEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
-    final Operator equalityOperator = Operator.getInstance("=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, literalLoincSystemCode,
+        left);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -189,9 +190,10 @@ class EqualityOperatorCodingTest {
 
   @Test
   void equalsLiteral() {
-    final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
-    final Operator equalityOperator = Operator.getInstance("=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left,
+        literalSnomedAll);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -206,9 +208,10 @@ class EqualityOperatorCodingTest {
 
   @Test
   void literalNotEquals() {
-    final OperatorInput input = new OperatorInput(parserContext, literalLoincSystemCode, left);
-    final Operator equalityOperator = Operator.getInstance("!=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, literalLoincSystemCode,
+        left);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("!=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -223,9 +226,10 @@ class EqualityOperatorCodingTest {
 
   @Test
   void notEqualsLiteral() {
-    final OperatorInput input = new OperatorInput(parserContext, left, literalSnomedAll);
-    final Operator equalityOperator = Operator.getInstance("!=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left,
+        literalSnomedAll);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("!=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),

@@ -21,7 +21,8 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -56,8 +57,8 @@ public class ComparisonOperatorQuantityTest {
 
   static final String ID_ALIAS = "_abc123";
 
-  FhirPath left;
-  FhirPath right;
+  Collection left;
+  Collection right;
   ParserContext parserContext;
   QuantityLiteralPath ucumQuantityLiteral1;
   QuantityLiteralPath ucumQuantityLiteral2;
@@ -164,12 +165,12 @@ public class ComparisonOperatorQuantityTest {
         .idAndValueColumns()
         .build();
 
-    ucumQuantityLiteral1 = QuantityLiteralPath.fromUcumString("500 'mg'", left, ucumService);
-    ucumQuantityLiteral2 = QuantityLiteralPath.fromUcumString("0.5 'g'", left, ucumService);
-    ucumQuantityLiteral3 = QuantityLiteralPath.fromUcumString("1.8 'm'", left, ucumService);
-    calendarDurationLiteral1 = QuantityLiteralPath.fromCalendarDurationString("30 days", left);
-    calendarDurationLiteral2 = QuantityLiteralPath.fromCalendarDurationString("60 seconds", left);
-    calendarDurationLiteral3 = QuantityLiteralPath.fromCalendarDurationString("1000 milliseconds",
+    ucumQuantityLiteral1 = QuantityCollection.fromUcumString("500 'mg'", left, ucumService);
+    ucumQuantityLiteral2 = QuantityCollection.fromUcumString("0.5 'g'", left, ucumService);
+    ucumQuantityLiteral3 = QuantityCollection.fromUcumString("1.8 'm'", left, ucumService);
+    calendarDurationLiteral1 = QuantityCollection.fromCalendarDurationString("30 days", left);
+    calendarDurationLiteral2 = QuantityCollection.fromCalendarDurationString("60 seconds", left);
+    calendarDurationLiteral3 = QuantityCollection.fromCalendarDurationString("1000 milliseconds",
         left);
 
     parserContext = new ParserContextBuilder(spark, fhirContext)
@@ -179,9 +180,9 @@ public class ComparisonOperatorQuantityTest {
 
   @Test
   void lessThan() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance("<");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("<");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", false),  // 500 mg < 500 mg
@@ -199,9 +200,9 @@ public class ComparisonOperatorQuantityTest {
 
   @Test
   void lessThanOrEqualTo() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance("<=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance("<=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", true),  // 500 mg <= 500 mg
@@ -219,9 +220,9 @@ public class ComparisonOperatorQuantityTest {
 
   @Test
   void greaterThanOrEqualTo() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance(">=");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance(">=");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", true),   // 500 mg >= 500 mg
@@ -239,9 +240,9 @@ public class ComparisonOperatorQuantityTest {
 
   @Test
   void greaterThan() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator equalityOperator = Operator.getInstance(">");
-    final FhirPath result = equalityOperator.invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator equalityOperator = BinaryOperator.getInstance(">");
+    final Collection result = equalityOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", false),  // 500 mg > 500 mg

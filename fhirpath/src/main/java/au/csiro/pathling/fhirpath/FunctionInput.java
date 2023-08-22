@@ -17,26 +17,40 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import java.util.List;
 import javax.annotation.Nonnull;
-import lombok.Getter;
+import lombok.Value;
 
 /**
  * Represents the inputs to a FHIRPath function.
  *
  * @author John Grimes
  */
-@Getter
-public abstract class FunctionInput {
+@Value
+public class FunctionInput {
 
   /**
    * Context and dependencies for use in evaluating the function.
    */
   @Nonnull
-  private final ParserContext context;
+  ParserContext context;
 
-  protected FunctionInput(@Nonnull final ParserContext context) {
-    this.context = context;
-  }
+  /**
+   * The collection that is the input to the function, i.e. the result of the evaluation of the
+   * expression on the left-hand side of the dot preceding the function invocation, or the left-hand
+   * operand in the case of an operator.
+   */
+  @Nonnull
+  Collection input;
+
+  /**
+   * A list of expressions representing the arguments to the function, i.e. the expressions inside
+   * the parentheses following the function invocation, separated by commas, or the right-hand
+   * operand in the case of an operator.
+   */
+  @Nonnull
+  List<FhirPath<Collection, Collection>> arguments;
 
 }

@@ -22,13 +22,12 @@ import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
 import static au.csiro.pathling.utilities.Strings.randomAlias;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -84,7 +83,7 @@ class WhereFunctionTest {
         .withRow("patient-5", makeEid(0), "encounter-9", "in-progress")
         .withRow("patient-6", null, null, null)
         .build();
-    final ResourcePath inputPath = new ResourcePathBuilder(spark)
+    final ResourceCollection inputPath = new ResourcePathBuilder(spark)
         .expression("reverseResolve(Encounter.subject)")
         .dataset(inputDataset)
         .idEidAndValueColumns()
@@ -100,7 +99,7 @@ class WhereFunctionTest {
             thisPath.getDataset().col(statusColumn).equalTo("in-progress"));
 
     assertTrue(thisPath.getThisColumn().isPresent());
-    final ElementPath argumentPath = new ElementPathBuilder(spark)
+    final PrimitivePath argumentPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
@@ -116,7 +115,7 @@ class WhereFunctionTest {
 
     // Execute the function.
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
-    final FhirPath result = whereFunction.invoke(whereInput);
+    final Collection result = whereFunction.invoke(whereInput);
 
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
@@ -157,7 +156,7 @@ class WhereFunctionTest {
         .withRow("patient-4", makeEid(0), "fr")
         .withRow("patient-5", null, null)
         .build();
-    final ElementPath inputPath = new ElementPathBuilder(spark)
+    final PrimitivePath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
         .idAndEidAndValueColumns()
@@ -171,7 +170,7 @@ class WhereFunctionTest {
         .withColumn("value", inputPath.getValueColumn().equalTo("en"));
 
     assertTrue(thisPath.getThisColumn().isPresent());
-    final ElementPath argumentExpression = new ElementPathBuilder(spark)
+    final PrimitivePath argumentExpression = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
@@ -188,7 +187,7 @@ class WhereFunctionTest {
 
     // Execute the function.
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
-    final FhirPath result = whereFunction.invoke(whereInput);
+    final Collection result = whereFunction.invoke(whereInput);
 
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
@@ -225,7 +224,7 @@ class WhereFunctionTest {
         .withRow("patient-3", makeEid(2), "zh")
         .withRow("patient-4", makeEid(0), "ar")
         .build();
-    final ElementPath inputPath = new ElementPathBuilder(spark)
+    final PrimitivePath inputPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.STRING)
         .dataset(dataset)
         .idAndEidAndValueColumns()
@@ -239,7 +238,7 @@ class WhereFunctionTest {
         .withColumn("value",
             functions.when(inputPath.getValueColumn().equalTo("en"), null).otherwise(true));
     assertTrue(thisPath.getThisColumn().isPresent());
-    final ElementPath argumentPath = new ElementPathBuilder(spark)
+    final PrimitivePath argumentPath = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.BOOLEAN)
         .dataset(argumentDataset)
         .idColumn(inputPath.getIdColumn())
@@ -255,7 +254,7 @@ class WhereFunctionTest {
 
     // Execute the function.
     final NamedFunction whereFunction = NamedFunction.getInstance("where");
-    final FhirPath result = whereFunction.invoke(whereInput);
+    final Collection result = whereFunction.invoke(whereInput);
 
     // Check the result dataset.
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
@@ -277,12 +276,12 @@ class WhereFunctionTest {
 
   @Test
   void throwsErrorIfMoreThanOneArgument() {
-    final ResourcePath input = new ResourcePathBuilder(spark).build();
-    final ElementPath argument1 = new ElementPathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark).build();
+    final PrimitivePath argument1 = new ElementPathBuilder(spark)
         .expression("$this.gender = 'female'")
         .fhirType(FHIRDefinedType.BOOLEAN)
         .build();
-    final ElementPath argument2 = new ElementPathBuilder(spark)
+    final PrimitivePath argument2 = new ElementPathBuilder(spark)
         .expression("$this.gender != 'male'")
         .fhirType(FHIRDefinedType.BOOLEAN)
         .build();
@@ -300,8 +299,8 @@ class WhereFunctionTest {
 
   @Test
   void throwsErrorIfArgumentNotBoolean() {
-    final ResourcePath input = new ResourcePathBuilder(spark).build();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark).build();
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .expression("$this.gender")
         .fhirType(FHIRDefinedType.STRING)
         .build();
@@ -321,8 +320,8 @@ class WhereFunctionTest {
 
   @Test
   void throwsErrorIfArgumentNotSingular() {
-    final ResourcePath input = new ResourcePathBuilder(spark).build();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark).build();
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .expression("$this.communication.preferred")
         .fhirType(FHIRDefinedType.BOOLEAN)
         .singular(false)
@@ -343,7 +342,7 @@ class WhereFunctionTest {
 
   @Test
   void throwsErrorIfArgumentIsLiteral() {
-    final ResourcePath input = new ResourcePathBuilder(spark).build();
+    final ResourceCollection input = new ResourcePathBuilder(spark).build();
     final BooleanLiteralPath argument = BooleanLiteralPath
         .fromString("true", input);
 

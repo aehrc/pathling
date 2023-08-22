@@ -17,14 +17,13 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.collection.Collection;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a path that represents a numeric value, and can be the subject of math operations.
@@ -34,37 +33,28 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public interface Numeric {
 
   /**
-   * Get a function that can take two Numeric paths and return a {@link NonLiteralPath} that
-   * contains the result of a math operation. The type of operation is controlled by supplying a
+   * Get a function that can take two Numeric paths and return a {@link Collection} that contains
+   * the result of a math operation. The type of operation is controlled by supplying a
    * {@link MathOperation}.
    *
    * @param operation The {@link MathOperation} type to retrieve a result for
-   * @param expression The FHIRPath expression to use within the result
-   * @param dataset The {@link Dataset} to use within the result
    * @return A {@link Function} that takes a Numeric as its parameter, and returns a
-   * {@link NonLiteralPath}.
+   * {@link Collection}.
    */
   @Nonnull
-  Function<Numeric, NonLiteralPath> getMathOperation(@Nonnull MathOperation operation,
-      @Nonnull String expression, @Nonnull Dataset<Row> dataset);
-
-  /**
-   * @return a {@link Column} within the dataset containing the identity of the subject resource
-   */
-  @Nonnull
-  Column getIdColumn();
+  Function<Numeric, Collection> getMathOperation(@Nonnull MathOperation operation);
 
   /**
    * @return a {@link Column} within the dataset containing the values of the nodes
    */
   @Nonnull
-  Column getValueColumn();
+  Column getColumn();
 
   /**
    * @return a {@link Column} that provides a value that can me used in math operations
    */
   @Nonnull
-  Column getNumericValueColumn();
+  Optional<Column> getNumericValueColumn();
 
   /**
    * Provides a {@link Column} that provides additional context that informs the way that math
@@ -74,19 +64,13 @@ public interface Numeric {
    * @return a {@link Column} that provides additional context for math operations
    */
   @Nonnull
-  Column getNumericContextColumn();
+  Optional<Column> getNumericContextColumn();
 
   /**
-   * The FHIR data type of the element being represented by this expression.
-   * <p>
-   * Note that there can be multiple valid FHIR types for a given FHIRPath type, e.g. {@code uri}
-   * and {@code code} both map to the {@code String} FHIRPath type.
-   *
-   * @return the FHIR data type of the expression
-   * @see <a href="https://hl7.org/fhir/fhirpath.html#types">Using FHIR types in expressions</a>
+   * The type of the result of evaluating this expression, if known.
    */
   @Nonnull
-  FHIRDefinedType getFhirType();
+  Optional<FhirPathType> getType();
 
   /**
    * Represents a type of math operator.

@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.join;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.test.helpers.SparkHelpers.getIdAndValueColumns;
 import static au.csiro.pathling.test.helpers.SparkHelpers.referenceStructType;
@@ -28,10 +27,10 @@ import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.QueryHelpers.JoinType;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -88,8 +87,8 @@ class ReverseResolveFunctionTest {
         .build();
     when(database.read(ResourceType.PATIENT))
         .thenReturn(patientDataset);
-    final ResourcePath inputPath = ResourcePath
-        .build(fhirContext, database, ResourceType.PATIENT, "Patient", true);
+    final ResourceCollection inputPath = ResourceCollection
+        .build(fhirContext, database, ResourceType.PATIENT, "Patient");
 
     final DatasetBuilder encounterDatasetBuilder = new ResourceDatasetBuilder(spark)
         .withIdColumn()
@@ -101,8 +100,8 @@ class ReverseResolveFunctionTest {
         .withRow("encounter-5", "onleave");
     final Dataset<Row> encounterDataset = encounterDatasetBuilder.build();
     when(database.read(ResourceType.ENCOUNTER)).thenReturn(encounterDataset);
-    final ResourcePath originPath = ResourcePath
-        .build(fhirContext, database, ResourceType.ENCOUNTER, "Encounter", false);
+    final ResourceCollection originPath = ResourceCollection
+        .build(fhirContext, database, ResourceType.ENCOUNTER, "Encounter");
 
     final Optional<ElementDefinition> optionalDefinition = FhirHelpers
         .getChildOfResource(fhirContext, "Encounter", "subject");
@@ -124,7 +123,7 @@ class ReverseResolveFunctionTest {
 
     final Dataset<Row> argumentDataset = join(originPath.getDataset(),
         originPath.getIdColumn(), argumentDatasetPreJoin, idColumn, JoinType.LEFT_OUTER);
-    final FhirPath argumentPath = new ElementPathBuilder(spark)
+    final Collection argumentPath = new ElementPathBuilder(spark)
         .dataset(argumentDataset)
         .idColumn(originPath.getIdColumn())
         .valueColumn(valueColumn)
@@ -142,10 +141,10 @@ class ReverseResolveFunctionTest {
     final NamedFunctionInput reverseResolveInput = new NamedFunctionInput(parserContext, inputPath,
         Collections.singletonList(argumentPath));
     final NamedFunction reverseResolve = NamedFunction.getInstance("reverseResolve");
-    final FhirPath result = reverseResolve.invoke(reverseResolveInput);
+    final Collection result = reverseResolve.invoke(reverseResolveInput);
 
-    assertTrue(result instanceof ResourcePath);
-    assertThat((ResourcePath) result)
+    assertTrue(result instanceof ResourceCollection);
+    assertThat((ResourceCollection) result)
         .hasExpression("reverseResolve(Encounter.subject)")
         .isNotSingular()
         .hasResourceType(ResourceType.ENCOUNTER);
@@ -166,11 +165,11 @@ class ReverseResolveFunctionTest {
 
   @Test
   void throwsErrorIfInputNotResource() {
-    final ElementPath input = new ElementPathBuilder(spark)
+    final PrimitivePath input = new ElementPathBuilder(spark)
         .expression("gender")
         .fhirType(FHIRDefinedType.CODE)
         .build();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
 
@@ -189,8 +188,8 @@ class ReverseResolveFunctionTest {
 
   @Test
   void throwsErrorIfArgumentIsNotReference() {
-    final ResourcePath input = new ResourcePathBuilder(spark).build();
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark).build();
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .expression("gender")
         .fhirType(FHIRDefinedType.CODE)
         .build();
@@ -210,14 +209,14 @@ class ReverseResolveFunctionTest {
 
   @Test
   void throwsErrorIfMoreThanOneArgument() {
-    final ResourcePath input = new ResourcePathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark)
         .expression("Patient")
         .build();
-    final ElementPath argument1 = new ElementPathBuilder(spark)
+    final PrimitivePath argument1 = new ElementPathBuilder(spark)
         .expression("Encounter.subject")
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
-    final ElementPath argument2 = new ElementPathBuilder(spark)
+    final PrimitivePath argument2 = new ElementPathBuilder(spark)
         .expression("Encounter.participant.individual")
         .fhirType(FHIRDefinedType.REFERENCE)
         .build();
@@ -239,7 +238,7 @@ class ReverseResolveFunctionTest {
 
   @Test
   void throwsErrorIfArgumentTypeDoesNotMatchInput() {
-    final ResourcePath input = new ResourcePathBuilder(spark)
+    final ResourceCollection input = new ResourcePathBuilder(spark)
         .resourceType(ResourceType.PATIENT)
         .expression("Patient")
         .build();
@@ -248,7 +247,7 @@ class ReverseResolveFunctionTest {
     final BaseRuntimeChildDefinition childDefinition = hapiResourceDef.getChildByName(
         "episodeOfCare");
     final ElementDefinition definition = ElementDefinition.build(childDefinition);
-    final ElementPath argument = new ElementPathBuilder(spark)
+    final PrimitivePath argument = new ElementPathBuilder(spark)
         .expression("Encounter.episodeOfCare")
         .fhirType(FHIRDefinedType.REFERENCE)
         .definition(definition)

@@ -21,9 +21,9 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -56,8 +56,8 @@ class ComparisonOperatorDateTest {
   FhirContext fhirContext;
 
   static final String ID_ALIAS = "_abc123";
-  private ElementPath left;
-  private ElementPath right;
+  private PrimitivePath left;
+  private PrimitivePath right;
   private ParserContext parserContext;
 
   @BeforeEach
@@ -120,9 +120,9 @@ class ComparisonOperatorDateTest {
 
   @Test
   void equals() {
-    final OperatorInput comparisonInput = new OperatorInput(parserContext, left, right);
-    final Operator lessThan = Operator.getInstance("=");
-    final FhirPath result = lessThan.invoke(comparisonInput);
+    final BinaryOperatorInput comparisonInput = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator lessThan = BinaryOperator.getInstance("=");
+    final Collection result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", true),   // Equal, years, months and days
@@ -140,9 +140,9 @@ class ComparisonOperatorDateTest {
 
   @Test
   void notEquals() {
-    final OperatorInput comparisonInput = new OperatorInput(parserContext, left, right);
-    final Operator lessThan = Operator.getInstance("!=");
-    final FhirPath result = lessThan.invoke(comparisonInput);
+    final BinaryOperatorInput comparisonInput = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator lessThan = BinaryOperator.getInstance("!=");
+    final Collection result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", false),  // Equal, years, months and days
@@ -160,9 +160,9 @@ class ComparisonOperatorDateTest {
 
   @Test
   void lessThan() {
-    final OperatorInput comparisonInput = new OperatorInput(parserContext, left, right);
-    final Operator lessThan = Operator.getInstance("<");
-    final FhirPath result = lessThan.invoke(comparisonInput);
+    final BinaryOperatorInput comparisonInput = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator lessThan = BinaryOperator.getInstance("<");
+    final Collection result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", false),  // Equal, years, months and days
@@ -180,9 +180,9 @@ class ComparisonOperatorDateTest {
 
   @Test
   void lessThanOrEqualTo() {
-    final OperatorInput comparisonInput = new OperatorInput(parserContext, left, right);
-    final Operator lessThan = Operator.getInstance("<=");
-    final FhirPath result = lessThan.invoke(comparisonInput);
+    final BinaryOperatorInput comparisonInput = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator lessThan = BinaryOperator.getInstance("<=");
+    final Collection result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", true),   // Equal, years, months and days
@@ -200,9 +200,9 @@ class ComparisonOperatorDateTest {
 
   @Test
   void greaterThan() {
-    final OperatorInput comparisonInput = new OperatorInput(parserContext, left, right);
-    final Operator lessThan = Operator.getInstance(">");
-    final FhirPath result = lessThan.invoke(comparisonInput);
+    final BinaryOperatorInput comparisonInput = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator lessThan = BinaryOperator.getInstance(">");
+    final Collection result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", false),  // Equal, years, months and days
@@ -220,9 +220,9 @@ class ComparisonOperatorDateTest {
 
   @Test
   void greaterThanOrEqualTo() {
-    final OperatorInput comparisonInput = new OperatorInput(parserContext, left, right);
-    final Operator lessThan = Operator.getInstance(">=");
-    final FhirPath result = lessThan.invoke(comparisonInput);
+    final BinaryOperatorInput comparisonInput = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator lessThan = BinaryOperator.getInstance(">=");
+    final Collection result = lessThan.invoke(comparisonInput);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-01", true),   // Equal, years, months and days

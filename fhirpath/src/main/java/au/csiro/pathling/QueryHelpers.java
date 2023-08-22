@@ -27,14 +27,13 @@ import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.posexplode_outer;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.literal.LiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.utilities.Strings;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -43,7 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Getter;
@@ -159,7 +157,7 @@ public abstract class QueryHelpers {
         "Left columns should be same size as right columns");
 
     Dataset<Row> aliasedLeft = left;
-    final Collection<Column> joinConditions = new ArrayList<>();
+    final java.util.Collection<Column> joinConditions = new ArrayList<>();
     for (int i = 0; i < leftColumns.size(); i++) {
       // We alias the join columns on the left-hand side to disambiguate them from columns named the
       // same on the right-hand side.
@@ -282,41 +280,41 @@ public abstract class QueryHelpers {
   }
 
   /**
-   * Joins two {@link FhirPath} expressions, using equality between their respective resource ID
+   * Joins two {@link Collection} expressions, using equality between their respective resource ID
    * columns.
    *
    * @param parserContext the current {@link ParserContext}
-   * @param left a {@link FhirPath} expression
+   * @param left a {@link Collection} expression
    * @param right another FhirPath expression
    * @param joinType a {@link JoinType}
    * @return a new {@link Dataset}
    */
   @Nonnull
   public static Dataset<Row> join(@Nonnull final ParserContext parserContext,
-      @Nonnull final FhirPath left, @Nonnull final FhirPath right,
+      @Nonnull final Collection left, @Nonnull final Collection right,
       @Nonnull final JoinType joinType) {
     return join(parserContext, Arrays.asList(left, right), joinType);
   }
 
   /**
-   * Joins any number of {@link FhirPath} expressions, using equality between their respective
+   * Joins any number of {@link Collection} expressions, using equality between their respective
    * resource ID columns.
    *
    * @param parserContext the current {@link ParserContext}
-   * @param fhirPaths a list of {@link FhirPath} expressions
+   * @param results a list of {@link Collection} expressions
    * @param joinType a {@link JoinType}
    * @return a new {@link Dataset}
    */
   @Nonnull
   public static Dataset<Row> join(@Nonnull final ParserContext parserContext,
-      @Nonnull final List<FhirPath> fhirPaths, @Nonnull final JoinType joinType) {
-    checkArgument(fhirPaths.size() > 1, "fhirPaths must contain more than one FhirPath");
+      @Nonnull final List<Collection> results, @Nonnull final JoinType joinType) {
+    checkArgument(results.size() > 1, "fhirPaths must contain more than one FhirPath");
 
-    final FhirPath left = fhirPaths.get(0);
-    final List<FhirPath> joinTargets = fhirPaths.subList(1, fhirPaths.size());
+    final Collection left = results.get(0);
+    final List<Collection> joinTargets = results.subList(1, results.size());
 
     // Only non-literal paths will trigger a join.
-    final List<FhirPath> nonLiteralTargets = joinTargets.stream()
+    final List<Collection> nonLiteralTargets = joinTargets.stream()
         .filter(t -> t instanceof NonLiteralPath)
         .collect(toList());
     if (left instanceof NonLiteralPath && nonLiteralTargets.isEmpty()) {
@@ -334,7 +332,7 @@ public abstract class QueryHelpers {
     final Column idColumn = parserContext.getInputContext().getIdColumn();
     final List<Column> leftColumns = checkColumnsAndFallback(left.getDataset(), groupingColumns,
         idColumn);
-    for (final FhirPath right : nonLiteralTargets) {
+    for (final Collection right : nonLiteralTargets) {
       final List<Column> resolvedGroupingColumns = checkColumnsAndFallback(right.getDataset(),
           leftColumns, idColumn);
       dataset = join(dataset, resolvedGroupingColumns, right.getDataset(), resolvedGroupingColumns,
@@ -344,26 +342,26 @@ public abstract class QueryHelpers {
   }
 
   /**
-   * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
+   * Joins a {@link Dataset} to a {@link Collection}, using equality between the resource ID in the
    * FhirPath and the supplied column.
    *
-   * @param left a {@link FhirPath} expression
+   * @param left a {@link Collection} expression
    * @param right a {@link Dataset}
    * @param rightColumn the {@link Column} in the right Dataset
    * @param joinType a {@link JoinType}
    * @return A new {@link Dataset}
    */
   @Nonnull
-  public static Dataset<Row> join(@Nonnull final FhirPath left, @Nonnull final Dataset<Row> right,
+  public static Dataset<Row> join(@Nonnull final Collection left, @Nonnull final Dataset<Row> right,
       @Nonnull final Column rightColumn, @Nonnull final JoinType joinType) {
     return join(left.getDataset(), left.getIdColumn(), right, rightColumn, joinType);
   }
 
   /**
-   * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
+   * Joins a {@link Dataset} to a {@link Collection}, using equality between the resource ID in the
    * FhirPath and the supplied column.
    *
-   * @param left a {@link FhirPath} expression
+   * @param left a {@link Collection} expression
    * @param right a {@link Dataset}
    * @param rightColumn the {@link Column} in the right Dataset
    * @param additionalCondition an additional Column to be added to the join condition, using AND
@@ -371,7 +369,7 @@ public abstract class QueryHelpers {
    * @return A new {@link Dataset}
    */
   @Nonnull
-  public static Dataset<Row> join(@Nonnull final FhirPath left, @Nonnull final Dataset<Row> right,
+  public static Dataset<Row> join(@Nonnull final Collection left, @Nonnull final Dataset<Row> right,
       @Nonnull final Column rightColumn, @Nonnull final Column additionalCondition,
       @Nonnull final JoinType joinType) {
     return join(left.getDataset(), Collections.singletonList(left.getIdColumn()), right,
@@ -379,18 +377,18 @@ public abstract class QueryHelpers {
   }
 
   /**
-   * Joins a {@link Dataset} to a {@link FhirPath}, using equality between the resource ID in the
+   * Joins a {@link Dataset} to a {@link Collection}, using equality between the resource ID in the
    * FhirPath and the supplied column.
    *
    * @param left a {@link Dataset}
    * @param leftColumn the {@link Column} in the left Dataset
-   * @param right a {@link FhirPath} expression
+   * @param right a {@link Collection} expression
    * @param joinType a {@link JoinType}
    * @return A new {@link Dataset}
    */
   @Nonnull
   public static Dataset<Row> join(@Nonnull final Dataset<Row> left,
-      @Nonnull final Column leftColumn, @Nonnull final FhirPath right,
+      @Nonnull final Column leftColumn, @Nonnull final Collection right,
       @Nonnull final JoinType joinType) {
     return join(left, leftColumn, right.getDataset(), right.getIdColumn(), joinType);
   }
@@ -422,7 +420,7 @@ public abstract class QueryHelpers {
    * @return A new Dataset that is the union of all the inputs
    */
   @Nonnull
-  public static Dataset<Row> union(@Nonnull final Collection<Dataset<Row>> datasets) {
+  public static Dataset<Row> union(@Nonnull final java.util.Collection<Dataset<Row>> datasets) {
     return datasets.stream()
         .reduce(Dataset::union)
         .orElseThrow();
@@ -430,7 +428,7 @@ public abstract class QueryHelpers {
 
   @Nonnull
   private static Dataset<Row> applySelection(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final Collection<String> includes, @Nonnull final Collection<String> excludes) {
+      @Nonnull final java.util.Collection<String> includes, @Nonnull final java.util.Collection<String> excludes) {
     return dataset.select(Stream.of(dataset.columns())
         .filter(column -> includes.contains(column) || !excludes.contains(column))
         .map(dataset::col)
@@ -438,8 +436,8 @@ public abstract class QueryHelpers {
   }
 
   @Nonnull
-  public static List<Column> getUnionableColumns(@Nonnull final FhirPath source,
-      @Nonnull final FhirPath target) {
+  public static List<Column> getUnionableColumns(@Nonnull final Collection source,
+      @Nonnull final Collection target) {
     // The columns will be those common to both datasets, plus the value column of the source.
     final Set<String> commonColumnNames = new HashSet<>(List.of(source.getDataset().columns()));
     commonColumnNames.retainAll(List.of(target.getDataset().columns()));

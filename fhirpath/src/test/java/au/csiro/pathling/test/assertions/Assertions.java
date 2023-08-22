@@ -19,9 +19,9 @@ package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -38,17 +38,17 @@ import org.opentest4j.AssertionFailedError;
 public abstract class Assertions {
 
   @Nonnull
-  public static FhirPathAssertion assertThat(@Nonnull final FhirPath fhirPath) {
-    return new FhirPathAssertion(fhirPath);
+  public static FhirPathAssertion assertThat(@Nonnull final Collection result) {
+    return new FhirPathAssertion(result);
   }
 
   @Nonnull
-  public static ResourcePathAssertion assertThat(@Nonnull final ResourcePath fhirPath) {
+  public static ResourcePathAssertion assertThat(@Nonnull final ResourceCollection fhirPath) {
     return new ResourcePathAssertion(fhirPath);
   }
 
   @Nonnull
-  public static ElementPathAssertion assertThat(@Nonnull final ElementPath fhirPath) {
+  public static ElementPathAssertion assertThat(@Nonnull final PrimitivePath fhirPath) {
     return new ElementPathAssertion(fhirPath);
   }
 

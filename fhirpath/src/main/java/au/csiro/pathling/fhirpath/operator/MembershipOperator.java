@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.fhirpath.operator.Operator.checkArgumentsAreComparable;
+import static au.csiro.pathling.fhirpath.operator.BinaryOperator.checkArgumentsAreComparable;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
@@ -25,7 +25,7 @@ import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.AggregateFunction;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
@@ -38,7 +38,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#membership">Membership</a>
  */
-public class MembershipOperator extends AggregateFunction implements Operator {
+public class MembershipOperator extends AggregateFunction implements BinaryOperator {
 
   private final MembershipOperatorType type;
 
@@ -51,15 +51,15 @@ public class MembershipOperator extends AggregateFunction implements Operator {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final OperatorInput input) {
-    final FhirPath left = input.getLeft();
-    final FhirPath right = input.getRight();
-    final FhirPath element = type.equals(MembershipOperatorType.IN)
-                             ? left
-                             : right;
-    final FhirPath collection = type.equals(MembershipOperatorType.IN)
-                                ? right
-                                : left;
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
+    final Collection element = type.equals(MembershipOperatorType.IN)
+                           ? left
+                           : right;
+    final Collection collection = type.equals(MembershipOperatorType.IN)
+                              ? right
+                              : left;
 
     checkUserInput(element.isSingular(),
         "Element operand used with " + type + " operator is not singular: " + element

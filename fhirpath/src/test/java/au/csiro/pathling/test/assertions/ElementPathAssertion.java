@@ -17,11 +17,8 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -32,9 +29,9 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAssertion> {
 
   @Nonnull
-  private final ElementPath fhirPath;
+  private final PrimitivePath fhirPath;
 
-  ElementPathAssertion(@Nonnull final ElementPath fhirPath) {
+  ElementPathAssertion(@Nonnull final PrimitivePath fhirPath) {
     super(fhirPath);
     this.fhirPath = fhirPath;
   }

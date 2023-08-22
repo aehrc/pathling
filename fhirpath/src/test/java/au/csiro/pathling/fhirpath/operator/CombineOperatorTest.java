@@ -25,11 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.CodingPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.element.IntegerPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -73,7 +73,7 @@ class CombineOperatorTest {
         .withColumn(DataTypes.BooleanType)
         .withIdsAndValue(null, Arrays.asList("observation-1", "observation-2", "observation-3"))
         .build();
-    final ResourcePath inputContext = new ResourcePathBuilder(spark)
+    final ResourceCollection inputContext = new ResourcePathBuilder(spark)
         .resourceType(ResourceType.OBSERVATION)
         .dataset(input)
         .idAndValueColumns()
@@ -96,7 +96,7 @@ class CombineOperatorTest {
         .withRow("observation-2", null, null)
         .withRow("observation-3", makeEid(0), -1)
         .build();
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(leftDataset)
         .idAndEidAndValueColumns()
@@ -112,7 +112,7 @@ class CombineOperatorTest {
         .withRow("observation-2", null, null)
         .withRow("observation-3", makeEid(0), 14)
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(rightDataset)
         .idAndEidAndValueColumns()
@@ -120,8 +120,8 @@ class CombineOperatorTest {
         .singular(false)
         .build();
 
-    final OperatorInput combineInput = new OperatorInput(parserContext, left, right);
-    final FhirPath result = Operator.getInstance("combine").invoke(combineInput);
+    final BinaryOperatorInput combineInput = new BinaryOperatorInput(parserContext, left, right);
+    final Collection result = BinaryOperator.getInstance("combine").invoke(combineInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -139,7 +139,7 @@ class CombineOperatorTest {
     assertThat(result)
         .hasExpression("valueInteger combine valueInteger")
         .isNotSingular()
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRowsUnordered(expectedDataset);
   }
@@ -156,7 +156,7 @@ class CombineOperatorTest {
         .withRow("observation-2", null, null)
         .withRow("observation-3", makeEid(0), -1)
         .build();
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .dataset(leftDataset)
         .idAndEidAndValueColumns()
@@ -166,8 +166,8 @@ class CombineOperatorTest {
     final IntegerLiteralPath right = IntegerLiteralPath
         .fromString("99", parserContext.getInputContext());
 
-    final OperatorInput combineInput = new OperatorInput(parserContext, left, right);
-    final FhirPath result = Operator.getInstance("combine").invoke(combineInput);
+    final BinaryOperatorInput combineInput = new BinaryOperatorInput(parserContext, left, right);
+    final Collection result = BinaryOperator.getInstance("combine").invoke(combineInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()
@@ -184,7 +184,7 @@ class CombineOperatorTest {
     assertThat(result)
         .hasExpression("valueInteger combine 99")
         .isNotSingular()
-        .isElementPath(IntegerPath.class)
+        .isElementPath(IntegerCollection.class)
         .selectResult()
         .hasRowsUnordered(expectedDataset);
   }
@@ -198,18 +198,18 @@ class CombineOperatorTest {
         .withRow("observation-1", makeEid(0),
             rowFromCoding(new Coding("http://snomed.info/sct", "18001011000036104", null)))
         .buildWithStructValue();
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.CODING)
         .dataset(leftDataset)
         .idAndEidAndValueColumns()
         .expression("valueCoding")
         .singular(false)
         .build();
-    final CodingLiteralPath right = CodingLiteralPath
-        .fromString("http://snomed.info/sct|373882004", parserContext.getInputContext());
+    final CodingLiteralPath right = CodingCollection
+        .fromLiteral("http://snomed.info/sct|373882004", parserContext.getInputContext());
 
-    final OperatorInput combineInput = new OperatorInput(parserContext, left, right);
-    final FhirPath result = Operator.getInstance("combine").invoke(combineInput);
+    final BinaryOperatorInput combineInput = new BinaryOperatorInput(parserContext, left, right);
+    final Collection result = BinaryOperator.getInstance("combine").invoke(combineInput);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn(idColumnName)
@@ -226,24 +226,24 @@ class CombineOperatorTest {
     assertThat(result)
         .hasExpression("valueCoding combine http://snomed.info/sct|373882004")
         .isNotSingular()
-        .isElementPath(CodingPath.class)
+        .isElementPath(CodingCollection.class)
         .selectResult()
         .hasRowsUnordered(expectedDataset);
   }
 
   @Test
   void throwsErrorIfInputsAreNotCombinable() {
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .expression("valueInteger")
         .fhirType(FHIRDefinedType.INTEGER)
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .expression("valueString")
         .fhirType(FHIRDefinedType.STRING)
         .build();
 
-    final OperatorInput combineInput = new OperatorInput(parserContext, left, right);
-    final Operator combineOperator = Operator.getInstance("combine");
+    final BinaryOperatorInput combineInput = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator combineOperator = BinaryOperator.getInstance("combine");
 
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,

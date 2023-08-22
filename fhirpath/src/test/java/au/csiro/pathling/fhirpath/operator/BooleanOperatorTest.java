@@ -19,7 +19,7 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 
-import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -52,8 +52,8 @@ class BooleanOperatorTest {
 
   static final String ID_ALIAS = "_abc123";
 
-  FhirPath left;
-  FhirPath right;
+  Collection left;
+  Collection right;
   ParserContext parserContext;
 
   @BeforeEach
@@ -105,10 +105,10 @@ class BooleanOperatorTest {
 
   @Test
   void and() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
 
-    final Operator booleanOperator = Operator.getInstance("and");
-    final FhirPath result = booleanOperator.invoke(input);
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
+    final Collection result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -124,10 +124,10 @@ class BooleanOperatorTest {
 
   @Test
   void or() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
 
-    final Operator booleanOperator = Operator.getInstance("or");
-    final FhirPath result = booleanOperator.invoke(input);
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("or");
+    final Collection result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -143,10 +143,10 @@ class BooleanOperatorTest {
 
   @Test
   void xor() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
 
-    final Operator booleanOperator = Operator.getInstance("xor");
-    final FhirPath result = booleanOperator.invoke(input);
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("xor");
+    final Collection result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),
@@ -162,10 +162,10 @@ class BooleanOperatorTest {
 
   @Test
   void implies() {
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
 
-    final Operator booleanOperator = Operator.getInstance("implies");
-    final FhirPath result = booleanOperator.invoke(input);
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("implies");
+    final Collection result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -181,11 +181,11 @@ class BooleanOperatorTest {
 
   @Test
   void leftIsLiteral() {
-    final FhirPath literalLeft = BooleanLiteralPath.fromString("true", left);
-    final OperatorInput input = new OperatorInput(parserContext, literalLeft, right);
+    final Collection literalLeft = BooleanLiteralPath.fromString("true", left);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, literalLeft, right);
 
-    final Operator booleanOperator = Operator.getInstance("and");
-    final FhirPath result = booleanOperator.invoke(input);
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
+    final Collection result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", false),
@@ -201,11 +201,11 @@ class BooleanOperatorTest {
 
   @Test
   void rightIsLiteral() {
-    final FhirPath literalRight = BooleanLiteralPath.fromString("true", right);
-    final OperatorInput input = new OperatorInput(parserContext, left, literalRight);
+    final Collection literalRight = BooleanLiteralPath.fromString("true", right);
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, literalRight);
 
-    final Operator booleanOperator = Operator.getInstance("and");
-    final FhirPath result = booleanOperator.invoke(input);
+    final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
+    final Collection result = booleanOperator.invoke(input);
 
     assertThat(result).selectOrderedResult().hasRows(
         RowFactory.create("patient-1", true),

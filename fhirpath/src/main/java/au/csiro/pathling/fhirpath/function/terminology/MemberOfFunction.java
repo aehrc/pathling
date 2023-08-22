@@ -22,10 +22,9 @@ import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromIn
 import static au.csiro.pathling.sql.Terminology.member_of;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
@@ -54,17 +53,17 @@ public class MemberOfFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
     validateInput(input);
-    final ElementPath inputPath = (ElementPath) input.getInput();
+    final PrimitivePath inputPath = (PrimitivePath) input.getInput();
     final StringLiteralPath argument = (StringLiteralPath) input.getArguments().get(0);
     final String valueSetUrl = argument.getValue().asStringValue();
 
     final Column resultColumn = member_of(getCodingColumn(inputPath), valueSetUrl);
     // Construct a new result expression.
-    final String expression = expressionFromInput(input, NAME);
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
-    return ElementPath
+    return PrimitivePath
         .build(expression, inputPath.getDataset(), inputPath.getIdColumn(), resultColumn,
             inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
             inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
@@ -76,14 +75,14 @@ public class MemberOfFunction implements NamedFunction {
         .isPresent(), "Attempt to call terminology function " + NAME
         + " when terminology service has not been configured");
 
-    final FhirPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof ElementPath
-            && (((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)
-            || ((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODEABLECONCEPT)),
+    final Collection inputPath = input.getInput();
+    checkUserInput(inputPath instanceof PrimitivePath
+            && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)
+            || ((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODEABLECONCEPT)),
         "Input to memberOf function is of unsupported type: " + inputPath.getExpression());
     checkUserInput(input.getArguments().size() == 1,
         "memberOf function accepts one argument of type String");
-    final FhirPath argument = input.getArguments().get(0);
+    final Collection argument = input.getArguments().get(0);
     checkUserInput(argument instanceof StringLiteralPath,
         "memberOf function accepts one argument of type String literal");
   }

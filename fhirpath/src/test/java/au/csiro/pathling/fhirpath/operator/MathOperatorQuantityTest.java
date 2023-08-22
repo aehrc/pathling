@@ -22,8 +22,8 @@ import static au.csiro.pathling.test.helpers.SparkHelpers.quantityStructType;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowForUcumQuantity;
 import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromQuantity;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.DatasetBuilder;
@@ -33,7 +33,6 @@ import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
@@ -75,16 +74,16 @@ public class MathOperatorQuantityTest {
     String name;
 
     @Nonnull
-    FhirPath left;
+    Collection left;
 
     @Nonnull
-    FhirPath right;
+    Collection right;
 
     @Nonnull
     ParserContext context;
 
     @Nonnull
-    Operator operator;
+    BinaryOperator operator;
 
     @Nonnull
     Dataset<Row> expectedResult;
@@ -98,16 +97,17 @@ public class MathOperatorQuantityTest {
 
   @Nonnull
   Stream<TestParameters> parameters() {
-    final Collection<TestParameters> parameters = new ArrayList<>();
+    final java.util.Collection<TestParameters> parameters = new ArrayList<>();
     for (final String operator : OPERATORS) {
       final String name = "Quantity " + operator + " Quantity";
-      final FhirPath left = buildQuantityExpression(true);
-      final FhirPath right = buildQuantityExpression(false);
+      final Collection left = buildQuantityExpression(true);
+      final Collection right = buildQuantityExpression(false);
       final ParserContext context = new ParserContextBuilder(spark, fhirContext)
           .groupingColumns(Collections.singletonList(left.getIdColumn()))
           .build();
-      parameters.add(new TestParameters(name, left, right, context, Operator.getInstance(operator),
-          expectedResult(operator)));
+      parameters.add(
+          new TestParameters(name, left, right, context, BinaryOperator.getInstance(operator),
+              expectedResult(operator)));
     }
     return parameters.stream();
   }
@@ -151,7 +151,7 @@ public class MathOperatorQuantityTest {
   }
 
   @Nonnull
-  FhirPath buildQuantityExpression(final boolean leftOperand) {
+  Collection buildQuantityExpression(final boolean leftOperand) {
     final Quantity nonUcumQuantity = new Quantity();
     nonUcumQuantity.setValue(15);
     nonUcumQuantity.setUnit("mSv");
@@ -194,9 +194,9 @@ public class MathOperatorQuantityTest {
   @ParameterizedTest
   @MethodSource("parameters")
   void test(@Nonnull final TestParameters parameters) {
-    final OperatorInput input = new OperatorInput(parameters.getContext(),
+    final BinaryOperatorInput input = new BinaryOperatorInput(parameters.getContext(),
         parameters.getLeft(), parameters.getRight());
-    final FhirPath result = parameters.getOperator().invoke(input);
+    final Collection result = parameters.getOperator().invoke(input);
     assertThat(result).selectOrderedResult().hasRows(parameters.getExpectedResult());
   }
 
@@ -212,20 +212,20 @@ public class MathOperatorQuantityTest {
         .withStructTypeColumns(quantityStructType())
         .withRow("patient-1", rowForUcumQuantity(new BigDecimal("1.0"), "mmol/L"))
         .buildWithStructValue();
-    final FhirPath right = new ElementPathBuilder(spark)
+    final Collection right = new ElementPathBuilder(spark)
         .expression("valueQuantity")
         .fhirType(FHIRDefinedType.QUANTITY)
         .singular(true)
         .dataset(rightDataset)
         .idAndValueColumns()
         .build();
-    final FhirPath left = QuantityLiteralPath.fromUcumString("1.0 'mmol/L'", right,
+    final Collection left = QuantityCollection.fromUcumString("1.0 'mmol/L'", right,
         ucumService);
     final ParserContext context = new ParserContextBuilder(spark, fhirContext)
         .groupingColumns(Collections.singletonList(left.getIdColumn()))
         .build();
-    final OperatorInput input = new OperatorInput(context, left, right);
-    final FhirPath result = Operator.getInstance("+").invoke(input);
+    final BinaryOperatorInput input = new BinaryOperatorInput(context, left, right);
+    final Collection result = BinaryOperator.getInstance("+").invoke(input);
 
     final Dataset<Row> expectedDataset = new DatasetBuilder(spark)
         .withIdColumn()

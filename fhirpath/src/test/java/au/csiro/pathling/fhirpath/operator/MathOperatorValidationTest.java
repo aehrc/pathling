@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.builders.ElementPathBuilder;
@@ -54,19 +54,19 @@ class MathOperatorValidationTest {
 
   @Test
   void operandIsNotCorrectType() {
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.DATETIME)
         .singular(true)
         .expression("foo")
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .singular(true)
         .expression("bar")
         .build();
 
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator mathOperator = Operator.getInstance("+");
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(input));
@@ -74,7 +74,7 @@ class MathOperatorValidationTest {
         error.getMessage());
 
     // Now test the right operand.
-    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
     final InvalidUserInputError reversedError = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(reversedInput));
@@ -85,19 +85,19 @@ class MathOperatorValidationTest {
 
   @Test
   void operandIsNotSingular() {
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .singular(false)
         .expression("foo")
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .singular(true)
         .expression("bar")
         .build();
 
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator mathOperator = Operator.getInstance("+");
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(input));
@@ -105,7 +105,7 @@ class MathOperatorValidationTest {
         error.getMessage());
 
     // Now test the right operand.
-    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
     final InvalidUserInputError reversedError = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(reversedInput));
@@ -116,19 +116,19 @@ class MathOperatorValidationTest {
 
   @Test
   void operandsAreNotComparable() {
-    final ElementPath left = new ElementPathBuilder(spark)
+    final PrimitivePath left = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.INTEGER)
         .singular(true)
         .expression("foo")
         .build();
-    final ElementPath right = new ElementPathBuilder(spark)
+    final PrimitivePath right = new ElementPathBuilder(spark)
         .fhirType(FHIRDefinedType.QUANTITY)
         .singular(true)
         .expression("bar")
         .build();
 
-    final OperatorInput input = new OperatorInput(parserContext, left, right);
-    final Operator mathOperator = Operator.getInstance("+");
+    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+    final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
     final InvalidUserInputError error = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(input));
@@ -136,7 +136,7 @@ class MathOperatorValidationTest {
         error.getMessage());
 
     // Now test the right operand.
-    final OperatorInput reversedInput = new OperatorInput(parserContext, right, left);
+    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
     final InvalidUserInputError reversedError = assertThrows(
         InvalidUserInputError.class,
         () -> mathOperator.invoke(reversedInput));

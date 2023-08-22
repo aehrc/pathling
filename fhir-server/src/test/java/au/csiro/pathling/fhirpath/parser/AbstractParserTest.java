@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath.parser;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.ResourcePath;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -74,8 +74,8 @@ public class AbstractParserTest {
         ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
         ResourceType.CAREPLAN);
 
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.PATIENT, ResourceType.PATIENT.toCode(), true);
+    final ResourceCollection subjectResource = ResourceCollection
+        .build(fhirContext, dataSource, ResourceType.PATIENT, ResourceType.PATIENT.toCode());
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
@@ -97,8 +97,8 @@ public class AbstractParserTest {
   @Nonnull
   protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, resourceType, resourceType.toCode(), true);
+    final ResourceCollection subjectResource = ResourceCollection
+        .build(fhirContext, dataSource, resourceType, resourceType.toCode());
 
     final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)

@@ -18,15 +18,13 @@
 package au.csiro.pathling.fhirpath.function.terminology;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.designation;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.explode_outer;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.fhirpath.function.Arguments;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -53,11 +51,11 @@ public class DesignationFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final NamedFunctionInput input) {
 
     validateInput(input);
-    final ElementPath inputPath = (ElementPath) input.getInput();
-    final String expression = expressionFromInput(input, NAME);
+    final PrimitivePath inputPath = (PrimitivePath) input.getInput();
+    final String expression = expressionFromInput(input, NAME, input.getInput());
 
     final Arguments arguments = Arguments.of(input);
     @Nullable final Coding use = arguments.getOptionalValue(0, Coding.class).orElse(null);
@@ -71,7 +69,7 @@ public class DesignationFunction implements NamedFunction {
     // The result is an array of designations per each input element, which we now need to explode 
     // in the same way as for path traversal, creating unique element ids.
     final Column explodedDesignations = explode_outer(designations);
-    return ElementPath.build(expression, dataset, inputPath.getIdColumn(), explodedDesignations,
+    return PrimitivePath.build(expression, dataset, inputPath.getIdColumn(), explodedDesignations,
         Optional.empty(), inputPath.isSingular(), inputPath.getCurrentResource(),
         inputPath.getThisColumn(), FHIRDefinedType.STRING);
   }
@@ -82,12 +80,12 @@ public class DesignationFunction implements NamedFunction {
         .isPresent(), "Attempt to call terminology function " + NAME
         + " when terminology service has not been configured");
 
-    final FhirPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof ElementPath
-            && (((ElementPath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
+    final Collection inputPath = input.getInput();
+    checkUserInput(inputPath instanceof PrimitivePath
+            && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
         "Input to " + NAME + " function must be Coding but is: " + inputPath.getExpression());
 
-    final List<FhirPath> arguments = input.getArguments();
+    final List<Collection> arguments = input.getArguments();
     checkUserInput(arguments.size() <= 2,
         NAME + " function accepts two optional arguments");
     checkUserInput(arguments.isEmpty() || arguments.get(0) instanceof CodingLiteralPath,
