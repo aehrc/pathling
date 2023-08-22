@@ -59,10 +59,39 @@ ptl_is_spark_installed <- function() {
 #' @param ... character vector of the path components.
 #' @return The path to the examples data.
 #' 
+#' @family pathlyr examples
+#' 
 #' @export
 #' 
 #' @examples
 #' pathlyr_examples('ndjson', 'Condition.ndjson')
 pathlyr_examples <- function(...) {
   system.file("extdata", ..., package = "pathlyr")
+}
+
+#' Reads example FHIR resource data frame.
+#' 
+#' @description
+#' \code{pathlyr_example_resource()} reads a FHIR resource dataframe from the package example data.
+#' 
+#' @param pc The PathlingContext object.
+#' @param resource_name The name of the resource to read.
+#' 
+#' @details
+#' The resorces are read from the package example data in the \code{extdata/parquet} directory. 
+#' Currently the following resources are available: 'Patient' and 'Condition'.
+#' 
+#' @return A Spark DataFrame containing the resource data.
+#' 
+#' @family pathlyr examples
+#'
+#' @export
+#' 
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' pathlyr_example_resource(pc, 'Condition')
+#' ptl_disconnect(pc)
+pathlyr_example_resource <- function(pc, resource_name) {
+  pc %>% ptl_spark() %>% 
+      sparklyr::spark_read_parquet(pathlyr_examples("parquet" , paste0(resource_name, ".parquet")))
 }

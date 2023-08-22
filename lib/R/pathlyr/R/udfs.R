@@ -59,47 +59,46 @@ Equivalence <- list(
     DISJOINT = "disjoint"
 )
 
-
-#' Converts a vector to an expression with the corresponding SQL array litera.
-#' @param value A character or numeric vector to be converted
-#' @return The `quosure` with the SQL array literal that can be used in dplyr::mutate.
-to_array <- function(value) {
-  if (!is.null(value)) {
-    rlang::new_quosure(rlang::expr(array(!!!value)))
-  } else {
-    rlang::new_quosure(rlang::expr(NULL))
-  }
-}
-
 #' Checks if Coding is a member of ValueSet.
 #'
-#' Takes a Coding or array of Codings column as its input. Returns the column which contains a
+#' \code{trm_member_of()} takes a Coding or array of Codings column as its input. Returns the column which contains a
 #' Boolean value, indicating whether any of the input Codings is a member of the specified FHIR
 #' ValueSet.
 #'
-#' @param coding A Column containing a struct representation of a Coding or an array of such structs.
+#' @param codings A Column containing a struct representation of a Coding or an array of such structs.
 #' @param value_set_uri An identifier for a FHIR ValueSet.
 #'
 #' @return A Column containing the result of the operation.
-#'
-#' @examples
-#' # Example usage of trm_member_of function
-#' trm_member_of(coding, value_set_uri)
+#' 
+#' @family terminology functions
 #'
 #' @export
-trm_member_of <- function(coding, value_set_uri) {
-  rlang::expr(member_of({ { coding } }, { { value_set_uri } }))
+#' 
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' 
+#' # Test the codings of the Condition `code` for membership in a SNOMED CT ValueSet.
+#' pc %>% pathlyr_example_resource('Condition') %>%
+#'      sparklyr::mutate(
+#'          id, 
+#'          is_member = !!trm_member_of(code[['coding']], 
+#'                  'http://snomed.info/sct?fhir_vs=refset/723264001'), 
+#'          .keep='none')
+#' 
+#' ptl_disconnect(pc)
+trm_member_of <- function(codings, value_set_uri) {
+  rlang::expr(member_of({ { codings } }, { { value_set_uri } }))
 }
 
 #' Translates a Coding column.
 #'
-#' Takes a Coding column as input. Returns the Column which contains an array of
+#' \code{trm_translate()} a Coding column as input. Returns the Column which contains an array of
 #' Coding value with translation targets from the specified FHIR ConceptMap. There
 #' may be more than one target concept for each input concept. Only the translation with
 #' the specified equivalences are returned.
 #' See also \code{\link{Equivalence}}.
 #'
-#' @param coding A Column containing a struct representation of a Coding.
+#' @param codings A Column containing a struct representation of a Coding.
 #' @param concept_map_uri An identifier for a FHIR ConceptMap.
 #' @param reverse The direction to traverse the map. FALSE results in "source to target"
 #'   mappings, while TRUE results in "target to source".
@@ -109,58 +108,90 @@ trm_member_of <- function(coding, value_set_uri) {
 #'
 #' @return A Column containing the result of the operation (an array of Coding structs).
 #'
-#' @examples
-#' # Example usage of trm_translate function
-#' trm_translate(coding, concept_map_uri, reverse = FALSE, equivalences = "equivalent", 
-#'      target = NULL)
-#'
+#' @family terminology functions
+#' 
 #' @export
-trm_translate <- function(coding, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
-  rlang::expr(translate_coding({ { coding } }, { { concept_map_uri } }, { { reverse } },
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' 
+#' # Translates the codings of the Condition `code` using a SNOMED implicit concept map.
+#' pc %>% pathlyr_example_resource('Condition') %>%
+#'     sparklyr::mutate(
+#'          id,
+#'          translation = !!trm_translate(code[['coding']],
+#'                  'http://snomed.info/sct?fhir_cm=900000000000527005'),
+#'          .keep='none')
+#'  
+#' ptl_disconnect(pc)
+trm_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
+  rlang::expr(translate_coding({ { codings } }, { { concept_map_uri } }, { { reverse } },
                                !!to_array(equivalences), { { target } }))
 }
 
 #' Checks if left Coding subsumes right Coding.
 #'
-#' Takes two Coding columns as input. Returns the Column, which contains a Boolean value,
+#' \code{trm_subsumes()} two Coding columns as input. Returns the Column,
+#' which contains a Boolean value,
 #' indicating whether the left Coding subsumes the right Coding.
 #'
-#' @param left_coding A Column containing a struct representation of a Coding or an array of Codings.
-#' @param right_coding A Column containing a struct representation of a Coding or an array of Codings.
+#' @param left_codings A Column containing a struct representation of a Coding or an array of Codings.
+#' @param right_codings A Column containing a struct representation of a Coding or an array of Codings.
 #'
 #' @return A Column containing the result of the operation (boolean).
-#'
-#' @examples
-#' # Example usage of trm_subsumes function
-#' trm_subsumes(left_coding, right_coding)
+#' 
+#' @family terminology functions
 #'
 #' @export
-trm_subsumes <- function(left_coding, right_coding) {
-  rlang::expr(subsumes({ { left_coding } }, { { right_coding } }, FALSE))
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' 
+#' # Test the codings of the Condition `code` for subsumption of a SNOMED CT code.
+#' pc %>% pathlyr_example_resource('Condition') %>%
+#'     sparklyr::mutate(
+#'          id,
+#'          subsumes = !!trm_subsumes(code[['coding']],
+#'              !!trm_to_snomed_coding('444814009')),
+#'          .keep='none')
+#'  
+#' ptl_disconnect(pc)
+trm_subsumes <- function(left_codings, right_codings) {
+  rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, FALSE))
 }
 
 #' Checks if left Coding is subsumed by right Coding.
 #'
-#' Takes two Coding columns as input. Returns the Column, which contains a Boolean value,
+#' \code{trm_subsumed_by()} takes two Coding columns as input. Returns the Column, 
+#' which contains a Boolean value,
 #' indicating whether the left Coding is subsumed by the right Coding.
 #'
-#' @param left_coding A Column containing a struct representation of a Coding or an array of Codings.
-#' @param right_coding A Column containing a struct representation of a Coding or an array of Codings.
+#' @param left_codings A Column containing a struct representation of a Coding or an array of Codings.
+#' @param right_codings A Column containing a struct representation of a Coding or an array of Codings.
 #'
 #' @return A Column containing the result of the operation (boolean).
 #'
-#' @examples
-#' # Example usage of trm_subsumed_by function
-#' trm_subsumed_by(left_coding, right_coding)
-#'
+#' @family terminology functions
+#' 
 #' @export
-trm_subsumed_by <- function(left_coding, right_coding) {
-  rlang::expr(subsumes({ { left_coding } }, { { right_coding } }, TRUE))
+#' 
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' 
+#' # Test the codings of the Condition `code` for subsumption by a SNOMED CT code.
+#' pc %>% pathlyr_example_resource('Condition') %>%
+#'     sparklyr::mutate(
+#'          id,
+#'          is_subsumed_by = !!trm_subsumed_by(code[['coding']],
+#'              !!trm_to_snomed_coding('444814009')),
+#'          .keep='none')
+#'  
+#' ptl_disconnect(pc)
+trm_subsumed_by <- function(left_codings, right_codings) {
+  rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, TRUE))
 }
 
 #' Retrieves the canonical display name for a Coding.
 #'
-#' Takes a Coding column as its input. Returns the Column, which contains the canonical display
+#' \code{trm_display()} takes a Coding column as its input. Returns the Column, which contains the canonical display
 #' name associated with the given code.
 #'
 #' @param coding A Column containing a struct representation of a Coding.
@@ -170,18 +201,29 @@ trm_subsumed_by <- function(left_coding, right_coding) {
 #'
 #' @return A Column containing the result of the operation (String).
 #'
-#' @examples
-#' # Example usage of trm_display function
-#' trm_display(coding, accept_language = NULL)
-#'
+#' @family terminology functions
+#' 
 #' @export
+#' 
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' 
+#' # Get the display nane of the first coding of the Condition resource code with default language
+#' pc %>% pathlyr_example_resource('Condition') %>%
+#'      sparklyr::mutate(
+#'          id, 
+#'          display = !!trm_display(code[['coding']][[0]]), 
+#'          .keep='none')
+#' 
+#' ptl_disconnect(pc)
 trm_display <- function(coding, accept_language = NULL) {
   rlang::expr(display({ { coding } }, { { accept_language } }))
 }
 
 #' Retrieves the values of properties for a Coding.
 #'
-#' Takes a Coding column as its input. Returns the Column, which contains the values of properties
+#' \code{trm_property_of()} takes a Coding column as its input. 
+#' Returns the Column, which contains the values of properties
 #' for this coding with specified names and types. The type of the result column depends on the
 #' types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
 #' Complex types are mapped to their corresponding structs. The allowed property types are:
@@ -195,12 +237,23 @@ trm_display <- function(coding, accept_language = NULL) {
 #'        Overrides the parameter `accept_language` in `PathlingContext.create`.
 #'
 #' @return The Column containing the result of the operation (array of property values).
-#'
-#' @examples
-#' # Example usage of trm_property_of function
-#' trm_property_of(coding, property_code, property_type = "string", accept_language = NULL)
+#' 
+#' @family terminology functions
 #'
 #' @export
+#' 
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' 
+#' # Get the (first) value of `inactive` property of the first coding of the Condition resource code
+#' pc %>% pathlyr_example_resource('Condition') %>%
+#'      sparklyr::mutate(id, 
+#'          is_inavtive = (!!trm_property_of(code[['coding']][[0]], 
+#'                                  "inactive",PropertyType$BOOLEAN))[[0]], 
+#'          .keep='none'
+#'      )
+#' 
+#' ptl_disconnect(pc)
 trm_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
 
   if (property_type == PropertyType$CODE) {
@@ -224,7 +277,7 @@ trm_property_of <- function(coding, property_code, property_type = "string", acc
 
 #' Retrieves the values of designations for a Coding.
 #'
-#' Takes a Coding column as its input. Returns the Column, which contains the values of
+#' \code{trm_designation()} takes a Coding column as its input. Returns the Column, which contains the values of
 #' designations (strings) for this coding for the specified use and language. If the language is
 #' not provided (is null), then all designations with the specified type are returned regardless of
 #' their language.
@@ -235,17 +288,22 @@ trm_property_of <- function(coding, property_code, property_type = "string", acc
 #'
 #' @return The Column containing the result of the operation (array of strings with designation values).
 #'
-#' @examples
-#' # Example usage of trm_designation function
-#' trm_designation(coding, use = NULL, language = NULL)
-#'
+#' @family Terminology functions
+#' 
 #' @export
+#' 
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' 
+#' # Get the (first) value of the SNONED-CD designation code '900000000000003001'  
+#' # for the first coding of the Condition resource code for language 'en'.
+#' pc %>% pathlyr_example_resource('Condition') %>% 
+#'      sparklyr::mutate(
+#'             id, 
+#'             designation = (!!trm_designation(code[['coding']][[0]], 
+#'                      !!trm_to_snomed_coding('900000000000003001'), language = 'en'))[[0]], 
+#'             .keep='none')
+#' ptl_disconnect(pc)
 trm_designation <- function(coding, use = NULL, language = NULL) {
   rlang::expr(designation({ { coding } }, { { use } }, { { language } }))
 }
-
-#
-# TODO: Review the code examples and documentation
-# Check : https://r-pkgs.org/man.html#sec-man-examples 
-# But also: The R Graphics Package (graphics) for the examples of how to include example code.
-#

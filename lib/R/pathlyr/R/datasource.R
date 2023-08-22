@@ -100,9 +100,8 @@ ptl_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' spark <- ptl_spark(pc)
-#' patient_df <- spark %>% sparklyr::sdf_copy_to(Patient)
-#' condition_df <- spark %>% sparklyr::sdf_copy_to(Condition)
+#' patient_df <- pc %>% pathlyr_example_resource('Patient')
+#' condition_df <- pc %>% pathlyr_example_resource('Condition')
 #' data_source <- pc %>% ptl_read_datasets(list(Patient = patient_df, Condition = condition_df))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' ptl_disconnect(pc)

@@ -66,10 +66,20 @@ trm_to_snomed_coding <- function(coding_column, version = NULL) {
   trm_to_coding({ { coding_column } }, SNOMED_URI, { { version } })
 }
 
+#' Converts a vector to an expression with the corresponding SQL array litera.
+#' @param value A character or numeric vector to be converted
+#' @return The `quosure` with the SQL array literal that can be used in dplyr::mutate.
+to_array <- function(value) {
+  if (!is.null(value)) {
+    rlang::new_quosure(rlang::expr(array(!!!value)))
+  } else {
+    rlang::new_quosure(rlang::expr(NULL))
+  }
+}
 
 #' Converts a SNOMED CT ECL expression into a FHIR ValueSet URI.
 #'
-#' Can be used with the `member_of` function.
+#' Can be used with the `trm_member_of` function.
 #'
 #' @param ecl The ECL expression.
 #'

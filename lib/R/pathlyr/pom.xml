@@ -37,6 +37,7 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>library-runtime</artifactId>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>au.csiro.pathling</groupId>
@@ -131,6 +132,7 @@
               <goal>copy-dependencies</goal>
             </goals>
             <configuration>
+              <includeScope>runtime</includeScope>
               <excludeTransitive>true</excludeTransitive>
               <outputDirectory>${project.basedir}/inst/java</outputDirectory>
             </configuration>
