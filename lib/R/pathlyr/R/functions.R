@@ -21,9 +21,17 @@ SNOMED_URI <- "http://snomed.info/sct"
 #' @export
 LOINC_URI <- "http://loinc.org"
 
-#' Converts a Column containing codes into a Column that contains a Coding struct.
+
+#' Functions converting codes into a Column that contains a Coding struct.
 #'
-#' The Coding struct Column can be used as an input to terminology functions such as `member_of` and `translate`.
+#' @rdname trm_to_coding
+#' @name trm_to_xxxx_coding
+#' 
+#' @details 
+#' The Coding struct Column can be used as an input to terminology functions such 
+#' as \code{\link{trm_member_of()}} and \code{\link{trm_translate()}}.
+#' Please note that inside \code{sparklyr} verbs such as \code{mutate} the functions calls need to 
+#' be preceeded with \code{!!}, e.g: \code{!!trm_to_coding(CODE, SNOMED_URI)}.
 #'
 #' @param coding_column The Column containing the codes.
 #' @param system The URI of the system the codes belong to.
@@ -31,9 +39,25 @@ LOINC_URI <- "http://loinc.org"
 #'
 #' @return A Column containing a Coding struct.
 #'
-#' @examples
-#' # Example usage of trm_to_coding function
-#' trm_to_coding(coding_column, system, version = NULL)
+#' @examplesIf ptl_is_spark_installed()
+#' pc <- ptl_connect()
+#' condition_df <- ptl_spark(pc) %>% sparklyr::copy_to(conditions)
+#' 
+#' # Convert codes to codins with explicit system
+#' condition_df %>% sparklyr::mutate(snomedCoding = !!trm_to_coding(CODE, SNOMED_URI), .keep = 'none')
+#'
+#' # Convert codes to SNOMED codings
+#' condition_df %>% sparklyr::mutate(snomedCoding = !!trm_to_snomed_coding(CODE), .keep = 'none')
+#' 
+#' ptl_disconnect(pc)
+NULL
+
+#' @rdname trm_to_coding
+#' 
+#' @family terminology helpers
+#' 
+#' @description
+#' \code{trm_to_coding()} converts a Column containing codes into a Column that contains a Coding struct.
 #'
 #' @export
 trm_to_coding <- function(coding_column, system, version = NULL) {
@@ -48,50 +72,38 @@ trm_to_coding <- function(coding_column, system, version = NULL) {
                   ) else NULL)
 }
 
-#' Converts a Column containing codes into a Column that contains a SNOMED Coding struct.
+#' @rdname trm_to_coding
+#' 
+#' @description
+#' \code{trm_to_snomed_coding()} converts a Column containing codes into a Column that 
+#' contains a SNOMED Coding struct.
 #'
-#' The Coding struct Column can be used as an input to terminology functions such as `member_of` and `translate`.
-#'
-#' @param coding_column The Column containing the codes.
-#' @param version The version of the code system.
-#'
-#' @return A Column containing a Coding struct.
-#'
-#' @examples
-#' # Example usage of trm_to_snomed_coding function
-#' trm_to_snomed_coding(coding_column, version = NULL)
-#'
+#' @family terminlogy helpers
+#
 #' @export
 trm_to_snomed_coding <- function(coding_column, version = NULL) {
   trm_to_coding({ { coding_column } }, SNOMED_URI, { { version } })
 }
 
-#' Converts a vector to an expression with the corresponding SQL array litera.
-#' @param value A character or numeric vector to be converted
-#' @return The `quosure` with the SQL array literal that can be used in dplyr::mutate.
-to_array <- function(value) {
-  if (!is.null(value)) {
-    rlang::new_quosure(rlang::expr(array(!!!value)))
-  } else {
-    rlang::new_quosure(rlang::expr(NULL))
-  }
-}
-
-#' Converts a SNOMED CT ECL expression into a FHIR ValueSet URI.
-#'
-#' Can be used with the `trm_member_of` function.
+#' Terminology helper functions
+#' 
+#' @description
+#' \code{trm_to_ecl_value_set} converts a SNOMED CT ECL expression into a FHIR ValueSet URI. 
+#' It can be used with the `\code{\link{trm_member_of()}} function.
 #'
 #' @param ecl The ECL expression.
 #'
 #' @return The ValueSet URI.
 #'
-#' @examples
-#' # Example usage of trm_to_ecl_value_set function
-#' trm_to_ecl_value_set('<<373265006 |Analgesic (substance)|')
-#'
+#' @family terminlogy helpers
+#' 
 #' @importFrom utils URLencode
 #' 
 #' @export
+#' 
+#' @examplesIf ptl_is_spark_installed()
+#' # Example usage of trm_to_ecl_value_set function
+#' trm_to_ecl_value_set('<<373265006 |Analgesic (substance)|')
 trm_to_ecl_value_set <- function(ecl) {
   paste0(SNOMED_URI, "?fhir_vs=ecl/", URLencode(ecl, reserved = TRUE))
 }

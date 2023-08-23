@@ -30,6 +30,18 @@ property_decimal <- function(...) { }
 property_integer <- function(...) { }
 property_string <- function(...) { }
 
+#' Converts a vector to an expression with the corresponding SQL array litera.
+#' @param value A character or numeric vector to be converted
+#' @return The `quosure` with the SQL array literal that can be used in dplyr::mutate.
+to_array <- function(value) {
+  if (!is.null(value)) {
+    rlang::new_quosure(rlang::expr(array(!!!value)))
+  } else {
+    rlang::new_quosure(rlang::expr(NULL))
+  }
+}
+
+
 #' Allowed property types.
 #'
 #' @export

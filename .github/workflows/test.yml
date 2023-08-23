@@ -618,10 +618,14 @@ jobs:
           use-public-rspm: true
       - name: Install texlive-latex-base
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
+      - name: Run maven to install dependencies
+        run: >-
+          mvn --batch-mode install -pl library-runtime -am -DskipTests
+        timeout-minutes: 30   
       - name: Run the init goal with Maven
         run: >-
           mvn --batch-mode initialize -P '!R-install-deps'
-          -pl lib/R/pathlyr -am -DskipTests
+          -pl lib/R/pathlyr
         timeout-minutes: 30          
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
