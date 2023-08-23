@@ -29,7 +29,7 @@ LOINC_URI <- "http://loinc.org"
 #' 
 #' @details 
 #' The Coding struct Column can be used as an input to terminology functions such 
-#' as \code{\link{trm_member_of()}} and \code{\link{trm_translate()}}.
+#' as \code{\link{trm_member_of}} and \code{\link{trm_translate}}.
 #' Please note that inside \code{sparklyr} verbs such as \code{mutate} the functions calls need to 
 #' be preceeded with \code{!!}, e.g: \code{!!trm_to_coding(CODE, SNOMED_URI)}.
 #'
@@ -89,7 +89,7 @@ trm_to_snomed_coding <- function(coding_column, version = NULL) {
 #' 
 #' @description
 #' \code{trm_to_ecl_value_set} converts a SNOMED CT ECL expression into a FHIR ValueSet URI. 
-#' It can be used with the `\code{\link{trm_member_of()}} function.
+#' It can be used with the `\code{\link{trm_member_of}} function.
 #'
 #' @param ecl The ECL expression.
 #'

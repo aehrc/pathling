@@ -1,18 +1,15 @@
 library(sparklyr)
 library(pathlyr)
 
-sc <- spark_connect(master = "local")
-pc <- ptl_connect(sc)
+pc <- ptl_connect()
 
-NDJSON_DIR_URI <- paste0('file://', system.file('data','ndjson', package='pathlyr'))
-
-print(sprintf('Using ndjson resources from: %s', NDJSON_DIR_URI))
-
-data_source <- pc %>% ptl_read_ndjson(NDJSON_DIR_URI)
+data_source <- pc %>% ptl_read_ndjson(pathlyr_examples('ndjson'))
 
 result <- data_source %>% ds_aggregate('Patient',
               aggregations = c(patientCount='count()', 'id.count()'),
               groupings = c('gender', givenName='name.given')
         )
 
+result %>% show()
 
+pc %>% ptl_disconnect()

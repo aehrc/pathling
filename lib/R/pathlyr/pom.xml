@@ -54,7 +54,8 @@
   </dependencies>
 
   <properties>
-    <pathling.pathlyr.version.base>6.3.0</pathling.pathlyr.version.base>
+    <!--suppress UnresolvedMavenProperty -->
+    <pathling.pathlyr.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.pathlyr.version.base>
     <pathling.pathlyr.version.qualifier>.9000</pathling.pathlyr.version.qualifier>
     <pathling.pathlyr.version>${pathling.pathlyr.version.base}${pathling.pathlyr.version.qualifier}</pathling.pathlyr.version>
     <!--suppress UnresolvedMavenProperty -->

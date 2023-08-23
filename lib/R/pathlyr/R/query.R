@@ -45,7 +45,7 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #' @export
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(system.file('extdata','ndjson', package='pathlyr'))
+#' data_source <- pc %>% ptl_read_ndjson(pathlyr_examples('ndjson'))
 #' data_source %>% ds_aggregate('Patient',
 #'      aggregations = c(patientCount='count()', 'id.count()'),
 #'      groupings = c('gender', givenName='name.given'),
@@ -99,7 +99,7 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), fi
 #' @export 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(system.file('extdata','ndjson', package='pathlyr'))
+#' data_source <- pc %>% ptl_read_ndjson(pathlyr_examples('ndjson'))
 #' data_source %>% ds_extract('Patient',
 #'      columns = c('gender', givenName='name.given'),
 #'      filters = c('active = true')
