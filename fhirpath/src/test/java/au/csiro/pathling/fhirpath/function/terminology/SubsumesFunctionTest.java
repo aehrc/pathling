@@ -17,57 +17,17 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
-import static au.csiro.pathling.test.helpers.SparkHelpers.codeableConceptStructType;
-import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
-import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCodeableConcept;
-import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
-import au.csiro.pathling.fhirpath.collection.CodingCollection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.SharedMocks;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.assertions.DatasetAssert;
-import au.csiro.pathling.test.assertions.ElementPathAssertion;
-import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import ca.uhn.fhir.context.FhirContext;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Piotr Szul
  */
 @SpringBootUnitTest
+@NotImplemented
 class SubsumesFunctionTest {
 
   static final String TEST_SYSTEM = "uuid:1";
@@ -90,538 +50,540 @@ class SubsumesFunctionTest {
   static final List<String> ALL_RES_IDS =
       Arrays.asList(RES_ID1, RES_ID2, RES_ID3, RES_ID4, RES_ID5);
 
-  @Autowired
-  SparkSession spark;
+  // TODO: implement with columns
 
-  @Autowired
-  FhirContext fhirContext;
-
-  @Autowired
-  TerminologyService terminologyService;
-
-  @Autowired
-  TerminologyServiceFactory terminologyServiceFactory;
-
-  static Row codeableConceptRowFromCoding(final Coding coding) {
-    return codeableConceptRowFromCoding(coding, CODING_OTHER4);
-  }
-
-  static Row codeableConceptRowFromCoding(final Coding coding, final Coding otherCoding) {
-    return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(otherCoding));
-  }
-
-  @BeforeEach
-  void setUp() {
-    SharedMocks.resetAll();
-    TerminologyServiceHelpers.setupSubsumes(terminologyService)
-        .withSubsumes(CODING_LARGE, CODING_MEDIUM)
-        .withSubsumes(CODING_MEDIUM, CODING_SMALL)
-        .withSubsumes(CODING_LARGE, CODING_SMALL);
-  }
-
-  CodingCollection createCodingInput() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withStructTypeColumns(codingStructType())
-        .withRow(RES_ID1, makeEid(1), rowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, makeEid(1), rowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, makeEid(1), rowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, makeEid(1), rowFromCoding(CODING_OTHER1))
-        .withRow(RES_ID5, null, null /* NULL coding value */)
-        .withRow(RES_ID1, makeEid(0), rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, makeEid(0), rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, makeEid(0), rowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, makeEid(0), rowFromCoding(CODING_OTHER2))
-        .buildWithStructValue();
-    final PrimitivePath inputExpression = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(dataset)
-        .idAndEidAndValueColumns()
-        .singular(false)
-        .build();
-
-    return (CodingCollection) inputExpression;
-  }
-
-  CodingCollection createSingularCodingInput() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withStructTypeColumns(codingStructType())
-        .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, rowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
-        .withRow(RES_ID5, null /* NULL coding value */)
-        .buildWithStructValue();
-    final PrimitivePath inputExpression = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(dataset)
-        .idAndValueColumns()
-        .singular(true)
-        .build();
-
-    return (CodingCollection) inputExpression;
-  }
-
-
-  PrimitivePath createCodeableConceptInput() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withStructTypeColumns(codeableConceptStructType())
-        .withRow(RES_ID1, makeEid(1), codeableConceptRowFromCoding(CODING_SMALL))
-        .withRow(RES_ID2, makeEid(1), codeableConceptRowFromCoding(CODING_MEDIUM))
-        .withRow(RES_ID3, makeEid(1), codeableConceptRowFromCoding(CODING_LARGE))
-        .withRow(RES_ID4, makeEid(1), codeableConceptRowFromCoding(CODING_OTHER1))
-        .withRow(RES_ID5, null, null /* NULL codeable concept value */)
-        .withRow(RES_ID1, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID2, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID3, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
-        .withRow(RES_ID4, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
-        .buildWithStructValue();
-
-    return new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .dataset(dataset)
-        .idAndEidAndValueColumns()
-        .singular(false)
-        .build();
-  }
-
-  CodingLiteralPath createLiteralArgOrInput() {
-    final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withColumn(DataTypes.BooleanType)
-        .withIdsAndValue(false, ALL_RES_IDS)
-        .build();
-    final PrimitivePath literalContext = new ElementPathBuilder(spark)
-        .dataset(literalContextDataset)
-        .idAndValueColumns()
-        .build();
-
-    return CodingCollection.fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-        literalContext);
-  }
-
-  CodingCollection createCodingArg() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withStructTypeColumns(codingStructType())
-        .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_MEDIUM))
-        .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_OTHER3))
-        .buildWithStructValue();
-    final PrimitivePath argument = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(dataset)
-        .idAndValueColumns()
-        .build();
-
-    return (CodingCollection) argument;
-  }
-
-  PrimitivePath createCodeableConceptArg() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withStructTypeColumns(codeableConceptStructType())
-        .withIdValueRows(ALL_RES_IDS,
-            id -> codeableConceptRowFromCoding(CODING_MEDIUM, CODING_OTHER5))
-        .withIdValueRows(ALL_RES_IDS,
-            id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
-        .buildWithStructValue();
-
-    return new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .dataset(dataset)
-        .idAndValueColumns()
-        .build();
-  }
-
-  CodingCollection createEmptyCodingInput() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withStructTypeColumns(codingStructType())
-        .buildWithStructValue();
-
-    final PrimitivePath argument = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(dataset)
-        .idAndEidAndValueColumns()
-        .build();
-
-    return (CodingCollection) argument;
-  }
-
-  CodingCollection createNullCodingInput() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
-        .withStructTypeColumns(codingStructType())
-        .buildWithStructValue();
-
-    final PrimitivePath argument = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(dataset)
-        .idAndEidAndValueColumns()
-        .build();
-
-    return (CodingCollection) argument;
-  }
-
-  PrimitivePath createEmptyCodeableConceptInput() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withStructTypeColumns(codeableConceptStructType())
-        .buildWithStructValue();
-
-    return new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .dataset(dataset)
-        .idAndEidAndValueColumns()
-        .build();
-  }
-
-  PrimitivePath createNullCodeableConceptInput() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
-        .withStructTypeColumns(codeableConceptStructType())
-        .buildWithStructValue();
-
-    return new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .dataset(dataset)
-        .idAndEidAndValueColumns()
-        .build();
-  }
-
-  CodingCollection createNullCodingArg() {
-    final Dataset<Row> dataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withStructTypeColumns(codingStructType())
-        .withIdValueRows(ALL_RES_IDS, id -> null)
-        .buildWithStructValue();
-
-    final PrimitivePath argument = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .dataset(dataset)
-        .idAndValueColumns()
-        .build();
-
-    return (CodingCollection) argument;
-  }
-
-  DatasetBuilder expectedSubsumes() {
-    return new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(DataTypes.BooleanType)
-        .withRow(RES_ID1, makeEid(0), false)
-        .withRow(RES_ID1, makeEid(1), false)
-        .withRow(RES_ID2, makeEid(0), false)
-        .withRow(RES_ID2, makeEid(1), true)
-        .withRow(RES_ID3, makeEid(0), false)
-        .withRow(RES_ID3, makeEid(1), true)
-        .withRow(RES_ID4, makeEid(0), false)
-        .withRow(RES_ID4, makeEid(1), false)
-        .withRow(RES_ID5, null, null);
-  }
-
-  DatasetBuilder expectedSubsumedBy() {
-    return new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(DataTypes.BooleanType)
-        .withRow(RES_ID1, makeEid(0), false)
-        .withRow(RES_ID1, makeEid(1), true)
-        .withRow(RES_ID2, makeEid(0), false)
-        .withRow(RES_ID2, makeEid(1), true)
-        .withRow(RES_ID3, makeEid(0), false)
-        .withRow(RES_ID3, makeEid(1), false)
-        .withRow(RES_ID4, makeEid(0), false)
-        .withRow(RES_ID4, makeEid(1), false)
-        .withRow(RES_ID5, null, null);
-  }
-
-  @Nonnull
-  DatasetBuilder expectedAllNonNull(final boolean result) {
-    return new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(DataTypes.BooleanType)
-        .withRow(RES_ID1, makeEid(0), result)
-        .withRow(RES_ID1, makeEid(1), result)
-        .withRow(RES_ID2, makeEid(0), result)
-        .withRow(RES_ID2, makeEid(1), result)
-        .withRow(RES_ID3, makeEid(0), result)
-        .withRow(RES_ID3, makeEid(1), result)
-        .withRow(RES_ID4, makeEid(0), result)
-        .withRow(RES_ID4, makeEid(1), result)
-        .withRow(RES_ID5, null, null);
-  }
-
-  @Nonnull
-  DatasetBuilder expectedEmpty() {
-    return new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(DataTypes.BooleanType);
-  }
-
-  @Nonnull
-  DatasetBuilder expectedNull() {
-    return new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
-        .withColumn(DataTypes.BooleanType);
-  }
-
-  ElementPathAssertion assertCallSuccess(final NamedFunction function,
-      final NonLiteralPath inputExpression, final Collection argumentExpression) {
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .build();
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, inputExpression,
-        Collections.singletonList(argumentExpression));
-    final Collection result = function.invoke(functionInput);
-
-    return assertThat(result)
-        .isElementPath(BooleanCollection.class)
-        .preservesCardinalityOf(inputExpression);
-  }
-
-  DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
-      final Collection argumentExpression) {
-    return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
-        argumentExpression).selectOrderedResultWithEid();
-  }
-
-  DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
-      final Collection argumentExpression) {
-    return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
-        argumentExpression).selectOrderedResultWithEid();
-  }
-
+  // @Autowired
+  // SparkSession spark;
   //
-  // Test subsumes on selected pairs of argument types
-  // (Coding, CodingLiteral) && (CodeableConcept, Coding) && (Literal, CodeableConcept)
-  // plus (Coding, Coding)
+  // @Autowired
+  // FhirContext fhirContext;
   //
-  @Test
-  void testSubsumesCodingWithLiteralCorrectly() {
-    assertSubsumesSuccess(createCodingInput(), createLiteralArgOrInput())
-        .hasRows(expectedSubsumes());
-  }
-
-  @Test
-  void testSubsumesCodeableConceptWithCodingCorrectly() {
-    assertSubsumesSuccess(createCodeableConceptInput(), createCodingArg())
-        .hasRows(expectedSubsumes());
-  }
-
-  @Test
-  void testSubsumesCodingWithCodingCorrectly() {
-    assertSubsumesSuccess(createCodingInput(), createCodingArg()).hasRows(expectedSubsumes());
-  }
-
+  // @Autowired
+  // TerminologyService terminologyService;
   //
-  // Test subsumedBy on selected pairs of argument types
-  // (Coding, CodeableConcept) && (CodeableConcept, Literal) && (Literal, Coding)
-  // plus (CodeableConcept, CodeableConcept)
+  // @Autowired
+  // TerminologyServiceFactory terminologyServiceFactory;
   //
-
-  @Test
-  void testSubsumedByCodingWithCodeableConceptCorrectly() {
-
-    assertSubsumedBySuccess(createCodingInput(), createCodeableConceptArg())
-        .hasRows(expectedSubsumedBy());
-  }
-
-  @Test
-  void testSubsumedByCodeableConceptWithLiteralCorrectly() {
-    assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArgOrInput())
-        .hasRows(expectedSubsumedBy());
-  }
-
-  @Test
-  void testSubsumedByCodeableConceptWithCodeableConceptCorrectly() {
-    // call subsumedBy but expect subsumes result
-    // because input is switched with argument
-    assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptArg())
-        .hasRows(expectedSubsumedBy());
-  }
-
+  // static Row codeableConceptRowFromCoding(final Coding coding) {
+  //   return codeableConceptRowFromCoding(coding, CODING_OTHER4);
+  // }
   //
-  // Test against nulls
+  // static Row codeableConceptRowFromCoding(final Coding coding, final Coding otherCoding) {
+  //   return rowFromCodeableConcept(new CodeableConcept(coding).addCoding(otherCoding));
+  // }
   //
-
-  @Test
-  void testAllFalseWhenSubsumesNullCoding() {
-    assertSubsumesSuccess(createCodingInput(), createNullCodingArg())
-        .hasRows(expectedAllNonNull(false));
-  }
-
-  @Test
-  void testAllFalseWhenSubsumedByNullCoding() {
-    assertSubsumedBySuccess(createCodeableConceptInput(), createNullCodingArg())
-        .hasRows(expectedAllNonNull(false));
-  }
-
-
-  @Test
-  void testAllNonNullTrueWhenSubsumesItself() {
-
-    final DatasetBuilder expectedResult = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(DataTypes.BooleanType)
-        .withRow(RES_ID1, null, true)
-        .withRow(RES_ID2, null, true)
-        .withRow(RES_ID3, null, true)
-        .withRow(RES_ID4, null, true)
-        .withRow(RES_ID5, null, null);
-
-    assertSubsumesSuccess(createSingularCodingInput(), createSingularCodingInput())
-        .hasRows(expectedResult);
-  }
-
-
-  @Test
-  void testAllNonNullTrueSubsumedByItself() {
-    assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptInput())
-        .hasRows(expectedAllNonNull(true));
-  }
-
-  @Test
-  void testEmptyCodingInput() {
-    assertSubsumedBySuccess(createEmptyCodingInput(), createCodingArg())
-        .hasRows(expectedEmpty());
-  }
-
-  @Test
-  void testNullCodingInput() {
-    assertSubsumedBySuccess(createNullCodingInput(), createCodingArg())
-        .hasRows(expectedNull());
-  }
-
-  @Test
-  void testEmptyCodeableConceptInput() {
-    assertSubsumedBySuccess(createEmptyCodeableConceptInput(), createCodingArg())
-        .hasRows(expectedEmpty());
-  }
-
-  @Test
-  void testNullCodeableConceptInput() {
-    assertSubsumedBySuccess(createNullCodeableConceptInput(), createCodingArg())
-        .hasRows(expectedNull());
-  }
-
+  // @BeforeEach
+  // void setUp() {
+  //   SharedMocks.resetAll();
+  //   TerminologyServiceHelpers.setupSubsumes(terminologyService)
+  //       .withSubsumes(CODING_LARGE, CODING_MEDIUM)
+  //       .withSubsumes(CODING_MEDIUM, CODING_SMALL)
+  //       .withSubsumes(CODING_LARGE, CODING_SMALL);
+  // }
   //
-  // Test for various validation errors
+  // CodingCollection createCodingInput() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withStructTypeColumns(codingStructType())
+  //       .withRow(RES_ID1, makeEid(1), rowFromCoding(CODING_SMALL))
+  //       .withRow(RES_ID2, makeEid(1), rowFromCoding(CODING_MEDIUM))
+  //       .withRow(RES_ID3, makeEid(1), rowFromCoding(CODING_LARGE))
+  //       .withRow(RES_ID4, makeEid(1), rowFromCoding(CODING_OTHER1))
+  //       .withRow(RES_ID5, null, null /* NULL coding value */)
+  //       .withRow(RES_ID1, makeEid(0), rowFromCoding(CODING_OTHER2))
+  //       .withRow(RES_ID2, makeEid(0), rowFromCoding(CODING_OTHER2))
+  //       .withRow(RES_ID3, makeEid(0), rowFromCoding(CODING_OTHER2))
+  //       .withRow(RES_ID4, makeEid(0), rowFromCoding(CODING_OTHER2))
+  //       .buildWithStructValue();
+  //   final PrimitivePath inputExpression = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .dataset(dataset)
+  //       .idAndEidAndValueColumns()
+  //       .singular(false)
+  //       .build();
   //
-
-  @Test
-  void throwsErrorIfInputTypeIsUnsupported() {
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
-        .build();
-
-    final PrimitivePath argument = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .build();
-
-    final PrimitivePath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.STRING)
-        .build();
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
-        Collections.singletonList(argument));
-    final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumedBy");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> subsumesFunction.invoke(functionInput));
-    assertEquals(
-        "subsumedBy function accepts input of type Coding or CodeableConcept",
-        error.getMessage());
-  }
-
-  @Test
-  void throwsErrorIfArgumentTypeIsUnsupported() {
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
-        .build();
-
-    final PrimitivePath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .build();
-    final StringLiteralPath argument = StringCollection
-        .fromLiteral("'str'", input);
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
-        Collections.singletonList(argument));
-    final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumes");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> subsumesFunction.invoke(functionInput));
-    assertEquals("subsumes function accepts argument of type Coding or CodeableConcept",
-        error.getMessage());
-  }
-
-
-  @Test
-  void throwsErrorIfMoreThanOneArgument() {
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
-        .build();
-
-    final PrimitivePath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .build();
-
-    final CodingLiteralPath argument1 = CodingCollection
-        .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            input);
-
-    final CodingLiteralPath argument2 = CodingCollection
-        .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            input);
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
-        Arrays.asList(argument1, argument2));
-    final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumes");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> subsumesFunction.invoke(functionInput));
-    assertEquals("subsumes function accepts one argument of type Coding or CodeableConcept",
-        error.getMessage());
-  }
-
-  @Test
-  void throwsErrorIfTerminologyServiceNotConfigured() {
-    final PrimitivePath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODEABLECONCEPT)
-        .build();
-
-    final CodingLiteralPath argument = CodingCollection
-        .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
-            input);
-
-    final ParserContext context = new ParserContextBuilder(spark, fhirContext).build();
-
-    final NamedFunctionInput functionInput = new NamedFunctionInput(context, input,
-        Collections.singletonList(argument));
-
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> new SubsumesFunction().invoke(functionInput));
-    assertEquals(
-        "Attempt to call terminology function subsumes when terminology service has not been configured",
-        error.getMessage());
-  }
+  //   return (CodingCollection) inputExpression;
+  // }
+  //
+  // CodingCollection createSingularCodingInput() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withStructTypeColumns(codingStructType())
+  //       .withRow(RES_ID1, rowFromCoding(CODING_SMALL))
+  //       .withRow(RES_ID2, rowFromCoding(CODING_MEDIUM))
+  //       .withRow(RES_ID3, rowFromCoding(CODING_LARGE))
+  //       .withRow(RES_ID4, rowFromCoding(CODING_OTHER1))
+  //       .withRow(RES_ID5, null /* NULL coding value */)
+  //       .buildWithStructValue();
+  //   final PrimitivePath inputExpression = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .dataset(dataset)
+  //       .idAndValueColumns()
+  //       .singular(true)
+  //       .build();
+  //
+  //   return (CodingCollection) inputExpression;
+  // }
+  //
+  //
+  // PrimitivePath createCodeableConceptInput() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withStructTypeColumns(codeableConceptStructType())
+  //       .withRow(RES_ID1, makeEid(1), codeableConceptRowFromCoding(CODING_SMALL))
+  //       .withRow(RES_ID2, makeEid(1), codeableConceptRowFromCoding(CODING_MEDIUM))
+  //       .withRow(RES_ID3, makeEid(1), codeableConceptRowFromCoding(CODING_LARGE))
+  //       .withRow(RES_ID4, makeEid(1), codeableConceptRowFromCoding(CODING_OTHER1))
+  //       .withRow(RES_ID5, null, null /* NULL codeable concept value */)
+  //       .withRow(RES_ID1, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+  //       .withRow(RES_ID2, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+  //       .withRow(RES_ID3, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+  //       .withRow(RES_ID4, makeEid(0), codeableConceptRowFromCoding(CODING_OTHER2))
+  //       .buildWithStructValue();
+  //
+  //   return new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .dataset(dataset)
+  //       .idAndEidAndValueColumns()
+  //       .singular(false)
+  //       .build();
+  // }
+  //
+  // CodingLiteralPath createLiteralArgOrInput() {
+  //   final Dataset<Row> literalContextDataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withColumn(DataTypes.BooleanType)
+  //       .withIdsAndValue(false, ALL_RES_IDS)
+  //       .build();
+  //   final PrimitivePath literalContext = new ElementPathBuilder(spark)
+  //       .dataset(literalContextDataset)
+  //       .idAndValueColumns()
+  //       .build();
+  //
+  //   return CodingCollection.fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+  //       literalContext);
+  // }
+  //
+  // CodingCollection createCodingArg() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withStructTypeColumns(codingStructType())
+  //       .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_MEDIUM))
+  //       .withIdValueRows(ALL_RES_IDS, id -> rowFromCoding(CODING_OTHER3))
+  //       .buildWithStructValue();
+  //   final PrimitivePath argument = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .dataset(dataset)
+  //       .idAndValueColumns()
+  //       .build();
+  //
+  //   return (CodingCollection) argument;
+  // }
+  //
+  // PrimitivePath createCodeableConceptArg() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withStructTypeColumns(codeableConceptStructType())
+  //       .withIdValueRows(ALL_RES_IDS,
+  //           id -> codeableConceptRowFromCoding(CODING_MEDIUM, CODING_OTHER5))
+  //       .withIdValueRows(ALL_RES_IDS,
+  //           id -> codeableConceptRowFromCoding(CODING_OTHER3, CODING_OTHER5))
+  //       .buildWithStructValue();
+  //
+  //   return new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .dataset(dataset)
+  //       .idAndValueColumns()
+  //       .build();
+  // }
+  //
+  // CodingCollection createEmptyCodingInput() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withStructTypeColumns(codingStructType())
+  //       .buildWithStructValue();
+  //
+  //   final PrimitivePath argument = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .dataset(dataset)
+  //       .idAndEidAndValueColumns()
+  //       .build();
+  //
+  //   return (CodingCollection) argument;
+  // }
+  //
+  // CodingCollection createNullCodingInput() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
+  //       .withStructTypeColumns(codingStructType())
+  //       .buildWithStructValue();
+  //
+  //   final PrimitivePath argument = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .dataset(dataset)
+  //       .idAndEidAndValueColumns()
+  //       .build();
+  //
+  //   return (CodingCollection) argument;
+  // }
+  //
+  // PrimitivePath createEmptyCodeableConceptInput() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withStructTypeColumns(codeableConceptStructType())
+  //       .buildWithStructValue();
+  //
+  //   return new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .dataset(dataset)
+  //       .idAndEidAndValueColumns()
+  //       .build();
+  // }
+  //
+  // PrimitivePath createNullCodeableConceptInput() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
+  //       .withStructTypeColumns(codeableConceptStructType())
+  //       .buildWithStructValue();
+  //
+  //   return new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .dataset(dataset)
+  //       .idAndEidAndValueColumns()
+  //       .build();
+  // }
+  //
+  // CodingCollection createNullCodingArg() {
+  //   final Dataset<Row> dataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withStructTypeColumns(codingStructType())
+  //       .withIdValueRows(ALL_RES_IDS, id -> null)
+  //       .buildWithStructValue();
+  //
+  //   final PrimitivePath argument = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .dataset(dataset)
+  //       .idAndValueColumns()
+  //       .build();
+  //
+  //   return (CodingCollection) argument;
+  // }
+  //
+  // DatasetBuilder expectedSubsumes() {
+  //   return new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(DataTypes.BooleanType)
+  //       .withRow(RES_ID1, makeEid(0), false)
+  //       .withRow(RES_ID1, makeEid(1), false)
+  //       .withRow(RES_ID2, makeEid(0), false)
+  //       .withRow(RES_ID2, makeEid(1), true)
+  //       .withRow(RES_ID3, makeEid(0), false)
+  //       .withRow(RES_ID3, makeEid(1), true)
+  //       .withRow(RES_ID4, makeEid(0), false)
+  //       .withRow(RES_ID4, makeEid(1), false)
+  //       .withRow(RES_ID5, null, null);
+  // }
+  //
+  // DatasetBuilder expectedSubsumedBy() {
+  //   return new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(DataTypes.BooleanType)
+  //       .withRow(RES_ID1, makeEid(0), false)
+  //       .withRow(RES_ID1, makeEid(1), true)
+  //       .withRow(RES_ID2, makeEid(0), false)
+  //       .withRow(RES_ID2, makeEid(1), true)
+  //       .withRow(RES_ID3, makeEid(0), false)
+  //       .withRow(RES_ID3, makeEid(1), false)
+  //       .withRow(RES_ID4, makeEid(0), false)
+  //       .withRow(RES_ID4, makeEid(1), false)
+  //       .withRow(RES_ID5, null, null);
+  // }
+  //
+  // @Nonnull
+  // DatasetBuilder expectedAllNonNull(final boolean result) {
+  //   return new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(DataTypes.BooleanType)
+  //       .withRow(RES_ID1, makeEid(0), result)
+  //       .withRow(RES_ID1, makeEid(1), result)
+  //       .withRow(RES_ID2, makeEid(0), result)
+  //       .withRow(RES_ID2, makeEid(1), result)
+  //       .withRow(RES_ID3, makeEid(0), result)
+  //       .withRow(RES_ID3, makeEid(1), result)
+  //       .withRow(RES_ID4, makeEid(0), result)
+  //       .withRow(RES_ID4, makeEid(1), result)
+  //       .withRow(RES_ID5, null, null);
+  // }
+  //
+  // @Nonnull
+  // DatasetBuilder expectedEmpty() {
+  //   return new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(DataTypes.BooleanType);
+  // }
+  //
+  // @Nonnull
+  // DatasetBuilder expectedNull() {
+  //   return new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withIdEidValueRows(ALL_RES_IDS, id -> null, id -> null)
+  //       .withColumn(DataTypes.BooleanType);
+  // }
+  //
+  // ElementPathAssertion assertCallSuccess(final NamedFunction function,
+  //     final NonLiteralPath inputExpression, final Collection argumentExpression) {
+  //   final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+  //       .terminologyClientFactory(terminologyServiceFactory)
+  //       .build();
+  //
+  //   final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, inputExpression,
+  //       Collections.singletonList(argumentExpression));
+  //   final Collection result = function.invoke(functionInput);
+  //
+  //   return assertThat(result)
+  //       .isElementPath(BooleanCollection.class)
+  //       .preservesCardinalityOf(inputExpression);
+  // }
+  //
+  // DatasetAssert assertSubsumesSuccess(final NonLiteralPath inputExpression,
+  //     final Collection argumentExpression) {
+  //   return assertCallSuccess(NamedFunction.getInstance("subsumes"), inputExpression,
+  //       argumentExpression).selectOrderedResultWithEid();
+  // }
+  //
+  // DatasetAssert assertSubsumedBySuccess(final NonLiteralPath inputExpression,
+  //     final Collection argumentExpression) {
+  //   return assertCallSuccess(NamedFunction.getInstance("subsumedBy"), inputExpression,
+  //       argumentExpression).selectOrderedResultWithEid();
+  // }
+  //
+  // //
+  // // Test subsumes on selected pairs of argument types
+  // // (Coding, CodingLiteral) && (CodeableConcept, Coding) && (Literal, CodeableConcept)
+  // // plus (Coding, Coding)
+  // //
+  // @Test
+  // void testSubsumesCodingWithLiteralCorrectly() {
+  //   assertSubsumesSuccess(createCodingInput(), createLiteralArgOrInput())
+  //       .hasRows(expectedSubsumes());
+  // }
+  //
+  // @Test
+  // void testSubsumesCodeableConceptWithCodingCorrectly() {
+  //   assertSubsumesSuccess(createCodeableConceptInput(), createCodingArg())
+  //       .hasRows(expectedSubsumes());
+  // }
+  //
+  // @Test
+  // void testSubsumesCodingWithCodingCorrectly() {
+  //   assertSubsumesSuccess(createCodingInput(), createCodingArg()).hasRows(expectedSubsumes());
+  // }
+  //
+  // //
+  // // Test subsumedBy on selected pairs of argument types
+  // // (Coding, CodeableConcept) && (CodeableConcept, Literal) && (Literal, Coding)
+  // // plus (CodeableConcept, CodeableConcept)
+  // //
+  //
+  // @Test
+  // void testSubsumedByCodingWithCodeableConceptCorrectly() {
+  //
+  //   assertSubsumedBySuccess(createCodingInput(), createCodeableConceptArg())
+  //       .hasRows(expectedSubsumedBy());
+  // }
+  //
+  // @Test
+  // void testSubsumedByCodeableConceptWithLiteralCorrectly() {
+  //   assertSubsumedBySuccess(createCodeableConceptInput(), createLiteralArgOrInput())
+  //       .hasRows(expectedSubsumedBy());
+  // }
+  //
+  // @Test
+  // void testSubsumedByCodeableConceptWithCodeableConceptCorrectly() {
+  //   // call subsumedBy but expect subsumes result
+  //   // because input is switched with argument
+  //   assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptArg())
+  //       .hasRows(expectedSubsumedBy());
+  // }
+  //
+  // //
+  // // Test against nulls
+  // //
+  //
+  // @Test
+  // void testAllFalseWhenSubsumesNullCoding() {
+  //   assertSubsumesSuccess(createCodingInput(), createNullCodingArg())
+  //       .hasRows(expectedAllNonNull(false));
+  // }
+  //
+  // @Test
+  // void testAllFalseWhenSubsumedByNullCoding() {
+  //   assertSubsumedBySuccess(createCodeableConceptInput(), createNullCodingArg())
+  //       .hasRows(expectedAllNonNull(false));
+  // }
+  //
+  //
+  // @Test
+  // void testAllNonNullTrueWhenSubsumesItself() {
+  //
+  //   final DatasetBuilder expectedResult = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(DataTypes.BooleanType)
+  //       .withRow(RES_ID1, null, true)
+  //       .withRow(RES_ID2, null, true)
+  //       .withRow(RES_ID3, null, true)
+  //       .withRow(RES_ID4, null, true)
+  //       .withRow(RES_ID5, null, null);
+  //
+  //   assertSubsumesSuccess(createSingularCodingInput(), createSingularCodingInput())
+  //       .hasRows(expectedResult);
+  // }
+  //
+  //
+  // @Test
+  // void testAllNonNullTrueSubsumedByItself() {
+  //   assertSubsumedBySuccess(createCodeableConceptInput(), createCodeableConceptInput())
+  //       .hasRows(expectedAllNonNull(true));
+  // }
+  //
+  // @Test
+  // void testEmptyCodingInput() {
+  //   assertSubsumedBySuccess(createEmptyCodingInput(), createCodingArg())
+  //       .hasRows(expectedEmpty());
+  // }
+  //
+  // @Test
+  // void testNullCodingInput() {
+  //   assertSubsumedBySuccess(createNullCodingInput(), createCodingArg())
+  //       .hasRows(expectedNull());
+  // }
+  //
+  // @Test
+  // void testEmptyCodeableConceptInput() {
+  //   assertSubsumedBySuccess(createEmptyCodeableConceptInput(), createCodingArg())
+  //       .hasRows(expectedEmpty());
+  // }
+  //
+  // @Test
+  // void testNullCodeableConceptInput() {
+  //   assertSubsumedBySuccess(createNullCodeableConceptInput(), createCodingArg())
+  //       .hasRows(expectedNull());
+  // }
+  //
+  // //
+  // // Test for various validation errors
+  // //
+  //
+  // @Test
+  // void throwsErrorIfInputTypeIsUnsupported() {
+  //   final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+  //       .terminologyClientFactory(mock(TerminologyServiceFactory.class))
+  //       .build();
+  //
+  //   final PrimitivePath argument = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .build();
+  //
+  //   final PrimitivePath input = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.STRING)
+  //       .build();
+  //
+  //   final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
+  //       Collections.singletonList(argument));
+  //   final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumedBy");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> subsumesFunction.invoke(functionInput));
+  //   assertEquals(
+  //       "subsumedBy function accepts input of type Coding or CodeableConcept",
+  //       error.getMessage());
+  // }
+  //
+  // @Test
+  // void throwsErrorIfArgumentTypeIsUnsupported() {
+  //   final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+  //       .terminologyClientFactory(mock(TerminologyServiceFactory.class))
+  //       .build();
+  //
+  //   final PrimitivePath input = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .build();
+  //   final StringLiteralPath argument = StringCollection
+  //       .fromLiteral("'str'", input);
+  //
+  //   final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
+  //       Collections.singletonList(argument));
+  //   final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumes");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> subsumesFunction.invoke(functionInput));
+  //   assertEquals("subsumes function accepts argument of type Coding or CodeableConcept",
+  //       error.getMessage());
+  // }
+  //
+  //
+  // @Test
+  // void throwsErrorIfMoreThanOneArgument() {
+  //
+  //   final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+  //       .terminologyClientFactory(mock(TerminologyServiceFactory.class))
+  //       .build();
+  //
+  //   final PrimitivePath input = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .build();
+  //
+  //   final CodingLiteralPath argument1 = CodingCollection
+  //       .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+  //           input);
+  //
+  //   final CodingLiteralPath argument2 = CodingCollection
+  //       .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+  //           input);
+  //
+  //   final NamedFunctionInput functionInput = new NamedFunctionInput(parserContext, input,
+  //       Arrays.asList(argument1, argument2));
+  //   final NamedFunction subsumesFunction = NamedFunction.getInstance("subsumes");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> subsumesFunction.invoke(functionInput));
+  //   assertEquals("subsumes function accepts one argument of type Coding or CodeableConcept",
+  //       error.getMessage());
+  // }
+  //
+  // @Test
+  // void throwsErrorIfTerminologyServiceNotConfigured() {
+  //   final PrimitivePath input = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODEABLECONCEPT)
+  //       .build();
+  //
+  //   final CodingLiteralPath argument = CodingCollection
+  //       .fromLiteral(CODING_MEDIUM.getSystem() + "|" + CODING_MEDIUM.getCode(),
+  //           input);
+  //
+  //   final ParserContext context = new ParserContextBuilder(spark, fhirContext).build();
+  //
+  //   final NamedFunctionInput functionInput = new NamedFunctionInput(context, input,
+  //       Collections.singletonList(argument));
+  //
+  //   final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+  //       () -> new SubsumesFunction().invoke(functionInput));
+  //   assertEquals(
+  //       "Attempt to call terminology function subsumes when terminology service has not been configured",
+  //       error.getMessage());
+  // }
 }

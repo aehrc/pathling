@@ -17,376 +17,331 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertThat;
-import static au.csiro.pathling.test.builders.DatasetBuilder.makeEid;
-import static au.csiro.pathling.test.helpers.SparkHelpers.codingStructType;
-import static au.csiro.pathling.test.helpers.SparkHelpers.rowFromCoding;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.collection.CodingCollection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteral;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.helpers.FhirHelpers;
-import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
-import ca.uhn.fhir.context.FhirContext;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.Type;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Piotr Szul
  */
 @SpringBootUnitTest
+@NotImplemented
 class PropertyFunctionTest extends AbstractTerminologyTestBase {
 
-  @Autowired
-  SparkSession spark;
+  // TODO: implement with columns
 
-  @Autowired
-  FhirContext fhirContext;
-
-  @Autowired
-  TerminologyServiceFactory terminologyServiceFactory;
-
-  @Autowired
-  TerminologyService terminologyService;
-
-  @BeforeEach
-  void setUp() {
-    reset(terminologyService);
-  }
-
-  private void checkPropertyOfCoding(final String propertyCode,
-      final Optional<String> maybePropertyType,
-      final Optional<String> maybeLanguage,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final FHIRDefinedType expectedResultType,
-      final Dataset<Row> expectedResult) {
-
-    // check the that if type is provided if language is provided
-    assertTrue(maybeLanguage.isEmpty() || maybePropertyType.isPresent());
-
-    TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_A, "propertyA", maybeLanguage.orElse(null), propertyAFhirValues)
-        .withProperty(CODING_B, "propertyB", maybeLanguage.orElse(null), propertyBFhirValues);
-
-    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource(fhirContext, "Encounter", "class");
-    assertTrue(optionalDefinition.isPresent());
-    final ElementDefinition definition = optionalDefinition.get();
-
-    final Dataset<Row> inputDataset = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withStructTypeColumns(codingStructType())
-        .withRow("encounter-1", makeEid(0), rowFromCoding(CODING_A))
-        .withRow("encounter-1", makeEid(1), rowFromCoding(INVALID_CODING_0))
-        .withRow("encounter-2", makeEid(0), rowFromCoding(CODING_B))
-        .withRow("encounter-3", null, null)
-        .buildWithStructValue();
-
-    final CodingCollection inputExpression = (CodingCollection) new ElementPathBuilder(spark)
-        .dataset(inputDataset)
-        .idAndEidAndValueColumns()
-        .expression("Encounter.class")
-        .singular(false)
-        .definition(definition)
-        .buildDefined();
-
-    // Prepare the inputs to the function.
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .idColumn(inputExpression.getIdColumn())
-        .terminologyClientFactory(terminologyServiceFactory)
-        .build();
-
-    final List<String> parameterLiterals = Stream.of(Optional.of(propertyCode),
-            maybePropertyType,
-            maybeLanguage).flatMap(Optional::stream)
-        .map(StringLiteral::toLiteral).collect(Collectors.toUnmodifiableList());
-
-    final List<Collection> arguments = parameterLiterals.stream()
-        .map(lit -> StringCollection.fromLiteral(lit, inputExpression))
-        .collect(Collectors.toUnmodifiableList());
-
-    final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
-        arguments);
-
-    // Invoke the function.
-    final Collection result = NamedFunction.getInstance("property").invoke(propertyInput);
-
-    // Check the result.
-    assertThat(result).hasExpression(
-            String.format("Encounter.class.property(%s)",
-                String.join(", ", parameterLiterals)))
-        .isElementPath(PrimitivePath.class)
-        .hasFhirType(expectedResultType)
-        .isNotSingular()
-        .selectOrderedResultWithEid()
-        .hasRows(expectedResult);
-
-    // Check that the ElementPath for CODING type has the correct Coding definition.
-    if (FHIRDefinedType.CODING.equals(expectedResultType)) {
-      assertThat(result)
-          .isElementPath(PrimitivePath.class)
-          .hasDefinition(definition);
-    }
-  }
-
-  @SuppressWarnings("unused")
-  @ParameterizedTest
-  @MethodSource("propertyParameters")
-  public void propertyAOfCoding(final String propertyType, final DataType resultDataType,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
-
-    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(resultDataType)
-        .withRow("encounter-1", makeEid(0, 0), propertyASqlValues[0])
-        .withRow("encounter-1", makeEid(1, 0), null)
-        .withRow("encounter-2", makeEid(0, 0), null)
-        .withRow("encounter-3", null, null)
-        .build();
-    checkPropertyOfCoding("propertyA",
-        Optional.of(propertyType),
-        Optional.empty(),
-        propertyAFhirValues, propertyBFhirValues,
-        FHIRDefinedType.fromCode(propertyType),
-        expectedResult);
-  }
-
-  @SuppressWarnings("unused")
-  @ParameterizedTest
-  @MethodSource("propertyParameters")
-  public void propertyBOfCoding(final String propertyType, final DataType resultDataType,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
-
-    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(resultDataType)
-        .withRow("encounter-1", makeEid(0, 0), null)
-        .withRow("encounter-1", makeEid(1, 0), null)
-        .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues[0])
-        .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues[1])
-        .withRow("encounter-3", null, null)
-        .build();
-
-    checkPropertyOfCoding("propertyB",
-        Optional.of(propertyType),
-        Optional.empty(),
-        propertyAFhirValues,
-        propertyBFhirValues,
-        FHIRDefinedType.fromCode(propertyType),
-        expectedResult);
-  }
-
-  @Test
-  public void propertyAOfCodingWithDefaultType() {
-    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(DataTypes.StringType)
-        .withRow("encounter-1", makeEid(0, 0), "value_1")
-        .withRow("encounter-1", makeEid(0, 1), "value_2")
-        .withRow("encounter-1", makeEid(1, 0), null)
-        .withRow("encounter-2", makeEid(0, 0), null)
-        .withRow("encounter-3", null, null)
-        .build();
-
-    checkPropertyOfCoding("propertyA",
-        Optional.empty(),
-        Optional.empty(),
-        new Type[]{new StringType("value_1"), new StringType("value_2")}, new Type[]{},
-        FHIRDefinedType.STRING,
-        expectedResult);
-  }
-
-
-  @SuppressWarnings("unused")
-  @ParameterizedTest
-  @MethodSource("propertyParameters")
-  public void propertyBOfCodingLanguage(final String propertyType, final DataType resultDataType,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
-
-    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
-        .withIdColumn()
-        .withEidColumn()
-        .withColumn(resultDataType)
-        .withRow("encounter-1", makeEid(0, 0), null)
-        .withRow("encounter-1", makeEid(1, 0), null)
-        .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues[0])
-        .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues[1])
-        .withRow("encounter-3", null, null)
-        .build();
-
-    checkPropertyOfCoding("propertyB",
-        Optional.of(propertyType),
-        Optional.of("de"),
-        propertyAFhirValues,
-        propertyBFhirValues,
-        FHIRDefinedType.fromCode(propertyType),
-        expectedResult);
-  }
-
-  @Test
-  void throwsErrorIfInputTypeIsUnsupported() {
-    final Collection mockContext = new ElementPathBuilder(spark).build();
-    final PrimitivePath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.STRING)
-        .expression("name.given")
-        .build();
-    final Collection argument = StringCollection.fromLiteral("some-property", mockContext);
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
-        .build();
-
-    final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, input,
-        Collections.singletonList(argument));
-
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> new PropertyFunction().invoke(propertyInput));
-    assertEquals("Input to property function must be Coding but is: name.given",
-        error.getMessage());
-  }
-
-  void assertThrowsErrorForArguments(@Nonnull final String expectedError,
-      @Nonnull final Function<PrimitivePath, List<Collection>> argsFactory) {
-
-    final Optional<ElementDefinition> optionalDefinition = FhirHelpers
-        .getChildOfResource(fhirContext, "Encounter", "class");
-    assertTrue(optionalDefinition.isPresent());
-    final ElementDefinition definition = optionalDefinition.get();
-
-    final PrimitivePath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .definition(definition)
-        .buildDefined();
-
-    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(mock(TerminologyServiceFactory.class))
-        .build();
-
-    final NamedFunctionInput propertyInput = new NamedFunctionInput(context, input,
-        argsFactory.apply(input));
-
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> new PropertyFunction().invoke(propertyInput));
-    assertEquals(expectedError,
-        error.getMessage());
-
-  }
-
-  @Test
-  void throwsErrorIfNoArguments() {
-    assertThrowsErrorForArguments(
-        "property function accepts one required and one optional arguments",
-        input -> Collections.emptyList());
-  }
-
-  @Test
-  void throwsErrorIfFirstArgumentIsNotString() {
-    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 1",
-        input -> Collections.singletonList(
-            IntegerLiteralPath.fromString("4", input)));
-  }
-
-  @Test
-  void throwsErrorIfSecondArgumentIsNotBoolean() {
-    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2",
-        input -> Arrays.asList(
-            StringCollection.fromLiteral("'foo'", input),
-            IntegerLiteralPath.fromString("5", input)));
-  }
-
-  @Test
-  void throwsErrorIfThirdArgumentIsNotBoolean() {
-    assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 3",
-        input -> Arrays.asList(
-            StringCollection.fromLiteral("'foo'", input),
-            StringCollection.fromLiteral("'foo'", input),
-            IntegerLiteralPath.fromString("5", input)));
-  }
-
-  @Test
-  void throwsErrorIfTooManyArguments() {
-    assertThrowsErrorForArguments(
-        "property function accepts one required and one optional arguments",
-        input -> Arrays.asList(
-            StringCollection.fromLiteral("'foo'", input),
-            StringCollection.fromLiteral("'false'", input),
-            StringCollection.fromLiteral("'false'", input),
-            StringCollection.fromLiteral("'false'", input)
-        ));
-  }
-
-  @Test
-  void throwsErrorIfCannotParsePropertyType() {
-    assertThrowsErrorForArguments(
-        "Unknown FHIRDefinedType code 'not-an-fhir-type'",
-        input -> Arrays.asList(
-            StringCollection.fromLiteral("'foo'", input),
-            StringCollection.fromLiteral("'not-an-fhir-type'", input)
-        ));
-  }
-
-  @Test
-  void throwsErrorIfTerminologyServiceNotConfigured() {
-    final PrimitivePath input = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .build();
-    final Collection argument = StringCollection.fromLiteral("some string", input);
-
-    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
-        .build();
-
-    final NamedFunctionInput translateInput = new NamedFunctionInput(context, input,
-        Collections.singletonList(argument));
-
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        () -> new TranslateFunction().invoke(translateInput));
-    assertEquals(
-        "Attempt to call terminology function translate when terminology service has not been configured",
-        error.getMessage());
-  }
+  // @Autowired
+  // SparkSession spark;
+  //
+  // @Autowired
+  // FhirContext fhirContext;
+  //
+  // @Autowiredø
+  // TerminologyServiceFactory terminologyServiceFactory;
+  //
+  // @Autowired
+  // TerminologyService terminologyService;
+  //
+  // @BeforeEach
+  // void setUp() {
+  //   reset(terminologyService);
+  // }
+  //
+  // private void checkPropertyOfCoding(final String propertyCode,
+  //     final Optional<String> maybePropertyType,
+  //     final Optional<String> maybeLanguage,
+  //     final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
+  //     final FHIRDefinedType expectedResultType,
+  //     final Dataset<Row> expectedResult) {
+  //
+  //   // check the that if type is provided if language is provided
+  //   assertTrue(maybeLanguage.isEmpty() || maybePropertyType.isPresent());
+  //
+  //   TerminologyServiceHelpers.setupLookup(terminologyService)
+  //       .withProperty(CODING_A, "propertyA", maybeLanguage.orElse(null), propertyAFhirValues)
+  //       .withProperty(CODING_B, "propertyB", maybeLanguage.orElse(null), propertyBFhirValues);
+  //
+  //   final Optional<ElementDefinition> optionalDefinition = FhirHelpers
+  //       .getChildOfResource(fhirContext, "Encounter", "class");
+  //   assertTrue(optionalDefinition.isPresent());
+  //   final ElementDefinition definition = optionalDefinition.get();
+  //
+  //   final Dataset<Row> inputDataset = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withStructTypeColumns(codingStructType())
+  //       .withRow("encounter-1", makeEid(0), rowFromCoding(CODING_A))
+  //       .withRow("encounter-1", makeEid(1), rowFromCoding(INVALID_CODING_0))
+  //       .withRow("encounter-2", makeEid(0), rowFromCoding(CODING_B))
+  //       .withRow("encounter-3", null, null)
+  //       .buildWithStructValue();
+  //
+  //   final CodingCollection inputExpression = (CodingCollection) new ElementPathBuilder(spark)
+  //       .dataset(inputDataset)
+  //       .idAndEidAndValueColumns()
+  //       .expression("Encounter.class")
+  //       .singular(false)
+  //       .definition(definition)
+  //       .buildDefined();
+  //
+  //   // Prepare the inputs to the function.
+  //   final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+  //       .idColumn(inputExpression.getIdColumn())
+  //       .terminologyClientFactory(terminologyServiceFactory)
+  //       .build();
+  //
+  //   final List<String> parameterLiterals = Stream.of(Optional.of(propertyCode),
+  //           maybePropertyType,
+  //           maybeLanguage).flatMap(Optional::stream)
+  //       .map(StringLiteral::toLiteral).collect(Collectors.toUnmodifiableList());
+  //
+  //   final List<Collection> arguments = parameterLiterals.stream()
+  //       .map(lit -> StringCollection.fromLiteral(lit, inputExpression))
+  //       .collect(Collectors.toUnmodifiableList());
+  //
+  //   final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, inputExpression,
+  //       arguments);
+  //
+  //   // Invoke the function.
+  //   final Collection result = NamedFunction.getInstance("property").invoke(propertyInput);
+  //
+  //   // Check the result.
+  //   assertThat(result).hasExpression(
+  //           String.format("Encounter.class.property(%s)",
+  //               String.join(", ", parameterLiterals)))
+  //       .isElementPath(PrimitivePath.class)
+  //       .hasFhirType(expectedResultType)
+  //       .isNotSingular()
+  //       .selectOrderedResultWithEid()
+  //       .hasRows(expectedResult);
+  //
+  //   // Check that the ElementPath for CODING type has the correct Coding definition.
+  //   if (FHIRDefinedType.CODING.equals(expectedResultType)) {
+  //     assertThat(result)
+  //         .isElementPath(PrimitivePath.class)
+  //         .hasDefinition(definition);
+  //   }
+  // }
+  //
+  // @SuppressWarnings("unused")
+  // @ParameterizedTest
+  // @MethodSource("propertyParameters")
+  // public void propertyAOfCoding(final String propertyType, final DataType resultDataType,
+  //     final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
+  //     final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+  //
+  //   final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(resultDataType)
+  //       .withRow("encounter-1", makeEid(0, 0), propertyASqlValues[0])
+  //       .withRow("encounter-1", makeEid(1, 0), null)
+  //       .withRow("encounter-2", makeEid(0, 0), null)
+  //       .withRow("encounter-3", null, null)
+  //       .build();
+  //   checkPropertyOfCoding("propertyA",
+  //       Optional.of(propertyType),
+  //       Optional.empty(),
+  //       propertyAFhirValues, propertyBFhirValues,
+  //       FHIRDefinedType.fromCode(propertyType),
+  //       expectedResult);
+  // }
+  //
+  // @SuppressWarnings("unused")
+  // @ParameterizedTest
+  // @MethodSource("propertyParameters")
+  // public void propertyBOfCoding(final String propertyType, final DataType resultDataType,
+  //     final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
+  //     final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+  //
+  //   final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(resultDataType)
+  //       .withRow("encounter-1", makeEid(0, 0), null)
+  //       .withRow("encounter-1", makeEid(1, 0), null)
+  //       .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues[0])
+  //       .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues[1])
+  //       .withRow("encounter-3", null, null)
+  //       .build();
+  //
+  //   checkPropertyOfCoding("propertyB",
+  //       Optional.of(propertyType),
+  //       Optional.empty(),
+  //       propertyAFhirValues,
+  //       propertyBFhirValues,
+  //       FHIRDefinedType.fromCode(propertyType),
+  //       expectedResult);
+  // }
+  //
+  // @Test
+  // public void propertyAOfCodingWithDefaultType() {
+  //   final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(DataTypes.StringType)
+  //       .withRow("encounter-1", makeEid(0, 0), "value_1")
+  //       .withRow("encounter-1", makeEid(0, 1), "value_2")
+  //       .withRow("encounter-1", makeEid(1, 0), null)
+  //       .withRow("encounter-2", makeEid(0, 0), null)
+  //       .withRow("encounter-3", null, null)
+  //       .build();
+  //
+  //   checkPropertyOfCoding("propertyA",
+  //       Optional.empty(),
+  //       Optional.empty(),
+  //       new Type[]{new StringType("value_1"), new StringType("value_2")}, new Type[]{},
+  //       FHIRDefinedType.STRING,
+  //       expectedResult);
+  // }
+  //
+  //
+  // @SuppressWarnings("unused")
+  // @ParameterizedTest
+  // @MethodSource("propertyParameters")
+  // public void propertyBOfCodingLanguage(final String propertyType, final DataType resultDataType,
+  //     final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
+  //     final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+  //
+  //   final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+  //       .withIdColumn()
+  //       .withEidColumn()
+  //       .withColumn(resultDataType)
+  //       .withRow("encounter-1", makeEid(0, 0), null)
+  //       .withRow("encounter-1", makeEid(1, 0), null)
+  //       .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues[0])
+  //       .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues[1])
+  //       .withRow("encounter-3", null, null)
+  //       .build();
+  //
+  //   checkPropertyOfCoding("propertyB",
+  //       Optional.of(propertyType),
+  //       Optional.of("de"),
+  //       propertyAFhirValues,
+  //       propertyBFhirValues,
+  //       FHIRDefinedType.fromCode(propertyType),
+  //       expectedResult);
+  // }
+  //
+  // @Test
+  // void throwsErrorIfInputTypeIsUnsupported() {
+  //   final Collection mockContext = new ElementPathBuilder(spark).build();
+  //   final PrimitivePath input = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.STRING)
+  //       .expression("name.given")
+  //       .build();
+  //   final Collection argument = StringCollection.fromLiteral("some-property", mockContext);
+  //
+  //   final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+  //       .terminologyClientFactory(mock(TerminologyServiceFactory.class))
+  //       .build();
+  //
+  //   final NamedFunctionInput propertyInput = new NamedFunctionInput(parserContext, input,
+  //       Collections.singletonList(argument));
+  //
+  //   final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+  //       () -> new PropertyFunction().invoke(propertyInput));
+  //   assertEquals("Input to property function must be Coding but is: name.given",
+  //       error.getMessage());
+  // }
+  //
+  // void assertThrowsErrorForArguments(@Nonnull final String expectedError,
+  //     @Nonnull final Function<PrimitivePath, List<Collection>> argsFactory) {
+  //
+  //   final Optional<ElementDefinition> optionalDefinition = FhirHelpers
+  //       .getChildOfResource(fhirContext, "Encounter", "class");
+  //   assertTrue(optionalDefinition.isPresent());
+  //   final ElementDefinition definition = optionalDefinition.get();
+  //
+  //   final PrimitivePath input = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .definition(definition)
+  //       .buildDefined();
+  //
+  //   final ParserContext context = new ParserContextBuilder(spark, fhirContext)
+  //       .terminologyClientFactory(mock(TerminologyServiceFactory.class))
+  //       .build();
+  //
+  //   final NamedFunctionInput propertyInput = new NamedFunctionInput(context, input,
+  //       argsFactory.apply(input));
+  //
+  //   final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+  //       () -> new PropertyFunction().invoke(propertyInput));
+  //   assertEquals(expectedError,
+  //       error.getMessage());
+  //
+  // }
+  //
+  // @Test
+  // void throwsErrorIfNoArguments() {
+  //   assertThrowsErrorForArguments(
+  //       "property function accepts one required and one optional arguments",
+  //       input -> Collections.emptyList());
+  // }
+  //
+  // @Test
+  // void throwsErrorIfFirstArgumentIsNotString() {
+  //   assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 1",
+  //       input -> Collections.singletonList(
+  //           IntegerLiteralPath.fromString("4", input)));
+  // }
+  //
+  // @Test
+  // void throwsErrorIfSecondArgumentIsNotBoolean() {
+  //   assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 2",
+  //       input -> Arrays.asList(
+  //           StringCollection.fromLiteral("'foo'", input),
+  //           IntegerLiteralPath.fromString("5", input)));
+  // }
+  //
+  // @Test
+  // void throwsErrorIfThirdArgumentIsNotBoolean() {
+  //   assertThrowsErrorForArguments("Function `property` expects `String literal` as argument 3",
+  //       input -> Arrays.asList(
+  //           StringCollection.fromLiteral("'foo'", input),
+  //           StringCollection.fromLiteral("'foo'", input),
+  //           IntegerLiteralPath.fromString("5", input)));
+  // }
+  //
+  // @Test
+  // void throwsErrorIfTooManyArguments() {
+  //   assertThrowsErrorForArguments(
+  //       "property function accepts one required and one optional arguments",
+  //       input -> Arrays.asList(
+  //           StringCollection.fromLiteral("'foo'", input),
+  //           StringCollection.fromLiteral("'false'", input),
+  //           StringCollection.fromLiteral("'false'", input),
+  //           StringCollection.fromLiteral("'false'", input)
+  //       ));
+  // }
+  //
+  // @Test
+  // void throwsErrorIfCannotParsePropertyType() {
+  //   assertThrowsErrorForArguments(
+  //       "Unknown FHIRDefinedType code 'not-an-fhir-type'",
+  //       input -> Arrays.asList(
+  //           StringCollection.fromLiteral("'foo'", input),
+  //           StringCollection.fromLiteral("'not-an-fhir-type'", input)
+  //       ));
+  // }
+  //
+  // @Test
+  // void throwsErrorIfTerminologyServiceNotConfigured() {
+  //   final PrimitivePath input = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .build();
+  //   final Collection argument = StringCollection.fromLiteral("some string", input);
+  //
+  //   final ParserContext context = new ParserContextBuilder(spark, fhirContext)
+  //       .build();
+  //
+  //   final NamedFunctionInput translateInput = new NamedFunctionInput(context, input,
+  //       Collections.singletonList(argument));
+  //
+  //   final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+  //       () -> new TranslateFunction().invoke(translateInput));
+  //   assertEquals(
+  //       "Attempt to call terminology function translate when terminology service has not been configured",
+  //       error.getMessage());
+  // }
 }

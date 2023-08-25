@@ -17,105 +17,96 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import ca.uhn.fhir.context.FhirContext;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
+@NotImplemented
 class BooleanOperatorValidationTest {
 
-  @Autowired
-  SparkSession spark;
-
-  @Autowired
-  FhirContext fhirContext;
-
-  ParserContext parserContext;
-
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
-
-  @Test
-  void operandIsNotSingular() {
-    final PrimitivePath left = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.BOOLEAN)
-        .singular(false)
-        .expression("estimatedAge")
-        .build();
-    final PrimitivePath right = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.BOOLEAN)
-        .singular(true)
-        .expression("deceasedBoolean")
-        .build();
-
-    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
-
-    final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> booleanOperator.invoke(input));
-    assertEquals(
-        "Left operand to and operator must be singular: estimatedAge",
-        error.getMessage());
-
-    // Now test the right operand.
-    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
-    final InvalidUserInputError reversedError = assertThrows(
-        InvalidUserInputError.class,
-        () -> booleanOperator.invoke(reversedInput));
-    assertEquals(
-        "Right operand to and operator must be singular: estimatedAge",
-        reversedError.getMessage());
-  }
-
-  @Test
-  void operandIsNotBoolean() {
-    final PrimitivePath left = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.STRING)
-        .singular(true)
-        .expression("estimatedAge")
-        .build();
-    final PrimitivePath right = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.BOOLEAN)
-        .singular(true)
-        .expression("deceasedBoolean")
-        .build();
-
-    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
-
-    final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> booleanOperator.invoke(input));
-    assertEquals(
-        "Left operand to and operator must be Boolean: estimatedAge",
-        error.getMessage());
-
-    // Now test the right operand.
-    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
-    final InvalidUserInputError reversedError = assertThrows(
-        InvalidUserInputError.class,
-        () -> booleanOperator.invoke(reversedInput));
-    assertEquals(
-        "Right operand to and operator must be Boolean: estimatedAge",
-        reversedError.getMessage());
-  }
-
+  // TODO: implement with columns
+  //
+  //
+  // @Autowired
+  // SparkSession spark;
+  //
+  // @Autowired
+  // FhirContext fhirContext;
+  //
+  // ParserContext parserContext;
+  //
+  // @BeforeEach
+  // void setUp() {
+  //   parserContext = new ParserContextBuilder(spark, fhirContext).build();
+  // }
+  //
+  // @Test
+  // void operandIsNotSingular() {
+  //   final PrimitivePath left = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.BOOLEAN)
+  //       .singular(false)
+  //       .expression("estimatedAge")
+  //       .build();
+  //   final PrimitivePath right = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.BOOLEAN)
+  //       .singular(true)
+  //       .expression("deceasedBoolean")
+  //       .build();
+  //
+  //   final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+  //
+  //   final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> booleanOperator.invoke(input));
+  //   assertEquals(
+  //       "Left operand to and operator must be singular: estimatedAge",
+  //       error.getMessage());
+  //
+  //   // Now test the right operand.
+  //   final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
+  //   final InvalidUserInputError reversedError = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> booleanOperator.invoke(reversedInput));
+  //   assertEquals(
+  //       "Right operand to and operator must be singular: estimatedAge",
+  //       reversedError.getMessage());
+  // }
+  //
+  // @Test
+  // void operandIsNotBoolean() {
+  //   final PrimitivePath left = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.STRING)
+  //       .singular(true)
+  //       .expression("estimatedAge")
+  //       .build();
+  //   final PrimitivePath right = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.BOOLEAN)
+  //       .singular(true)
+  //       .expression("deceasedBoolean")
+  //       .build();
+  //
+  //   final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+  //
+  //   final BinaryOperator booleanOperator = BinaryOperator.getInstance("and");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> booleanOperator.invoke(input));
+  //   assertEquals(
+  //       "Left operand to and operator must be Boolean: estimatedAge",
+  //       error.getMessage());
+  //
+  //   // Now test the right operand.
+  //   final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
+  //   final InvalidUserInputError reversedError = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> booleanOperator.invoke(reversedInput));
+  //   assertEquals(
+  //       "Right operand to and operator must be Boolean: estimatedAge",
+  //       reversedError.getMessage());
+  // }
+  //
 }

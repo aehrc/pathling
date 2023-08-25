@@ -25,9 +25,7 @@ import au.csiro.pathling.fhirpath.Nesting;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.definition.BasicElementDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import au.csiro.pathling.test.helpers.SparkHelpers.IdAndValueColumns;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -161,17 +159,19 @@ public class ElementPathBuilder {
     return this;
   }
 
-  @Nonnull
-  public PrimitivePath build() {
-    return PrimitivePath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),
-        singular,
-        Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), fhirType);
-  }
-
-  @Nonnull
-  public PrimitivePath buildDefined() {
-    return PrimitivePath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),
-        singular,
-        Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), definition);
-  }
+  // TODO: check
+  
+  // @Nonnull
+  // public PrimitivePath build() {
+  //   return PrimitivePath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),
+  //       singular,
+  //       Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), fhirType);
+  // }
+  //
+  // @Nonnull
+  // public PrimitivePath buildDefined() {
+  //   return PrimitivePath.build(expression, dataset, idColumn, valueColumn, Optional.empty(),
+  //       singular,
+  //       Optional.ofNullable(currentResource), Optional.ofNullable(thisColumn), definition);
+  // }
 }

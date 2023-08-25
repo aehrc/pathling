@@ -17,36 +17,42 @@
 
 package au.csiro.pathling.test.assertions;
 
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * @author John Grimes
  */
 @SuppressWarnings("UnusedReturnValue")
+@NotImplemented
 public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAssertion> {
 
-  @Nonnull
-  private final PrimitivePath fhirPath;
-
-  ElementPathAssertion(@Nonnull final PrimitivePath fhirPath) {
-    super(fhirPath);
-    this.fhirPath = fhirPath;
+  ElementPathAssertion(@Nonnull final Collection result) {
+    super(result);
   }
 
-  @Nonnull
-  public ElementPathAssertion hasFhirType(@Nonnull final FHIRDefinedType type) {
-    assertEquals(type, fhirPath.getFhirType());
-    return this;
-  }
+  // TODO: check
 
-
-  @Nonnull
-  public ElementPathAssertion hasDefinition(@Nonnull final ElementDefinition elementDefinition) {
-    assertTrue(fhirPath.getDefinition().isPresent());
-    assertEquals(elementDefinition, fhirPath.getDefinition().get());
-    return this;
-  }
+  // @Nonnull
+  // private final PrimitivePath fhirPath;
+  //
+  // ElementPathAssertion(@Nonnull final PrimitivePath fhirPath) {
+  //   super(fhirPath);
+  //   this.fhirPath = fhirPath;
+  // }
+  //
+  // @Nonnull
+  // public ElementPathAssertion hasFhirType(@Nonnull final FHIRDefinedType type) {
+  //   assertEquals(type, fhirPath.getFhirType());
+  //   return this;
+  // }
+  //
+  //
+  // @Nonnull
+  // public ElementPathAssertion hasDefinition(@Nonnull final ElementDefinition elementDefinition) {
+  //   assertTrue(fhirPath.getDefinition().isPresent());
+  //   assertEquals(elementDefinition, fhirPath.getDefinition().get());
+  //   return this;
+  // }
 }

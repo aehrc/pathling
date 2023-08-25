@@ -17,70 +17,61 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import ca.uhn.fhir.context.FhirContext;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
+@NotImplemented
 class ComparisonOperatorValidationTest {
 
-  @Autowired
-  SparkSession spark;
+  // TODO: implement with columns
 
-  @Autowired
-  FhirContext fhirContext;
-
-  ParserContext parserContext;
-
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
-
-  @Test
-  void operandsAreNotComparable() {
-    final PrimitivePath left = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.BOOLEAN)
-        .singular(true)
-        .expression("foo")
-        .build();
-    final PrimitivePath right = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.STRING)
-        .singular(true)
-        .expression("bar")
-        .build();
-
-    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
-    final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> comparisonOperator.invoke(input));
-    assertEquals("Left operand to > operator is not comparable to right operand: foo > bar",
-        error.getMessage());
-
-    // Now test the right operand.
-    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
-    final InvalidUserInputError reversedError = assertThrows(
-        InvalidUserInputError.class,
-        () -> comparisonOperator.invoke(reversedInput));
-    assertEquals(
-        "Left operand to > operator is not comparable to right operand: bar > foo",
-        reversedError.getMessage());
-  }
-
+  //
+  // @Autowired
+  // SparkSession spark;
+  //
+  // @Autowired
+  // FhirContext fhirContext;
+  //
+  // ParserContext parserContext;
+  //
+  // @BeforeEach
+  // void setUp() {
+  //   parserContext = new ParserContextBuilder(spark, fhirContext).build();
+  // }
+  //
+  // @Test
+  // void operandsAreNotComparable() {
+  //   final PrimitivePath left = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.BOOLEAN)
+  //       .singular(true)
+  //       .expression("foo")
+  //       .build();
+  //   final PrimitivePath right = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.STRING)
+  //       .singular(true)
+  //       .expression("bar")
+  //       .build();
+  //
+  //   final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+  //   final BinaryOperator comparisonOperator = BinaryOperator.getInstance(">");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> comparisonOperator.invoke(input));
+  //   assertEquals("Left operand to > operator is not comparable to right operand: foo > bar",
+  //       error.getMessage());
+  //
+  //   // Now test the right operand.
+  //   final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
+  //   final InvalidUserInputError reversedError = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> comparisonOperator.invoke(reversedInput));
+  //   assertEquals(
+  //       "Left operand to > operator is not comparable to right operand: bar > foo",
+  //       reversedError.getMessage());
+  // }
+  //
 }

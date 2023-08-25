@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,11 +28,14 @@ import org.springframework.beans.factory.annotation.Autowired;
  * @author Piotr Szul
  */
 @SpringBootUnitTest
+@NotImplemented
 class NonLiteralPathTest {
 
   @Autowired
   SparkSession spark;
 
+  // TODO: implement with columns
+  
   // @Test
   // void testSingularNonLiteralEidExpansion() {
   //   // Check the result.

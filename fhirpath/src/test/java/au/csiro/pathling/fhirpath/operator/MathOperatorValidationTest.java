@@ -17,132 +17,123 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import ca.uhn.fhir.context.FhirContext;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
+@NotImplemented
 class MathOperatorValidationTest {
 
-  @Autowired
-  SparkSession spark;
-
-  @Autowired
-  FhirContext fhirContext;
-
-  ParserContext parserContext;
-
-  @BeforeEach
-  void setUp() {
-    parserContext = new ParserContextBuilder(spark, fhirContext).build();
-  }
-
-  @Test
-  void operandIsNotCorrectType() {
-    final PrimitivePath left = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.DATETIME)
-        .singular(true)
-        .expression("foo")
-        .build();
-    final PrimitivePath right = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.INTEGER)
-        .singular(true)
-        .expression("bar")
-        .build();
-
-    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
-    final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> mathOperator.invoke(input));
-    assertEquals("+ operator does not support left operand: foo",
-        error.getMessage());
-
-    // Now test the right operand.
-    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
-    final InvalidUserInputError reversedError = assertThrows(
-        InvalidUserInputError.class,
-        () -> mathOperator.invoke(reversedInput));
-    assertEquals(
-        "+ operator does not support right operand: foo",
-        reversedError.getMessage());
-  }
-
-  @Test
-  void operandIsNotSingular() {
-    final PrimitivePath left = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.INTEGER)
-        .singular(false)
-        .expression("foo")
-        .build();
-    final PrimitivePath right = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.INTEGER)
-        .singular(true)
-        .expression("bar")
-        .build();
-
-    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
-    final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> mathOperator.invoke(input));
-    assertEquals("Left operand to + operator must be singular: foo",
-        error.getMessage());
-
-    // Now test the right operand.
-    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
-    final InvalidUserInputError reversedError = assertThrows(
-        InvalidUserInputError.class,
-        () -> mathOperator.invoke(reversedInput));
-    assertEquals(
-        "Right operand to + operator must be singular: foo",
-        reversedError.getMessage());
-  }
-
-  @Test
-  void operandsAreNotComparable() {
-    final PrimitivePath left = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.INTEGER)
-        .singular(true)
-        .expression("foo")
-        .build();
-    final PrimitivePath right = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.QUANTITY)
-        .singular(true)
-        .expression("bar")
-        .build();
-
-    final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
-    final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
-    final InvalidUserInputError error = assertThrows(
-        InvalidUserInputError.class,
-        () -> mathOperator.invoke(input));
-    assertEquals("Left and right operands are not comparable: foo + bar",
-        error.getMessage());
-
-    // Now test the right operand.
-    final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
-    final InvalidUserInputError reversedError = assertThrows(
-        InvalidUserInputError.class,
-        () -> mathOperator.invoke(reversedInput));
-    assertEquals(
-        "Left and right operands are not comparable: bar + foo",
-        reversedError.getMessage());
-  }
+  // TODO: implement with columns
+  
+  //
+  // @Autowired
+  // SparkSession spark;
+  //
+  // @Autowired
+  // FhirContext fhirContext;
+  //
+  // ParserContext parserContext;
+  //
+  // @BeforeEach
+  // void setUp() {
+  //   parserContext = new ParserContextBuilder(spark, fhirContext).build();
+  // }
+  //
+  // @Test
+  // void operandIsNotCorrectType() {
+  //   final PrimitivePath left = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.DATETIME)
+  //       .singular(true)
+  //       .expression("foo")
+  //       .build();
+  //   final PrimitivePath right = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.INTEGER)
+  //       .singular(true)
+  //       .expression("bar")
+  //       .build();
+  //
+  //   final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+  //   final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> mathOperator.invoke(input));
+  //   assertEquals("+ operator does not support left operand: foo",
+  //       error.getMessage());
+  //
+  //   // Now test the right operand.
+  //   final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
+  //   final InvalidUserInputError reversedError = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> mathOperator.invoke(reversedInput));
+  //   assertEquals(
+  //       "+ operator does not support right operand: foo",
+  //       reversedError.getMessage());
+  // }
+  //
+  // @Test
+  // void operandIsNotSingular() {
+  //   final PrimitivePath left = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.INTEGER)
+  //       .singular(false)
+  //       .expression("foo")
+  //       .build();
+  //   final PrimitivePath right = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.INTEGER)
+  //       .singular(true)
+  //       .expression("bar")
+  //       .build();
+  //
+  //   final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+  //   final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> mathOperator.invoke(input));
+  //   assertEquals("Left operand to + operator must be singular: foo",
+  //       error.getMessage());
+  //
+  //   // Now test the right operand.
+  //   final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
+  //   final InvalidUserInputError reversedError = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> mathOperator.invoke(reversedInput));
+  //   assertEquals(
+  //       "Right operand to + operator must be singular: foo",
+  //       reversedError.getMessage());
+  // }
+  //
+  // @Test
+  // void operandsAreNotComparable() {
+  //   final PrimitivePath left = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.INTEGER)
+  //       .singular(true)
+  //       .expression("foo")
+  //       .build();
+  //   final PrimitivePath right = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.QUANTITY)
+  //       .singular(true)
+  //       .expression("bar")
+  //       .build();
+  //
+  //   final BinaryOperatorInput input = new BinaryOperatorInput(parserContext, left, right);
+  //   final BinaryOperator mathOperator = BinaryOperator.getInstance("+");
+  //   final InvalidUserInputError error = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> mathOperator.invoke(input));
+  //   assertEquals("Left and right operands are not comparable: foo + bar",
+  //       error.getMessage());
+  //
+  //   // Now test the right operand.
+  //   final BinaryOperatorInput reversedInput = new BinaryOperatorInput(parserContext, right, left);
+  //   final InvalidUserInputError reversedError = assertThrows(
+  //       InvalidUserInputError.class,
+  //       () -> mathOperator.invoke(reversedInput));
+  //   assertEquals(
+  //       "Left and right operands are not comparable: bar + foo",
+  //       reversedError.getMessage());
+  // }
 
 }

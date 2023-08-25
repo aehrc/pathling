@@ -17,11 +17,12 @@
 
 package au.csiro.pathling.test.builders;
 
-import static org.apache.spark.sql.functions.lit;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -43,6 +44,9 @@ import org.mockito.Mockito;
  * @author John Grimes
  */
 public class ParserContextBuilder {
+
+  @Nonnull
+  private ResourceCollection rootContext;
 
   @Nonnull
   private Collection inputContext;
@@ -69,9 +73,8 @@ public class ParserContextBuilder {
       @Nonnull final FhirContext fhirContext) {
     this.fhirContext = fhirContext;
     this.spark = spark;
-    inputContext = mock(Collection.class);
-    when(inputContext.getIdColumn()).thenReturn(lit(null));
-    when(inputContext.getDataset()).thenReturn(spark.emptyDataFrame());
+    rootContext = mock(ResourceCollection.class);
+    inputContext = rootContext;
     dataSource = Mockito.mock(DataSource.class, new DefaultAnswer());
     groupingColumns = Collections.emptyList();
     nodeIdColumns = new HashMap<>();
@@ -83,17 +86,17 @@ public class ParserContextBuilder {
     return this;
   }
 
-  @Nonnull
-  public ParserContextBuilder inputExpression(@Nonnull final String inputExpression) {
-    when(inputContext.getExpression()).thenReturn(inputExpression);
-    return this;
-  }
+  // @Nonnull
+  // public ParserContextBuilder inputExpression(@Nonnull final String inputExpression) {
+  //   when(inputContext.getExpression()).thenReturn(inputExpression);
+  //   return this;
+  // }
 
-  @Nonnull
-  public ParserContextBuilder idColumn(@Nonnull final Column idColumn) {
-    when(inputContext.getIdColumn()).thenReturn(idColumn);
-    return this;
-  }
+  // @Nonnull
+  // public ParserContextBuilder idColumn(@Nonnull final Column idColumn) {
+  //   when(inputContext.getIdColumn()).thenReturn(idColumn);
+  //   return this;
+  // }
 
   @Nonnull
   public ParserContextBuilder database(@Nonnull final DataSource dataSource) {
@@ -116,9 +119,9 @@ public class ParserContextBuilder {
 
   @Nonnull
   public ParserContext build() {
-    return new ParserContext(inputContext, fhirContext, spark, dataSource,
-        Optional.ofNullable(terminologyServiceFactory), functionRegistry, groupingColumns,
-        Optional.empty());
+    return new ParserContext(inputContext, rootContext, fhirContext, spark, dataSource,
+        StaticFunctionRegistry.getInstance(),
+        Optional.ofNullable(terminologyServiceFactory), Optional.empty());
   }
 
 }

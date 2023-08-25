@@ -17,22 +17,13 @@
 
 package au.csiro.pathling.test.builders;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.fixtures.PatientResourceRowFixture;
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -159,39 +150,42 @@ public class ResourcePathBuilder {
     return this;
   }
 
-  @Nonnull
-  public ResourceCollection build() {
-    return ResourceCollection.build(fhirContext, dataSource, resourceType, expression);
-  }
-
-  @Nonnull
-  public ResourceCollection buildCustom() {
-    final String resourceCode = resourceType.toCode();
-    final RuntimeResourceDefinition hapiDefinition = fhirContext
-        .getResourceDefinition(resourceCode);
-    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition,
-        Optional.empty());
-    // in most cases value column should be the same as id
-    final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
-
-    final Map<String, Column> elementsToColumns = new HashMap<>();
-    for (final String columnName : dataset.columns()) {
-      elementsToColumns.put(columnName, dataset.col(columnName));
-    }
-
-    try {
-      final Constructor<ResourceCollection> constructor = ResourceCollection.class
-          .getDeclaredConstructor(String.class, Dataset.class, Column.class, Optional.class,
-              Column.class, boolean.class, Optional.class, ResourceDefinition.class, Map.class);
-      constructor.setAccessible(true);
-      return constructor
-          .newInstance(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
-              datasetWithColumn.getColumn(), singular, Optional.ofNullable(thisColumn), definition,
-              elementsToColumns);
-    } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException |
-                   InstantiationException e) {
-      throw new RuntimeException("Problem building ResourcePath", e);
-    }
-  }
+  // TODO: check
+  
+  //
+  // @Nonnull
+  // public ResourceCollection build() {
+  //   return ResourceCollection.build(fhirContext, dataSource, resourceType, expression);
+  // }
+  //
+  // @Nonnull
+  // public ResourceCollection buildCustom() {
+  //   final String resourceCode = resourceType.toCode();
+  //   final RuntimeResourceDefinition hapiDefinition = fhirContext
+  //       .getResourceDefinition(resourceCode);
+  //   final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition,
+  //       Optional.empty());
+  //   // in most cases value column should be the same as id
+  //   final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
+  //
+  //   final Map<String, Column> elementsToColumns = new HashMap<>();
+  //   for (final String columnName : dataset.columns()) {
+  //     elementsToColumns.put(columnName, dataset.col(columnName));
+  //   }
+  //
+  //   try {
+  //     final Constructor<ResourceCollection> constructor = ResourceCollection.class
+  //         .getDeclaredConstructor(String.class, Dataset.class, Column.class, Optional.class,
+  //             Column.class, boolean.class, Optional.class, ResourceDefinition.class, Map.class);
+  //     constructor.setAccessible(true);
+  //     return constructor
+  //         .newInstance(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
+  //             datasetWithColumn.getColumn(), singular, Optional.ofNullable(thisColumn), definition,
+  //             elementsToColumns);
+  //   } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException |
+  //                  InstantiationException e) {
+  //     throw new RuntimeException("Problem building ResourcePath", e);
+  //   }
+  // }
 
 }

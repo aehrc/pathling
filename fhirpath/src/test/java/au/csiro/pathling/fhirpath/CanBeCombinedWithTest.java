@@ -17,204 +17,172 @@
 
 package au.csiro.pathling.fhirpath;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import au.csiro.pathling.fhirpath.collection.CodingCollection;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.DateCollection;
-import au.csiro.pathling.fhirpath.collection.DecimalCollection;
-import au.csiro.pathling.fhirpath.collection.NullPath;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.collection.ReferencePath;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.collection.TimeCollection;
-import au.csiro.pathling.fhirpath.collection.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
-import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
-import au.csiro.pathling.test.builders.ElementPathBuilder;
-import au.csiro.pathling.test.builders.ResourcePathBuilder;
-import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Stream;
-import javax.annotation.Nonnull;
-import lombok.EqualsAndHashCode;
-import lombok.Value;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
+@NotImplemented
 class CanBeCombinedWithTest {
 
-  final ResourceCollection resourceCollection;
-  final UntypedResourcePath untypedResourcePath;
-
-  final PrimitivePath booleanPath;
-  final PrimitivePath codingPath;
-  final PrimitivePath datePath;
-  final PrimitivePath dateTimePath;
-  final PrimitivePath decimalPath;
-  final PrimitivePath integerPath;
-  final ReferencePath referencePath;
-  final PrimitivePath stringPath;
-  final PrimitivePath timePath;
-
-  final BooleanLiteralPath booleanLiteralPath;
-  final CodingLiteralPath codingLiteralPath;
-  final DateLiteralPath dateLiteralPath;
-  final DateTimeLiteralPath dateTimeLiteralPath;
-  final DecimalCollection decimalLiteralPath;
-  final IntegerLiteralPath integerLiteralPath;
-  final NullPath nullPath;
-  final StringLiteralPath stringLiteralPath;
-  final TimeLiteralPath timeLiteralPath;
-
-  final Set<Collection> paths;
-
-  @Autowired
-  CanBeCombinedWithTest(@Nonnull final SparkSession spark) throws ParseException {
-    resourceCollection = new ResourcePathBuilder(spark)
-        .build();
-
-    booleanPath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.BOOLEAN)
-        .build();
-    codingPath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.CODING)
-        .build();
-    datePath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.DATE)
-        .build();
-    dateTimePath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.DATETIME)
-        .build();
-    decimalPath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.DECIMAL)
-        .build();
-    integerPath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.INTEGER)
-        .build();
-    referencePath = (ReferencePath) new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.REFERENCE)
-        .build();
-    untypedResourcePath = UntypedResourcePath.build(referencePath, referencePath.getExpression());
-    stringPath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.STRING)
-        .build();
-    timePath = new ElementPathBuilder(spark)
-        .fhirType(FHIRDefinedType.TIME)
-        .build();
-
-    booleanLiteralPath = BooleanLiteralPath.fromString("true", resourceCollection);
-    codingLiteralPath = CodingCollection
-        .fromLiteral("http://snomed.info/sct|27699000", resourceCollection);
-    dateLiteralPath = DateCollection.fromLiteral("@1983-06-21", resourceCollection);
-    dateTimeLiteralPath = DateTimeLiteralPath
-        .fromString("@2015-02-08T13:28:17-05:00", resourceCollection);
-    decimalLiteralPath = DecimalCollection.fromLiteral("9.5", resourceCollection);
-    integerLiteralPath = IntegerLiteralPath.fromString("14", resourceCollection);
-    nullPath = NullPath.build(resourceCollection);
-    stringLiteralPath = StringCollection.fromLiteral("'foo'", resourceCollection);
-    timeLiteralPath = TimeCollection.fromLiteral("T12:30", resourceCollection);
-
-    paths = new HashSet<>(Arrays.asList(
-        resourceCollection,
-        untypedResourcePath,
-        booleanPath,
-        codingPath,
-        datePath,
-        dateTimePath,
-        decimalPath,
-        integerPath,
-        referencePath,
-        stringPath,
-        timePath,
-        booleanLiteralPath,
-        codingLiteralPath,
-        dateLiteralPath,
-        dateTimeLiteralPath,
-        decimalLiteralPath,
-        integerLiteralPath,
-        nullPath,
-        stringLiteralPath,
-        timeLiteralPath
-    ));
-  }
-
-  @Value
-  @EqualsAndHashCode
-  static class TestParameters {
-
-    @Nonnull
-    Collection source;
-
-    @Nonnull
-    Collection target;
-
-    boolean expectation;
-
-    @Override
-    public String toString() {
-      return source.getClass().getSimpleName() + ", " + target.getClass().getSimpleName() + ": "
-          + expectation;
-    }
-
-  }
-
-  Stream<TestParameters> parameters() {
-    return Stream.of(
-        buildParameters(resourceCollection, Collections.singletonList(resourceCollection)),
-        buildParameters(untypedResourcePath, Collections.singletonList(untypedResourcePath)),
-        buildParameters(booleanPath, Arrays.asList(booleanPath, booleanLiteralPath)),
-        buildParameters(codingPath, Arrays.asList(codingPath, codingLiteralPath)),
-        buildParameters(datePath, Arrays.asList(datePath, dateLiteralPath)),
-        buildParameters(dateTimePath, Arrays.asList(dateTimePath, dateTimeLiteralPath)),
-        buildParameters(decimalPath, Arrays.asList(decimalPath, decimalLiteralPath)),
-        buildParameters(integerPath, Arrays.asList(integerPath, integerLiteralPath)),
-        buildParameters(referencePath, Collections.singletonList(referencePath)),
-        buildParameters(stringPath, Arrays.asList(stringPath, stringLiteralPath)),
-        buildParameters(timePath, Arrays.asList(timePath, timeLiteralPath)),
-        buildParameters(booleanLiteralPath, Arrays.asList(booleanLiteralPath, booleanPath)),
-        buildParameters(codingLiteralPath, Arrays.asList(codingLiteralPath, codingPath)),
-        buildParameters(dateLiteralPath, Arrays.asList(dateLiteralPath, datePath)),
-        buildParameters(dateTimeLiteralPath, Arrays.asList(dateTimeLiteralPath, dateTimePath)),
-        buildParameters(decimalLiteralPath, Arrays.asList(decimalLiteralPath, decimalPath)),
-        buildParameters(integerLiteralPath, Arrays.asList(integerLiteralPath, integerPath)),
-        buildParameters(stringLiteralPath, Arrays.asList(stringLiteralPath, stringPath)),
-        buildParameters(timeLiteralPath, Arrays.asList(timeLiteralPath, timePath)),
-        buildParameters(nullPath, paths)
-    ).flatMap(x -> x).distinct();
-  }
-
-  Stream<TestParameters> buildParameters(@Nonnull final Collection source,
-      @Nonnull final java.util.Collection<Collection> canBeCombined) {
-    return paths.stream().map(path -> new TestParameters(source, path,
-        canBeCombined.contains(path) || path == nullPath));
-  }
-
-  @ParameterizedTest
-  @MethodSource("parameters")
-  void canBeCombined(@Nonnull final TestParameters parameters) {
-    final boolean result = parameters.getSource().canBeCombinedWith(parameters.getTarget());
-    assertEquals(parameters.isExpectation(), result);
-  }
-
+  // TODO: implement with columns
+  
+  // final ResourceCollection resourceCollection;
+  // final UntypedResourcePath untypedResourcePath;
+  //
+  // final PrimitivePath booleanPath;
+  // final PrimitivePath codingPath;
+  // final PrimitivePath datePath;
+  // final PrimitivePath dateTimePath;
+  // final PrimitivePath decimalPath;
+  // final PrimitivePath integerPath;
+  // final ReferencePath referencePath;
+  // final PrimitivePath stringPath;
+  // final PrimitivePath timePath;
+  //
+  // final BooleanLiteralPath booleanLiteralPath;
+  // final CodingLiteralPath codingLiteralPath;
+  // final DateLiteralPath dateLiteralPath;
+  // final DateTimeLiteralPath dateTimeLiteralPath;
+  // final DecimalCollection decimalLiteralPath;
+  // final IntegerLiteralPath integerLiteralPath;
+  // final NullPath nullPath;
+  // final StringLiteralPath stringLiteralPath;
+  // final TimeLiteralPath timeLiteralPath;
+  //
+  // final Set<Collection> paths;
+  //
+  // @Autowired
+  // CanBeCombinedWithTest(@Nonnull final SparkSession spark) throws ParseException {
+  //   resourceCollection = new ResourcePathBuilder(spark)
+  //       .build();
+  //
+  //   booleanPath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.BOOLEAN)
+  //       .build();
+  //   codingPath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.CODING)
+  //       .build();
+  //   datePath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.DATE)
+  //       .build();
+  //   dateTimePath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.DATETIME)
+  //       .build();
+  //   decimalPath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.DECIMAL)
+  //       .build();
+  //   integerPath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.INTEGER)
+  //       .build();
+  //   referencePath = (ReferencePath) new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.REFERENCE)
+  //       .build();
+  //   untypedResourcePath = UntypedResourcePath.build(referencePath, referencePath.getExpression());
+  //   stringPath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.STRING)
+  //       .build();
+  //   timePath = new ElementPathBuilder(spark)
+  //       .fhirType(FHIRDefinedType.TIME)
+  //       .build();
+  //
+  //   booleanLiteralPath = BooleanLiteralPath.fromString("true", resourceCollection);
+  //   codingLiteralPath = CodingCollection
+  //       .fromLiteral("http://snomed.info/sct|27699000", resourceCollection);
+  //   dateLiteralPath = DateCollection.fromLiteral("@1983-06-21", resourceCollection);
+  //   dateTimeLiteralPath = DateTimeLiteralPath
+  //       .fromString("@2015-02-08T13:28:17-05:00", resourceCollection);
+  //   decimalLiteralPath = DecimalCollection.fromLiteral("9.5", resourceCollection);
+  //   integerLiteralPath = IntegerLiteralPath.fromString("14", resourceCollection);
+  //   nullPath = NullPath.build(resourceCollection);
+  //   stringLiteralPath = StringCollection.fromLiteral("'foo'", resourceCollection);
+  //   timeLiteralPath = TimeCollection.fromLiteral("T12:30", resourceCollection);
+  //
+  //   paths = new HashSet<>(Arrays.asList(
+  //       resourceCollection,
+  //       untypedResourcePath,
+  //       booleanPath,
+  //       codingPath,
+  //       datePath,
+  //       dateTimePath,
+  //       decimalPath,
+  //       integerPath,
+  //       referencePath,
+  //       stringPath,
+  //       timePath,
+  //       booleanLiteralPath,
+  //       codingLiteralPath,
+  //       dateLiteralPath,
+  //       dateTimeLiteralPath,
+  //       decimalLiteralPath,
+  //       integerLiteralPath,
+  //       nullPath,
+  //       stringLiteralPath,
+  //       timeLiteralPath
+  //   ));
+  // }
+  //
+  // @Value
+  // @EqualsAndHashCode
+  // static class TestParameters {
+  //
+  //   @Nonnull
+  //   Collection source;
+  //
+  //   @Nonnull
+  //   Collection target;
+  //
+  //   boolean expectation;
+  //
+  //   @Override
+  //   public String toString() {
+  //     return source.getClass().getSimpleName() + ", " + target.getClass().getSimpleName() + ": "
+  //         + expectation;
+  //   }
+  //
+  // }
+  //
+  // Stream<TestParameters> parameters() {
+  //   return Stream.of(
+  //       buildParameters(resourceCollection, Collections.singletonList(resourceCollection)),
+  //       buildParameters(untypedResourcePath, Collections.singletonList(untypedResourcePath)),
+  //       buildParameters(booleanPath, Arrays.asList(booleanPath, booleanLiteralPath)),
+  //       buildParameters(codingPath, Arrays.asList(codingPath, codingLiteralPath)),
+  //       buildParameters(datePath, Arrays.asList(datePath, dateLiteralPath)),
+  //       buildParameters(dateTimePath, Arrays.asList(dateTimePath, dateTimeLiteralPath)),
+  //       buildParameters(decimalPath, Arrays.asList(decimalPath, decimalLiteralPath)),
+  //       buildParameters(integerPath, Arrays.asList(integerPath, integerLiteralPath)),
+  //       buildParameters(referencePath, Collections.singletonList(referencePath)),
+  //       buildParameters(stringPath, Arrays.asList(stringPath, stringLiteralPath)),
+  //       buildParameters(timePath, Arrays.asList(timePath, timeLiteralPath)),
+  //       buildParameters(booleanLiteralPath, Arrays.asList(booleanLiteralPath, booleanPath)),
+  //       buildParameters(codingLiteralPath, Arrays.asList(codingLiteralPath, codingPath)),
+  //       buildParameters(dateLiteralPath, Arrays.asList(dateLiteralPath, datePath)),
+  //       buildParameters(dateTimeLiteralPath, Arrays.asList(dateTimeLiteralPath, dateTimePath)),
+  //       buildParameters(decimalLiteralPath, Arrays.asList(decimalLiteralPath, decimalPath)),
+  //       buildParameters(integerLiteralPath, Arrays.asList(integerLiteralPath, integerPath)),
+  //       buildParameters(stringLiteralPath, Arrays.asList(stringLiteralPath, stringPath)),
+  //       buildParameters(timeLiteralPath, Arrays.asList(timeLiteralPath, timePath)),
+  //       buildParameters(nullPath, paths)
+  //   ).flatMap(x -> x).distinct();
+  // }
+  //
+  // Stream<TestParameters> buildParameters(@Nonnull final Collection source,
+  //     @Nonnull final java.util.Collection<Collection> canBeCombined) {
+  //   return paths.stream().map(path -> new TestParameters(source, path,
+  //       canBeCombined.contains(path) || path == nullPath));
+  // }
+  //
+  // @ParameterizedTest
+  // @MethodSource("parameters")
+  // void canBeCombined(@Nonnull final TestParameters parameters) {
+  //   final boolean result = parameters.getSource().canBeCombinedWith(parameters.getTarget());
+  //   assertEquals(parameters.isExpectation(), result);
+  // }
+  //
 }

@@ -18,12 +18,7 @@
 package au.csiro.pathling.test.builders;
 
 import static org.apache.spark.sql.functions.col;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.fhirpath.collection.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.collection.ReferencePath;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
@@ -32,7 +27,6 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataTypes;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * @author John Grimes
@@ -111,17 +105,19 @@ public class UntypedResourcePathBuilder {
     return this;
   }
 
-  @Nonnull
-  public UntypedResourcePath build() {
-    final ReferencePath referencePath = mock(ReferencePath.class);
-    when(referencePath.getIdColumn()).thenReturn(idColumn);
-    when(referencePath.getValueColumn()).thenReturn(valueColumn);
-    when(referencePath.getDataset()).thenReturn(dataset);
-    when(referencePath.isSingular()).thenReturn(singular);
-    when(referencePath.getCurrentResource()).thenReturn(Optional.empty());
-    when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
-    when(referencePath.getFhirType()).thenReturn(FHIRDefinedType.REFERENCE);
-    return UntypedResourcePath.build(referencePath, expression);
-  }
+  // TODO: check
+  //
+  // @Nonnull
+  // public UntypedResourcePath build() {
+  //   final ReferencePath referencePath = mock(ReferencePath.class);
+  //   when(referencePath.getIdColumn()).thenReturn(idColumn);
+  //   when(referencePath.getValueColumn()).thenReturn(valueColumn);
+  //   when(referencePath.getDataset()).thenReturn(dataset);
+  //   when(referencePath.isSingular()).thenReturn(singular);
+  //   when(referencePath.getCurrentResource()).thenReturn(Optional.empty());
+  //   when(referencePath.getThisColumn()).thenReturn(Optional.ofNullable(thisColumn));
+  //   when(referencePath.getFhirType()).thenReturn(FHIRDefinedType.REFERENCE);
+  //   return UntypedResourcePath.build(referencePath, expression);
+  // }
 
 }

@@ -21,7 +21,6 @@ import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -47,10 +46,10 @@ public abstract class Assertions {
     return new ResourcePathAssertion(fhirPath);
   }
 
-  @Nonnull
-  public static ElementPathAssertion assertThat(@Nonnull final PrimitivePath fhirPath) {
-    return new ElementPathAssertion(fhirPath);
-  }
+  // @Nonnull
+  // public static ElementPathAssertion assertThat(@Nonnull final PrimitivePath fhirPath) {
+  //   return new ElementPathAssertion(fhirPath);
+  // }
 
   @Nonnull
   public static DatasetAssert assertThat(@Nonnull final Dataset<Row> rowDataset) {

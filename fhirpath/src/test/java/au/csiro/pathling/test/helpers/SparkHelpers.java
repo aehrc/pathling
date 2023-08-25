@@ -186,10 +186,12 @@ public abstract class SparkHelpers {
     final List<Column> columns = new ArrayList<>();
     columns.addAll(
         paths.stream()
-            .map(Collection::getValueColumn)
+            .map(Collection::getColumn)
             .collect(toList())
     );
-    columns.addAll(new ArrayList<>(context.getNesting().getOrderingColumns()));
+   
+    // TODO: review 
+    // columns.addAll(new ArrayList<>(context.getNesting().getOrderingColumns()));
     return dataset.select(columns.toArray(new Column[0]));
   }
 

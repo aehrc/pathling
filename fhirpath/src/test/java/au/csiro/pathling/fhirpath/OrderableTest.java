@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.test.SpringBootUnitTest;
 
 /**
@@ -25,8 +26,11 @@ import au.csiro.pathling.test.SpringBootUnitTest;
  * @author Piotr Szul
  */
 @SpringBootUnitTest
+@NotImplemented
 class OrderableTest {
 
+  // TODO: implement with columns
+  
   // @Autowired
   // SparkSession spark;
   //

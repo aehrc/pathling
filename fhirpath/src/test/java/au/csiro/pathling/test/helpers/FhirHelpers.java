@@ -42,7 +42,7 @@ public class FhirHelpers {
         .getResourceDefinition(resourceCode);
     requireNonNull(hapiDefinition);
     final ResourceDefinition definition = new ResourceDefinition(
-        ResourceType.fromCode(resourceCode), hapiDefinition, Optional.empty());
+        ResourceType.fromCode(resourceCode), hapiDefinition);
     return definition.getChildElement(elementName);
   }
 
