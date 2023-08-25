@@ -17,18 +17,9 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.fhirpath.operator.BinaryOperator.buildExpression;
-import static au.csiro.pathling.fhirpath.operator.BinaryOperator.checkArgumentsAreComparable;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import java.util.Optional;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the functionality of the family of comparison operators within FHIRPath, i.e. {@code =},
@@ -38,6 +29,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#equality">Equality</a>
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#comparison">Comparison</a>
  */
+@NotImplemented
 public class ComparisonOperator implements BinaryOperator {
 
   @Nonnull
@@ -50,26 +42,28 @@ public class ComparisonOperator implements BinaryOperator {
     this.type = type;
   }
 
-  @Nonnull
-  @Override
-  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final Collection left = input.getLeft();
-    final Collection right = input.getRight();
-    final SparkSession spark = input.getContext().getSparkSession();
-    checkUserInput(left.isSingular(spark),
-        "Left operand must be singular: " + left.getExpression());
+  // TODO: implement with columns
 
-    checkUserInput(right.isSingular(spark),
-        "Right operand must be singular: " + right.getExpression());
-    checkArgumentsAreComparable(input, type.toString());
-
-    final String expression = buildExpression(input, type.toString());
-
-    final Column valueColumn = left.getComparison(type).apply(right);
-
-    return PrimitivePath.build(expression, datasetWithColumn.getDataset(), idColumn,
-        datasetWithColumn.getColumn(), Optional.empty(), true, Optional.empty(), thisColumn,
-        FHIRDefinedType.BOOLEAN);
-  }
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+  //   final Collection left = input.getLeft();
+  //   final Collection right = input.getRight();
+  //   final SparkSession spark = input.getContext().getSparkSession();
+  //   checkUserInput(left.isSingular(spark),
+  //       "Left operand must be singular: " + left.getExpression());
+  //
+  //   checkUserInput(right.isSingular(spark),
+  //       "Right operand must be singular: " + right.getExpression());
+  //   checkArgumentsAreComparable(input, type.toString());
+  //
+  //   final String expression = buildExpression(input, type.toString());
+  //
+  //   final Column valueColumn = left.getComparison(type).apply(right);
+  //
+  //   return PrimitivePath.build(expression, datasetWithColumn.getDataset(), idColumn,
+  //       datasetWithColumn.getColumn(), Optional.empty(), true, Optional.empty(), thisColumn,
+  //       FHIRDefinedType.BOOLEAN);
+  // }
 
 }

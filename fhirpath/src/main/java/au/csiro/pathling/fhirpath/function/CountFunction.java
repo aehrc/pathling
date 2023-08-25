@@ -18,11 +18,11 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static org.apache.spark.sql.functions.size;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -34,13 +34,8 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#count">count</a>
  */
+@Name("count")
 public class CountFunction implements NamedFunction {
-
-  @Nonnull
-  @Override
-  public String getName() {
-    return "count";
-  }
 
   @Nonnull
   @Override
@@ -48,8 +43,7 @@ public class CountFunction implements NamedFunction {
     checkNoArguments(getName(), input);
     final Collection inputPath = input.getInput();
     final Column valueColumn = size(inputPath.getColumn());
-    final String expression = expressionFromInput(input, getName(), input.getInput());
-    return IntegerCollection.build(valueColumn, expression, Optional.empty());
+    return IntegerCollection.build(valueColumn, Optional.empty());
   }
 
 }

@@ -17,20 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
-import au.csiro.pathling.encoders.ExtensionSupport;
-import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.FunctionInput;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.operator.ComparisonOperator;
-import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
-import au.csiro.pathling.fhirpath.collection.StringCollection;
-import java.util.Collections;
-import java.util.List;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 
 /**
  * A function that returns the extensions of the current element that match a given URL.
@@ -38,39 +26,43 @@ import javax.annotation.Nonnull;
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#extension">extension</a>
  */
+@Name("extension")
+@NotImplemented
 public class ExtensionFunction implements NamedFunction {
 
-  private static final String NAME = "extension";
+  // TODO: implement as columns
 
-  @Nonnull
-  @Override
-  public String getName() {
-    return NAME;
-  }
-
-  @Nonnull
-  @Override
-  public Collection invoke(@Nonnull final FunctionInput input) {
-    final String expression = NamedFunction.expressionFromInput(input, getName(),
-        input.getInput());
-    checkUserInput(input.getArguments().size() == 1,
-        "extension function must have one argument: " + expression);
-
-    final Collection<?> inputPath = input.getInput();
-    final Collection<?> urlArgument = input.getArguments().get(0).apply(inputPath);
-    checkUserInput(urlArgument instanceof StringCollection,
-        "extension function must have argument of type String: " + expression);
-    final Collection<?> extensionPath = checkPresent(
-        inputPath.traverse(ExtensionSupport.EXTENSION_ELEMENT_NAME()));
-
-    final Collection<?> extensionUrlPath = checkPresent(extensionPath.traverse("url"));
-    final Collection extensionUrCondition = new ComparisonOperator(ComparisonOperation.EQUALS)
-        .invoke(new FunctionInput(input.getContext(), extensionUrlPath, List.of(i -> urlArgument)));
-
-    // Override the expression in the function input.
-    return new WhereFunction()
-        .invoke(new NamedFunctionInput(input.getContext(), extensionPath,
-            Collections.singletonList(extensionUrCondition)));
-  }
+  // private static final String NAME = "extension";
+  //
+  // @Nonnull
+  // @Override
+  // public String getName() {
+  //   return NAME;
+  // }
+  //
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final FunctionInput input) {
+  //   final String expression = NamedFunction.expressionFromInput(input, getName(),
+  //       input.getInput());
+  //   checkUserInput(input.getArguments().size() == 1,
+  //       "extension function must have one argument: " + expression);
+  //
+  //   final Collection<?> inputPath = input.getInput();
+  //   final Collection<?> urlArgument = input.getArguments().get(0).apply(inputPath);
+  //   checkUserInput(urlArgument instanceof StringCollection,
+  //       "extension function must have argument of type String: " + expression);
+  //   final Collection<?> extensionPath = checkPresent(
+  //       inputPath.traverse(ExtensionSupport.EXTENSION_ELEMENT_NAME()));
+  //
+  //   final Collection<?> extensionUrlPath = checkPresent(extensionPath.traverse("url"));
+  //   final Collection extensionUrCondition = new ComparisonOperator(ComparisonOperation.EQUALS)
+  //       .invoke(new FunctionInput(input.getContext(), extensionUrlPath, List.of(i -> urlArgument)));
+  //
+  //   // Override the expression in the function input.
+  //   return new WhereFunction()
+  //       .invoke(new NamedFunctionInput(input.getContext(), extensionPath,
+  //           Collections.singletonList(extensionUrCondition)));
+  // }
 
 }

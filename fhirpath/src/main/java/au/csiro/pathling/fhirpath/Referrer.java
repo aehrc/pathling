@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.split;
 
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -65,14 +66,18 @@ public interface Referrer {
    * @return a {@link Column} representing the matching condition
    */
   @Nonnull
+  @NotImplemented
   static Column resourceEqualityFor(@Nonnull final Referrer referrer,
       @Nonnull final ResourceCollection resourceCollection) {
-    final Column targetId = resourceCollection.getCurrentResource()
-        .map(ResourceCollection::getIdColumn)
-        .orElse(resourceCollection.getIdColumn());
-    final Column targetCode = lit(resourceCollection.getResourceType().toCode());
-
-    return Referrer.resourceEqualityFor(referrer, targetCode, targetId);
+    
+    // TODO: implement
+    // final Column targetId = resourceCollection.getCurrentResource()
+    //     .map(ResourceCollection::getIdColumn)
+    //     .orElse(resourceCollection.getIdColumn());
+    // final Column targetCode = lit(resourceCollection.getResourceType().toCode());
+    //
+    // return Referrer.resourceEqualityFor(referrer, targetCode, targetId);
+    return null;
   }
 
   /**

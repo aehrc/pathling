@@ -38,8 +38,8 @@ public interface Temporal {
   /**
    * Gets a function that can take the {@link QuantityCollection} representing a time duration and
    * return a {@link Collection} that contains the result of date arithmetic operation for this path
-   * and the provided duration. The type of operation is controlled by supplying a
-   * {@link MathOperation}.
+   * and the provided duration. The type of operation is controlled by supplying a {@link
+   * MathOperation}.
    *
    * @param operation The {@link MathOperation} type to retrieve a result for
    * @return A {@link Function} that takes a {@link QuantityCollection} as its parameter, and
@@ -84,7 +84,7 @@ public interface Temporal {
 
       final Column valueColumn = functions.callUDF(functionName, source.getColumn(),
           target.getColumn());
-      return DateTimeCollection.build(valueColumn, expression, Optional.empty());
+      return DateTimeCollection.build(valueColumn, Optional.empty());
     };
   }
 

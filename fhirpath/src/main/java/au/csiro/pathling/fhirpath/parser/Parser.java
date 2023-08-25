@@ -47,19 +47,32 @@ public class Parser {
   }
 
   /**
+   * Evaluates a FHIRPath expression.
+   *
+   * @param expression The String representation of the FHIRPath expression
+   * @return a new {@link Collection} object
+   */
+  @Nonnull
+  public Collection evaluate(@Nonnull final String expression) {
+    final FhirPath<Collection,Collection> fhirPath = parse(expression);
+    return fhirPath.apply(context.getInputContext(), context);
+  }
+
+  
+  /**
    * Parses a FHIRPath expression.
    *
    * @param expression The String representation of the FHIRPath expression
    * @return a new {@link Collection} object
    */
   @Nonnull
-  public FhirPath parse(@Nonnull final String expression) {
+  public FhirPath<Collection,Collection> parse(@Nonnull final String expression) {
     final FhirPathParser parser = buildParser(expression);
 
     final Visitor visitor = new Visitor(context);
     return visitor.visit(parser.expression());
   }
-
+  
   @Nonnull
   static FhirPathParser buildParser(final @Nonnull String expression) {
     final FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));

@@ -26,8 +26,10 @@ import static org.apache.spark.sql.functions.row_number;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -115,73 +117,79 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
   }
 
   @Nonnull
+  @NotImplemented
   private Dataset<Row> initializeDataset() {
-    final ResourceCollection resourceCollection = ResourceCollection
-        .build(getFhirContext(), getDataSource(), subjectResource, subjectResource.toCode());
-    final Dataset<Row> subjectDataset = resourceCollection.getDataset();
-    final Dataset<Row> dataset;
-
-    if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
-      // If there are no filters, return all resources.
-      dataset = subjectDataset;
-
-    } else {
-      final ParserContext parserContext = new ParserContext(resourceCollection, fhirContext, sparkSession,
-          dataSource, terminologyServiceFactory,
-          functionRegistry, Collections.singletonList(resourceCollection.getIdColumn()),
-          Optional.empty());
-      Dataset<Row> currentDataset = subjectDataset;
-      @Nullable Column filterCondition = null;
-
-      // Parse each of the supplied filter expressions, building up a filter column. This captures 
-      // the AND/OR conditions possible through the FHIR API, see 
-      // https://hl7.org/fhir/R4/search.html#combining.
-      for (final StringOrListParam orParam : filters.get().getValuesAsQueryTokens()) {
-
-        // Parse all the filter expressions within this AND condition.
-        final List<String> filterExpressions = orParam.getValuesAsQueryTokens().stream()
-            .map(StringParam::getValue)
-            .collect(toList());
-        checkUserInput(filterExpressions.stream().noneMatch(String::isBlank),
-            "Filter expression cannot be blank");
-        final List<Collection> filters = parseExpressions(parserContext, filterExpressions,
-            Optional.of(currentDataset));
-        validateFilters(filters);
-
-        // Get the dataset from the last filter.
-        currentDataset = filters.get(filters.size() - 1).getDataset();
-
-        // Combine all the columns with OR logic.
-        final Column orColumn = filters.stream()
-            .map(Collection::getValueColumn)
-            .reduce(Column::or)
-            .orElseThrow();
-
-        // Combine OR-grouped columns with AND logic.
-        filterCondition = filterCondition == null
-                          ? orColumn
-                          : filterCondition.and(orColumn);
-      }
-      dataset = currentDataset.filter(filterCondition);
-    }
-
-    final Column[] resourceColumns = resourceCollection.getElementsToColumns().keySet().stream()
-        .map(colName -> resourceCollection.getElementsToColumns().get(colName).alias(colName))
-        .toArray(Column[]::new);
-    // Resources are ordered by ID to ensure consistent paging.
-    final Dataset<Row> result = dataset.select(resourceColumns);
-    final WindowSpec window = Window.orderBy(col("id"));
-    final Dataset<Row> withRowNumbers = result.withColumn("row_number",
-        row_number().over(window));
-
-    if (getConfiguration().getCacheResults()) {
-      // We cache the dataset because we know it will be accessed for both the total and the record
-      // retrieval.
-      log.debug("Caching search dataset");
-      withRowNumbers.cache();
-    }
-
-    return withRowNumbers;
+    // final ResourceCollection resourceCollection = ResourceCollection
+    //     .build(getFhirContext(), getDataSource(), subjectResource);
+    // final Dataset<Row> subjectDataset = resourceCollection.getDataset();
+    // final Dataset<Row> dataset;
+    //
+    // if (filters.isEmpty() || filters.get().getValuesAsQueryTokens().isEmpty()) {
+    //   // If there are no filters, return all resources.
+    //   dataset = subjectDataset;
+    //
+    // } else {
+    //   final ParserContext parserContext = new ParserContext(resourceCollection,
+    //       resourceCollection,
+    //       fhirContext, sparkSession,
+    //       dataSource,
+    //       StaticFunctionRegistry.getInstance(),
+    //       terminologyServiceFactory,
+    //       Optional.empty()
+    //   );
+    //   Dataset<Row> currentDataset = subjectDataset;
+    //   @Nullable Column filterCondition = null;
+    //
+    //   // Parse each of the supplied filter expressions, building up a filter column. This captures 
+    //   // the AND/OR conditions possible through the FHIR API, see 
+    //   // https://hl7.org/fhir/R4/search.html#combining.
+    //   for (final StringOrListParam orParam : filters.get().getValuesAsQueryTokens()) {
+    //
+    //     // Parse all the filter expressions within this AND condition.
+    //     final List<String> filterExpressions = orParam.getValuesAsQueryTokens().stream()
+    //         .map(StringParam::getValue)
+    //         .collect(toList());
+    //     checkUserInput(filterExpressions.stream().noneMatch(String::isBlank),
+    //         "Filter expression cannot be blank");
+    //     final List<Collection> filters = parseExpressions(parserContext, filterExpressions,
+    //         Optional.of(currentDataset));
+    //     validateFilters(filters);
+    //
+    //     // Get the dataset from the last filter.
+    //     currentDataset = filters.get(filters.size() - 1).getDataset();
+    //
+    //     // Combine all the columns with OR logic.
+    //     final Column orColumn = filters.stream()
+    //         .map(Collection::getValueColumn)
+    //         .reduce(Column::or)
+    //         .orElseThrow();
+    //
+    //     // Combine OR-grouped columns with AND logic.
+    //     filterCondition = filterCondition == null
+    //                       ? orColumn
+    //                       : filterCondition.and(orColumn);
+    //   }
+    //   dataset = currentDataset.filter(filterCondition);
+    // }
+    //
+    // final Column[] resourceColumns = resourceCollection.getElementsToColumns().keySet().stream()
+    //     .map(colName -> resourceCollection.getElementsToColumns().get(colName).alias(colName))
+    //     .toArray(Column[]::new);
+    // // Resources are ordered by ID to ensure consistent paging.
+    // final Dataset<Row> result = dataset.select(resourceColumns);
+    // final WindowSpec window = Window.orderBy(col("id"));
+    // final Dataset<Row> withRowNumbers = result.withColumn("row_number",
+    //     row_number().over(window));
+    //
+    // if (getConfiguration().getCacheResults()) {
+    //   // We cache the dataset because we know it will be accessed for both the total and the record
+    //   // retrieval.
+    //   log.debug("Caching search dataset");
+    //   withRowNumbers.cache();
+    // }
+    //
+    // return withRowNumbers;
+    return null;
   }
 
   @Override

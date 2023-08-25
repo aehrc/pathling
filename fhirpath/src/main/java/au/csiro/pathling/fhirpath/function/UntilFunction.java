@@ -17,26 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.callUDF;
-
-import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
-import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.collection.DateCollection;
-import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.sql.misc.TemporalDifferenceFunction;
-import java.util.Optional;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 
 /**
  * This function computes the time interval (duration) between two paths representing dates or dates
@@ -45,50 +27,54 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#until">until</a>
  */
+@Name("until")
+@NotImplemented
 public class UntilFunction implements NamedFunction {
 
-  private static final String NAME = "until";
+  // TODO: implement as columns
 
-  @Nonnull
-  @Override
-  public Collection invoke(@Nonnull final NamedFunctionInput input) {
-    checkUserInput(input.getArguments().size() == 2,
-        "until function must have two arguments");
-    final NonLiteralPath fromArgument = input.getInput();
-    final Collection toArgument = input.getArguments().get(0);
-    final Collection calendarDurationArgument = input.getArguments().get(1);
-
-    checkUserInput(
-        fromArgument instanceof DateTimeCollection || fromArgument instanceof DateCollection,
-        "until function must be invoked on a DateTime or Date");
-    checkUserInput(
-        toArgument instanceof DateTimeCollection || toArgument instanceof DateTimeLiteralPath
-            || toArgument instanceof DateCollection || toArgument instanceof DateLiteralPath,
-        "until function must have a DateTime or Date as the first argument");
-
-    checkUserInput(fromArgument.isSingular(),
-        "until function must be invoked on a singular path");
-    checkUserInput(toArgument.isSingular(),
-        "until function must have the singular path as its first argument");
-
-    checkUserInput(calendarDurationArgument instanceof StringLiteralPath,
-        "until function must have a String as the second argument");
-    final String literalValue = ((StringLiteralPath) calendarDurationArgument).getValue()
-        .asStringValue();
-    checkUserInput(TemporalDifferenceFunction.isValidCalendarDuration(literalValue),
-        "Invalid calendar duration: " + literalValue);
-
-    final Dataset<Row> dataset = join(input.getContext(), fromArgument, toArgument,
-        JoinType.LEFT_OUTER);
-    final Column valueColumn = callUDF(TemporalDifferenceFunction.FUNCTION_NAME,
-        fromArgument.getValueColumn(), toArgument.getValueColumn(),
-        calendarDurationArgument.getValueColumn());
-    final String expression = NamedFunction.expressionFromInput(input, NAME, input.getInput());
-    final Optional<Column> thisColumn = findThisColumn(fromArgument, toArgument);
-
-    return PrimitivePath.build(expression, dataset, fromArgument.getIdColumn(), valueColumn,
-        fromArgument.getOrderingColumn(), true, fromArgument.getCurrentResource(), thisColumn,
-        FHIRDefinedType.INTEGER);
-  }
+  // private static final String NAME = "until";
+  //
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final NamedFunctionInput input) {
+  //   checkUserInput(input.getArguments().size() == 2,
+  //       "until function must have two arguments");
+  //   final NonLiteralPath fromArgument = input.getInput();
+  //   final Collection toArgument = input.getArguments().get(0);
+  //   final Collection calendarDurationArgument = input.getArguments().get(1);
+  //
+  //   checkUserInput(
+  //       fromArgument instanceof DateTimeCollection || fromArgument instanceof DateCollection,
+  //       "until function must be invoked on a DateTime or Date");
+  //   checkUserInput(
+  //       toArgument instanceof DateTimeCollection || toArgument instanceof DateTimeLiteralPath
+  //           || toArgument instanceof DateCollection || toArgument instanceof DateLiteralPath,
+  //       "until function must have a DateTime or Date as the first argument");
+  //
+  //   checkUserInput(fromArgument.isSingular(),
+  //       "until function must be invoked on a singular path");
+  //   checkUserInput(toArgument.isSingular(),
+  //       "until function must have the singular path as its first argument");
+  //
+  //   checkUserInput(calendarDurationArgument instanceof StringLiteralPath,
+  //       "until function must have a String as the second argument");
+  //   final String literalValue = ((StringLiteralPath) calendarDurationArgument).getValue()
+  //       .asStringValue();
+  //   checkUserInput(TemporalDifferenceFunction.isValidCalendarDuration(literalValue),
+  //       "Invalid calendar duration: " + literalValue);
+  //
+  //   final Dataset<Row> dataset = join(input.getContext(), fromArgument, toArgument,
+  //       JoinType.LEFT_OUTER);
+  //   final Column valueColumn = callUDF(TemporalDifferenceFunction.FUNCTION_NAME,
+  //       fromArgument.getValueColumn(), toArgument.getValueColumn(),
+  //       calendarDurationArgument.getValueColumn());
+  //   final String expression = NamedFunction.expressionFromInput(input, NAME, input.getInput());
+  //   final Optional<Column> thisColumn = findThisColumn(fromArgument, toArgument);
+  //
+  //   return PrimitivePath.build(expression, dataset, fromArgument.getIdColumn(), valueColumn,
+  //       fromArgument.getOrderingColumn(), true, fromArgument.getCurrentResource(), thisColumn,
+  //       FHIRDefinedType.INTEGER);
+  // }
 
 }

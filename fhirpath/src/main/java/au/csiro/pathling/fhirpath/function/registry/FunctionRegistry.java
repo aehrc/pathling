@@ -8,16 +8,16 @@ import javax.annotation.Nonnull;
  *
  * @author John Grimes
  */
-public interface FunctionRegistry {
+public interface FunctionRegistry<T> {
 
   /**
    * Retrieves an instance of the function with the specified name in the specified context.
    *
    * @param name The name of the function
-   * @return An instance of a NamedFunction
+   * @return An instance of a T
    */
   @Nonnull
-  NamedFunction getInstance(@Nonnull final String name) throws NoSuchFunctionException;
+  T getInstance(@Nonnull final String name) throws NoSuchFunctionException;
 
   class NoSuchFunctionException extends Exception {
 

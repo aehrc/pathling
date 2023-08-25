@@ -17,17 +17,12 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.coalesce;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.max;
 import static org.apache.spark.sql.functions.min;
 
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
@@ -37,7 +32,8 @@ import org.apache.spark.sql.Column;
 /**
  * @author John Grimes
  */
-public class BooleansTestFunction extends AggregateFunction implements NamedFunction {
+@NotImplemented
+public class BooleansTestFunction implements NamedFunction {
 
   @Nonnull
   private final BooleansTestType type;
@@ -49,20 +45,27 @@ public class BooleansTestFunction extends AggregateFunction implements NamedFunc
     this.type = type;
   }
 
-  @Nonnull
   @Override
-  public Collection invoke(@Nonnull final NamedFunctionInput input) {
-    checkNoArguments(type.getFunctionName(), input);
-    final NonLiteralPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof BooleanCollection,
-        "Input to " + type + " function must be Boolean");
-    final Column inputColumn = inputPath.getValueColumn();
-    final String expression = expressionFromInput(input, type.getFunctionName(), input.getInput());
-
-    final Column valueColumn = type.getEquality().apply(inputColumn);
-    return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
-        expression);
+  public String getName() {
+    return type.getFunctionName();
   }
+
+  // TODO: implement with columns
+
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final NamedFunctionInput input) {
+  //   checkNoArguments(type.getFunctionName(), input);
+  //   final NonLiteralPath inputPath = input.getInput();
+  //   checkUserInput(inputPath instanceof BooleanCollection,
+  //       "Input to " + type + " function must be Boolean");
+  //   final Column inputColumn = inputPath.getValueColumn();
+  //   final String expression = expressionFromInput(input, type.getFunctionName(), input.getInput());
+  //
+  //   final Column valueColumn = type.getEquality().apply(inputColumn);
+  //   return buildAggregateResult(inputPath.getDataset(), input.getContext(), inputPath, valueColumn,
+  //       expression);
+  // }
 
   /**
    * Represents a type of test that can be performed against a collection of Boolean values.

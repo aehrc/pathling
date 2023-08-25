@@ -38,6 +38,9 @@ import com.google.common.collect.ImmutableMap;
  */
 public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFunction> {
 
+
+  private static final StaticFunctionRegistry INSTANCE = new StaticFunctionRegistry();
+
   public StaticFunctionRegistry() {
     super(new ImmutableMap.Builder<String, NamedFunction>()
         .put("count", new CountFunction())
@@ -67,6 +70,10 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .put("toString", new ToStringFunction())
         .put("getId", new GetIdFunction())
         .build());
+  }
+
+  public static StaticFunctionRegistry getInstance() {
+    return INSTANCE;
   }
 
 }

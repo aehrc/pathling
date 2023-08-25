@@ -15,28 +15,25 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.path;
 
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.operator.BinaryOperator;
+import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
+import lombok.Value;
 import javax.annotation.Nonnull;
 
-/**
- * Represents a binary operator in FHIRPath.
- *
- * @author John Grimes
- */
-public interface BinaryOperator {
+@Value
+public class EvalOperatorPath implements FhirPath<Collection, Collection> {
 
-  /**
-   * Invokes this operator with the specified inputs.
-   *
-   * @param input An {@link BinaryOperatorInput} object
-   * @return A {@link Collection} object representing the resulting expression
-   */
-  @Nonnull
-  default Collection invoke(@Nonnull BinaryOperatorInput input) {
-    // TODO: revert to abstract method once all operators are implemented
-    throw new UnsupportedOperationException("Not implemented");
+  FhirPath<Collection,Collection> leftPath;
+  FhirPath<Collection,Collection> rightPath;
+  BinaryOperator operator;
+  
+  @Override
+  public Collection apply(@Nonnull final Collection input, @Nonnull final ParserContext context) {
+    return operator.invoke(new BinaryOperatorInput(context, leftPath.apply(input, context), rightPath.apply(input, context)));
   }
-
 }

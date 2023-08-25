@@ -106,12 +106,12 @@ public class AbstractParserTest {
         .inputContext(subjectResource)
         .build();
     final Parser resourceParser = new Parser(parserContext);
-    return assertThat(resourceParser.parse(expression));
+    return assertThat(resourceParser.evaluate(expression));
   }
 
   @SuppressWarnings("SameParameterValue")
   FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(parser.parse(expression));
+    return assertThat(parser.evaluate(expression));
   }
 
 }

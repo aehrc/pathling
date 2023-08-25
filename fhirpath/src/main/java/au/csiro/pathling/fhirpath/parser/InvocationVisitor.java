@@ -79,8 +79,9 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
       @Nullable final MemberInvocationContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
-
-    return input -> {
+    
+    // TODO: refactor to an expression
+    return (input, c) -> {
       try {
         // Attempt path traversal.
         final Optional<Collection> result = input.traverse(fhirPath);
@@ -89,6 +90,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
 
       } catch (final InvalidUserInputError e) {
         try {
+          // TODO: what is this about?
           // If it is not a valid path traversal, see if it is a valid type specifier.
           final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
           return new Collection(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),
@@ -113,26 +115,28 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
   @Nonnull
   public FhirPath<Collection, Collection> visitFunctionInvocation(
       @Nullable final FunctionInvocationContext ctx) {
-    final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
-    @Nullable final ParamListContext paramList = ctx.function().paramList();
 
-    return input -> {
+    final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
+    
+    @Nullable final ParamListContext paramList = ctx.function().paramList();
+    final Visitor paramListVisitor = new Visitor(context);
+    final List<FhirPath<Collection, Collection>> arguments = Optional.ofNullable(paramList)
+        .map(ParamListContext::expression)
+        .map(p -> p.stream()
+            .map(paramListVisitor::visit)
+            .collect(toList())
+        ).orElse(new ArrayList<>());
+    
+    
+    // TODO: refactor to an expression
+    return (input, c) -> {
       final NamedFunction function;
       try {
-        function = context.getFunctionRegistry().getInstance(functionIdentifier);
+        function = c.getFunctionRegistry().getInstance(functionIdentifier);
       } catch (final NoSuchFunctionException e) {
         throw new InvalidUserInputError(e.getMessage());
       }
-      final Visitor paramListVisitor = new Visitor(context);
-
-      final List<FhirPath<Collection, Collection>> arguments = Optional.ofNullable(paramList)
-          .map(ParamListContext::expression)
-          .map(p -> p.stream()
-              .map(paramListVisitor::visit)
-              .collect(toList())
-          ).orElse(new ArrayList<>());
-
-      final FunctionInput functionInput = new FunctionInput(context, input, arguments);
+      final FunctionInput functionInput = new FunctionInput(c, input, arguments);
       return function.invoke(functionInput);
     };
   }
@@ -140,7 +144,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
   @Override
   @Nonnull
   public FhirPath<Collection, Collection> visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
-    return input -> context.getInputContext();
+    return (input, c) -> input;
   }
 
   @Override

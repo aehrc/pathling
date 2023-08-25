@@ -33,6 +33,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -97,8 +98,8 @@ public class Collection implements Comparable, Numeric {
   private Optional<? extends NodeDefinition> definition;
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied
-   * {@link ElementDefinition}.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
+   * ElementDefinition}.
    * <p>
    * Use this builder when the path is the child of another path, and will need to be traversable.
    *
@@ -119,8 +120,8 @@ public class Collection implements Comparable, Numeric {
   }
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied
-   * {@link FHIRDefinedType}.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
+   * FHIRDefinedType}.
    * <p>
    * Use this builder when the path is derived, e.g. the result of a function.
    *
@@ -153,7 +154,7 @@ public class Collection implements Comparable, Numeric {
       return constructor
           .newInstance(column, Optional.of(fhirPathType), Optional.of(fhirType), definition);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
-                   InvocationTargetException e) {
+        InvocationTargetException e) {
       throw new RuntimeException("Problem building an FhirPath object", e);
     }
   }
@@ -259,6 +260,17 @@ public class Collection implements Comparable, Numeric {
   @Override
   public Optional<Column> getNumericContextColumn() {
     return Optional.empty();
+  }
+
+  /**
+   * Creates a null {@link Collection}.
+   * 
+   * @return the null collection.
+   */
+  @Nonnull
+  public static Collection nullCollection() {
+    return new Collection(functions.lit(null), Optional.empty(), Optional.empty(),
+        Optional.empty());
   }
 
 }

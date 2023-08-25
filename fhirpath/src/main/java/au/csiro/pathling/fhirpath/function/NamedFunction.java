@@ -19,8 +19,11 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
 
@@ -35,7 +38,9 @@ public interface NamedFunction<O extends Collection> {
    * @return the name of this function
    */
   @Nonnull
-  String getName();
+  default String getName() {
+    return requireNonNull(this.getClass().getAnnotation(Name.class)).value();
+  }
 
   /**
    * Invokes this function with the specified inputs.
@@ -44,7 +49,9 @@ public interface NamedFunction<O extends Collection> {
    * @return a {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  O invoke(@Nonnull FunctionInput input);
+  default O invoke(@Nonnull FunctionInput input) {
+    throw new UnsupportedOperationException("Not implemented: " + getName());
+  }
 
   /**
    * Check that no arguments have been passed within the supplied {@link FunctionInput}.

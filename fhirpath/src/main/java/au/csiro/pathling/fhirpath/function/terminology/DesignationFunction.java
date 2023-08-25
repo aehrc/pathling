@@ -17,27 +17,9 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.explode_outer;
-
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.function.Arguments;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.List;
-import java.util.Optional;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Coding;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.StringType;
 
 /**
  * This function returns the designations of a Coding.
@@ -45,52 +27,56 @@ import org.hl7.fhir.r4.model.StringType;
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#designation">designation</a>
  */
+@Name("designation")
+@NotImplemented
 public class DesignationFunction implements NamedFunction {
 
-  private static final String NAME = "designation";
+  // TODO: implement as columns
 
-  @Nonnull
-  @Override
-  public Collection invoke(@Nonnull final NamedFunctionInput input) {
-
-    validateInput(input);
-    final PrimitivePath inputPath = (PrimitivePath) input.getInput();
-    final String expression = expressionFromInput(input, NAME, input.getInput());
-
-    final Arguments arguments = Arguments.of(input);
-    @Nullable final Coding use = arguments.getOptionalValue(0, Coding.class).orElse(null);
-    @Nullable final String languageCode = arguments.getOptionalValue(1, StringType.class)
-        .map(StringType::getValue)
-        .orElse(null);
-
-    final Dataset<Row> dataset = inputPath.getDataset();
-    final Column designations = designation(inputPath.getValueColumn(), use, languageCode);
-
-    // The result is an array of designations per each input element, which we now need to explode 
-    // in the same way as for path traversal, creating unique element ids.
-    final Column explodedDesignations = explode_outer(designations);
-    return PrimitivePath.build(expression, dataset, inputPath.getIdColumn(), explodedDesignations,
-        Optional.empty(), inputPath.isSingular(), inputPath.getCurrentResource(),
-        inputPath.getThisColumn(), FHIRDefinedType.STRING);
-  }
-
-  private void validateInput(@Nonnull final NamedFunctionInput input) {
-    final ParserContext context = input.getContext();
-    checkUserInput(context.getTerminologyServiceFactory()
-        .isPresent(), "Attempt to call terminology function " + NAME
-        + " when terminology service has not been configured");
-
-    final Collection inputPath = input.getInput();
-    checkUserInput(inputPath instanceof PrimitivePath
-            && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
-        "Input to " + NAME + " function must be Coding but is: " + inputPath.getExpression());
-
-    final List<Collection> arguments = input.getArguments();
-    checkUserInput(arguments.size() <= 2,
-        NAME + " function accepts two optional arguments");
-    checkUserInput(arguments.isEmpty() || arguments.get(0) instanceof CodingLiteralPath,
-        String.format("Function `%s` expects `%s` as argument %s", NAME, "Coding literal", 1));
-    checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof StringLiteralPath,
-        String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 2));
-  }
+  // private static final String NAME = "designation";
+  //
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final NamedFunctionInput input) {
+  //
+  //   validateInput(input);
+  //   final PrimitivePath inputPath = (PrimitivePath) input.getInput();
+  //   final String expression = expressionFromInput(input, NAME, input.getInput());
+  //
+  //   final Arguments arguments = Arguments.of(input);
+  //   @Nullable final Coding use = arguments.getOptionalValue(0, Coding.class).orElse(null);
+  //   @Nullable final String languageCode = arguments.getOptionalValue(1, StringType.class)
+  //       .map(StringType::getValue)
+  //       .orElse(null);
+  //
+  //   final Dataset<Row> dataset = inputPath.getDataset();
+  //   final Column designations = designation(inputPath.getValueColumn(), use, languageCode);
+  //
+  //   // The result is an array of designations per each input element, which we now need to explode 
+  //   // in the same way as for path traversal, creating unique element ids.
+  //   final Column explodedDesignations = explode_outer(designations);
+  //   return PrimitivePath.build(expression, dataset, inputPath.getIdColumn(), explodedDesignations,
+  //       Optional.empty(), inputPath.isSingular(), inputPath.getCurrentResource(),
+  //       inputPath.getThisColumn(), FHIRDefinedType.STRING);
+  // }
+  //
+  // private void validateInput(@Nonnull final NamedFunctionInput input) {
+  //   final ParserContext context = input.getContext();
+  //   checkUserInput(context.getTerminologyServiceFactory()
+  //       .isPresent(), "Attempt to call terminology function " + NAME
+  //       + " when terminology service has not been configured");
+  //
+  //   final Collection inputPath = input.getInput();
+  //   checkUserInput(inputPath instanceof PrimitivePath
+  //           && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
+  //       "Input to " + NAME + " function must be Coding but is: " + inputPath.getExpression());
+  //
+  //   final List<Collection> arguments = input.getArguments();
+  //   checkUserInput(arguments.size() <= 2,
+  //       NAME + " function accepts two optional arguments");
+  //   checkUserInput(arguments.isEmpty() || arguments.get(0) instanceof CodingLiteralPath,
+  //       String.format("Function `%s` expects `%s` as argument %s", NAME, "Coding literal", 1));
+  //   checkUserInput(arguments.size() <= 1 || arguments.get(1) instanceof StringLiteralPath,
+  //       String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 2));
+  // }
 }

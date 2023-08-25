@@ -17,19 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.not;
-
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import java.util.Optional;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 
 /**
  * Returns {@code true} if the input collection evaluates to {@code false}, and {@code false} if it
@@ -38,26 +27,29 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#not">not</a>
  */
+@Name("not")
+@NotImplemented
 public class NotFunction implements NamedFunction {
 
-  private static final String NAME = "not";
-
-  @Nonnull
-  @Override
-  public Collection invoke(@Nonnull final NamedFunctionInput input) {
-    checkNoArguments(NAME, input);
-    final NonLiteralPath inputPath = input.getInput();
-    checkUserInput(inputPath instanceof BooleanCollection,
-        "Input to not function must be Boolean: " + inputPath.getExpression());
-    final String expression = expressionFromInput(input, NAME, input.getInput());
-
-    // The not function is just a thin wrapper over the Spark not function.
-    final Column valueColumn = not(inputPath.getValueColumn());
-
-    return PrimitivePath
-        .build(expression, inputPath.getDataset(), inputPath.getIdColumn(), valueColumn,
-            inputPath.getOrderingColumn(), inputPath.isSingular(), Optional.empty(),
-            inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
-  }
+  // TODO: implement as columns
+  // private static final String NAME = "not";
+  //
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final NamedFunctionInput input) {
+  //   checkNoArguments(NAME, input);
+  //   final NonLiteralPath inputPath = input.getInput();
+  //   checkUserInput(inputPath instanceof BooleanCollection,
+  //       "Input to not function must be Boolean: " + inputPath.getExpression());
+  //   final String expression = expressionFromInput(input, NAME, input.getInput());
+  //
+  //   // The not function is just a thin wrapper over the Spark not function.
+  //   final Column valueColumn = not(inputPath.getValueColumn());
+  //
+  //   return PrimitivePath
+  //       .build(expression, inputPath.getDataset(), inputPath.getIdColumn(), valueColumn,
+  //           inputPath.getOrderingColumn(), inputPath.isSingular(), Optional.empty(),
+  //           inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+  // }
 
 }

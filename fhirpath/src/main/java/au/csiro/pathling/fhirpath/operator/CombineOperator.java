@@ -17,18 +17,10 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.createColumn;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.array_except;
-import static org.apache.spark.sql.functions.explode_outer;
-import static org.apache.spark.sql.functions.lit;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
-import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 
 /**
  * Merges the left and right operands into a single collection.
@@ -40,26 +32,18 @@ public class CombineOperator implements BinaryOperator {
 
   private static final String NAME = "combine";
 
-  @Nonnull
-  @Override
-  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-    final String expression = BinaryOperator.buildExpression(input, NAME);
-    final Collection left = input.getLeft();
-    final Collection right = input.getRight();
-
-    // Create an array of the two operands, excluding nulls, then explode it into rows.
-    final Column valueColumn = explode_outer(
-        array_except(
-            array(left.getValueColumn(), right.getValueColumn()),
-            array(lit(null))
-        )
-    );
-    final DatasetWithColumn datasetWithColumn = createColumn(right.getDataset(), valueColumn);
-    final Optional<Column> thisColumn = left instanceof NonLiteralPath
-                                        ? ((NonLiteralPath) left).getThisColumn()
-                                        : Optional.empty();
-    return left.combineWith(right, datasetWithColumn.getDataset(), expression, left.getIdColumn(),
-        datasetWithColumn.getColumn(), false, thisColumn);
-  }
-
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+  //   final Collection left = input.getLeft();
+  //   final Collection right = input.getRight();
+  //
+  //   // TODO: check the condition
+  //   checkUserInput(left.getFhirType().equals(right.getFhirType()),
+  //       "Collection must have the same type");
+  //   // and also need to
+  //
+  //   return null;
+  //   // return functions.concat(left.getColumn(), right.getColumn());
+  // }
 }

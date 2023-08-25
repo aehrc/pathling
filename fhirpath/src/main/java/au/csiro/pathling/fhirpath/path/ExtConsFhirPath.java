@@ -15,28 +15,27 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.path;
 
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.parser.ParserContext;
+import lombok.Value;
 import javax.annotation.Nonnull;
 
-/**
- * Represents a binary operator in FHIRPath.
- *
- * @author John Grimes
- */
-public interface BinaryOperator {
+@Value
+public class ExtConsFhirPath implements FhirPath<Collection, Collection> {
 
-  /**
-   * Invokes this operator with the specified inputs.
-   *
-   * @param input An {@link BinaryOperatorInput} object
-   * @return A {@link Collection} object representing the resulting expression
-   */
-  @Nonnull
-  default Collection invoke(@Nonnull BinaryOperatorInput input) {
-    // TODO: revert to abstract method once all operators are implemented
-    throw new UnsupportedOperationException("Not implemented");
+  String name;
+
+  @Override
+  public Collection apply(@Nonnull final Collection input, @Nonnull final ParserContext context) {
+    if (name.equals("%context")) {
+      return context.getInputContext();
+    } else if (name.equals("%resource") || name.equals("%rootResource")) {
+      return context.getResource();
+    } else {
+      throw new IllegalArgumentException("Unknown constant: " + name);
+    }
   }
-
 }

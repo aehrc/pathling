@@ -15,28 +15,12 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.annotations;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import javax.annotation.Nonnull;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
-/**
- * Represents a binary operator in FHIRPath.
- *
- * @author John Grimes
- */
-public interface BinaryOperator {
-
-  /**
-   * Invokes this operator with the specified inputs.
-   *
-   * @param input An {@link BinaryOperatorInput} object
-   * @return A {@link Collection} object representing the resulting expression
-   */
-  @Nonnull
-  default Collection invoke(@Nonnull BinaryOperatorInput input) {
-    // TODO: revert to abstract method once all operators are implemented
-    throw new UnsupportedOperationException("Not implemented");
-  }
+@Retention(RetentionPolicy.SOURCE)
+public @interface NotImplemented {
 
 }

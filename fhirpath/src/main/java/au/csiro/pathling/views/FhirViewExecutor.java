@@ -3,8 +3,10 @@ package au.csiro.pathling.views;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
@@ -41,6 +43,7 @@ public class FhirViewExecutor {
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
+
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
@@ -60,10 +63,11 @@ public class FhirViewExecutor {
 
     // Build a new expression parser, and parse all the column expressions within the query.
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
-    final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataSource, resourceType,
-        view.getResource());
+    final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataSource,
+        resourceType);
     final ParserContext parserContext = new ParserContext(inputContext, inputContext, fhirContext,
-        sparkSession, dataSource, functionRegistry, terminologyServiceFactory, constantReplacer);
+        sparkSession, dataSource, StaticFunctionRegistry.getInstance(), terminologyServiceFactory,
+        constantReplacer);
 
     final List<Column> select = parseSelect(view.getSelect(), parserContext,
         Collections.emptyList());
@@ -73,12 +77,15 @@ public class FhirViewExecutor {
                                    .map(WhereClause::getExpression)
                                    .collect(toList());
     final Optional<Column> filterCondition = where.stream()
-        .map(e -> parseExpression(e, parserContext))
-        .map(Collection::getValueColumn)
+        .map(e -> evalExpression(e, parserContext))
+        .map(Collection::getColumn)
         .reduce(Column::and);
+
+    final Dataset<Row> subjectDataset = dataSource.read(resourceType);
+    
     return filterCondition
-        .map(inputContext.getDataset()::filter)
-        .orElse(inputContext.getDataset())
+        .map(subjectDataset::filter)
+        .orElse(subjectDataset)
         .select(select.toArray(new Column[0]));
   }
 
@@ -110,32 +117,34 @@ public class FhirViewExecutor {
   @Nonnull
   private List<Column> directSelection(@Nonnull final ParserContext context,
       @Nonnull final DirectSelection select, @Nonnull final List<Column> currentSelection) {
-    final Collection path = parseExpression(select.getExpression(), context);
+    final Collection path = evalExpression(select.getExpression(), context);
     final List<Column> newColumns = new ArrayList<>(currentSelection);
-    newColumns.add(path.getValueColumn().alias(select.getName()));
+    newColumns.add(path.getColumn().alias(select.getName()));
     return newColumns;
   }
 
   @Nonnull
+  @NotImplemented
   private List<Column> nestedSelection(final @Nonnull ParserContext context,
       @Nonnull final NestedSelectClause select, @Nonnull final List<Column> currentSelection,
       final boolean unnest) {
-    final Collection from = parseExpression(select.getExpression(), context);
+    final Collection from = evalExpression(select.getExpression(), context);
     final Collection nextInputContext = unnest
-                                        ? from.unnest()
+                                        // TODO: FIX FIRST
+                                        ? from // .unnest()
                                         : from;
     final ParserContext nextContext = context.withInputContext(nextInputContext);
     return parseSelect(select.getSelect(), nextContext, currentSelection);
   }
 
   @Nonnull
-  private Collection parseExpression(@Nonnull final String expression,
+  private Collection evalExpression(@Nonnull final String expression,
       @Nonnull final ParserContext context) {
     final Parser parser = new Parser(context);
     final String updatedExpression = context.getConstantReplacer()
         .map(replacer -> replacer.execute(expression))
         .orElse(expression);
-    return parser.parse(updatedExpression).apply(context.getInputContext());
+    return parser.evaluate(updatedExpression);
   }
 
 }

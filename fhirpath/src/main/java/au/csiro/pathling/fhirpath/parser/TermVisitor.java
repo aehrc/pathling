@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConsta
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
+import au.csiro.pathling.fhirpath.path.ExtConsFhirPath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -61,27 +62,17 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> 
       @Nullable final ExternalConstantTermContext ctx) {
     @Nullable final String term = requireNonNull(ctx).getText();
     requireNonNull(term);
-
-    return input -> {
-      if (term.equals("%context")) {
-        return context.getInputContext();
-      } else if (term.equals("%resource") || term.equals("%rootResource")) {
-        return context.getResource();
-      } else {
-        throw new IllegalArgumentException("Unknown constant: " + term);
-      }
-    };
+    return new ExtConsFhirPath(term);
   }
 
   @Override
   @Nonnull
   public FhirPath<Collection, Collection> visitParenthesizedTerm(
       @Nullable final ParenthesizedTermContext ctx) {
-    return input -> {
-      // Parentheses are ignored in the standalone term case.
-      return new Visitor(context).visit(
-          requireNonNull(ctx).expression()).apply(input);
-    };
+    // TODO: maybe we do not need that and just use the subExpression directly?
+    // Parentheses are ignored in the standalone term case.
+    final FhirPath<Collection, Collection> subExpression = new Visitor(context).visit(
+        requireNonNull(ctx).expression());
+    return (input, c) -> subExpression.apply(input, c);
   }
-
 }

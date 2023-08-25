@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.not;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Collections;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -36,15 +36,8 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#exists">exists</a>
  */
+@Name("exists")
 public class ExistsFunction implements NamedFunction {
-
-  private static final String NAME = "exists";
-
-  @Nonnull
-  @Override
-  public String getName() {
-    return NAME;
-  }
 
   @Nonnull
   @Override
@@ -52,7 +45,6 @@ public class ExistsFunction implements NamedFunction {
     final int numberOfArguments = input.getArguments().size();
     checkUserInput(numberOfArguments <= 1,
         "exists function accepts at most one argument");
-    final String expression = expressionFromInput(input, getName(), input.getInput());
 
     final Column column;
     if (numberOfArguments == 0) {
@@ -69,7 +61,7 @@ public class ExistsFunction implements NamedFunction {
       column = existsResult.getColumn();
     }
 
-    return BooleanCollection.build(column, expression, Optional.empty());
+    return BooleanCollection.build(column, Optional.empty());
   }
 
 }

@@ -17,29 +17,10 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
-import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodeableConcept;
-import static au.csiro.pathling.fhirpath.TerminologyUtils.isCodingOrCodeableConcept;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.subsumed_by;
-import static au.csiro.pathling.sql.Terminology.subsumes;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static org.apache.spark.sql.functions.array;
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.collect_set;
-import static org.apache.spark.sql.functions.explode_outer;
-import static org.apache.spark.sql.functions.when;
-
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 
 /**
@@ -53,6 +34,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 
 @Slf4j
+@NotImplemented
 public class SubsumesFunction implements NamedFunction {
 
   /**
@@ -93,115 +75,122 @@ public class SubsumesFunction implements NamedFunction {
 
   @Nonnull
   @Override
-  public Collection invoke(@Nonnull final NamedFunctionInput input) {
-    validateInput(input);
-
-    final NonLiteralPath inputPath = input.getInput();
-    final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
-        input.getArguments().get(0));
-    final Column leftCodings = idAndCodingSet.col(COL_INPUT_CODINGS);
-    final Column rightCodings = idAndCodingSet.col(COL_ARG_CODINGS);
-    final Column resultColumn = inverted
-                                ? subsumed_by(leftCodings, rightCodings)
-                                : subsumes(leftCodings, rightCodings);
-
-    // Construct a new result expression.
-    final String expression = expressionFromInput(input, functionName, input.getInput());
-    return PrimitivePath.build(expression, idAndCodingSet, inputPath.getIdColumn(), resultColumn,
-        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
-        inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+  public String getName() {
+    return functionName;
   }
 
-  /**
-   * Creates a dataset that preserves previous columns and adds three new ones: resource ID, input
-   * codings and argument codings.
-   *
-   * @see #toInputDataset(Collection)
-   * @see #toArgDataset(Collection)
-   */
-  @Nonnull
-  private Dataset<Row> createJoinedDataset(@Nonnull final Collection inputResult,
-      @Nonnull final Collection argResult) {
-
-    final Dataset<Row> inputCodingSet = toInputDataset(inputResult);
-    final Dataset<Row> argCodingSet = toArgDataset(argResult);
-
-    return inputCodingSet.join(argCodingSet, col(COL_ID).equalTo(col(COL_ARG_ID)), "left_outer");
-  }
-
-  /**
-   * Creates a {@link Dataset} with a new column, which is an array of all the codings within the
-   * values. Each CodeableConcept is converted to an array that includes all its codings. Each
-   * Coding is converted to an array that only includes that coding.
-   * <p>
-   * Null Codings and CodeableConcepts are represented as null.
-   *
-   * @param result the {@link Collection} object to convert
-   * @return the resulting Dataset
-   */
-  @Nonnull
-  private Dataset<Row> toInputDataset(@Nonnull final Collection result) {
-    final Column valueColumn = result.getValueColumn();
-
-    assert (isCodingOrCodeableConcept(result));
-
-    final Dataset<Row> expressionDataset = result.getDataset()
-        .withColumn(COL_ID, result.getIdColumn());
-    final Column codingArrayCol = (isCodeableConcept(result))
-                                  ? valueColumn.getField(FIELD_CODING)
-                                  : array(valueColumn);
-
-    return expressionDataset.withColumn(COL_INPUT_CODINGS,
-        when(valueColumn.isNotNull(), codingArrayCol).otherwise(null));
-  }
-
-  /**
-   * Converts the argument {@link Collection} to a Dataset with the schema: STRING id, ARRAY(struct
-   * CODING) codingSet.
-   * <p>
-   * All codings are collected in a single `array` per resource.
-   * <p>
-   * Null Codings and CodeableConcepts are ignored. In the case where the resource does not have any
-   * non-null elements, an empty array will be created.
-   *
-   * @param result to convert
-   * @return input dataset
-   */
-  @Nonnull
-  private Dataset<Row> toArgDataset(@Nonnull final Collection result) {
-    final Column valueColumn = result.getValueColumn();
-
-    assert (isCodingOrCodeableConcept(result));
-
-    final Dataset<Row> expressionDataset = result.getDataset();
-    final Column codingCol = (isCodeableConcept(result))
-                             ? explode_outer(valueColumn.getField(FIELD_CODING))
-                             : valueColumn;
-
-    final Dataset<Row> systemAndCodeDataset = expressionDataset.select(
-        result.getIdColumn().alias(COL_ARG_ID), codingCol.alias(COL_CODING));
-
-    return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ARG_ID))
-        .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_ARG_CODINGS));
-  }
-
-  private void validateInput(@Nonnull final NamedFunctionInput input) {
-
-    final ParserContext context = input.getContext();
-    checkUserInput(context.getTerminologyServiceFactory().isPresent(),
-        "Attempt to call terminology function " + functionName
-            + " when terminology service has not been configured");
-
-    checkUserInput(input.getArguments().size() == 1,
-        functionName + " function accepts one argument of type Coding or CodeableConcept");
-
-    validateExpressionType(input.getInput(), "input");
-    validateExpressionType(input.getArguments().get(0), "argument");
-  }
-
-  private void validateExpressionType(@Nonnull final Collection inputPath,
-      @Nonnull final String pathRole) {
-    checkUserInput(isCodingOrCodeableConcept(inputPath),
-        functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept");
-  }
+  //
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final NamedFunctionInput input) {
+  //   validateInput(input);
+  //
+  //   final NonLiteralPath inputPath = input.getInput();
+  //   final Dataset<Row> idAndCodingSet = createJoinedDataset(input.getInput(),
+  //       input.getArguments().get(0));
+  //   final Column leftCodings = idAndCodingSet.col(COL_INPUT_CODINGS);
+  //   final Column rightCodings = idAndCodingSet.col(COL_ARG_CODINGS);
+  //   final Column resultColumn = inverted
+  //                               ? subsumed_by(leftCodings, rightCodings)
+  //                               : subsumes(leftCodings, rightCodings);
+  //
+  //   // Construct a new result expression.
+  //   final String expression = expressionFromInput(input, functionName, input.getInput());
+  //   return PrimitivePath.build(expression, idAndCodingSet, inputPath.getIdColumn(), resultColumn,
+  //       inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
+  //       inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+  // }
+  //
+  // /**
+  //  * Creates a dataset that preserves previous columns and adds three new ones: resource ID, input
+  //  * codings and argument codings.
+  //  *
+  //  * @see #toInputDataset(Collection)
+  //  * @see #toArgDataset(Collection)
+  //  */
+  // @Nonnull
+  // private Dataset<Row> createJoinedDataset(@Nonnull final Collection inputResult,
+  //     @Nonnull final Collection argResult) {
+  //
+  //   final Dataset<Row> inputCodingSet = toInputDataset(inputResult);
+  //   final Dataset<Row> argCodingSet = toArgDataset(argResult);
+  //
+  //   return inputCodingSet.join(argCodingSet, col(COL_ID).equalTo(col(COL_ARG_ID)), "left_outer");
+  // }
+  //
+  // /**
+  //  * Creates a {@link Dataset} with a new column, which is an array of all the codings within the
+  //  * values. Each CodeableConcept is converted to an array that includes all its codings. Each
+  //  * Coding is converted to an array that only includes that coding.
+  //  * <p>
+  //  * Null Codings and CodeableConcepts are represented as null.
+  //  *
+  //  * @param result the {@link Collection} object to convert
+  //  * @return the resulting Dataset
+  //  */
+  // @Nonnull
+  // private Dataset<Row> toInputDataset(@Nonnull final Collection result) {
+  //   final Column valueColumn = result.getValueColumn();
+  //
+  //   assert (isCodingOrCodeableConcept(result));
+  //
+  //   final Dataset<Row> expressionDataset = result.getDataset()
+  //       .withColumn(COL_ID, result.getIdColumn());
+  //   final Column codingArrayCol = (isCodeableConcept(result))
+  //                                 ? valueColumn.getField(FIELD_CODING)
+  //                                 : array(valueColumn);
+  //
+  //   return expressionDataset.withColumn(COL_INPUT_CODINGS,
+  //       when(valueColumn.isNotNull(), codingArrayCol).otherwise(null));
+  // }
+  //
+  // /**
+  //  * Converts the argument {@link Collection} to a Dataset with the schema: STRING id, ARRAY(struct
+  //  * CODING) codingSet.
+  //  * <p>
+  //  * All codings are collected in a single `array` per resource.
+  //  * <p>
+  //  * Null Codings and CodeableConcepts are ignored. In the case where the resource does not have any
+  //  * non-null elements, an empty array will be created.
+  //  *
+  //  * @param result to convert
+  //  * @return input dataset
+  //  */
+  // @Nonnull
+  // private Dataset<Row> toArgDataset(@Nonnull final Collection result) {
+  //   final Column valueColumn = result.getValueColumn();
+  //
+  //   assert (isCodingOrCodeableConcept(result));
+  //
+  //   final Dataset<Row> expressionDataset = result.getDataset();
+  //   final Column codingCol = (isCodeableConcept(result))
+  //                            ? explode_outer(valueColumn.getField(FIELD_CODING))
+  //                            : valueColumn;
+  //
+  //   final Dataset<Row> systemAndCodeDataset = expressionDataset.select(
+  //       result.getIdColumn().alias(COL_ARG_ID), codingCol.alias(COL_CODING));
+  //
+  //   return systemAndCodeDataset.groupBy(systemAndCodeDataset.col(COL_ARG_ID))
+  //       .agg(collect_set(systemAndCodeDataset.col(COL_CODING)).alias(COL_ARG_CODINGS));
+  // }
+  //
+  // private void validateInput(@Nonnull final NamedFunctionInput input) {
+  //
+  //   final ParserContext context = input.getContext();
+  //   checkUserInput(context.getTerminologyServiceFactory().isPresent(),
+  //       "Attempt to call terminology function " + functionName
+  //           + " when terminology service has not been configured");
+  //
+  //   checkUserInput(input.getArguments().size() == 1,
+  //       functionName + " function accepts one argument of type Coding or CodeableConcept");
+  //
+  //   validateExpressionType(input.getInput(), "input");
+  //   validateExpressionType(input.getArguments().get(0), "argument");
+  // }
+  //
+  // private void validateExpressionType(@Nonnull final Collection inputPath,
+  //     @Nonnull final String pathRole) {
+  //   checkUserInput(isCodingOrCodeableConcept(inputPath),
+  //       functionName + " function accepts " + pathRole + " of type Coding or CodeableConcept");
+  // }
 }

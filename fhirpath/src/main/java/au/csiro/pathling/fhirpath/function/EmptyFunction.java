@@ -18,11 +18,11 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 
 import au.csiro.pathling.fhirpath.FunctionInput;
-import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -33,27 +33,17 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">empty</a>
  */
+@Name("empty")
 public class EmptyFunction implements NamedFunction {
-
-  private static final String NAME = "empty";
-
-  @Nonnull
-  @Override
-  public String getName() {
-    return NAME;
-  }
 
   @Nonnull
   @Override
   public Collection invoke(@Nonnull final FunctionInput input) {
     checkNoArguments(getName(), input);
-
     // We use the count function to determine whether there are zero items in the input collection.
     final Collection countResult = new CountFunction().invoke(input);
     final Column valueColumn = countResult.getColumn().equalTo(0);
-    final String expression = expressionFromInput(input, getName(), input.getInput());
-
-    return BooleanCollection.build(valueColumn, expression, Optional.empty());
+    return BooleanCollection.build(valueColumn, Optional.empty());
   }
 
 }

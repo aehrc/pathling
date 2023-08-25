@@ -19,10 +19,12 @@ public interface ElementDefinition extends NodeDefinition<ElementDefinition> {
    */
   @Nonnull
   static ElementDefinition build(@Nonnull final BaseRuntimeChildDefinition childDefinition) {
-    if (childDefinition instanceof RuntimeChildAny && "valueReference".equals(childDefinition
-        .getElementName())) {
-      return new ReferenceExtensionDefinition((RuntimeChildAny) childDefinition);
-    } else if (childDefinition instanceof RuntimeChildResourceDefinition) {
+    // TODO: check why this is safe to remove
+    // if (childDefinition instanceof RuntimeChildAny && "valueReference".equals(childDefinition
+    //     .getElementName())) {
+    //   return new ReferenceExtensionDefinition((RuntimeChildAny) childDefinition);
+    // } else 
+    if (childDefinition instanceof RuntimeChildResourceDefinition) {
       return new ReferenceDefinition((RuntimeChildResourceDefinition) childDefinition);
     } else if (childDefinition instanceof RuntimeChildChoiceDefinition) {
       return new ChoiceElementDefinition((RuntimeChildChoiceDefinition) childDefinition);

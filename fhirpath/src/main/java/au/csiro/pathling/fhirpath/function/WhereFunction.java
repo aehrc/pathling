@@ -24,6 +24,7 @@ import static org.apache.spark.sql.functions.filter;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -38,16 +39,9 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#where">where</a>
  */
+@Name("where")
 public class WhereFunction implements NamedFunction<Collection> {
-
-  private static final String NAME = "where";
-
-  @Nonnull
-  @Override
-  public String getName() {
-    return NAME;
-  }
-
+  
   @Nonnull
   @Override
   public Collection invoke(@Nonnull final FunctionInput input) {
@@ -59,7 +53,7 @@ public class WhereFunction implements NamedFunction<Collection> {
     final Column column = filter(previous.getColumn(), element -> {
       final Collection result = argument.apply(
           new Collection(element, previous.getType(), previous.getFhirType(),
-              Optional.empty()));
+              Optional.empty()), input.getContext());
       final SparkSession spark = input.getContext().getSparkSession();
       final FhirPathType type = checkPresent(result.getType());
       checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(spark),

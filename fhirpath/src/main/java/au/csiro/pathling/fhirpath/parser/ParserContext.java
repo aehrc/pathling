@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.parser;
 
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -34,6 +35,7 @@ import org.apache.spark.sql.SparkSession;
  *
  * @author John Grimes
  */
+// TODO: Split into two classes, one for parsing and one for evaluation
 @Getter
 public class ParserContext {
 
@@ -83,7 +85,7 @@ public class ParserContext {
    * A registry of FHIRPath function implementations.
    */
   @Nonnull
-  private final FunctionRegistry functionRegistry;
+  private final FunctionRegistry<NamedFunction> functionRegistry;
 
   /**
    * A factory for creating new {@link TerminologyService} objects, which is needed within blocks of

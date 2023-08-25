@@ -19,9 +19,8 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -38,8 +37,18 @@ public interface TerminologyUtils {
    * @return true if the path is a codeable concept
    */
   static boolean isCodeableConcept(@Nonnull final Collection result) {
-    return (result instanceof PrimitivePath &&
-        FHIRDefinedType.CODEABLECONCEPT.equals(((PrimitivePath) result).getFhirType()));
+    return result.getFhirType().map(FHIRDefinedType.CODEABLECONCEPT::equals).orElse(false);
+  }
+
+  /**
+   * Checks if a path is a coding path
+   *
+   * @param result a path to check
+   * @return true if the path is a codeable concept
+   */
+  static boolean isCoding(@Nonnull final Collection result) {
+    return result instanceof CodingCollection ||
+        result.getFhirType().map(FHIRDefinedType.CODING::equals).orElse(false);
   }
 
   /**
@@ -49,22 +58,14 @@ public interface TerminologyUtils {
    * @return true if the path is coding or codeable concept
    */
   static boolean isCodingOrCodeableConcept(@Nonnull final Collection result) {
-    if (result instanceof CodingLiteralPath) {
-      return true;
-    } else if (result instanceof PrimitivePath) {
-      final FHIRDefinedType elementFhirType = ((PrimitivePath) result).getFhirType();
-      return FHIRDefinedType.CODING.equals(elementFhirType)
-          || FHIRDefinedType.CODEABLECONCEPT.equals(elementFhirType);
-    } else {
-      return false;
-    }
+    return isCoding(result) || isCodeableConcept(result);
   }
 
   @Nonnull
   static Column getCodingColumn(@Nonnull final Collection result) {
     check(isCodingOrCodeableConcept(result),
         "Coding or CodeableConcept path expected");
-    final Column conceptColumn = result.getValueColumn();
+    final Column conceptColumn = result.getColumn();
     return isCodeableConcept(result)
            ? conceptColumn.getField("coding")
            : conceptColumn;

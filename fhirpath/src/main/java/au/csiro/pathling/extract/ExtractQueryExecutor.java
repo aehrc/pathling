@@ -6,6 +6,7 @@ import static java.util.stream.Collectors.toList;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.AbstractPath;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.io.source.DataSource;
@@ -25,6 +26,7 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @Slf4j
+@NotImplemented
 public class ExtractQueryExecutor extends QueryExecutor {
 
   public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
@@ -115,39 +117,39 @@ public class ExtractQueryExecutor extends QueryExecutor {
     return null;
   }
 
-  private List<Collection> validateAndCoerceColumns(
-      @Nonnull final List<Collection> columnParseResult,
-      @Nonnull final ExtractResultType resultType) {
-
-    // Perform any necessary String coercion.
-    final List<Collection> coerced = columnParseResult.stream()
-        .map(column -> {
-          if (resultType == ExtractResultType.FLAT && !(column instanceof Flat)
-              && column instanceof StringCoercible) {
-            // If the result type is flat and the path is string-coercible, we can coerce it.
-            final StringCoercible stringCoercible = (StringCoercible) column;
-            return stringCoercible.asStringPath(column.getExpression(),
-                stringCoercible.getExpression());
-          } else {
-            return column;
-          }
-        }).collect(toList());
-
-    // Validate the final set of paths.
-    for (final Collection column : coerced) {
-      final boolean condition;
-      if (resultType == ExtractResultType.FLAT) {
-        // In flat mode, only flat columns are allowed.
-        condition = column instanceof Flat;
-      } else {
-        // Otherwise, a column can be of any type, as long as it has not been specifically flagged 
-        // as being abstract, e.g. an UntypedResourcePath.
-        condition = !(column instanceof AbstractPath);
-      }
-      checkArgument(condition, "Column is not of a supported type: " + column.getExpression());
-    }
-
-    return coerced;
-  }
-
+  // private List<Collection> validateAndCoerceColumns(
+  //     @Nonnull final List<Collection> columnParseResult,
+  //     @Nonnull final ExtractResultType resultType) {
+  //
+  //   // Perform any necessary String coercion.
+  //   final List<Collection> coerced = columnParseResult.stream()
+  //       .map(column -> {
+  //         if (resultType == ExtractResultType.FLAT && !(column instanceof Flat)
+  //             && column instanceof StringCoercible) {
+  //           // If the result type is flat and the path is string-coercible, we can coerce it.
+  //           final StringCoercible stringCoercible = (StringCoercible) column;
+  //           return stringCoercible.asStringPath(column.getExpression(),
+  //               stringCoercible.getExpression());
+  //         } else {
+  //           return column;
+  //         }
+  //       }).collect(toList());
+  //
+  //   // Validate the final set of paths.
+  //   for (final Collection column : coerced) {
+  //     final boolean condition;
+  //     if (resultType == ExtractResultType.FLAT) {
+  //       // In flat mode, only flat columns are allowed.
+  //       condition = column instanceof Flat;
+  //     } else {
+  //       // Otherwise, a column can be of any type, as long as it has not been specifically flagged 
+  //       // as being abstract, e.g. an UntypedResourcePath.
+  //       condition = !(column instanceof AbstractPath);
+  //     }
+  //     checkArgument(condition, "Column is not of a supported type: " + column.getExpression());
+  //   }
+  //
+  //   return coerced;
+  // }
+  //
 }

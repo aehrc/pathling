@@ -58,12 +58,23 @@ public class ResourceCollection extends Collection {
   @Nonnull
   private final ResourceDefinition resourceDefinition;
 
-  public ResourceCollection(@Nonnull final Column column, @Nonnull final ResourceDefinition definition,
+  @Nonnull
+  private final Dataset<Row> dataset;
+
+
+  public ResourceCollection(@Nonnull final Dataset<Row> dataset, @Nonnull final Column column,
+      @Nonnull final ResourceDefinition definition,
       @Nonnull final Map<String, Column> elementsToColumns) {
     super(column, Optional.empty(), getFhirType(definition.getResourceType()),
         Optional.of(definition));
+    this.dataset = dataset;
     this.elementsToColumns = elementsToColumns;
     this.resourceDefinition = definition;
+  }
+  
+  @Nonnull
+  public Dataset<Row> getDataset() {
+    return dataset;
   }
 
   @Nonnull
@@ -101,7 +112,7 @@ public class ResourceCollection extends Collection {
         .collect(Collectors.toMap(Function.identity(), functions::col, (a, b) -> null));
 
     // We use the ID column as the value column for a ResourcePath.
-    return new ResourceCollection(functions.col("id"), definition, elementsToColumns);
+    return new ResourceCollection(dataset, functions.col("id"), definition, elementsToColumns);
   }
 
   /**

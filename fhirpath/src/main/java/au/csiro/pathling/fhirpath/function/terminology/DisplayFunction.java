@@ -17,23 +17,9 @@
 
 package au.csiro.pathling.fhirpath.function.terminology;
 
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.sql.Terminology.display;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.PrimitivePath;
-import au.csiro.pathling.fhirpath.function.Arguments;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import java.util.Optional;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import org.hl7.fhir.r4.model.StringType;
 
 /**
  * This function returns the display name for given Coding
@@ -41,47 +27,51 @@ import org.hl7.fhir.r4.model.StringType;
  * @author Piotr Szul
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#display">display</a>
  */
+@Name("display")
+@NotImplemented
 public class DisplayFunction implements NamedFunction {
 
-  private static final String NAME = "display";
+  // TODO: implement as columns
 
-  @Nonnull
-  @Override
-  public Collection invoke(@Nonnull final NamedFunctionInput input) {
-
-    validateInput(input);
-    final PrimitivePath inputPath = (PrimitivePath) input.getInput();
-    final String expression = expressionFromInput(input, NAME, input.getInput());
-
-    final Arguments arguments = Arguments.of(input);
-    final Optional<StringType> acceptLanguage = arguments.getOptionalValue(0, StringType.class);
-
-    final Dataset<Row> dataset = inputPath.getDataset();
-    final Column resultColumn = display(inputPath.getValueColumn(),
-        acceptLanguage.map(StringType::getValue).orElse(null));
-    return PrimitivePath.build(expression, dataset, inputPath.getIdColumn(), resultColumn,
-        inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
-        inputPath.getThisColumn(), FHIRDefinedType.STRING);
-  }
-
-  private void validateInput(@Nonnull final NamedFunctionInput input) {
-    final ParserContext context = input.getContext();
-
-    checkUserInput(input.getArguments().size() <= 1,
-        NAME + " function accepts one optional language argument");
-    if (input.getArguments().size() == 1) {
-      checkUserInput(input.getArguments().get(0) instanceof StringLiteralPath,
-          String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 1));
-    }
-
-    checkUserInput(context.getTerminologyServiceFactory()
-        .isPresent(), "Attempt to call terminology function " + NAME
-        + " when terminology service has not been configured");
-
-    final Collection inputPath = input.getInput();
-    checkUserInput(inputPath instanceof PrimitivePath
-            && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
-        "Input to display function must be Coding but is: " + inputPath.getExpression());
-
-  }
+  // private static final String NAME = "display";
+  //
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final NamedFunctionInput input) {
+  //
+  //   validateInput(input);
+  //   final PrimitivePath inputPath = (PrimitivePath) input.getInput();
+  //   final String expression = expressionFromInput(input, NAME, input.getInput());
+  //
+  //   final Arguments arguments = Arguments.of(input);
+  //   final Optional<StringType> acceptLanguage = arguments.getOptionalValue(0, StringType.class);
+  //
+  //   final Dataset<Row> dataset = inputPath.getDataset();
+  //   final Column resultColumn = display(inputPath.getValueColumn(),
+  //       acceptLanguage.map(StringType::getValue).orElse(null));
+  //   return PrimitivePath.build(expression, dataset, inputPath.getIdColumn(), resultColumn,
+  //       inputPath.getOrderingColumn(), inputPath.isSingular(), inputPath.getCurrentResource(),
+  //       inputPath.getThisColumn(), FHIRDefinedType.STRING);
+  // }
+  //
+  // private void validateInput(@Nonnull final NamedFunctionInput input) {
+  //   final ParserContext context = input.getContext();
+  //
+  //   checkUserInput(input.getArguments().size() <= 1,
+  //       NAME + " function accepts one optional language argument");
+  //   if (input.getArguments().size() == 1) {
+  //     checkUserInput(input.getArguments().get(0) instanceof StringLiteralPath,
+  //         String.format("Function `%s` expects `%s` as argument %s", NAME, "String literal", 1));
+  //   }
+  //
+  //   checkUserInput(context.getTerminologyServiceFactory()
+  //       .isPresent(), "Attempt to call terminology function " + NAME
+  //       + " when terminology service has not been configured");
+  //
+  //   final Collection inputPath = input.getInput();
+  //   checkUserInput(inputPath instanceof PrimitivePath
+  //           && (((PrimitivePath) inputPath).getFhirType().equals(FHIRDefinedType.CODING)),
+  //       "Input to display function must be Coding but is: " + inputPath.getExpression());
+  //
+  // }
 }

@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
 import static org.apache.spark.sql.functions.date_format;
+import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -30,6 +31,7 @@ import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeSubtractDurationFunction;
 import com.google.common.collect.ImmutableSet;
+import java.text.ParseException;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -58,6 +60,19 @@ public class DateTimeCollection extends Collection implements
         definition);
   }
 
+  /**
+   * Returns a new instance, parsed from a FHIRPath literal.
+   *
+   * @param fhirPath The FHIRPath representation of the literal
+   * @return A new instance of {@link DateTimeCollection}
+   * @throws ParseException if the literal is malformed
+   */
+  @Nonnull
+  public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath) throws ParseException {
+    final String dateString = fhirPath.replaceFirst("^@", "");
+    return DateTimeCollection.build(lit(dateString), Optional.empty());
+  }
+  
   @Nonnull
   public static DateTimeCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
