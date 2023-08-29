@@ -3,12 +3,20 @@ pathtlyr dev notes
 
 ### Setting up dev environment
 
-These are relevant for MacOD
+These are relevant for MacOS
 
 The following packages are needed to generate pdf manuals:
 
     brew install basictex
     brew install freetype
+
+Then run the following to install the `inconsolata` fonts used in R manuals:
+
+    # Install texlive packages needed to build R package vignettes
+    sudo tlmgr update --self
+    sudo tlmgr update --all
+    sudo tlmgr install titling framed inconsolata
+    sudo tlmgr install collection-fontsrecommended
 
 The following packages (may) be needed to build build the dependecies of 'devtools'
 
