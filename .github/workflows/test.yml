@@ -586,7 +586,7 @@ jobs:
           check_name: Python API test report
           fail_on_test_failures: true
           
-  pathlyr-api:
+  R-api:
     runs-on: ubuntu-latest
     name: PathlyR API
     env:

@@ -15,7 +15,7 @@
 
 spark_dependencies <- function(spark_version, scala_version, ...) {
   sparklyr::spark_dependency(
-      jars = Sys.glob(file.path(system.file('java', package = "pathlyr"), "library-runtime-*.jar"))
+      jars = Sys.glob(file.path(system.file('java', package = "pathling"), "library-runtime-*.jar"))
   )
 }
 

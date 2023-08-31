@@ -27,7 +27,7 @@
     <version>6.3.0</version>
     <relativePath>../../../pom.xml</relativePath>
   </parent>
-  <artifactId>pathlyr</artifactId>
+  <artifactId>pathling-R</artifactId>
   <packaging>jar</packaging>
 
   <name>Pathling R Sparklyr API</name>
@@ -55,14 +55,15 @@
 
   <properties>
     <!--suppress UnresolvedMavenProperty -->
-    <pathling.pathlyr.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.pathlyr.version.base>
-    <pathling.pathlyr.version.qualifier>.9000</pathling.pathlyr.version.qualifier>
-    <pathling.pathlyr.version>${pathling.pathlyr.version.base}${pathling.pathlyr.version.qualifier}</pathling.pathlyr.version>
+    <pathling.Rapi.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.Rapi.version.base>
+    <pathling.Rapi.version.qualifier>.9000</pathling.Rapi.version.qualifier>
+    <pathling.Rapi.version>${pathling.Rapi.version.base}${pathling.Rapi.version.qualifier}</pathling.Rapi.version>
     <!-- TODO: This to to deal with the spaklyr bug. In general it should be the same as the spark version -->
-    <pathling.pathlyr.sparkVersion>3.3.1</pathling.pathlyr.sparkVersion>
-    <pathling.pathlry.hadoopVersion>${pathling.hadoopMajorVersion}</pathling.pathlry.hadoopVersion>
+    <pathling.Rapi.sparkVersion>3.3.1</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.hadoopVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopVersion>
+    <pathling.Rapi.packageName>pathling</pathling.Rapi.packageName>
     <!--suppress UnresolvedMavenProperty -->
-    <skipPathlyrTests>${skipTests}</skipPathlyrTests>
+    <skipRapiTests>${skipTests}</skipRapiTests>
   </properties>
 
   <build>
@@ -185,11 +186,11 @@
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
                 <argument>-e</argument>
-                <argument>s/%pathling.pathlyr.version%/${pathling.pathlyr.version}/</argument>
+                <argument>s/%pathling.Rapi.version%/${pathling.Rapi.version}/</argument>
                 <argument>-e</argument>
-                <argument>s/%pathling.pathlyr.sparkVersion%/${pathling.pathlyr.sparkVersion}/</argument>
+                <argument>s/%pathling.Rapi.sparkVersion%/${pathling.Rapi.sparkVersion}/</argument>
                 <argument>-e</argument>
-                <argument>s/%pathling.pathlyr.hadoopVersion%/${pathling.pathlry.hadoopVersion}/</argument>
+                <argument>s/%pathling.Rapi.hadoopVersion%/${pathling.Rapi.hadoopVersion}/</argument>
                 <argument>${project.basedir}/DESCRIPTION.src</argument>
               </arguments>
               <outputFile>${project.basedir}/DESCRIPTION</outputFile>
@@ -217,7 +218,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <skip>${skipPathlyrTests}</skip>
+              <skip>${skipRapiTests}</skip>
               <executable>Rscript</executable>
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
@@ -256,7 +257,7 @@
                 <argument>check</argument>
                 <argument>--output=${project.basedir}/target</argument>
                 <argument>--as-cran</argument>
-                <argument>target/${project.artifactId}_${pathling.pathlyr.version}.tar.gz</argument>
+                <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
               </arguments>
             </configuration>
           </execution>
@@ -293,7 +294,7 @@
                     <argument>-e</argument>
                     <argument>devtools::install_dev_deps()</argument>
                     <argument>-e</argument>
-                    <argument>sparklyr::spark_install(version='${pathling.pathlyr.sparkVersion}', hadoop_version='${pathling.pathlry.hadoopVersion}')</argument>
+                    <argument>sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopVersion}')</argument>
                   </arguments>
                 </configuration>
               </execution>
@@ -345,7 +346,7 @@
               </execution>
             </executions>
           </plugin>
-          <!-- Create a JAR containing the Pathlyr docs -->
+          <!-- Create a JAR containing the Rapi docs -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-jar-plugin</artifactId>

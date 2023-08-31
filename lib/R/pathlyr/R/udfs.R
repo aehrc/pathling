@@ -90,7 +90,7 @@ Equivalence <- list(
 #' pc <- ptl_connect()
 #' 
 #' # Test the codings of the Condition `code` for membership in a SNOMED CT ValueSet.
-#' pc %>% pathlyr_example_resource('Condition') %>%
+#' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'          id, 
 #'          is_member = !!trm_member_of(code[['coding']], 
@@ -127,7 +127,7 @@ trm_member_of <- function(codings, value_set_uri) {
 #' pc <- ptl_connect()
 #' 
 #' # Translates the codings of the Condition `code` using a SNOMED implicit concept map.
-#' pc %>% pathlyr_example_resource('Condition') %>%
+#' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
 #'          id,
 #'          translation = !!trm_translate(code[['coding']],
@@ -158,7 +158,7 @@ trm_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalence
 #' pc <- ptl_connect()
 #' 
 #' # Test the codings of the Condition `code` for subsumption of a SNOMED CT code.
-#' pc %>% pathlyr_example_resource('Condition') %>%
+#' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
 #'          id,
 #'          subsumes = !!trm_subsumes(code[['coding']],
@@ -189,7 +189,7 @@ trm_subsumes <- function(left_codings, right_codings) {
 #' pc <- ptl_connect()
 #' 
 #' # Test the codings of the Condition `code` for subsumption by a SNOMED CT code.
-#' pc %>% pathlyr_example_resource('Condition') %>%
+#' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
 #'          id,
 #'          is_subsumed_by = !!trm_subsumed_by(code[['coding']],
@@ -221,7 +221,7 @@ trm_subsumed_by <- function(left_codings, right_codings) {
 #' pc <- ptl_connect()
 #' 
 #' # Get the display nane of the first coding of the Condition resource code with default language
-#' pc %>% pathlyr_example_resource('Condition') %>%
+#' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'          id, 
 #'          display = !!trm_display(code[['coding']][[0]]), 
@@ -258,7 +258,7 @@ trm_display <- function(coding, accept_language = NULL) {
 #' pc <- ptl_connect()
 #' 
 #' # Get the (first) value of `inactive` property of the first coding of the Condition resource code
-#' pc %>% pathlyr_example_resource('Condition') %>%
+#' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(id, 
 #'          is_inavtive = (!!trm_property_of(code[['coding']][[0]], 
 #'                                  "inactive",PropertyType$BOOLEAN))[[0]], 
@@ -309,7 +309,7 @@ trm_property_of <- function(coding, property_code, property_type = "string", acc
 #' 
 #' # Get the (first) value of the SNONED-CD designation code '900000000000003001'  
 #' # for the first coding of the Condition resource code for language 'en'.
-#' pc %>% pathlyr_example_resource('Condition') %>% 
+#' pc %>% pathling_example_resource('Condition') %>% 
 #'      sparklyr::mutate(
 #'             id, 
 #'             designation = (!!trm_designation(code[['coding']][[0]], 

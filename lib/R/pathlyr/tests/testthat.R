@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(pathlyr)
+library(pathling)
 
-test_check("pathlyr")
+test_check("pathling")

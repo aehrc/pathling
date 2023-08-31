@@ -37,7 +37,7 @@
 #' pc <- ptl_connect()
 #' json_resources_df <- ptl_spark(pc) %>% 
 #'      sparklyr::spark_read_text(path=system.file('extdata','ndjson', 'Condition.ndjson', 
-#'              package='pathlyr'))
+#'              package='pathling'))
 #' pc %>% ptl_encode(json_resources_df, 'Condition')
 #' ptl_disconnect(pc)
 ptl_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
@@ -68,7 +68,7 @@ ptl_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
 #' json_resources_df <- ptl_spark(pc) %>% 
-#'      sparklyr::spark_read_text(path=system.file('extdata','bundle-xml', package='pathlyr'), 
+#'      sparklyr::spark_read_text(path=system.file('extdata','bundle-xml', package='pathling'), 
 #'          whole = TRUE)
 #' pc %>% ptl_encode_bundle(json_resources_df, 'Condition',
 #'      input_type = MimeType$FHIR_XML, column = 'contents')

@@ -27,15 +27,15 @@ package_info <- function(pkgname) {
 
 
 ptl_spark_info <- function() {
-  metadata <- package_info("pathlyr")
+  metadata <- package_info("pathling")
   list(
-      spark_version = metadata[["Config/pathlyr/SparkVersion"]],
-      hadoop_version = metadata[["Config/pathlyr/HadoopVersion"]]
+      spark_version = metadata[["Config/pathling/SparkVersion"]],
+      hadoop_version = metadata[["Config/pathling/HadoopVersion"]]
   )
 }
 
 
-#' Installs the version of Spark/Hadoop required by PathLyr.
+#' Installs the version of Spark/Hadoop required by pathling.
 #' 
 #' @description
 #' Installs the version of Spark/Hadoop defined in the package metadata 
@@ -43,12 +43,12 @@ ptl_spark_info <- function() {
 #' 
 #' @return List with information about the installed version.
 #' @export
-pathlyr_install_spark <- function() {
+pathling_install_spark <- function() {
   spark_info <- ptl_spark_info()
   sparklyr::spark_install(version = spark_info$spark_version, hadoop_version = spark_info$hadoop_version)
 }
 
-#' Checks if the version of Spark/Hadoop reuired by PathLyr is installed.
+#' Checks if the version of Spark/Hadoop reuired by pathling is installed.
 #' @return TRUE if the required version of Spark/Hadoop is installed, FALSE otherwise.
 #' 
 #' @importFrom rlang .data
@@ -68,20 +68,20 @@ ptl_is_spark_installed <- function() {
 #' @param ... character vector of the path components.
 #' @return The path to the examples data.
 #' 
-#' @family pathlyr examples
+#' @family pathling examples
 #' 
 #' @export
 #' 
 #' @examples
-#' pathlyr_examples('ndjson', 'Condition.ndjson')
-pathlyr_examples <- function(...) {
-  system.file("extdata", ..., package = "pathlyr")
+#' pathling_examples('ndjson', 'Condition.ndjson')
+pathling_examples <- function(...) {
+  system.file("extdata", ..., package = "pathling")
 }
 
 #' Reads example FHIR resource data frame.
 #' 
 #' @description
-#' \code{pathlyr_example_resource()} reads a FHIR resource dataframe from the package example data.
+#' \code{pathling_example_resource()} reads a FHIR resource dataframe from the package example data.
 #' 
 #' @param pc The PathlingContext object.
 #' @param resource_name The name of the resource to read.
@@ -92,15 +92,15 @@ pathlyr_examples <- function(...) {
 #' 
 #' @return A Spark DataFrame containing the resource data.
 #' 
-#' @family pathlyr examples
+#' @family pathling examples
 #'
 #' @export
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' pathlyr_example_resource(pc, 'Condition')
+#' pathling_example_resource(pc, 'Condition')
 #' ptl_disconnect(pc)
-pathlyr_example_resource <- function(pc, resource_name) {
+pathling_example_resource <- function(pc, resource_name) {
   pc %>% ptl_spark() %>% 
-      sparklyr::spark_read_parquet(pathlyr_examples("parquet" , paste0(resource_name, ".parquet")))
+      sparklyr::spark_read_parquet(pathling_examples("parquet" , paste0(resource_name, ".parquet")))
 }

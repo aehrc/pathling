@@ -1,5 +1,5 @@
 library(sparklyr)
-library(pathlyr)
+library(pathling)
 
 pc <- ptl_connect()
 
@@ -10,7 +10,7 @@ VIRAL_DISEASE_ECL <- '<< 64572001|Disease| : (
     )'
 
 
-pc %>% pathlyr_example_resource('Condition') %>% mutate(
+pc %>% pathling_example_resource('Condition') %>% mutate(
     CONDITION_ID = id,
     IS_VIRAL_DISEASE = !!trm_member_of(code[['coding']], !!trm_to_ecl_value_set(VIRAL_DISEASE_ECL)),
     .keep="none"

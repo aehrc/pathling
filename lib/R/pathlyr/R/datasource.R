@@ -46,7 +46,7 @@ invoke_datasource <- function(pc, name, ...) {
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(pathlyr_examples('ndjson'))
+#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' ptl_disconnect(pc)
 ptl_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
@@ -72,7 +72,7 @@ ptl_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = N
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_bundles(pathlyr_examples('bundle-xml'),
+#' data_source <- pc %>% ptl_read_bundles(pathling_examples('bundle-xml'),
 #'      c("Patient", "Observation"), MimeType$FHIR_XML)
 #' data_source %>% ds_read('Observation') %>% sparklyr::sdf_nrow()
 #' ptl_disconnect(pc)
@@ -100,8 +100,8 @@ ptl_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' patient_df <- pc %>% pathlyr_example_resource('Patient')
-#' condition_df <- pc %>% pathlyr_example_resource('Condition')
+#' patient_df <- pc %>% pathling_example_resource('Patient')
+#' condition_df <- pc %>% pathling_example_resource('Condition')
 #' data_source <- pc %>% ptl_read_datasets(list(Patient = patient_df, Condition = condition_df))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' ptl_disconnect(pc)
@@ -131,7 +131,7 @@ ptl_read_datasets <- function(pc, resources) {
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_parquet(pathlyr_examples('parquet'))
+#' data_source <- pc %>% ptl_read_parquet(pathling_examples('parquet'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' ptl_disconnect(pc)
 ptl_read_parquet <- function(pc, path) {
@@ -154,7 +154,7 @@ ptl_read_parquet <- function(pc, path) {
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect(enable_delta = TRUE)
-#' data_source <- pc %>% ptl_read_delta(pathlyr_examples('delta'))
+#' data_source <- pc %>% ptl_read_delta(pathling_examples('delta'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' ptl_disconnect(pc)
 ptl_read_delta <- function(pc, path) {
@@ -200,7 +200,7 @@ ptl_read_tables <- function(pc, schema = NULL) {
 #'
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(pathlyr_examples('ndjson'))
+#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' data_source %>% ds_read('Condition') %>% sparklyr::sdf_nrow()
 #' ptl_disconnect(pc)
@@ -236,7 +236,7 @@ ImportMode <- list(
 #' 
 #' @examplesIf ptl_is_spark_installed()
 #' pc <- ptl_connect(enable_delta = TRUE)
-#' data_source <- pc %>% ptl_read_ndjson(pathlyr_examples('ndjson'))
+#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of NDJSON files.
 #' data_source %>% ds_write_ndjson(file.path(tempdir(), 'ndjson'))

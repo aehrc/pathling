@@ -1,5 +1,5 @@
 library(sparklyr)
-library(pathlyr)
+library(pathling)
 
 pc <- ptl_connect()
 

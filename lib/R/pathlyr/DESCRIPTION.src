@@ -1,7 +1,7 @@
-Package: pathlyr
+Package: pathling
 Type: Package
 Title: Pathling R API for Sparklyr
-Version: %pathling.pathlyr.version%
+Version: %pathling.Rapi.version%
 Authors@R:
     c(
       person(given = "Piotr",
@@ -24,11 +24,11 @@ Encoding: UTF-8
 Depends:
     R (>= 3.5.0)
 Imports:
-    rlang(>= 1.0.0), sparklyr(>= 1.7.0)
+    rlang(>= 1.0.0), sparklyr(>= 1.7.8)
 Suggests:
     testthat(>= 3.0.0)
 Config/testthat/edition: 3
 RoxygenNote: 7.2.3
 SystemRequirements: Spark: 3.3.x
-Config/pathlyr/SparkVersion: %pathling.pathlyr.sparkVersion%
-Config/pathlyr/HadoopVersion: %pathling.pathlyr.hadoopVersion%
+Config/pathling/SparkVersion: %pathling.Rapi.sparkVersion%
+Config/pathling/HadoopVersion: %pathling.Rapi.hadoopVersion%

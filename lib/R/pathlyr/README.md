@@ -1,7 +1,7 @@
 R sparklyr API for Pathling
 =======================
 
-``pathlyr`` is the R [sparklyr](https://spark.rstudio.com/) API 
+``pathling`` is the R [sparklyr](https://spark.rstudio.com/) API 
 for [Pathling](https://pathling.csiro.au). It provides a set of functions that 
 aid the use of FHIR terminology services and FHIR data within R code.
 
@@ -10,8 +10,8 @@ aid the use of FHIR terminology services and FHIR data within R code.
 Prerequisites: `R >= 3.5.0` (has been tested with `R 4.3.1`)
 
 * Install the `remotes` package: `install.packages('remotes')`
-* Install the `pathlyr` package: `remotes::install_url('[package URL]', upgrade = FALSE)`
-* Install Spark: `pathlyr::pathlyr_spark_install()`
+* Install the `pathling` package: `remotes::install_url('[package URL]', upgrade = FALSE)`
+* Install Spark: `pathling::pathling_spark_install()`
 
 
 
@@ -25,11 +25,11 @@ In the notebook use the following code to install the R package and connect to t
 ```r
 # install 'pathling' if not installed
 # replace PACKAGE_URL with the URL of the package source distribution
-if (!nzchar(system.file(package='pathlyr'))) {
+if (!nzchar(system.file(package='pathling'))) {
     remotes::install_url(PACKAGE_URL, upgrade = FALSE)
 }
 
-library(pathlyr)
+library(pathling)
 pc <- ptl_connect(sparklyr::spark_connect(method = "databricks"))
 
 # code to use pathling here
