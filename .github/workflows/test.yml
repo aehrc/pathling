@@ -625,11 +625,11 @@ jobs:
       - name: Run the init goal with Maven
         run: >-
           mvn --batch-mode initialize -P '!R-install-deps'
-          -pl lib/R/pathlyr
+          -pl lib/R
         timeout-minutes: 30          
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          working-directory: lib/R/pathlyr
+          working-directory: lib/R
           extra-packages: |
             any::devtools
       - name: Cache Spark
@@ -653,7 +653,7 @@ jobs:
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify -P '!R-install-deps'
-          -pl lib/R/pathlyr -am
+          -pl lib/R -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
   site:
