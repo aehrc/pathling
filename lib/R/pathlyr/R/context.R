@@ -95,7 +95,7 @@ StorageType <- list(
 ptl_connect <- function(
     spark = NULL,
     max_nesting_level = 3,
-    enable_extensions = FALSE, 
+    enable_extensions = FALSE,
     enabled_open_types = c(
         "boolean", "code", "date", "dateTime", "decimal", "integer",
         "string", "Coding", "CodeableConcept", "Address", "Identifier", "Reference"
@@ -124,6 +124,10 @@ ptl_connect <- function(
     enable_delta = FALSE
 ) {
 
+
+  spark_info <- ptl_spark_info()
+
+
   new_spark_connection <- function() {
     config <- if (enable_delta) {
       list(
@@ -136,7 +140,7 @@ ptl_connect <- function(
     } else {
       sparklyr::spark_config()
     }
-    sparklyr::spark_connect(master = "local", config = config)
+    sparklyr::spark_connect(master = "local", config = config, version = spark_info$spark_version)
   }
 
   spark <- if (!is.null(spark)) {
@@ -144,7 +148,13 @@ ptl_connect <- function(
   } else {
     new_spark_connection()
   }
-  
+
+  spark_runtime_version <- sparklyr::spark_version(spark)
+  if (package_version(spark_runtime_version) < spark_info$spark_version) {
+    warn(sprintf("Incompatible version of spark: %s, while Pathling requires at least: %s",
+                 spark_runtime_version, spark_info$spark_version))
+  }
+
   encoders_config <- spark %>%
       j_invoke_static(
           "au.csiro.pathling.config.EncodingConfiguration", "builder") %>%
@@ -203,7 +213,7 @@ ptl_connect <- function(
       j_invoke("build")
 
   j_invoke_static(spark, "au.csiro.pathling.library.PathlingContext", "create",
-                  sparklyr::spark_session(spark), 
+                  sparklyr::spark_session(spark),
                   encoders_config, terminology_config)
 }
 
@@ -243,7 +253,7 @@ ptl_disconnect <- function(pc) {
 #' @rdname ptl_context
 #' 
 #' @export
-ptl_disconnect_all <-function () {
+ptl_disconnect_all <- function() {
   sparklyr::spark_disconnect_all()
   invisible(NULL)
 }
