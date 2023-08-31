@@ -58,6 +58,9 @@
     <pathling.pathlyr.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.pathlyr.version.base>
     <pathling.pathlyr.version.qualifier>.9000</pathling.pathlyr.version.qualifier>
     <pathling.pathlyr.version>${pathling.pathlyr.version.base}${pathling.pathlyr.version.qualifier}</pathling.pathlyr.version>
+    <!-- TODO: This to to deal with the spaklyr bug. In general it should be the same as the spark version -->
+    <pathling.pathlyr.sparkVersion>3.3.1</pathling.pathlyr.sparkVersion>
+    <pathling.pathlry.hadoopVersion>${pathling.hadoopMajorVersion}</pathling.pathlry.hadoopVersion>
     <!--suppress UnresolvedMavenProperty -->
     <skipPathlyrTests>${skipTests}</skipPathlyrTests>
   </properties>
@@ -184,9 +187,9 @@
                 <argument>-e</argument>
                 <argument>s/%pathling.pathlyr.version%/${pathling.pathlyr.version}/</argument>
                 <argument>-e</argument>
-                <argument>s/%pathling.pathlyr.sparkVersion%/${pathling.sparkVersion}/</argument>
+                <argument>s/%pathling.pathlyr.sparkVersion%/${pathling.pathlyr.sparkVersion}/</argument>
                 <argument>-e</argument>
-                <argument>s/%pathling.pathlyr.hadoopVersion%/${pathling.hadoopMajorVersion}/</argument>
+                <argument>s/%pathling.pathlyr.hadoopVersion%/${pathling.pathlry.hadoopVersion}/</argument>
                 <argument>${project.basedir}/DESCRIPTION.src</argument>
               </arguments>
               <outputFile>${project.basedir}/DESCRIPTION</outputFile>
@@ -290,7 +293,7 @@
                     <argument>-e</argument>
                     <argument>devtools::install_dev_deps()</argument>
                     <argument>-e</argument>
-                    <argument>sparklyr::spark_install(version='${pathling.sparkVersion}', hadoop='${pathling.hadoopMajorVersion}')</argument>
+                    <argument>sparklyr::spark_install(version='${pathling.pathlyr.sparkVersion}', hadoop_version='${pathling.pathlry.hadoopVersion}')</argument>
                   </arguments>
                 </configuration>
               </execution>

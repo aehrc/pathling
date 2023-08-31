@@ -49,7 +49,7 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #' data_source %>% ds_aggregate('Patient',
 #'      aggregations = c(patientCount='count()', 'id.count()'),
 #'      groupings = c('gender', givenName='name.given'),
-#'      filters = c('active = true')
+#'      filters = c('birthDate > @1950-01-01')
 #' )
 #' ptl_disconnect(pc)
 ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), filters = NULL) {
@@ -102,7 +102,7 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), fi
 #' data_source <- pc %>% ptl_read_ndjson(pathlyr_examples('ndjson'))
 #' data_source %>% ds_extract('Patient',
 #'      columns = c('gender', givenName='name.given'),
-#'      filters = c('active = true')
+#'      filters = c('birthDate > @1950-01-01')
 #' )
 #' ptl_disconnect(pc)
 ds_extract <- function(ds, subject_resource, columns, filters = NULL) {

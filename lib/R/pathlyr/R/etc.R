@@ -34,7 +34,16 @@ ptl_spark_info <- function() {
   )
 }
 
-ptl_spark_install <- function() {
+
+#' Installs the version of Spark/Hadoop required by PathLyr.
+#' 
+#' @description
+#' Installs the version of Spark/Hadoop required defined in the package metadata 
+#' using the sparklyr package  \code{spark_install} function.
+#' 
+#' @return List with information about the installed version.
+#' @export
+pathlyr_install_spark <- function() {
   spark_info <- ptl_spark_info()
   sparklyr::spark_install(version = spark_info$spark_version, hadoop_version = spark_info$hadoop_version)
 }
