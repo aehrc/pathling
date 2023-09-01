@@ -151,7 +151,7 @@ ptl_connect <- function(
 
   spark_runtime_version <- sparklyr::spark_version(spark)
   if (package_version(spark_runtime_version) < spark_info$spark_version) {
-    warn(sprintf("Incompatible version of spark: %s, while Pathling requires at least: %s",
+    warning(sprintf("Incompatible version of spark: %s, while Pathling requires at least: %s",
                  spark_runtime_version, spark_info$spark_version))
   }
 

@@ -250,6 +250,7 @@
               <goal>exec</goal>
             </goals>
             <configuration>
+              <skip>${skipRapiTests}</skip>
               <executable>R</executable>
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>

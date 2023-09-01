@@ -7,7 +7,7 @@
 .gitkeep$
 ^derby.log$
 ^pom.xml$
-^pathlyr.iml$
+^.*\.iml$
 ^examples$
 ^DESCRIPTION.src$
 ^README-dev.md$
