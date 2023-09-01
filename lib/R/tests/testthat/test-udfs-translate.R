@@ -103,7 +103,7 @@ test_that("translate", {
               !!trm_to_coding("55915-3", LOINC_URI),
               "http://snomed.info/sct?fhir_cm=200",
               reverse = TRUE,
-              equivalences = c("relatedto")
+              equivalences = "relatedto"
           )
       )
 

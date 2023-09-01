@@ -52,7 +52,7 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #'      filters = c('birthDate > @1950-01-01')
 #' )
 #' ptl_disconnect(pc)
-ds_aggregate <- function(ds, subject_resource, aggregations, groupings = c(), filters = NULL) {
+ds_aggregate <- function(ds, subject_resource, aggregations, groupings = NULL, filters = NULL) {
   q <- j_invoke(ds, "aggregate", as.character(subject_resource))
   
   for_each_with_name(aggregations, function(expression, name) {

@@ -113,8 +113,8 @@ test_that("test datasource aggregate with no grouping", {
   # ... previous setup code ...
 
   ResultRow <- tibble::tibble(
-      patient_count = c(9),
-      id_count = c(9)
+      patient_count = 9,
+      id_count = 9
   )
 
   agg_result <- ds_aggregate(

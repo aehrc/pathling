@@ -41,7 +41,7 @@ test_that("property_of", {
       id = c("id-1", "id-2", "id-3"),
       result = list(
         logical(0),
-        c(FALSE),
+        FALSE,
         NA
       )
     )
