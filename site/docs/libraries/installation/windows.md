@@ -16,11 +16,24 @@ To solve this problem, you can do the following:
    you can extract it to `C:\hadoop`.
 3. Set the `HADOOP_HOME` environment variable to the `hadoop-3.0.0` subdirectory
    within the installation directory, e.g. `c:\hadoop\hadoop-3.0.0`.
+4. Add `%HADOOP_HOME%\bin` to the `PATH` environment variable.
 
 You can set an environment variable in Windows by right-clicking on "This PC"
 and selecting "Properties", then clicking on "Advanced system settings", then
-clicking on "Environment Variables". You will need administrator privileges on
+clicking on "Environment Variables". You will need to use "System variables",
+rather than "User variables". You will need administrator privileges on
 the computer to be able to do this.
+
+To verify that the variables have been set correctly, open a new command prompt
+and run:
+
+```cmd
+dir %HADOOP_HOME%
+hadoop
+```
+
+If this executes successfully, finding the Hadoop executable and printing the 
+help text, then the variables have been set correctly.
 
 As with other operating systems, you also need to have Java 11 installed and
 the `JAVA_HOME` environment variable set to its installation location. We

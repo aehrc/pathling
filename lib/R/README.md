@@ -22,29 +22,6 @@ Hadoop on Windows. These are described in
 the [Pathling Windows Installation](https://pathling.csiro.au/docs/libraries/installation/windows)
 documentation.
 
-In addition `%HADOOP_HOME%\bin` needs to be added to the `PATH` environment
-variable.
-
-Both env variables (`HADOOP_HOME` and `PATH`) need to be set
-as `System variables`, not user variables. In order toset the `HADOOP_HOME`
-variable use the `Browse Directory ...`  button, as typing the path in the text
-box may not work.
-
-To verify that the variables are set correctly open a new command prompt and
-run:
-
-```cmd
-dir %HADOOP_HOME%
-hadoop
-```
-
-Both commands should run without errors.
-
-Also, please be aware that Windows does not allow deleting files that are in
-use. This may lead to some problems in removing/upgrading 'pathling' package if
-the current version is being uses by Spark/JVM process running in a background,
-either for an exising pathling session or one that was not properly closed.
-
 # Getting Started
 
 The example below shows how to use `pathling` terminology functions to find
