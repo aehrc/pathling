@@ -1,11 +1,11 @@
-R sparklyr API for Pathling
-=======================
+R API for Pathling
+==================
 
-``pathling`` package is the R [sparklyr](https://spark.rstudio.com/) API
-for [Pathling](https://pathling.csiro.au). It provides a set of functions that
-aid the use of FHIR terminology services and FHIR data within R code.
+``pathling`` package is the R API for [Pathling](https://pathling.csiro.au),
+based on [sparklyr](https://spark.rstudio.com/). It provides a set of functions
+that aid the use of FHIR terminology services and FHIR data within R code.
 
-# Local Installation
+## Local installation
 
 Prerequisites: `R >= 3.5.0` (has been tested with `R 4.3.1`)
 
@@ -15,14 +15,19 @@ Prerequisites: `R >= 3.5.0` (has been tested with `R 4.3.1`)
 * Install Spark version required by
   Pathling: `pathling::pathling_spark_install()`
 
-## Running on Windows
+### Running on Windows
 
 Additional steps are required to run Pathling on Windows, related to setting up
 Hadoop on Windows. These are described in
 the [Pathling Windows Installation](https://pathling.csiro.au/docs/libraries/installation/windows)
 documentation.
 
-# Getting Started
+### Running on Databricks
+
+See [Pathling Databricks installation](https://pathling.csiro.au/docs/libraries/installation/databricks) for instructions on how to install
+the Pathling R API on Databricks.
+
+## Getting started
 
 The example below shows how to use `pathling` terminology functions to find
 codes and names of viral diseases in an R data frame. The dataframe `conditions`
@@ -32,22 +37,23 @@ is an example dataset that comes with the `pathling` package.
 library(sparklyr)
 library(pathling)
 
-# create a default pathling context
+# Create a default Pathling context.
 pc <- ptl_connect()
 
-# copy the R data frame to the spark data frame
+# Copy the R data frame to a Spark data frame.
 conditions_sdf <- pc %>%
         ptl_spark() %>%
         copy_to(conditions, overwrite = TRUE)
 
 
-# define an ECL expression for viral diseases
+# Define an ECL expression for viral diseases.
 VIRAL_DISEASE_ECL <- '<< 64572001|Disease| : (
       << 370135005|Pathological process| = << 441862004|Infectious process|,
       << 246075003|Causative agent| = << 49872002|Virus|
     )'
 
-# use pathling terminology functions and dplr verbs to find codes for viral diseases and obtain their display names
+# Use Pathling terminology functions and dplyr verbs to find codes for viral 
+# diseases and obtain their display names.
 result <- conditions_sdf %>%
         filter(!!trm_member_of(!!trm_to_snomed_coding(CODE), !!trm_to_ecl_value_set(VIRAL_DISEASE_ECL))) %>%
         mutate(DISPLAY_NAME = !!trm_display(!!trm_to_snomed_coding(CODE))) %>%
@@ -55,10 +61,10 @@ result <- conditions_sdf %>%
         distinct() %>%
         collect()
 
-# disconnect from the pathling context
+# Disconnect from the Pathling context.
 pc %>% ptl_disconnect()
 
-# as we used `collect()` `result` is also an R data frame
+# As we used collect(), result is also an R data frame.
 result %>% show()
 ```
 
@@ -75,39 +81,14 @@ This should produce the following output:
 Please note that in this example both the input and output are R data frames,
 even though internally they were processed as Spark/Sparklyr data frames.
 
-To find out about other `pathling` capabilities please explore the examples in
+To find out about other Pathling capabilities please explore the examples in
 the help topics for `pathling` functions. In particular these are some good
-staring points:
+starting points:
 
-- `?ptl_connect` for information about creating and configuring pathling
+- `?ptl_connect` for information about creating and configuring Pathling
   contexts.
 - `?trm_display` and `?trm_to_snomed_coding` for terminology functions.
 - `?ds_aggregate` and `?ds_extract` for pathling queries.
 - `?ptl_encode` for encoding of FHIR resources into data frames.
 - `?ptl_read_ndjson` and `?ds_write_ndjson` for reading and writing FHIR
   resources in various formats.
-
-# Running on Databricks
-
-Setup the cluster using the instructions
-from [Pathling Databricks Installation](https://pathling.csiro.au/docs/libraries/installation/databricks)
-, skipping the installation of the `python` package from `PyPI`.
-
-In the notebook use the following code to install the R package and connect to
-the Databricks cluster:
-
-```r
-# install 'pathling' if not installed
-# replace PACKAGE_URL with the URL of the package source distribution
-if (!nzchar(system.file(package = 'pathling'))) {
-    remotes::install_url(PACKAGE_URL, upgrade = FALSE)
-}
-
-library(pathling)
-pc <- ptl_connect(sparklyr::spark_connect(method = "databricks"))
-
-# code to use pathling here
-# ...
-
-ptl_disconnect(pc)
-```

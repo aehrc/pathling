@@ -9,8 +9,6 @@ server from within your queries and transformations.
 
 import Tabs from "@theme/Tabs"; 
 import TabItem from "@theme/TabItem"; 
-import { JavaInstallation, PythonInstallation, ScalaInstallation } 
-    from "../../src/components/installation";
 
 ### Value set membership
 

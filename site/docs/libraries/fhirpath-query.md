@@ -10,11 +10,6 @@ custom views.
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
-import {
-JavaInstallation,
-PythonInstallation,
-ScalaInstallation
-} from "../../src/components/installation";
 
 ## Extract
 
