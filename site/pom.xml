@@ -119,6 +119,12 @@
           <artifactId>python</artifactId>
           <classifier>docs</classifier>
         </dependency>
+        <!-- This is the docs JAR that is built by the R API module. -->
+        <dependency>
+          <groupId>au.csiro.pathling</groupId>
+          <artifactId>r</artifactId>
+          <classifier>docs</classifier>
+        </dependency>
         <!-- Lombok is required for Javadoc generation. -->
         <dependency>
           <groupId>org.projectlombok</groupId>
@@ -151,6 +157,19 @@
                   <includeArtifactIds>python</includeArtifactIds>
                   <excludeTransitive>true</excludeTransitive>
                   <outputDirectory>${project.build.directory}/site/docs/python</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
+                <id>unpack-r-docs</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
+                  <includeArtifactIds>r</includeArtifactIds>
+                  <excludeTransitive>true</excludeTransitive>
+                  <outputDirectory>${project.build.directory}/site/docs/r</outputDirectory>
                 </configuration>
               </execution>
               <execution>

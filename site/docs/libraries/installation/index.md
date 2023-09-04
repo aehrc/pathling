@@ -12,7 +12,7 @@ Prerequisites:
 
 To install, run this command:
 
-```bash
+```
 pip install pathling  
 ```
 

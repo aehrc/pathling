@@ -236,6 +236,12 @@
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
+        <artifactId>r</artifactId>
+        <version>${project.version}</version>
+        <classifier>docs</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
         <artifactId>js</artifactId>
         <version>${project.version}</version>
       </dependency>
