@@ -1,6 +1,6 @@
 Package: pathling
 Type: Package
-Title: Pathling R API for Sparklyr
+Title: A library for using Pathling with R
 Version: %pathling.Rapi.version%
 Authors@R:
     c(
@@ -13,9 +13,8 @@ Authors@R:
              role = "aut",
              email = "john.grimes@csiro.au")
      )
-Maintainer: Piotr Szul <piotr.szul@csiro.au>
-Description: Sparklyr based API for Pathling 
-    with support for encoding, terminology and queries.
+Maintainer: Australian e-Health Research Centre, CSIRO <ontoserver-support@csiro.au>
+Description: R API for Pathling with support for encoding, terminology and queries.
 License: Apache License 2.0 | file LICENSE
 URL: https://pathling.csiro.au/
 BugReports: https://github.com/aehrc/pathling/issues
