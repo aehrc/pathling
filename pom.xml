@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>6.3.1</version>
+  <version>6.4.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -78,6 +78,7 @@
     <pathling.deltaVersion>2.3.0</pathling.deltaVersion>
     <!-- Hadoop is currently pinned to 3.3.4 because of this vulnerability: CVE-2022-26612 -->
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
+    <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>6.6.1</pathling.hapiFhirVersion>
     <pathling.springBootVersion>2.7.15</pathling.springBootVersion>
     <pathling.springSecurityVersion>5.7.10</pathling.springSecurityVersion>
@@ -107,6 +108,7 @@
     <module>lib/import</module>
     <module>lib/js</module>
     <module>lib/python</module>
+    <module>lib/R</module>
     <module>site</module>
     <module>utilities</module>
   </modules>
@@ -191,6 +193,13 @@
         <artifactId>library-api</artifactId>
         <version>${project.version}</version>
         <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>library-api</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
