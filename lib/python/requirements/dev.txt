@@ -5,5 +5,5 @@ pytest==7.4.0
 ipython==8.10.0
 wheel==0.40.0
 twine==4.0.2
-build==0.10.0
+build==1.0.0
 pytest-cov==4.1.0
