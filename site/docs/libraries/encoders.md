@@ -43,6 +43,23 @@ patients.select('id', 'gender', 'birthDate').show()
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- ptl_connect()
+
+ndjson <- '/some/path/ndjson/Condition.ndjson'
+json_resources <- ptl_spark(pc) %>% spark_read_text(ndjson)
+
+pc %>% ptl_encode(json_resources, 'Condition') %>% show()
+
+pc %>% ptl_disconnect()
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -119,6 +136,23 @@ patients = pc.encode_bundle(bundles, 'Patient')
 
 # Do some stuff.
 patients.select('id', 'gender', 'birthDate').show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- ptl_connect()
+
+bundles_dir <- '/some/path/bundles'
+json_bundles <- ptl_spark(pc) %>% spark_read_text(bundles_dir, whole = TRUE)
+
+pc %>% ptl_encode_bundle(json_bundles, 'Condition', column = 'contents') %>% show()
+
+pc %>% ptl_disconnect()
 ```
 
 </TabItem>
