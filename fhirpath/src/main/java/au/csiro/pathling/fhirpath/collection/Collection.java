@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
@@ -43,7 +44,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Getter
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 public class Collection implements Comparable, Numeric {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
@@ -98,8 +99,26 @@ public class Collection implements Comparable, Numeric {
   private Optional<? extends NodeDefinition> definition;
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
-   * ElementDefinition}.
+   * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
+   * definition.
+   *
+   * @param column a {@link Column} containing the result of the expression
+   * @param fhirPathType the {@link FhirPathType} that this path should be based upon
+   * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
+   * @param definition the {@link ElementDefinition} that this path should be based upon
+   * @return a new {@link Collection}
+   */
+  @Nonnull
+  public static Collection build(@Nonnull final Column column,
+      @Nonnull final Optional<FhirPathType> fhirPathType,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    return new Collection(column, fhirPathType, fhirType, definition);
+  }
+
+  /**
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied
+   * {@link ElementDefinition}.
    * <p>
    * Use this builder when the path is the child of another path, and will need to be traversable.
    *
@@ -112,16 +131,16 @@ public class Collection implements Comparable, Numeric {
       @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
-      return getInstance(column, Optional.empty(), Optional.of(definition));
+      return getInstance(column, optionalFhirType, Optional.of(definition));
     } else {
       throw new IllegalArgumentException(
-          "Attempted to build an ElementPath with an ElementDefinition with no fhirType");
+          "Attempted to build a Collection with an ElementDefinition with no fhirType");
     }
   }
 
   /**
-   * Builds the appropriate subtype of {@link Collection} based upon the supplied {@link
-   * FHIRDefinedType}.
+   * Builds the appropriate subtype of {@link Collection} based upon the supplied
+   * {@link FHIRDefinedType}.
    * <p>
    * Use this builder when the path is derived, e.g. the result of a function.
    *
@@ -152,10 +171,10 @@ public class Collection implements Comparable, Numeric {
       final Constructor<? extends Collection> constructor = elementPathClass
           .getDeclaredConstructor(Column.class, Optional.class, Optional.class, Optional.class);
       return constructor
-          .newInstance(column, Optional.of(fhirPathType), Optional.of(fhirType), definition);
+          .newInstance(column, Optional.ofNullable(fhirPathType), fhirType, definition);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
-        InvocationTargetException e) {
-      throw new RuntimeException("Problem building an FhirPath object", e);
+                   InvocationTargetException e) {
+      throw new RuntimeException("Problem building a Collection object", e);
     }
   }
 
@@ -264,7 +283,7 @@ public class Collection implements Comparable, Numeric {
 
   /**
    * Creates a null {@link Collection}.
-   * 
+   *
    * @return the null collection.
    */
   @Nonnull

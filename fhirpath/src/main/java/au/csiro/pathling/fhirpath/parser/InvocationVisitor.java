@@ -79,7 +79,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
       @Nullable final MemberInvocationContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
-    
+
     // TODO: refactor to an expression
     return (input, c) -> {
       try {
@@ -93,7 +93,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
           // TODO: what is this about?
           // If it is not a valid path traversal, see if it is a valid type specifier.
           final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
-          return new Collection(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),
+          return Collection.build(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),
               Optional.of(fhirType), Optional.empty());
 
         } catch (final FHIRException e2) {
@@ -117,7 +117,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
       @Nullable final FunctionInvocationContext ctx) {
 
     final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
-    
+
     @Nullable final ParamListContext paramList = ctx.function().paramList();
     final Visitor paramListVisitor = new Visitor(context);
     final List<FhirPath<Collection, Collection>> arguments = Optional.ofNullable(paramList)
@@ -126,8 +126,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
             .map(paramListVisitor::visit)
             .collect(toList())
         ).orElse(new ArrayList<>());
-    
-    
+
     // TODO: refactor to an expression
     return (input, c) -> {
       final NamedFunction function;
@@ -143,19 +142,22 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitThisInvocation(@Nullable final ThisInvocationContext ctx) {
+  public FhirPath<Collection, Collection> visitThisInvocation(
+      @Nullable final ThisInvocationContext ctx) {
     return (input, c) -> input;
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitIndexInvocation(@Nullable final IndexInvocationContext ctx) {
+  public FhirPath<Collection, Collection> visitIndexInvocation(
+      @Nullable final IndexInvocationContext ctx) {
     throw new InvalidUserInputError("$index is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitTotalInvocation(@Nullable final TotalInvocationContext ctx) {
+  public FhirPath<Collection, Collection> visitTotalInvocation(
+      @Nullable final TotalInvocationContext ctx) {
     throw new InvalidUserInputError("$total is not supported");
   }
 

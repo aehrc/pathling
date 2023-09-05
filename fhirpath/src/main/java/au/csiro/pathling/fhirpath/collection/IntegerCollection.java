@@ -52,16 +52,25 @@ public class IntegerCollection extends Collection implements
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(IntegerCollection.class, DecimalCollection.class);
 
-  public IntegerCollection(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    super(column, Optional.of(FhirPathType.INTEGER), Optional.of(FHIRDefinedType.INTEGER),
-        definition);
+  protected IntegerCollection(@Nonnull final Column column,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link IntegerCollection}
+   */
   @Nonnull
   public static IntegerCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new IntegerCollection(column, definition);
+    return new IntegerCollection(column, Optional.of(FhirPathType.INTEGER),
+        Optional.of(FHIRDefinedType.INTEGER), definition);
   }
 
   /**
@@ -74,7 +83,7 @@ public class IntegerCollection extends Collection implements
   public static IntegerCollection fromLiteral(@Nonnull final String fhirPath)
       throws NumberFormatException {
     final int value = Integer.parseInt(fhirPath);
-    return new IntegerCollection(lit(value), Optional.empty());
+    return IntegerCollection.build(lit(value), Optional.empty());
   }
 
   @Nonnull

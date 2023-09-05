@@ -57,15 +57,24 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
   public QuantityCollection(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    super(column, Optional.of(FhirPathType.QUANTITY), Optional.of(FHIRDefinedType.QUANTITY),
-        definition);
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link QuantityCollection}
+   */
   @Nonnull
   public static QuantityCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new QuantityCollection(column, definition);
+    return new QuantityCollection(column, Optional.of(FhirPathType.QUANTITY),
+        Optional.of(FHIRDefinedType.QUANTITY), definition);
   }
 
   /**

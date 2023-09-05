@@ -42,10 +42,25 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(BooleanCollection.class);
 
-  public BooleanCollection(@Nonnull final Column column,
+  protected BooleanCollection(@Nonnull final Column column,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
+  }
+
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link BooleanCollection}
+   */
+  @Nonnull
+  public static BooleanCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
-    super(column, Optional.of(FhirPathType.BOOLEAN), Optional.of(FHIRDefinedType.BOOLEAN),
-        definition);
+    return new BooleanCollection(column, Optional.of(FhirPathType.BOOLEAN),
+        Optional.of(FHIRDefinedType.BOOLEAN), definition);
   }
 
   /**
@@ -57,13 +72,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   @Nonnull
   public static BooleanCollection fromLiteral(@Nonnull final String literal) {
     final boolean value = literal.equals("true");
-    return new BooleanCollection(lit(value), Optional.empty());
-  }
-
-  @Nonnull
-  public static BooleanCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    return new BooleanCollection(column, definition);
+    return BooleanCollection.build(lit(value), Optional.empty());
   }
 
   @Nonnull

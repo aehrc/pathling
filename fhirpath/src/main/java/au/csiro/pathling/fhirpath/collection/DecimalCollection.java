@@ -50,13 +50,20 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   private static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
-  public DecimalCollection(@Nonnull final Column column,
+  protected DecimalCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<NodeDefinition> definition) {
     super(column, fhirPathType, fhirType, definition);
   }
 
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link DecimalCollection}
+   */
   @Nonnull
   public static DecimalCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {

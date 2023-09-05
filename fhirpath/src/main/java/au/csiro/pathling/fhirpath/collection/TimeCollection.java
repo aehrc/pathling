@@ -40,15 +40,24 @@ import org.hl7.fhir.r4.model.TimeType;
 public class TimeCollection extends Collection implements Materializable<TimeType>,
     Comparable, StringCoercible {
 
-  public TimeCollection(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    super(column, Optional.of(FhirPathType.TIME), Optional.of(FHIRDefinedType.TIME), definition);
+  public TimeCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link TimeCollection}
+   */
   @Nonnull
   public static TimeCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new TimeCollection(column, definition);
+    return new TimeCollection(column, Optional.of(FhirPathType.TIME),
+        Optional.of(FHIRDefinedType.TIME), definition);
   }
 
   /**

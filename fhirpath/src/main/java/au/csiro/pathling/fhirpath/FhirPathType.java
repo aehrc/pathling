@@ -1,6 +1,7 @@
 package au.csiro.pathling.fhirpath;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Getter;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -36,7 +37,7 @@ public enum FhirPathType {
    * @return the corresponding {@link FhirPathType} according to the rules of automatic conversion
    * within the FHIR spec
    */
-  @Nonnull
+  @Nullable
   public static FhirPathType forFhirType(@Nonnull final FHIRDefinedType fhirType) {
     return FhirTypeMapping.get(fhirType);
   }

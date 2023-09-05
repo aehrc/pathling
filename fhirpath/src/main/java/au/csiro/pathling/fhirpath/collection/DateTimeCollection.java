@@ -54,10 +54,25 @@ public class DateTimeCollection extends Collection implements
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DateCollection.class, DateTimeCollection.class);
 
-  public DateTimeCollection(@Nonnull final Column column,
+  protected DateTimeCollection(@Nonnull final Column column,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
+  }
+
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link DateTimeCollection}
+   */
+  @Nonnull
+  public static DateTimeCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
-    super(column, Optional.of(FhirPathType.DATETIME), Optional.of(FHIRDefinedType.DATETIME),
-        definition);
+    return new DateTimeCollection(column, Optional.of(FhirPathType.DATETIME),
+        Optional.of(FHIRDefinedType.DATETIME), definition);
   }
 
   /**
@@ -68,15 +83,10 @@ public class DateTimeCollection extends Collection implements
    * @throws ParseException if the literal is malformed
    */
   @Nonnull
-  public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath) throws ParseException {
+  public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
+      throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
     return DateTimeCollection.build(lit(dateString), Optional.empty());
-  }
-  
-  @Nonnull
-  public static DateTimeCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    return new DateTimeCollection(column, definition);
   }
 
   @Nonnull

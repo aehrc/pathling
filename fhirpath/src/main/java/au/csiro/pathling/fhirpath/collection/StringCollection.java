@@ -46,16 +46,24 @@ import org.hl7.fhir.r4.model.UuidType;
  */
 public class StringCollection extends Collection implements Materializable<PrimitiveType> {
 
-  public StringCollection(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    super(column, Optional.of(FhirPathType.STRING), Optional.of(FHIRDefinedType.STRING),
-        definition);
+  public StringCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link StringCollection}
+   */
   @Nonnull
   public static StringCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new StringCollection(column, definition);
+    return new StringCollection(column, Optional.of(FhirPathType.STRING),
+        Optional.of(FHIRDefinedType.STRING), definition);
   }
 
   /**

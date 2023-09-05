@@ -41,7 +41,7 @@ import org.apache.spark.sql.SparkSession;
  */
 @Name("where")
 public class WhereFunction implements NamedFunction<Collection> {
-  
+
   @Nonnull
   @Override
   public Collection invoke(@Nonnull final FunctionInput input) {
@@ -52,7 +52,7 @@ public class WhereFunction implements NamedFunction<Collection> {
 
     final Column column = filter(previous.getColumn(), element -> {
       final Collection result = argument.apply(
-          new Collection(element, previous.getType(), previous.getFhirType(),
+          Collection.build(element, previous.getType(), previous.getFhirType(),
               Optional.empty()), input.getContext());
       final SparkSession spark = input.getContext().getSparkSession();
       final FhirPathType type = checkPresent(result.getType());
@@ -61,7 +61,7 @@ public class WhereFunction implements NamedFunction<Collection> {
       return result.getColumn();
     });
 
-    return new Collection(column, previous.getType(), previous.getFhirType(), Optional.empty());
+    return Collection.build(column, previous.getType(), previous.getFhirType(), Optional.empty());
   }
 
 }

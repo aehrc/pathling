@@ -21,6 +21,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
@@ -33,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -47,6 +50,7 @@ import scala.collection.JavaConverters;
  *
  * @author John Grimes
  */
+@Getter
 public class ResourceCollection extends Collection {
 
   /**
@@ -55,26 +59,29 @@ public class ResourceCollection extends Collection {
   @Nonnull
   private final Map<String, Column> elementsToColumns;
 
+  /**
+   * The {@link ResourceDefinition} for this resource type.
+   */
   @Nonnull
   private final ResourceDefinition resourceDefinition;
 
+  /**
+   * The {@link Dataset} containing the resource data.
+   */
   @Nonnull
   private final Dataset<Row> dataset;
 
-
-  public ResourceCollection(@Nonnull final Dataset<Row> dataset, @Nonnull final Column column,
-      @Nonnull final ResourceDefinition definition,
-      @Nonnull final Map<String, Column> elementsToColumns) {
-    super(column, Optional.empty(), getFhirType(definition.getResourceType()),
-        Optional.of(definition));
-    this.dataset = dataset;
+  protected ResourceCollection(@Nonnull final Column column,
+      @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition,
+      @Nonnull final Map<String, Column> elementsToColumns,
+      @Nonnull final ResourceDefinition resourceDefinition,
+      @Nonnull final Dataset<Row> dataset) {
+    super(column, type, fhirType, definition);
     this.elementsToColumns = elementsToColumns;
-    this.resourceDefinition = definition;
-  }
-  
-  @Nonnull
-  public Dataset<Row> getDataset() {
-    return dataset;
+    this.resourceDefinition = resourceDefinition;
+    this.dataset = dataset;
   }
 
   @Nonnull
@@ -112,7 +119,9 @@ public class ResourceCollection extends Collection {
         .collect(Collectors.toMap(Function.identity(), functions::col, (a, b) -> null));
 
     // We use the ID column as the value column for a ResourcePath.
-    return new ResourceCollection(dataset, functions.col("id"), definition, elementsToColumns);
+    return new ResourceCollection(functions.col("id"), Optional.empty(),
+        getFhirType(resourceType), Optional.of(definition), elementsToColumns, definition,
+        dataset);
   }
 
   /**
@@ -152,6 +161,9 @@ public class ResourceCollection extends Collection {
             + " Check if extension support was enabled when data were imported!");
   }
 
+  /**
+   * @return the {@link ResourceType} of this resource collection
+   */
   public ResourceType getResourceType() {
     return resourceDefinition.getResourceType();
   }

@@ -49,15 +49,24 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class DateCollection extends Collection implements Materializable<DateType>,
     Comparable, Temporal, StringCoercible {
 
-  public DateCollection(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
-    super(column, Optional.of(FhirPathType.DATE), Optional.of(FHIRDefinedType.DATE), definition);
+  protected DateCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
+      @Nonnull final Optional<FHIRDefinedType> fhirType,
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
+  /**
+   * Returns a new instance with the specified column and definition.
+   *
+   * @param column The column to use
+   * @param definition The definition to use
+   * @return A new instance of {@link DateCollection}
+   */
   @Nonnull
   public static DateCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new DateCollection(column, definition);
+    return new DateCollection(column, Optional.of(FhirPathType.DATE),
+        Optional.of(FHIRDefinedType.DATE), definition);
   }
 
   /**
