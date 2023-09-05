@@ -9,6 +9,8 @@ spring:
 # Actuator endpoints let you monitor and interact with your application.
 # <https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints>
 management:
+  server:
+    port: 8081
   endpoints:
     web:
       exposure:
@@ -84,7 +86,7 @@ pathling:
 
       # When GA4GH passport authentication is enabled, this option configures the list of endpoints
       # that are allowed to issue visas.
-      allowedVisaIssuers: []
+      allowedVisaIssuers: [ ]
 
   # This section configures HTTP caching response headers.
   httpCaching:
@@ -105,8 +107,8 @@ pathling:
   # This section configures the CORS functionality of the server.
   # For more information, see: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   cors:
-    allowedOrigins: []
-    allowedOriginPatterns: []
+    allowedOrigins: [ ]
+    allowedOriginPatterns: [ ]
     allowedMethods:
       - OPTIONS
       - GET
