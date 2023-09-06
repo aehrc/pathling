@@ -15,6 +15,10 @@ management:
     web:
       exposure:
         include: "health,prometheus"
+  endpoint:
+    health:
+      probes:
+        add-additional-paths: true
 
 pathling:
   # Controls the description of this server as displayed within the FHIR CapabilityStatement.
