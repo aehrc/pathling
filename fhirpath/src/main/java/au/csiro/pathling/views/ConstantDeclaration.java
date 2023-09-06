@@ -4,24 +4,32 @@ import javax.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * An optional list of constants that can be used in any FHIRPath expression in the view definition.
- *  These are effectively strings or numbers that can be injected into FHIRPath expressions below by
- * having {@code %constantName`} in  the expression.
+ * Constant that can be used in FHIRPath expressions.
+ * <p>
+ * A constant is a string that is injected into a FHIRPath expression through the use of a FHIRPath
+ * external constant with the same name.
  *
  * @author John Grimes
+ * @see <a
+ * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
  */
 @Data
 public class ConstantDeclaration {
 
   /**
-   * The name of the variable that can be referenced by following variables or columns, where users
-   * would use the {@code %variable_name} syntax.
+   * Name of constant (referred to in FHIRPath as {@code %[name]}).
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant.name">ViewDefinition.constant.name</a>
    */
   @NotNull
   String name;
 
   /**
-   * The value of the constant name to be used in expressions below.
+   * The string that will be substituted in place of the constant reference.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant.value">ViewDefinition.constant.value</a>
    */
   @NotNull
   String value;

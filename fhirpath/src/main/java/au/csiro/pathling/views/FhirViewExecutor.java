@@ -82,7 +82,7 @@ public class FhirViewExecutor {
         .reduce(Column::and);
 
     final Dataset<Row> subjectDataset = dataSource.read(resourceType);
-    
+
     return filterCondition
         .map(subjectDataset::filter)
         .orElse(subjectDataset)
@@ -117,9 +117,9 @@ public class FhirViewExecutor {
   @Nonnull
   private List<Column> directSelection(@Nonnull final ParserContext context,
       @Nonnull final DirectSelection select, @Nonnull final List<Column> currentSelection) {
-    final Collection path = evalExpression(select.getExpression(), context);
+    final Collection path = evalExpression(select.getPath(), context);
     final List<Column> newColumns = new ArrayList<>(currentSelection);
-    newColumns.add(path.getColumn().alias(select.getName()));
+    newColumns.add(path.getColumn().alias(select.getAlias()));
     return newColumns;
   }
 
@@ -128,10 +128,11 @@ public class FhirViewExecutor {
   private List<Column> nestedSelection(final @Nonnull ParserContext context,
       @Nonnull final NestedSelectClause select, @Nonnull final List<Column> currentSelection,
       final boolean unnest) {
-    final Collection from = evalExpression(select.getExpression(), context);
+    final Collection from = evalExpression(select.getPath(), context);
     final Collection nextInputContext = unnest
                                         // TODO: FIX FIRST
-                                        ? from // .unnest()
+                                        ? from
+                                        // .unnest()
                                         : from;
     final ParserContext nextContext = context.withInputContext(nextInputContext);
     return parseSelect(select.getSelect(), nextContext, currentSelection);

@@ -29,6 +29,7 @@ import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import au.csiro.pathling.views.SelectClauseTypeAdapterFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import javax.annotation.Nonnull;
@@ -93,14 +94,14 @@ public class UnitTestDependencies {
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static FhirContext fhirContext() {
+  public static FhirContext fhirContext() {
     return FhirContext.forR4();
   }
 
   @Bean
   @ConditionalOnMissingBean
   @Nonnull
-  static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
+  public static IParser jsonParser(@Nonnull final FhirContext fhirContext) {
     return fhirContext.newJsonParser();
   }
 

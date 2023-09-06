@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import lombok.Data;
 
@@ -14,60 +15,73 @@ import lombok.Data;
  * may shift to defining views as true FHIR resources.
  *
  * @author John Grimes
+ * @see <a
+ * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition.html">ViewDefinition</a>
  */
 @Data
 public class FhirView {
 
   /**
-   * Name of the FHIR view to be created. View runners can use this in whatever way is appropriate
-   * for their use case, such as a database view or table name.
-   * <p>
-   * The name is limited to letters, numbers, or underscores and cannot start with an underscore --
-   * i.e. with a regular expression of {@code }^[^_][A-Za-z0-9_]+$}. This makes it usable as table
-   * names in a wide variety of databases.
+   * Name of the view definition, must be in a database-friendly format.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.name">ViewDefinition.name</a>
    */
-  @NotNull
+  @Nullable
+  @Pattern(regexp = "^[^_][A-Za-z][A-Za-z0-9_]+$")
   String name;
 
   /**
-   * An optional human-readable description of the view.
+   * Natural language description of the view definition.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.description">ViewDefinition.description</a>
    */
   @SerializedName("desc")
   @Nullable
   String description;
 
   /**
-   * The FHIR resource the view is based on, e.g. 'Patient' or 'Observation'.
+   * The FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.resource">ViewDefinition.resource</a>
    */
   @NotNull
   String resource;
 
   /**
-   * An optional list of constants that can be used in any FHIRPath expression in the view
-   * definition.  These are effectively strings or numbers that can be injected into FHIRPath
-   * expressions below by having {@code %constantName`} in  the expression.
+   * Constant that can be used in FHIRPath expressions.
+   * <p>
+   * A constant is a string that is injected into a FHIRPath expression through the use of a
+   * FHIRPath external constant with the same name.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
   @Nullable
   List<ConstantDeclaration> constants;
 
   /**
-   * The select stanza defines the actual content of the view itself. This stanza is a list where
-   * each item in is one of:
-   * <ul>
-   * <li>a structure with the column name, expression, and optional description,</li>
-   * <li>a 'from' structure indicating a relative path to pull fields from in a nested select, or</li>
-   * <li>a 'forEach' structure, unrolling the specified path and creating a new row for each item.</li>
-   * </ul>
-   * See the comments below for details on the semantics.
+   * Defines the content of a column within the view.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select">ViewDefinition.select</a>
    */
   @NotNull
   @Size(min = 1)
   List<SelectClause> select;
 
   /**
-   * 'where' filters are FHIRPath expressions joined with an implicit "and". This enables users to
-   * select a subset of rows that match a specific need. For example, a user may be interested only
-   * in a subset of observations based on code value and can filter them here.
+   * FHIRPath expression defining a filter condition.
+   * <p>
+   * A FHIRPath expression that defines a filter that must evaluate to true for a resource to be
+   * included in the output. The input context is the collection of resources of the type specified
+   * in the resource element. Constants defined in {@link #constants} can be referenced as
+   * {@code %[name]}. The result of the expression must be of type Boolean.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.where">ViewDefinition.where</a>
    */
   @Nullable
   List<WhereClause> where;

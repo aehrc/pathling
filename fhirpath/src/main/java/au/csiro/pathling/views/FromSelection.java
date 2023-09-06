@@ -7,26 +7,31 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * A 'from' expression is a convenience to select values relative to some parent FHIRPath. This does
- * not unnest or unroll multiple values. If the 'from' results in a FHIRPath collection, that full
- * collection is used in the nested select, so the resulting view would have repeated fields rather
- * than a separate row per value.
+ * Creates a scope for selection relative to a parent FHIRPath expression.
  *
  * @author John Grimes
+ * @see <a
+ * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.from">ViewDefinition.select.from</a>
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class FromSelection extends NestedSelectClause {
 
   /**
-   * The FHIRPath expression for the parent path to select from.
+   * Creates a scope for selection relative to a parent FHIRPath expression.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.from">ViewDefinition.select.from</a>
    */
   @NotNull
   @SerializedName("from")
-  String expression;
+  String path;
 
   /**
-   * The nested select clauses.
+   * Nested select relative to the {@link #path}.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.select">ViewDefinition.select.select</a>
    */
   @NotNull
   List<SelectClause> select;

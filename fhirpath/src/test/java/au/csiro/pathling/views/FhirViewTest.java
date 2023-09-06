@@ -1,27 +1,42 @@
 package au.csiro.pathling.views;
 
+import static au.csiro.pathling.UnitTestDependencies.fhirContext;
+import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Value;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.junit.jupiter.api.BeforeEach;
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,6 +50,8 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 class FhirViewTest {
+
+  static Path tempDir;
 
   @Autowired
   SparkSession spark;
@@ -51,58 +68,144 @@ class FhirViewTest {
   @MockBean
   TerminologyServiceFactory terminologyServiceFactory;
 
-  FhirViewExecutor executor;
-
-  static final Path TEST_DATA_PATH = Path.of(
-      "src/test/resources/test-data/views").toAbsolutePath().normalize();
-
-  @BeforeEach
-  void setUp() {
-    final DataSource dataSource = Database.forFileSystem(spark, fhirEncoders,
-        TEST_DATA_PATH.toUri().toString(), false);
-    executor = new FhirViewExecutor(fhirContext, spark, dataSource,
-        Optional.of(terminologyServiceFactory));
+  @BeforeAll
+  static void beforeAll() throws IOException {
+    tempDir = Files.createTempDirectory("pathling-fhir-view-test");
   }
 
   @Nonnull
   Stream<TestParameters> requests() throws IOException {
+    final ObjectMapper mapper = new ObjectMapper();
     final ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-    final Resource[] resources = resolver.getResources("classpath:requests/views/*.json");
-    return Stream.of(resources).map(resource -> {
+    final Resource[] resources = resolver.getResources("classpath:sql-on-fhir/input/tests/*.json");
+    return Stream.of(resources)
+        // Get each test file.
+        .map(resource -> {
           try {
             return resource.getFile();
           } catch (final IOException e) {
             throw new RuntimeException(e);
           }
-        }).map(File::toPath)
+        })
+        // Map it to a path.
+        .map(File::toPath)
+        // Parse the JSON.
         .map(path -> {
           try {
-            final FhirView view = gson.fromJson(new FileReader(path.toFile()), FhirView.class);
-            return new TestParameters(view, path);
-          } catch (final FileNotFoundException e) {
+            return mapper.readTree(new FileReader(path.toFile()));
+          } catch (final IOException e) {
             throw new RuntimeException(e);
           }
+        })
+        // Create a TestParameters object for each test within the file.
+        .flatMap(testDefinition -> {
+          final DataSource sourceData = getDataSource(testDefinition);
+          return toTestParameters(testDefinition, sourceData).stream();
         });
+  }
+
+  DataSource getDataSource(@Nonnull final JsonNode testDefinition) {
+    try {
+      // Create a parent directory based upon the test name.
+      final JsonNode resources = testDefinition.get("resource");
+      final Path directory = getTempDir(testDefinition);
+      final FhirViewTestDataSource result = new FhirViewTestDataSource();
+
+      for (final Iterator<JsonNode> it = resources.elements(); it.hasNext(); ) {
+        final JsonNode resource = it.next();
+
+        // Append each resource to a file named after its type.
+        final String resourceType = resource.get("resourceType").asText();
+        final Path ndjsonPath = directory.resolve(resourceType + ".ndjson");
+        Files.write(ndjsonPath,
+            (resource + "\n").getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND);
+
+        // Read the NDJSON file into a Spark dataset and add it to the data source.
+        final Dataset<String> jsonStrings = spark.read().text(ndjsonPath.toString())
+            .as(Encoders.STRING());
+        final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
+        final Dataset<Row> dataset = jsonStrings.map(
+            (MapFunction<String, IBaseResource>) (json) -> jsonParser(fhirContext())
+                .parseResource(json), encoder).toDF();
+        result.put(ResourceType.fromCode(resourceType), dataset);
+      }
+
+      return result;
+
+    } catch (final IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  List<TestParameters> toTestParameters(@Nonnull final JsonNode testDefinition,
+      @Nonnull final DataSource sourceData) {
+    try {
+      final JsonNode views = testDefinition.get("views");
+      final List<TestParameters> result = new ArrayList<>();
+
+      for (final Iterator<JsonNode> it = views.elements(); it.hasNext(); ) {
+        final JsonNode view = it.next();
+
+        // Serialize a FhirView object from the view definition in the test.
+        final FhirView fhirView = gson.fromJson(view.get("view").toString(), FhirView.class);
+        ensureValid(fhirView, "View is not valid");
+
+        // Write the expected JSON to a file, named after the view.
+        final Path directory = getTempDir(testDefinition);
+        final String expectedFileName =
+            view.get("title").asText().replaceAll("\\W+", "_") + ".json";
+        final Path expectedPath = directory.resolve(expectedFileName);
+        for (final Iterator<JsonNode> rowIt = view.get("result").elements(); rowIt.hasNext(); ) {
+          final JsonNode row = rowIt.next();
+          Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
+              StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        }
+
+        final String testName =
+            testDefinition.get("name").asText() + " - " + view.get("title").asText();
+        result.add(new TestParameters(testName, sourceData, fhirView, expectedPath));
+      }
+
+      return result;
+
+    } catch (final IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Nonnull
+  private static Path getTempDir(final @Nonnull JsonNode testDefinition) throws IOException {
+    final String directoryName = testDefinition.get("name").asText().replaceAll("\\W+", "_");
+    final Path directory = tempDir.resolve(directoryName);
+    try {
+      return Files.createDirectory(directory);
+    } catch (final FileAlreadyExistsException ignored) {
+      return directory;
+    }
   }
 
   @ParameterizedTest
   @MethodSource("requests")
   void test(@Nonnull final TestParameters parameters) {
+    final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
+        parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));
     final Dataset<Row> result = executor.buildQuery(parameters.getView());
-    assertThat(result)
-        .hasRows(spark, "results/views/" +
-            parameters.getRequestFile().getFileName().toString().replace(".json", ".tsv"), true);
+    final Dataset<Row> expectedResult = spark.read().json(parameters.getExpectedJson().toString());
+    assertThat(result).hasRows(expectedResult);
   }
 
   @Value
   static class TestParameters {
 
+    String title;
+    DataSource sourceData;
     FhirView view;
-    Path requestFile;
+    Path expectedJson;
 
     @Override
     public String toString() {
-      return view.getName();
+      return getTitle();
     }
   }
 

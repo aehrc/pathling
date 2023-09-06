@@ -4,7 +4,7 @@ import java.util.List;
 
 public abstract class NestedSelectClause extends SelectClause {
 
-  abstract String getExpression();
+  abstract String getPath();
 
   abstract List<SelectClause> getSelect();
 

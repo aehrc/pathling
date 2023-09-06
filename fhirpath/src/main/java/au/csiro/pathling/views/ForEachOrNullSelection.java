@@ -7,21 +7,21 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * Same as from, but unnests a new row for each item in the collection.
+ * Same as forEach, but produces a single row with a null value if the collection is empty.
  *
  * @author John Grimes
  * @see <a
- * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.forEach">ViewDefinition.select.forEach</a>
+ * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.forEachOrNull">ViewDefinition.select.forEachOrNull</a>
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class ForEachSelection extends NestedSelectClause {
+public class ForEachOrNullSelection extends NestedSelectClause {
 
   /**
-   * Same as from, but unnests a new row for each item in the collection.
+   * Same as forEach, but produces a single row with a null value if the collection is empty.
    *
    * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.forEach">ViewDefinition.select.forEach</a>
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.forEachOrNull">ViewDefinition.select.forEachOrNull</a>
    */
   @NotNull
   String path;
