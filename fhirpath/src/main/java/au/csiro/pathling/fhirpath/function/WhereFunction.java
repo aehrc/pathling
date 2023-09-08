@@ -29,7 +29,6 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.SparkSession;
 
 /**
  * Describes a function which can scope down the previous invocation within a FHIRPath expression,
@@ -53,8 +52,7 @@ public class WhereFunction implements NamedFunction<Collection> {
     final Column column = filter(previous.getColumn(), element -> {
       final Collection result = argument.apply(
           Collection.build(element, previous.getType(), previous.getFhirType(),
-              Optional.empty()), input.getContext());
-      final SparkSession spark = input.getContext().getSparkSession();
+              previous.getDefinition()), input.getContext());
       final FhirPathType type = checkPresent(result.getType());
       checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(input.getContext()),
           "Argument to " + getName() + " function must be a singular Boolean");

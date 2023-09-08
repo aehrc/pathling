@@ -194,8 +194,8 @@ public class Collection implements Comparable, Numeric {
    * @return whether the result of evaluating this path is a non-singular collection
    */
   public boolean isSingular(@Nonnull final EvaluationContext context) {
-    return context.getDataset().select(column).schema()
-        .fields()[0].dataType() instanceof ArrayType;
+    return !(context.getDataset().select(column).schema()
+        .fields()[0].dataType() instanceof ArrayType);
   }
 
   private static boolean needsFlattening(@Nonnull final Column column,
@@ -230,10 +230,10 @@ public class Collection implements Comparable, Numeric {
           // Build a new FhirPath object, with a column that uses `getField` to extract the
           // appropriate child.
           final Column traversed = column.getField(expression);
-          final Column flattened = needsFlattening(traversed, context)
-                                   ? functions.flatten(traversed)
-                                   : traversed;
-          return Collection.build(flattened, def);
+          // final Column flattened = needsFlattening(traversed, context)
+          //                          ? functions.flatten(traversed)
+          //                          : traversed;
+          return Collection.build(traversed, def);
         });
   }
 
