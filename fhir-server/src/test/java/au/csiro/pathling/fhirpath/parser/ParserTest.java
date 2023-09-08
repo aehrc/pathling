@@ -37,18 +37,19 @@ import static au.csiro.pathling.test.helpers.TerminologyServiceHelpers.setupSubs
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateLiteralPath;
 import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.TimeLiteralPath;
 import au.csiro.pathling.test.builders.DatasetBuilder;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.EvaluationContextBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
 import java.util.Collections;
@@ -66,7 +67,7 @@ public class ParserTest extends AbstractParserTest {
 
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
-    return Assertions.assertThrows(errorType, () -> parser.evaluate(expression));
+    return Assertions.assertThrows(errorType, () -> parser.evaluate(expression, context));
   }
 
   private TranslateExpectations setupMockTranslationFor_195662009_444814009(
@@ -794,13 +795,13 @@ public class ParserTest extends AbstractParserTest {
         .build(fhirContext, dataSource, resourceType, resourceType.toCode()
         );
 
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
-    parser = new Parser(parserContext);
+    parser = new Parser(evaluationContext);
   }
 
   @Test

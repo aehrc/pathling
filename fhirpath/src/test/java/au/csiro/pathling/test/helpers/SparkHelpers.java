@@ -22,9 +22,9 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -182,14 +182,14 @@ public abstract class SparkHelpers {
 
   @Nonnull
   public static Dataset<Row> selectValuesAndNodes(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<Collection> paths, @Nonnull final ParserContext context) {
+      @Nonnull final List<Collection> paths, @Nonnull final EvaluationContext context) {
     final List<Column> columns = new ArrayList<>();
     columns.addAll(
         paths.stream()
             .map(Collection::getColumn)
             .collect(toList())
     );
-   
+
     // TODO: review 
     // columns.addAll(new ArrayList<>(context.getNesting().getOrderingColumns()));
     return dataset.select(columns.toArray(new Column[0]));

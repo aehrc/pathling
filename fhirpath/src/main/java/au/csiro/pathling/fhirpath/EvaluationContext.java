@@ -15,29 +15,30 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.parser;
+package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
-import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
 /**
- * Context and dependencies used in the parsing of a FHIRPath expression.
+ * Context and dependencies used in the evaluation of a FHIRPath expression.
  *
  * @author John Grimes
  */
-// TODO: Split into two classes, one for parsing and one for evaluation
 @Getter
-public class ParserContext {
+public class EvaluationContext {
 
   /**
    * The input context from which the FHIRPath is to be evaluated, referred to through
@@ -79,7 +80,7 @@ public class ParserContext {
    * A table resolver for retrieving Datasets for resource references.
    */
   @Nonnull
-  private final DataSource dataSource;
+  private final Dataset<Row> dataset;
 
   /**
    * A registry of FHIRPath function implementations.
@@ -106,35 +107,36 @@ public class ParserContext {
    * @param fhirContext a {@link FhirContext} that can be used to do FHIR stuff
    * @param sparkSession a {@link SparkSession} that can be used to resolve Spark queries required
    * for this expression
-   * @param dataSource for retrieving data relating to resource references
+   * @param dataset for retrieving data relating to resource references
    * @param terminologyServiceFactory a factory for {@link TerminologyService} objects, used for
    * parallel processing
    * @param constantReplacer a list of constants and the expressions that they should be replaced
    * with
    */
-  public ParserContext(@Nonnull final Collection inputContext, @Nonnull final ResourceCollection resource,
+  public EvaluationContext(@Nonnull final Collection inputContext,
+      @Nonnull final ResourceCollection resource,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
-      @Nonnull final FunctionRegistry functionRegistry,
+      @Nonnull final SparkSession sparkSession, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final FunctionRegistry<NamedFunction> functionRegistry,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final Optional<ConstantReplacer> constantReplacer) {
     this.inputContext = inputContext;
     this.resource = resource;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.dataSource = dataSource;
+    this.dataset = dataset;
     this.functionRegistry = functionRegistry;
     this.terminologyServiceFactory = terminologyServiceFactory;
     this.constantReplacer = constantReplacer;
   }
 
   /**
-   * @return a new {@link ParserContext} with the same properties as this one, but with a different
-   * input context
+   * @return a new {@link EvaluationContext} with the same properties as this one, but with a
+   * different input context
    */
   @Nonnull
-  public ParserContext withInputContext(@Nonnull final Collection inputContext) {
-    return new ParserContext(inputContext, resource, fhirContext, sparkSession, dataSource,
+  public EvaluationContext withInputContext(@Nonnull final Collection inputContext) {
+    return new EvaluationContext(inputContext, resource, fhirContext, sparkSession, dataset,
         functionRegistry, terminologyServiceFactory, constantReplacer);
   }
 

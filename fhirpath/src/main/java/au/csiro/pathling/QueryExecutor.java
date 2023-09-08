@@ -19,11 +19,10 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.config.QueryConfiguration;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
@@ -58,14 +57,14 @@ public abstract class QueryExecutor {
   protected final SparkSession sparkSession;
 
   @Nonnull
-  protected final DataSource dataSource;
+  protected final Dataset<Row> dataSource;
 
   @Nonnull
   protected final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   protected QueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final DataSource dataSource,
+      @Nonnull final Dataset<Row> dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;
@@ -76,14 +75,14 @@ public abstract class QueryExecutor {
 
   @Nonnull
   protected List<Collection> parseExpressions(
-      @Nonnull final ParserContext parserContext,
+      @Nonnull final EvaluationContext evaluationContext,
       @Nonnull final java.util.Collection<String> expressions) {
-    return parseExpressions(parserContext, expressions, Optional.empty());
+    return parseExpressions(evaluationContext, expressions, Optional.empty());
   }
 
   @Nonnull
   protected List<Collection> parseExpressions(
-      @Nonnull final ParserContext parserContext,
+      @Nonnull final EvaluationContext evaluationContext,
       @Nonnull final java.util.Collection<String> expressions,
       @Nonnull final Optional<Dataset<Row>> contextDataset) {
 

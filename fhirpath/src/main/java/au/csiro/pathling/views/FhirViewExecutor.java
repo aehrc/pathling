@@ -3,14 +3,13 @@ package au.csiro.pathling.views;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
@@ -38,18 +37,18 @@ public class FhirViewExecutor {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final DataSource dataSource;
+  private final Dataset<Row> dataset;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
 
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataSource,
+      @Nonnull final SparkSession sparkSession, @Nonnull final Dataset<Row> dataset,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.dataSource = dataSource;
+    this.dataset = dataset;
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
@@ -63,13 +62,14 @@ public class FhirViewExecutor {
 
     // Build a new expression parser, and parse all the column expressions within the query.
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
-    final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataSource,
+    final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataset,
         resourceType);
-    final ParserContext parserContext = new ParserContext(inputContext, inputContext, fhirContext,
-        sparkSession, dataSource, StaticFunctionRegistry.getInstance(), terminologyServiceFactory,
+    final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
+        fhirContext,
+        sparkSession, dataset, StaticFunctionRegistry.getInstance(), terminologyServiceFactory,
         constantReplacer);
 
-    final List<Column> select = parseSelect(view.getSelect(), parserContext,
+    final List<Column> select = parseSelect(view.getSelect(), evaluationContext,
         Collections.emptyList());
     final List<String> where = view.getWhere() == null
                                ? Collections.emptyList()
@@ -77,21 +77,19 @@ public class FhirViewExecutor {
                                    .map(WhereClause::getExpression)
                                    .collect(toList());
     final Optional<Column> filterCondition = where.stream()
-        .map(e -> evalExpression(e, parserContext))
+        .map(e -> evalExpression(e, evaluationContext))
         .map(Collection::getColumn)
         .reduce(Column::and);
 
-    final Dataset<Row> subjectDataset = dataSource.read(resourceType);
-
     return filterCondition
-        .map(subjectDataset::filter)
-        .orElse(subjectDataset)
+        .map(dataset::filter)
+        .orElse(dataset)
         .select(select.toArray(new Column[0]));
   }
 
   @Nonnull
   private List<Column> parseSelect(@Nonnull final List<SelectClause> selectGroup,
-      @Nonnull final ParserContext context, @Nonnull final List<Column> currentSelection) {
+      @Nonnull final EvaluationContext context, @Nonnull final List<Column> currentSelection) {
     final List<Column> newSelection = new ArrayList<>(currentSelection);
 
     for (final SelectClause select : selectGroup) {
@@ -115,7 +113,7 @@ public class FhirViewExecutor {
   }
 
   @Nonnull
-  private List<Column> directSelection(@Nonnull final ParserContext context,
+  private List<Column> directSelection(@Nonnull final EvaluationContext context,
       @Nonnull final DirectSelection select, @Nonnull final List<Column> currentSelection) {
     final Collection path = evalExpression(select.getPath(), context);
     final List<Column> newColumns = new ArrayList<>(currentSelection);
@@ -125,7 +123,7 @@ public class FhirViewExecutor {
 
   @Nonnull
   @NotImplemented
-  private List<Column> nestedSelection(final @Nonnull ParserContext context,
+  private List<Column> nestedSelection(final @Nonnull EvaluationContext context,
       @Nonnull final NestedSelectClause select, @Nonnull final List<Column> currentSelection,
       final boolean unnest) {
     final Collection from = evalExpression(select.getPath(), context);
@@ -134,18 +132,17 @@ public class FhirViewExecutor {
                                         ? from
                                         // .unnest()
                                         : from;
-    final ParserContext nextContext = context.withInputContext(nextInputContext);
+    final EvaluationContext nextContext = context.withInputContext(nextInputContext);
     return parseSelect(select.getSelect(), nextContext, currentSelection);
   }
 
   @Nonnull
   private Collection evalExpression(@Nonnull final String expression,
-      @Nonnull final ParserContext context) {
-    final Parser parser = new Parser(context);
+      @Nonnull final EvaluationContext context) {
     final String updatedExpression = context.getConstantReplacer()
         .map(replacer -> replacer.execute(expression))
         .orElse(expression);
-    return parser.evaluate(updatedExpression);
+    return new Parser().evaluate(updatedExpression, context);
   }
 
 }

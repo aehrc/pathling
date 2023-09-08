@@ -17,9 +17,10 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.EvaluationContextBuilder;
 import java.util.Collections;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
@@ -29,15 +30,15 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
   @Test
   void lengthOfEncounter() {
     final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode()
-        );
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+        .build(fhirContext, dataSource.read(ResourceType.ENCOUNTER), ResourceType.ENCOUNTER);
+
+    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
-    parser = new Parser(parserContext);
+    parser = new Parser(evaluationContext);
 
     assertThatResultOf("(period.start + 20 minutes) > period.end")
         .isElementPath(BooleanCollection.class)
@@ -50,13 +51,13 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
     final ResourceCollection subjectResource = ResourceCollection
         .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode()
         );
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
-    parser = new Parser(parserContext);
+    parser = new Parser(evaluationContext);
 
     assertThatResultOf("period.start > (subject.resolve().ofType(Patient).birthDate + 60 years)")
         .isElementPath(BooleanCollection.class)

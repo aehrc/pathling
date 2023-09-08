@@ -22,7 +22,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.parser.IParser;
 import java.io.IOException;
@@ -33,6 +32,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import org.apache.commons.io.IOUtils;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
@@ -60,7 +61,7 @@ class ExtractTest extends IntegrationTest {
   IParser jsonParser;
 
   @MockBean
-  CacheableDatabase database;
+  Dataset<Row> database;
 
   @LocalServerPort
   int port;

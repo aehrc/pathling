@@ -1,18 +1,10 @@
 package au.csiro.pathling.extract;
 
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-import static java.util.stream.Collectors.toList;
-
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.AbstractPath;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +23,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
   public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final DataSource dataSource,
+      @Nonnull final Dataset<Row> dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
   }

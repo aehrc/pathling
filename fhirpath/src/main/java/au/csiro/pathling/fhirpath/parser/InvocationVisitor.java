@@ -52,20 +52,6 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
 
-  @Nonnull
-  private final ParserContext context;
-
-  /**
-   * This constructor is used when there is no explicit invoker, i.e. an invocation is made without
-   * an expression on the left-hand side of the dot notation. In this case, the invoker is taken to
-   * be either the root node, or the `$this` node in the context of functions that support it.
-   *
-   * @param context The {@link ParserContext} to use when parsing the invocation
-   */
-  InvocationVisitor(@Nonnull final ParserContext context) {
-    this.context = context;
-  }
-
   /**
    * This method gets called when an element is on the right-hand side of the invocation expression,
    * or when an identifier is referred to as a term (e.g. "Encounter" or "type").
@@ -81,10 +67,10 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
     requireNonNull(fhirPath);
 
     // TODO: refactor to an expression
-    return (input, c) -> {
+    return (input, context) -> {
       try {
         // Attempt path traversal.
-        final Optional<Collection> result = input.traverse(fhirPath);
+        final Optional<Collection> result = input.traverse(fhirPath, context);
         checkUserInput(result.isPresent(), "No such child: " + fhirPath);
         return result.get();
 
@@ -119,7 +105,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
     final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
 
     @Nullable final ParamListContext paramList = ctx.function().paramList();
-    final Visitor paramListVisitor = new Visitor(context);
+    final Visitor paramListVisitor = new Visitor();
     final List<FhirPath<Collection, Collection>> arguments = Optional.ofNullable(paramList)
         .map(ParamListContext::expression)
         .map(p -> p.stream()
@@ -128,14 +114,14 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
         ).orElse(new ArrayList<>());
 
     // TODO: refactor to an expression
-    return (input, c) -> {
+    return (input, context) -> {
       final NamedFunction function;
       try {
-        function = c.getFunctionRegistry().getInstance(functionIdentifier);
+        function = context.getFunctionRegistry().getInstance(functionIdentifier);
       } catch (final NoSuchFunctionException e) {
         throw new InvalidUserInputError(e.getMessage());
       }
-      final FunctionInput functionInput = new FunctionInput(c, input, arguments);
+      final FunctionInput functionInput = new FunctionInput(context, input, arguments);
       return function.invoke(functionInput);
     };
   }
@@ -144,7 +130,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
   @Nonnull
   public FhirPath<Collection, Collection> visitThisInvocation(
       @Nullable final ThisInvocationContext ctx) {
-    return (input, c) -> input;
+    return (input, context) -> input;
   }
 
   @Override

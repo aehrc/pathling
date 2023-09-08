@@ -35,6 +35,8 @@ import ca.uhn.fhir.parser.IParser;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
@@ -84,7 +86,7 @@ public class AggregateBenchmark {
     FhirEncoders fhirEncoders;
 
     AggregateExecutor executor;
-    Database database;
+    Dataset<Row> database;
 
     void mockResource(final ResourceType... resourceTypes) {
       TestHelpers.mockResource(database, spark, resourceTypes);

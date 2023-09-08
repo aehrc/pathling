@@ -17,9 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FunctionInput;
@@ -49,7 +47,7 @@ public interface NamedFunction<O extends Collection> {
    * @return a {@link Collection} object representing the resulting expression
    */
   @Nonnull
-  default O invoke(@Nonnull FunctionInput input) {
+  default O invoke(@Nonnull final FunctionInput input) {
     throw new UnsupportedOperationException("Not implemented: " + getName());
   }
 

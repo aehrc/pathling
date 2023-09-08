@@ -1,12 +1,11 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
 import lombok.Value;
 
 /**
- * Holds the value of a {@link Collection} and an associated {@link ParserContext}.
+ * Holds the value of a {@link Collection} and an associated {@link EvaluationContext}.
  *
  * @author John Grimes
  */
@@ -17,6 +16,6 @@ public class FhirPathAndContext {
   Collection result;
 
   @Nonnull
-  ParserContext context;
+  EvaluationContext context;
 
 }

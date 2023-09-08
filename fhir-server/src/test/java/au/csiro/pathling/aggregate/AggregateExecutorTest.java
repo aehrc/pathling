@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -38,6 +37,8 @@ import ca.uhn.fhir.rest.param.StringParam;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -75,7 +76,7 @@ abstract class AggregateExecutorTest {
   FhirEncoders fhirEncoders;
 
   @MockBean
-  CacheableDatabase database;
+  Dataset<Row> database;
 
   AggregateExecutor executor;
   ResourceType subjectResource;

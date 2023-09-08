@@ -23,7 +23,6 @@ import au.csiro.pathling.aggregate.AggregateRequestBuilder;
 import au.csiro.pathling.aggregate.AggregateResponse;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -33,6 +32,8 @@ import ca.uhn.fhir.parser.IParser;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -86,7 +87,7 @@ public class TerminologyDevBenchmark {
     FhirEncoders fhirEncoders;
 
     @MockBean
-    CacheableDatabase database;
+    Dataset<Row> database;
 
     AggregateExecutor defaultExecutor;
 

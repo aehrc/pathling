@@ -37,17 +37,11 @@ import javax.annotation.Nullable;
  */
 class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
 
-  @Nonnull
-  private final ParserContext context;
-
-  TermVisitor(@Nonnull final ParserContext context) {
-    this.context = context;
-  }
-
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
-    return new InvocationVisitor(context).visit(requireNonNull(ctx).invocation());
+  public FhirPath<Collection, Collection> visitInvocationTerm(
+      @Nullable final InvocationTermContext ctx) {
+    return new InvocationVisitor().visit(requireNonNull(ctx).invocation());
   }
 
   @Override
@@ -71,8 +65,8 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> 
       @Nullable final ParenthesizedTermContext ctx) {
     // TODO: maybe we do not need that and just use the subExpression directly?
     // Parentheses are ignored in the standalone term case.
-    final FhirPath<Collection, Collection> subExpression = new Visitor(context).visit(
+    final FhirPath<Collection, Collection> subExpression = new Visitor().visit(
         requireNonNull(ctx).expression());
-    return (input, c) -> subExpression.apply(input, c);
+    return (input, context) -> subExpression.apply(input, context);
   }
 }

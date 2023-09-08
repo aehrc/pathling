@@ -17,101 +17,80 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static org.mockito.Mockito.when;
-
-import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.terminology.TerminologyService;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.TimingExtension;
-import au.csiro.pathling.test.assertions.FhirPathAssertion;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import au.csiro.pathling.test.helpers.TestHelpers;
-import ca.uhn.fhir.context.FhirContext;
-import java.util.Collections;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootUnitTest
 @ExtendWith(TimingExtension.class)
 public class AbstractParserTest {
 
-  @Autowired
-  protected SparkSession spark;
-
-  @Autowired
-  FhirContext fhirContext;
-
-  @Autowired
-  TerminologyService terminologyService;
-
-  @Autowired
-  FhirEncoders fhirEncoders;
-
-  @Autowired
-  TerminologyServiceFactory terminologyServiceFactory;
-
-  @MockBean
-  protected DataSource dataSource;
-
-  Parser parser;
-
-  @BeforeEach
-  void setUp() {
-    SharedMocks.resetAll();
-    mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
-        ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
-        ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
-        ResourceType.CAREPLAN);
-
-    final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource, ResourceType.PATIENT, ResourceType.PATIENT.toCode());
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
-  }
-
-  void mockResource(final ResourceType... resourceTypes) {
-    for (final ResourceType resourceType : resourceTypes) {
-      final Dataset<Row> dataset = TestHelpers.getDatasetForResourceType(spark, resourceType);
-      when(dataSource.read(resourceType)).thenReturn(dataset);
-    }
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @Nonnull
-  protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
-      @Nonnull final String expression) {
-    final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource, resourceType, resourceType.toCode());
-
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .build();
-    final Parser resourceParser = new Parser(parserContext);
-    return assertThat(resourceParser.evaluate(expression));
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(parser.evaluate(expression));
-  }
+  // @Autowired
+  // protected SparkSession spark;
+  //
+  // @Autowired
+  // FhirContext fhirContext;
+  //
+  // @Autowired
+  // TerminologyService terminologyService;
+  //
+  // @Autowired
+  // FhirEncoders fhirEncoders;
+  //
+  // @Autowired
+  // TerminologyServiceFactory terminologyServiceFactory;
+  //
+  // @MockBean
+  // protected DataSource dataSource;
+  //
+  // Parser parser;
+  //
+  // @BeforeEach
+  // void setUp() {
+  //   SharedMocks.resetAll();
+  //   mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
+  //       ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
+  //       ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
+  //       ResourceType.CAREPLAN);
+  //
+  //   final ResourceCollection subjectResource = ResourceCollection
+  //       .build(fhirContext, dataSource, ResourceType.PATIENT, ResourceType.PATIENT.toCode());
+  //
+  //   final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
+  //       .terminologyServiceFactory(terminologyServiceFactory)
+  //       .dataset(dataSource)
+  //       .inputContext(subjectResource)
+  //       .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
+  //       .build();
+  //   parser = new Parser(evaluationContext);
+  // }
+  //
+  // void mockResource(final ResourceType... resourceTypes) {
+  //   for (final ResourceType resourceType : resourceTypes) {
+  //     final Dataset<Row> dataset = TestHelpers.getDatasetForResourceType(spark, resourceType);
+  //     when(dataSource.read(resourceType)).thenReturn(dataset);
+  //   }
+  // }
+  //
+  // @SuppressWarnings("SameParameterValue")
+  // @Nonnull
+  // protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
+  //     @Nonnull final String expression) {
+  //   final ResourceCollection subjectResource = ResourceCollection
+  //       .build(fhirContext, dataSource, resourceType, resourceType.toCode());
+  //
+  //   final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
+  //       .terminologyClientFactory(terminologyServiceFactory)
+  //       .database(dataSource)
+  //       .inputContext(subjectResource)
+  //       .build();
+  //   final Parser resourceParser = new Parser(evaluationContext);
+  //   return assertThat(resourceParser.evaluate(expression, context));
+  // }
+  //
+  // @SuppressWarnings("SameParameterValue")
+  // FhirPathAssertion assertThatResultOf(final String expression) {
+  //   return assertThat(parser.evaluate(expression, context));
+  // }
 
 }

@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import javax.annotation.Nonnull;
 import lombok.Value;
 
@@ -34,7 +34,7 @@ public class BinaryOperatorInput {
    * Context and dependencies for use in evaluating the function.
    */
   @Nonnull
-  ParserContext context;
+  EvaluationContext context;
 
   /**
    * An expression representing the left operand.

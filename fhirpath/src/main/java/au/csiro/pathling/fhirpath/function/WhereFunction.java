@@ -56,7 +56,7 @@ public class WhereFunction implements NamedFunction<Collection> {
               Optional.empty()), input.getContext());
       final SparkSession spark = input.getContext().getSparkSession();
       final FhirPathType type = checkPresent(result.getType());
-      checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(spark),
+      checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(input.getContext()),
           "Argument to " + getName() + " function must be a singular Boolean");
       return result.getColumn();
     });

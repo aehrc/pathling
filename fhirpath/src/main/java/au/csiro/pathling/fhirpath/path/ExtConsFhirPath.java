@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.fhirpath.path;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import lombok.Value;
 import javax.annotation.Nonnull;
+import lombok.Value;
 
 @Value
 public class ExtConsFhirPath implements FhirPath<Collection, Collection> {
@@ -29,7 +29,8 @@ public class ExtConsFhirPath implements FhirPath<Collection, Collection> {
   String name;
 
   @Override
-  public Collection apply(@Nonnull final Collection input, @Nonnull final ParserContext context) {
+  public Collection apply(@Nonnull final Collection input,
+      @Nonnull final EvaluationContext context) {
     if (name.equals("%context")) {
       return context.getInputContext();
     } else if (name.equals("%resource") || name.equals("%rootResource")) {

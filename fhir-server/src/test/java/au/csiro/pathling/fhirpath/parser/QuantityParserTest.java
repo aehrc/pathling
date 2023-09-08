@@ -17,9 +17,10 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
+import au.csiro.pathling.test.builders.EvaluationContextBuilder;
 import java.util.Collections;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
@@ -31,13 +32,13 @@ public class QuantityParserTest extends AbstractParserTest {
     final ResourceCollection subjectResource = ResourceCollection
         .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode()
         );
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
-    parser = new Parser(parserContext);
+    parser = new Parser(evaluationContext);
 
     assertThatResultOf("valueQuantity < 1.5 'm'")
         .isElementPath(BooleanCollection.class)
@@ -50,13 +51,13 @@ public class QuantityParserTest extends AbstractParserTest {
     final ResourceCollection subjectResource = ResourceCollection
         .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode()
         );
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
+    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .terminologyClientFactory(terminologyServiceFactory)
         .database(dataSource)
         .inputContext(subjectResource)
         .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
         .build();
-    parser = new Parser(parserContext);
+    parser = new Parser(evaluationContext);
 
     assertThatResultOf("valueQuantity > (valueQuantity - 2 'g/dL')")
         .isElementPath(BooleanCollection.class)

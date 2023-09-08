@@ -48,21 +48,21 @@ public abstract class TestHelpers {
   public static final String UCUM_URL = "http://unitsofmeasure.org";
   public static final MediaType FHIR_MEDIA_TYPE = new MediaType("application", "fhir+json");
 
-  public static void mockResource(@Nonnull final DataSource dataSource,
-      @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
-    for (final ResourceType resourceType : resourceTypes) {
-      final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
-      when(dataSource.read(resourceType)).thenReturn(dataset);
-    }
-  }
-
-  public static void mockCachedResource(@Nonnull final DataSource dataSource,
-      @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
-    for (final ResourceType resourceType : resourceTypes) {
-      final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType).cache();
-      when(dataSource.read(resourceType)).thenReturn(dataset);
-    }
-  }
+  // public static void mockResource(@Nonnull final Dataset<Row> dataSource,
+  //     @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
+  //   for (final ResourceType resourceType : resourceTypes) {
+  //     final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType);
+  //     when(dataSource.read(resourceType)).thenReturn(dataset);
+  //   }
+  // }
+  //
+  // public static void mockCachedResource(@Nonnull final Dataset<Row> dataSource,
+  //     @Nonnull final SparkSession spark, @Nonnull final ResourceType... resourceTypes) {
+  //   for (final ResourceType resourceType : resourceTypes) {
+  //     final Dataset<Row> dataset = getDatasetForResourceType(spark, resourceType).cache();
+  //     when(dataSource.read(resourceType)).thenReturn(dataset);
+  //   }
+  // }
 
   public static void mockResource(@Nonnull final DataSource dataSource,
       @Nonnull final SparkSession spark, final int numPartitions,

@@ -21,6 +21,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
@@ -97,22 +98,19 @@ public class ResourceCollection extends Collection {
    * Build a new ResourcePath using the supplied {@link FhirContext} and {@link DataSource}.
    *
    * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
-   * @param dataSource the {@link DataSource} to use for retrieving the Dataset
+   * @param dataset the {@link Dataset} that contains the resource data
    * @param resourceType the type of the resource
    * @return A shiny new ResourcePath
    */
   @Nonnull
   public static ResourceCollection build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final DataSource dataSource, @Nonnull final ResourceType resourceType) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final ResourceType resourceType) {
 
     // Get the resource definition from HAPI.
     final String resourceCode = resourceType.toCode();
     final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
         resourceCode);
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
-
-    // Retrieve the dataset for the resource type using the supplied resource reader.
-    final Dataset<Row> dataset = dataSource.read(resourceType);
 
     //noinspection ReturnOfNull
     final Map<String, Column> elementsToColumns = Stream.of(dataset.columns())
@@ -170,7 +168,8 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   @Override
-  public Optional<Collection> traverse(@Nonnull final String expression) {
+  public Optional<Collection> traverse(@Nonnull final String expression,
+      final EvaluationContext context) {
     // Get the child column from the map of elements to columns.
     return getElementColumn(expression).flatMap(value ->
         // Get the child element definition from the resource definition.

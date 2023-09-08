@@ -17,8 +17,16 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.fhirpath.FhirPath.applyOperation;
+import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
+
+import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
 
 /**
  * This function allows the selection of only the first element of a collection.
@@ -31,19 +39,16 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 @NotImplemented
 public class FirstFunction implements NamedFunction {
 
-  // TODO: implement as columns
+  @Nonnull
+  @Override
+  public Collection invoke(@Nonnull final FunctionInput input) {
+    checkNoArguments(getName(), input);
 
-  // @Nonnull
-  // @Override
-  // public Collection invoke(@Nonnull final FunctionInput input) {
-  //   checkNoArguments(getName(), input);
-  //
-  //   final NonLiteralPath inputPath = input.getInput();
-  //   final Dataset<Row> dataset = inputPath.getOrderedDataset(nesting);
-  //   final String expression = expressionFromInput(input, NAME, input.getInput());
-  //   final Column aggregateColumn = first(inputPath.getValueColumn(), true);
-  //
-  //   return buildAggregateResult(dataset, input.getContext(), inputPath, aggregateColumn,
-  //       expression);
-  // }
+    final Collection inputCollection = input.getInput();
+    final Column result = applyOperation(input.getContext(),
+        inputCollection, Function.identity(), column -> column.getItem(0));
+
+    return Collection.build(result, inputCollection.getType(),
+        inputCollection.getFhirType(), inputCollection.getDefinition());
+  }
 }

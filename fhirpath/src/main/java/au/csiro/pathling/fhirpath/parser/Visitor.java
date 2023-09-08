@@ -22,8 +22,6 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.operator.BinaryOperator;
-import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
@@ -41,9 +39,9 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.PolarityExpres
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TermExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
+import au.csiro.pathling.fhirpath.path.EvalOperatorPath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.fhirpath.path.EvalOperatorPath;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 /**
@@ -53,13 +51,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
  * @author John Grimes
  */
 class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
-
-  @Nonnull
-  private final ParserContext context;
-
-  Visitor(@Nonnull final ParserContext context) {
-    this.context = context;
-  }
 
   /**
    * A term is typically a standalone literal or function invocation.
@@ -71,7 +62,7 @@ class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
   @Nonnull
   public FhirPath<Collection, Collection> visitTermExpression(
       @Nullable final TermExpressionContext ctx) {
-    return requireNonNull(ctx).term().accept(new TermVisitor(context));
+    return requireNonNull(ctx).term().accept(new TermVisitor());
   }
 
   /**
@@ -87,13 +78,13 @@ class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
 
     // TODO: Is this really OK (now I am a bit confused of what the context is vs input)
 
-    final FhirPath<Collection, Collection> invocationSubject = new Visitor(context).visit(
+    final FhirPath<Collection, Collection> invocationSubject = new Visitor().visit(
         requireNonNull(ctx).expression());
     final FhirPath<Collection, Collection> invocationVerb = ctx.invocation()
-        .accept(new InvocationVisitor(context));
-    return (input, c) -> {
+        .accept(new InvocationVisitor());
+    return (input, context) -> {
       // TODO: perhpas we should also create the new cotext here (with different %context)
-      return invocationVerb.apply(invocationSubject.apply(input, c), c);
+      return invocationVerb.apply(invocationSubject.apply(input, context), context);
     };
   }
 
@@ -102,8 +93,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
       @Nullable final ParseTree leftContext,
       @Nullable final ParseTree rightContext, @Nullable final String operatorName) {
     requireNonNull(operatorName);
-    return new EvalOperatorPath(new Visitor(context).visit(leftContext),
-        new Visitor(context).visit(rightContext),
+    return new EvalOperatorPath(new Visitor().visit(leftContext),
+        new Visitor().visit(rightContext),
         BinaryOperatorType.fromSymbol(operatorName).getInstance());
 
   }

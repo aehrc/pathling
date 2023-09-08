@@ -20,10 +20,9 @@ package au.csiro.pathling.aggregate;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.io.Database;
-import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
@@ -32,6 +31,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Type;
@@ -59,7 +59,7 @@ public class AggregateExecutor extends AggregateQueryExecutor {
    */
   public AggregateExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final DataSource dataSource,
+      @Nonnull final Dataset<Row> dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource,
         terminologyServiceFactory);

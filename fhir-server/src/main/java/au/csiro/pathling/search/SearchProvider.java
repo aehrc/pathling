@@ -35,6 +35,8 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -74,7 +76,7 @@ public class SearchProvider implements IResourceProvider {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final Database database;
+  private final Dataset<Row> database;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
@@ -103,7 +105,7 @@ public class SearchProvider implements IResourceProvider {
    */
   public SearchProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Database database,
+      @Nonnull final Dataset<Row> database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {

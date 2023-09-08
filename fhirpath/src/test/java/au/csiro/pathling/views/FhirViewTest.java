@@ -77,7 +77,7 @@ class FhirViewTest {
   Stream<TestParameters> requests() throws IOException {
     final ObjectMapper mapper = new ObjectMapper();
     final ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-    final Resource[] resources = resolver.getResources("classpath:sql-on-fhir/input/tests/*.json");
+    final Resource[] resources = resolver.getResources("classpath:sql-on-fhir/tests/v1/*.json");
     return Stream.of(resources)
         // Get each test file.
         .map(resource -> {
@@ -107,7 +107,7 @@ class FhirViewTest {
   DataSource getDataSource(@Nonnull final JsonNode testDefinition) {
     try {
       // Create a parent directory based upon the test name.
-      final JsonNode resources = testDefinition.get("resource");
+      final JsonNode resources = testDefinition.get("resources");
       final Path directory = getTempDir(testDefinition);
       final FhirViewTestDataSource result = new FhirViewTestDataSource();
 
@@ -141,7 +141,7 @@ class FhirViewTest {
   List<TestParameters> toTestParameters(@Nonnull final JsonNode testDefinition,
       @Nonnull final DataSource sourceData) {
     try {
-      final JsonNode views = testDefinition.get("views");
+      final JsonNode views = testDefinition.get("tests");
       final List<TestParameters> result = new ArrayList<>();
 
       for (final Iterator<JsonNode> it = views.elements(); it.hasNext(); ) {
@@ -156,15 +156,26 @@ class FhirViewTest {
         final String expectedFileName =
             view.get("title").asText().replaceAll("\\W+", "_") + ".json";
         final Path expectedPath = directory.resolve(expectedFileName);
-        for (final Iterator<JsonNode> rowIt = view.get("result").elements(); rowIt.hasNext(); ) {
+        List<String> expectedColumns = null;
+        for (final Iterator<JsonNode> rowIt = view.get("expected").elements(); rowIt.hasNext(); ) {
           final JsonNode row = rowIt.next();
+
+          // Get the columns from the first row.
+          if (expectedColumns == null) {
+            final List<String> columns = new ArrayList<>();
+            row.fields().forEachRemaining(field -> columns.add(field.getKey()));
+            expectedColumns = columns;
+          }
+
+          // Append the row to the file.
           Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
               StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         }
 
         final String testName =
-            testDefinition.get("name").asText() + " - " + view.get("title").asText();
-        result.add(new TestParameters(testName, sourceData, fhirView, expectedPath));
+            testDefinition.get("title").asText() + " - " + view.get("title").asText();
+        result.add(
+            new TestParameters(testName, sourceData, fhirView, expectedPath, expectedColumns));
       }
 
       return result;
@@ -176,7 +187,7 @@ class FhirViewTest {
 
   @Nonnull
   private static Path getTempDir(final @Nonnull JsonNode testDefinition) throws IOException {
-    final String directoryName = testDefinition.get("name").asText().replaceAll("\\W+", "_");
+    final String directoryName = testDefinition.get("title").asText().replaceAll("\\W+", "_");
     final Path directory = tempDir.resolve(directoryName);
     try {
       return Files.createDirectory(directory);
@@ -188,10 +199,13 @@ class FhirViewTest {
   @ParameterizedTest
   @MethodSource("requests")
   void test(@Nonnull final TestParameters parameters) {
+    final FhirView view = parameters.getView();
     final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
-        parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));
-    final Dataset<Row> result = executor.buildQuery(parameters.getView());
-    final Dataset<Row> expectedResult = spark.read().json(parameters.getExpectedJson().toString());
+        parameters.getSourceData().read(view.getResource()),
+        Optional.ofNullable(terminologyServiceFactory));
+    final Dataset<Row> result = executor.buildQuery(view);
+    final Dataset<Row> expectedResult = spark.read().json(parameters.getExpectedJson().toString())
+        .selectExpr(parameters.getExpectedColumns().toArray(new String[0]));
     assertThat(result).hasRows(expectedResult);
   }
 
@@ -202,6 +216,7 @@ class FhirViewTest {
     DataSource sourceData;
     FhirView view;
     Path expectedJson;
+    List<String> expectedColumns;
 
     @Override
     public String toString() {

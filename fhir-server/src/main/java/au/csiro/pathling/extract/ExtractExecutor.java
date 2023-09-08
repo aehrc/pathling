@@ -64,7 +64,7 @@ public class ExtractExecutor extends ExtractQueryExecutor {
    */
   public ExtractExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Database database,
+      @Nonnull final Dataset<Row> database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory,
       @Nonnull final ResultWriter resultWriter,
       @Nonnull final ResultRegistry resultRegistry) {

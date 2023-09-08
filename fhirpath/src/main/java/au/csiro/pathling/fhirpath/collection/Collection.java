@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
@@ -33,9 +34,9 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.DataType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -189,22 +190,37 @@ public class Collection implements Comparable, Numeric {
   }
 
   /**
-   * @param spark a {@link SparkSession} to help with determining the schema of the result
+   * @param context an {@link EvaluationContext}
    * @return whether the result of evaluating this path is a non-singular collection
    */
-  public boolean isSingular(@Nonnull final SparkSession spark) {
-    return spark.emptyDataFrame().select(column).schema()
+  public boolean isSingular(@Nonnull final EvaluationContext context) {
+    return context.getDataset().select(column).schema()
         .fields()[0].dataType() instanceof ArrayType;
+  }
+
+  private static boolean needsFlattening(@Nonnull final Column column,
+      @Nonnull final EvaluationContext context) {
+    final boolean arrayOfArrays;
+    final DataType dataType = context.getDataset().select(column).schema().fields()[0].dataType();
+    if (dataType instanceof ArrayType) {
+      final ArrayType arrayType = (ArrayType) dataType;
+      arrayOfArrays = arrayType.elementType() instanceof ArrayType;
+    } else {
+      arrayOfArrays = false;
+    }
+    return arrayOfArrays;
   }
 
   /**
    * Return the child {@link Collection} that results from traversing to the given expression.
    *
    * @param expression the name of the child element
+   * @param context an {@link EvaluationContext}
    * @return a new {@link Collection} representing the child element
    */
   @Nonnull
-  public Optional<Collection> traverse(@Nonnull final String expression) {
+  public Optional<Collection> traverse(@Nonnull final String expression,
+      @Nonnull final EvaluationContext context) {
     // It is only possible to traverse to a child with an element definition.
     return definition.filter(def -> def instanceof ElementDefinition)
         .map(def -> (ElementDefinition) def)
@@ -213,7 +229,11 @@ public class Collection implements Comparable, Numeric {
         .map(def -> {
           // Build a new FhirPath object, with a column that uses `getField` to extract the
           // appropriate child.
-          return Collection.build(column.getField(expression), def);
+          final Column traversed = column.getField(expression);
+          final Column flattened = needsFlattening(traversed, context)
+                                   ? functions.flatten(traversed)
+                                   : traversed;
+          return Collection.build(flattened, def);
         });
   }
 

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
@@ -36,29 +37,22 @@ import org.antlr.v4.runtime.CommonTokenStream;
 @Getter
 public class Parser {
 
-  @Nonnull
-  private final ParserContext context;
-
-  /**
-   * @param context The {@link ParserContext} that this parser should use when parsing expressions
-   */
-  public Parser(@Nonnull final ParserContext context) {
-    this.context = context;
-  }
-
   /**
    * Evaluates a FHIRPath expression.
    *
    * @param expression The String representation of the FHIRPath expression
+   * @param context An {@link EvaluationContext} that provides dependencies and context for the *
+   * evaluation of the expression
    * @return a new {@link Collection} object
    */
   @Nonnull
-  public Collection evaluate(@Nonnull final String expression) {
-    final FhirPath<Collection,Collection> fhirPath = parse(expression);
+  public Collection evaluate(@Nonnull final String expression,
+      @Nonnull final EvaluationContext context) {
+    final FhirPath<Collection, Collection> fhirPath = parse(expression);
     return fhirPath.apply(context.getInputContext(), context);
   }
 
-  
+
   /**
    * Parses a FHIRPath expression.
    *
@@ -66,13 +60,12 @@ public class Parser {
    * @return a new {@link Collection} object
    */
   @Nonnull
-  public FhirPath<Collection,Collection> parse(@Nonnull final String expression) {
+  public FhirPath<Collection, Collection> parse(@Nonnull final String expression) {
     final FhirPathParser parser = buildParser(expression);
 
-    final Visitor visitor = new Visitor(context);
-    return visitor.visit(parser.expression());
+    return new Visitor().visit(parser.expression());
   }
-  
+
   @Nonnull
   static FhirPathParser buildParser(final @Nonnull String expression) {
     final FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));

@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
 import java.util.List;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -35,7 +34,7 @@ public class FunctionInput {
    * Context and dependencies for use in evaluating the function.
    */
   @Nonnull
-  ParserContext context;
+  EvaluationContext context;
 
   /**
    * The collection that is the input to the function, i.e. the result of the evaluation of the

@@ -20,12 +20,12 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.SparkSession;
 
 /**
  * Provides the functionality of the family of boolean operators within FHIRPath, i.e. and, or, xor
@@ -51,15 +51,15 @@ public class BooleanOperator implements BinaryOperator {
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
     final Collection left = input.getLeft();
     final Collection right = input.getRight();
-    final SparkSession spark = input.getContext().getSparkSession();
+    final EvaluationContext context = input.getContext();
 
     checkUserInput(left instanceof BooleanCollection,
         "Left operand to " + type + " operator must be Boolean");
-    checkUserInput(left.isSingular(spark),
+    checkUserInput(left.isSingular(context),
         "Left operand to " + type + " operator must be singular");
     checkUserInput(right instanceof BooleanCollection,
         "Right operand to " + type + " operator must be Boolean");
-    checkUserInput(right.isSingular(spark),
+    checkUserInput(right.isSingular(context),
         "Right operand to " + type + " operator must be singular");
 
     final Column leftValue = left.getColumn();

@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.collection;
 import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.definition.ChoiceElementDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
@@ -61,7 +62,8 @@ public class MixedCollection extends Collection {
 
   @Nonnull
   @Override
-  public Optional<Collection> traverse(@Nonnull final String expression) {
+  public Optional<Collection> traverse(@Nonnull final String expression,
+      final EvaluationContext context) {
     return Optional.empty();
   }
 
@@ -75,11 +77,13 @@ public class MixedCollection extends Collection {
    * type.
    *
    * @param type The type of element to return
+   * @param context The {@link EvaluationContext} to use
    * @return A new collection representing just the elements of this collection with the specified
    * type
    */
   @Nonnull
-  public Optional<Collection> resolveChoice(@Nonnull final String type) {
+  public Optional<Collection> resolveChoice(@Nonnull final String type,
+      @Nonnull final EvaluationContext context) {
     final String elementName = choiceDefinition.getElementName();
     final String columnName = ChoiceElementDefinition.getColumnName(elementName, type);
     if (from instanceof ResourceCollection) {
@@ -90,7 +94,7 @@ public class MixedCollection extends Collection {
           "No such child: " + columnName);
       return elementColumn.map(column -> Collection.build(column, definition.get()));
     }
-    return from.traverse(columnName);
+    return from.traverse(columnName, context);
   }
 
 }

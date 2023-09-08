@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -31,6 +30,8 @@ import java.util.Date;
 import java.util.List;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Tag;
@@ -60,7 +61,7 @@ class AsyncTest extends IntegrationTest {
   SparkSession spark;
 
   @MockBean
-  CacheableDatabase database;
+  Dataset<Row> database;
 
   @LocalServerPort
   int port;
