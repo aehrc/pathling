@@ -76,10 +76,10 @@ public class ResourceCollection extends Collection {
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Map<String, Column> elementsToColumns,
+      final boolean singular, @Nonnull final Map<String, Column> elementsToColumns,
       @Nonnull final ResourceDefinition resourceDefinition,
       @Nonnull final Dataset<Row> dataset) {
-    super(column, type, fhirType, definition);
+    super(column, type, fhirType, definition, singular);
     this.elementsToColumns = elementsToColumns;
     this.resourceDefinition = resourceDefinition;
     this.dataset = dataset;
@@ -100,11 +100,13 @@ public class ResourceCollection extends Collection {
    * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
    * @param dataset the {@link Dataset} that contains the resource data
    * @param resourceType the type of the resource
+   * @param singular whether the resource is singular
    * @return A shiny new ResourcePath
    */
   @Nonnull
   public static ResourceCollection build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final ResourceType resourceType) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final ResourceType resourceType,
+      final boolean singular) {
 
     // Get the resource definition from HAPI.
     final String resourceCode = resourceType.toCode();
@@ -118,7 +120,7 @@ public class ResourceCollection extends Collection {
 
     // We use the ID column as the value column for a ResourcePath.
     return new ResourceCollection(functions.col("id"), Optional.empty(),
-        getFhirType(resourceType), Optional.of(definition), elementsToColumns, definition,
+        getFhirType(resourceType), Optional.of(definition), singular, elementsToColumns, definition,
         dataset);
   }
 
@@ -173,8 +175,11 @@ public class ResourceCollection extends Collection {
     // Get the child column from the map of elements to columns.
     return getElementColumn(expression).flatMap(value ->
         // Get the child element definition from the resource definition.
-        resourceDefinition.getChildElement(expression).map(definition ->
-            Collection.build(value, definition)));
+        resourceDefinition.getChildElement(expression).map(definition -> {
+          final boolean singular = isSingular() && definition.getMaxCardinality().isPresent()
+              && definition.getMaxCardinality().get() == 1;
+          return Collection.build(value, definition, singular);
+        }));
   }
 
 }

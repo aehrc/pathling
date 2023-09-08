@@ -80,7 +80,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
           // If it is not a valid path traversal, see if it is a valid type specifier.
           final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
           return Collection.build(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),
-              Optional.of(fhirType), Optional.empty());
+              Optional.of(fhirType), Optional.empty(), true);
 
         } catch (final FHIRException e2) {
           throw new InvalidUserInputError(

@@ -26,7 +26,6 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -52,14 +51,15 @@ public class WhereFunction implements NamedFunction<Collection> {
     final Column column = filter(previous.getColumn(), element -> {
       final Collection result = argument.apply(
           Collection.build(element, previous.getType(), previous.getFhirType(),
-              previous.getDefinition()), input.getContext());
+              previous.getDefinition(), true), input.getContext());
       final FhirPathType type = checkPresent(result.getType());
-      checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(input.getContext()),
+      checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(),
           "Argument to " + getName() + " function must be a singular Boolean");
       return result.getColumn();
     });
 
-    return Collection.build(column, previous.getType(), previous.getFhirType(), Optional.empty());
+    return Collection.build(column, previous.getType(), previous.getFhirType(),
+        previous.getDefinition(), previous.isSingular());
   }
 
 }

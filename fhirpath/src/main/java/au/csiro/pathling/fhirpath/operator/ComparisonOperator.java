@@ -17,8 +17,13 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 
 /**
@@ -42,28 +47,18 @@ public class ComparisonOperator implements BinaryOperator {
     this.type = type;
   }
 
-  // TODO: implement with columns
+  @Nonnull
+  @Override
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
 
-  // @Nonnull
-  // @Override
-  // public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-  //   final Collection left = input.getLeft();
-  //   final Collection right = input.getRight();
-  //   final SparkSession spark = input.getContext().getSparkSession();
-  //   checkUserInput(left.isSingular(spark),
-  //       "Left operand must be singular: " + left.getExpression());
-  //
-  //   checkUserInput(right.isSingular(spark),
-  //       "Right operand must be singular: " + right.getExpression());
-  //   checkArgumentsAreComparable(input, type.toString());
-  //
-  //   final String expression = buildExpression(input, type.toString());
-  //
-  //   final Column valueColumn = left.getComparison(type).apply(right);
-  //
-  //   return PrimitivePath.build(expression, datasetWithColumn.getDataset(), idColumn,
-  //       datasetWithColumn.getColumn(), Optional.empty(), true, Optional.empty(), thisColumn,
-  //       FHIRDefinedType.BOOLEAN);
-  // }
+    checkUserInput(left.isSingular(), "Left operand must be singular");
+    checkUserInput(right.isSingular(), "Right operand must be singular");
+    checkUserInput(left.isComparableTo(right), "Operands must be comparable");
+
+    return BooleanCollection.build(left.getComparison(type).apply(right), Optional.empty(),
+        true);
+  }
 
 }

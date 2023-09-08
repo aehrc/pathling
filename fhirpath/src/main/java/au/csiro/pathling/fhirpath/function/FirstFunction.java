@@ -45,10 +45,10 @@ public class FirstFunction implements NamedFunction {
     checkNoArguments(getName(), input);
 
     final Collection inputCollection = input.getInput();
-    final Column result = applyOperation(input.getContext(),
+    final Column result = applyOperation(
         inputCollection, Function.identity(), column -> column.getItem(0));
 
     return Collection.build(result, inputCollection.getType(),
-        inputCollection.getFhirType(), inputCollection.getDefinition());
+        inputCollection.getFhirType(), inputCollection.getDefinition(), true);
   }
 }

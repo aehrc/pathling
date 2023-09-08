@@ -55,11 +55,11 @@ public class BooleanOperator implements BinaryOperator {
 
     checkUserInput(left instanceof BooleanCollection,
         "Left operand to " + type + " operator must be Boolean");
-    checkUserInput(left.isSingular(context),
+    checkUserInput(left.isSingular(),
         "Left operand to " + type + " operator must be singular");
     checkUserInput(right instanceof BooleanCollection,
         "Right operand to " + type + " operator must be Boolean");
-    checkUserInput(right.isSingular(context),
+    checkUserInput(right.isSingular(),
         "Right operand to " + type + " operator must be singular");
 
     final Column leftValue = left.getColumn();
@@ -97,7 +97,7 @@ public class BooleanOperator implements BinaryOperator {
         throw new AssertionError("Unsupported boolean operator encountered: " + type);
     }
 
-    return BooleanCollection.build(valueColumn, Optional.empty());
+    return BooleanCollection.build(valueColumn, Optional.empty(), true);
   }
 
   /**

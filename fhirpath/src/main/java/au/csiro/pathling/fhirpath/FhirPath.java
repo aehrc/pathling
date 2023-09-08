@@ -17,10 +17,10 @@ public interface FhirPath<I extends Collection, O extends Collection> {
 
   O apply(@Nonnull final I input, @Nonnull final EvaluationContext context);
 
-  static Column applyOperation(@Nonnull final EvaluationContext context,
-      @Nonnull final Collection input, @Nonnull final Function<Column, Column> singularOperation,
+  static Column applyOperation(@Nonnull final Collection input,
+      @Nonnull final Function<Column, Column> singularOperation,
       @Nonnull final Function<Column, Column> collectionOperation) {
-    if (input.isSingular(context)) {
+    if (input.isSingular()) {
       return singularOperation.apply(input.getColumn());
     } else {
       return collectionOperation.apply(input.getColumn());

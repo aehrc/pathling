@@ -42,8 +42,8 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
 
   public TimeCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
+    super(column, type, fhirType, definition, singular);
   }
 
   /**
@@ -51,13 +51,14 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
    *
    * @param column The column to use
    * @param definition The definition to use
+   * @param singular Whether the collection is singular
    * @return A new instance of {@link TimeCollection}
    */
   @Nonnull
   public static TimeCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition) {
+      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
     return new TimeCollection(column, Optional.of(FhirPathType.TIME),
-        Optional.of(FHIRDefinedType.TIME), definition);
+        Optional.of(FHIRDefinedType.TIME), definition, singular);
   }
 
   /**
@@ -69,7 +70,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) {
     final String timeString = literal.replaceFirst("^@T", "");
-    return TimeCollection.build(lit(timeString), Optional.empty());
+    return TimeCollection.build(lit(timeString), Optional.empty(), true);
   }
 
   @Nonnull
@@ -84,7 +85,8 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   @Override
   public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
+    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty(),
+        isSingular());
   }
 
 }

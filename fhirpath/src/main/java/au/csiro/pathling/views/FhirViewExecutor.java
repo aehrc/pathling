@@ -63,7 +63,7 @@ public class FhirViewExecutor {
     // Build a new expression parser, and parse all the column expressions within the query.
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
     final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataset,
-        resourceType);
+        resourceType, false);
     final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
         fhirContext,
         sparkSession, dataset, StaticFunctionRegistry.getInstance(), terminologyServiceFactory,

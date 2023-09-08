@@ -43,7 +43,7 @@ public class CountFunction implements NamedFunction {
     checkNoArguments(getName(), input);
     final Collection inputPath = input.getInput();
     final Column valueColumn = size(inputPath.getColumn());
-    return IntegerCollection.build(valueColumn, Optional.empty());
+    return IntegerCollection.build(valueColumn, Optional.empty(), true);
   }
 
 }

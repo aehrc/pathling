@@ -38,8 +38,8 @@ public class MixedCollection extends Collection {
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Collection from) {
-    super(column, type, fhirType, definition);
+      final boolean singular, @Nonnull final Collection from) {
+    super(column, type, fhirType, definition, singular);
     this.from = from;
     checkArgument(definition.isPresent() && definition.get() instanceof ChoiceElementDefinition,
         "definition must be a ChoiceElementDefinition");
@@ -51,13 +51,16 @@ public class MixedCollection extends Collection {
    *
    * @param column The column to use
    * @param definition The definition to use
+   * @param singular Whether the collection is singular
    * @param from The collection from which this choice element is derived
    * @return A new instance of {@link MixedCollection}
    */
   @Nonnull
   public static MixedCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<ChoiceElementDefinition> definition, @Nonnull final Collection from) {
-    return new MixedCollection(column, Optional.empty(), Optional.empty(), definition, from);
+      @Nonnull final Optional<ChoiceElementDefinition> definition, final boolean singular,
+      @Nonnull final Collection from) {
+    return new MixedCollection(column, Optional.empty(), Optional.empty(), definition, singular,
+        from);
   }
 
   @Nonnull
@@ -92,7 +95,8 @@ public class MixedCollection extends Collection {
       final Optional<ElementDefinition> definition = resolveChoiceDefinition(type);
       checkUserInput(elementColumn.isPresent() && definition.isPresent(),
           "No such child: " + columnName);
-      return elementColumn.map(column -> Collection.build(column, definition.get()));
+      return elementColumn.map(column -> Collection.build(column, definition.get(),
+          isSingular()));
     }
     return from.traverse(columnName, context);
   }
