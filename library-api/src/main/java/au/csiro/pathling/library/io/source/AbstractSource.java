@@ -23,18 +23,17 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.aggregate.AggregateQueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.extract.ExtractQueryExecutor;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
-import au.csiro.pathling.library.query.FhirViewBuilder;
+import au.csiro.pathling.library.query.FhirViewQuery;
 import au.csiro.pathling.library.query.QueryDispatcher;
 import au.csiro.pathling.views.FhirViewExecutor;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -57,7 +56,7 @@ public abstract class AbstractSource implements QueryableDataSource {
 
   @Nonnull
   private QueryDispatcher buildDispatcher(final @Nonnull PathlingContext context,
-      final Dataset<Row> dataSource) {
+      final DataSource dataSource) {
     // Use the default query configuration.
     final QueryConfiguration queryConfiguration = QueryConfiguration.builder().build();
 
@@ -109,13 +108,13 @@ public abstract class AbstractSource implements QueryableDataSource {
 
   @Nonnull
   @Override
-  public FhirViewBuilder view(@Nullable final ResourceType subjectResource) {
-    return new FhirViewBuilder(dispatcher, requireNonNull(subjectResource));
+  public FhirViewQuery view(@Nullable final ResourceType subjectResource) {
+    return new FhirViewQuery(dispatcher, requireNonNull(subjectResource), context.getGson());
   }
 
   @Nonnull
   @Override
-  public FhirViewBuilder view(@Nullable final String subjectResource) {
+  public FhirViewQuery view(@Nullable final String subjectResource) {
     return view(getResourceType(subjectResource));
   }
 

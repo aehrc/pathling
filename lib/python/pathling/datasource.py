@@ -15,6 +15,7 @@
 
 
 from typing import Dict, Sequence, Optional, Callable
+import json
 
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
@@ -49,6 +50,9 @@ class DataSource(SparkConversionsMixin):
         :return: A Spark DataFrame containing the data for the given resource type.
         """
         return self._wrap_df(self._jds.read(resource_code))
+
+    def resource_types(self):
+        return [r.toCode() for r in self._jds.getResourceTypes()]
 
     @property
     def write(self) -> "DataSinks":
@@ -118,29 +122,21 @@ class DataSource(SparkConversionsMixin):
 
     def view(
         self,
-        resource_type: str,
-        columns: Sequence[Expression],
-        variables: Optional[Sequence[Expression]] = None,
-        filters: Optional[Sequence[Expression]] = None,
+        resource: str,
+        select: Sequence[Dict],
+        constants: Optional[Sequence[Dict]] = None,
+        where: Optional[Sequence[Dict]] = None,
     ) -> DataFrame:
-        """
-        Runs a view query for the given resource type, using the specified columns, variables and
-        filters.
-
-        :param resource_type: A string representing the type of FHIR resource to base the view upon.
-        :param columns: A sequence of FHIRPath expressions that define the columns to include in the
-               view.
-        :param variables: A sequence of FHIRPath expressions that define variables that can be used
-               in the view.
-        :param filters: An optional sequence of FHIRPath expressions that can be evaluated against
-               each resource in the data set to determine whether it is included within the result.
-               The expression must evaluate to a Boolean value. Multiple filters are combined using
-               AND logic.
-        :return: A Spark DataFrame object that represents the view query.
-        """
-        from pathling.query import FhirView
-
-        return FhirView(resource_type, columns, variables, filters).execute(self)
+        args = locals()
+        query = {
+            key: args[key]
+            for key in ["resource", "select", "constants", "where"]
+            if args[key] is not None
+        }
+        query_json = json.dumps(query)
+        jquery = self._jds.view(resource)
+        jquery.json(query_json)
+        return self._wrap_df(jquery.execute())
 
 
 class DataSources(SparkConversionsMixin):

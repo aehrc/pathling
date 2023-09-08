@@ -201,8 +201,7 @@ class FhirViewTest {
   void test(@Nonnull final TestParameters parameters) {
     final FhirView view = parameters.getView();
     final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
-        parameters.getSourceData().read(view.getResource()),
-        Optional.ofNullable(terminologyServiceFactory));
+        parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));
     final Dataset<Row> result = executor.buildQuery(view);
     final Dataset<Row> expectedResult = spark.read().json(parameters.getExpectedJson().toString())
         .selectExpr(parameters.getExpectedColumns().toArray(new String[0]));

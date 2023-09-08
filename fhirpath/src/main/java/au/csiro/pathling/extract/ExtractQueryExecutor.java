@@ -3,6 +3,7 @@ package au.csiro.pathling.extract;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
@@ -23,7 +24,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
 
   public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Dataset<Row> dataSource,
+      @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
   }

@@ -10,6 +10,7 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.ArrayList;
@@ -37,18 +38,18 @@ public class FhirViewExecutor {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final Dataset<Row> dataset;
+  private final DataSource dataSource;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
 
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
-    this.dataset = dataset;
+    this.dataSource = dataset;
     this.terminologyServiceFactory = terminologyServiceFactory;
   }
 
@@ -62,12 +63,12 @@ public class FhirViewExecutor {
 
     // Build a new expression parser, and parse all the column expressions within the query.
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
+    final Dataset<Row> dataset = dataSource.read(resourceType);
     final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataset,
         resourceType, false);
     final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
-        fhirContext,
-        sparkSession, dataset, StaticFunctionRegistry.getInstance(), terminologyServiceFactory,
-        constantReplacer);
+        fhirContext, sparkSession, dataset, StaticFunctionRegistry.getInstance(),
+        terminologyServiceFactory, constantReplacer);
 
     final List<Column> select = parseSelect(view.getSelect(), evaluationContext,
         Collections.emptyList());

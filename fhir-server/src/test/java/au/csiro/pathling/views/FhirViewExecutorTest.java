@@ -17,12 +17,11 @@
 
 package au.csiro.pathling.views;
 
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +36,7 @@ class FhirViewExecutorTest {
   SparkSession sparkSession;
 
   @Autowired
-  Dataset<Row> dataSource;
+  DataSource dataSource;
 
   @Autowired
   TerminologyServiceFactory terminologyServiceFactory;

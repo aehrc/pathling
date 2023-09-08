@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.google.common.collect.Streams;
@@ -57,14 +58,14 @@ public abstract class QueryExecutor {
   protected final SparkSession sparkSession;
 
   @Nonnull
-  protected final Dataset<Row> dataSource;
+  protected final DataSource dataSource;
 
   @Nonnull
   protected final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
   protected QueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Dataset<Row> dataSource,
+      @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     this.configuration = configuration;
     this.fhirContext = fhirContext;

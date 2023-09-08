@@ -20,7 +20,7 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
-import au.csiro.pathling.library.query.FhirViewBuilder;
+import au.csiro.pathling.library.query.FhirViewQuery;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -59,7 +59,7 @@ public interface QueryableDataSource extends DataSource {
    * @return a query builder for the view operation
    */
   @Nonnull
-  FhirViewBuilder view(@Nullable ResourceType subjectResource);
+  FhirViewQuery view(@Nullable ResourceType subjectResource);
 
   /**
    * @param subjectResource the subject resource code
@@ -80,6 +80,6 @@ public interface QueryableDataSource extends DataSource {
    * @return a query builder for the view operation
    */
   @Nonnull
-  FhirViewBuilder view(@Nullable String subjectResource);
+  FhirViewQuery view(@Nullable String subjectResource);
 
 }
