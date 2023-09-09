@@ -382,6 +382,7 @@
               </labels>
               <ports>
                 <port>8080</port>
+                <port>8081</port>
                 <port>4040</port>
               </ports>
             </container>
