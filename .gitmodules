@@ -1,3 +1,3 @@
 [submodule "sql-on-fhir"]
-	path = fhirpath/src/test/resources/sql-on-fhir
+	path = sql-on-fhir
 	url = https://github.com/FHIR/sql-on-fhir-v2.git

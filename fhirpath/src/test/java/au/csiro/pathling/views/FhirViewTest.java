@@ -77,7 +77,7 @@ class FhirViewTest {
   Stream<TestParameters> requests() throws IOException {
     final ObjectMapper mapper = new ObjectMapper();
     final ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-    final Resource[] resources = resolver.getResources("classpath:sql-on-fhir/tests/v1/*.json");
+    final Resource[] resources = resolver.getResources("classpath:tests/sql-on-fhir/v1/*.json");
     return Stream.of(resources)
         // Get each test file.
         .map(resource -> {
