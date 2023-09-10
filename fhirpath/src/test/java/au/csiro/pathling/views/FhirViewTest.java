@@ -157,7 +157,7 @@ class FhirViewTest {
             view.get("title").asText().replaceAll("\\W+", "_") + ".json";
         final Path expectedPath = directory.resolve(expectedFileName);
         List<String> expectedColumns = null;
-        for (final Iterator<JsonNode> rowIt = view.get("expected").elements(); rowIt.hasNext(); ) {
+        for (final Iterator<JsonNode> rowIt = view.get("expect").elements(); rowIt.hasNext(); ) {
           final JsonNode row = rowIt.next();
 
           // Get the columns from the first row.
