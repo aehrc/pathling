@@ -118,7 +118,9 @@ public class FhirViewExecutor {
       @Nonnull final DirectSelection select, @Nonnull final List<Column> currentSelection) {
     final Collection path = evalExpression(select.getPath(), context);
     final List<Column> newColumns = new ArrayList<>(currentSelection);
-    newColumns.add(path.getColumn().alias(select.getAlias()));
+    final Column column = path.getColumn();
+    final Optional<String> alias = Optional.ofNullable(select.getAlias());
+    newColumns.add(alias.map(column::alias).orElse(column));
     return newColumns;
   }
 

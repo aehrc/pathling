@@ -22,7 +22,7 @@ public class DirectSelection extends SelectClause {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.name">ViewDefinition.select.name</a>
    */
-  @NotNull
+  @Nullable
   @Size(max = 255)
   @Pattern(regexp = "^[^_][A-Za-z][A-Za-z0-9_]+$")
   String alias;
