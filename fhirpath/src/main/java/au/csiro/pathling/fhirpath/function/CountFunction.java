@@ -41,9 +41,7 @@ public class CountFunction implements NamedFunction {
   @Override
   public Collection invoke(@Nonnull final FunctionInput input) {
     checkNoArguments(getName(), input);
-    final Collection inputPath = input.getInput();
-    final Column valueColumn = size(inputPath.getColumn());
-    return IntegerCollection.build(valueColumn, Optional.empty(), true);
+    return IntegerCollection.build(
+        input.getInput().getCtx().count().getValue());
   }
-
 }

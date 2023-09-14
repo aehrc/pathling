@@ -55,8 +55,8 @@ public class IntegerCollection extends Collection implements
   protected IntegerCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -64,15 +64,20 @@ public class IntegerCollection extends Collection implements
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link IntegerCollection}
    */
   @Nonnull
   public static IntegerCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new IntegerCollection(column, Optional.of(FhirPathType.INTEGER),
-        Optional.of(FHIRDefinedType.INTEGER), definition, singular);
+        Optional.of(FHIRDefinedType.INTEGER), definition);
   }
+
+  @Nonnull
+  public static IntegerCollection build(@Nonnull final Column column) {
+    return build(column, Optional.empty());
+  }
+
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -84,7 +89,7 @@ public class IntegerCollection extends Collection implements
   public static IntegerCollection fromLiteral(@Nonnull final String fhirPath)
       throws NumberFormatException {
     final int value = Integer.parseInt(fhirPath);
-    return IntegerCollection.build(lit(value), Optional.empty(), true);
+    return IntegerCollection.build(lit(value));
   }
 
   @Nonnull
@@ -172,11 +177,11 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(valueColumn, Optional.empty(), true);
+          return IntegerCollection.build(valueColumn, Optional.empty());
         case DIVISION:
           final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType());
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(valueColumn, Optional.empty(), true);
+          return DecimalCollection.build(valueColumn, Optional.empty());
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -186,7 +191,7 @@ public class IntegerCollection extends Collection implements
   @Override
   @Nonnull
   public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty(), true);
+    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
   }
 
 }

@@ -39,7 +39,7 @@ public class MixedCollection extends Collection {
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       final boolean singular, @Nonnull final Collection from) {
-    super(column, type, fhirType, definition, singular);
+    super(column, type, fhirType, definition);
     this.from = from;
     checkArgument(definition.isPresent() && definition.get() instanceof ChoiceElementDefinition,
         "definition must be a ChoiceElementDefinition");
@@ -65,8 +65,7 @@ public class MixedCollection extends Collection {
 
   @Nonnull
   @Override
-  public Optional<Collection> traverse(@Nonnull final String expression,
-      final EvaluationContext context) {
+  public Optional<Collection> traverse(@Nonnull final String elementName) {
     return Optional.empty();
   }
 
@@ -95,10 +94,8 @@ public class MixedCollection extends Collection {
       final Optional<ElementDefinition> definition = resolveChoiceDefinition(type);
       checkUserInput(elementColumn.isPresent() && definition.isPresent(),
           "No such child: " + columnName);
-      return elementColumn.map(column -> Collection.build(column, definition.get(),
-          isSingular()));
+      return elementColumn.map(column -> Collection.build(column, definition.get()));
     }
-    return from.traverse(columnName, context);
+    return from.traverse(columnName);
   }
-
 }

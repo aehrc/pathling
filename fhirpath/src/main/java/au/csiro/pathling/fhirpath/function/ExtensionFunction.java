@@ -31,9 +31,6 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 public class ExtensionFunction implements NamedFunction {
 
   // TODO: implement as columns
-
-  // private static final String NAME = "extension";
-  //
   // @Nonnull
   // @Override
   // public String getName() {

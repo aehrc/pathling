@@ -43,7 +43,7 @@ public class EmptyFunction implements NamedFunction {
     // We use the count function to determine whether there are zero items in the input collection.
     final Collection countResult = new CountFunction().invoke(input);
     final Column valueColumn = countResult.getColumn().equalTo(0);
-    return BooleanCollection.build(valueColumn, Optional.empty(), true);
+    return BooleanCollection.build(valueColumn, Optional.empty());
   }
 
 }

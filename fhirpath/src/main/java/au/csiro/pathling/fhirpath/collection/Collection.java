@@ -17,12 +17,11 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static org.apache.spark.sql.functions.flatten;
-
+import au.csiro.pathling.fhirpath.ColumnHelpers;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableMap;
@@ -100,11 +99,6 @@ public class Collection implements Comparable, Numeric {
   private Optional<? extends NodeDefinition> definition;
 
   /**
-   * Whether the result of evaluating this expression is a singleton collection.
-   */
-  private boolean singular;
-
-  /**
    * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
    * definition.
    *
@@ -118,8 +112,8 @@ public class Collection implements Comparable, Numeric {
   public static Collection build(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    return new Collection(column, fhirPathType, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    return new Collection(column, fhirPathType, fhirType, definition);
   }
 
   /**
@@ -130,15 +124,14 @@ public class Collection implements Comparable, Numeric {
    *
    * @param column a {@link Column} containing the result of the expression
    * @param definition the {@link ElementDefinition} that this path should be based upon
-   * @param singular whether the result of evaluating this expression is a singleton collection
    * @return a new {@link Collection}
    */
   @Nonnull
   public static Collection build(@Nonnull final Column column,
-      @Nonnull final ElementDefinition definition, final boolean singular) {
+      @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
-      return getInstance(column, optionalFhirType, Optional.of(definition), singular);
+      return getInstance(column, optionalFhirType, Optional.of(definition));
     } else {
       throw new IllegalArgumentException(
           "Attempted to build a Collection with an ElementDefinition with no fhirType");
@@ -153,19 +146,18 @@ public class Collection implements Comparable, Numeric {
    *
    * @param column a {@link Column} containing the result of the expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
-   * @param singular whether the result of evaluating this expression is a singleton collection
    * @return a new {@link Collection}
    */
   @Nonnull
   public static Collection build(@Nonnull final Column column,
-      @Nonnull final FHIRDefinedType fhirType, final boolean singular) {
-    return getInstance(column, Optional.of(fhirType), Optional.empty(), singular);
+      @Nonnull final FHIRDefinedType fhirType) {
+    return getInstance(column, Optional.of(fhirType), Optional.empty());
   }
 
   @Nonnull
   private static Collection getInstance(@Nonnull final Column column,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<ElementDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<ElementDefinition> definition) {
     // Look up the class that represents an element with the specified FHIR type.
     final FHIRDefinedType resolvedType = fhirType
         .or(() -> definition.flatMap(ElementDefinition::getFhirType))
@@ -177,10 +169,9 @@ public class Collection implements Comparable, Numeric {
     try {
       // Call its constructor and return.
       final Constructor<? extends Collection> constructor = elementPathClass
-          .getDeclaredConstructor(Column.class, Optional.class, Optional.class, Optional.class,
-              boolean.class);
+          .getDeclaredConstructor(Column.class, Optional.class, Optional.class, Optional.class);
       return constructor
-          .newInstance(column, Optional.ofNullable(fhirPathType), fhirType, definition, singular);
+          .newInstance(column, Optional.ofNullable(fhirPathType), fhirType, definition);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
                    InvocationTargetException e) {
       throw new RuntimeException("Problem building a Collection object", e);
@@ -198,45 +189,21 @@ public class Collection implements Comparable, Numeric {
   }
 
   /**
-   * Return the child {@link Collection} that results from traversing to the given expression.
+   * Return the child {@link Collection} that results from traversing to the given elementName.
    *
-   * @param expression the name of the child element
-   * @param context an {@link EvaluationContext}
+   * @param elementName the name of the child element
    * @return a new {@link Collection} representing the child element
    */
   @Nonnull
-  public Optional<Collection> traverse(@Nonnull final String expression,
-      @Nonnull final EvaluationContext context) {
+  public Optional<Collection> traverse(@Nonnull final String elementName) {
     final Optional<ElementDefinition> elementDefinition = definition
         .filter(def -> def instanceof ElementDefinition)
         .map(def -> (ElementDefinition) def);
-    final Optional<Integer> parentCardinality = elementDefinition.flatMap(
-        ElementDefinition::getMaxCardinality);
-
     // It is only possible to traverse to a child with an element definition.
     return elementDefinition
         // Get the named child definition.
-        .flatMap(def -> def.getChildElement(expression))
-        .map(def -> {
-          // Build a new FhirPath object, with a column that uses `getField` to extract the
-          // appropriate child.
-          final Column traversed = column.getField(expression);
-
-          // Detect if flattening is required by examining the cardinality of the parent and the 
-          // child within the traversal operation. If both will result in arrays, flattening will be 
-          // required.
-          final Optional<Integer> childCardinality = def.getMaxCardinality();
-          final Column flattened =
-              parentCardinality.orElse(0) != 1 && childCardinality.orElse(0) != 1
-              ? flatten(traversed)
-              : traversed;
-
-          // Determine whether the new collection is singular.
-          final boolean singular = isSingular() && childCardinality.isPresent()
-              && childCardinality.get() == 1;
-
-          return Collection.build(flattened, def, singular);
-        });
+        .flatMap(def -> def.getChildElement(elementName))
+        .map(def -> Collection.build(getCtx().traverse(elementName).getValue(), def));
   }
 
   // @Nonnull
@@ -303,6 +270,7 @@ public class Collection implements Comparable, Numeric {
     return Optional.empty();
   }
 
+
   /**
    * Creates a null {@link Collection}.
    *
@@ -311,7 +279,25 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   public static Collection nullCollection() {
     return new Collection(functions.lit(null), Optional.empty(), Optional.empty(),
-        Optional.empty(), false);
+        Optional.empty());
+  }
+
+  @Nonnull
+  public Collection copyWith(Column newValue) {
+    // TODO: This is very very suspicious 
+    // Really need to understand what the relationships between all the different types
+    // some of them seem redundant
+    return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition);
+  }
+
+  public Column getSingleton() {
+    return ColumnHelpers.singular(getColumn());
+  }
+
+  @Nonnull
+  // TODO: Find a better name
+  public ColumnCtx getCtx() {
+    return ColumnCtx.of(getColumn());
   }
 
 }

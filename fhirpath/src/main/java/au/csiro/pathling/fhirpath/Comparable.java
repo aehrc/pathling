@@ -49,8 +49,10 @@ public interface Comparable {
 
     final TriFunction<ColumnComparator, Column, Column, Column> compFunction = operation.compFunction;
 
+    // TODO: Move to the interface (asking for the singular column)
     return target -> compFunction
-        .apply(comparator, source.getColumn(), target.getColumn());
+        .apply(comparator, ColumnHelpers.singular(source.getColumn()),
+            ColumnHelpers.singular(target.getColumn()));
   }
 
   /**

@@ -51,15 +51,15 @@ public class WhereFunction implements NamedFunction<Collection> {
     final Column column = filter(previous.getColumn(), element -> {
       final Collection result = argument.apply(
           Collection.build(element, previous.getType(), previous.getFhirType(),
-              previous.getDefinition(), true), input.getContext());
+              previous.getDefinition()), input.getContext());
       final FhirPathType type = checkPresent(result.getType());
-      checkUserInput(type.equals(FhirPathType.BOOLEAN) && result.isSingular(),
+      checkUserInput(type.equals(FhirPathType.BOOLEAN),
           "Argument to " + getName() + " function must be a singular Boolean");
-      return result.getColumn();
+      return result.getSingleton();
     });
 
     return Collection.build(column, previous.getType(), previous.getFhirType(),
-        previous.getDefinition(), previous.isSingular());
+        previous.getDefinition());
   }
 
 }

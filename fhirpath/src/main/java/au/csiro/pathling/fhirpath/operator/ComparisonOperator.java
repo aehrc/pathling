@@ -53,12 +53,9 @@ public class ComparisonOperator implements BinaryOperator {
     final Collection left = input.getLeft();
     final Collection right = input.getRight();
 
-    checkUserInput(left.isSingular(), "Left operand must be singular");
-    checkUserInput(right.isSingular(), "Right operand must be singular");
     checkUserInput(left.isComparableTo(right), "Operands must be comparable");
 
-    return BooleanCollection.build(left.getComparison(type).apply(right), Optional.empty(),
-        true);
+    return BooleanCollection.build(left.getComparison(type).apply(right), Optional.empty());
   }
 
 }

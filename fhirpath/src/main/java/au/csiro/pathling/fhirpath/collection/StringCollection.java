@@ -48,8 +48,8 @@ public class StringCollection extends Collection implements Materializable<Primi
 
   public StringCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -57,14 +57,13 @@ public class StringCollection extends Collection implements Materializable<Primi
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link StringCollection}
    */
   @Nonnull
   public static StringCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new StringCollection(column, Optional.of(FhirPathType.STRING),
-        Optional.of(FHIRDefinedType.STRING), definition, singular);
+        Optional.of(FHIRDefinedType.STRING), definition);
   }
 
   /**
@@ -76,7 +75,7 @@ public class StringCollection extends Collection implements Materializable<Primi
   @Nonnull
   public static StringCollection fromLiteral(@Nonnull final String fhirPath) {
     final String value = parseStringLiteral(fhirPath);
-    return StringCollection.build(lit(value), Optional.empty(), true);
+    return StringCollection.build(lit(value), Optional.empty());
   }
 
   @Nonnull

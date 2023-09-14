@@ -57,8 +57,8 @@ public class DateTimeCollection extends Collection implements
   protected DateTimeCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -73,7 +73,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
     return new DateTimeCollection(column, Optional.of(FhirPathType.DATETIME),
-        Optional.of(FHIRDefinedType.DATETIME), definition, singular);
+        Optional.of(FHIRDefinedType.DATETIME), definition);
   }
 
   /**
@@ -139,7 +139,7 @@ public class DateTimeCollection extends Collection implements
     } else {
       valueColumn = getColumn();
     }
-    return StringCollection.build(valueColumn, Optional.empty(), isSingular());
+    return StringCollection.build(valueColumn, Optional.empty());
   }
 
 }

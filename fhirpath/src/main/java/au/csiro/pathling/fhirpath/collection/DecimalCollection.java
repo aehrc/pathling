@@ -53,8 +53,8 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   protected DecimalCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
-    super(column, fhirPathType, fhirType, definition, singular);
+      @Nonnull final Optional<NodeDefinition> definition) {
+    super(column, fhirPathType, fhirType, definition);
   }
 
   /**
@@ -62,14 +62,13 @@ public class DecimalCollection extends Collection implements Materializable<Deci
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link DecimalCollection}
    */
   @Nonnull
   public static DecimalCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new DecimalCollection(column, Optional.of(FhirPathType.DECIMAL),
-        Optional.of(FHIRDefinedType.DECIMAL), definition, singular);
+        Optional.of(FHIRDefinedType.DECIMAL), definition);
   }
 
   /**
@@ -83,7 +82,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   public static DecimalCollection fromLiteral(@Nonnull final String literal)
       throws NumberFormatException {
     final BigDecimal value = parseLiteral(literal);
-    return DecimalCollection.build(lit(value), Optional.empty(), true);
+    return DecimalCollection.build(lit(value), Optional.empty());
   }
 
   @Nonnull
@@ -131,10 +130,10 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         case MULTIPLICATION:
         case DIVISION:
           result = result.cast(getDecimalType());
-          return DecimalCollection.build(result, Optional.empty(), isSingular());
+          return DecimalCollection.build(result, Optional.empty());
         case MODULUS:
           result = result.cast(DataTypes.LongType);
-          return IntegerCollection.build(result, Optional.empty(), isSingular());
+          return IntegerCollection.build(result, Optional.empty());
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -184,7 +183,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Override
   @Nonnull
   public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty(), true);
+    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
   }
 
 

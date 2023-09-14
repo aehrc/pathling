@@ -45,8 +45,8 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   protected BooleanCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -54,14 +54,13 @@ public class BooleanCollection extends Collection implements Materializable<Bool
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link BooleanCollection}
    */
   @Nonnull
   public static BooleanCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new BooleanCollection(column, Optional.of(FhirPathType.BOOLEAN),
-        Optional.of(FHIRDefinedType.BOOLEAN), definition, singular);
+        Optional.of(FHIRDefinedType.BOOLEAN), definition);
   }
 
   /**
@@ -73,7 +72,12 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   @Nonnull
   public static BooleanCollection fromLiteral(@Nonnull final String literal) {
     final boolean value = literal.equals("true");
-    return BooleanCollection.build(lit(value), Optional.empty(), true);
+    return BooleanCollection.build(lit(value), Optional.empty());
+  }
+
+  @Nonnull
+  public static BooleanCollection build(@Nonnull final Column column) {
+    return BooleanCollection.build(column, Optional.empty());
   }
 
   @Nonnull

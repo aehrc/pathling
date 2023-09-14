@@ -48,8 +48,8 @@ public class CodingCollection extends Collection implements Materializable<Codin
   protected CodingCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -57,14 +57,13 @@ public class CodingCollection extends Collection implements Materializable<Codin
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link CodingCollection}
    */
   @Nonnull
   public static CodingCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new CodingCollection(column, Optional.of(FhirPathType.CODING),
-        Optional.of(FHIRDefinedType.CODING), definition, singular);
+        Optional.of(FHIRDefinedType.CODING), definition);
   }
 
   /**
@@ -79,7 +78,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
       throws IllegalArgumentException {
     final Coding coding = CodingLiteral.fromString(fhirPath);
     final Column column = buildColumn(coding);
-    return CodingCollection.build(column, Optional.empty(), true);
+    return CodingCollection.build(column, Optional.empty());
   }
 
   @Nonnull
@@ -132,7 +131,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
   @Override
   public Collection asStringPath() {
     final Column valueColumn = callUDF(CodingToLiteral.FUNCTION_NAME, getColumn());
-    return CodingCollection.build(valueColumn, Optional.empty(), isSingular());
+    return CodingCollection.build(valueColumn, Optional.empty());
   }
 
 }

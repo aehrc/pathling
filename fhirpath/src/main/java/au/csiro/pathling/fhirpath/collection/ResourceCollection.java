@@ -21,7 +21,6 @@ import static au.csiro.pathling.utilities.Preconditions.checkPresent;
 
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
@@ -79,7 +78,7 @@ public class ResourceCollection extends Collection {
       final boolean singular, @Nonnull final Map<String, Column> elementsToColumns,
       @Nonnull final ResourceDefinition resourceDefinition,
       @Nonnull final Dataset<Row> dataset) {
-    super(column, type, fhirType, definition, singular);
+    super(column, type, fhirType, definition);
     this.elementsToColumns = elementsToColumns;
     this.resourceDefinition = resourceDefinition;
     this.dataset = dataset;
@@ -116,10 +115,10 @@ public class ResourceCollection extends Collection {
 
     //noinspection ReturnOfNull
     final Map<String, Column> elementsToColumns = Stream.of(dataset.columns())
-        .collect(Collectors.toMap(Function.identity(), functions::col, (a, b) -> null));
+        .collect(Collectors.toUnmodifiableMap(Function.identity(), dataset::col));
 
     // We use the ID column as the value column for a ResourcePath.
-    return new ResourceCollection(functions.col("id"), Optional.empty(),
+    return new ResourceCollection(dataset.col("id"), Optional.empty(),
         getFhirType(resourceType), Optional.of(definition), singular, elementsToColumns, definition,
         dataset);
   }
@@ -170,15 +169,14 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   @Override
-  public Optional<Collection> traverse(@Nonnull final String expression,
-      final EvaluationContext context) {
+  public Optional<Collection> traverse(@Nonnull final String elementName) {
     // Get the child column from the map of elements to columns.
-    return getElementColumn(expression).flatMap(value ->
+    return getElementColumn(elementName).flatMap(value ->
         // Get the child element definition from the resource definition.
-        resourceDefinition.getChildElement(expression).map(definition -> {
-          final boolean singular = isSingular() && definition.getMaxCardinality().isPresent()
-              && definition.getMaxCardinality().get() == 1;
-          return Collection.build(value, definition, singular);
+        resourceDefinition.getChildElement(elementName).map(definition -> {
+          // final boolean singular = isSingular() && definition.getMaxCardinality().isPresent()
+          //     && definition.getMaxCardinality().get() == 1;
+          return Collection.build(value, definition);
         }));
   }
 

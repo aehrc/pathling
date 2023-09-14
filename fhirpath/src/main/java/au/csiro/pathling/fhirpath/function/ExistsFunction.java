@@ -61,7 +61,7 @@ public class ExistsFunction implements NamedFunction {
       column = existsResult.getColumn();
     }
 
-    return BooleanCollection.build(column, Optional.empty(), true);
+    return BooleanCollection.build(column, Optional.empty());
   }
 
 }

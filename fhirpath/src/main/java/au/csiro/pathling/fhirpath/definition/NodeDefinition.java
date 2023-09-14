@@ -4,8 +4,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 
 /**
- * 
- * @param <T>
+ *
  */
 public interface NodeDefinition<T extends NodeDefinition> {
 

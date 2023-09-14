@@ -38,9 +38,8 @@ public class MembershipOperator /*extends AggregateFunction */ implements Binary
     this.type = type;
   }
 
-  
   // TODO: implement with columns
-  
+
   // @Nonnull
   // @Override
   // public Collection invoke(@Nonnull final BinaryOperatorInput input) {

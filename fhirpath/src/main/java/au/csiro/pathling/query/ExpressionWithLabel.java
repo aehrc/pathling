@@ -84,7 +84,7 @@ public class ExpressionWithLabel {
     return expressionWithLabels.stream().map(ExpressionWithLabel::getLabel)
         .map(Optional::ofNullable);
   }
-  
+
   /**
    * Returns a list of {@link ExpressionWithLabel} objects, where each expression has no label.
    *
@@ -92,7 +92,8 @@ public class ExpressionWithLabel {
    * @return a list of {@link ExpressionWithLabel} objects
    */
   @Nonnull
-  public static List<ExpressionWithLabel> fromUnlabelledExpressions(@Nonnull final List<String> expressions) {
+  public static List<ExpressionWithLabel> fromUnlabelledExpressions(
+      @Nonnull final List<String> expressions) {
     return expressions.stream().map(ExpressionWithLabel::withNoLabel)
         .collect(Collectors.toUnmodifiableList());
   }

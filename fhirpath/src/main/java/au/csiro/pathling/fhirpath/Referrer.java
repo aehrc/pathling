@@ -69,7 +69,7 @@ public interface Referrer {
   @NotImplemented
   static Column resourceEqualityFor(@Nonnull final Referrer referrer,
       @Nonnull final ResourceCollection resourceCollection) {
-    
+
     // TODO: implement
     // final Column targetId = resourceCollection.getCurrentResource()
     //     .map(ResourceCollection::getIdColumn)

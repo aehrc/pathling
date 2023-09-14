@@ -144,6 +144,7 @@ class FhirViewTest {
       final JsonNode views = testDefinition.get("tests");
       final List<TestParameters> result = new ArrayList<>();
 
+      int testNumber = 0;
       for (final Iterator<JsonNode> it = views.elements(); it.hasNext(); ) {
         final JsonNode view = it.next();
 
@@ -154,7 +155,8 @@ class FhirViewTest {
         // Write the expected JSON to a file, named after the view.
         final Path directory = getTempDir(testDefinition);
         final String expectedFileName =
-            view.get("title").asText().replaceAll("\\W+", "_") + ".json";
+            String.format("%02d_%s.json", testNumber,
+                view.get("title").asText().replaceAll("\\W+", "_"));
         final Path expectedPath = directory.resolve(expectedFileName);
         List<String> expectedColumns = null;
         for (final Iterator<JsonNode> rowIt = view.get("expect").elements(); rowIt.hasNext(); ) {
@@ -176,6 +178,7 @@ class FhirViewTest {
             testDefinition.get("title").asText() + " - " + view.get("title").asText();
         result.add(
             new TestParameters(testName, sourceData, fhirView, expectedPath, expectedColumns));
+        testNumber++;
       }
 
       return result;

@@ -8,7 +8,7 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 public class GetIdFunction implements NamedFunction {
 
   // TODO: impelement as columns
-  
+
   // private static final String NAME = "getId";
   //
   // @Nonnull

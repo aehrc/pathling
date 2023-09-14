@@ -70,7 +70,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
     return (input, context) -> {
       try {
         // Attempt path traversal.
-        final Optional<Collection> result = input.traverse(fhirPath, context);
+        final Optional<Collection> result = input.traverse(fhirPath);
         checkUserInput(result.isPresent(), "No such child: " + fhirPath);
         return result.get();
 
@@ -80,7 +80,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
           // If it is not a valid path traversal, see if it is a valid type specifier.
           final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
           return Collection.build(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),
-              Optional.of(fhirType), Optional.empty(), true);
+              Optional.of(fhirType), Optional.empty());
 
         } catch (final FHIRException e2) {
           throw new InvalidUserInputError(

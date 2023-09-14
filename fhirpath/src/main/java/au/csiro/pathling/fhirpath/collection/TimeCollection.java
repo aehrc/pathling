@@ -42,8 +42,8 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
 
   public TimeCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -58,7 +58,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   public static TimeCollection build(@Nonnull final Column column,
       @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
     return new TimeCollection(column, Optional.of(FhirPathType.TIME),
-        Optional.of(FHIRDefinedType.TIME), definition, singular);
+        Optional.of(FHIRDefinedType.TIME), definition);
   }
 
   /**
@@ -85,8 +85,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   @Override
   public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty(),
-        isSingular());
+    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
   }
 
 }

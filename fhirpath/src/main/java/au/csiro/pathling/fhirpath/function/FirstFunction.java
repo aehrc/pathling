@@ -17,14 +17,12 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.FhirPath.applyOperation;
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
 
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.annotations.Name;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -43,12 +41,7 @@ public class FirstFunction implements NamedFunction {
   @Override
   public Collection invoke(@Nonnull final FunctionInput input) {
     checkNoArguments(getName(), input);
-
-    final Collection inputCollection = input.getInput();
-    final Column result = applyOperation(
-        inputCollection, Function.identity(), column -> column.getItem(0));
-
-    return Collection.build(result, inputCollection.getType(),
-        inputCollection.getFhirType(), inputCollection.getDefinition(), true);
+    final Column result = input.getInput().getCtx().first().getValue();
+    return input.getInput().copyWith(result);
   }
 }

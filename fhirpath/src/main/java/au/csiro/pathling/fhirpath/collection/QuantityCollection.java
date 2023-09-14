@@ -60,7 +60,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+    super(column, type, fhirType, definition);
   }
 
   /**

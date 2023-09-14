@@ -1,8 +1,11 @@
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.collection.Collection;
+
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+
 import org.apache.spark.sql.Column;
 
 /**
@@ -20,11 +23,7 @@ public interface FhirPath<I extends Collection, O extends Collection> {
   static Column applyOperation(@Nonnull final Collection input,
       @Nonnull final Function<Column, Column> singularOperation,
       @Nonnull final Function<Column, Column> collectionOperation) {
-    if (input.isSingular()) {
-      return singularOperation.apply(input.getColumn());
-    } else {
-      return collectionOperation.apply(input.getColumn());
-    }
+    return ValueFunctions.ifArray(input.getColumn(), collectionOperation::apply,
+        singularOperation::apply);
   }
-
 }

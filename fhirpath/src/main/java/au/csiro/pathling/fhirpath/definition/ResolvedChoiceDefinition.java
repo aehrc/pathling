@@ -11,12 +11,13 @@ public class ResolvedChoiceDefinition implements ElementDefinition {
 
   @Nonnull
   private final BaseRuntimeElementDefinition elementDefinition;
-  
+
   @Nonnull
   @Getter
   private final Optional<Integer> maxCardinality;
 
-  public ResolvedChoiceDefinition(@Nonnull final BaseRuntimeElementDefinition definition, @Nonnull final
+  public ResolvedChoiceDefinition(@Nonnull final BaseRuntimeElementDefinition definition,
+      @Nonnull final
       ChoiceElementDefinition parent) {
     this.elementDefinition = definition;
     this.maxCardinality = parent.getMaxCardinality();

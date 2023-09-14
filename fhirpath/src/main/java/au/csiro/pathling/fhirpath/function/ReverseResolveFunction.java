@@ -25,7 +25,8 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
  * referring element is supplied as an argument.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#reverseresolve">reverseResolve</a>
+ * @see <a
+ * href="https://pathling.csiro.au/docs/fhirpath/functions.html#reverseresolve">reverseResolve</a>
  */
 @Name("reverseResolve")
 @NotImplemented

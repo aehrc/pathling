@@ -51,8 +51,8 @@ public class DateCollection extends Collection implements Materializable<DateTyp
 
   protected DateCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
-    super(column, type, fhirType, definition, singular);
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
+    super(column, type, fhirType, definition);
   }
 
   /**
@@ -60,14 +60,13 @@ public class DateCollection extends Collection implements Materializable<DateTyp
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link DateCollection}
    */
   @Nonnull
   public static DateCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new DateCollection(column, Optional.of(FhirPathType.DATE),
-        Optional.of(FHIRDefinedType.DATE), definition, singular);
+        Optional.of(FHIRDefinedType.DATE), definition);
   }
 
   /**
@@ -80,7 +79,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   @Nonnull
   public static DateCollection fromLiteral(@Nonnull final String fhirPath) throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateCollection.build(lit(dateString), Optional.empty(), true);
+    return DateCollection.build(lit(dateString), Optional.empty());
   }
 
   @Nonnull
@@ -115,8 +114,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   @Nonnull
   @Override
   public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty(),
-        isSingular());
+    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
   }
 
 }

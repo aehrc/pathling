@@ -21,7 +21,7 @@ public class InMemoryFunctionRegistry<T> implements FunctionRegistry<T> {
 
   @Nonnull
   @Override
-  public  T getInstance(@Nonnull final String name) throws NoSuchFunctionException {
+  public T getInstance(@Nonnull final String name) throws NoSuchFunctionException {
     final T function = functions.get(name);
     if (function == null) {
       throw new NoSuchFunctionException("Unsupported function: " + name);
