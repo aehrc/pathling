@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.fhirpath.validation.ReturnType;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -72,10 +73,18 @@ public class ColumnFunction0 implements NamedFunction<Collection> {
         Optional.ofNullable(method.getAnnotation(ReturnType.class)).map(ReturnType::value));
   }
 
+
+  @Nonnull
   public static List<NamedFunction> of(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirpathFunction.class) != null)
         .map(ColumnFunction0::of).collect(Collectors.toUnmodifiableList());
+  }
+
+  @Nonnull
+  public static Map<String, NamedFunction> mapOf(@Nonnull final Class<?> clazz) {
+    return of(clazz).stream().collect(Collectors.toUnmodifiableMap(NamedFunction::getName,
+        Function.identity()));
   }
 
 }

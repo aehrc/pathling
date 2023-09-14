@@ -55,7 +55,7 @@ class SearchExecutorBuilder {
   final FhirEncoders fhirEncoders;
 
   @Nonnull
-  final Dataset<Row> database;
+  final Database database;
 
   @Nonnull
   final TerminologyServiceFactory terminologyServiceFactory;

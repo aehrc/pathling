@@ -19,6 +19,7 @@ package au.csiro.pathling.test.assertions;
 
 import static au.csiro.pathling.test.TestResources.getResourceAsUrl;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import java.net.URL;
@@ -37,13 +38,15 @@ import org.opentest4j.AssertionFailedError;
 public abstract class Assertions {
 
   @Nonnull
-  public static FhirPathAssertion assertThat(@Nonnull final Collection result) {
-    return new FhirPathAssertion(result);
+  public static FhirPathAssertion assertThat(@Nonnull final Collection result,
+      @Nonnull final EvaluationContext evaluationContext) {
+    return new FhirPathAssertion(result, evaluationContext);
   }
 
   @Nonnull
-  public static ResourcePathAssertion assertThat(@Nonnull final ResourceCollection fhirPath) {
-    return new ResourcePathAssertion(fhirPath);
+  public static ResourcePathAssertion assertThat(@Nonnull final ResourceCollection fhirPath,
+      @Nonnull final EvaluationContext evaluationContext) {
+    return new ResourcePathAssertion(fhirPath, evaluationContext);
   }
 
   // @Nonnull

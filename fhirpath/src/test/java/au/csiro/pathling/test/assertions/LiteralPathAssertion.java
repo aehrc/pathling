@@ -17,9 +17,16 @@
 
 package au.csiro.pathling.test.assertions;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.catalyst.expressions.Literal;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John Grimes
@@ -28,26 +35,21 @@ import javax.annotation.Nonnull;
 @NotImplemented
 public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAssertion> {
 
-  LiteralPathAssertion(@Nonnull final Collection result) {
-    super(result);
+  LiteralPathAssertion(@Nonnull final Collection result,
+      @Nonnull final EvaluationContext evaluationContext) {
+    super(result, evaluationContext);
   }
 
   //TODO: LiteralPathAssertion
-
-  // @Nonnull
-  // private final LiteralPath fhirPath;
-  //
-  // LiteralPathAssertion(@Nonnull final LiteralPath fhirPath) {
-  //   super(fhirPath);
-  //   this.fhirPath = fhirPath;
-  // }
-  //
-  // @Nonnull
-  // public LiteralPathAssertion has(@Nullable final Object expected,
-  //     @Nonnull final Function<LiteralPath, Object> function) {
-  //   assertEquals(expected, function.apply(fhirPath));
-  //   return this;
-  // }
+  
+  @Nonnull
+  public LiteralPathAssertion has(@Nullable final Object expected) {
+    // TODO: consider this implementation - we may want to evaluate the expression instead
+    final Expression maybeLiteral = result.getColumn().expr();
+    assertTrue(maybeLiteral instanceof Literal);
+    assertEquals(expected, ((Literal) maybeLiteral).value());
+    return this;
+  }
   //
   // @Nonnull
   // public LiteralPathAssertion hasCodingValue(@Nonnull final Coding expectedCoding) {

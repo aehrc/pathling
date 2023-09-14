@@ -29,18 +29,7 @@ public class QuantityParserTest extends AbstractParserTest {
 
   @Test
   void lengthObservationComparison() {
-    final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode()
-        );
-    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(evaluationContext);
-
-    assertThatResultOf("valueQuantity < 1.5 'm'")
+    assertThatResultOf(ResourceType.OBSERVATION, "valueQuantity < 1.5 'm'")
         .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/lengthObservationComparison.tsv");
@@ -48,18 +37,7 @@ public class QuantityParserTest extends AbstractParserTest {
 
   @Test
   void lengthObservationSubtraction() {
-    final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource, ResourceType.OBSERVATION, ResourceType.OBSERVATION.toCode()
-        );
-    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(evaluationContext);
-
-    assertThatResultOf("valueQuantity > (valueQuantity - 2 'g/dL')")
+    assertThatResultOf(ResourceType.OBSERVATION, "valueQuantity > (valueQuantity - 2 'g/dL')")
         .isElementPath(BooleanCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/lengthObservationSubtraction.tsv");

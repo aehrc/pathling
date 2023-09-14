@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
@@ -79,9 +80,8 @@ class ExtractQueryTest {
   FhirEncoders fhirEncoders;
 
   @MockBean
-  Dataset<Row> dataSource;
-
-
+  CacheableDatabase dataSource;
+  
   ResourceType subjectResource;
 
 

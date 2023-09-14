@@ -79,13 +79,13 @@ public class ColumnFunctions {
   public static Column sum(@Nonnull @Numeric final Column column) {
     return ColumnCtx.of(column).aggregate(0, Column::plus).getValue();
   }
-
-  @ReturnType(FHIRDefinedType.INTEGER)
-  public static Column until(@Nonnull final Column from, @Nonnull final Column to,
-      @Nonnull final Column calendarDuration) {
-    // the singularity is not strictly necessary here for from as we could lift it with transform
-    return
-        functions.call_udf(TemporalDifferenceFunction.FUNCTION_NAME, singular(from), singular(to),
-            singular(calendarDuration));
-  }
+  //
+  // @ReturnType(FHIRDefinedType.INTEGER)
+  // public static Column until(@Nonnull final Column from, @Nonnull final Column to,
+  //     @Nonnull final Column calendarDuration) {
+  //   // the singularity is not strictly necessary here for from as we could lift it with transform
+  //   return
+  //       functions.call_udf(TemporalDifferenceFunction.FUNCTION_NAME, singular(from), singular(to),
+  //           singular(calendarDuration));
+  // }
 }

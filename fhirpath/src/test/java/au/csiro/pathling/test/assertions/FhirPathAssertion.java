@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.test.assertions;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
 
@@ -25,8 +26,9 @@ import javax.annotation.Nonnull;
  */
 public class FhirPathAssertion extends BaseFhirPathAssertion<FhirPathAssertion> {
 
-  FhirPathAssertion(@Nonnull final Collection result) {
-    super(result);
+  FhirPathAssertion(@Nonnull final Collection result,
+      @Nonnull final EvaluationContext evaluationContext) {
+    super(result, evaluationContext);
   }
 
 }

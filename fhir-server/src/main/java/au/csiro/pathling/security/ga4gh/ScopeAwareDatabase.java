@@ -21,6 +21,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
@@ -98,7 +99,7 @@ public class ScopeAwareDatabase extends CacheableDatabase {
         .map(scope -> {
           // We need to create a non-scope-aware reader here for the parsing of the filters, so that
           // we don't have recursive application of the filters.
-          final Dataset<Row> dataSource = Database.forConfiguration(spark, fhirEncoders,
+          final DataSource dataSource = Database.forConfiguration(spark, fhirEncoders,
               configuration.getStorage());
           final PassportScopeEnforcer scopeEnforcer = new PassportScopeEnforcer(
               configuration.getQuery(),

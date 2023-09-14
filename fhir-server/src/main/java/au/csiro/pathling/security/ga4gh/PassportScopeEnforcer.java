@@ -21,6 +21,7 @@ import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collection;
@@ -60,7 +61,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
       @Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession,
-      @Nonnull final Dataset<Row> dataSource,
+      @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final PassportScope passportScope) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
@@ -83,9 +84,8 @@ public class PassportScopeEnforcer extends QueryExecutor {
 
       // Build a new expression parser, and parse all the column expressions within the query.
       final ResourceCollection inputContext = ResourceCollection
-          .build(getFhirContext(), getDataSource(), subjectResource,
-              ResourceCollection.isSingular());
-
+          .build(getFhirContext(), getDataSource().read(subjectResource), subjectResource,
+              false);
       return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);
     }
   }

@@ -22,6 +22,7 @@ import static au.csiro.pathling.security.SecurityAspect.getCurrentUserId;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ResultWriter;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
@@ -64,7 +65,7 @@ public class ExtractExecutor extends ExtractQueryExecutor {
    */
   public ExtractExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Dataset<Row> database,
+      @Nonnull final DataSource database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyClientFactory,
       @Nonnull final ResultWriter resultWriter,
       @Nonnull final ResultRegistry resultRegistry) {

@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.aggregate.AggregateResponse.Grouping;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.search.SearchExecutor;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -76,7 +77,7 @@ abstract class AggregateExecutorTest {
   FhirEncoders fhirEncoders;
 
   @MockBean
-  Dataset<Row> database;
+  CacheableDatabase database;
 
   AggregateExecutor executor;
   ResourceType subjectResource;

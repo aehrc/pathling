@@ -23,6 +23,7 @@ import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -35,8 +36,6 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -76,7 +75,7 @@ public class SearchProvider implements IResourceProvider {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final Dataset<Row> database;
+  private final DataSource database;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
@@ -105,7 +104,7 @@ public class SearchProvider implements IResourceProvider {
    */
   public SearchProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Dataset<Row> database,
+      @Nonnull final DataSource database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {

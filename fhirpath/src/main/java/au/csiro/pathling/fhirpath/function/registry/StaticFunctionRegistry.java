@@ -6,6 +6,8 @@ import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansT
 import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ANY_TRUE;
 
 import au.csiro.pathling.fhirpath.function.BooleansTestFunction;
+import au.csiro.pathling.fhirpath.function.ColumnFunction0;
+import au.csiro.pathling.fhirpath.function.ColumnFunctions;
 import au.csiro.pathling.fhirpath.function.CountFunction;
 import au.csiro.pathling.fhirpath.function.EmptyFunction;
 import au.csiro.pathling.fhirpath.function.ExistsFunction;
@@ -29,6 +31,7 @@ import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
 import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 /**
  * A static registry of FHIRPath function implementations, for use in environments where dependency
@@ -42,8 +45,8 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
   private static final StaticFunctionRegistry INSTANCE = new StaticFunctionRegistry();
 
   public StaticFunctionRegistry() {
-    super(new ImmutableMap.Builder<String, NamedFunction>()
-        .put("count", new CountFunction())
+    super(new Builder<String, NamedFunction>()
+        //.put("count", new CountFunction())
         .put("resolve", new ResolveFunction())
         .put("ofType", new OfTypeFunction())
         .put("reverseResolve", new ReverseResolveFunction())
@@ -51,24 +54,25 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .put("where", new WhereFunction())
         .put("subsumes", new SubsumesFunction())
         .put("subsumedBy", new SubsumesFunction(true))
-        .put("empty", new EmptyFunction())
-        .put("first", new FirstFunction())
-        .put("not", new NotFunction())
+        //.put("empty", new EmptyFunction())
+        //.put("first", new FirstFunction())
+        //.put("not", new NotFunction())
         .put("iif", new IifFunction())
         .put("translate", new TranslateFunction())
-        .put("sum", new SumFunction())
+        //.put("sum", new SumFunction())
         .put("anyTrue", new BooleansTestFunction(ANY_TRUE))
         .put("anyFalse", new BooleansTestFunction(ANY_FALSE))
         .put("allTrue", new BooleansTestFunction(ALL_TRUE))
         .put("allFalse", new BooleansTestFunction(ALL_FALSE))
         .put("extension", new ExtensionFunction())
         .put("until", new UntilFunction())
-        .put("exists", new ExistsFunction())
+         //.put("exists", new ExistsFunction())
         .put("display", new DisplayFunction())
         .put("property", new PropertyFunction())
         .put("designation", new DesignationFunction())
         .put("toString", new ToStringFunction())
         .put("getId", new GetIdFunction())
+        .putAll(ColumnFunction0.mapOf(ColumnFunctions.class))
         .build());
   }
 

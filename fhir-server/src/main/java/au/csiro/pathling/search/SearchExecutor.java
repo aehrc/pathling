@@ -25,6 +25,7 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.api.IQueryParameterAnd;
@@ -88,7 +89,7 @@ public class SearchExecutor extends QueryExecutor implements IBundleProvider {
    */
   public SearchExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Dataset<Row> database,
+      @Nonnull final DataSource database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders, @Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<StringAndListParam> filters) {
