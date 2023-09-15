@@ -779,7 +779,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testUntilFunction.csv");
   }
-  
+
   @Test
   void testQuantityMultiplicationAndDivision() {
     assertThatResultOf(

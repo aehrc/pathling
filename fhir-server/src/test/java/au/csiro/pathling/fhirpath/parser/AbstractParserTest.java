@@ -91,6 +91,7 @@ public class AbstractParserTest {
 
     evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .dataset(dataSource.read(resourceType))
+        .resource(subjectResource)
         .inputContext(subjectResource)
         .build();
   }
@@ -111,6 +112,7 @@ public class AbstractParserTest {
 
     final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .dataset(dataSource.read(resourceType))
+        .resource(subjectResource)
         .inputContext(subjectResource)
         .build();
     return assertThat(parser.evaluate(expression, evaluationContext), evaluationContext);

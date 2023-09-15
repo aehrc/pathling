@@ -50,6 +50,8 @@ public class WhereFunction implements NamedFunction<Collection> {
 
     final Column column = filter(previous.getColumn(), element -> {
       final Collection result = argument.apply(
+          
+          // TOOD: This does not work on Resource collections
           Collection.build(element, previous.getType(), previous.getFhirType(),
               previous.getDefinition()), input.getContext());
       final FhirPathType type = checkPresent(result.getType());
