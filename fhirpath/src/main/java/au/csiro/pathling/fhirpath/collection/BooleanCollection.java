@@ -22,6 +22,7 @@ import static org.apache.spark.sql.functions.lit;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -79,6 +80,12 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   public static BooleanCollection build(@Nonnull final Column column) {
     return BooleanCollection.build(column, Optional.empty());
   }
+
+  @Nonnull
+  public static BooleanCollection build(@Nonnull final ColumnCtx value) {
+    return BooleanCollection.build(value.getValue(), Optional.empty());
+  }
+
 
   @Nonnull
   @Override

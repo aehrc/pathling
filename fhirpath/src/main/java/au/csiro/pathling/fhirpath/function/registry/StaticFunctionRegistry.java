@@ -20,10 +20,12 @@ import au.csiro.pathling.fhirpath.function.NotFunction;
 import au.csiro.pathling.fhirpath.function.OfTypeFunction;
 import au.csiro.pathling.fhirpath.function.ResolveFunction;
 import au.csiro.pathling.fhirpath.function.ReverseResolveFunction;
+import au.csiro.pathling.fhirpath.function.StandardFunctions;
 import au.csiro.pathling.fhirpath.function.SumFunction;
 import au.csiro.pathling.fhirpath.function.ToStringFunction;
 import au.csiro.pathling.fhirpath.function.UntilFunction;
 import au.csiro.pathling.fhirpath.function.WhereFunction;
+import au.csiro.pathling.fhirpath.function.WrappedFunction;
 import au.csiro.pathling.fhirpath.function.terminology.DesignationFunction;
 import au.csiro.pathling.fhirpath.function.terminology.DisplayFunction;
 import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
@@ -51,7 +53,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .put("ofType", new OfTypeFunction())
         .put("reverseResolve", new ReverseResolveFunction())
         .put("memberOf", new MemberOfFunction())
-        .put("where", new WhereFunction())
+        //.put("where", new WhereFunction())
         .put("subsumes", new SubsumesFunction())
         .put("subsumedBy", new SubsumesFunction(true))
         //.put("empty", new EmptyFunction())
@@ -66,13 +68,14 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .put("allFalse", new BooleansTestFunction(ALL_FALSE))
         .put("extension", new ExtensionFunction())
         .put("until", new UntilFunction())
-         //.put("exists", new ExistsFunction())
+        //.put("exists", new ExistsFunction())
         .put("display", new DisplayFunction())
         .put("property", new PropertyFunction())
         .put("designation", new DesignationFunction())
         .put("toString", new ToStringFunction())
         .put("getId", new GetIdFunction())
         .putAll(ColumnFunction0.mapOf(ColumnFunctions.class))
+        .putAll(WrappedFunction.mapOf(StandardFunctions.class))
         .build());
   }
 

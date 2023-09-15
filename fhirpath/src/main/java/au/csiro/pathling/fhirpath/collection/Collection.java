@@ -283,12 +283,21 @@ public class Collection implements Comparable, Numeric {
   }
 
   @Nonnull
-  public Collection copyWith(Column newValue) {
+  public Collection copyWith(@Nonnull final Column newValue) {
     // TODO: This is very very suspicious 
     // Really need to understand what the relationships between all the different types
     // some of them seem redundant
     return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition);
   }
+
+  @Nonnull
+  public Collection copyWith(@Nonnull final ColumnCtx newValue) {
+    // TODO: This is very very suspicious 
+    // Really need to understand what the relationships between all the different types
+    // some of them seem redundant
+    return copyWith(newValue.getValue());
+  }
+
 
   public Column getSingleton() {
     return ColumnHelpers.singular(getColumn());

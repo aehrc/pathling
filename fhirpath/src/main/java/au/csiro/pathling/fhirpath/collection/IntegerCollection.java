@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -78,6 +79,11 @@ public class IntegerCollection extends Collection implements
     return build(column, Optional.empty());
   }
 
+
+  @Nonnull
+  public static IntegerCollection build(ColumnCtx count) {
+    return build(count.getValue());
+  }
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.

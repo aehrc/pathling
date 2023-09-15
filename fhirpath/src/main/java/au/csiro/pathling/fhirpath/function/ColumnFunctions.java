@@ -40,19 +40,19 @@ public class ColumnFunctions {
   }
 
 
-  @FhirpathFunction
+  //@FhirpathFunction
   @ReturnType(FHIRDefinedType.BOOLEAN)
   public static Column empty(@Nonnull final Column column) {
     return ColumnCtx.of(column).empty().getValue();
   }
 
-  @FhirpathFunction
+  //@FhirpathFunction
   @ReturnType(FHIRDefinedType.INTEGER)
   public static Column count(@Nonnull final Column column) {
     return ColumnCtx.of(column).count().getValue();
   }
 
-  @FhirpathFunction
+  //@FhirpathFunction
   public static Column first(@Nonnull final Column column) {
     // how to deal with nulls inside the expressioss?
     // technically should use filter to remove nulls, but that's expensive

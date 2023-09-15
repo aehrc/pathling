@@ -58,7 +58,14 @@ public class ColumnCtx {
         Function.identity()
     );
   }
-
+  
+  @Nonnull
+  public ColumnCtx filter(Function<Column, Column> lambda) {
+    return vectorize(
+        c -> functions.filter(c, lambda::apply),
+        c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
+    );
+  }
 
   @Nonnull
   public ColumnCtx aggregate(@Nonnull final Object zeroValue,
