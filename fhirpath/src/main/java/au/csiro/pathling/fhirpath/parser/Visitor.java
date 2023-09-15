@@ -22,7 +22,10 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
+import au.csiro.pathling.fhirpath.operator.BinaryOperators;
+import au.csiro.pathling.fhirpath.operator.WrappedBinaryOperator;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
@@ -43,6 +46,7 @@ import au.csiro.pathling.fhirpath.path.EvalOperatorPath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
+import java.util.Map;
 
 /**
  * This class processes all types of expressions, and delegates the special handling of supported
@@ -88,6 +92,10 @@ class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
     };
   }
 
+
+  private static final Map<String, BinaryOperator> BINARY_OPERATORS = WrappedBinaryOperator.mapOf(
+      BinaryOperators.class);
+
   @Nonnull
   private FhirPath<Collection, Collection> visitBinaryOperator(
       @Nullable final ParseTree leftContext,
@@ -95,7 +103,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
     requireNonNull(operatorName);
     return new EvalOperatorPath(new Visitor().visit(leftContext),
         new Visitor().visit(rightContext),
-        BinaryOperatorType.fromSymbol(operatorName).getInstance());
+        BINARY_OPERATORS.getOrDefault(operatorName,
+            BinaryOperatorType.fromSymbol(operatorName).getInstance()));
 
   }
 
