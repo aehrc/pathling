@@ -17,11 +17,10 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.source.DataSource;
@@ -39,7 +38,6 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -152,12 +150,10 @@ public class ResourceCollection extends Collection {
   }
 
   @Nonnull
-  public Column getExtensionContainerColumn() {
-    final Optional<Column> maybeExtensionColumn = Optional
-        .ofNullable(elementsToColumns.get(ExtensionSupport.EXTENSIONS_FIELD_NAME()));
-    return checkPresent(maybeExtensionColumn,
-        "Extension container column '_extension' not present in the resource."
-            + " Check if extension support was enabled when data were imported!");
+  @Override
+  protected Column getFid() {
+    return getElementColumn(ExtensionSupport.FID_FIELD_NAME()).orElseThrow(
+        () -> new IllegalStateException("Resource does not have an 'id' column"));
   }
 
   /**
@@ -167,17 +163,13 @@ public class ResourceCollection extends Collection {
     return resourceDefinition.getResourceType();
   }
 
+
   @Nonnull
   @Override
-  public Optional<Collection> traverse(@Nonnull final String elementName) {
-    // Get the child column from the map of elements to columns.
-    return getElementColumn(elementName).flatMap(value ->
-        // Get the child element definition from the resource definition.
-        resourceDefinition.getChildElement(elementName).map(definition -> {
-          // final boolean singular = isSingular() && definition.getMaxCardinality().isPresent()
-          //     && definition.getMaxCardinality().get() == 1;
-          return Collection.build(value, definition);
-        }));
+  protected Collection traverseElement(@Nonnull final ElementDefinition childDef) {
+    // TODO: what does mean if an element is present in the definition but not in 
+    // the schema?
+    return getElementColumn(childDef.getElementName()).map(
+        value -> Collection.build(value, childDef)).get();
   }
-
 }

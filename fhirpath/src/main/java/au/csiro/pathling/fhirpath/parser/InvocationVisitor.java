@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.MixedCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
@@ -68,15 +69,16 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
 
     // TODO: refactor to an expression
     return (input, context) -> {
-      try {
+      if (!(input instanceof MixedCollection)) {
         // Attempt path traversal.
         final Optional<Collection> result = input.traverse(fhirPath);
         checkUserInput(result.isPresent(), "No such child: " + fhirPath);
         return result.get();
 
-      } catch (final InvalidUserInputError e) {
+      } else {
         try {
-          // TODO: what is this about?
+          // TODO: Should it really be a function or rather an expression?
+          // In the former case though the better definition of type specifier path would be needed.
           // If it is not a valid path traversal, see if it is a valid type specifier.
           final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
           return Collection.build(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),

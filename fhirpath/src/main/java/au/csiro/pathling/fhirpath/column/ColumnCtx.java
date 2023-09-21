@@ -45,6 +45,11 @@ public class ColumnCtx {
   }
 
   @Nonnull
+  public ColumnCtx unnest() {
+    return of(ValueFunctions.unnest(value));
+  }
+  
+  @Nonnull
   public ColumnCtx traverse(@Nonnull final String fieldName) {
     return of(ValueFunctions.unnest(value.getField(fieldName)));
   }
@@ -67,6 +72,15 @@ public class ColumnCtx {
     );
   }
 
+  
+  @Nonnull 
+  public ColumnCtx transform(Function<Column, Column> lambda) {
+    return vectorize(
+        c -> functions.transform(c, lambda::apply),
+        c -> functions.when(c.isNotNull(), lambda.apply(c))
+    );
+  }
+  
   @Nonnull
   public ColumnCtx aggregate(@Nonnull final Object zeroValue,
       BiFunction<Column, Column, Column> aggregator) {

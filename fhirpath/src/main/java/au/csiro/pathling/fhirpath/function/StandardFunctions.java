@@ -17,16 +17,24 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
+import au.csiro.pathling.fhirpath.collection.MixedCollection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import javax.annotation.Nonnull;
 
+import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static au.csiro.pathling.fhirpath.function.CollectionExpression.*;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 public class StandardFunctions {
 
+  public static final String EXTENSION_ELEMENT_NAME = "extension";
+  public static final String URL_ELEMENT_NAME = "url";
 
   @Nonnull
   @FhirpathFunction
@@ -65,4 +73,32 @@ public class StandardFunctions {
     return IntegerCollection.build(input.getCtx().count());
   }
 
+  /**
+   * A function that returns the extensions of the current element that match a given URL.
+   *
+   * @author Piotr Szul
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#extension">extension</a>
+   */
+  @FhirpathFunction
+  public static Collection extension(@Nonnull final Collection input,
+      @Nonnull final StringCollection url) {
+    return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
+        where(extensionCollection, c -> c.traverse(URL_ELEMENT_NAME).map(
+                urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
+            .map(BooleanCollection::build).orElse(BooleanCollection.falseCollection()))
+    ).orElse(Collection.nullCollection());
+  }
+
+  @FhirpathFunction
+  public static Collection ofType(@Nonnull final MixedCollection input,
+      @Nonnull final Collection typeSpecifier) {
+    // TODO: implement as annotation or collection type
+    checkUserInput(typeSpecifier.getType().isPresent() && FhirPathType.TYPE_SPECIFIER.equals(
+            typeSpecifier.getType().get()),
+        "Argument to ofType function must be a type specifier");
+    // TODO: This should work on any collection type - not just mixed
+    // if the type of the collection does not match the required type then it should return an empty collection.
+    return input.resolveChoice(typeSpecifier.getFhirType().get().toCode())
+        .orElse(Collection.nullCollection());
+  }
 }

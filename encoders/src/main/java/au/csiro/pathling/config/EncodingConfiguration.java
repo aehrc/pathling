@@ -26,6 +26,7 @@ package au.csiro.pathling.config;
 import java.util.Set;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import au.csiro.pathling.encoders.FhirEncoders;
 import lombok.Builder;
 import lombok.Data;
 
@@ -59,19 +60,5 @@ public class EncodingConfiguration {
    */
   @NotNull
   @Builder.Default
-  private Set<String> openTypes = Set.of(
-      "boolean",
-      "code",
-      "date",
-      "dateTime",
-      "decimal",
-      "integer",
-      "string",
-      "Coding",
-      "CodeableConcept",
-      "Address",
-      "Identifier",
-      "Reference"
-  );
-
+  private Set<String> openTypes = FhirEncoders.STANDARD_OPEN_TYPES;
 }

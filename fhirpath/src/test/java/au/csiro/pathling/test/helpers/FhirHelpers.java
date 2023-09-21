@@ -19,6 +19,7 @@ package au.csiro.pathling.test.helpers;
 
 import static java.util.Objects.requireNonNull;
 
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
@@ -35,7 +36,7 @@ import org.springframework.stereotype.Component;
 public class FhirHelpers {
 
   @Nonnull
-  public static Optional<ElementDefinition> getChildOfResource(
+  public static Optional<ChildDefinition> getChildOfResource(
       @Nonnull final FhirContext fhirContext, @Nonnull final String resourceCode,
       @Nonnull final String elementName) {
     final RuntimeResourceDefinition hapiDefinition = fhirContext

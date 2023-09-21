@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.commons.lang.WordUtils;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Represents the definition of an element that can be represented by multiple different data
@@ -16,7 +15,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#polymorphism">Polymorphism in FHIR</a>
  */
-public class ChoiceElementDefinition implements ElementDefinition {
+public class ChoiceChildDefinition implements ChildDefinition {
 
   @Nonnull
   private final RuntimeChildChoiceDefinition childDefinition;
@@ -24,7 +23,7 @@ public class ChoiceElementDefinition implements ElementDefinition {
   @Nonnull
   private final Map<String, BaseRuntimeElementDefinition<?>> elementNameToDefinition;
 
-  protected ChoiceElementDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
+  protected ChoiceChildDefinition(@Nonnull final RuntimeChildChoiceDefinition childDefinition) {
     this.childDefinition = childDefinition;
     elementNameToDefinition = new HashMap<>();
     childDefinition.getValidChildNames()
@@ -46,26 +45,22 @@ public class ChoiceElementDefinition implements ElementDefinition {
 
   @Nonnull
   @Override
-  public String getElementName() {
+  public String getName() {
     return childDefinition.getElementName();
   }
 
   @Nonnull
   @Override
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
-    return Optional.empty();
+    return getChildByElementName(name);
   }
 
+  @Nonnull
   @Override
   public Optional<Integer> getMaxCardinality() {
     return Optional.of(childDefinition.getMax());
   }
 
-  @Nonnull
-  @Override
-  public Optional<FHIRDefinedType> getFhirType() {
-    return Optional.empty();
-  }
 
   /**
    * Returns the child element definition for the given type, if it exists.
@@ -75,7 +70,7 @@ public class ChoiceElementDefinition implements ElementDefinition {
    */
   @Nonnull
   public Optional<ElementDefinition> getChildByType(@Nonnull final String type) {
-    final String key = ChoiceElementDefinition.getColumnName(getElementName(), type);
+    final String key = ChoiceChildDefinition.getColumnName(getName(), type);
     return getChildByElementName(key);
   }
 
@@ -86,9 +81,9 @@ public class ChoiceElementDefinition implements ElementDefinition {
    * @return the child element definition, if it exists
    */
   @Nonnull
-  public Optional<ElementDefinition> getChildByElementName(final String name) {
+  private Optional<ElementDefinition> getChildByElementName(final String name) {
     return Optional.ofNullable(elementNameToDefinition.get(name))
-        .map(def -> new ResolvedChoiceDefinition(def, this));
+        .map(def -> new ElementChildDefinition(def, this.childDefinition, name));
   }
 
 }

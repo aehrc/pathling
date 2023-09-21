@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.definition;
 
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -31,7 +30,7 @@ import org.hl7.fhir.r4.model.ListResource;
  * @author John Grimes
  */
 @Getter
-public class ResourceDefinition implements NodeDefinition {
+public class ResourceDefinition extends BaseNodeDefinition<RuntimeResourceDefinition> {
 
   /**
    * The HAPI FHIR resource type.
@@ -39,31 +38,14 @@ public class ResourceDefinition implements NodeDefinition {
   @Nonnull
   private final ResourceType resourceType;
 
-  @Nonnull
-  private final RuntimeResourceDefinition definition;
-
   /**
    * @param resourceType The {@link ResourceType} that describes this resource
    * @param definition The HAPI {@link RuntimeResourceDefinition} for this resource
    */
   public ResourceDefinition(@Nonnull final ResourceType resourceType,
       @Nonnull final RuntimeResourceDefinition definition) {
+    super(definition);
     this.resourceType = resourceType;
-    this.definition = definition;
-  }
-
-  /**
-   * Returns the child element of this resource with the specified name.
-   *
-   * @param name The name of the child element
-   * @return A new ElementDefinition describing the child
-   */
-  @Nonnull
-  @Override
-  public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
-    return Optional.ofNullable(definition.getChildByName(name))
-        .or(() -> Optional.ofNullable(definition.getChildByName(name + "[x]")))
-        .map(ElementDefinition::build);
   }
 
   /**

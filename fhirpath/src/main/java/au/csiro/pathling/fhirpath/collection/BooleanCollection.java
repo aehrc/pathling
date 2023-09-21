@@ -42,6 +42,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(BooleanCollection.class);
+  private static final BooleanCollection FALSE_COLLECTION = BooleanCollection.fromValue(false);
 
   protected BooleanCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> type,
@@ -72,7 +73,11 @@ public class BooleanCollection extends Collection implements Materializable<Bool
    */
   @Nonnull
   public static BooleanCollection fromLiteral(@Nonnull final String literal) {
-    final boolean value = literal.equals("true");
+    return BooleanCollection.fromValue(literal.equals("true"));
+  }
+
+  @Nonnull
+  public static BooleanCollection fromValue(final boolean value) {
     return BooleanCollection.build(lit(value), Optional.empty());
   }
 
@@ -86,6 +91,10 @@ public class BooleanCollection extends Collection implements Materializable<Bool
     return BooleanCollection.build(value.getValue(), Optional.empty());
   }
 
+  @Nonnull
+  public static BooleanCollection falseCollection() {
+    return FALSE_COLLECTION;
+  }
 
   @Nonnull
   @Override

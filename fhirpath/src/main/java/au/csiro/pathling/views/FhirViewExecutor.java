@@ -72,6 +72,7 @@ public class FhirViewExecutor {
 
     final List<Column> select = parseSelect(view.getSelect(), evaluationContext,
         Collections.emptyList());
+    
     final List<String> where = view.getWhere() == null
                                ? Collections.emptyList()
                                : view.getWhere().stream()

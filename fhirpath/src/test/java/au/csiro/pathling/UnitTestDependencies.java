@@ -29,7 +29,6 @@ import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import au.csiro.pathling.views.SelectClauseTypeAdapterFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import javax.annotation.Nonnull;
@@ -109,7 +108,10 @@ public class UnitTestDependencies {
   @ConditionalOnMissingBean
   @Nonnull
   static FhirEncoders fhirEncoders() {
-    return FhirEncoders.forR4().getOrCreate();
+    return FhirEncoders.forR4()
+        .withExtensionsEnabled(true)
+        .withStandardOenTypes()
+        .getOrCreate();
   }
 
   @Bean

@@ -34,10 +34,15 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-public class ReferenceDefinition extends BasicElementDefinition<RuntimeChildResourceDefinition> {
+public class ReferenceDefinition extends ElementChildDefinition {
+
+
+  private final List<Class<? extends IBaseResource>> resourceTypes;
 
   protected ReferenceDefinition(@Nonnull final RuntimeChildResourceDefinition childDefinition) {
     super(childDefinition);
+    resourceTypes = ((RuntimeChildResourceDefinition) childDefinition).getResourceTypes();
+    requireNonNull(resourceTypes);
   }
 
   /**
@@ -47,9 +52,8 @@ public class ReferenceDefinition extends BasicElementDefinition<RuntimeChildReso
    */
   @Nonnull
   public Set<ResourceType> getReferenceTypes() {
-    final List<Class<? extends IBaseResource>> resourceTypes = childDefinition.getResourceTypes();
-    requireNonNull(resourceTypes);
-
+    // final List<Class<? extends IBaseResource>> resourceTypes = ((RuntimeChildResourceDefinition) childDefinition).getResourceTypes();
+    // requireNonNull(resourceTypes);
     return resourceTypes.stream()
         .map(clazz -> {
           final String resourceCode;

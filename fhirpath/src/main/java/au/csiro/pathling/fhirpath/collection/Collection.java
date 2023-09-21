@@ -17,13 +17,18 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.ColumnHelpers;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.definition.ChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
+import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import au.csiro.pathling.utilities.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -32,8 +37,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -44,7 +49,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Getter
-@AllArgsConstructor(access = AccessLevel.PROTECTED)
+@RequiredArgsConstructor(access = AccessLevel.PROTECTED)
 public class Collection implements Comparable, Numeric {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
@@ -78,25 +83,25 @@ public class Collection implements Comparable, Numeric {
    * A {@link Column} representing the result of evaluating this expression.
    */
   @Nonnull
-  private Column column;
+  private final Column column;
 
   /**
    * The type of the result of evaluating this expression, if known.
    */
   @Nonnull
-  private Optional<FhirPathType> type;
+  private final Optional<FhirPathType> type;
 
   /**
    * The FHIR type of the result of evaluating this expression, if there is one.
    */
   @Nonnull
-  private Optional<FHIRDefinedType> fhirType;
+  private final Optional<FHIRDefinedType> fhirType;
 
   /**
    * The FHIR definition that describes this path, if there is one.
    */
   @Nonnull
-  private Optional<? extends NodeDefinition> definition;
+  private final Optional<? extends NodeDefinition> definition;
 
   /**
    * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
@@ -196,43 +201,61 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public Optional<Collection> traverse(@Nonnull final String elementName) {
-    final Optional<ElementDefinition> elementDefinition = definition
-        .filter(def -> def instanceof ElementDefinition)
-        .map(def -> (ElementDefinition) def);
-    // It is only possible to traverse to a child with an element definition.
-    return elementDefinition
-        // Get the named child definition.
-        .flatMap(def -> def.getChildElement(elementName))
-        .map(def -> Collection.build(getCtx().traverse(elementName).getValue(), def));
+
+    final Optional<? extends ChildDefinition> maybeChildDef = definition.flatMap(
+            def -> def.getChildElement(elementName))
+        .filter(ChildDefinition.class::isInstance);
+
+    return maybeChildDef.flatMap(
+        childDef -> ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(elementName)
+                    ? traverseExtensions(childDef)
+                    : Optional.of(traverseChild(childDef)));
   }
 
-  // @Nonnull
-  // private Optional<ElementDefinition> traverseExtension(@Nonnull final SparkSession spark,
-  //     @Nonnull final String name) {
-  //   // This code introspects the type of the extension container column to determine the valid child 
-  //   // element names.
-  //   final String extensionElementName = ExtensionSupport.EXTENSION_ELEMENT_NAME();
-  //   final MapType mapType = (MapType) spark.emptyDataFrame().select(extensionElementName)
-  //       .schema()
-  //       .fields()[0].dataType();
-  //   final ArrayType arrayType = (ArrayType) mapType.valueType();
-  //   final StructType structType = (StructType) arrayType.elementType();
-  //   final List<String> fieldNames = Arrays.stream(structType.fields()).map(StructField::name)
-  //       .collect(Collectors.toList());
-  //   // Add the extension field name, so that we can support traversal to nested extensions.
-  //   fieldNames.add(extensionElementName);
-  //
-  //   // If the field is part of the encoded extension container, pass control to the generic code to 
-  //   // determine the correct element definition.
-  //   if (fieldNames.contains(name)) {
-  //     // Create a new expression that looks like a path traversal.
-  //     final String resultExpression = this.expression + "." + expression;
-  //     // Build a new FhirPath object, with a column that uses `getField` to extract the
-  //     // appropriate child.
-  //     return Result.build(column.getField(expression), resultExpression, def);
-  //   }
-  //   return Optional.empty();
-  // }
+  @Nonnull
+  protected Collection traverseChild(@Nonnull final ChildDefinition childDef) {
+    // It is only possible to traverse to a child with an element definition.
+    if (childDef instanceof ChoiceChildDefinition) {
+      return MixedCollection.build(this, (ChoiceChildDefinition) childDef);
+    } else if (childDef instanceof ElementChildDefinition) {
+      return traverseElement((ElementChildDefinition) childDef);
+    } else {
+      throw new IllegalArgumentException("Unsupported child definition type: " + childDef
+          .getClass().getSimpleName());
+    }
+  }
+
+
+  @Nonnull
+  protected Collection traverseElement(@Nonnull final ElementDefinition childDef) {
+    // It is only possible to traverse to a child with an element definition.
+    return Collection.build(getCtx().traverse(childDef.getElementName()).getValue(), childDef);
+  }
+
+  @Nonnull
+  protected Optional<Collection> traverseExtensions(
+      @Nonnull final ChildDefinition extensionDefinition) {
+    // check the provided definition is of an extension
+    Preconditions.checkArgument(extensionDefinition instanceof ElementDefinition,
+        "Cannot traverse to an extension with a non-ElementDefinition");
+    return getExtensionMap().map(em ->
+        Collection.build(
+            // We need here to deal with the situation where _fid is an array of element ids
+            ColumnCtx.of(getFid()).transform(em::apply).unnest().getValue(),
+            (ElementDefinition) extensionDefinition));
+  }
+
+  @Nonnull
+  protected Column getFid() {
+    return column.getField(ExtensionSupport.FID_FIELD_NAME());
+  }
+
+  @Nonnull
+  protected Optional<Column> getExtensionMap() {
+    // TODO: This most likely needs to be implemented a
+    // as a member column propagated from the parent resource/collection
+    return Optional.of(functions.col(ExtensionSupport.EXTENSIONS_FIELD_NAME()));
+  }
 
   /**
    * @return whether the order of the collection returned by this expression has any meaning

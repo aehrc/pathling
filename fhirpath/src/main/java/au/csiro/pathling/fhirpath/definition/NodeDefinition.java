@@ -4,9 +4,9 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 
 /**
- *
+ * Base abstractions for FHIR defintions.
  */
-public interface NodeDefinition<T extends NodeDefinition> {
+public interface NodeDefinition {
 
   /**
    * Returns the child element of this definition with the specified name.
@@ -15,6 +15,6 @@ public interface NodeDefinition<T extends NodeDefinition> {
    * @return a new {@link NodeDefinition} describing the child
    */
   @Nonnull
-  Optional<T> getChildElement(@Nonnull String name);
+  Optional<? extends ChildDefinition> getChildElement(@Nonnull String name);
 
 }
