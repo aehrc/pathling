@@ -79,7 +79,7 @@
     <!-- Hadoop is currently pinned to 3.3.4 because of this vulnerability: CVE-2022-26612 -->
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hapiFhirVersion>6.6.1</pathling.hapiFhirVersion>
-    <pathling.springBootVersion>2.7.15</pathling.springBootVersion>
+    <pathling.springBootVersion>2.7.16</pathling.springBootVersion>
     <pathling.springSecurityVersion>5.7.10</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
