@@ -67,6 +67,16 @@ public class StringCollection extends Collection implements Materializable<Primi
   }
 
   /**
+   * Returns a new instance with the specified column.
+   */
+  @Nonnull
+  public static StringCollection build(@Nonnull final Column column) {
+    return new StringCollection(column, Optional.of(FhirPathType.STRING),
+        Optional.of(FHIRDefinedType.STRING), Optional.empty());
+  }
+
+
+  /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
    * @param fhirPath The FHIRPath representation of the literal

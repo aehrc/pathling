@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
@@ -171,5 +172,13 @@ public class ResourceCollection extends Collection {
     // the schema?
     return getElementColumn(childDef.getElementName()).map(
         value -> Collection.build(value, childDef)).get();
+  }
+  
+  @Nonnull
+  public ColumnCtx getKeyColumn() {
+    return getElementColumn("id_versioned")
+        .map(ColumnCtx::of)
+        .orElseThrow(
+            () -> new IllegalStateException("Resource does not have an 'id_versioned' column"));
   }
 }

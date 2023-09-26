@@ -17,20 +17,20 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.MixedCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import javax.annotation.Nonnull;
 
-import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
-import static au.csiro.pathling.fhirpath.function.CollectionExpression.*;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
+@SuppressWarnings("unused")
 public class StandardFunctions {
 
   public static final String EXTENSION_ELEMENT_NAME = "extension";
@@ -39,7 +39,7 @@ public class StandardFunctions {
   @Nonnull
   @FhirpathFunction
   public static Collection where(@Nonnull final Collection input,
-      @Nonnull CollectionExpression expression) {
+      @Nonnull final CollectionExpression expression) {
     return input.copyWith(
         input.getCtx().filter(expression.requireBoolean().toColumnFunction(input)));
   }
@@ -100,5 +100,10 @@ public class StandardFunctions {
     // if the type of the collection does not match the required type then it should return an empty collection.
     return input.resolveChoice(typeSpecifier.getFhirType().get().toCode())
         .orElse(Collection.nullCollection());
+  }
+
+  @FhirpathFunction
+  public static StringCollection getResourceKey(@Nonnull final ResourceCollection input) {
+    return StringCollection.build(input.getKeyColumn().getValue());
   }
 }
