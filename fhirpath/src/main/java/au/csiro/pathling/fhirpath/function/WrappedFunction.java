@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static java.util.Objects.isNull;
+
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
-import lombok.Value;
-import javax.annotation.Nonnull;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -33,6 +33,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.Value;
 
 @Value
 public class WrappedFunction implements NamedFunction<Collection> {
@@ -53,16 +56,29 @@ public class WrappedFunction implements NamedFunction<Collection> {
     EvaluationContext evaluationContext;
     Collection input;
 
+    @Nullable
     public Object resolveArgument(@Nonnull final Parameter parameter,
-        FhirPath<Collection, Collection> argument) {
-      if (Collection.class.isAssignableFrom(parameter.getType())) {
+                                  final FhirPath<Collection, Collection> argument) {
+      
+      if (isNull(argument)) {
+        // check the pararmeter is happy with a null value
+        if (parameter.getAnnotation(Nullable.class) != null) {
+          return null;
+        } else {
+          throw new RuntimeException(
+              "Parameter " + parameter + " is not nullable and no argument was provided");
+        }
+        // return Optional.ofNullable(parameter.getAnnotation(Nullable.class))
+        //     .map(__ -> null).orElseThrow(() -> new RuntimeException(
+        //         "Parameter " + parameter + " is not nullable and no argument was provided"));
+      } else if (Collection.class.isAssignableFrom(parameter.getType())) {
         // evaluate collection types 
         return argument.apply(input, evaluationContext);
       } else if (CollectionExpression.class.isAssignableFrom(parameter.getType())) {
         // bind with context
-        return (CollectionExpression)(c -> argument.apply(c, evaluationContext));
+        return (CollectionExpression) (c -> argument.apply(c, evaluationContext));
       } else {
-        throw  new RuntimeException("Cannot resolve parameter:" + parameter);
+        throw new RuntimeException("Cannot resolve parameter:" + parameter);
       }
     }
   }
@@ -75,17 +91,20 @@ public class WrappedFunction implements NamedFunction<Collection> {
     final ParamResolver resolver = new ParamResolver(functionInput.getContext(),
         functionInput.getInput());
 
+    final List<FhirPath<Collection, Collection>> actualArguments = functionInput.getArguments();
+
+    // TODO: make it nicer
     final Stream<Object> resolvedArguments = IntStream.range(0, method.getParameterCount() - 1)
         .mapToObj(i -> resolver.resolveArgument(method.getParameters()[i + 1],
-            functionInput.getArguments().get(i)));
+            (i < actualArguments.size())
+            ? actualArguments.get(i)
+            : null));
     // eval arguments
     final Object[] invocationArgs = Stream.concat(Stream.of(functionInput.getInput()),
         resolvedArguments).toArray(Object[]::new);
     try {
       return (Collection) method.invoke(null, invocationArgs);
-    } catch (IllegalAccessException e) {
-      throw new RuntimeException(e);
-    } catch (InvocationTargetException e) {
+    } catch (final IllegalAccessException | InvocationTargetException e) {
       throw new RuntimeException(e);
     }
   }
@@ -95,14 +114,14 @@ public class WrappedFunction implements NamedFunction<Collection> {
   }
 
   @Nonnull
-  public static List<NamedFunction> of(@Nonnull final Class<?> clazz) {
+  public static List<NamedFunction<?>> of(@Nonnull final Class<?> clazz) {
     return Stream.of(clazz.getDeclaredMethods())
         .filter(m -> m.getAnnotation(FhirpathFunction.class) != null)
         .map(WrappedFunction::of).collect(Collectors.toUnmodifiableList());
   }
 
   @Nonnull
-  public static Map<String, NamedFunction> mapOf(@Nonnull final Class<?> clazz) {
+  public static Map<String, NamedFunction<?>> mapOf(@Nonnull final Class<?> clazz) {
     return of(clazz).stream().collect(Collectors.toUnmodifiableMap(NamedFunction::getName,
         Function.identity()));
   }

@@ -270,6 +270,5 @@ abstract class AbstractFhirViewTestBase {
     public Set<ResourceType> getResourceTypes() {
       return resourceTypeToDataset.keySet();
     }
-  
   }
 }

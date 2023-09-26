@@ -23,11 +23,15 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
+import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.catalyst.expressions.Literal;
+import org.apache.spark.unsafe.types.UTF8String;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -75,6 +79,16 @@ public class StringCollection extends Collection implements Materializable<Primi
         Optional.of(FHIRDefinedType.STRING), Optional.empty());
   }
 
+  /**
+   * Returns a new instance with the specified column context.
+   *
+   * @param column The column context to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection build(@Nonnull final ColumnCtx column) {
+    return build(column.getValue());
+  }
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -97,6 +111,18 @@ public class StringCollection extends Collection implements Materializable<Primi
     return value;
   }
 
+  @Nonnull
+  public String toLiteralValue() {
+    return Optional.of(getColumn().expr())
+        .filter(Literal.class::isInstance)
+        .map(Literal.class::cast)
+        .map(Literal::value)
+        .filter(UTF8String.class::isInstance)
+        .map(Objects::toString)
+        .orElseThrow(() -> new IllegalStateException(
+            "Cannot convert column to literal value: " + getColumn()));
+  }
+  
   /**
    * Gets a value from a row for a String or String literal.
    *

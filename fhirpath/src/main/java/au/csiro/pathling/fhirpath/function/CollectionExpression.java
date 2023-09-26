@@ -25,7 +25,7 @@ import javax.annotation.Nonnull;
 import java.util.function.Function;
 
 @FunctionalInterface
-interface CollectionExpression extends Function<Collection, Collection> {
+public interface CollectionExpression extends Function<Collection, Collection> {
 
   default CollectionExpression requireBoolean() {
     return input -> {

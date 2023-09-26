@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -29,12 +30,14 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 @SuppressWarnings("unused")
 public class StandardFunctions {
 
   public static final String EXTENSION_ELEMENT_NAME = "extension";
   public static final String URL_ELEMENT_NAME = "url";
+  public static final String JOIN_DEFAULT_SEPARATOR = "";
 
   @Nonnull
   @FhirpathFunction
@@ -101,9 +104,16 @@ public class StandardFunctions {
     return input.resolveChoice(typeSpecifier.getFhirType().get().toCode())
         .orElse(Collection.nullCollection());
   }
-
   @FhirpathFunction
   public static StringCollection getResourceKey(@Nonnull final ResourceCollection input) {
     return StringCollection.build(input.getKeyColumn().getValue());
   }
+  
+  @FhirpathFunction
+  public static StringCollection join(@Nonnull final StringCollection input, @Nullable final StringCollection separator) {
+    return StringCollection.build(input.getCtx().join(
+        nonNull(separator) ? separator.toLiteralValue() : JOIN_DEFAULT_SEPARATOR
+    ));
+  }
+
 }
