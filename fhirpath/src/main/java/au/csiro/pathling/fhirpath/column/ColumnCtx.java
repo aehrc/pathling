@@ -118,8 +118,13 @@ public class ColumnCtx {
   public ColumnCtx explode() {
     return vectorize(functions::explode, Function.identity());
   }
-  
+
   public ColumnCtx join(@Nonnull final String separator) {
     return vectorize(c -> functions.array_join(c, separator), Function.identity());
   }
+
+  public ColumnCtx not() {
+    return transform(functions::not);
+  }
+
 }

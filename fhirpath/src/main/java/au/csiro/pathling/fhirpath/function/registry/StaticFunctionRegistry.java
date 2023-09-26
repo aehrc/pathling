@@ -6,25 +6,14 @@ import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansT
 import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ANY_TRUE;
 
 import au.csiro.pathling.fhirpath.function.BooleansTestFunction;
-import au.csiro.pathling.fhirpath.function.ColumnFunction0;
-import au.csiro.pathling.fhirpath.function.ColumnFunctions;
-import au.csiro.pathling.fhirpath.function.CountFunction;
-import au.csiro.pathling.fhirpath.function.EmptyFunction;
-import au.csiro.pathling.fhirpath.function.ExistsFunction;
-import au.csiro.pathling.fhirpath.function.ExtensionFunction;
-import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.FirstFunction;
 import au.csiro.pathling.fhirpath.function.GetIdFunction;
 import au.csiro.pathling.fhirpath.function.IifFunction;
-import au.csiro.pathling.fhirpath.function.NotFunction;
-import au.csiro.pathling.fhirpath.function.OfTypeFunction;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.ResolveFunction;
 import au.csiro.pathling.fhirpath.function.ReverseResolveFunction;
 import au.csiro.pathling.fhirpath.function.StandardFunctions;
-import au.csiro.pathling.fhirpath.function.SumFunction;
 import au.csiro.pathling.fhirpath.function.ToStringFunction;
 import au.csiro.pathling.fhirpath.function.UntilFunction;
-import au.csiro.pathling.fhirpath.function.WhereFunction;
 import au.csiro.pathling.fhirpath.function.WrappedFunction;
 import au.csiro.pathling.fhirpath.function.terminology.DesignationFunction;
 import au.csiro.pathling.fhirpath.function.terminology.DisplayFunction;
@@ -32,7 +21,6 @@ import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
 import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
 import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
 /**
@@ -74,7 +62,7 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .put("designation", new DesignationFunction())
         .put("toString", new ToStringFunction())
         .put("getId", new GetIdFunction())
-        .putAll(ColumnFunction0.mapOf(ColumnFunctions.class))
+        //.putAll(ColumnFunction0.mapOf(ColumnFunctions.class))
         .putAll(WrappedFunction.mapOf(StandardFunctions.class))
         .build());
   }

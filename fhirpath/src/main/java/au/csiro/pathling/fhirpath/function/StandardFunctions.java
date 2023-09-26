@@ -104,16 +104,33 @@ public class StandardFunctions {
     return input.resolveChoice(typeSpecifier.getFhirType().get().toCode())
         .orElse(Collection.nullCollection());
   }
+
   @FhirpathFunction
   public static StringCollection getResourceKey(@Nonnull final ResourceCollection input) {
     return StringCollection.build(input.getKeyColumn().getValue());
   }
-  
+
   @FhirpathFunction
-  public static StringCollection join(@Nonnull final StringCollection input, @Nullable final StringCollection separator) {
+  public static StringCollection join(@Nonnull final StringCollection input,
+      @Nullable final StringCollection separator) {
     return StringCollection.build(input.getCtx().join(
-        nonNull(separator) ? separator.toLiteralValue() : JOIN_DEFAULT_SEPARATOR
+        nonNull(separator)
+        ? separator.toLiteralValue()
+        : JOIN_DEFAULT_SEPARATOR
     ));
   }
 
+  @FhirpathFunction
+  public static BooleanCollection exists(@Nonnull final Collection input,
+      @Nullable final CollectionExpression criteria) {
+    return not(empty(nonNull(criteria)
+                     ? where(input, criteria)
+                     : input));
+
+  }
+
+  @FhirpathFunction
+  public static BooleanCollection not(@Nonnull final BooleanCollection input) {
+    return BooleanCollection.build(input.getCtx().not());
+  }
 }
