@@ -18,100 +18,104 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ValueFunctions;
+
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
-import org.apache.spark.sql.types.ArrayType;
 
 @Value(staticConstructor = "of")
 public class ColumnCtx {
 
-  Column value;
+    Column value;
 
-  @Nonnull
-  public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
-      @Nonnull final Function<Column, Column> singularExpression) {
-    return of(ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
-  }
+    @Nonnull
+    public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+                               @Nonnull final Function<Column, Column> singularExpression) {
+        return of(ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
+    }
 
-  @Nonnull
-  public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression) {
-    // the default implementation just wraps the element info array if needed
-    return vectorize(arrayExpression,
-        c -> arrayExpression.apply(functions.when(c.isNotNull(), functions.array(c))));
-  }
+    @Nonnull
+    public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression) {
+        // the default implementation just wraps the element info array if needed
+        return vectorize(arrayExpression,
+                c -> arrayExpression.apply(functions.when(c.isNotNull(), functions.array(c))));
+    }
 
-  @Nonnull
-  public ColumnCtx unnest() {
-    return of(ValueFunctions.unnest(value));
-  }
-  
-  @Nonnull
-  public ColumnCtx traverse(@Nonnull final String fieldName) {
-    return of(ValueFunctions.unnest(value.getField(fieldName)));
-  }
+    @Nonnull
+    public ColumnCtx flatten() {
+        return of(ValueFunctions.unnest(value));
+    }
 
-  @Nonnull
-  public ColumnCtx singular() {
-    return vectorize(
-        c -> functions.when(functions.size(c).leq(1), c.getItem(0))
-            .otherwise(functions.raise_error(
-                functions.lit("Expected a single value, but found multiple values"))),
-        Function.identity()
-    );
-  }
-  
-  @Nonnull
-  public ColumnCtx filter(Function<Column, Column> lambda) {
-    return vectorize(
-        c -> functions.filter(c, lambda::apply),
-        c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
-    );
-  }
+    @Nonnull
+    public ColumnCtx traverse(@Nonnull final String fieldName) {
+        return of(ValueFunctions.unnest(value.getField(fieldName)));
+    }
 
-  
-  @Nonnull 
-  public ColumnCtx transform(Function<Column, Column> lambda) {
-    return vectorize(
-        c -> functions.transform(c, lambda::apply),
-        c -> functions.when(c.isNotNull(), lambda.apply(c))
-    );
-  }
-  
-  @Nonnull
-  public ColumnCtx aggregate(@Nonnull final Object zeroValue,
-      BiFunction<Column, Column, Column> aggregator) {
+    @Nonnull
+    public ColumnCtx singular() {
+        return vectorize(
+                c -> functions.when(functions.size(c).leq(1), c.getItem(0))
+                        .otherwise(functions.raise_error(
+                                functions.lit("Expected a single value, but found multiple values"))),
+                Function.identity()
+        );
+    }
 
-    return vectorize(
-        c -> functions.when(c.isNull(), zeroValue)
-            .otherwise(functions.aggregate(c, functions.lit(zeroValue), aggregator::apply)),
-        c -> functions.when(c.isNull(), zeroValue).otherwise(c)
-    );
-    // this is OK because aggregator(zero, x) == x
-  }
+    @Nonnull
+    public ColumnCtx filter(final Function<Column, Column> lambda) {
+        return vectorize(
+                c -> functions.filter(c, lambda::apply),
+                c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
+        );
+    }
 
 
-  @Nonnull
-  public ColumnCtx first() {
-    return vectorize(c -> c.getItem(0), Function.identity());
-  }
+    @Nonnull
+    public ColumnCtx transform(final Function<Column, Column> lambda) {
+        return vectorize(
+                c -> functions.transform(c, lambda::apply),
+                c -> functions.when(c.isNotNull(), lambda.apply(c))
+        );
+    }
 
-  @Nonnull
-  public ColumnCtx count() {
-    return vectorize(
-        c -> functions.when(c.isNull(), 0).otherwise(functions.size(c)),
-        c -> functions.when(c.isNull(), 0).otherwise(1)
-    );
-  }
+    @Nonnull
+    public ColumnCtx aggregate(@Nonnull final Object zeroValue,
+                               final BiFunction<Column, Column, Column> aggregator) {
 
-  @Nonnull
-  public ColumnCtx empty() {
-    return vectorize(
-        c -> functions.when(c.isNotNull(), functions.size(c).equalTo(0)).otherwise(true),
-        Column::isNull);
-  }
+        return vectorize(
+                c -> functions.when(c.isNull(), zeroValue)
+                        .otherwise(functions.aggregate(c, functions.lit(zeroValue), aggregator::apply)),
+                c -> functions.when(c.isNull(), zeroValue).otherwise(c)
+        );
+        // this is OK because aggregator(zero, x) == x
+    }
 
+
+    @Nonnull
+    public ColumnCtx first() {
+        return vectorize(c -> c.getItem(0), Function.identity());
+    }
+
+    @Nonnull
+    public ColumnCtx count() {
+        return vectorize(
+                c -> functions.when(c.isNull(), 0).otherwise(functions.size(c)),
+                c -> functions.when(c.isNull(), 0).otherwise(1)
+        );
+    }
+
+    @Nonnull
+    public ColumnCtx empty() {
+        return vectorize(
+                c -> functions.when(c.isNotNull(), functions.size(c).equalTo(0)).otherwise(true),
+                Column::isNull);
+    }
+    
+    public ColumnCtx explode() {
+        return vectorize(functions::explode, Function.identity());
+    }
 }

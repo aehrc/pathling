@@ -5,6 +5,7 @@ import ca.uhn.fhir.context.*;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
+import ca.uhn.fhir.model.api.annotation.Block;
 import ca.uhn.fhir.model.api.annotation.DatatypeDef;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -16,10 +17,13 @@ public interface ElementDefinition extends ChildDefinition {
   @Nonnull
   static Optional<FHIRDefinedType> getFhirTypeFromElementDefinition(
       @Nonnull final BaseRuntimeElementDefinition<?> elementDefinition) {
-    return Optional.ofNullable(
-            elementDefinition.getImplementingClass().getAnnotation(DatatypeDef.class))
+    final Class<?> elementClass = elementDefinition.getImplementingClass();
+    return Optional.ofNullable(elementClass.getAnnotation(DatatypeDef.class))
         .map(DatatypeDef::name)
-        .map(FHIRDefinedType::fromCode);
+        .map(FHIRDefinedType::fromCode)
+        // special case for backbone elements
+        .or(() -> Optional.ofNullable(elementClass.getAnnotation(Block.class))
+            .map(__ -> FHIRDefinedType.BACKBONEELEMENT));
   }
 
   /**

@@ -1,0 +1,200 @@
+{
+  "title": "Unnesting tests",
+  "authors": [
+    "niquola"
+  ],
+  "generated": true,
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "pt1",
+      "name": [
+        {
+          "use": "official",
+          "family": "f1.1",
+          "given": [
+            "g1.1"
+          ]
+        },
+        {
+          "family": "f1.2",
+          "given": [
+            "g1.2",
+            "g1.3"
+          ]
+        }
+      ],
+      "gender": "male",
+      "birthDate": "1950-01-01",
+      "address": [
+        {
+          "city": "c1"
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "pt2",
+      "name": [
+        {
+          "family": "f2.1",
+          "given": [
+            "g2.1"
+          ]
+        },
+        {
+          "use": "official",
+          "family": "f2.2",
+          "given": [
+            "g2.2",
+            "g2.3"
+          ]
+        }
+      ],
+      "gender": "female",
+      "birthDate": "1950-01-01"
+    }
+  ],
+  "tests": [
+    {
+      "title": "basic unnesting",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "alias": "id",
+            "path": "id"
+          },
+          {
+            "forEach": "name",
+            "select": [
+              {
+                "alias": "family",
+                "path": "family"
+              },
+              {
+                "alias": "given",
+                "path": "given"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "family": "f1.1",
+          "given": ["g1.1"]
+        },
+        {
+          "id": "pt1",
+          "family": "f1.2",
+          "given": ["g1.2", "g1.3"]
+        },
+        {
+          "id": "pt2",
+          "family": "f2.1",
+          "given": ["g2.1"]
+        },
+        {
+          "id": "pt2",
+          "family": "f2.2",
+          "given": ["g2.2", "g2.3"]
+        }
+      ]
+    },
+    {
+      "title": "two levels of unnesting with $this",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "alias": "id",
+            "path": "id"
+          },
+          {
+            "forEach": "name",
+            "select": [
+              {
+                "alias": "family",
+                "path": "family"
+              },
+              {
+                "forEach": "given",
+                "select": [
+                  {
+                    "alias": "given",
+                    "path": "$this"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "family": "f1.1",
+          "given": "g1.1"
+        },
+        {
+          "id": "pt1",
+          "family": "f1.2",
+          "given": "g1.2"
+        },
+        {
+          "id": "pt1",
+          "family": "f1.2",
+          "given": "g1.3"
+        },
+        {
+          "id": "pt2",
+          "family": "f2.1",
+          "given": "g2.1"
+        },
+        {
+          "id": "pt2",
+          "family": "f2.2",
+          "given": "g2.2"
+        },
+        {
+          "id": "pt2",
+          "family": "f2.2",
+          "given": "g2.3"
+        }
+      ]
+    },
+    {
+      "title": "unnesting of singular element",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "alias": "id",
+            "path": "id"
+          },
+          {
+            "forEach": "gender",
+            "select": [
+              {
+                "alias": "gender",
+                "path": "$this"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "gender": "male"
+        },
+        {
+          "id": "pt2",
+          "gender": "female"
+        }
+      ]
+    }
+  ]
+}

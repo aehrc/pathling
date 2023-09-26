@@ -22,7 +22,12 @@ import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.Literal;
+import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.ArrayType;
+import org.apache.spark.sql.types.StructType;
 import javax.annotation.Nonnull;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,12 +59,21 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   @Nonnull
   public DatasetAssert selectResult() {
     final Column[] selection = new Column[]{
-        evaluationContext.getResource().traverse("id").get().getColumn(),
-        result.getColumn()
+        evaluationContext.getResource().traverse("id").get().getColumn().alias("id"),
+        result.getColumn().alias("value")
     };
-    // TODO: Update this to make sure that it is ordered
-    // and exploded is needed
-    return DatasetAssert.of(evaluationContext.getDataset().select(selection));
+    // and exploded the result if needed to compare with CSV 
+    final Dataset<Row> resultDataset = evaluationContext.getDataset()
+        .select(selection);
+    final StructType schema = resultDataset.schema();
+    final Dataset<Row> explodedDataset = schema.fields()[schema.fieldIndex(
+        "value")].dataType() instanceof ArrayType
+                                         ? resultDataset.select(resultDataset.col("id"),
+        functions.explode(resultDataset.col("value"))
+            .alias("value"))
+                                         : resultDataset;
+
+    return DatasetAssert.of(explodedDataset);
   }
 
   @Nonnull

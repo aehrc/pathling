@@ -22,12 +22,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -49,7 +54,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
-class FhirViewTest {
+abstract class AbstractFhirViewTestBase {
 
   static Path tempDir;
 
@@ -68,8 +73,16 @@ class FhirViewTest {
   @MockBean
   TerminologyServiceFactory terminologyServiceFactory;
 
+
+  private final String testLocationGlob;
+
+  protected AbstractFhirViewTestBase(final String testLocationGlob) {
+    this.testLocationGlob = testLocationGlob;
+  }
+  
   @BeforeAll
   static void beforeAll() throws IOException {
+    System.out.println("Creating temp directory");
     tempDir = Files.createTempDirectory("pathling-fhir-view-test");
   }
 
@@ -77,7 +90,7 @@ class FhirViewTest {
   Stream<TestParameters> requests() throws IOException {
     final ObjectMapper mapper = new ObjectMapper();
     final ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-    final Resource[] resources = resolver.getResources("classpath:tests/sql-on-fhir/v1/*.json");
+    final Resource[] resources = resolver.getResources(testLocationGlob);
     return Stream.of(resources)
         // Get each test file.
         .map(resource -> {
@@ -109,7 +122,7 @@ class FhirViewTest {
       // Create a parent directory based upon the test name.
       final JsonNode resources = testDefinition.get("resources");
       final Path directory = getTempDir(testDefinition);
-      final FhirViewTestDataSource result = new FhirViewTestDataSource();
+      final TestDataSource result = new TestDataSource();
 
       for (final Iterator<JsonNode> it = resources.elements(); it.hasNext(); ) {
         final JsonNode resource = it.next();
@@ -226,4 +239,37 @@ class FhirViewTest {
     }
   }
 
+  /**
+   * A class for making FHIR data available for the view tests.
+   *
+   * @author John Grimes
+   */
+  @Slf4j
+  public static class TestDataSource implements DataSource {
+  
+    private static final Map<ResourceType, Dataset<Row>> resourceTypeToDataset = new HashMap<>();
+  
+    public void put(@Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> dataset) {
+      resourceTypeToDataset.put(resourceType, dataset);
+    }
+  
+    @Nonnull
+    @Override
+    public Dataset<Row> read(@Nullable final ResourceType resourceType) {
+      return resourceTypeToDataset.get(resourceType);
+    }
+  
+    @Nonnull
+    @Override
+    public Dataset<Row> read(@Nullable final String resourceCode) {
+      return resourceTypeToDataset.get(ResourceType.fromCode(resourceCode));
+    }
+  
+    @Nonnull
+    @Override
+    public Set<ResourceType> getResourceTypes() {
+      return resourceTypeToDataset.keySet();
+    }
+  
+  }
 }

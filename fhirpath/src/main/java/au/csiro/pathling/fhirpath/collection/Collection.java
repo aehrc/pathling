@@ -241,7 +241,7 @@ public class Collection implements Comparable, Numeric {
     return getExtensionMap().map(em ->
         Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
-            ColumnCtx.of(getFid()).transform(em::apply).unnest().getValue(),
+            ColumnCtx.of(getFid()).transform(em::apply).flatten().getValue(),
             (ElementDefinition) extensionDefinition));
   }
 
@@ -331,5 +331,5 @@ public class Collection implements Comparable, Numeric {
   public ColumnCtx getCtx() {
     return ColumnCtx.of(getColumn());
   }
-
+  
 }

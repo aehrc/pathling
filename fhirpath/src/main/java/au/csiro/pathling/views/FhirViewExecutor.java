@@ -1,8 +1,10 @@
 package au.csiro.pathling.views;
 
+import static au.csiro.pathling.utilities.Functions.backCurried;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 
+import au.csiro.pathling.encoders.ValueFunctions;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -13,15 +15,18 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -44,6 +49,50 @@ public class FhirViewExecutor {
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
 
 
+  @Value
+  private static class ExecutionContextImpl implements ExecutionContext {
+
+    EvaluationContext evaluationContext;
+    DatasetContext datasetContext;
+
+    @Nonnull
+    @Override
+    public Column evalExpression(@Nonnull final String path) {
+      return internalEvalExpression(path).getColumn();
+    }
+
+    @Nonnull
+    @Override
+    public ExecutionContextImpl subContext(@Nonnull final String expression, final boolean unnest) {
+      final Collection newInputContext = internalEvalExpression(expression);
+      return new ExecutionContextImpl(
+          evaluationContext.withInputContext(unnest
+                                             ? unnest(newInputContext)
+                                             : newInputContext),
+          datasetContext);
+    }
+
+
+    @Nonnull
+    private Collection internalEvalExpression(@Nonnull final String expression) {
+      final String updatedExpression = evaluationContext.getConstantReplacer()
+          .map(replacer -> replacer.execute(expression))
+          .orElse(expression);
+      return new Parser().evaluate(updatedExpression, evaluationContext);
+    }
+
+    @Nonnull
+    private Collection unnest(@Nonnull final Collection collection) {
+      return collection.copyWith(
+          datasetContext.materialize(collection.getCtx().explode().getValue()));
+    }
+
+    @Nonnull
+    Dataset<Row> getDataset() {
+      return datasetContext.getDataset();
+    }
+  }
+
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
@@ -55,7 +104,31 @@ public class FhirViewExecutor {
 
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
-    // Get the constants from the query, and build a replacer.
+
+    final ExecutionContextImpl executionContext = newExecutionContext(view);
+    final List<Column> select = parseSelect(view.getSelect(), executionContext);
+
+    final List<String> where = view.getWhere() == null
+                               ? Collections.emptyList()
+                               : view.getWhere().stream()
+                                   .map(WhereClause::getExpression)
+                                   .collect(toList());
+    final Optional<Column> filterCondition = where.stream()
+        .map(executionContext::evalExpression)
+        .reduce(Column::and);
+
+    // TODO: Make the context immutable
+    // NOTE: The executionContext is mutable with regards to the dataset
+    // Due to the necessity or column "materializations" needed for unnesting.
+    final Dataset<Row> dataset = executionContext.getDataset();
+    return filterCondition
+        .map(dataset::filter)
+        .orElse(dataset)
+        .select(select.toArray(new Column[0]));
+  }
+
+
+  private ExecutionContextImpl newExecutionContext(@Nonnull final FhirView view) {
     final Optional<ConstantReplacer> constantReplacer = Optional.ofNullable(view.getConstants())
         .map(c -> c.stream()
             .collect(toMap(ConstantDeclaration::getName, ConstantDeclaration::getValue)))
@@ -69,84 +142,66 @@ public class FhirViewExecutor {
     final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
         fhirContext, sparkSession, dataset, StaticFunctionRegistry.getInstance(),
         terminologyServiceFactory, constantReplacer);
-
-    final List<Column> select = parseSelect(view.getSelect(), evaluationContext,
-        Collections.emptyList());
-    
-    final List<String> where = view.getWhere() == null
-                               ? Collections.emptyList()
-                               : view.getWhere().stream()
-                                   .map(WhereClause::getExpression)
-                                   .collect(toList());
-    final Optional<Column> filterCondition = where.stream()
-        .map(e -> evalExpression(e, evaluationContext))
-        .map(Collection::getColumn)
-        .reduce(Column::and);
-
-    return filterCondition
-        .map(dataset::filter)
-        .orElse(dataset)
-        .select(select.toArray(new Column[0]));
+    return new ExecutionContextImpl(evaluationContext,
+        new DatasetContext(dataset));
   }
 
   @Nonnull
   private List<Column> parseSelect(@Nonnull final List<SelectClause> selectGroup,
-      @Nonnull final EvaluationContext context, @Nonnull final List<Column> currentSelection) {
-    final List<Column> newSelection = new ArrayList<>(currentSelection);
+      @Nonnull final ExecutionContext context) {
 
-    for (final SelectClause select : selectGroup) {
-      if (select instanceof DirectSelection) {
-        newSelection.addAll(directSelection(context, (DirectSelection) select, currentSelection));
-
-      } else if (select instanceof FromSelection) {
-        newSelection.addAll(
-            nestedSelection(context, (FromSelection) select, currentSelection, false));
-
-      } else if (select instanceof ForEachSelection) {
-        newSelection.addAll(
-            nestedSelection(context, (ForEachSelection) select, currentSelection, true));
-
-      } else {
-        throw new IllegalStateException("Unknown select clause type: " + select.getClass());
-      }
-    }
-
-    return newSelection;
+    return selectGroup.stream()
+        .flatMap(select -> evalSelect(select, context).stream())
+        .collect(Collectors.toUnmodifiableList());
   }
 
   @Nonnull
-  private List<Column> directSelection(@Nonnull final EvaluationContext context,
-      @Nonnull final DirectSelection select, @Nonnull final List<Column> currentSelection) {
-    final Collection path = evalExpression(select.getPath(), context);
-    final List<Column> newColumns = new ArrayList<>(currentSelection);
-    final Column column = path.getColumn();
-    final Optional<String> alias = Optional.ofNullable(select.getAlias());
-    newColumns.add(alias.map(column::alias).orElse(column));
-    return newColumns;
+  private List<Column> evalSelect(@Nonnull final SelectClause select, @Nonnull final ExecutionContext context) {
+    // TODO: move to the classes ???
+    if (select instanceof DirectSelection) {
+      return directSelection(context, (DirectSelection) select);
+    } else if (select instanceof FromSelection) {
+      return nestedSelection(context, (FromSelection) select, false);
+    } else if (select instanceof ForEachSelection) {
+      return nestedSelection(context, (ForEachSelection) select, true);
+    } else if (select instanceof UnionSelection) {
+      return unionSelection(context, (UnionSelection) select);
+    } else {
+      throw new IllegalStateException("Unknown select clause type: " + select.getClass());
+    }
+  }
+
+  @Nonnull
+  private List<Column> unionSelection(@Nonnull final ExecutionContext context,
+      @Nonnull final UnionSelection select) {
+    final List<Column> unionColumns = nestedSelection(context, select, false);
+    // need to combine all these columns here
+    return List.of(functions.flatten(functions.array(
+        unionColumns.stream()
+            .map(c -> ValueFunctions.ifArray(c, Function.<Column>identity()::apply,
+                functions::array))
+            .toArray(Column[]::new)
+    )));
+  }
+
+  @Nonnull
+  private List<Column> directSelection(@Nonnull final ExecutionContext context,
+      @Nonnull final DirectSelection select) {
+    return List.of(
+        context.evalExpression(select.getPath(), Optional.ofNullable(select.getAlias())));
   }
 
   @Nonnull
   @NotImplemented
-  private List<Column> nestedSelection(final @Nonnull EvaluationContext context,
-      @Nonnull final NestedSelectClause select, @Nonnull final List<Column> currentSelection,
+  private List<Column> nestedSelection(final @Nonnull ExecutionContext context,
+      @Nonnull final NestedSelectClause select,
       final boolean unnest) {
-    final Collection from = evalExpression(select.getPath(), context);
-    final Collection nextInputContext = unnest
-                                        // TODO: FIX FIRST
-                                        ? from
-                                        // .unnest()
-                                        : from;
-    final EvaluationContext nextContext = context.withInputContext(nextInputContext);
-    return parseSelect(select.getSelect(), nextContext, currentSelection);
-  }
 
-  @Nonnull
-  private Collection evalExpression(@Nonnull final String expression,
-      @Nonnull final EvaluationContext context) {
-    final String updatedExpression = context.getConstantReplacer()
-        .map(replacer -> replacer.execute(expression))
-        .orElse(expression);
-    return new Parser().evaluate(updatedExpression, context);
-  }
+    final ExecutionContext nextContext = Optional.ofNullable(select.getPath())
+        .map(backCurried(context::subContext).apply(unnest))
+        .orElse(context);
 
+    return parseSelect(select.getSelect(), nextContext);
+
+  }
 }

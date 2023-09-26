@@ -3,6 +3,7 @@ package au.csiro.pathling.views;
 import java.util.List;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
+import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -40,6 +41,7 @@ public class UnionSelection extends NestedSelectClause {
    */
   @NotNull
   @Size(min = 1)
+  @SerializedName("union")
   List<SelectClause> select;
 
 }
