@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.utilities;
 
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -24,7 +25,7 @@ import java.util.function.Function;
  * Utility class containing some functional programming helper functions.
  */
 public interface Functions {
-  
+
   /**
    * Converts a function that takes two arguments to its curried version.
    *
@@ -50,4 +51,20 @@ public interface Functions {
   static <A1, A2, R> Function<A2, Function<A1, R>> backCurried(final BiFunction<A1, A2, R> f) {
     return a2 -> a1 -> f.apply(a1, a2);
   }
+
+
+  /**
+   * Returns function that conditionally casts an object to a given class, returning an empty
+   * optional if the cast fails.
+   *
+   * @param clazz the class to cast to
+   * @param <T> the class to cast to
+   * @return the function
+   */
+  static <T> Function<Object, Optional<T>> maybeCast(final Class<T> clazz) {
+    return o -> clazz.isInstance(o)
+                ? Optional.of(clazz.cast(o))
+                : Optional.empty();
+  }
+
 }

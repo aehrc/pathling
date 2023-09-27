@@ -70,6 +70,7 @@ public class ElementChildDefinition extends
     return childDefinition.getElementName();
   }
 
+  @Nonnull
   @Override
   public Optional<Integer> getMaxCardinality() {
     return Optional.of(childDefinition.getMax());

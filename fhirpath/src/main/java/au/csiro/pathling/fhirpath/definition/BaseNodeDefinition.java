@@ -17,11 +17,19 @@
 
 package au.csiro.pathling.fhirpath.definition;
 
+import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementCompositeDefinition;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
+import org.apache.commons.lang3.tuple.Pair;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+
+import static au.csiro.pathling.utilities.Functions.maybeCast;
 
 /**
  * Base implemention of a NodeDefition based on a BaseRuntimeElementDefinition.
@@ -34,16 +42,38 @@ abstract public class BaseNodeDefinition<ED extends BaseRuntimeElementDefinition
   @Nonnull
   protected final ED elementDefinition;
 
+  @Nonnull
+  final Map<String, RuntimeChildChoiceDefinition> nestedChildElementsByName;
+
   protected BaseNodeDefinition(@Nonnull final ED elementDefinition) {
     this.elementDefinition = elementDefinition;
+
+    // we need to map all choices to be available as children here
+    //noinspection unchecked
+    final Stream<BaseRuntimeChildDefinition> allChildren = Optional.of(elementDefinition)
+        .flatMap(maybeCast(BaseRuntimeElementCompositeDefinition.class)).stream()
+        .flatMap(compElementDef -> compElementDef.getChildren().stream());
+
+    nestedChildElementsByName = allChildren
+        .filter(ChildDefinition::isChildChoiceDefinition)
+        .map(RuntimeChildChoiceDefinition.class::cast)
+        .flatMap(
+            choiceDef -> choiceDef.getValidChildNames().stream().map(n -> Pair.of(n, choiceDef)))
+        .collect(Collectors.toUnmodifiableMap(Pair::getLeft, Pair::getRight));
   }
 
   @Override
   @Nonnull
   public Optional<ChildDefinition> getChildElement(@Nonnull final String name) {
+
+    // TODO: make it nicer
+    final RuntimeChildChoiceDefinition choiceChild = nestedChildElementsByName.get(name);
+    if (choiceChild != null) {
+      return Optional.of(new ElementChildDefinition(choiceChild, name));
+    }
+
     return Optional.of(elementDefinition)
-        .filter(BaseRuntimeElementCompositeDefinition.class::isInstance)
-        .map(BaseRuntimeElementCompositeDefinition.class::cast)
+        .flatMap(maybeCast(BaseRuntimeElementCompositeDefinition.class))
         .flatMap(compElementDef -> Optional.ofNullable(compElementDef.getChildByName(name))
             .or(() -> Optional.ofNullable(compElementDef.getChildByName(name + "[x]"))))
         .map(ChildDefinition::build);

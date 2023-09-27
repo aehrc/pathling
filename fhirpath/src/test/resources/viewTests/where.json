@@ -67,7 +67,7 @@
       "view": {
         "resource": "Observation",
         "select": [{ "path": "id" }],
-        "where": [{ "path": "valueInteger > 11" }]
+        "where": [{ "path": "value.ofType(integer) > 11" }]
       },
       "expect": [{ "id": "o1" }]
     },
@@ -115,7 +115,7 @@
       "view": {
         "resource": "Patient",
         "select": [{ "path": "id" }],
-        "where": [{ "path": "name.where(use = 'official' and family = 'f1')" }]
+        "where": [{ "path": "name.exists(use = 'official' and family = 'f1')" }]
       },
       "expect": [{ "id": "p1" }]
     },
@@ -124,7 +124,7 @@
       "view": {
         "resource": "Patient",
         "select": [{ "path": "id" }],
-        "where": [{ "path": "name.where(use = 'official' or family = 'f2')" }]
+        "where": [{ "path": "name.exists(use = 'official' or family = 'f2')" }]
       },
       "expect": [{ "id": "p1" }, { "id": "p2" }]
     }

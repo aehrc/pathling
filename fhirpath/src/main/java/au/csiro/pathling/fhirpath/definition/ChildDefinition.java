@@ -28,14 +28,19 @@ public interface ChildDefinition extends NodeDefinition {
     // } else 
     if (childDefinition instanceof RuntimeChildResourceDefinition) {
       return new ReferenceDefinition((RuntimeChildResourceDefinition) childDefinition);
-    } else if (childDefinition instanceof RuntimeChildChoiceDefinition
-        && !(childDefinition instanceof RuntimeChildExtension)) {
+    } else if (isChildChoiceDefinition(childDefinition)) {
       return new ChoiceChildDefinition((RuntimeChildChoiceDefinition) childDefinition);
     } else {
       return new ElementChildDefinition(childDefinition);
     }
   }
 
+
+  static boolean isChildChoiceDefinition(
+      @Nonnull final BaseRuntimeChildDefinition childDefinition) {
+    return childDefinition instanceof RuntimeChildChoiceDefinition
+        && !(childDefinition instanceof RuntimeChildExtension);
+  }
 
   /**
    * @return the name of this child
