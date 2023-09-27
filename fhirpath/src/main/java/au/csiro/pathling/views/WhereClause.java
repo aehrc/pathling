@@ -19,13 +19,12 @@ public class WhereClause {
    * The FHIRPath expression for the filter.
    */
   @NotNull
-  @SerializedName("expr")
+  @SerializedName("path")
   String expression;
 
   /**
    * An optional human-readable description of the filter.
    */
-  @SerializedName("desc")
   @Nullable
   String description;
 

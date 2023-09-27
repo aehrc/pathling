@@ -4,6 +4,7 @@ import static au.csiro.pathling.UnitTestDependencies.fhirContext;
 import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
+import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
@@ -22,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -79,7 +81,7 @@ abstract class AbstractFhirViewTestBase {
   protected AbstractFhirViewTestBase(final String testLocationGlob) {
     this.testLocationGlob = testLocationGlob;
   }
-  
+
   @BeforeAll
   static void beforeAll() throws IOException {
     System.out.println("Creating temp directory");
@@ -172,6 +174,9 @@ abstract class AbstractFhirViewTestBase {
                 view.get("title").asText().replaceAll("\\W+", "_"));
         final Path expectedPath = directory.resolve(expectedFileName);
         List<String> expectedColumns = null;
+
+        // Always create the file first to account for empty 'expect' element.
+        Files.createFile(expectedPath);
         for (final Iterator<JsonNode> rowIt = view.get("expect").elements(); rowIt.hasNext(); ) {
           final JsonNode row = rowIt.next();
 
@@ -184,13 +189,16 @@ abstract class AbstractFhirViewTestBase {
 
           // Append the row to the file.
           Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
-              StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+              StandardOpenOption.APPEND);
         }
 
         final String testName =
             testDefinition.get("title").asText() + " - " + view.get("title").asText();
         result.add(
-            new TestParameters(testName, sourceData, fhirView, expectedPath, expectedColumns));
+            new TestParameters(testName, sourceData, fhirView, expectedPath,
+                nonNull(expectedColumns)
+                ? expectedColumns
+                : Collections.emptyList()));
         testNumber++;
       }
 
@@ -246,25 +254,25 @@ abstract class AbstractFhirViewTestBase {
    */
   @Slf4j
   public static class TestDataSource implements DataSource {
-  
+
     private static final Map<ResourceType, Dataset<Row>> resourceTypeToDataset = new HashMap<>();
-  
+
     public void put(@Nonnull final ResourceType resourceType, @Nonnull final Dataset<Row> dataset) {
       resourceTypeToDataset.put(resourceType, dataset);
     }
-  
+
     @Nonnull
     @Override
     public Dataset<Row> read(@Nullable final ResourceType resourceType) {
       return resourceTypeToDataset.get(resourceType);
     }
-  
+
     @Nonnull
     @Override
     public Dataset<Row> read(@Nullable final String resourceCode) {
       return resourceTypeToDataset.get(ResourceType.fromCode(resourceCode));
     }
-  
+
     @Nonnull
     @Override
     public Set<ResourceType> getResourceTypes() {
