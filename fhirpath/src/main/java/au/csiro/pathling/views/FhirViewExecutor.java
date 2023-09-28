@@ -57,8 +57,10 @@ public class FhirViewExecutor {
 
     @Nonnull
     @Override
-    public Column evalExpression(@Nonnull final String path) {
-      return internalEvalExpression(path).getColumn();
+    public Column evalExpression(@Nonnull final String path, final boolean singularise) {
+      return singularise
+             ? internalEvalExpression(path).getSingleton()
+             : internalEvalExpression(path).getColumn();
     }
 
     @Nonnull
@@ -156,7 +158,8 @@ public class FhirViewExecutor {
   }
 
   @Nonnull
-  private List<Column> evalSelect(@Nonnull final SelectClause select, @Nonnull final ExecutionContext context) {
+  private List<Column> evalSelect(@Nonnull final SelectClause select,
+      @Nonnull final ExecutionContext context) {
     // TODO: move to the classes ???
     if (select instanceof DirectSelection) {
       return directSelection(context, (DirectSelection) select);
@@ -188,7 +191,8 @@ public class FhirViewExecutor {
   private List<Column> directSelection(@Nonnull final ExecutionContext context,
       @Nonnull final DirectSelection select) {
     return List.of(
-        context.evalExpression(select.getPath(), Optional.ofNullable(select.getAlias())));
+        context.evalExpression(select.getPath(), !select.isCollection(),
+            Optional.ofNullable(select.getAlias())));
   }
 
   @Nonnull

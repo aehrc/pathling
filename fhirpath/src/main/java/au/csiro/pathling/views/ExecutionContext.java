@@ -41,34 +41,52 @@ public interface ExecutionContext {
    * Evaluates the given FHIRPath path and returns the result as a column.
    *
    * @param path the path to evaluate
+   * @param singularise whether to singularise the result
    * @return the result as a column
    */
   @Nonnull
-  Column evalExpression(@Nonnull final String path);
+  Column evalExpression(@Nonnull final String path, final boolean singularise);
+
+
+  /**
+   * Evaluates the given FHIRPath path and returns the result as a column.
+   *
+   * @param path the path to evaluate
+   * @return the result as a column
+   */
+  @Nonnull
+  default Column evalExpression(@Nonnull final String path) {
+    return evalExpression(path, true);
+  }
+
 
   /**
    * Evaluates the given FHIRPath path and returns the result as a column with the given alias.
    *
    * @param path the path to evaluate
+   * @param singularise whether to singularise the result
    * @param alias the alias to use for the column
    * @return the result as a column
    */
   @Nonnull
-  default Column evalExpression(@Nonnull final String path, @Nonnull final String alias) {
-    return evalExpression(path).as(alias);
+  default Column evalExpression(@Nonnull final String path, final boolean singularise,
+      @Nonnull final String alias) {
+    return evalExpression(path, singularise).as(alias);
   }
 
   /**
    * Evaluates the given FHIRPath path and returns the result as a column with the given alias.
    *
    * @param path the path to evaluate
+   * @param singularise whether to singularise the result
    * @param maybeAlias the alias to use for the column
    * @return the result as a column
    */
   @Nonnull
-  default Column evalExpression(@Nonnull final String path, @Nonnull final
-  Optional<String> maybeAlias) {
-    return maybeAlias.map(alias -> evalExpression(path, alias))
-        .orElse(evalExpression(path));
+  default Column evalExpression(@Nonnull final String path, final boolean singularise,
+      @Nonnull final
+      Optional<String> maybeAlias) {
+    return maybeAlias.map(alias -> evalExpression(path, singularise, alias))
+        .orElse(evalExpression(path, singularise));
   }
 }

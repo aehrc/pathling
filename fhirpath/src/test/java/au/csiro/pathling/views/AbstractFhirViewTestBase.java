@@ -5,6 +5,8 @@ import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
@@ -30,11 +32,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.spark.SparkException;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -77,6 +81,57 @@ abstract class AbstractFhirViewTestBase {
 
 
   private final String testLocationGlob;
+
+
+  @FunctionalInterface
+  interface Expectation {
+
+    void expect(@Nonnull final Supplier<Dataset<Row>> result);
+  }
+
+  abstract static class ResultExpectation implements Expectation {
+
+    @Override
+    public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
+      expectResult(result.get());
+    }
+
+    abstract void expectResult(@Nonnull final Dataset<Row> rowDataset);
+  }
+
+  static class ExpectError implements Expectation {
+
+    @Override
+    public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
+      assertThrows(SparkException.class, () -> result.get().collectAsList());
+    }
+  }
+
+  @Value
+  class Expect extends ResultExpectation {
+
+    Path expectedJson;
+    List<String> expectedColumns;
+
+    @Override
+    void expectResult(@Nonnull final Dataset<Row> rowDataset) {
+      final Dataset<Row> expectedResult = spark.read().json(expectedJson.toString())
+          .selectExpr(expectedColumns.toArray(new String[0]));
+      assertThat(rowDataset).hasRows(expectedResult);
+    }
+  }
+
+  @Value
+  static class ExpectCount extends ResultExpectation {
+
+    long count;
+
+    @Override
+    void expectResult(@Nonnull final Dataset<Row> rowDataset) {
+      assertEquals(count, rowDataset.count());
+    }
+  }
+
 
   protected AbstractFhirViewTestBase(final String testLocationGlob) {
     this.testLocationGlob = testLocationGlob;
@@ -173,39 +228,50 @@ abstract class AbstractFhirViewTestBase {
             String.format("%02d_%s.json", testNumber,
                 view.get("title").asText().replaceAll("\\W+", "_"));
         final Path expectedPath = directory.resolve(expectedFileName);
-        List<String> expectedColumns = null;
-
-        // Always create the file first to account for empty 'expect' element.
-        Files.createFile(expectedPath);
-        for (final Iterator<JsonNode> rowIt = view.get("expect").elements(); rowIt.hasNext(); ) {
-          final JsonNode row = rowIt.next();
-
-          // Get the columns from the first row.
-          if (expectedColumns == null) {
-            final List<String> columns = new ArrayList<>();
-            row.fields().forEachRemaining(field -> columns.add(field.getKey()));
-            expectedColumns = columns;
-          }
-
-          // Append the row to the file.
-          Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
-              StandardOpenOption.APPEND);
-        }
 
         final String testName =
             testDefinition.get("title").asText() + " - " + view.get("title").asText();
         result.add(
-            new TestParameters(testName, sourceData, fhirView, expectedPath,
-                nonNull(expectedColumns)
-                ? expectedColumns
-                : Collections.emptyList()));
+            new TestParameters(testName, sourceData, fhirView, getExpectation(view, expectedPath)));
         testNumber++;
       }
-
       return result;
-
     } catch (final IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+
+  @Nonnull
+  Expectation getExpectation(@Nonnull final JsonNode testDefinition,
+      @Nonnull final Path expectedPath)
+      throws IOException {
+    @Nullable
+    JsonNode expectation = null;
+    if (nonNull(testDefinition.get("expectError"))) {
+      return new ExpectError();
+    } else if (nonNull(expectation = testDefinition.get("expectCount"))) {
+      return new ExpectCount(expectation.asLong());
+    } else if (nonNull(expectation = testDefinition.get("expect"))) {
+      List<String> expectedColumns = null;
+      Files.createFile(expectedPath);
+      for (final Iterator<JsonNode> rowIt = expectation.elements(); rowIt.hasNext(); ) {
+        final JsonNode row = rowIt.next();
+        // Get the columns from the first row.
+        if (expectedColumns == null) {
+          final List<String> columns = new ArrayList<>();
+          row.fields().forEachRemaining(field -> columns.add(field.getKey()));
+          expectedColumns = columns;
+        }
+        // Append the row to the file.
+        Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
+            StandardOpenOption.APPEND);
+      }
+      return new Expect(expectedPath, expectedColumns != null
+                                      ? expectedColumns
+                                      : Collections.emptyList());
+    } else {
+      throw new RuntimeException("No expectation found");
     }
   }
 
@@ -223,13 +289,14 @@ abstract class AbstractFhirViewTestBase {
   @ParameterizedTest
   @MethodSource("requests")
   void test(@Nonnull final TestParameters parameters) {
-    final FhirView view = parameters.getView();
-    final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
-        parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));
-    final Dataset<Row> result = executor.buildQuery(view);
-    final Dataset<Row> expectedResult = spark.read().json(parameters.getExpectedJson().toString())
-        .selectExpr(parameters.getExpectedColumns().toArray(new String[0]));
-    assertThat(result).hasRows(expectedResult);
+
+    parameters.getExpectation().expect(() -> {
+
+      final FhirView view = parameters.getView();
+      final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
+          parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));
+      return executor.buildQuery(view);
+    });
   }
 
   @Value
@@ -238,8 +305,7 @@ abstract class AbstractFhirViewTestBase {
     String title;
     DataSource sourceData;
     FhirView view;
-    Path expectedJson;
-    List<String> expectedColumns;
+    Expectation expectation;
 
     @Override
     public String toString() {

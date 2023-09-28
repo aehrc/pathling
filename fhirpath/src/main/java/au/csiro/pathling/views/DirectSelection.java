@@ -48,4 +48,11 @@ public class DirectSelection extends SelectClause {
   @Nullable
   String description;
 
+  /**
+   * Indicates whether the column may have multiple values. Defaults to false if unset.
+   *
+   * @see <a
+   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.collection">ViewDefinition.select.collection</a>
+   */
+  boolean collection;
 }
