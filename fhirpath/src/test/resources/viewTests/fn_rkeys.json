@@ -39,11 +39,15 @@
       "title": "get reference key",
       "view": {
         "resource": "Observation",
-        "forEach": "basedOn",
         "select": [
           {
-            "alias": "rid",
-            "path": "getReferenceKey()"
+            "forEach": "basedOn",
+            "select": [
+              {
+                "alias": "rid",
+                "path": "getReferenceKey()"
+              }
+            ]
           }
         ]
       },
@@ -63,11 +67,15 @@
       "title": "get reference key with resource param",
       "view": {
         "resource": "Observation",
-        "forEach": "basedOn.where(getReferenceKey('CarePlan').exists())",
         "select": [
           {
-            "alias": "rid",
-            "path": "getReferenceKey()"
+            "forEach": "basedOn.where(getReferenceKey(CarePlan).exists())",
+            "select": [
+              {
+                "alias": "rid",
+                "path": "getReferenceKey()"
+              }
+            ]
           }
         ]
       },
