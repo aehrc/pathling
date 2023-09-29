@@ -46,11 +46,13 @@
             "union": [
               {
                 "alias": "phone",
-                "path": "telecom.value"
+                "path": "telecom.value",
+                "collection": true
               },
               {
                 "alias": "phone",
-                "path": "contact.telecom.value"
+                "path": "contact.telecom.value",
+                "collection": true
               }
             ]
           }

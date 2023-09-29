@@ -22,7 +22,9 @@ import static java.util.Objects.isNull;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.path.TypeSpecifierPath;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -58,8 +60,8 @@ public class WrappedFunction implements NamedFunction<Collection> {
 
     @Nullable
     public Object resolveArgument(@Nonnull final Parameter parameter,
-                                  final FhirPath<Collection, Collection> argument) {
-      
+        final FhirPath<Collection, Collection> argument) {
+
       if (isNull(argument)) {
         // check the pararmeter is happy with a null value
         if (parameter.getAnnotation(Nullable.class) != null) {
@@ -77,6 +79,9 @@ public class WrappedFunction implements NamedFunction<Collection> {
       } else if (CollectionExpression.class.isAssignableFrom(parameter.getType())) {
         // bind with context
         return (CollectionExpression) (c -> argument.apply(c, evaluationContext));
+      } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
+        // bind type specifier
+        return ((TypeSpecifierPath) argument).getTypeSpecifier();
       } else {
         throw new RuntimeException("Cannot resolve parameter:" + parameter);
       }

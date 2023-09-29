@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.views;
 
-public class FhirViewV1Test extends AbstractFhirViewTestBase {
+public class FhirViewComplianceTest extends AbstractFhirViewTestBase {
 
-  public FhirViewV1Test() {
+  public FhirViewComplianceTest() {
     super("classpath:tests/sql-on-fhir/content/*.json");
   }
 }

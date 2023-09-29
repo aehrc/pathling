@@ -30,12 +30,14 @@ import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.utilities.Preconditions;
 import com.google.common.collect.ImmutableMap;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -315,12 +317,13 @@ public class Collection implements Comparable, Numeric {
 
   @Nonnull
   public Collection copyWith(@Nonnull final ColumnCtx newValue) {
-    // TODO: This is very very suspicious 
-    // Really need to understand what the relationships between all the different types
-    // some of them seem redundant
     return copyWith(newValue.getValue());
   }
 
+  @Nonnull
+  public Collection filter(@Nonnull final Function<Column, Column> lambda) {
+    return copyWith(getCtx().filter(lambda));
+  }
 
   public Column getSingleton() {
     return ColumnHelpers.singular(getColumn());
@@ -331,5 +334,5 @@ public class Collection implements Comparable, Numeric {
   public ColumnCtx getCtx() {
     return ColumnCtx.of(getColumn());
   }
-  
+
 }

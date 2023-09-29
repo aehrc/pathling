@@ -656,7 +656,7 @@ public class ParserTest extends AbstractParserTest {
   void testExtensionFunction() {
     // This should be the same as: "extension.where($this.url='http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').valueString"
     assertThatResultOf(
-        "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').value.ofType(string)")
+        "extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName').value.ofType(FHIR.string)")
         .isElementPath(StringCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testExtensionFunction.tsv");
@@ -694,7 +694,7 @@ public class ParserTest extends AbstractParserTest {
     assertThatResultOf(
         "address.where($this.city = 'Boston')"
             + ".extension('http://hl7.org/fhir/StructureDefinition/geolocation')"
-            + ".extension('latitude').value.ofType(decimal)")
+            + ".extension('latitude').valueDecimal")
         .isElementPath(DecimalCollection.class)
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testComplexExtensionsOnComplexPath.tsv");

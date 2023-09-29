@@ -18,10 +18,10 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
@@ -29,8 +29,12 @@ import au.csiro.pathling.fhirpath.collection.MixedCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import java.util.Optional;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 @SuppressWarnings("unused")
 public class StandardFunctions {
@@ -39,12 +43,13 @@ public class StandardFunctions {
   public static final String URL_ELEMENT_NAME = "url";
   public static final String JOIN_DEFAULT_SEPARATOR = "";
 
+  public static final String REFERENCE_ELEMENT_NAME = "reference";
+
   @Nonnull
   @FhirpathFunction
   public static Collection where(@Nonnull final Collection input,
       @Nonnull final CollectionExpression expression) {
-    return input.copyWith(
-        input.getCtx().filter(expression.requireBoolean().toColumnFunction(input)));
+    return input.filter(expression.requireBoolean().toColumnFunction(input));
   }
   //
   //
@@ -94,20 +99,33 @@ public class StandardFunctions {
 
   @FhirpathFunction
   public static Collection ofType(@Nonnull final MixedCollection input,
-      @Nonnull final Collection typeSpecifier) {
-    // TODO: implement as annotation or collection type
-    checkUserInput(typeSpecifier.getType().isPresent() && FhirPathType.TYPE_SPECIFIER.equals(
-            typeSpecifier.getType().get()),
-        "Argument to ofType function must be a type specifier");
+      @Nonnull final TypeSpecifier typeSpecifier) {
     // TODO: This should work on any collection type - not just mixed
     // if the type of the collection does not match the required type then it should return an empty collection.
-    return input.resolveChoice(typeSpecifier.getFhirType().get().toCode())
+    return input.resolveChoice(typeSpecifier.toFhirType().toCode())
         .orElse(Collection.nullCollection());
   }
 
   @FhirpathFunction
   public static StringCollection getResourceKey(@Nonnull final ResourceCollection input) {
     return StringCollection.build(input.getKeyColumn().getValue());
+  }
+
+  @FhirpathFunction
+  // TODO: This needs to be somehow constrained to the collections of References
+  public static Collection getReferenceKey(@Nonnull final Collection input,
+      @Nullable final TypeSpecifier typeSpecifier) {
+    checkArgument(input.getFhirType().map(FHIRDefinedType.REFERENCE::equals).orElse(false),
+        "getReferenceKey can only be applied to a REFERENCE collection");
+    // TODO: How to deal with exceptions here?
+    // TODO: add filtering on 'type' but that requies changes in the Encoder (as 'type' is not encoded)
+    // TODO: add support for other types of references
+    return Optional.ofNullable(typeSpecifier)
+        .map(ts -> ts.toFhirType().toCode() + "/.+")
+        .<Function<Column, Column>>map(
+            regex -> (c -> c.getField(REFERENCE_ELEMENT_NAME).rlike(regex)))
+        .map(input::filter).orElse(input)
+        .traverse(REFERENCE_ELEMENT_NAME).orElse(Collection.nullCollection());
   }
 
   @FhirpathFunction
@@ -133,4 +151,9 @@ public class StandardFunctions {
   public static BooleanCollection not(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getCtx().not());
   }
+
+  public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
+    return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
+  }
+
 }

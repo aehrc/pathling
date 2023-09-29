@@ -86,10 +86,8 @@ class Visitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
         requireNonNull(ctx).expression());
     final FhirPath<Collection, Collection> invocationVerb = ctx.invocation()
         .accept(new InvocationVisitor());
-    return (input, context) -> {
-      // TODO: perhpas we should also create the new cotext here (with different %context)
-      return invocationVerb.apply(invocationSubject.apply(input, context), context);
-    };
+    return (input, context) -> invocationVerb.apply(invocationSubject.apply(input, context),
+        context);
   }
 
 

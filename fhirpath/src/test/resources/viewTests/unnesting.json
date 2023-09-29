@@ -74,7 +74,8 @@
               },
               {
                 "alias": "given",
-                "path": "given"
+                "path": "given",
+                "collection": true
               }
             ]
           }
@@ -84,22 +85,32 @@
         {
           "id": "pt1",
           "family": "f1.1",
-          "given": ["g1.1"]
+          "given": [
+            "g1.1"
+          ]
         },
         {
           "id": "pt1",
           "family": "f1.2",
-          "given": ["g1.2", "g1.3"]
+          "given": [
+            "g1.2",
+            "g1.3"
+          ]
         },
         {
           "id": "pt2",
           "family": "f2.1",
-          "given": ["g2.1"]
+          "given": [
+            "g2.1"
+          ]
         },
         {
           "id": "pt2",
           "family": "f2.2",
-          "given": ["g2.2", "g2.3"]
+          "given": [
+            "g2.2",
+            "g2.3"
+          ]
         }
       ]
     },

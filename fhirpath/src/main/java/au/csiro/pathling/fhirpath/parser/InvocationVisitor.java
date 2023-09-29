@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import static au.csiro.pathling.fhirpath.function.StandardFunctions.isTypeSpecifierFunction;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
@@ -36,6 +37,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocati
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathVisitor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -105,9 +107,16 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
       @Nullable final FunctionInvocationContext ctx) {
 
     final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
-
     @Nullable final ParamListContext paramList = ctx.function().paramList();
-    final Visitor paramListVisitor = new Visitor();
+
+    // NOTE: Here we assume that a function is either a type specifier function 
+    // (and all the arguments are type specifiers) or regular function 
+    // (none of the arguments are type specifiers).
+    final FhirPathVisitor<FhirPath<Collection, Collection>> paramListVisitor =
+        isTypeSpecifierFunction(functionIdentifier)
+        ? new TypeSpecifierVisitor()
+        : new Visitor();
+
     final List<FhirPath<Collection, Collection>> arguments = Optional.ofNullable(paramList)
         .map(ParamListContext::expression)
         .map(p -> p.stream()
