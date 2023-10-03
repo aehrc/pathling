@@ -103,7 +103,7 @@ class AggregateQueryExecutorTest {
         result.columns());
     assertThat(result)
         .debugAllRows()
-        .hasRows(spark, "responses/AggregateQueryExecutorTest/simpleQuery.csv");
+        .hasRows(spark, "responses/AggregateQueryExecutorTest/simpleQuery.tsv");
   }
 
   @Test
@@ -120,7 +120,7 @@ class AggregateQueryExecutorTest {
     assertTrue(Stream.of(result.columns()).allMatch(Strings::looksLikeAlias));
     assertThat(result)
         .debugAllRows()
-        .hasRows(spark, "responses/AggregateQueryExecutorTest/simpleQuery.csv");
+        .hasRows(spark, "responses/AggregateQueryExecutorTest/simpleQuery.tsv");
   }
 
   void mockResource(final ResourceType... resourceTypes) {

@@ -17,23 +17,15 @@
 
 package au.csiro.pathling.fhirpath.operator;
 
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findEidColumn;
-import static au.csiro.pathling.fhirpath.NonLiteralPath.findThisColumn;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
+import au.csiro.pathling.fhirpath.EvaluationContext;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Provides the functionality of the family of boolean operators within FHIRPath, i.e. and, or, xor
@@ -43,7 +35,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/operators.html#boolean-logic">Boolean
  * logic</a>
  */
-public class BooleanOperator implements Operator {
+public class BooleanOperator implements BinaryOperator {
 
   private final BooleanOperatorType type;
 
@@ -56,21 +48,18 @@ public class BooleanOperator implements Operator {
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final OperatorInput input) {
-    final FhirPath left = input.getLeft();
-    final FhirPath right = input.getRight();
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
+    final EvaluationContext context = input.getContext();
 
-    checkUserInput(left instanceof BooleanPath || left instanceof BooleanLiteralPath,
-        "Left operand to " + type + " operator must be Boolean: " + left.getExpression());
-    checkUserInput(left.isSingular(),
-        "Left operand to " + type + " operator must be singular: " + left.getExpression());
-    checkUserInput(right instanceof BooleanPath || right instanceof BooleanLiteralPath,
-        "Right operand to " + type + " operator must be Boolean: " + right.getExpression());
-    checkUserInput(right.isSingular(),
-        "Right operand to " + type + " operator must be singular: " + right.getExpression());
-
-    final Column leftValue = left.getValueColumn();
-    final Column rightValue = right.getValueColumn();
+    checkUserInput(left instanceof BooleanCollection,
+        "Left operand to " + type + " operator must be Boolean");
+    checkUserInput(right instanceof BooleanCollection,
+        "Right operand to " + type + " operator must be Boolean");
+    
+    final Column leftValue = left.getColumn();
+    final Column rightValue = right.getColumn();
 
     // Based on the type of operator, create the correct column expression.
     final Column valueColumn;
@@ -104,15 +93,7 @@ public class BooleanOperator implements Operator {
         throw new AssertionError("Unsupported boolean operator encountered: " + type);
     }
 
-    final String expression = left.getExpression() + " " + type + " " + right.getExpression();
-    final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
-    final Column idColumn = left.getIdColumn();
-    final Optional<Column> eidColumn = findEidColumn(left, right);
-    final Optional<Column> thisColumn = findThisColumn(left, right);
-
-    return ElementPath
-        .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),
-            thisColumn, FHIRDefinedType.BOOLEAN);
+    return BooleanCollection.build(valueColumn, Optional.empty());
   }
 
   /**

@@ -18,6 +18,8 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
+import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.explode_outer;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
@@ -78,9 +80,8 @@ class ExtractQueryTest {
   FhirEncoders fhirEncoders;
 
   @MockBean
-  DataSource dataSource;
-
-
+  CacheableDatabase dataSource;
+  
   ResourceType subjectResource;
 
 
@@ -103,16 +104,17 @@ class ExtractQueryTest {
             ExpressionWithLabel.withExpressionAsLabel("id"),
             ExpressionWithLabel.withExpressionAsLabel("gender"),
             ExpressionWithLabel.of("name.given.first()", "given_name"),
-            ExpressionWithLabel.of("reverseResolve(Condition.subject).count()", "patient_count")
+            ExpressionWithLabel.of("reverseResolve(Condition.subject).count().toString()",
+                "condition_count")
         ),
         List.of("gender = 'female'"),
         Optional.empty()
     );
-    final Dataset<Row> result = executor.buildQuery(request);
-    assertArrayEquals(new String[]{"id", "gender", "given_name", "patient_count"},
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertArrayEquals(new String[]{"id", "gender", "given_name", "condition_count"},
         result.columns());
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/simpleQuery.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/simpleQueryWithAliases.tsv");
   }
 
   @Test
@@ -127,11 +129,11 @@ class ExtractQueryTest {
         .withColumn("serviceProvider.resolve().address.postalCode")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
 
     assertTrue(Stream.of(result.columns()).allMatch(Strings::looksLikeAlias));
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multipleResolves.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleResolves.tsv");
   }
 
   @Test
@@ -146,9 +148,9 @@ class ExtractQueryTest {
         .withColumn("reverseResolve(Condition.subject).code.coding.code")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.tsv");
   }
 
   @Test
@@ -164,9 +166,10 @@ class ExtractQueryTest {
         .withColumn("subject.resolve().ofType(Patient).name.family")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.csv");
+        .debugAllRows()
+        .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.tsv");
   }
 
   @Test
@@ -179,9 +182,9 @@ class ExtractQueryTest {
         .withColumn("19")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/literalColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/literalColumn.tsv");
   }
 
   @Test
@@ -195,10 +198,9 @@ class ExtractQueryTest {
         .withLimit(10)
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .debugAllRows()
-        .hasRows(spark, "responses/ExtractQueryTest/resolveAndCodingLiteralColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/resolveAndCodingLiteralColumn.tsv");
   }
 
   @Test
@@ -211,9 +213,9 @@ class ExtractQueryTest {
         .withColumn("code.coding")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/codingColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/codingColumn.tsv");
   }
 
   @Test
@@ -227,9 +229,9 @@ class ExtractQueryTest {
             "http://snomed.info/sct|'46,2'|http://snomed.info/sct/32506021000036107/version/20201231")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.tsv");
   }
 
   @Test
@@ -246,9 +248,9 @@ class ExtractQueryTest {
         .withFilter("reverseResolve(Condition.subject).count() >= 10")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/multipleFilters.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/multipleFilters.tsv");
   }
 
   @Test
@@ -263,9 +265,9 @@ class ExtractQueryTest {
         .withLimit(3)
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/limit.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/limit.tsv");
   }
 
   @Test
@@ -278,9 +280,9 @@ class ExtractQueryTest {
         .withColumn("reverseResolve(Condition.subject).code.coding.code.where($this = '72892002')")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/eliminatesTrailingNulls.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/eliminatesTrailingNulls.tsv");
   }
 
   @Test
@@ -294,9 +296,9 @@ class ExtractQueryTest {
         .withFilter("(name.given combine name.family).empty().not()")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.tsv");
   }
 
   @Test
@@ -310,9 +312,9 @@ class ExtractQueryTest {
         .withColumn("identifier.where(system = 'http://hl7.org/fhir/sid/us-ssn').value")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
-        .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.csv");
+        .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.tsv");
   }
 
   @Test
@@ -326,10 +328,70 @@ class ExtractQueryTest {
         .withColumn("type.coding")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request);
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
     assertThat(result)
         .hasRows(spark,
-            "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.csv");
+            "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.tsv");
+  }
+
+  @Test
+  void linkedUnnesting() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.given")
+        .withColumn("name.family")
+        .withColumn("name.use")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/linkedUnnesting.tsv");
+  }
+
+  @Test
+  void multipleIndependentUnnestings() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.given")
+        .withColumn("name.family")
+        .withColumn("maritalStatus.coding.system")
+        .withColumn("maritalStatus.coding.code")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/multipleIndependentUnnestings.tsv");
+  }
+
+  @Test
+  void toleranceOfColumnOrdering() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.family")
+        .withColumn("name.given")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.tsv");
+
+    final ExtractRequest request2 = new ExtractRequestBuilder(subjectResource)
+        .withColumn("name.given")
+        .withColumn("id")
+        .build();
+
+    final Dataset<Row> result2 = executor.buildQuery(request2);
+    assertThat(result2)
+        .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering2.tsv");
   }
 
   @Test
@@ -337,7 +399,7 @@ class ExtractQueryTest {
     subjectResource = ResourceType.PATIENT;
     mockResource(ResourceType.PATIENT);
 
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
+    final IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
         () -> new ExtractRequestBuilder(subjectResource)
             .withColumn("id")
             .withColumn("")
@@ -387,6 +449,59 @@ class ExtractQueryTest {
               .build());
       assertEquals("Limit must be greater than zero", error.getMessage());
     }
+  }
+
+  @Test
+  void structuredResult() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(ResourceType.PATIENT);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id", "id")
+        .withColumn("name", "name")
+        .build();
+
+    Dataset<Row> result = executor.buildQuery(request, ExtractResultType.UNCONSTRAINED);
+    result = result.select(
+        col("id"),
+        explode_outer(col("name").getField("given")).as("given")
+    );
+
+    assertThat(result)
+        .debugAllRows()
+        .hasRows(spark, "responses/ExtractQueryTest/structuredResult.tsv");
+  }
+
+  @Test
+  void combineWithLiterals() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("'foo' combine 'bar'")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.tsv");
+  }
+
+  @Test
+  void combineWithUnequalCardinalities() {
+    subjectResource = ResourceType.PATIENT;
+    mockResource(subjectResource);
+
+    final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
+        .withColumn("id")
+        .withColumn("name.given")
+        .withColumn("name.family")
+        .withColumn("name.given combine name.family")
+        .build();
+
+    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    assertThat(result)
+        .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.tsv");
   }
 
   void mockResource(final ResourceType... resourceTypes) {

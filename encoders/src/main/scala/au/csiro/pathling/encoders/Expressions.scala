@@ -29,7 +29,9 @@
 
 package au.csiro.pathling.encoders
 
+import org.apache.spark.sql.{Column, functions}
 import org.apache.spark.sql.catalyst.InternalRow
+import org.apache.spark.sql.catalyst.analysis.{UnresolvedException, UnresolvedExtractValue}
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
@@ -304,3 +306,87 @@ case class AttachExtensions(targetObject: Expression,
     AttachExtensions(newChildren.head, newChildren.tail.head)
   }
 }
+
+
+case class UnresolvedIfArray(value: Expression, arrayExpressions: Expression => Expression, elseExpression: Expression => Expression)
+  extends Expression with Unevaluable with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+
+    val newValue = f(value)
+
+    if (newValue.resolved) {
+      newValue.dataType match {
+        case ArrayType(_, _) => f(arrayExpressions(newValue))
+        case _ => f(elseExpression(newValue))
+      }
+    }
+    else {
+      copy(value = newValue)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$value"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedIfArray(newChildren.head, arrayExpressions, elseExpression)
+  }
+}
+
+
+case class UnresolvedUnnest(value: Expression)
+  extends Expression with Unevaluable with NonSQLExpression {
+
+  override def mapChildren(f: Expression => Expression): Expression = {
+
+    val newValue = f(value)
+
+    if (newValue.resolved) {
+      newValue.dataType match {
+        case ArrayType(ArrayType(_, _), _) => Flatten(newValue)
+        case _ => newValue
+      }
+    }
+    else {
+      copy(value = newValue)
+    }
+  }
+
+  override def dataType: DataType = throw new UnresolvedException("dataType")
+
+  override def nullable: Boolean = throw new UnresolvedException("nullable")
+
+  override lazy val resolved = false
+
+  override def toString: String = s"$value"
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    UnresolvedUnnest(newChildren.head)
+  }
+}
+
+
+object ValueFunctions {
+  def ifArray(value: Column, arrayExpressions: Column => Column, elseExpression: Column => Column): Column = {
+    val expr = UnresolvedIfArray(value.alias(value.hashCode().toString).expr,
+      e => arrayExpressions(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
+    new Column(expr)
+  }
+
+  def unnest(value: Column): Column = {
+    val expr = UnresolvedUnnest(value.alias(value.hashCode().toString).expr)
+    new Column(expr)
+  }
+  
+}
+ 

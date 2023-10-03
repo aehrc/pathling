@@ -106,6 +106,31 @@
       "part": [
         {
           "name": "label",
+          "valueCode": "female"
+        },
+        {
+          "name": "label",
+          "valueCoding": {
+            "system": "http://snomed.info/sct",
+            "code": "87915002",
+            "display": "Married"
+          }
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((gender) = 'female') and ((maritalStatus.coding) contains http://snomed.info/sct|87915002||Married)"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
           "valueCode": "male"
         },
         {

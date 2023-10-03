@@ -17,18 +17,16 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
-import java.util.Objects;
+import au.csiro.pathling.fhirpath.path.ExtConsFhirPath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -37,52 +35,38 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
+class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
 
+  @Override
   @Nonnull
-  private final ParserContext context;
-
-  TermVisitor(@Nonnull final ParserContext context) {
-    this.context = context;
+  public FhirPath<Collection, Collection> visitInvocationTerm(
+      @Nullable final InvocationTermContext ctx) {
+    return new InvocationVisitor().visit(requireNonNull(ctx).invocation());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitInvocationTerm(@Nullable final InvocationTermContext ctx) {
-    return new InvocationVisitor(context).visit(requireNonNull(ctx).invocation());
+  public FhirPath<Collection, Collection> visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
+    return new LiteralTermVisitor().visit(requireNonNull(ctx).literal());
   }
 
   @Override
   @Nonnull
-  public FhirPath visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
-    return new LiteralTermVisitor(context).visit(requireNonNull(ctx).literal());
-  }
-
-  @Override
-  @Nonnull
-  public FhirPath visitExternalConstantTerm(@Nullable final ExternalConstantTermContext ctx) {
+  public FhirPath<Collection, Collection> visitExternalConstantTerm(
+      @Nullable final ExternalConstantTermContext ctx) {
     @Nullable final String term = requireNonNull(ctx).getText();
     requireNonNull(term);
-    checkUserInput(term.equals("%resource") || term.equals("%context"),
-        "Unsupported environment variable: " + term);
-    check(context.getInputContext() instanceof NonLiteralPath);
-
-    // The %resource and %context elements both return the input context.
-    final NonLiteralPath inputContext = (NonLiteralPath) context.getInputContext();
-
-    // In the case of %resource and %context, the new expression will be the input context with the
-    // expression updated to match the external constant term.
-    return inputContext.copy(term, inputContext.getDataset(), inputContext.getIdColumn(),
-        inputContext.getEidColumn(), inputContext.getValueColumn(), inputContext.isSingular(),
-        inputContext.getThisColumn());
+    return new ExtConsFhirPath(term);
   }
 
   @Override
   @Nonnull
-  public FhirPath visitParenthesizedTerm(@Nullable final ParenthesizedTermContext ctx) {
+  public FhirPath<Collection, Collection> visitParenthesizedTerm(
+      @Nullable final ParenthesizedTermContext ctx) {
+    // TODO: maybe we do not need that and just use the subExpression directly?
     // Parentheses are ignored in the standalone term case.
-    final FhirPath result = new Visitor(context).visit(requireNonNull(ctx).expression());
-    return result.withExpression("(" + result.getExpression() + ")");
+    final FhirPath<Collection, Collection> subExpression = new Visitor().visit(
+        requireNonNull(ctx).expression());
+    return (input, context) -> subExpression.apply(input, context);
   }
-
 }

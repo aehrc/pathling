@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static au.csiro.pathling.test.assertions.Assertions.assertDatasetAgainstCsv;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -86,8 +85,20 @@ public class DatasetAssert {
   @Nonnull
   public DatasetAssert hasRows(@Nonnull final SparkSession spark,
       @Nonnull final String expectedCsvPath) {
-    assertDatasetAgainstCsv(spark, expectedCsvPath, dataset);
+    return hasRows(spark, expectedCsvPath, false);
+  }
+
+  public DatasetAssert hasRows(@Nonnull final SparkSession spark,
+      @Nonnull final String expectedCsvPath, final boolean header) {
+    dataset.explain();
+    dataset.show(1000, false);
+    Assertions.assertDatasetAgainstTsv(spark, expectedCsvPath, dataset, header);
     return this;
+  }
+
+  @Nonnull
+  public DatasetAssert hasRowsUnordered(@Nonnull final Row... expected) {
+    return hasRowsUnordered(Arrays.asList(expected));
   }
 
   @Nonnull
@@ -150,7 +161,7 @@ public class DatasetAssert {
   @Nonnull
   @SuppressWarnings({"unused", "UnusedReturnValue"})
   public DatasetAssert debugAllRows() {
-    dataset.collectAsList().forEach(System.out::println);
+    dataset.collectAsList().forEach(row -> System.out.println(row.mkString(",")));
     return this;
   }
 

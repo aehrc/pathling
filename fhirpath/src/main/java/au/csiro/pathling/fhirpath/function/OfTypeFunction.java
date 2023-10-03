@@ -17,12 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 
 /**
  * A function filters items in the input collection to only those that are of the given type.
@@ -30,31 +26,45 @@ import javax.annotation.Nonnull;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
  */
+@Name("ofType")
+@NotImplemented
 public class OfTypeFunction implements NamedFunction {
 
-  private static final String NAME = "ofType";
+  // TODO: implements with columns
 
-  @Nonnull
-  @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
-    final String expression = NamedFunction.expressionFromInput(input, NAME);
-    checkUserInput(input.getInput() instanceof UntypedResourcePath,
-        "Input to ofType function must be a polymorphic resource type: " + input.getInput()
-            .getExpression());
-    checkUserInput(input.getArguments().size() == 1,
-        "ofType function must have one argument: " + expression);
-    final UntypedResourcePath inputPath = (UntypedResourcePath) input.getInput();
-    final FhirPath argumentPath = input.getArguments().get(0);
-
-    // If the input is a polymorphic resource reference, check that the argument is a resource 
-    // type.
-    checkUserInput(argumentPath instanceof ResourcePath,
-        "Argument to ofType function must be a resource type: " + argumentPath.getExpression());
-    final ResourcePath resourcePath = (ResourcePath) argumentPath;
-
-    return ResolveFunction.resolveMonomorphicReference(inputPath, input.getContext().getDataSource(),
-        input.getContext().getFhirContext(), resourcePath.getResourceType(), expression,
-        input.getContext());
-  }
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final FunctionInput input) {
+  //   final Collection inputCollection = input.getInput();
+  //   final boolean choiceElement = inputCollection instanceof MixedCollection;
+  //   checkUserInput(choiceElement,
+  //       "Input to ofType function must be a mixed collection");
+  //   checkUserInput(input.getArguments().size() == 1,
+  //       "ofType function must have one argument");
+  //
+  //   final MixedCollection mixedCollection = (MixedCollection) inputCollection;
+  //   final Collection argument = input.getArguments().get(0).apply(inputCollection);
+  //
+  //   // If the input is a choice element, check that the argument is a type specifier.
+  //   checkUserInput(argument.getType().isPresent() && FhirPathType.TYPE_SPECIFIER.equals(
+  //           argument.getType().get()),
+  //       "Argument to ofType function must be a type specifier");
+  //   final Optional<ElementDefinition> maybeDefinition = mixedCollection.resolveChoiceDefinition(
+  //       type);
+  //   checkUserInput(maybeDefinition.isPresent(),
+  //       "Choice element does not have a child element with name " + type + ": "
+  //           + mixedCollection.getExpression());
+  //   final ElementDefinition definition = maybeDefinition.get();
+  //   final Column valueColumn = checkPresent(
+  //       mixedCollection.resolveChoice(type, mixedCollection.getExpression()));
+  //   final DatasetWithColumn datasetWithColumn = createColumn(mixedCollection.getDataset(),
+  //       valueColumn);
+  //
+  //   return PrimitivePath.build(expression, datasetWithColumn.getDataset(),
+  //       mixedCollection.getIdColumn(),
+  //       datasetWithColumn.getColumn(), mixedCollection.getOrderingColumn(),
+  //       mixedCollection.isSingular(),
+  //       mixedCollection.getCurrentResource(), mixedCollection.getThisColumn(), definition);
+  // }
 
 }

@@ -18,17 +18,14 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.ElementPath;
+import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * This function returns true if the input collection is empty.
@@ -36,25 +33,17 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">empty</a>
  */
+@Name("empty")
 public class EmptyFunction implements NamedFunction {
-
-  private static final String NAME = "empty";
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
-    checkNoArguments(NAME, input);
-    final NonLiteralPath inputPath = input.getInput();
-    final String expression = expressionFromInput(input, NAME);
-
+  public Collection invoke(@Nonnull final FunctionInput input) {
+    checkNoArguments(getName(), input);
     // We use the count function to determine whether there are zero items in the input collection.
-    final FhirPath countResult = new CountFunction().invoke(input);
-    final Dataset<Row> dataset = countResult.getDataset();
-    final Column valueColumn = countResult.getValueColumn().equalTo(0);
-
-    return ElementPath
-        .build(expression, dataset, inputPath.getIdColumn(), Optional.empty(), valueColumn, true,
-            Optional.empty(), inputPath.getThisColumn(), FHIRDefinedType.BOOLEAN);
+    final Collection countResult = new CountFunction().invoke(input);
+    final Column valueColumn = countResult.getColumn().equalTo(0);
+    return BooleanCollection.build(valueColumn, Optional.empty());
   }
 
 }

@@ -17,14 +17,15 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.not;
 
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.NonLiteralPath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
+import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Collections;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -35,41 +36,32 @@ import org.apache.spark.sql.Column;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#exists">exists</a>
  */
+@Name("exists")
 public class ExistsFunction implements NamedFunction {
-
-  private static final String NAME = "exists";
 
   @Nonnull
   @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
+  public Collection invoke(@Nonnull final FunctionInput input) {
     final int numberOfArguments = input.getArguments().size();
     checkUserInput(numberOfArguments <= 1,
         "exists function accepts at most one argument");
-    final String expression = expressionFromInput(input, NAME);
 
+    final Column column;
     if (numberOfArguments == 0) {
       // If there are no arguments, invoke the `empty` function and use the inverse of the result.
-      final BooleanPath emptyResult = (BooleanPath) new EmptyFunction().invoke(input);
-      final Column valueColumn = not(emptyResult.getValueColumn());
-      return emptyResult.copy(expression, emptyResult.getDataset(), emptyResult.getIdColumn(),
-          emptyResult.getEidColumn(), valueColumn, emptyResult.isSingular(),
-          emptyResult.getThisColumn());
+      final Collection emptyResult = new EmptyFunction().invoke(input);
+      column = not(emptyResult.getColumn());
     } else {
-      final FhirPath argument = input.getArguments().get(0);
-      checkUserInput(argument.isSingular() && argument instanceof BooleanPath,
-          "Argument to exists function must be a singular Boolean: " + argument.getExpression());
-      
       // If there is an argument, first invoke the `where` function.
-      final NonLiteralPath whereResult = (NonLiteralPath) new WhereFunction().invoke(input);
+      final Collection whereResult = new WhereFunction().invoke(input);
       // Then invoke the `exists` function on the result, with no arguments.
-      final NamedFunctionInput existsInput = new NamedFunctionInput(input.getContext(),
+      final FunctionInput existsInput = new FunctionInput(input.getContext(),
           whereResult, Collections.emptyList());
-      final BooleanPath existsResult = (BooleanPath) invoke(existsInput);
-      return existsResult.copy(expression, existsResult.getDataset(), existsResult.getIdColumn(),
-          existsResult.getEidColumn(), existsResult.getValueColumn(), existsResult.isSingular(),
-          existsResult.getThisColumn());
+      final Collection existsResult = invoke(existsInput);
+      column = existsResult.getColumn();
     }
 
+    return BooleanCollection.build(column, Optional.empty());
   }
 
 }

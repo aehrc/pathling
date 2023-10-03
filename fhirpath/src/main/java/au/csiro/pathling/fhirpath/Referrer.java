@@ -18,8 +18,12 @@
 package au.csiro.pathling.fhirpath;
 
 import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.element_at;
 import static org.apache.spark.sql.functions.lit;
+import static org.apache.spark.sql.functions.split;
 
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
@@ -48,22 +52,32 @@ public interface Referrer {
     return referrer.getValueColumn().getField(REFERENCE_FIELD_NAME);
   }
 
+  @Nonnull
+  static Column referenceIdColumnFor(@Nonnull final Column referenceColumn) {
+    return element_at(split(referenceColumn, PATH_SEPARATOR, 2), 2);
+  }
+
   /**
-   * Constructs an equality column for matching a resource reference to a {@link ResourcePath}.
+   * Constructs an equality column for matching a resource reference to a
+   * {@link ResourceCollection}.
    *
    * @param referrer the Referrer that is the subject of the operation
-   * @param resourcePath the target ResourcePath
+   * @param resourceCollection the target ResourcePath
    * @return a {@link Column} representing the matching condition
    */
   @Nonnull
+  @NotImplemented
   static Column resourceEqualityFor(@Nonnull final Referrer referrer,
-      @Nonnull final ResourcePath resourcePath) {
-    final Column targetId = resourcePath.getCurrentResource()
-        .map(ResourcePath::getIdColumn)
-        .orElse(resourcePath.getIdColumn());
-    final Column targetCode = lit(resourcePath.getResourceType().toCode());
+      @Nonnull final ResourceCollection resourceCollection) {
 
-    return Referrer.resourceEqualityFor(referrer, targetCode, targetId);
+    // TODO: implement
+    // final Column targetId = resourceCollection.getCurrentResource()
+    //     .map(ResourceCollection::getIdColumn)
+    //     .orElse(resourceCollection.getIdColumn());
+    // final Column targetCode = lit(resourceCollection.getResourceType().toCode());
+    //
+    // return Referrer.resourceEqualityFor(referrer, targetCode, targetId);
+    return null;
   }
 
   /**
@@ -95,13 +109,21 @@ public interface Referrer {
   Column getReferenceColumn();
 
   /**
-   * Constructs an equality column for matching a resource reference to a {@link ResourcePath}.
+   * @return the ID component of the {@code reference} element from within the Reference struct in
+   * this path's value column
+   */
+  @Nonnull
+  Column getReferenceIdColumn();
+
+  /**
+   * Constructs an equality column for matching a resource reference to a
+   * {@link ResourceCollection}.
    *
-   * @param resourcePath the target ResourcePath
+   * @param resourceCollection the target ResourcePath
    * @return a {@link Column} representing the matching condition
    */
   @Nonnull
-  Column getResourceEquality(@Nonnull ResourcePath resourcePath);
+  Column getResourceEquality(@Nonnull ResourceCollection resourceCollection);
 
   /**
    * Constructs an equality column for matching a resource reference to a dataset with a target

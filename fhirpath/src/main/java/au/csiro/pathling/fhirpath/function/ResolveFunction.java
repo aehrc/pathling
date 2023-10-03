@@ -17,27 +17,8 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import static au.csiro.pathling.QueryHelpers.join;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.checkNoArguments;
-import static au.csiro.pathling.fhirpath.function.NamedFunction.expressionFromInput;
-import static au.csiro.pathling.utilities.Preconditions.check;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
-import au.csiro.pathling.QueryHelpers.JoinType;
-import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import au.csiro.pathling.fhirpath.element.ReferencePath;
-import au.csiro.pathling.fhirpath.parser.ParserContext;
-import au.csiro.pathling.io.source.DataSource;
-import ca.uhn.fhir.context.FhirContext;
-import java.util.Optional;
-import java.util.Set;
-import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import au.csiro.pathling.fhirpath.annotations.Name;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 
 /**
  * A function for resolving a Reference element in order to access the elements of the target
@@ -47,72 +28,80 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author John Grimes
  * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#resolve">resolve</a>
  */
+@Name("resolve")
+@NotImplemented
 public class ResolveFunction implements NamedFunction {
 
-  private static final String NAME = "resolve";
-
-  protected ResolveFunction() {
-  }
-
-  @Nonnull
-  @Override
-  public FhirPath invoke(@Nonnull final NamedFunctionInput input) {
-    checkUserInput(input.getInput() instanceof ReferencePath,
-        "Input to " + NAME + " function must be a Reference: " + input.getInput().getExpression());
-    checkNoArguments(NAME, input);
-    final ReferencePath inputPath = (ReferencePath) input.getInput();
-    final DataSource dataSource = input.getContext().getDataSource();
-
-    // Get the allowed types for the input reference. This gives us the set of possible resource
-    // types that this reference could resolve to.
-    Set<ResourceType> referenceTypes = inputPath.getResourceTypes();
-    // If the type is Resource, all resource types need to be looked at.
-    if (referenceTypes.contains(ResourceType.RESOURCE)) {
-      referenceTypes = ResourcePath.supportedResourceTypes();
-    }
-    check(referenceTypes.size() > 0);
-    final boolean isPolymorphic = referenceTypes.size() > 1;
-
-    final String expression = expressionFromInput(input, NAME);
-
-    if (isPolymorphic) {
-      final ReferencePath referencePath = (ReferencePath) input.getInput();
-      return UntypedResourcePath.build(referencePath, expression);
-    } else {
-      final FhirContext fhirContext = input.getContext().getFhirContext();
-      final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
-      return resolveMonomorphicReference(inputPath, dataSource, fhirContext, resourceType,
-          expression, input.getContext());
-    }
-  }
-
-  @Nonnull
-  public static FhirPath resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
-      @Nonnull final DataSource dataSource, @Nonnull final FhirContext fhirContext,
-      @Nonnull final ResourceType resourceType, @Nonnull final String expression,
-      @Nonnull final ParserContext context) {
-    // If this is a monomorphic reference, we just need to retrieve the appropriate table and
-    // create a dataset with the full resources.
-    final ResourcePath resourcePath = ResourcePath
-        .build(fhirContext, dataSource, resourceType, expression, referencePath.isSingular());
-
-    // Join the resource dataset to the reference dataset.
-    final Column joinCondition = referencePath.getResourceEquality(resourcePath);
-    final Dataset<Row> dataset = join(referencePath.getDataset(), resourcePath.getDataset(),
-        joinCondition, JoinType.LEFT_OUTER);
-
-    final Column inputId = referencePath.getIdColumn();
-    final Optional<Column> inputEid = referencePath.getEidColumn();
-
-    // We need to add the resource ID column to the parser context so that it can be used within
-    // joins in certain situations, e.g. extract.
-    context.getNodeIdColumns()
-        .putIfAbsent(expression, resourcePath.getElementColumn("id"));
-
-    final ResourcePath result = resourcePath.copy(expression, dataset, inputId, inputEid,
-        resourcePath.getValueColumn(), referencePath.isSingular(), referencePath.getThisColumn());
-    result.setCurrentResource(resourcePath);
-    return result;
-  }
+  // TODO: implement with columns
+  // private static final String NAME = "resolve";
+  //
+  // public ResolveFunction() {
+  // }
+  //
+  // @Nonnull
+  // @Override
+  // public Collection invoke(@Nonnull final NamedFunctionInput input) {
+  //   checkUserInput(input.getInput() instanceof ReferencePath,
+  //       "Input to " + NAME + " function must be a Reference: " + input.getInput().getExpression());
+  //   checkNoArguments(NAME, input);
+  //   final ReferencePath inputPath = (ReferencePath) input.getInput();
+  //   final DataSource dataSource = input.getContext().getDataSource();
+  //
+  //   // Get the allowed types for the input reference. This gives us the set of possible resource
+  //   // types that this reference could resolve to.
+  //   Set<ResourceType> referenceTypes = inputPath.getResourceTypes();
+  //   // If the type is Resource, all resource types need to be looked at.
+  //   if (referenceTypes.contains(ResourceType.RESOURCE)) {
+  //     referenceTypes = ResourceCollection.supportedResourceTypes();
+  //   }
+  //   check(referenceTypes.size() > 0);
+  //   final boolean isPolymorphic = referenceTypes.size() > 1;
+  //
+  //   final String expression = expressionFromInput(input, NAME, input.getInput());
+  //
+  //   if (isPolymorphic) {
+  //     final ReferencePath referencePath = (ReferencePath) input.getInput();
+  //     return UntypedResourcePath.build(referencePath, expression);
+  //   } else {
+  //     final FhirContext fhirContext = input.getContext().getFhirContext();
+  //     final ResourceType resourceType = (ResourceType) referenceTypes.toArray()[0];
+  //     return resolveMonomorphicReference(inputPath, dataSource, fhirContext, resourceType,
+  //         expression, input.getContext());
+  //   }
+  // }
+  //
+  // @Nonnull
+  // public static Collection resolveMonomorphicReference(@Nonnull final ReferencePath referencePath,
+  //     @Nonnull final DataSource dataSource, @Nonnull final FhirContext fhirContext,
+  //     @Nonnull final ResourceType resourceType, @Nonnull final String expression,
+  //     @Nonnull final ParserContext context) {
+  //   // If this is a monomorphic reference, we just need to retrieve the appropriate table and
+  //   // create a dataset with the full resources.
+  //   final ResourceCollection resourceCollection = ResourceCollection.build(fhirContext, dataSource,
+  //       resourceType,
+  //       expression, referencePath.isSingular());
+  //   final BasicElementDefinition referenceDefinition = checkPresent(referencePath.getDefinition());
+  //   final ReferenceNestingKey referenceNestingKey = new ReferenceNestingKey(referenceDefinition,
+  //       resourceCollection.getDefinition());
+  //
+  //   return context.getNesting()
+  //       .updateOrRetrieve(referenceNestingKey, expression, referencePath.getDataset(),
+  //           referencePath.isSingular(), referencePath.getThisColumn(), key -> {
+  //             // Join the resource dataset to the reference dataset.
+  //             final Column joinCondition = referencePath.getResourceEquality(resourceCollection);
+  //             final Dataset<Row> dataset = join(referencePath.getDataset(),
+  //                 resourceCollection.getDataset(),
+  //                 joinCondition, JoinType.LEFT_OUTER);
+  //
+  //             final Column inputId = referencePath.getIdColumn();
+  //             final ResourceCollection result = resourceCollection.copy(expression, dataset,
+  //                 inputId,
+  //                 resourceCollection.getValueColumn(), resourceCollection.getOrderingColumn(),
+  //                 referencePath.isSingular(), referencePath.getThisColumn());
+  //             result.setCurrentResource(resourceCollection);
+  //
+  //             return result;
+  //           });
+  // }
 
 }
