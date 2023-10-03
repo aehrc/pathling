@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.function;
 
 import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
 import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -26,16 +25,14 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.MixedCollection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
-import java.util.Optional;
-import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.Column;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+/**
+ * Implementation of standard FHIRPath functions.
+ */
 @SuppressWarnings("unused")
 public class StandardFunctions {
 
@@ -45,6 +42,15 @@ public class StandardFunctions {
 
   public static final String REFERENCE_ELEMENT_NAME = "reference";
 
+  /**
+   * Describes a function which can scope down the previous invocation within a FHIRPath expression,
+   * based upon an expression passed in as an argument. Supports the use of `$this` to reference the
+   * element currently in scope.
+   *
+   * @param input the input collection
+   * @param expression the expression to evaluate
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#where">where</a>
+   */
   @Nonnull
   @FhirpathFunction
   public static Collection where(@Nonnull final Collection input,
@@ -66,16 +72,34 @@ public class StandardFunctions {
   //   return Collection.nullCollection();
   // }
 
+  /**
+   * This function allows the selection of only the first element of a collection.
+   *
+   * @param input the input collection
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#first">first</a>
+   */
   @FhirpathFunction
   public static Collection first(@Nonnull final Collection input) {
     return input.copyWith(input.getCtx().first());
   }
 
+  /**
+   * This function returns true if the input collection is empty.
+   *
+   * @param input the input collection
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#empty">empty</a>
+   */
   @FhirpathFunction
   public static BooleanCollection empty(@Nonnull final Collection input) {
     return BooleanCollection.build(input.getCtx().empty());
   }
 
+  /**
+   * A function for aggregating data based on counting the number of rows within the result.
+   *
+   * @param input the input collection
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#count">count</a>
+   */
   @FhirpathFunction
   public static IntegerCollection count(@Nonnull final Collection input) {
     return IntegerCollection.build(input.getCtx().count());
@@ -97,6 +121,13 @@ public class StandardFunctions {
     ).orElse(Collection.nullCollection());
   }
 
+  /**
+   * A function filters items in the input collection to only those that are of the given type.
+   *
+   * @param input the input collection
+   * @param typeSpecifier the type specifier
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
+   */
   @FhirpathFunction
   public static Collection ofType(@Nonnull final MixedCollection input,
       @Nonnull final TypeSpecifier typeSpecifier) {
@@ -104,28 +135,6 @@ public class StandardFunctions {
     // if the type of the collection does not match the required type then it should return an empty collection.
     return input.resolveChoice(typeSpecifier.toFhirType().toCode())
         .orElse(Collection.nullCollection());
-  }
-
-  @FhirpathFunction
-  public static StringCollection getResourceKey(@Nonnull final ResourceCollection input) {
-    return StringCollection.build(input.getKeyColumn().getValue());
-  }
-
-  @FhirpathFunction
-  // TODO: This needs to be somehow constrained to the collections of References
-  public static Collection getReferenceKey(@Nonnull final Collection input,
-      @Nullable final TypeSpecifier typeSpecifier) {
-    checkArgument(input.getFhirType().map(FHIRDefinedType.REFERENCE::equals).orElse(false),
-        "getReferenceKey can only be applied to a REFERENCE collection");
-    // TODO: How to deal with exceptions here?
-    // TODO: add filtering on 'type' but that requies changes in the Encoder (as 'type' is not encoded)
-    // TODO: add support for other types of references
-    return Optional.ofNullable(typeSpecifier)
-        .map(ts -> ts.toFhirType().toCode() + "/.+")
-        .<Function<Column, Column>>map(
-            regex -> (c -> c.getField(REFERENCE_ELEMENT_NAME).rlike(regex)))
-        .map(input::filter).orElse(input)
-        .traverse(REFERENCE_ELEMENT_NAME).orElse(Collection.nullCollection());
   }
 
   @FhirpathFunction
@@ -138,6 +147,14 @@ public class StandardFunctions {
     ));
   }
 
+  /**
+   * A function which is able to test whether the input collection is empty. It can also optionally
+   * accept an argument which can filter the input collection prior to applying the test.
+   *
+   * @param input the input collection
+   * @param criteria the criteria to apply to the input collection
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#exists">exists</a>
+   */
   @FhirpathFunction
   public static BooleanCollection exists(@Nonnull final Collection input,
       @Nullable final CollectionExpression criteria) {
@@ -147,6 +164,13 @@ public class StandardFunctions {
 
   }
 
+  /**
+   * Returns {@code true} if the input collection evaluates to {@code false}, and {@code false} if
+   * it evaluates to {@code true}. Otherwise, the result is empty.
+   *
+   * @param input the input collection
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#not">not</a>
+   */
   @FhirpathFunction
   public static BooleanCollection not(@Nonnull final BooleanCollection input) {
     return BooleanCollection.build(input.getCtx().not());
