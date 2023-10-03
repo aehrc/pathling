@@ -17,42 +17,34 @@
 
 package au.csiro.pathling.fhirpath.column;
 
-import au.csiro.pathling.encoders.ValueFunctions;
-
-import java.util.function.BiFunction;
-import java.util.function.Function;
-import javax.annotation.Nonnull;
-
-import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
-@Value(staticConstructor = "of")
-public class ColumnCtx {
+import javax.annotation.Nonnull;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
-  Column value;
+
+public abstract class ColumnCtx {
+
+  public abstract Column getValue();
+  
+  @Nonnull
+  public abstract ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+      @Nonnull final Function<Column, Column> singularExpression);
+
 
   @Nonnull
-  public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
-      @Nonnull final Function<Column, Column> singularExpression) {
-    return of(ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
-  }
+  public abstract ColumnCtx flatten();
+
+  @Nonnull
+  public abstract ColumnCtx traverse(@Nonnull final String fieldName);
 
   @Nonnull
   public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression) {
     // the default implementation just wraps the element info array if needed
     return vectorize(arrayExpression,
         c -> arrayExpression.apply(functions.when(c.isNotNull(), functions.array(c))));
-  }
-
-  @Nonnull
-  public ColumnCtx flatten() {
-    return of(ValueFunctions.unnest(value));
-  }
-
-  @Nonnull
-  public ColumnCtx traverse(@Nonnull final String fieldName) {
-    return of(ValueFunctions.unnest(value.getField(fieldName)));
   }
 
   @Nonnull

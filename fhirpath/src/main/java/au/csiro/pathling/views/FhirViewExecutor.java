@@ -86,7 +86,7 @@ public class FhirViewExecutor {
     @Nonnull
     private Collection unnest(@Nonnull final Collection collection) {
       return collection.copyWith(
-          datasetContext.materialize(collection.getCtx().explode().getValue()));
+          datasetContext.materialize(collection.getCtx().explode().getValue(), true));
     }
 
     @Nonnull
@@ -140,7 +140,7 @@ public class FhirViewExecutor {
     final ResourceType resourceType = ResourceType.fromCode(view.getResource());
     final Dataset<Row> dataset = dataSource.read(resourceType);
     final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataset,
-        resourceType, false);
+        resourceType);
     final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
         fhirContext, sparkSession, dataset, StaticFunctionRegistry.getInstance(),
         terminologyServiceFactory, constantReplacer);

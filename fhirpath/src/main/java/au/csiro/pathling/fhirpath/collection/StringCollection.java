@@ -122,7 +122,7 @@ public class StringCollection extends Collection implements Materializable<Primi
         .orElseThrow(() -> new IllegalStateException(
             "Cannot convert column to literal value: " + getColumn()));
   }
-  
+
   /**
    * Gets a value from a row for a String or String literal.
    *

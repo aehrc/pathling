@@ -37,13 +37,11 @@ import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import java.util.Collections;
 
 @SpringBootUnitTest
 @ExtendWith(TimingExtension.class)
@@ -87,7 +85,7 @@ public class AbstractParserTest {
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
     final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource.read(resourceType), resourceType, false);
+        .build(fhirContext, dataSource.read(resourceType), resourceType);
 
     evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .dataset(dataSource.read(resourceType))
@@ -108,7 +106,7 @@ public class AbstractParserTest {
   protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
     final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource.read(resourceType), resourceType, false);
+        .build(fhirContext, dataSource.read(resourceType), resourceType);
 
     final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .dataset(dataSource.read(resourceType))

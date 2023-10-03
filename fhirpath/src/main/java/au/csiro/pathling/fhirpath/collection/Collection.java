@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
@@ -243,7 +244,7 @@ public class Collection implements Comparable, Numeric {
     return getExtensionMap().map(em ->
         Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
-            ColumnCtx.of(getFid()).transform(em::apply).flatten().getValue(),
+            StdColumnCtx.of(getFid()).transform(em::apply).flatten().getValue(),
             (ElementDefinition) extensionDefinition));
   }
 
@@ -317,7 +318,7 @@ public class Collection implements Comparable, Numeric {
 
   @Nonnull
   public Collection copyWith(@Nonnull final ColumnCtx newValue) {
-    return copyWith(newValue.getValue());
+    return copyWith((newValue).getValue());
   }
 
   @Nonnull
@@ -332,7 +333,7 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   // TODO: Find a better name
   public ColumnCtx getCtx() {
-    return ColumnCtx.of(getColumn());
+    return StdColumnCtx.of(getColumn());
   }
 
 }

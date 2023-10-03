@@ -21,6 +21,8 @@ import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.SingleRowCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
@@ -39,6 +41,7 @@ import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -74,7 +77,7 @@ public class ResourceCollection extends Collection {
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
-      final boolean singular, @Nonnull final Map<String, Column> elementsToColumns,
+      @Nonnull final Map<String, Column> elementsToColumns,
       @Nonnull final ResourceDefinition resourceDefinition,
       @Nonnull final Dataset<Row> dataset) {
     super(column, type, fhirType, definition);
@@ -98,13 +101,11 @@ public class ResourceCollection extends Collection {
    * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
    * @param dataset the {@link Dataset} that contains the resource data
    * @param resourceType the type of the resource
-   * @param singular whether the resource is singular
    * @return A shiny new ResourcePath
    */
   @Nonnull
   public static ResourceCollection build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final ResourceType resourceType,
-      final boolean singular) {
+      @Nonnull final Dataset<Row> dataset, @Nonnull final ResourceType resourceType) {
 
     // Get the resource definition from HAPI.
     final String resourceCode = resourceType.toCode();
@@ -116,9 +117,10 @@ public class ResourceCollection extends Collection {
     final Map<String, Column> elementsToColumns = Stream.of(dataset.columns())
         .collect(Collectors.toUnmodifiableMap(Function.identity(), dataset::col));
 
-    // We use the ID column as the value column for a ResourcePath.
-    return new ResourceCollection(dataset.col("id"), Optional.empty(),
-        getFhirType(resourceType), Optional.of(definition), singular, elementsToColumns, definition,
+    // We use a literal column as the resource value - the actual value is not important.
+    // But the non-null value indicates that the resource should be included in any result.
+    return new ResourceCollection(functions.lit(true), Optional.empty(),
+        getFhirType(resourceType), Optional.of(definition), elementsToColumns, definition,
         dataset);
   }
 
@@ -171,14 +173,31 @@ public class ResourceCollection extends Collection {
     // TODO: what does mean if an element is present in the definition but not in 
     // the schema?
     return getElementColumn(childDef.getElementName()).map(
-        value -> Collection.build(value, childDef)).get();
+        value -> Collection.build(
+            // TODO: simplify this
+            functions.when(getCtx().getValue().isNotNull(), value),
+            childDef)).get();
   }
-  
+
+
   @Nonnull
-  public ColumnCtx getKeyColumn() {
+  @Override
+  public Collection copyWith(@Nonnull final Column newValue) {
+    return new ResourceCollection(newValue, getType(), getFhirType(), getDefinition(),
+        elementsToColumns, resourceDefinition, dataset);
+  }
+
+  @Nonnull
+  public StdColumnCtx getKeyColumn() {
     return getElementColumn("id_versioned")
-        .map(ColumnCtx::of)
+        .map(StdColumnCtx::of)
         .orElseThrow(
             () -> new IllegalStateException("Resource does not have an 'id_versioned' column"));
+  }
+
+  @Nonnull
+  @Override
+  public ColumnCtx getCtx() {
+    return SingleRowCtx.of(getColumn());
   }
 }

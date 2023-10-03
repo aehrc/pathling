@@ -51,9 +51,12 @@ public class DatasetContext {
    * @return the materialized column
    */
   @Nonnull
-  public Column materialize(@Nonnull final Column column) {
+  public Column materialize(@Nonnull final Column column, final boolean removeNulls) {
     final String materializedColumnName = randomAlias();
     dataset = dataset.withColumn(materializedColumnName, column);
+    if (removeNulls) {
+      dataset = dataset.filter(dataset.col(materializedColumnName).isNotNull());
+    }
     return dataset.col(materializedColumnName);
   }
 }

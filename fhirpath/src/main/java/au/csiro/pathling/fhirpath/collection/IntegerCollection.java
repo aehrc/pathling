@@ -81,8 +81,8 @@ public class IntegerCollection extends Collection implements
 
 
   @Nonnull
-  public static IntegerCollection build(ColumnCtx count) {
-    return build(count.getValue());
+  public static IntegerCollection build(final ColumnCtx columnCtx) {
+    return build(columnCtx.getValue());
   }
 
   /**

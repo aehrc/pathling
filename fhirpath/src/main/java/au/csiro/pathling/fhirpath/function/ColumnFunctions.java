@@ -17,11 +17,10 @@
 
 package au.csiro.pathling.fhirpath.function;
 
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.fhirpath.validation.Numeric;
 import au.csiro.pathling.fhirpath.validation.ReturnType;
-import au.csiro.pathling.sql.misc.TemporalDifferenceFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
@@ -33,7 +32,7 @@ public class ColumnFunctions {
   @FhirpathFunction
   @ReturnType(FHIRDefinedType.BOOLEAN)
   public static Column not(@Nonnull final Column column) {
-    return ColumnCtx.of(column).vectorize(
+    return StdColumnCtx.of(column).vectorize(
         c -> functions.when(c.isNotNull(), functions.transform(c, functions::not)),
         c -> functions.when(c.isNotNull(), functions.not(c))
     ).getValue();
@@ -43,27 +42,27 @@ public class ColumnFunctions {
   //@FhirpathFunction
   @ReturnType(FHIRDefinedType.BOOLEAN)
   public static Column empty(@Nonnull final Column column) {
-    return ColumnCtx.of(column).empty().getValue();
+    return StdColumnCtx.of(column).empty().getValue();
   }
 
   //@FhirpathFunction
   @ReturnType(FHIRDefinedType.INTEGER)
   public static Column count(@Nonnull final Column column) {
-    return ColumnCtx.of(column).count().getValue();
+    return StdColumnCtx.of(column).count().getValue();
   }
 
   //@FhirpathFunction
   public static Column first(@Nonnull final Column column) {
     // how to deal with nulls inside the expressioss?
     // technically should use filter to remove nulls, but that's expensive
-    return ColumnCtx.of(column).first().getValue();
+    return StdColumnCtx.of(column).first().getValue();
   }
 
   @FhirpathFunction
   public static Column last(@Nonnull final Column column) {
     // we need to use `element_at()` here are `getItem()` does not support column arguments
     // NOTE: `element_at()` is 1-indexed as opposed to `getItem()` which is 0-indexed
-    return ColumnCtx.of(column).vectorize(
+    return StdColumnCtx.of(column).vectorize(
         c -> functions.when(c.isNull().or(functions.size(c).equalTo(0)), null)
             .otherwise(functions.element_at(c, functions.size(c))),
         Function.identity()
@@ -72,12 +71,12 @@ public class ColumnFunctions {
 
   @FhirpathFunction
   public static Column singular(@Nonnull final Column column) {
-    return ColumnCtx.of(column).singular().getValue();
+    return StdColumnCtx.of(column).singular().getValue();
   }
 
   @FhirpathFunction
   public static Column sum(@Nonnull @Numeric final Column column) {
-    return ColumnCtx.of(column).aggregate(0, Column::plus).getValue();
+    return StdColumnCtx.of(column).aggregate(0, Column::plus).getValue();
   }
   //
   // @ReturnType(FHIRDefinedType.INTEGER)

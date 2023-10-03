@@ -1,0 +1,108 @@
+{
+  "title": "where function and element",
+  "resources": [
+    {
+      "resourceType": "Patient",
+      "id": "p1",
+      "gender": "male",
+      "name": [
+        {
+          "use": "official",
+          "family": "f1"
+        }
+      ]
+    },
+    {
+      "resourceType": "Patient",
+      "id": "p2",
+      "gender": "female",
+      "name": [
+        {
+          "use": "nickname",
+          "family": "f2"
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "title": "count() on resource",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "path": "id",
+            "alias": "id"
+          },
+          {
+            "path": "count()",
+            "alias": "count"
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "count": 1
+        },
+        {
+          "id": "p2",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "title": "count() on resource with where",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "path": "id",
+            "alias": "id"
+          },
+          {
+            "path": "where(gender='male').count()",
+            "alias": "count"
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "count": 1
+        },
+        {
+          "id": "p2",
+          "count": 0
+        }
+      ]
+    },
+    {
+      "title": "traversal on resource with where",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "path": "id",
+            "alias": "id"
+          },
+          {
+            "path": "where(gender='male').name.family",
+            "alias": "familyName"
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "familyName": "f1"
+        },
+        {
+          "id": "p2",
+          "familyName": null
+        }
+      ]
+    }
+    
+  ]
+}
