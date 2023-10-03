@@ -8,7 +8,11 @@
       "name": [
         {
           "use": "official",
-          "family": "f1"
+          "family": "f1",
+          "given": [
+            "g1.1",
+            "g1.2"
+          ]
         }
       ]
     },
@@ -19,7 +23,11 @@
       "name": [
         {
           "use": "nickname",
-          "family": "f2"
+          "family": "f2",
+          "given": [
+            "g2.1",
+            "g2.2"
+          ]
         }
       ]
     }
@@ -61,7 +69,7 @@
             "alias": "id"
           },
           {
-            "path": "where(gender='male').count()",
+            "path": "where(gender='male').empty()",
             "alias": "count"
           }
         ]
@@ -69,11 +77,11 @@
       "expect": [
         {
           "id": "p1",
-          "count": 1
+          "count": false
         },
         {
           "id": "p2",
-          "count": 0
+          "count": true
         }
       ]
     },
@@ -102,7 +110,59 @@
           "familyName": null
         }
       ]
+    },
+    {
+      "title": "for each traversal on resource with where",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "path": "id",
+            "alias": "id"
+          },
+          {
+            "forEach": "where(gender='male').name.given",
+            "select": [
+              {
+                "path": "$this",
+                "alias": "givenName"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1",
+          "givenName": "g1.1"
+        },
+        {
+          "id": "p1",
+          "givenName": "g1.2"
+        }
+      ]
+    },
+    {
+      "title": "for each traversal on resource with where",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "forEach": "where(gender='male')",
+            "select": [
+              {
+                "path": "id",
+                "alias": "id"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "p1"
+        }
+      ]
     }
-    
   ]
 }
