@@ -17,18 +17,17 @@
 
 package au.csiro.pathling.fhirpath.column;
 
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
-
-import javax.annotation.Nonnull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import javax.annotation.Nonnull;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 
 
 public abstract class ColumnCtx {
 
   public abstract Column getValue();
-  
+
   @Nonnull
   public abstract ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression);
@@ -89,8 +88,21 @@ public abstract class ColumnCtx {
 
   @Nonnull
   public ColumnCtx first() {
+
     return vectorize(c -> c.getItem(0), Function.identity());
   }
+
+
+  public ColumnCtx last() {
+    // we need to use `element_at()` here are `getItem()` does not support column arguments
+    // NOTE: `element_at()` is 1-indexed as opposed to `getItem()` which is 0-indexed
+    return vectorize(
+        c -> functions.when(c.isNull().or(functions.size(c).equalTo(0)), null)
+            .otherwise(functions.element_at(c, functions.size(c))),
+        Function.identity()
+    );
+  }
+
 
   @Nonnull
   public ColumnCtx count() {
@@ -107,16 +119,24 @@ public abstract class ColumnCtx {
         Column::isNull);
   }
 
+  @Nonnull
   public ColumnCtx explode() {
     return vectorize(functions::explode, Function.identity());
   }
 
+  @Nonnull
   public ColumnCtx join(@Nonnull final String separator) {
     return vectorize(c -> functions.array_join(c, separator), Function.identity());
   }
 
+  @Nonnull
   public ColumnCtx not() {
     return transform(functions::not);
+  }
+
+  @Nonnull
+  public ColumnCtx sum() {
+    return aggregate(0, Column::plus);
   }
 
 }
