@@ -28,6 +28,8 @@ public abstract class ColumnCtx {
 
   public abstract Column getValue();
 
+  protected abstract ColumnCtx copyOf(@Nonnull final Column newValue);
+
   @Nonnull
   public abstract ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression);
@@ -44,6 +46,11 @@ public abstract class ColumnCtx {
     // the default implementation just wraps the element info array if needed
     return vectorize(arrayExpression,
         c -> arrayExpression.apply(functions.when(c.isNotNull(), functions.array(c))));
+  }
+
+  @Nonnull
+  public ColumnCtx orElse(@Nonnull final Object value) {
+    return copyOf(functions.coalesce(getValue(), functions.lit(value)));
   }
 
   @Nonnull
@@ -139,4 +146,34 @@ public abstract class ColumnCtx {
     return aggregate(0, Column::plus);
   }
 
+
+  @Nonnull
+  public ColumnCtx max() {
+    return vectorize(functions::array_max, Function.identity());
+  }
+
+  @Nonnull
+  public ColumnCtx min() {
+    return vectorize(functions::array_min, Function.identity());
+  }
+
+  @Nonnull
+  public ColumnCtx allTrue() {
+    return min().orElse(true);
+  }
+
+  @Nonnull
+  public ColumnCtx allFalse() {
+    return max().not().orElse(true);
+  }
+
+  @Nonnull
+  public ColumnCtx anyTrue() {
+    return max().orElse(false);
+  }
+
+  @Nonnull
+  public ColumnCtx anyFalse() {
+    return min().not().orElse(false);
+  }
 }

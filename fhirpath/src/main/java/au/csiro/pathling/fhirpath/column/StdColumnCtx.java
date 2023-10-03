@@ -33,6 +33,11 @@ public class StdColumnCtx extends ColumnCtx {
   Column value;
 
   @Override
+  protected ColumnCtx copyOf(@Nonnull final Column newValue) {
+    return StdColumnCtx.of(newValue);
+  }
+
+  @Override
   @Nonnull
   public StdColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression) {

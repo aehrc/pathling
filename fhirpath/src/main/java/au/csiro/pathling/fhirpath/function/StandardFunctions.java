@@ -176,6 +176,26 @@ public class StandardFunctions {
     return BooleanCollection.build(input.getCtx().not());
   }
 
+  @FhirpathFunction
+  public static BooleanCollection allTrue(@Nonnull final BooleanCollection input) {
+    return BooleanCollection.build(input.getCtx().allTrue());
+  }
+
+  @FhirpathFunction
+  public static BooleanCollection allFalse(@Nonnull final BooleanCollection input) {
+    return BooleanCollection.build(input.getCtx().allFalse());
+  }
+
+  @FhirpathFunction
+  public static BooleanCollection anyTrue(@Nonnull final BooleanCollection input) {
+    return BooleanCollection.build(input.getCtx().anyTrue());
+  }
+
+  @FhirpathFunction
+  public static BooleanCollection anyFalse(@Nonnull final BooleanCollection input) {
+    return BooleanCollection.build(input.getCtx().anyFalse());
+  }
+
   public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
     return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
   }

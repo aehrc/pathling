@@ -190,6 +190,85 @@ class StdColumnCtxTest {
         .assertEquals(false, arrayOf(1, 2, 3).empty())
         .check();
   }
+
+  @Test
+  void testMax() {
+    new ColumnAsserts()
+        .assertNull(nullValue().max())
+        .assertEquals(17, valueOf(17).max())
+        .assertNull(nullArray().max())
+        .assertNull(emptyArray().max())
+        .assertEquals(true, arrayOf(true, false).max())
+        .check();
+  }
+
+  @Test
+  void testMin() {
+    new ColumnAsserts()
+        .assertNull(nullValue().min())
+        .assertEquals(17, valueOf(17).min())
+        .assertNull(nullArray().min())
+        .assertNull(emptyArray().min())
+        .assertEquals(false, arrayOf(true, false).min())
+        .check();
+  }
+
+  @Test
+  void testAllTrue() {
+    new ColumnAsserts()
+        .assertEquals(true, nullValue().allTrue())
+        .assertEquals(true, valueOf(true).allTrue())
+        .assertEquals(false, valueOf(false).allTrue())
+        .assertEquals(true, nullArray().allTrue())
+        .assertEquals(true, emptyArray().allTrue())
+        .assertEquals(true, arrayOf(true, true).allTrue())
+        .assertEquals(false, arrayOf(false, true).allTrue())
+        .assertEquals(false, arrayOf(false, false).allTrue())
+        .check();
+  }
+
+  @Test
+  void testAllFalse() {
+    new ColumnAsserts()
+        .assertEquals(true, nullValue().allFalse())
+        .assertEquals(false, valueOf(true).allFalse())
+        .assertEquals(true, valueOf(false).allFalse())
+        .assertEquals(true, nullArray().allFalse())
+        .assertEquals(true, emptyArray().allFalse())
+        .assertEquals(false, arrayOf(true, true).allFalse())
+        .assertEquals(false, arrayOf(false, true).allFalse())
+        .assertEquals(true, arrayOf(false, false).allFalse())
+        .check();
+  }
+
+  @Test
+  void testAnyTrue() {
+    new ColumnAsserts()
+        .assertEquals(false, nullValue().anyTrue())
+        .assertEquals(true, valueOf(true).anyTrue())
+        .assertEquals(false, valueOf(false).anyTrue())
+        .assertEquals(false, nullArray().anyTrue())
+        .assertEquals(false, emptyArray().anyTrue())
+        .assertEquals(true, arrayOf(true, true).anyTrue())
+        .assertEquals(true, arrayOf(false, true).anyTrue())
+        .assertEquals(false, arrayOf(false, false).anyTrue())
+        .check();
+  }
+
+  @Test
+  void testAnyFalse() {
+    new ColumnAsserts()
+        .assertEquals(false, nullValue().anyFalse())
+        .assertEquals(false, valueOf(true).anyFalse())
+        .assertEquals(true, valueOf(false).anyFalse())
+        .assertEquals(false, nullArray().anyFalse())
+        .assertEquals(false, emptyArray().anyFalse())
+        .assertEquals(false, arrayOf(true, true).anyFalse())
+        .assertEquals(true, arrayOf(false, true).anyFalse())
+        .assertEquals(true, arrayOf(false, false).anyFalse())
+        .check();
+  }
+
 }
   
  

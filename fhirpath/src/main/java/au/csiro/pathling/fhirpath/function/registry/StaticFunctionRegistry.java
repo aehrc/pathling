@@ -1,12 +1,5 @@
 package au.csiro.pathling.fhirpath.function.registry;
 
-import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ALL_FALSE;
-import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ALL_TRUE;
-import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ANY_FALSE;
-import static au.csiro.pathling.fhirpath.function.BooleansTestFunction.BooleansTestType.ANY_TRUE;
-
-import au.csiro.pathling.fhirpath.function.BooleansTestFunction;
-import au.csiro.pathling.fhirpath.function.GetIdFunction;
 import au.csiro.pathling.fhirpath.function.IifFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.ResolveFunction;
@@ -44,16 +37,11 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .put("subsumedBy", new SubsumesFunction(true))
         .put("iif", new IifFunction())
         .put("translate", new TranslateFunction())
-        .put("anyTrue", new BooleansTestFunction(ANY_TRUE))
-        .put("anyFalse", new BooleansTestFunction(ANY_FALSE))
-        .put("allTrue", new BooleansTestFunction(ALL_TRUE))
-        .put("allFalse", new BooleansTestFunction(ALL_FALSE))
         .put("until", new UntilFunction())
         .put("display", new DisplayFunction())
         .put("property", new PropertyFunction())
         .put("designation", new DesignationFunction())
         .put("toString", new ToStringFunction())
-        .put("getId", new GetIdFunction())
         .putAll(WrappedFunction.mapOf(StandardFunctions.class))
         .putAll(WrappedFunction.mapOf(FhirViewFunctions.class))
         .build());
