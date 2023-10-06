@@ -14,6 +14,7 @@ import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.view.DatasetContext;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import java.util.List;

@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.path.TypeSpecifierPath;
+import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -60,7 +60,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
 
     @Nullable
     public Object resolveArgument(@Nonnull final Parameter parameter,
-        final FhirPath<Collection, Collection> argument) {
+        final FhirPath<Collection> argument) {
 
       if (isNull(argument)) {
         // check the pararmeter is happy with a null value
@@ -81,7 +81,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
         return (CollectionExpression) (c -> argument.apply(c, evaluationContext));
       } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
         // bind type specifier
-        return ((TypeSpecifierPath) argument).getTypeSpecifier();
+        return ((Paths.TypeSpecifierPath) argument).getTypeSpecifier();
       } else {
         throw new RuntimeException("Cannot resolve parameter:" + parameter);
       }
@@ -96,7 +96,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
     final ParamResolver resolver = new ParamResolver(functionInput.getContext(),
         functionInput.getInput());
 
-    final List<FhirPath<Collection, Collection>> actualArguments = functionInput.getArguments();
+    final List<FhirPath<Collection>> actualArguments = functionInput.getArguments();
 
     // TODO: make it nicer
     final Stream<Object> resolvedArguments = IntStream.range(0, method.getParameterCount() - 1)

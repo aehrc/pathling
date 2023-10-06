@@ -15,28 +15,32 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.path;
+package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
+import javax.annotation.Nonnull;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import javax.annotation.Nonnull;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
+import java.util.List;
 
+@EqualsAndHashCode(callSuper = true)
 @Value
-public class ExtConsFhirPath implements FhirPath<Collection, Collection> {
+public class FromSelection extends AbstractCompositeSelection {
 
-  String name;
+  public FromSelection(final FhirPath<Collection> parent, final List<Selection> components) {
+    super(parent, components);
+  }
 
+  @Nonnull
   @Override
-  public Collection apply(@Nonnull final Collection input,
-      @Nonnull final EvaluationContext context) {
-    if (name.equals("%context")) {
-      return context.getInputContext();
-    } else if (name.equals("%resource") || name.equals("%rootResource")) {
-      return context.getResource();
-    } else {
-      throw new IllegalArgumentException("Unknown constant: " + name);
-    }
+  protected String getName() {
+    return "from";
+  }
+
+  @Nonnull
+  @Override
+  protected FromSelection copy(@Nonnull final List<Selection> newComponents) {
+    return new FromSelection(path, newComponents);
   }
 }

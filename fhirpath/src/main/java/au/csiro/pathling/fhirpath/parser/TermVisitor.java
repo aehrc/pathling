@@ -26,7 +26,8 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConsta
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
-import au.csiro.pathling.fhirpath.path.ExtConsFhirPath;
+import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -35,38 +36,38 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
+class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitInvocationTerm(
+  public FhirPath<Collection> visitInvocationTerm(
       @Nullable final InvocationTermContext ctx) {
     return new InvocationVisitor().visit(requireNonNull(ctx).invocation());
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
+  public FhirPath<Collection> visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
     return new LiteralTermVisitor().visit(requireNonNull(ctx).literal());
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitExternalConstantTerm(
+  public FhirPath<Collection> visitExternalConstantTerm(
       @Nullable final ExternalConstantTermContext ctx) {
     @Nullable final String term = requireNonNull(ctx).getText();
     requireNonNull(term);
-    return new ExtConsFhirPath(term);
+    return new ExtConsFhir(term);
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitParenthesizedTerm(
+  public FhirPath<Collection> visitParenthesizedTerm(
       @Nullable final ParenthesizedTermContext ctx) {
     // TODO: maybe we do not need that and just use the subExpression directly?
     // Parentheses are ignored in the standalone term case.
-    final FhirPath<Collection, Collection> subExpression = new Visitor().visit(
+    final FhirPath<Collection> subExpression = new Visitor().visit(
         requireNonNull(ctx).expression());
-    return (input, context) -> subExpression.apply(input, context);
+    return subExpression;
   }
 }

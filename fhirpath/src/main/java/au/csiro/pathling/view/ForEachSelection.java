@@ -15,27 +15,41 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.path;
+package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
+import org.apache.commons.lang3.tuple.Pair;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
-/**
- * FHIRPath expression with a type specifier value.
- */
+@EqualsAndHashCode(callSuper = true)
 @Value
-public class TypeSpecifierPath implements FhirPath<Collection, Collection> {
+public class ForEachSelection extends AbstractCompositeSelection {
 
-  TypeSpecifier typeSpecifier;
+  public ForEachSelection(final FhirPath<Collection> parent, final List<Selection> components) {
+    super(parent, components);
+  }
 
+  @Nonnull
   @Override
-  public Collection apply(@Nonnull final Collection input,
-      @Nonnull final EvaluationContext context) {
-    throw new UnsupportedOperationException("TypeSpecifierPath cannot be evaluated directly");
+  protected String getName() {
+    return "forEach";
+  }
+
+  @Nonnull
+  @Override
+  protected ForEachSelection copy(@Nonnull final List<Selection> newComponents) {
+    return new ForEachSelection(path, newComponents);
+  }
+
+  @Nonnull
+  @Override
+  protected Pair<ProjectionContext, DatasetView> subContext(@Nonnull final ProjectionContext context,
+      @Nonnull final FhirPath<Collection> parent) {
+    return context.subContext(parent, true);
   }
 }

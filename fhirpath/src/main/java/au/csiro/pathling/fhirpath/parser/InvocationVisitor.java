@@ -18,18 +18,12 @@
 package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.fhirpath.function.StandardFunctions.isTypeSpecifierFunction;
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.MixedCollection;
-import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
@@ -38,14 +32,14 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListConte
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathVisitor;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.spark.sql.functions;
-import org.hl7.fhir.exceptions.FHIRException;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.This;
+import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 
 /**
  * This class is invoked on the right-hand side of the invocation expression, and can optionally be
@@ -53,7 +47,7 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  *
  * @author John Grimes
  */
-class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collection>> {
+class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   /**
    * This method gets called when an element is on the right-hand side of the invocation expression,
@@ -64,34 +58,10 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
    */
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitMemberInvocation(
+  public FhirPath<Collection> visitMemberInvocation(
       @Nullable final MemberInvocationContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    // TODO: refactor to an expression
-    return (input, context) -> {
-      if (!(input instanceof MixedCollection)) {
-        // Attempt path traversal.
-        final Optional<Collection> result = input.traverse(fhirPath);
-        checkUserInput(result.isPresent(), "No such child: " + fhirPath);
-        return result.get();
-
-      } else {
-        try {
-          // TODO: Should it really be a function or rather an expression?
-          // In the former case though the better definition of type specifier path would be needed.
-          // If it is not a valid path traversal, see if it is a valid type specifier.
-          final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(fhirPath);
-          return Collection.build(functions.lit(null), Optional.of(FhirPathType.TYPE_SPECIFIER),
-              Optional.of(fhirType), Optional.empty());
-
-        } catch (final FHIRException e2) {
-          throw new InvalidUserInputError(
-              "Invocation is not a valid path or type specifier: " + fhirPath);
-        }
-      }
-    };
+    return new Traversal(requireNonNull(fhirPath));
   }
 
   /**
@@ -103,7 +73,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
    */
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitFunctionInvocation(
+  public FhirPath<Collection> visitFunctionInvocation(
       @Nullable final FunctionInvocationContext ctx) {
 
     final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
@@ -112,48 +82,38 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection, Collect
     // NOTE: Here we assume that a function is either a type specifier function 
     // (and all the arguments are type specifiers) or regular function 
     // (none of the arguments are type specifiers).
-    final FhirPathVisitor<FhirPath<Collection, Collection>> paramListVisitor =
+    final FhirPathVisitor<FhirPath<Collection>> paramListVisitor =
         isTypeSpecifierFunction(functionIdentifier)
         ? new TypeSpecifierVisitor()
         : new Visitor();
 
-    final List<FhirPath<Collection, Collection>> arguments = Optional.ofNullable(paramList)
+    final List<FhirPath<Collection>> arguments = Optional.ofNullable(paramList)
         .map(ParamListContext::expression)
         .map(p -> p.stream()
             .map(paramListVisitor::visit)
             .collect(toList())
-        ).orElse(new ArrayList<>());
+        ).orElse(Collections.emptyList());
 
-    // TODO: refactor to an expression
-    return (input, context) -> {
-      final NamedFunction function;
-      try {
-        function = context.getFunctionRegistry().getInstance(functionIdentifier);
-      } catch (final NoSuchFunctionException e) {
-        throw new InvalidUserInputError(e.getMessage());
-      }
-      final FunctionInput functionInput = new FunctionInput(context, input, arguments);
-      return function.invoke(functionInput);
-    };
+    return new EvalFunction(functionIdentifier, arguments);
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitThisInvocation(
+  public FhirPath<Collection> visitThisInvocation(
       @Nullable final ThisInvocationContext ctx) {
-    return (input, context) -> input;
+    return new This();
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitIndexInvocation(
+  public FhirPath<Collection> visitIndexInvocation(
       @Nullable final IndexInvocationContext ctx) {
     throw new InvalidUserInputError("$index is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection, Collection> visitTotalInvocation(
+  public FhirPath<Collection> visitTotalInvocation(
       @Nullable final TotalInvocationContext ctx) {
     throw new InvalidUserInputError("$total is not supported");
   }

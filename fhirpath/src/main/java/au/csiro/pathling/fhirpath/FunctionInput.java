@@ -50,6 +50,6 @@ public class FunctionInput {
    * operand in the case of an operator.
    */
   @Nonnull
-  List<FhirPath<Collection, Collection>> arguments;
+  List<FhirPath<Collection>> arguments;
 
 }

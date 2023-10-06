@@ -15,27 +15,25 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.path;
+package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.operator.BinaryOperator;
-import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
-import javax.annotation.Nonnull;
 import lombok.Value;
+import org.apache.spark.sql.Column;
+import java.util.function.Function;
 
-@Value
-public class EvalOperatorPath implements FhirPath<Collection, Collection> {
+public interface ColumnExtractor extends Function<Collection, Column> {
 
-  FhirPath<Collection, Collection> leftPath;
-  FhirPath<Collection, Collection> rightPath;
-  BinaryOperator operator;
 
-  @Override
-  public Collection apply(@Nonnull final Collection input,
-      @Nonnull final EvaluationContext context) {
-    return operator.invoke(new BinaryOperatorInput(context, leftPath.apply(input, context),
-        rightPath.apply(input, context)));
+  ColumnExtractor UNCONSTRAINED = new Unconstrained();
+
+  @Value
+  class Unconstrained implements ColumnExtractor {
+
+    @Override
+    public Column apply(final Collection collection) {
+      return collection.getColumn();
+    }
   }
+
 }
