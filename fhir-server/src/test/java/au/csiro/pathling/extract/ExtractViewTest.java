@@ -19,11 +19,8 @@ package au.csiro.pathling.extract;
 
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
 import au.csiro.pathling.io.CacheableDatabase;
@@ -32,20 +29,17 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.view.AbstractCompositeSelection;
-import au.csiro.pathling.view.DatasetView;
-import au.csiro.pathling.view.DefaultProjectionContext;
 import au.csiro.pathling.view.ForEachSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
+import au.csiro.pathling.view.View;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -139,33 +133,32 @@ class ExtractViewTest {
   }
 
 
-  DefaultProjectionContext newContext(@Nonnull final ResourceType resourceType) {
-    final Dataset<Row> dataset = dataSource.read(resourceType);
-    final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataset,
-        resourceType);
-    final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
-        fhirContext, spark, dataset, StaticFunctionRegistry.getInstance(),
-        Optional.of(terminologyServiceFactory), Optional.empty());
-    return new DefaultProjectionContext(evaluationContext);
+  View.Context newContext() {
+    return new View.Context(spark, fhirContext, dataSource);
   }
 
   @Test
   void combineWithUnequalCardinalities() {
-    final DefaultProjectionContext evalContext = newContext(ResourceType.PATIENT);
 
     final Parser parser = new Parser();
-    final List<FhirPath<Collection>> paths = Stream.of(
-            //"name.family",
-            //"name.given",
-            "id",
-            "gender.first()",
-            "name.use",
-            "name.family",
-            "name.given.first()"
-        )
+    final List<String> expressios = List.of(
+        //"name.family",
+        //"name.given",
+        "id",
+        "gender.first()",
+        "name.use",
+        "name.family",
+        "name.given.first()"
+    );
+
+    System.out.println("### Expressions: ###");
+    expressios.forEach(System.out::println);
+
+    final List<FhirPath<Collection>> paths = expressios.stream()
         .map(parser::parse)
         .collect(Collectors.toUnmodifiableList());
 
+    System.out.println("### Paths: ###");
     paths.forEach(System.out::println);
     final Selection view = decompose(paths);
     System.out.println("## Raw view ##");
@@ -174,15 +167,17 @@ class ExtractViewTest {
     System.out.println("## Optimised view ##");
     optimizedView.printTree();
 
-    final DatasetView result = view.evaluate(evalContext);
-    //final Dataset<Row> resultDataset = result.apply(evalContext.getDataset());
-    final Dataset<Row> resultDataset = result.apply(
-        evalContext.getEvaluationContext().getDataset());
+    final View extractView = new View(ResourceType.PATIENT, view);
+    System.out.println("## Extract view ##");
+    extractView.printTree();
 
+    final Dataset<Row> resultDataset = extractView.evaluate(newContext());
     resultDataset.show(false);
-
     System.out.println(resultDataset.logicalPlan());
     System.out.println(resultDataset.queryExecution().executedPlan());
+
+    System.out.println(resultDataset.queryExecution().optimizedPlan());
+
   }
 
   void mockResource(final ResourceType... resourceTypes) {
