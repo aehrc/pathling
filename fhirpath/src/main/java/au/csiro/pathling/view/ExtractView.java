@@ -17,12 +17,8 @@
 
 package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
@@ -31,7 +27,7 @@ import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @Value
-public class View {
+public class ExtractView {
 
   ResourceType subjectResource;
   Selection selection;
@@ -45,25 +41,16 @@ public class View {
   }
 
   public Dataset<Row> evaluate(@Nonnull final Context context) {
-    final DefaultProjectionContext projectionContext = newContext(context);
+    final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
+        subjectResource);
     final DatasetView result = selection.evaluate(projectionContext);
-    return result.apply(
-        projectionContext.getEvaluationContext().getDataset());
+    return result.select(projectionContext.getDataset());
   }
 
   public void printTree() {
     System.out.println("select:");
-    selection.printTree(1);
+    selection.toTreeString()
+        .forEach(s -> System.out.println("  " + s));
   }
 
-  DefaultProjectionContext newContext(@Nonnull final Context context) {
-    final Dataset<Row> dataset = context.getDataSource().read(subjectResource);
-    final ResourceCollection inputContext = ResourceCollection.build(context.getFhirContext(),
-        dataset,
-        subjectResource);
-    final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
-        context.getFhirContext(), context.getSpark(), dataset, StaticFunctionRegistry.getInstance(),
-        Optional.empty(), Optional.empty());
-    return new DefaultProjectionContext(evaluationContext);
-  }
 }

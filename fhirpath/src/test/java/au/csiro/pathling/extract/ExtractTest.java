@@ -45,9 +45,9 @@ public class ExtractTest {
   static List<Selection> decomposeInternal(@Nonnull final List<FhirPath<Collection>> paths) {
     final Map<FhirPath<Collection>, List<FhirPath<Collection>>> tailsByHeads = paths.stream()
         .collect(
-            Collectors.groupingBy(FhirPath<Collection>::head,
+            Collectors.groupingBy(FhirPath<Collection>::first,
                 Collectors.mapping(
-                    FhirPath<Collection>::tail,
+                    FhirPath<Collection>::suffix,
                     Collectors.toList())));
 
     return tailsByHeads.entrySet().stream()
@@ -111,9 +111,9 @@ public class ExtractTest {
 
     final Map<FhirPath<Collection>, List<FhirPath<Collection>>> xxx = paths.stream()
         .collect(
-            Collectors.groupingBy(FhirPath<Collection>::head,
+            Collectors.groupingBy(FhirPath<Collection>::first,
                 Collectors.mapping(
-                    FhirPath<Collection>::tail,
+                    FhirPath<Collection>::suffix,
                     Collectors.toList())));
 
     xxx.forEach((k, v) -> System.out.println(k + " -> " + v));

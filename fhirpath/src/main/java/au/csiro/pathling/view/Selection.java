@@ -18,6 +18,7 @@
 package au.csiro.pathling.view;
 
 import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 public interface Selection {
@@ -25,10 +26,10 @@ public interface Selection {
   DatasetView evaluate(@Nonnull final ProjectionContext context);
 
   default void printTree() {
-    printTree(0);
+    toTreeString().forEach(System.out::println);
   }
 
-  void printTree(int i);
+  Stream<String> toTreeString();
 
   @Nonnull
   Selection map(@Nonnull final Function<Selection, Selection> mapFunction);

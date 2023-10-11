@@ -19,36 +19,37 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import java.util.function.Function;
-import java.util.stream.Stream;
-import javax.annotation.Nonnull;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
-import org.apache.spark.sql.Column;
+import org.apache.commons.lang3.tuple.Pair;
 
+import javax.annotation.Nonnull;
+import java.util.List;
+
+@EqualsAndHashCode(callSuper = true)
 @Value
-public class PrimitiveSelection implements Selection {
+public class ForEachOrNullSelection extends AbstractCompositeSelection {
 
-  FhirPath<Collection> path;
-  Function<Collection, Column> valueExtractor;
-
-  public PrimitiveSelection(@Nonnull final FhirPath<Collection> path) {
-    this.path = path;
-    this.valueExtractor = ColumnExtractor.UNCONSTRAINED;
-  }
-
-  @Override
-  public DatasetView evaluate(@Nonnull final ProjectionContext context) {
-    return DatasetView.of(context.evalExpression(path, false));
-  }
-
-  @Override
-  public Stream<String> toTreeString() {
-    return Stream.of("select: " + path + " with " + valueExtractor);
+  public ForEachOrNullSelection(final FhirPath<Collection> parent, final List<Selection> components) {
+    super(parent, components);
   }
 
   @Nonnull
   @Override
-  public Selection map(@Nonnull final Function<Selection, Selection> mapFunction) {
-    return mapFunction.apply(this);
+  protected String getName() {
+    return "forEachOrNull";
+  }
+
+  @Nonnull
+  @Override
+  protected ForEachOrNullSelection copy(@Nonnull final List<Selection> newComponents) {
+    return new ForEachOrNullSelection(path, newComponents);
+  }
+
+  @Nonnull
+  @Override
+  protected Pair<ProjectionContext, DatasetView> subContext(@Nonnull final ProjectionContext context,
+      @Nonnull final FhirPath<Collection> parent) {
+    return context.subContext(parent, true, true);
   }
 }

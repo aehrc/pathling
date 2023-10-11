@@ -23,8 +23,13 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 public interface ProjectionContext {
+
+  @Nonnull
+  Dataset<Row> getDataset();
 
   @Nonnull
   Collection evaluateInternal(@Nonnull final FhirPath<Collection> path);
@@ -38,8 +43,15 @@ public interface ProjectionContext {
    */
   @Nonnull
   Pair<ProjectionContext, DatasetView> subContext(@Nonnull final FhirPath<Collection> parent,
-      boolean unnest);
+      boolean unnest, boolean withNulls);
 
+  @Nonnull
+  default Pair<ProjectionContext, DatasetView> subContext(
+          @Nonnull final FhirPath<Collection> parent,
+          final boolean unnest) {
+    return subContext(parent, unnest, false);
+  }
+  
   @Nonnull
   default Pair<ProjectionContext, DatasetView> subContext(
       @Nonnull final FhirPath<Collection> parent) {

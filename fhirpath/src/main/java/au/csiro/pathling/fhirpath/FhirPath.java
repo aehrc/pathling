@@ -22,11 +22,19 @@ public interface FhirPath<I extends Collection> {
 
   I apply(@Nonnull final I input, @Nonnull final EvaluationContext context);
 
-  default FhirPath<I> head() {
+  default FhirPath<I> first() {
     return this;
   }
 
-  default FhirPath<I> tail() {
+  default FhirPath<I> suffix() {
+    return nullPath();
+  }
+
+  default FhirPath<I> last() {
+    return this;
+  }
+
+  default FhirPath<I> prefix() {
     return nullPath();
   }
 
@@ -91,15 +99,27 @@ public interface FhirPath<I extends Collection> {
     }
 
     @Override
-    public FhirPath<I> head() {
+    public FhirPath<I> first() {
       return elements.get(0);
     }
 
     @Override
-    public FhirPath<I> tail() {
+    public FhirPath<I> suffix() {
       return elements.size() > 2
              ? new Composite<>(elements.subList(1, elements.size()))
              : elements.get(1);
+    }
+
+    @Override
+    public FhirPath<I> last() {
+      return elements.get(elements.size() - 1);
+    }
+
+    @Override
+    public FhirPath<I> prefix() {
+      return elements.size() > 2
+             ? new Composite<>(elements.subList(0, elements.size() - 1))
+             : elements.get(0);
     }
   }
 

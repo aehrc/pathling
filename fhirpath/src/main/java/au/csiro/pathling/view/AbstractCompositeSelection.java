@@ -28,6 +28,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Value
 @NonFinal
@@ -45,9 +46,11 @@ public abstract class AbstractCompositeSelection implements Selection {
   }
 
   @Override
-  public void printTree(final int i) {
-    System.out.println("  ".repeat(i) + getName() + ":  " + path);
-    components.forEach(c -> c.printTree(i + 1));
+  public Stream<String> toTreeString() {
+    return Stream.concat(
+        Stream.of(getName() + ":  " + path),
+        components.stream().flatMap(c -> c.toTreeString().map(s -> "  " + s))
+    );
   }
 
   @Nonnull

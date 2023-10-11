@@ -128,8 +128,16 @@ public abstract class ColumnCtx {
 
   @Nonnull
   public ColumnCtx explode() {
+    //  TODO: this actually cannot should return DatasetResult as filtering is required here
     return vectorize(functions::explode, Function.identity());
   }
+
+  @Nonnull
+  public ColumnCtx explode_outer() {
+    //  TODO: this actually cannot should return DatasetResult as filtering is required here
+    return vectorize(functions::explode_outer, Function.identity());
+  }
+
 
   @Nonnull
   public ColumnCtx join(@Nonnull final String separator) {

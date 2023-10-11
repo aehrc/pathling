@@ -54,10 +54,16 @@ public interface DatasetView {
   }
 
   @Nonnull
-  default Dataset<Row> apply(@Nonnull final Dataset<Row> dataset) {
+  default Dataset<Row> select(@Nonnull final Dataset<Row> dataset) {
     return getTransform().map(t -> t.apply(dataset)).orElse(dataset)
         .select(asStream().toArray(Column[]::new));
   }
+
+  @Nonnull
+  default Dataset<Row> applyTransform(@Nonnull final Dataset<Row> dataset) {
+    return getTransform().map(t -> t.apply(dataset)).orElse(dataset);
+  }
+
 
   @Nonnull
   static DatasetView empty() {
