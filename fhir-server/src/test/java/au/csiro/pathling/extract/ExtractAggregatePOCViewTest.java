@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.extract;
 
+import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -31,6 +32,7 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.view.AbstractCompositeSelection;
+import au.csiro.pathling.view.AggregationView;
 import au.csiro.pathling.view.DatasetView;
 import au.csiro.pathling.view.DefaultProjectionContext;
 import au.csiro.pathling.view.ForEachOrNullSelection;
@@ -38,18 +40,17 @@ import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
 import au.csiro.pathling.view.ExtractView;
+import au.csiro.pathling.view.ViewContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import com.google.common.collect.ImmutableMap;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -61,11 +62,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import static au.csiro.pathling.view.AggregationView.AGG_FUNCTIONS;
+
 /**
  * @author John Grimes
  */
 @SpringBootUnitTest
-class ExtractViewTest {
+class ExtractAggregatePOCViewTest {
 
   @Autowired
   QueryConfiguration configuration;
@@ -106,7 +109,7 @@ class ExtractViewTest {
            ? Stream.of(new PrimitiveSelection(parent))
            : Stream.of(
                new ForEachOrNullSelection(parent, decomposeInternal(
-                   children.stream().filter(ExtractViewTest::isTraversal).collect(
+                   children.stream().filter(ExtractAggregatePOCViewTest::isTraversal).collect(
                        Collectors.toUnmodifiableList()))),
                new FromSelection(parent, decomposeInternal(
                    children.stream().filter(c -> !isTraversal(c)).collect(
@@ -165,8 +168,8 @@ class ExtractViewTest {
   }
 
 
-  ExtractView.Context newContext() {
-    return new ExtractView.Context(spark, fhirContext, dataSource);
+  ViewContext newContext() {
+    return new ViewContext(spark, fhirContext, dataSource);
   }
 
   @Test
@@ -211,15 +214,6 @@ class ExtractViewTest {
     System.out.println(resultDataset.queryExecution().optimizedPlan());
 
   }
-
-
-  private static final Map<String, Function<Column, Column>> AGG_FUNCTIONS = ImmutableMap.of(
-      "count", functions::count,
-      "sum", functions::sum,
-      "avg", functions::avg,
-      "min", functions::min,
-      "max", functions::max
-  );
 
   @Test
   void testAggregation() {
@@ -313,6 +307,38 @@ class ExtractViewTest {
     // System.out.println(resultDataset.queryExecution().optimizedPlan());
   }
 
+  @Test
+  void testAggregationQuery() {
+
+    final List<String> grouppingExpressions = List.of(
+        "gender",
+        "maritalStatus.coding.code.first()",
+        "name.prefix.first()"
+    );
+
+    final List<String> aggregations = List.of(
+        "id.count()",
+        "name.count().sum()"
+    );
+
+    final AggregateRequest aggregateQuery = AggregateRequest.fromUserInput(
+        ResourceType.PATIENT,
+        Optional.of(aggregations),
+        Optional.of(grouppingExpressions),
+        Optional.empty());
+
+    final QueryParser queryParser = new QueryParser(new Parser());
+    final AggregationView aggregationView = queryParser.toView(aggregateQuery);
+
+    System.out.println("## Aggregation view ##");
+    aggregationView.printTree();
+
+    final Dataset<Row> resultDataset = aggregationView.evaluate(newContext());
+    resultDataset.show(false);
+    System.out.println(resultDataset.logicalPlan());
+    System.out.println(resultDataset.queryExecution().executedPlan());
+    System.out.println(resultDataset.queryExecution().optimizedPlan());
+  }
 
   void mockResource(final ResourceType... resourceTypes) {
     TestHelpers.mockResource(dataSource, spark, resourceTypes);

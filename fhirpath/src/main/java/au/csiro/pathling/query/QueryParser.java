@@ -17,26 +17,28 @@
 
 package au.csiro.pathling.query;
 
+import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.extract.ExtractRequest;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
+import au.csiro.pathling.view.AggregationView;
+import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ForEachOrNullSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
-import au.csiro.pathling.view.ExtractView;
-import lombok.Value;
-import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import javax.annotation.Nonnull;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import lombok.Value;
+import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 
 @Value
@@ -55,6 +57,42 @@ public class QueryParser {
         paths.stream().map(FhirPath::toString).collect(Collectors.joining("\n")));
     final Selection select = decompose(paths);
     return new ExtractView(ResourceType.PATIENT, select);
+  }
+
+
+  @Nonnull
+  public AggregationView toView(@Nonnull final AggregateRequest request) {
+    final List<FhirPath<Collection>> groupByPaths = request.getGroupings().stream()
+        .map(parser::parse)
+        .collect(Collectors.toUnmodifiableList());
+    log.debug("Parsed groupBy paths:\n{}",
+        groupByPaths.stream().map(FhirPath::toString).collect(Collectors.joining("\n")));
+    final Selection groupBy = decompose(groupByPaths);
+
+    final List<FhirPath<Collection>> aggPaths = request.getAggregations().stream()
+        .map(parser::parse)
+        .collect(Collectors.toUnmodifiableList());
+    log.debug("Parsed aggregate paths:\n{}",
+        aggPaths.stream().map(FhirPath::toString).collect(Collectors.joining("\n")));
+    
+    // TODO: validate that all aggPaths are aggregations
+    final List<FhirPath<Collection>> aggFields = aggPaths.stream().map(FhirPath::prefix)
+        .collect(Collectors.toUnmodifiableList());
+    final List<FhirPath<Collection>> aggFunctions = aggPaths.stream().map(FhirPath::last)
+        .collect(Collectors.toUnmodifiableList());
+
+    // TODO: needs a better model for the aggregation decomposition
+    return new AggregationView(ResourceType.PATIENT, groupBy, decomposeSimple(aggFields),
+        aggFunctions);
+  }
+
+  @Nonnull
+  public static Selection decomposeSimple(@Nonnull final List<FhirPath<Collection>> paths) {
+    // TODO: this can be simplified if we can explode the leaves
+    return new FromSelection(new ExtConsFhir("%resource"),
+        paths.stream().map(p -> new ForEachOrNullSelection(p,
+                List.of(new PrimitiveSelection(FhirPath.nullPath()))))
+            .collect(Collectors.toUnmodifiableList()));
   }
 
   @Nonnull

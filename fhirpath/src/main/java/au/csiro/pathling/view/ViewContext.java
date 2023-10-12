@@ -17,28 +17,15 @@
 
 package au.csiro.pathling.view;
 
-import javax.annotation.Nonnull;
+import au.csiro.pathling.io.source.DataSource;
+import ca.uhn.fhir.context.FhirContext;
 import lombok.Value;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.apache.spark.sql.SparkSession;
 
 @Value
-public class ExtractView {
+public class ViewContext {
 
-  ResourceType subjectResource;
-  Selection selection;
-
-  public Dataset<Row> evaluate(@Nonnull final ViewContext context) {
-    final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
-        subjectResource);
-    final DatasetView result = selection.evaluate(projectionContext);
-    return result.select(projectionContext.getDataset());
-  }
-
-  public void printTree() {
-    System.out.println("select:");
-    selection.toTreeString()
-        .forEach(s -> System.out.println("  " + s));
-  }
+  SparkSession spark;
+  FhirContext fhirContext;
+  DataSource dataSource;
 }

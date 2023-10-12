@@ -8,6 +8,7 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.QueryParser;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.view.ExtractView;
+import au.csiro.pathling.view.ViewContext;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -61,8 +62,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
     return extractView.evaluate(newContext());
   }
 
-  protected ExtractView.Context newContext() {
-    return new ExtractView.Context(sparkSession, fhirContext, dataSource);
+  protected ViewContext newContext() {
+    return new ViewContext(sparkSession, fhirContext, dataSource);
   }
 
 }

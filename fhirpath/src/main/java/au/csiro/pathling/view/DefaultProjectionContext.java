@@ -98,7 +98,7 @@ public class DefaultProjectionContext implements ProjectionContext {
   }
 
   @Nonnull
-  public static DefaultProjectionContext of(@Nonnull final ExtractView.Context context, @Nonnull final
+  public static DefaultProjectionContext of(@Nonnull final ViewContext context, @Nonnull final
   ResourceType subjectResource) {
     final Dataset<Row> dataset = context.getDataSource().read(subjectResource);
     final ResourceCollection inputContext = ResourceCollection.build(context.getFhirContext(),
