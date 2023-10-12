@@ -32,6 +32,11 @@ public interface ProjectionContext {
   Dataset<Row> getDataset();
 
   @Nonnull
+  default DatasetView evaluate(@Nonnull final Selection selection) {
+    return selection.evaluate(this);
+  }
+  
+  @Nonnull
   Collection evaluateInternal(@Nonnull final FhirPath<Collection> path);
 
   /**
@@ -47,11 +52,11 @@ public interface ProjectionContext {
 
   @Nonnull
   default Pair<ProjectionContext, DatasetView> subContext(
-          @Nonnull final FhirPath<Collection> parent,
-          final boolean unnest) {
+      @Nonnull final FhirPath<Collection> parent,
+      final boolean unnest) {
     return subContext(parent, unnest, false);
   }
-  
+
   @Nonnull
   default Pair<ProjectionContext, DatasetView> subContext(
       @Nonnull final FhirPath<Collection> parent) {

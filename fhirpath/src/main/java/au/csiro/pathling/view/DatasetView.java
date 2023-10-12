@@ -41,7 +41,6 @@ public interface DatasetView {
   @Nonnull
   Optional<Function<Dataset<Row>, Dataset<Row>>> getTransform();
 
-
   @Nonnull
   default DatasetView andThen(@Nonnull final DatasetView next) {
     return new ProjectionView(
@@ -75,8 +74,22 @@ public interface DatasetView {
     return new OneColumn(column, Optional.empty());
   }
 
+  @Nonnull
+  static DatasetView fromTransform(@Nonnull final Function<Dataset<Row>, Dataset<Row>> transform) {
+    return new Transform(transform);
+  }
+
   default DatasetView asTransform() {
-    return new Transform(getTransform());
+    return getTransform().map(DatasetView::fromTransform).orElse(empty());
+  }
+  
+  default DatasetView toFilter() {
+    final List<Column> filterColumns = asStream().collect(Collectors.toUnmodifiableList());
+    return filterColumns.isEmpty()
+           ? empty()
+           : asTransform().andThen(fromTransform(ds -> ds.filter(
+               filterColumns.stream().reduce(Column::and).orElseThrow()
+           )));
   }
 
   @Value
@@ -111,12 +124,18 @@ public interface DatasetView {
   @Value
   class Transform implements DatasetView {
 
-    Optional<Function<Dataset<Row>, Dataset<Row>>> transform;
+    Function<Dataset<Row>, Dataset<Row>> transform;
 
     @Nonnull
     @Override
     public Stream<Column> asStream() {
       return Stream.empty();
+    }
+
+    @Nonnull
+    @Override
+    public Optional<Function<Dataset<Row>, Dataset<Row>>> getTransform() {
+      return Optional.of(transform);
     }
 
   }

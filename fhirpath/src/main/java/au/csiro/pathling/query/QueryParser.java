@@ -33,6 +33,7 @@ import au.csiro.pathling.view.Selection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -50,13 +51,22 @@ public class QueryParser {
 
   @Nonnull
   public ExtractView toView(@Nonnull final ExtractRequest request) {
-    final List<FhirPath<Collection>> paths = request.getColumnsAsStrings().stream()
+    final List<FhirPath<Collection>> columns = request.getColumnsAsStrings().stream()
         .map(parser::parse)
         .collect(Collectors.toUnmodifiableList());
     log.debug("Parsed paths:\n{}",
-        paths.stream().map(FhirPath::toString).collect(Collectors.joining("\n")));
-    final Selection select = decompose(paths);
-    return new ExtractView(ResourceType.PATIENT, select);
+        columns.stream().map(FhirPath::toString).collect(Collectors.joining("\n")));
+
+    final Selection select = decompose(columns);
+    final List<FhirPath<Collection>> filter = request.getFilters().stream().map(parser::parse)
+        .collect(Collectors.toUnmodifiableList());
+
+    return new ExtractView(ResourceType.PATIENT,
+        select,
+        filter.isEmpty()
+        ? Optional.empty()
+        : Optional.of(decomposeFilter(filter))
+    );
   }
 
 
@@ -74,7 +84,7 @@ public class QueryParser {
         .collect(Collectors.toUnmodifiableList());
     log.debug("Parsed aggregate paths:\n{}",
         aggPaths.stream().map(FhirPath::toString).collect(Collectors.joining("\n")));
-    
+
     // TODO: validate that all aggPaths are aggregations
     final List<FhirPath<Collection>> aggFields = aggPaths.stream().map(FhirPath::prefix)
         .collect(Collectors.toUnmodifiableList());
@@ -84,6 +94,14 @@ public class QueryParser {
     // TODO: needs a better model for the aggregation decomposition
     return new AggregationView(ResourceType.PATIENT, groupBy, decomposeSimple(aggFields),
         aggFunctions);
+  }
+
+  @Nonnull
+  public static Selection decomposeFilter(@Nonnull final List<FhirPath<Collection>> paths) {
+    // TODO: this should check/enforce the booleannes of the paths results
+    return new FromSelection(new ExtConsFhir("%resource"),
+        paths.stream().map(PrimitiveSelection::new)
+            .collect(Collectors.toUnmodifiableList()));
   }
 
   @Nonnull

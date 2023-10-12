@@ -60,7 +60,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final QueryParser queryParser = new QueryParser(new Parser());
     final ExtractView extractView = queryParser.toView(query);
     extractView.printTree();
-    return extractView.evaluate(newContext());
+    final Dataset<Row> resultDataset = extractView.evaluate(newContext());
+    return query.getLimit().map(resultDataset::limit).orElse(resultDataset);
   }
 
   protected ViewContext newContext() {

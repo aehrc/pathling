@@ -17,28 +17,46 @@
 
 package au.csiro.pathling.view;
 
+import java.util.Optional;
 import javax.annotation.Nonnull;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @Value
+@AllArgsConstructor
 public class ExtractView {
 
   ResourceType subjectResource;
   Selection selection;
+  Optional<Selection> where;
+
+  public ExtractView(@Nonnull final ResourceType subjectResource,
+      @Nonnull final Selection selection) {
+    this(subjectResource, selection, Optional.empty());
+  }
 
   public Dataset<Row> evaluate(@Nonnull final ViewContext context) {
     final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
         subjectResource);
-    final DatasetView result = selection.evaluate(projectionContext);
-    return result.select(projectionContext.getDataset());
+    final DatasetView selectionResult = selection.evaluate(projectionContext);
+    return where.map(projectionContext::evaluate)
+        .map(DatasetView::toFilter)
+        .map(selectionResult::andThen)
+        .orElse(selectionResult)
+        .select(projectionContext.getDataset());
   }
 
   public void printTree() {
     System.out.println("select:");
     selection.toTreeString()
         .forEach(s -> System.out.println("  " + s));
+    where.ifPresent(w -> {
+      System.out.println("where:");
+      w.toTreeString()
+          .forEach(s -> System.out.println("  " + s));
+    });
   }
 }
