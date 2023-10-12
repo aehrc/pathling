@@ -56,6 +56,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
       @Nonnull final ExtractResultType resultType) {
+    log.info("Executing request: {}", query);
     final QueryParser queryParser = new QueryParser(new Parser());
     final ExtractView extractView = queryParser.toView(query);
     extractView.printTree();
