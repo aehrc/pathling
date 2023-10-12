@@ -39,7 +39,6 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 
 @Value
@@ -51,24 +50,25 @@ public class QueryParser {
 
   @Nonnull
   public ExtractView toView(@Nonnull final ExtractRequest request) {
-    final List<FhirPath<Collection>> columns = request.getColumnsAsStrings().stream()
-        .map(parser::parse)
+
+    final List<PathWithAlias> columns = request.getColumns().stream()
+        .map(e -> new PathWithAlias(parser.parse(e.getExpression()),
+            Optional.ofNullable(e.getLabel())))
         .collect(Collectors.toUnmodifiableList());
     log.debug("Parsed paths:\n{}",
-        columns.stream().map(FhirPath::toString).collect(Collectors.joining("\n")));
+        columns.stream().map(PathWithAlias::toString).collect(Collectors.joining("\n")));
 
-    final Selection select = decompose(columns);
+    final Selection select = decomposeAliased(columns);
     final List<FhirPath<Collection>> filter = request.getFilters().stream().map(parser::parse)
         .collect(Collectors.toUnmodifiableList());
 
-    return new ExtractView(ResourceType.PATIENT,
+    return new ExtractView(request.getSubjectResource(),
         select,
         filter.isEmpty()
         ? Optional.empty()
         : Optional.of(decomposeFilter(filter))
     );
   }
-
 
   @Nonnull
   public AggregationView toView(@Nonnull final AggregateRequest request) {
@@ -92,8 +92,31 @@ public class QueryParser {
         .collect(Collectors.toUnmodifiableList());
 
     // TODO: needs a better model for the aggregation decomposition
-    return new AggregationView(ResourceType.PATIENT, groupBy, decomposeSimple(aggFields),
+    return new AggregationView(request.getSubjectResource(),
+        groupBy,
+        decomposeSimple(aggFields),
         aggFunctions);
+  }
+
+
+  @Value
+  public static class PathWithAlias {
+
+    @Nonnull
+    FhirPath<Collection> path;
+
+    @Nonnull
+    Optional<String> alias;
+
+    @Nonnull
+    public FhirPath<Collection> head() {
+      return path.first();
+    }
+
+    @Nonnull
+    public PathWithAlias tail() {
+      return new PathWithAlias(path.suffix(), alias);
+    }
   }
 
   @Nonnull
@@ -115,19 +138,29 @@ public class QueryParser {
 
   @Nonnull
   public static Selection decompose(@Nonnull final List<FhirPath<Collection>> paths) {
+    return decomposeAliased(paths.stream().map(p -> new PathWithAlias(p, Optional.empty()))
+        .collect(Collectors.toUnmodifiableList()));
+  }
+
+  @Nonnull
+  public static Selection decomposeAliased(@Nonnull final List<PathWithAlias> paths) {
     return new FromSelection(new ExtConsFhir("%resource"), decomposeInternal(paths));
   }
 
-  static boolean isTraversal(@Nonnull final FhirPath<Collection> path) {
+  static boolean isTraversal(@Nonnull final PathWithAlias pathWithAlias) {
+    final FhirPath<Collection> path = pathWithAlias.getPath();
     return path instanceof Paths.Traversal || path.isNull();
   }
 
   static Stream<? extends Selection> decomposeSelection(@Nonnull final FhirPath<Collection> parent,
-      @Nonnull final List<FhirPath<Collection>> children) {
+      @Nonnull final List<PathWithAlias> children) {
 
     // TODO: do not create empty selections.
+
+    // HMM: with the primitive selection
+
     return parent.isNull()
-           ? Stream.of(new PrimitiveSelection(parent))
+           ? Stream.of(new PrimitiveSelection(parent, children.get(0).getAlias()))
            : Stream.of(
                new ForEachOrNullSelection(parent, decomposeInternal(
                    children.stream().filter(QueryParser::isTraversal).collect(
@@ -138,17 +171,13 @@ public class QueryParser {
            ).filter(s -> !s.getComponents().isEmpty());
   }
 
-  static List<Selection> decomposeInternal(@Nonnull final List<FhirPath<Collection>> paths) {
-    final Map<FhirPath<Collection>, List<FhirPath<Collection>>> tailsByHeads = paths.stream()
+  static List<Selection> decomposeInternal(@Nonnull final List<PathWithAlias> paths) {
+    final Map<FhirPath<Collection>, List<PathWithAlias>> tailsByHeads = paths.stream()
         .collect(
-            Collectors.groupingBy(FhirPath<Collection>::first, LinkedHashMap::new,
+            Collectors.groupingBy(PathWithAlias::head, LinkedHashMap::new,
                 Collectors.mapping(
-                    FhirPath<Collection>::suffix,
+                    PathWithAlias::tail,
                     Collectors.toList())));
-
-    // This needs to be more sophisticated
-    // 1. PathTraverslas and Nulls go into the ForSelection bucket
-    // 2. Everyting else to to FromSelection bucket
     return tailsByHeads.entrySet().stream()
         .flatMap(e -> decomposeSelection(e.getKey(), e.getValue()))
         .collect(Collectors.toUnmodifiableList());

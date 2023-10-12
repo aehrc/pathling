@@ -19,31 +19,50 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 
 @Value
+@AllArgsConstructor
 public class PrimitiveSelection implements Selection {
 
+
+  @Nonnull
   FhirPath<Collection> path;
+
+  @Nonnull
   Function<Collection, Column> valueExtractor;
+
+  @Nonnull
+  Optional<String> alias;
 
   public PrimitiveSelection(@Nonnull final FhirPath<Collection> path) {
     this.path = path;
     this.valueExtractor = ColumnExtractor.UNCONSTRAINED;
+    this.alias = Optional.empty();
+  }
+
+  public PrimitiveSelection(@Nonnull final FhirPath<Collection> path,
+      @Nonnull final Optional<String> alias) {
+    this.path = path;
+    this.valueExtractor = ColumnExtractor.UNCONSTRAINED;
+    this.alias = alias;
   }
 
   @Override
   public DatasetView evaluate(@Nonnull final ProjectionContext context) {
-    return DatasetView.of(context.evalExpression(path, false));
+    final Column resultColumn = context.evalExpression(path, false);
+    return DatasetView.of(alias.map(resultColumn::alias).orElse(resultColumn));
   }
 
   @Override
   public Stream<String> toTreeString() {
-    return Stream.of("select: " + path + " with " + valueExtractor);
+    return Stream.of("select: " + path + " with " + valueExtractor + " as " + alias);
   }
 
   @Nonnull

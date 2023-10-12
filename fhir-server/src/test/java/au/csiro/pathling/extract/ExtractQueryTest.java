@@ -259,8 +259,8 @@ class ExtractQueryTest {
     mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
-        .withColumn("id")
-        .withColumn("gender")
+        .withColumn("id", "id_col")
+        .withColumn("gender", "gender_col")
         .withFilter("gender = 'female'")
         .withLimit(3)
         .build();
@@ -458,13 +458,13 @@ class ExtractQueryTest {
 
     final ExtractRequest request = new ExtractRequestBuilder(subjectResource)
         .withColumn("id", "id")
-        .withColumn("name", "name")
+        .withColumn("name", "name_struct")
         .build();
 
     Dataset<Row> result = executor.buildQuery(request, ExtractResultType.UNCONSTRAINED);
     result = result.select(
         col("id"),
-        explode_outer(col("name").getField("given")).as("given")
+        explode_outer(col("name_struct").getField("given")).as("given")
     );
 
     assertThat(result)
