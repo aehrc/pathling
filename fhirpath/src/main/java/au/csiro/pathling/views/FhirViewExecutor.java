@@ -143,8 +143,8 @@ public class FhirViewExecutor {
     final ResourceCollection inputContext = ResourceCollection.build(fhirContext, dataset,
         resourceType);
     final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
-        fhirContext, sparkSession, dataset, StaticFunctionRegistry.getInstance(),
-        terminologyServiceFactory, constantReplacer);
+        fhirContext, sparkSession, dataSource, dataset,
+        StaticFunctionRegistry.getInstance(), terminologyServiceFactory, constantReplacer);
     return new ExecutionContextImpl(evaluationContext,
         new DatasetContext(dataset));
   }

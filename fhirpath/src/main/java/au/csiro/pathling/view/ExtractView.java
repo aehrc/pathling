@@ -18,9 +18,11 @@
 package au.csiro.pathling.view;
 
 import java.util.Optional;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -41,12 +43,12 @@ public class ExtractView {
   public Dataset<Row> evaluate(@Nonnull final ViewContext context) {
     final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
         subjectResource);
-    final DatasetView selectionResult = selection.evaluate(projectionContext);
+    final DatasetResult<Column> selectionResult = selection.evaluate(projectionContext);
     return where.map(projectionContext::evaluate)
-        .map(DatasetView::toFilter)
+        .map(dr -> dr.toFilter(Function.identity()))
         .map(selectionResult::andThen)
         .orElse(selectionResult)
-        .select(projectionContext.getDataset());
+        .select(projectionContext.getDataset(), Function.identity());
   }
 
   public void printTree() {

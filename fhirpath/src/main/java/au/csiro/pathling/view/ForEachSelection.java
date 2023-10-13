@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.spark.sql.Column;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -48,8 +49,8 @@ public class ForEachSelection extends AbstractCompositeSelection {
 
   @Nonnull
   @Override
-  protected Pair<ProjectionContext, DatasetView> subContext(@Nonnull final ProjectionContext context,
-      @Nonnull final FhirPath<Collection> parent) {
+  protected Pair<ProjectionContext, DatasetResult<Column>> subContext(@Nonnull final ProjectionContext context,
+                                                              @Nonnull final FhirPath<Collection> parent) {
     return context.subContext(parent, true);
   }
 }

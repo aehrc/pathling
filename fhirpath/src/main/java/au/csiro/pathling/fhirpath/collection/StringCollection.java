@@ -23,6 +23,7 @@ import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Objects;
@@ -48,7 +49,8 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringCollection extends Collection implements Materializable<PrimitiveType> {
+public class StringCollection extends Collection implements Materializable<PrimitiveType>,
+    StringCoercible {
 
   public StringCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
@@ -167,4 +169,9 @@ public class StringCollection extends Collection implements Materializable<Primi
     return valueFromRow(row, columnNumber, getFhirType());
   }
 
+  @Nonnull
+  @Override
+  public StringCollection asStringPath() {
+    return this;
+  }
 }

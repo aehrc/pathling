@@ -17,13 +17,14 @@
 
 package au.csiro.pathling.view;
 
+import org.apache.spark.sql.Column;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 
 public interface Selection {
 
-  DatasetView evaluate(@Nonnull final ProjectionContext context);
+  DatasetResult<Column> evaluate(@Nonnull final ProjectionContext context);
 
   default void printTree() {
     toTreeString().forEach(System.out::println);

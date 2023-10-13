@@ -24,7 +24,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
-import au.csiro.pathling.view.DatasetView.OneColumn;
+import au.csiro.pathling.view.DatasetResult.One;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -50,11 +50,11 @@ public class DefaultProjectionContext implements ProjectionContext {
   }
 
   @Nonnull
-  private OneColumn unnestColumn(@Nonnull final Column column, final boolean keepNulls) {
+  private One<Column> unnestColumn(@Nonnull final Column column, final boolean keepNulls) {
 
     final String materializedColumnName = randomAlias();
 
-    return new OneColumn(functions.col(materializedColumnName),
+    return new One<>(functions.col(materializedColumnName),
         Optional.of(ds -> {
           final Dataset<Row> newDs = ds.withColumn(
               materializedColumnName, column);
@@ -78,22 +78,23 @@ public class DefaultProjectionContext implements ProjectionContext {
 
   @Nonnull
   @Override
-  public Pair<ProjectionContext, DatasetView> subContext(@Nonnull final FhirPath<Collection> parent,
+  public Pair<ProjectionContext, DatasetResult<Column>> subContext(
+      @Nonnull final FhirPath<Collection> parent,
       final boolean unnest, final boolean withNulls) {
     final Collection newInputContext = evaluateInternal(parent);
 
     if (unnest) {
-      final OneColumn unnestedColumn = unnestColumn(
+      final One<Column> unnestedColumn = unnestColumn(
           withNulls
           ? newInputContext.getCtx().explode_outer().getValue()
           : newInputContext.getCtx().explode().getValue(),
           withNulls);
       return Pair.of(new DefaultProjectionContext(
-              evaluationContext.withInputContext(newInputContext.copyWith(unnestedColumn.getColumn())))
+              evaluationContext.withInputContext(newInputContext.copyWith(unnestedColumn.getValue())))
           , unnestedColumn.asTransform());
     } else {
       return Pair.of(new DefaultProjectionContext(
-          evaluationContext.withInputContext(newInputContext)), DatasetView.empty());
+          evaluationContext.withInputContext(newInputContext)), DatasetResult.empty());
     }
   }
 
@@ -105,8 +106,8 @@ public class DefaultProjectionContext implements ProjectionContext {
         dataset,
         subjectResource);
     final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
-        context.getFhirContext(), context.getSpark(), dataset, StaticFunctionRegistry.getInstance(),
-        Optional.empty(), Optional.empty());
+        context.getFhirContext(), context.getSpark(), context.getDataSource(), dataset,
+        StaticFunctionRegistry.getInstance(), Optional.empty(), Optional.empty());
     return new DefaultProjectionContext(evaluationContext);
   }
 }

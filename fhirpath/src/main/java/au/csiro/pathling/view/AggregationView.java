@@ -54,8 +54,8 @@ public class AggregationView {
     final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
         subjectResource);
 
-    final DatasetView groupByResult = groupBy.evaluate(projectionContext);
-    final DatasetView selectResult = select.evaluate(projectionContext);
+    final DatasetResult<Column> groupByResult = groupBy.evaluate(projectionContext);
+    final DatasetResult<Column> selectResult = select.evaluate(projectionContext);
 
     final Column[] groupingColumns = groupByResult.asStream().toArray(Column[]::new);
     final Column[] selectColumns = selectResult.asStream().toArray(Column[]::new);
@@ -68,7 +68,7 @@ public class AggregationView {
                 .apply(selectColumns[i]))
         .toArray(Column[]::new);
 
-    return groupByResult.asTransform().andThen(selectResult)
+    return groupByResult.<Column>asTransform().andThen(selectResult)
         .applyTransform(projectionContext.getDataset())
         .groupBy(groupingColumns)
         .agg(aggColumns[0], Stream.of(aggColumns).skip(1).toArray(Column[]::new));

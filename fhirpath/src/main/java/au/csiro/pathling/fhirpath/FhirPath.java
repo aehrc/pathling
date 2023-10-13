@@ -42,10 +42,10 @@ public interface FhirPath<I extends Collection> {
     return nullPath().equals(after)
            ? this
            : new Composite<>(
-               Stream.concat(flatten(), after.flatten()).collect(Collectors.toUnmodifiableList()));
+               Stream.concat(asStream(), after.asStream()).collect(Collectors.toUnmodifiableList()));
   }
 
-  default Stream<FhirPath<I>> flatten() {
+  default Stream<FhirPath<I>> asStream() {
     return Stream.of(this);
   }
 
@@ -68,7 +68,7 @@ public interface FhirPath<I extends Collection> {
     }
 
     @Override
-    public Stream<FhirPath<I>> flatten() {
+    public Stream<FhirPath<I>> asStream() {
       return Stream.empty();
     }
 
@@ -94,7 +94,7 @@ public interface FhirPath<I extends Collection> {
     }
 
     @Override
-    public Stream<FhirPath<I>> flatten() {
+    public Stream<FhirPath<I>> asStream() {
       return elements.stream();
     }
 

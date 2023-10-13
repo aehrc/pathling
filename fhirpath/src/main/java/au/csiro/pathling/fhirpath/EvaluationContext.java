@@ -22,6 +22,7 @@ import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -77,6 +78,12 @@ public class EvaluationContext {
   private final SparkSession sparkSession;
 
   /**
+   * A data source that can be used to resolve FhirPath queries required for this expression.
+   */
+  @Nonnull
+  private final DataSource dataSource;
+
+  /**
    * A table resolver for retrieving Datasets for resource references.
    */
   @Nonnull
@@ -116,7 +123,9 @@ public class EvaluationContext {
   public EvaluationContext(@Nonnull final Collection inputContext,
       @Nonnull final ResourceCollection resource,
       @Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final Dataset<Row> dataset,
+      @Nonnull final SparkSession sparkSession,
+      @Nonnull final DataSource dataSource,
+      @Nonnull final Dataset<Row> dataset,
       @Nonnull final FunctionRegistry<NamedFunction> functionRegistry,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final Optional<ConstantReplacer> constantReplacer) {
@@ -124,6 +133,7 @@ public class EvaluationContext {
     this.resource = resource;
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
+    this.dataSource = dataSource;
     this.dataset = dataset;
     this.functionRegistry = functionRegistry;
     this.terminologyServiceFactory = terminologyServiceFactory;
@@ -136,8 +146,8 @@ public class EvaluationContext {
    */
   @Nonnull
   public EvaluationContext withInputContext(@Nonnull final Collection inputContext) {
-    return new EvaluationContext(inputContext, resource, fhirContext, sparkSession, dataset,
-        functionRegistry, terminologyServiceFactory, constantReplacer);
+    return new EvaluationContext(inputContext, resource, fhirContext, sparkSession, dataSource,
+        dataset, functionRegistry, terminologyServiceFactory, constantReplacer);
   }
 
 }

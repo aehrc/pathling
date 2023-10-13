@@ -20,15 +20,31 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static java.util.Objects.nonNull;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
+import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.MixedCollection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import au.csiro.pathling.utilities.Functions;
+import au.csiro.pathling.utilities.Preconditions;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Implementation of standard FHIRPath functions.
@@ -198,6 +214,66 @@ public class StandardFunctions {
 
   public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {
     return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
+  }
+
+  // TODO: This should be a string collection with a StringCoerible argument
+  @FhirpathFunction
+  public static Collection toString(@Nonnull final Collection input) {
+    Preconditions.checkUserInput(input instanceof StringCoercible,
+        "toString() can only be applied to a StringCoercible path");
+    return ((StringCoercible) input).asStringPath();
+  }
+
+  public StandardFunctions() {
+  }
+
+  // extended functions
+  @FhirpathFunction
+  public static ResourceCollection reverseResolve(@Nonnull final Collection input,
+      @Nonnull final FhirPath<Collection> reference,
+      @Nonnull final EvaluationContext evaluationContext) {
+    // TODO: decompose the reference - this should be done in a better way
+    // TODO: maybe it should be '
+    final List<String> names = reference.asStream()
+        .map(Functions.maybeCast(Paths.Traversal.class))
+        .flatMap(Optional::stream)
+        .map(Paths.Traversal::getPropertyName)
+        .collect(Collectors.toUnmodifiableList());
+    Preconditions.checkUserInput(names.size() == 2,
+        "Reference must be in format: <ResourceType>.<referenceFieldName>");
+    final ResourceType foreignResourceType = ResourceType.fromCode(names.get(0));
+    final String foreignReferenceField = names.get(1);
+
+    final Dataset<Row> dataset = evaluationContext.getDataSource().read(foreignResourceType);
+    // TODO join and aggregate
+    // not quite sure how to deal with extensions here - somehow nees to merge the maps as well
+    // but in general
+    // group by foreignReferenceField and collect_list(on everything else)
+
+    final ResourceCollection foreignResource = ResourceCollection.build(
+        evaluationContext.getFhirContext(),
+        dataset,
+        foreignResourceType);
+
+    final Column referenceColumn = foreignResource.traverse(
+            foreignReferenceField)
+        .flatMap(c -> c.traverse("reference"))
+        .map(Collection::getColumn)
+        .orElseThrow();
+
+    final List<Column> aggs = Stream.of(dataset.columns())
+        .map(c -> functions.collect_list(c).alias(foreignResourceType.toCode() + "_" + c))
+        .collect(Collectors.toUnmodifiableList());
+
+    final Dataset<Row> foreignDataset = dataset.groupBy(referenceColumn.alias("ref_xxx"))
+        .agg(aggs.get(0), aggs.subList(1, aggs.size()).toArray(new Column[0]));
+
+    final Dataset<Row> joinedDataset = dataset.join(foreignDataset,
+        dataset.col("id_versioned").equalTo(foreignDataset.col("ref_xxx")), "left_outer");
+
+    return ResourceCollection.build(evaluationContext.getFhirContext(), joinedDataset,
+        foreignResourceType);
+
   }
 
 }

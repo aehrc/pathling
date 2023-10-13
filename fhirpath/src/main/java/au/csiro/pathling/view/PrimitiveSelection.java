@@ -55,9 +55,9 @@ public class PrimitiveSelection implements Selection {
   }
 
   @Override
-  public DatasetView evaluate(@Nonnull final ProjectionContext context) {
+  public DatasetResult<Column> evaluate(@Nonnull final ProjectionContext context) {
     final Column resultColumn = context.evalExpression(path, false);
-    return DatasetView.of(alias.map(resultColumn::alias).orElse(resultColumn));
+    return DatasetResult.of(alias.map(resultColumn::alias).orElse(resultColumn));
   }
 
   @Override

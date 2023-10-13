@@ -64,7 +64,10 @@ public class WrappedFunction implements NamedFunction<Collection> {
 
       if (isNull(argument)) {
         // check the pararmeter is happy with a null value
-        if (parameter.getAnnotation(Nullable.class) != null) {
+        if (EvaluationContext.class.isAssignableFrom(parameter.getType())) {
+          // bind type specifier
+          return evaluationContext;
+        } else if (parameter.getAnnotation(Nullable.class) != null) {
           return null;
         } else {
           throw new RuntimeException(
@@ -82,6 +85,9 @@ public class WrappedFunction implements NamedFunction<Collection> {
       } else if (TypeSpecifier.class.isAssignableFrom(parameter.getType())) {
         // bind type specifier
         return ((Paths.TypeSpecifierPath) argument).getTypeSpecifier();
+      } else if (FhirPath.class.isAssignableFrom(parameter.getType())) {
+        // bind type specifier
+        return argument;
       } else {
         throw new RuntimeException("Cannot resolve parameter:" + parameter);
       }

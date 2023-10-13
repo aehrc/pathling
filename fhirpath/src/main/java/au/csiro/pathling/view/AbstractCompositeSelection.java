@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Value;
 import lombok.experimental.NonFinal;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.spark.sql.Column;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -39,10 +40,10 @@ public abstract class AbstractCompositeSelection implements Selection {
   List<Selection> components;
 
   @Override
-  public DatasetView evaluate(@Nonnull final ProjectionContext context) {
-    final Pair<ProjectionContext, DatasetView> pathContext = subContext(context, path);
+  public DatasetResult<Column> evaluate(@Nonnull final ProjectionContext context) {
+    final Pair<ProjectionContext, DatasetResult<Column>> pathContext = subContext(context, path);
     return components.stream().map(s -> s.evaluate(pathContext.getLeft()))
-        .reduce(pathContext.getRight(), DatasetView::andThen);
+        .reduce(pathContext.getRight(), DatasetResult::andThen);
   }
 
   @Override
@@ -71,7 +72,7 @@ public abstract class AbstractCompositeSelection implements Selection {
       @Nonnull final List<Selection> newComponents);
 
   @Nonnull
-  protected Pair<ProjectionContext, DatasetView> subContext(
+  protected Pair<ProjectionContext, DatasetResult<Column>> subContext(
       @Nonnull final ProjectionContext context,
       @Nonnull final FhirPath<Collection> parent) {
     return context.subContext(parent);

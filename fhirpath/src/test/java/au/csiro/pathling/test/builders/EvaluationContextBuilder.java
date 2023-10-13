@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.DefaultAnswer;
 import ca.uhn.fhir.context.FhirContext;
@@ -41,6 +42,8 @@ import org.apache.spark.sql.SparkSession;
  */
 public class EvaluationContextBuilder {
 
+  @Nonnull
+  private final DataSource dataSource;
   @Nonnull
   private Collection inputContext;
 
@@ -71,6 +74,7 @@ public class EvaluationContextBuilder {
     resource = mock(ResourceCollection.class);
     this.fhirContext = fhirContext;
     this.spark = spark;
+    this.dataSource = mock(DataSource.class);
     //noinspection unchecked
     dataset = mock(Dataset.class, new DefaultAnswer());
     functionRegistry = new StaticFunctionRegistry();
@@ -119,9 +123,9 @@ public class EvaluationContextBuilder {
 
   @Nonnull
   public EvaluationContext build() {
-    return new EvaluationContext(inputContext, resource, fhirContext, spark, dataset,
-        functionRegistry, Optional.ofNullable(terminologyServiceFactory),
-        Optional.ofNullable(constantReplacer));
+    return new EvaluationContext(inputContext, resource, fhirContext, spark, dataSource,
+        dataset, functionRegistry,
+        Optional.ofNullable(terminologyServiceFactory), Optional.ofNullable(constantReplacer));
   }
 
 }

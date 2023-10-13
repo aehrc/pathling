@@ -33,7 +33,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.view.AbstractCompositeSelection;
 import au.csiro.pathling.view.AggregationView;
-import au.csiro.pathling.view.DatasetView;
+import au.csiro.pathling.view.DatasetResult;
 import au.csiro.pathling.view.DefaultProjectionContext;
 import au.csiro.pathling.view.ForEachOrNullSelection;
 import au.csiro.pathling.view.FromSelection;
@@ -47,6 +47,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -215,6 +216,35 @@ class ExtractAggregatePOCViewTest {
 
   }
 
+
+  @Test
+  void testExtractWithResoutions() {
+
+    final List<String> expressions = List.of(
+        "id",
+        "gender",
+        "reverseResolve(Condition.subject).clinicalStatus"
+    );
+
+    System.out.println("### Expressions: ###");
+    expressions.forEach(System.out::println);
+    final ExtractRequest extractRequest = ExtractRequest.fromUserInput(
+        ResourceType.PATIENT,
+        Optional.of(expressions),
+        Optional.empty(),
+        Optional.empty()
+    );
+
+    final QueryParser queryParser = new QueryParser(new Parser());
+    final ExtractView extractView = queryParser.toView(extractRequest);
+    System.out.println("## Extract view ##");
+    extractView.printTree();
+    final Dataset<Row> resultDataset = extractView.evaluate(newContext());
+    resultDataset.show(false);
+    System.out.println(resultDataset.logicalPlan());
+    System.out.println(resultDataset.queryExecution().executedPlan());
+  }
+
   @Test
   void testAggregation() {
 
@@ -243,7 +273,7 @@ class ExtractAggregatePOCViewTest {
     final DefaultProjectionContext execContext = DefaultProjectionContext.of(newContext(),
         ResourceType.PATIENT);
 
-    final DatasetView groupingResult = groupingSelction.evaluate(execContext);
+    final DatasetResult<Column> groupingResult = groupingSelction.evaluate(execContext);
     final Dataset<Row> transDs = groupingResult.applyTransform(execContext.getDataset());
 
     transDs.show(false);
@@ -279,10 +309,11 @@ class ExtractAggregatePOCViewTest {
     aggFunctions.forEach(System.out::println);
 
     final Selection aggView = decompose(aggFields);
-    final DatasetView aggResult = aggView.evaluate(execContext);
+    final DatasetResult<Column> aggResult = aggView.evaluate(execContext);
 
     System.out.println("### Pre-grouping ####");
-    groupingResult.andThen(aggResult).select(execContext.getDataset()).show(false);
+    groupingResult.andThen(aggResult).select(execContext.getDataset(), Function.identity())
+        .show(false);
 
     final Column[] groupingColumns = groupingResult.asStream().toArray(Column[]::new);
 
@@ -295,7 +326,7 @@ class ExtractAggregatePOCViewTest {
             .apply(aggColumnsValues.get(i)))
         .toArray(Column[]::new);
 
-    final Dataset<Row> finalResult = groupingResult.asTransform().andThen(aggResult)
+    final Dataset<Row> finalResult = groupingResult.<Column>asTransform().andThen(aggResult)
         .applyTransform(execContext.getDataset())
         .groupBy(groupingColumns)
         .agg(aggColumns[0], Stream.of(aggColumns).skip(1).toArray(Column[]::new));

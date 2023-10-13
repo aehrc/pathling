@@ -31,31 +31,25 @@ import java.util.stream.Stream;
 /**
  * Encapsulates the result of a view query.
  */
-public interface DatasetView {
+public interface DatasetResult<T> {
 
-  Empty EMPTY = new Empty();
+  Empty<?> EMPTY = new Empty<>();
 
   @Nonnull
-  Stream<Column> asStream();
+  Stream<T> asStream();
 
   @Nonnull
   Optional<Function<Dataset<Row>, Dataset<Row>>> getTransform();
 
   @Nonnull
-  default DatasetView andThen(@Nonnull final DatasetView next) {
-    return new ProjectionView(
-        Stream.concat(this.asStream(), next.asStream())
-            .collect(Collectors.toUnmodifiableList()),
-        // TODOmaybe just use identity() here
-        getTransform().map(t -> next.getTransform().map(t::andThen).orElse(t))
-            .or(next::getTransform)
+  default DatasetResult<T> andThen(@Nonnull final DatasetResult<T> next) {
+    return new Composite<>(
+            Stream.concat(this.asStream(), next.asStream())
+                    .collect(Collectors.toUnmodifiableList()),
+            // TODOmaybe just use identity() here
+            getTransform().map(t -> next.getTransform().map(t::andThen).orElse(t))
+                    .or(next::getTransform)
     );
-  }
-
-  @Nonnull
-  default Dataset<Row> select(@Nonnull final Dataset<Row> dataset) {
-    return getTransform().map(t -> t.apply(dataset)).orElse(dataset)
-        .select(asStream().toArray(Column[]::new));
   }
 
   @Nonnull
@@ -65,39 +59,55 @@ public interface DatasetView {
 
 
   @Nonnull
-  static DatasetView empty() {
-    return EMPTY;
+  static <T> DatasetResult<T> empty() {
+    //noinspection unchecked
+    return (DatasetResult<T>) EMPTY;
   }
 
   @Nonnull
-  static DatasetView of(@Nonnull final Column column) {
-    return new OneColumn(column, Optional.empty());
+  static <T> DatasetResult<T> of(@Nonnull final T value) {
+    return new One<>(value, Optional.empty());
   }
 
   @Nonnull
-  static DatasetView fromTransform(@Nonnull final Function<Dataset<Row>, Dataset<Row>> transform) {
-    return new Transform(transform);
+  static <T> DatasetResult<T> fromTransform(
+      @Nonnull final Function<Dataset<Row>, Dataset<Row>> transform) {
+    return new Transform<>(transform);
   }
 
-  default DatasetView asTransform() {
-    return getTransform().map(DatasetView::fromTransform).orElse(empty());
+  default <K> DatasetResult<K> asTransform() {
+    //noinspection unchecked
+    return (DatasetResult<K>) getTransform().map(DatasetResult::fromTransform).orElse(empty());
   }
-  
-  default DatasetView toFilter() {
-    final List<Column> filterColumns = asStream().collect(Collectors.toUnmodifiableList());
+
+  // Column Based operations
+  @Nonnull
+  default Dataset<Row> select(@Nonnull final Dataset<Row> dataset,
+      @Nonnull final Function<T, Column> asColumn) {
+    return getTransform().map(t -> t.apply(dataset)).orElse(dataset)
+        .select(asStream()
+            .map(asColumn)
+            .toArray(Column[]::new));
+  }
+
+  default DatasetResult<Column> toFilter(@Nonnull final Function<T, Column> asColumn) {
+    final List<Column> filterColumns = asStream()
+        .map(asColumn)
+        .collect(Collectors.toUnmodifiableList());
     return filterColumns.isEmpty()
-           ? empty()
-           : asTransform().andThen(fromTransform(ds -> ds.filter(
-               filterColumns.stream().reduce(Column::and).orElseThrow()
+           ? DatasetResult.empty()
+           : this.<Column>asTransform().andThen(fromTransform(ds -> ds.filter(
+               filterColumns.stream()
+                   .reduce(Column::and).orElseThrow()
            )));
   }
 
   @Value
-  class Empty implements DatasetView {
+  class Empty<T> implements DatasetResult<T> {
 
     @Nonnull
     @Override
-    public Stream<Column> asStream() {
+    public Stream<T> asStream() {
       return Stream.empty();
     }
 
@@ -109,26 +119,26 @@ public interface DatasetView {
   }
 
   @Value
-  class OneColumn implements DatasetView {
+  class One<T> implements DatasetResult<T> {
 
-    Column column;
+    T value;
     Optional<Function<Dataset<Row>, Dataset<Row>>> transform;
 
     @Nonnull
     @Override
-    public Stream<Column> asStream() {
-      return Stream.of(column);
+    public Stream<T> asStream() {
+      return Stream.of(value);
     }
   }
 
   @Value
-  class Transform implements DatasetView {
+  class Transform<T> implements DatasetResult<T> {
 
     Function<Dataset<Row>, Dataset<Row>> transform;
 
     @Nonnull
     @Override
-    public Stream<Column> asStream() {
+    public Stream<T> asStream() {
       return Stream.empty();
     }
 
@@ -137,19 +147,17 @@ public interface DatasetView {
     public Optional<Function<Dataset<Row>, Dataset<Row>>> getTransform() {
       return Optional.of(transform);
     }
-
   }
 
-
   @Value
-  class ProjectionView implements DatasetView {
+  class Composite<T> implements DatasetResult<T> {
 
-    List<Column> columns;
+    List<T> columns;
     Optional<Function<Dataset<Row>, Dataset<Row>>> transform;
 
     @Nonnull
     @Override
-    public Stream<Column> asStream() {
+    public Stream<T> asStream() {
       return columns.stream();
     }
   }
