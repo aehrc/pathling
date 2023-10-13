@@ -32,6 +32,7 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 
@@ -71,6 +72,13 @@ final public class Paths {
         throw new IllegalArgumentException("Unknown constant: " + name);
       }
     }
+
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return name;
+    }
   }
 
   @Value
@@ -106,6 +114,14 @@ final public class Paths {
       final FunctionInput functionInput = new FunctionInput(context, input, arguments);
       return function.invoke(functionInput);
     }
+
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return functionIdentifier + "(" + arguments.stream().map(FhirPath::toExpression)
+          .collect(Collectors.joining(",")) + ")";
+    }
   }
 
   @Value
@@ -119,6 +135,12 @@ final public class Paths {
       final Optional<Collection> result = input.traverse(propertyName);
       checkUserInput(result.isPresent(), "No such child: " + propertyName);
       return result.get();
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return propertyName;
     }
   }
 
@@ -157,7 +179,12 @@ final public class Paths {
         @Nonnull final EvaluationContext context) {
       return StringCollection.fromLiteral(value);
     }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      // TODO: use a better conversion
+      return "'" + value + "'";
+    }
   }
-
-
 }

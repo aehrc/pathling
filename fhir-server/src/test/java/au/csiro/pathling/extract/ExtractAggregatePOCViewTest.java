@@ -17,10 +17,15 @@
 
 package au.csiro.pathling.extract;
 
+import static au.csiro.pathling.view.AggregationView.AGG_FUNCTIONS;
+
 import au.csiro.pathling.aggregate.AggregateRequest;
+import au.csiro.pathling.aggregate.AggregateResponse;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
@@ -35,14 +40,16 @@ import au.csiro.pathling.view.AbstractCompositeSelection;
 import au.csiro.pathling.view.AggregationView;
 import au.csiro.pathling.view.DatasetResult;
 import au.csiro.pathling.view.DefaultProjectionContext;
+import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ForEachOrNullSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
-import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ViewContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import com.google.common.collect.Streams;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,18 +59,18 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
+import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-
-import static au.csiro.pathling.view.AggregationView.AGG_FUNCTIONS;
 
 /**
  * @author John Grimes
@@ -369,6 +376,91 @@ class ExtractAggregatePOCViewTest {
     System.out.println(resultDataset.logicalPlan());
     System.out.println(resultDataset.queryExecution().executedPlan());
     System.out.println(resultDataset.queryExecution().optimizedPlan());
+  }
+
+
+  @Test
+  void testAggregationFull() {
+
+    final Parser parser = new Parser();
+    final List<String> grouppingExpressions = List.of(
+        //"name.family",
+        //"name.given",
+        "gender",
+        "maritalStatus.coding.code.first()",
+        "name.prefix.count()"
+    );
+
+    System.out.println("### Expressions: ###");
+    grouppingExpressions.forEach(System.out::println);
+
+    final Paths.ExtConsFhir contextPath = new Paths.ExtConsFhir("%resource");
+
+    final List<FhirPath<Collection>> groupingPaths = grouppingExpressions.stream()
+        .map(parser::parse)
+        .map(contextPath::andThen)
+        .collect(Collectors.toUnmodifiableList());
+
+    System.out.println("### GroupBy Paths: ###");
+    groupingPaths.forEach(System.out::println);
+
+    final DefaultProjectionContext execContext = DefaultProjectionContext.of(newContext(),
+        ResourceType.PATIENT);
+    final EvaluationContext evaluationContext = execContext.getEvaluationContext();
+
+    final List<Collection> groupByCollections = groupingPaths.stream()
+        .map(p -> p.apply(evaluationContext.getInputContext(), evaluationContext))
+        .collect(Collectors.toUnmodifiableList());
+
+    System.out.println("### GroupBy collections: ###");
+    groupByCollections.forEach(System.out::println);
+    groupByCollections.forEach(c -> System.out.println(c.getFhirType()));
+
+    final DatasetResult<Collection> datasetCollectionResult = groupByCollections.stream()
+        .map(DatasetResult::of)
+        .reduce(DatasetResult.empty(), DatasetResult::andThen);
+
+    System.out.println("### Grouping Collection Result: ###");
+    System.out.println(datasetCollectionResult);
+
+    final Dataset<Row> groupByDataset = datasetCollectionResult.select(execContext.getDataset(),
+        c -> c.getColumn().alias(c.toString()));
+
+    System.out.println("### GrouBy dataset  ###");
+    groupByDataset.show(false);
+
+    // collect and materialize the dataset
+
+    final List<Collection> groupbyCollections = datasetCollectionResult.asStream()
+        .collect(Collectors.toUnmodifiableList());
+
+    final List<AggregateResponse.Grouping> groupings = groupByDataset.collectAsList().stream()
+        .map(rowToGrouping(groupingPaths, groupbyCollections))
+        .collect(Collectors.toUnmodifiableList());
+    System.out.println("### Groupings  ###");
+    groupings.forEach(System.out::println);
+
+  }
+
+  @Nonnull
+  static Function<Row, AggregateResponse.Grouping> rowToGrouping(
+      @Nonnull final List<FhirPath<Collection>> groupByPaths,
+      @Nonnull final List<Collection> groupByCollections) {
+    return row -> {
+      final List<Optional<Type>> labels = IntStream.range(0, groupByCollections.size())
+          .mapToObj(
+              i -> ((Materializable<Type>) groupByCollections.get(i)).getFhirValueFromRow(row, i))
+          .collect(Collectors.toUnmodifiableList());
+
+      final String drillDown = Streams.zip(groupByPaths.stream().map(FhirPath::toExpression),
+              labels.stream(), Pair::of)
+          .map(p -> p.getRight().map(v -> v + " in " + p.getLeft())
+              .orElse(p.getLeft() + ".empty()"))
+          .collect(Collectors.joining(" and "));
+
+      return new AggregateResponse.Grouping(labels, Collections.emptyList(),
+          Optional.of(drillDown));
+    };
   }
 
   void mockResource(final ResourceType... resourceTypes) {

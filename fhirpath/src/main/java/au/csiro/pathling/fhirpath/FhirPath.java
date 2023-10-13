@@ -18,7 +18,7 @@ import lombok.Value;
 @FunctionalInterface
 public interface FhirPath<I extends Collection> {
 
-  FhirPath<?> NULL = new Null<>();
+  FhirPath<?> NULL = new This<>();
 
   I apply(@Nonnull final I input, @Nonnull final EvaluationContext context);
 
@@ -42,7 +42,8 @@ public interface FhirPath<I extends Collection> {
     return nullPath().equals(after)
            ? this
            : new Composite<>(
-               Stream.concat(asStream(), after.asStream()).collect(Collectors.toUnmodifiableList()));
+               Stream.concat(asStream(), after.asStream())
+                   .collect(Collectors.toUnmodifiableList()));
   }
 
   default Stream<FhirPath<I>> asStream() {
@@ -58,8 +59,14 @@ public interface FhirPath<I extends Collection> {
     return NULL.equals(this);
   }
 
+
+  @Nonnull
+  default String toExpression() {
+    return toString();
+  }
+
   @Value
-  class Null<I extends Collection> implements FhirPath<I> {
+  class This<I extends Collection> implements FhirPath<I> {
 
     @Override
     public I apply(@Nonnull final I input,
@@ -75,6 +82,12 @@ public interface FhirPath<I extends Collection> {
     @Override
     public FhirPath<I> andThen(@Nonnull final FhirPath<I> after) {
       return after;
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return "$this";
     }
   }
 
@@ -120,6 +133,14 @@ public interface FhirPath<I extends Collection> {
       return elements.size() > 2
              ? new Composite<>(elements.subList(0, elements.size() - 1))
              : elements.get(0);
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return elements.stream()
+          .map(FhirPath::toExpression)
+          .collect(Collectors.joining("."));
     }
   }
 
