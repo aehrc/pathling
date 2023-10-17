@@ -41,22 +41,26 @@ public class PrimitiveSelection implements Selection {
   @Nonnull
   Optional<String> alias;
 
+  boolean asCollection;
+
   public PrimitiveSelection(@Nonnull final FhirPath<Collection> path) {
-    this.path = path;
-    this.valueExtractor = ColumnExtractor.UNCONSTRAINED;
-    this.alias = Optional.empty();
+    this(path, Optional.empty());
   }
 
   public PrimitiveSelection(@Nonnull final FhirPath<Collection> path,
       @Nonnull final Optional<String> alias) {
-    this.path = path;
-    this.valueExtractor = ColumnExtractor.UNCONSTRAINED;
-    this.alias = alias;
+    this(path, alias, false);
+
+  }
+
+  public PrimitiveSelection(@Nonnull final FhirPath<Collection> path,
+      @Nonnull final Optional<String> alias, final boolean asCollection) {
+    this(path, ColumnExtractor.UNCONSTRAINED, alias, asCollection);
   }
 
   @Override
   public DatasetResult<Column> evaluate(@Nonnull final ProjectionContext context) {
-    final Column resultColumn = context.evalExpression(path, false);
+    final Column resultColumn = context.evalExpression(path, !asCollection);
     return DatasetResult.of(alias.map(resultColumn::alias).orElse(resultColumn));
   }
 

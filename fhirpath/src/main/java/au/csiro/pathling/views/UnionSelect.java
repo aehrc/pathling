@@ -19,7 +19,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class UnionSelection extends NestedSelectClause {
+public class UnionSelect extends NestedSelectClause {
 
   /**
    * The result of each selection within the union will be combined according to the semantics of

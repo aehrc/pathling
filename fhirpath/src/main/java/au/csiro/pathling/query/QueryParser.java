@@ -63,10 +63,7 @@ public class QueryParser {
         .collect(Collectors.toUnmodifiableList());
 
     return new ExtractView(request.getSubjectResource(),
-        select,
-        filter.isEmpty()
-        ? Optional.empty()
-        : Optional.of(decomposeFilter(filter))
+        select, decomposeFilter(filter)
     );
   }
 
@@ -120,11 +117,14 @@ public class QueryParser {
   }
 
   @Nonnull
-  public static Selection decomposeFilter(@Nonnull final List<FhirPath<Collection>> paths) {
+  public static Optional<Selection> decomposeFilter(
+      @Nonnull final List<FhirPath<Collection>> paths) {
     // TODO: this should check/enforce the booleannes of the paths results
-    return new FromSelection(new ExtConsFhir("%resource"),
-        paths.stream().map(PrimitiveSelection::new)
-            .collect(Collectors.toUnmodifiableList()));
+    return paths.isEmpty()
+           ? Optional.empty()
+           : Optional.of(new FromSelection(new ExtConsFhir("%resource"),
+               paths.stream().map(PrimitiveSelection::new)
+                   .collect(Collectors.toUnmodifiableList())));
   }
 
   @Nonnull

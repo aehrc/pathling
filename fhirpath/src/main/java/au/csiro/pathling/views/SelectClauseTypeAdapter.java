@@ -38,15 +38,15 @@ public class SelectClauseTypeAdapter extends TypeAdapter<SelectClause> {
     final JsonObject jsonObject = jsonElement.getAsJsonObject();
 
     if (jsonObject.has("path")) {
-      return gson.fromJson(jsonObject, DirectSelection.class);
+      return gson.fromJson(jsonObject, DirectSelect.class);
     } else if (jsonObject.has("from")) {
-      return gson.fromJson(jsonObject, FromSelection.class);
+      return gson.fromJson(jsonObject, FromSelect.class);
     } else if (jsonObject.has("forEach")) {
-      return gson.fromJson(jsonObject, ForEachSelection.class);
+      return gson.fromJson(jsonObject, ForEachSelect.class);
     } else if (jsonObject.has("forEachOrNull")) {
-      return gson.fromJson(jsonObject, ForEachOrNullSelection.class);
+      return gson.fromJson(jsonObject, ForEachOrNullSelect.class);
     } else if (jsonObject.has("union")) {
-      return gson.fromJson(jsonObject, UnionSelection.class);
+      return gson.fromJson(jsonObject, UnionSelect.class);
     } else {
       throw new JsonParseException(
           "Select clause must contain either 'path', 'from', 'forEach', 'forEachOrNull' or 'union'");

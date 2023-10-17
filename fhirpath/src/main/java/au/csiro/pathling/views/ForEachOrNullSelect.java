@@ -15,7 +15,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class ForEachOrNullSelection extends NestedSelectClause {
+public class ForEachOrNullSelect extends NestedSelectClause {
 
   /**
    * Same as forEach, but produces a single row with a null value if the collection is empty.

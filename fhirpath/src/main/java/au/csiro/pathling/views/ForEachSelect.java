@@ -16,7 +16,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class ForEachSelection extends NestedSelectClause {
+public class ForEachSelect extends NestedSelectClause {
 
   /**
    * Same as from, but unnests a new row for each item in the collection.

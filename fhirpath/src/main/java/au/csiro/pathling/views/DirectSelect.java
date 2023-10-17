@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class DirectSelection extends SelectClause {
+public class DirectSelect extends SelectClause {
 
   /**
    * Name of the column produced in the output, must be in a database-friendly format.
