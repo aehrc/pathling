@@ -17,6 +17,9 @@
 
 package au.csiro.pathling.test.assertions;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -43,7 +46,6 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   @Nonnull
   protected final Collection result;
-
 
   @Nonnull
   private final EvaluationContext evaluationContext;

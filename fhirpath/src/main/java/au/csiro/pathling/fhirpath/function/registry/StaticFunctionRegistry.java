@@ -5,10 +5,10 @@ import au.csiro.pathling.fhirpath.function.IifFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.ResolveFunction;
 import au.csiro.pathling.fhirpath.function.StandardFunctions;
+import au.csiro.pathling.fhirpath.function.TerminologyFunctions;
 import au.csiro.pathling.fhirpath.function.UntilFunction;
 import au.csiro.pathling.fhirpath.function.WrappedFunction;
 import au.csiro.pathling.fhirpath.function.terminology.DesignationFunction;
-import au.csiro.pathling.fhirpath.function.terminology.DisplayFunction;
 import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
 import au.csiro.pathling.fhirpath.function.terminology.PropertyFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
@@ -35,14 +35,14 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
         .put("iif", new IifFunction())
         .put("translate", new TranslateFunction())
         .put("until", new UntilFunction())
-        .put("display", new DisplayFunction())
         .put("property", new PropertyFunction())
         .put("designation", new DesignationFunction())
         .putAll(WrappedFunction.mapOf(StandardFunctions.class))
+        .putAll(WrappedFunction.mapOf(TerminologyFunctions.class))
         .putAll(WrappedFunction.mapOf(FhirViewFunctions.class))
         .build());
   }
-  
+
   public static StaticFunctionRegistry getInstance() {
     return INSTANCE;
   }

@@ -19,12 +19,56 @@ package au.csiro.pathling.fhirpath.column;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
 
 public abstract class ColumnCtx {
+
+  private static final Column NULL_LITERAL = functions.lit(null);
+
+
+  static class NullCtx extends ColumnCtx {
+
+    private static final ColumnCtx INSTANCE = new NullCtx();
+
+
+    @Override
+    public Column getValue() {
+      return NULL_LITERAL;
+    }
+
+    @Override
+    protected ColumnCtx copyOf(@Nonnull final Column newValue) {
+      return this;
+    }
+
+    @Nonnull
+    @Override
+    public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+        @Nonnull final Function<Column, Column> singularExpression) {
+      return this;
+    }
+
+    @Nonnull
+    @Override
+    public ColumnCtx flatten() {
+      return this;
+    }
+
+    @Nonnull
+    @Override
+    public ColumnCtx traverse(@Nonnull final String fieldName) {
+      return this;
+    }
+  }
+  
+  @Nonnull
+  public static ColumnCtx nullCtx() {
+    return NullCtx.INSTANCE;
+  }
 
   public abstract Column getValue();
 
@@ -68,6 +112,15 @@ public abstract class ColumnCtx {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
         c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
+    );
+  }
+
+
+  @Nonnull
+  public ColumnCtx removeNulls() {
+    return vectorize(
+        c -> functions.filter(c, Column::isNotNull),
+        Function.identity()
     );
   }
 
@@ -183,5 +236,16 @@ public abstract class ColumnCtx {
   @Nonnull
   public ColumnCtx anyFalse() {
     return min().not().orElse(false);
+  }
+
+  /**
+   * Call udf with this column as the first argument.
+   */
+  @Nonnull
+  public ColumnCtx callUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
+    return transform(c -> functions.callUDF(udfName,
+        Stream.concat(Stream.of(c), Stream.of(args).map(ColumnCtx::getValue))
+            .toArray(Column[]::new)));
+
   }
 }
