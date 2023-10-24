@@ -129,6 +129,12 @@ public class CodingCollection extends Collection implements Materializable<Codin
 
   @Nonnull
   @Override
+  public Optional<CodingCollection> asCoding() {
+    return Optional.of(this);
+  }
+
+  @Nonnull
+  @Override
   public Collection asStringPath() {
     final Column valueColumn = callUDF(CodingToLiteral.FUNCTION_NAME, getColumn());
     return CodingCollection.build(valueColumn, Optional.empty());

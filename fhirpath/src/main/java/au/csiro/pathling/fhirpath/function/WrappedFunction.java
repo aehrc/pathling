@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
@@ -94,6 +95,19 @@ public class WrappedFunction implements NamedFunction<Collection> {
     }
   }
 
+  public static Object resolveInput(@Nonnull final Collection input,
+      @Nonnull final Parameter inputParameter) {
+    if (CodingCollection.class.isAssignableFrom(inputParameter.getType())) {
+      // evaluate collection types 
+      return input.asCoding().orElseThrow();
+    } else if (Collection.class.isAssignableFrom(inputParameter.getType())) {
+      // evaluate collection types 
+      return input;
+    } else {
+      throw new RuntimeException("Cannot resolve input:" + inputParameter);
+    }
+  }
+  
   @Override
   @Nonnull
   public Collection invoke(@Nonnull final FunctionInput functionInput) {
@@ -111,7 +125,12 @@ public class WrappedFunction implements NamedFunction<Collection> {
             ? actualArguments.get(i)
             : null));
     // eval arguments
-    final Object[] invocationArgs = Stream.concat(Stream.of(functionInput.getInput()),
+
+    // we also may need to map the input here ....
+
+    final Object input = resolveInput(functionInput.getInput(), method.getParameters()[0]);
+
+    final Object[] invocationArgs = Stream.concat(Stream.of(input),
         resolvedArguments).toArray(Object[]::new);
     try {
       return (Collection) method.invoke(null, invocationArgs);

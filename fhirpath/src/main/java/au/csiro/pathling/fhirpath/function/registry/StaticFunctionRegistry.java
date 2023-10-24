@@ -8,7 +8,6 @@ import au.csiro.pathling.fhirpath.function.StandardFunctions;
 import au.csiro.pathling.fhirpath.function.TerminologyFunctions;
 import au.csiro.pathling.fhirpath.function.UntilFunction;
 import au.csiro.pathling.fhirpath.function.WrappedFunction;
-import au.csiro.pathling.fhirpath.function.terminology.MemberOfFunction;
 import au.csiro.pathling.fhirpath.function.terminology.SubsumesFunction;
 import au.csiro.pathling.fhirpath.function.terminology.TranslateFunction;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -27,7 +26,6 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
   public StaticFunctionRegistry() {
     super(new Builder<String, NamedFunction>()
         .put("resolve", new ResolveFunction())
-        .put("memberOf", new MemberOfFunction())
         .put("subsumes", new SubsumesFunction())
         .put("subsumedBy", new SubsumesFunction(true))
         .put("iif", new IifFunction())

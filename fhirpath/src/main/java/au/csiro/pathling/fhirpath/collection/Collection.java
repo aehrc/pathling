@@ -336,4 +336,140 @@ public class Collection implements Comparable, Numeric {
     return StdColumnCtx.of(getColumn());
   }
 
+
+  @Nonnull
+  public Optional<Reference> asReference(@Nonnull final EvaluationContext context) {
+    return getFhirType()
+        .filter(FHIRDefinedType.REFERENCE::equals)
+        .map(__ -> new ReferenceImpl(this, context));
+  }
+
+  @Nonnull
+  public Optional<CodingCollection> asCoding() {
+    return getFhirType()
+        .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
+        .map(__ -> (CodingCollection) traverse("coding").get());
+  }
+  
+  @Value
+  private static class ReferenceImpl implements Reference {
+
+    @Nonnull
+    Collection referenceCollection;
+
+    @Nonnull
+    EvaluationContext context;
+
+    @Nonnull
+    @Override
+    public ReferenceDefinition getDefinition() {
+      return (ReferenceDefinition) referenceCollection.getDefinition()
+          .get();
+    }
+
+    @Nonnull
+    @Override
+    public One<Collection> reverseResolve(@Nonnull final ResourceCollection masterCollection,
+        @Nonnull final ResourceType thisResourceType) {
+
+      final ReferenceDefinition referenceDefinition = getDefinition();
+
+      checkUserInput(
+          referenceDefinition.getReferenceTypes().contains(masterCollection.getResourceType()),
+          "Reference in argument to reverseResolve does not support input resource type: "
+              + masterCollection.getResourceType());
+      // TODO: Finish
+      final Column referenceColumn = referenceCollection.traverse("reference")
+          .map(Collection::getSingleton)
+          .orElseThrow();
+
+      final String joinId = thisResourceType.toCode();
+
+      final Function<Dataset<Row>, Dataset<Row>> sideEffect = ds -> {
+        final String joinKeyColumn = joinId + "__key";
+
+        // see if the join is already present
+        final Optional<String> maybeExisingKeyColumn = Stream.of(ds.columns())
+            .filter(joinKeyColumn::equals).findFirst();
+
+        if (maybeExisingKeyColumn.isEmpty()) {
+
+          final Dataset<Row> foreignDataset = context.getDataSource().read(thisResourceType);
+          final List<Column> aggs = Stream.of(foreignDataset.columns())
+              .map(c -> functions.collect_list(c).alias(joinId + "_" + c))
+              .collect(Collectors.toUnmodifiableList());
+
+          final Dataset<Row> foreignDatasetAgg = foreignDataset.groupBy(
+                  referenceColumn.alias(joinId + "__key"))
+              .agg(aggs.get(0), aggs.subList(1, aggs.size()).toArray(new Column[0]));
+
+          return ds.join(foreignDatasetAgg,
+              ds.col("id_versioned").equalTo(foreignDatasetAgg.col(joinKeyColumn)), "left_outer");
+        } else {
+          return ds;
+        }
+      };
+
+      return DatasetResult.one(ResourceCollection.build(
+          context.getFhirContext(),
+          thisResourceType,
+          Optional.of(joinId)), sideEffect);
+    }
+
+    @Nonnull
+    @Override
+    public One<Collection> resolve(@Nonnull final ResourceType foreignResourceType) {
+
+      final One<ColumnCtx> referenceColumn = referenceCollection.traverse(
+              "reference")
+          .get().getCtx().explode_outer();
+
+      // maybe better to use subquery here
+      // but regardless it needs to be collected after the join (or maybe just groupped by the current context)
+
+      final String joinId = foreignResourceType.toCode() + randomAlias();
+
+      final Function<Dataset<Row>, Dataset<Row>> sideEffect = ds -> {
+        final Dataset<Row> foreignDataset = context.getDataSource()
+            .read(foreignResourceType);
+
+        // reproject the foreign dataset before joining
+
+        final Dataset<Row> foreignDatasetPrefixed = foreignDataset.select(
+            Stream.of(foreignDataset.columns())
+                .map(foreignDataset::col)
+                .map(c -> c.alias(joinId + "_" + c))
+                .toArray(Column[]::new));
+
+        final Dataset<Row> joinedDs = ds.join(foreignDatasetPrefixed,
+            referenceColumn.getValue().getValue()
+                .equalTo(
+                    foreignDatasetPrefixed.col(joinId + "_id_versioned")),
+            "left_outer");
+
+        // and now we need to aggregate the joinedDS by the current "id" combining the values of the joined_dataset
+        final List<Column> aggs = Stream.concat(
+            Stream.of(ds.columns()).filter(c -> !c.equals("id"))
+                .map(c -> functions.first(c).alias(c)),
+            Stream.of(foreignDatasetPrefixed.columns())
+                .map(c -> functions.collect_list(c).alias(c))
+        ).collect(Collectors.toUnmodifiableList());
+
+        // TODO: this should actually the be current grouping context
+        return joinedDs.groupBy(functions.col("id"))
+            .agg(aggs.get(0), aggs.subList(1, aggs.size()).toArray(new Column[0]));
+      };
+
+      final Function<Dataset<Row>, Dataset<Row>> totalSideEffect = referenceColumn.getTransform()
+          .map(t -> t.andThen(sideEffect)).orElse(sideEffect);
+
+      // TODO: rewrite the joning of transforms
+      return DatasetResult.one(ResourceCollection.build(
+          context.getFhirContext(),
+          foreignResourceType,
+          Optional.of(joinId)), totalSideEffect);
+    }
+  }
+
+
 }

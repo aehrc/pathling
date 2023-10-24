@@ -245,6 +245,39 @@ public class ParserTest extends AbstractParserTest {
   //       .hasCodingValue(expectedCodingWithVersion);
   // }
 
+
+  @Test
+  void testBasicReverseResolve() {
+    mockResource(ResourceType.PATIENT, ResourceType.CONDITION);
+
+    final SparkPlan p = assertThatResultOf(
+        "reverseResolve(Condition.subject).code.coding")
+        //.isElementPath(IntegerCollection.class)
+        //.isSingular()
+        .selectOrderedResult()
+        .debugAllRows()
+        .getDataset().queryExecution().executedPlan();
+
+    System.out.println(p);
+  }
+
+
+  @Test
+  void testBasicResolve() {
+    mockResource(ResourceType.ENCOUNTER, ResourceType.CONDITION);
+
+    final SparkPlan p = assertThatResultOf(ResourceType.CONDITION,
+        "encounter.resolve().status")
+        //.isElementPath(IntegerCollection.class)
+        //.isSingular()
+        .selectOrderedResult()
+        .debugAllRows()
+        .getDataset().queryExecution().executedPlan();
+
+    System.out.println(p);
+  }
+
+
   @Test
   void testCountWithReverseResolve() {
     assertThatResultOf("reverseResolve(Condition.subject).code.coding.count()")
@@ -319,6 +352,19 @@ public class ParserTest extends AbstractParserTest {
         + "(http://snomed.info/sct|40055000|http://snomed.info/sct/32506021000036107/version/20200229)")
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSubsumesAndSubsumedBy-subsumedBy.tsv");
+  }
+
+  @Test
+  void testMemberOfCodings() {
+    TerminologyServiceHelpers.setupValidate(terminologyService)
+        .withValueSet("http://snomed.info/sct?fhir_vs=refset/32570521000036109",
+            CD_SNOMED_403190006, CD_SNOMED_284551006);
+    assertThatResultOf(ResourceType.CONDITION,
+        "where("
+            + "$this.code.memberOf('http://snomed.info/sct?fhir_vs=refset/32570521000036109'))"
+            + ".recordedDate")
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testMemberOfCodings.tsv");
   }
 
   @Test

@@ -29,7 +29,6 @@ public abstract class ColumnCtx {
 
   private static final Column NULL_LITERAL = functions.lit(null);
 
-
   static class NullCtx extends ColumnCtx {
 
     private static final ColumnCtx INSTANCE = new NullCtx();
@@ -64,7 +63,7 @@ public abstract class ColumnCtx {
       return this;
     }
   }
-  
+
   @Nonnull
   public static ColumnCtx nullCtx() {
     return NullCtx.INSTANCE;
@@ -257,10 +256,17 @@ public abstract class ColumnCtx {
    * Call udf with this column as the first argument.
    */
   @Nonnull
-  public ColumnCtx callUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
+  public ColumnCtx mapWithUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
     return transform(c -> functions.callUDF(udfName,
         Stream.concat(Stream.of(c), Stream.of(args).map(ColumnCtx::getValue))
             .toArray(Column[]::new)));
 
+  }
+  
+  @Nonnull
+  public ColumnCtx callUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
+    return copyOf(functions.callUDF(udfName,
+        Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnCtx::getValue))
+            .toArray(Column[]::new)));
   }
 }

@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
@@ -40,7 +41,7 @@ public abstract class TerminologyFunctions {
       @Nullable final StringCollection language) {
 
     return StringCollection.build(input.getCtx()
-        .callUDF("display", Optional.ofNullable(language)
+        .mapWithUDF("display", Optional.ofNullable(language)
             .map(StringCollection::getCtx)
             .map(ColumnCtx::singular)
             .orElse(ColumnCtx.nullCtx()))
@@ -77,7 +78,7 @@ public abstract class TerminologyFunctions {
       @Nullable final StringCollection language) {
 
     return StringCollection.build(input.getCtx()
-        .callUDF("designation",
+        .mapWithUDF("designation",
             Optional.ofNullable(use)
                 .map(CodingCollection::getCtx)
                 .map(ColumnCtx::singular)
@@ -91,4 +92,19 @@ public abstract class TerminologyFunctions {
     );
   }
 
+  /**
+   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
+   * values, based upon whether each item is present within the ValueSet identified by the supplied
+   * URL.
+   *
+   * @author John Grimes
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">memberOf</a>
+   */
+  @FhirpathFunction
+  public static BooleanCollection memberOf(@Nonnull final CodingCollection input,
+      @Nonnull final StringCollection valueSetURL) {
+    return BooleanCollection.build(
+        input.getCtx().callUDF("member_of", valueSetURL.getCtx().singular())
+    );
+  }
 }
