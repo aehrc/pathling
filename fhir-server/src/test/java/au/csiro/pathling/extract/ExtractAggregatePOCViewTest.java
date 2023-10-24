@@ -252,6 +252,52 @@ class ExtractAggregatePOCViewTest {
     System.out.println(resultDataset.queryExecution().executedPlan());
   }
 
+
+
+  @Test
+  void testExtractFGPDView() {
+    final List<String> expressions = List.of(
+        //"name.family",
+        //"name.given",
+        "id"
+    );
+
+    final List<String> filters = List.of(
+        "reverseResolve(Observation.subject).where(code.subsumedBy(http://snomed.info/sct|424144002)).exists(valueQuantity >= 18 'a' and valueQuantity <= 75 'a')",
+        "reverseResolve(MedicationRequest.subject).medicationCodeableConcept.subsumedBy(http://fhir.de/CodeSystem/bfarm/atc|A10B|2022).anyTrue()",
+        "reverseResolve(MedicationRequest.subject).medicationCodeableConcept.subsumedBy(http://fhir.de/CodeSystem/bfarm/atc|A10A|2022).anyTrue()",
+        "reverseResolve(Condition.subject).code.subsumedBy(http://fhir.de/CodeSystem/bfarm/icd-10-gm|E11).anyTrue()",
+        "reverseResolve(Observation.subject).where(code.subsumedBy(http://loinc.org|4548-4)).exists(valueQuantity >= 6 '%' and valueQuantity <= 10 '%')",
+        "reverseResolve(Condition.subject).code.subsumedBy(http://fhir.de/CodeSystem/bfarm/icd-10-gm|E10).allFalse()",
+        "reverseResolve(Condition.subject).code.subsumedBy(http://fhir.de/CodeSystem/bfarm/icd-10-gm|N17).allFalse()"
+    );
+
+    System.out.println("### Expressions: ###");
+    expressions.forEach(System.out::println);
+    System.out.println("### Filters: ###");
+    filters.forEach(System.out::println);
+
+
+    final ExtractRequest extractRequest = ExtractRequest.fromUserInput(
+        ResourceType.PATIENT,
+        Optional.of(expressions),
+        Optional.of(filters),
+        Optional.empty()
+    );
+
+    final QueryParser queryParser = new QueryParser(new Parser());
+    final ExtractView extractView = queryParser.toView(extractRequest);
+    System.out.println("## Extract view ##");
+    extractView.printTree();
+    final Dataset<Row> resultDataset = extractView.evaluate(newContext());
+    resultDataset.show(false);
+    System.out.println(resultDataset.logicalPlan());
+    System.out.println(resultDataset.queryExecution().executedPlan());
+
+    System.out.println(resultDataset.queryExecution().optimizedPlan());
+
+  }
+
   @Test
   void testAggregation() {
 
@@ -467,4 +513,33 @@ class ExtractAggregatePOCViewTest {
     TestHelpers.mockResource(dataSource, spark, resourceTypes);
   }
 
+
+  @Test
+  void testExtractViewWithReverseResolve() {
+
+    final List<String> expressions = List.of(
+        "id",
+        "gender",
+        "reverseResolve(Condition.subject).clinicalStatus",
+        "reverseResolve(Observation.subject).id.count()"
+    );
+
+    System.out.println("### Expressions: ###");
+    expressions.forEach(System.out::println);
+    final ExtractRequest extractRequest = ExtractRequest.fromUserInput(
+        ResourceType.PATIENT,
+        Optional.of(expressions),
+        Optional.empty(),
+        Optional.empty()
+    );
+
+    final QueryParser queryParser = new QueryParser(new Parser());
+    final ExtractView extractView = queryParser.toView(extractRequest);
+    System.out.println("## Extract view ##");
+    extractView.printTree();
+    final Dataset<Row> resultDataset = extractView.evaluate(newContext());
+    resultDataset.show(false);
+    System.out.println(resultDataset.logicalPlan());
+    System.out.println(resultDataset.queryExecution().executedPlan());
+  }
 }

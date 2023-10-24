@@ -19,17 +19,13 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.BooleanCollection;
-import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
-import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.BooleanLiteralContext;
@@ -41,12 +37,16 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.NumberLiteralC
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.QuantityLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.StringLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralContext;
+import au.csiro.pathling.fhirpath.path.Literals.BooleanLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.CalendarDurationLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.CodingLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.StringLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.UcumQuantityLiteral;
 import java.text.ParseException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import au.csiro.pathling.fhirpath.path.Paths.StringLiteral;
 import org.antlr.v4.runtime.tree.TerminalNode;
-import org.fhir.ucum.UcumException;
 
 /**
  * This class deals with terms that are literal expressions.
@@ -129,11 +129,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
   @Nonnull
   public FhirPath<Collection> visitBooleanLiteral(
       @Nullable final BooleanLiteralContext ctx) {
-    requireNonNull(ctx);
-    @Nullable final String fhirPath = ctx.getText();
-    requireNonNull(fhirPath);
-
-    return (input, context) -> BooleanCollection.fromLiteral(fhirPath);
+    return new BooleanLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
   @Override
@@ -150,38 +146,17 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
     @Nullable final String number = ctx.quantity().NUMBER().getText();
     requireNonNull(number);
     @Nullable final TerminalNode ucumUnit = ctx.quantity().unit().STRING();
-
-    return (input, context) -> {
-      if (ucumUnit == null) {
-        // Create a calendar duration literal.
-        final String fhirPath = String.format("%s %s", number, ctx.quantity().unit().getText());
-        return QuantityCollection.fromCalendarDurationString(fhirPath);
-      } else {
-        // Create a UCUM Quantity literal.
-        final String fhirPath = String.format("%s %s", number, ucumUnit.getText());
-        try {
-          return QuantityCollection.fromUcumString(fhirPath, Ucum.service());
-        } catch (final UcumException e) {
-          throw new RuntimeException(e);
-        }
-      }
-    };
+    return (ucumUnit == null)
+           ? new CalendarDurationLiteral(
+        String.format("%s %s", number, ctx.quantity().unit().getText()))
+           : new UcumQuantityLiteral(String.format("%s %s", number, ucumUnit.getText()));
   }
 
   @Override
   @Nonnull
   public FhirPath<Collection> visitCodingLiteral(
       @Nullable final CodingLiteralContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    requireNonNull(fhirPath);
-
-    return (input, context) -> {
-      try {
-        return CodingCollection.fromLiteral(fhirPath);
-      } catch (final IllegalArgumentException e) {
-        throw new InvalidUserInputError(e.getMessage(), e);
-      }
-    };
+    return new CodingLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
 }

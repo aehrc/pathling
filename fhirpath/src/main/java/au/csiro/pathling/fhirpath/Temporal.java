@@ -84,7 +84,7 @@ public interface Temporal {
 
       final Column valueColumn = functions.callUDF(functionName, source.getColumn(),
           target.getColumn());
-      return DateTimeCollection.build(valueColumn, Optional.empty(), true);
+      return DateTimeCollection.build(valueColumn, Optional.empty());
     };
   }
 

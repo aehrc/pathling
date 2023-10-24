@@ -66,12 +66,11 @@ public class DateTimeCollection extends Collection implements
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link DateTimeCollection}
    */
   @Nonnull
   public static DateTimeCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new DateTimeCollection(column, Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.DATETIME), definition);
   }
@@ -87,7 +86,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
       throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateTimeCollection.build(lit(dateString), Optional.empty(), true);
+    return DateTimeCollection.build(lit(dateString), Optional.empty());
   }
 
   @Nonnull

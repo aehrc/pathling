@@ -51,12 +51,11 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link TimeCollection}
    */
   @Nonnull
   public static TimeCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new TimeCollection(column, Optional.of(FhirPathType.TIME),
         Optional.of(FHIRDefinedType.TIME), definition);
   }
@@ -70,7 +69,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) {
     final String timeString = literal.replaceFirst("^@T", "");
-    return TimeCollection.build(lit(timeString), Optional.empty(), true);
+    return TimeCollection.build(lit(timeString), Optional.empty());
   }
 
   @Nonnull

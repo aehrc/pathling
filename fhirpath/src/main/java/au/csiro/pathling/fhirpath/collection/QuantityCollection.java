@@ -59,7 +59,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   public QuantityCollection(@Nonnull final Column column,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<? extends NodeDefinition> definition) {
     super(column, type, fhirType, definition);
   }
 
@@ -68,14 +68,13 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
    *
    * @param column The column to use
    * @param definition The definition to use
-   * @param singular Whether the collection is singular
    * @return A new instance of {@link QuantityCollection}
    */
   @Nonnull
   public static QuantityCollection build(@Nonnull final Column column,
-      @Nonnull final Optional<NodeDefinition> definition, final boolean singular) {
+      @Nonnull final Optional<NodeDefinition> definition) {
     return new QuantityCollection(column, Optional.of(FhirPathType.QUANTITY),
-        Optional.of(FHIRDefinedType.QUANTITY), definition, singular);
+        Optional.of(FHIRDefinedType.QUANTITY), definition);
   }
 
   /**
@@ -122,7 +121,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   public static QuantityCollection fromCalendarDurationString(@Nonnull final String fhirPath) {
 
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
-    return QuantityCollection.build(column, Optional.empty(), true);
+    return QuantityCollection.build(column, Optional.empty());
   }
 
   @Nonnull
@@ -206,8 +205,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
     quantity.setCode(unit);
     display.ifPresent(quantity::setUnit);
 
-    return QuantityCollection.build(QuantityEncoding.encodeLiteral(quantity), Optional.empty(),
-        true);
+    return QuantityCollection.build(QuantityEncoding.encodeLiteral(quantity), Optional.empty());
   }
 
   @Nonnull
@@ -265,7 +263,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(resultQuantityColumn, Optional.empty(), true);
+      return QuantityCollection.build(resultQuantityColumn, Optional.empty());
     };
   }
 
