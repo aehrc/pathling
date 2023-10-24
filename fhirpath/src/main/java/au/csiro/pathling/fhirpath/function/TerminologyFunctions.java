@@ -18,12 +18,13 @@
 package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Optional;
 
 public abstract class TerminologyFunctions {
 
@@ -44,6 +45,49 @@ public abstract class TerminologyFunctions {
             .map(ColumnCtx::singular)
             .orElse(ColumnCtx.nullCtx()))
         .removeNulls()
+    );
+  }
+
+  /**
+   * This function returns the value of a property for a Coding.
+   *
+   * @author Piotr Szul
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#property">property</a>
+   */
+  @FhirpathFunction
+  public static Collection property(@Nonnull final CodingCollection input,
+      @Nonnull final StringCollection code,
+      @Nullable final StringCollection type,
+      @Nullable final StringCollection language) {
+    // OK: This is actually tricky because the type needs to be a literal. 
+    // It would be better if it was type specifier (but literal can be incorporated as well)
+    throw new UnsupportedOperationException("Not implemented: property()");
+  }
+
+  /**
+   * This function returns the designations of a Coding.
+   *
+   * @author Piotr Szul
+   * @see <a
+   * href="https://pathling.csiro.au/docs/fhirpath/functions.html#designation">designation</a>
+   */
+  @FhirpathFunction
+  public static StringCollection designation(@Nonnull final CodingCollection input,
+      @Nullable final CodingCollection use,
+      @Nullable final StringCollection language) {
+
+    return StringCollection.build(input.getCtx()
+        .callUDF("designation",
+            Optional.ofNullable(use)
+                .map(CodingCollection::getCtx)
+                .map(ColumnCtx::singular)
+                .orElse(ColumnCtx.nullCtx()),
+            Optional.ofNullable(language)
+                .map(StringCollection::getCtx)
+                .map(ColumnCtx::singular)
+                .orElse(ColumnCtx.nullCtx())
+        )
+        .flatten().removeNulls()
     );
   }
 

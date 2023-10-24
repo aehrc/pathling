@@ -85,6 +85,21 @@ public abstract class ColumnCtx {
   @Nonnull
   public abstract ColumnCtx traverse(@Nonnull final String fieldName);
 
+
+  @Nonnull
+  public ColumnCtx toArray() {
+    return vectorize(
+        Function.identity(),
+        c -> functions.when(c.isNotNull(), functions.array(c))
+    );
+  }
+
+  @Nonnull
+  public ColumnCtx combine(@Nonnull final ColumnCtx other) {
+    return copyOf(functions.concat(toArray().getValue(), other.toArray().getValue()));
+  }
+
+  @SuppressWarnings("unused")
   @Nonnull
   public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression) {
     // the default implementation just wraps the element info array if needed
