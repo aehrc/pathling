@@ -71,7 +71,7 @@ public interface ProjectionContext {
    * @return the result as a column
    */
   @Nonnull
-  Column evalExpression(@Nonnull final FhirPath<Collection> path, final boolean singularise);
+  One<Column> evalExpression(@Nonnull final FhirPath<Collection> path, final boolean singularise);
 
 
   /**
@@ -81,7 +81,7 @@ public interface ProjectionContext {
    * @return the result as a column
    */
   @Nonnull
-  default Column evalExpression(@Nonnull final FhirPath<Collection> path) {
+  default One<Column> evalExpression(@Nonnull final FhirPath<Collection> path) {
     return evalExpression(path, true);
   }
 
@@ -95,9 +95,10 @@ public interface ProjectionContext {
    * @return the result as a column
    */
   @Nonnull
-  default Column evalExpression(@Nonnull final FhirPath<Collection> path, final boolean singularise,
+  default One<Column> evalExpression(@Nonnull final FhirPath<Collection> path,
+      final boolean singularise,
       @Nonnull final String alias) {
-    return evalExpression(path, singularise).as(alias);
+    return evalExpression(path, singularise).map(c -> c.as(alias));
   }
 
   /**
@@ -109,7 +110,8 @@ public interface ProjectionContext {
    * @return the result as a column
    */
   @Nonnull
-  default Column evalExpression(@Nonnull final FhirPath<Collection> path, final boolean singularise,
+  default One<Column> evalExpression(@Nonnull final FhirPath<Collection> path,
+      final boolean singularise,
       @Nonnull final
       Optional<String> maybeAlias) {
     return maybeAlias.map(alias -> evalExpression(path, singularise, alias))

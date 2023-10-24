@@ -172,7 +172,8 @@ class ExtractAggregatePOCViewTest {
   @BeforeEach
   void setUp() {
     SharedMocks.resetAll();
-    mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.OBSERVATION);
+    mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.OBSERVATION,
+        ResourceType.MEDICATIONREQUEST);
   }
 
 
@@ -276,7 +277,6 @@ class ExtractAggregatePOCViewTest {
     expressions.forEach(System.out::println);
     System.out.println("### Filters: ###");
     filters.forEach(System.out::println);
-
 
     final ExtractRequest extractRequest = ExtractRequest.fromUserInput(
         ResourceType.PATIENT,

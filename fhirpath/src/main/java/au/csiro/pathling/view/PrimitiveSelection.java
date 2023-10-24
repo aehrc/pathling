@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.view.DatasetResult.One;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -60,8 +61,8 @@ public class PrimitiveSelection implements Selection {
 
   @Override
   public DatasetResult<Column> evaluate(@Nonnull final ProjectionContext context) {
-    final Column resultColumn = context.evalExpression(path, !asCollection);
-    return DatasetResult.of(alias.map(resultColumn::alias).orElse(resultColumn));
+    final One<Column> resultColumn = context.evalExpression(path, !asCollection);
+    return alias.map(a -> resultColumn.map(c -> c.as(a))).orElse(resultColumn);
   }
 
   @Override

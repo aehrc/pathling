@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.view;
 
-import static au.csiro.pathling.utilities.Strings.randomAlias;
-
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -32,7 +30,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @Value
@@ -42,11 +39,11 @@ public class DefaultProjectionContext implements ProjectionContext {
 
   @Nonnull
   @Override
-  public Column evalExpression(@Nonnull final FhirPath<Collection> path,
+  public One<Column> evalExpression(@Nonnull final FhirPath<Collection> path,
       final boolean singularise) {
     return singularise
-           ? evaluateInternal(path).getSingleton()
-           : evaluateInternal(path).getColumn();
+           ? evaluateInternal(path).map(Collection::getSingleton)
+           : evaluateInternal(path).map(Collection::getColumn);
   }
 
   @Nonnull
