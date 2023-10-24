@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
+import au.csiro.pathling.sql.Terminology;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -93,9 +94,9 @@ public abstract class TerminologyFunctions {
   }
 
   /**
-   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of boolean
-   * values, based upon whether each item is present within the ValueSet identified by the supplied
-   * URL.
+   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of
+   * boolean values, based upon whether each item is present within the ValueSet identified by the
+   * supplied URL.
    *
    * @author John Grimes
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#memberof">memberOf</a>
@@ -106,5 +107,36 @@ public abstract class TerminologyFunctions {
     return BooleanCollection.build(
         input.getCtx().callUDF("member_of", valueSetURL.getCtx().singular())
     );
+  }
+
+
+  /**
+   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of
+   * boolean values whether based upon whether each item subsumes one or more Codings or
+   * CodeableConcepts in the argument set.
+   *
+   * @author John Grimes
+   * @author Piotr Szul
+   * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
+   */
+  @FhirpathFunction
+  public static BooleanCollection subsumes(@Nonnull final CodingCollection input,
+      @Nonnull final CodingCollection codes) {
+    return BooleanCollection.build(Terminology.subsumes(input.getColumn(), codes.getColumn()));
+  }
+  
+  /**
+   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of
+   * boolean values whether based upon whether each item  is subsumedBy one or more Codings or
+   * CodeableConcepts in the argument set.
+   *
+   * @author John Grimes
+   * @author Piotr Szul
+   * @see <a href="https://hl7.org/fhir/R4/fhirpath.html#functions">Additional functions</a>
+   */
+  @FhirpathFunction
+  public static BooleanCollection subsumedBy(@Nonnull final CodingCollection input,
+      @Nonnull final CodingCollection codes) {
+    return BooleanCollection.build(Terminology.subsumed_by(input.getColumn(), codes.getColumn()));
   }
 }

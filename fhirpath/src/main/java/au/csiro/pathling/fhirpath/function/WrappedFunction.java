@@ -79,7 +79,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
         //         "Parameter " + parameter + " is not nullable and no argument was provided"));
       } else if (Collection.class.isAssignableFrom(parameter.getType())) {
         // evaluate collection types 
-        return argument.apply(input, evaluationContext);
+        return resolveCollection(argument.eval(input, evaluationContext), parameter);
       } else if (CollectionExpression.class.isAssignableFrom(parameter.getType())) {
         // bind with context
         return (CollectionExpression) (c -> argument.apply(c, evaluationContext));
@@ -95,19 +95,19 @@ public class WrappedFunction implements NamedFunction<Collection> {
     }
   }
 
-  public static Object resolveInput(@Nonnull final Collection input,
-      @Nonnull final Parameter inputParameter) {
-    if (CodingCollection.class.isAssignableFrom(inputParameter.getType())) {
+  public static Object resolveCollection(@Nonnull final Collection collection,
+      @Nonnull final Parameter parameter) {
+    if (CodingCollection.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
-      return input.asCoding().orElseThrow();
-    } else if (Collection.class.isAssignableFrom(inputParameter.getType())) {
+      return collection.asCoding().orElseThrow();
+    } else if (Collection.class.isAssignableFrom(parameter.getType())) {
       // evaluate collection types 
-      return input;
+      return collection;
     } else {
-      throw new RuntimeException("Cannot resolve input:" + inputParameter);
+      throw new RuntimeException("Cannot resolve input:" + parameter);
     }
   }
-  
+
   @Override
   @Nonnull
   public Collection invoke(@Nonnull final FunctionInput functionInput) {
@@ -128,7 +128,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
 
     // we also may need to map the input here ....
 
-    final Object input = resolveInput(functionInput.getInput(), method.getParameters()[0]);
+    final Object input = resolveCollection(functionInput.getInput(), method.getParameters()[0]);
 
     final Object[] invocationArgs = Stream.concat(Stream.of(input),
         resolvedArguments).toArray(Object[]::new);
