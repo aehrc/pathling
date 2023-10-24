@@ -22,11 +22,13 @@ import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.sql.Terminology;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.apache.spark.sql.functions;
 
 public abstract class TerminologyFunctions {
 
@@ -124,7 +126,7 @@ public abstract class TerminologyFunctions {
       @Nonnull final CodingCollection codes) {
     return BooleanCollection.build(Terminology.subsumes(input.getColumn(), codes.getColumn()));
   }
-  
+
   /**
    * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set of
    * boolean values whether based upon whether each item  is subsumedBy one or more Codings or
@@ -139,4 +141,39 @@ public abstract class TerminologyFunctions {
       @Nonnull final CodingCollection codes) {
     return BooleanCollection.build(Terminology.subsumed_by(input.getColumn(), codes.getColumn()));
   }
+
+  /**
+   * A function that takes a set of Codings or CodeableConcepts as inputs and returns a set Codings
+   * translated using provided concept map URL.
+   * <p>
+   * Signature:
+   * <pre>
+   * collection&lt;Coding|CodeableConcept&gt; -&gt; translate(conceptMapUrl: string, reverse = false,
+   * equivalence = 'equivalent') : collection&lt;Coding&gt;
+   * </pre>
+   * <p>
+   * Uses: <a href="https://www.hl7.org/fhir/operation-conceptmap-translate.html">Translate
+   * Operation</a>
+   *
+   * @author Piotr Szul
+   * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#translate">translate</a>
+   */
+  @FhirpathFunction
+  public static CodingCollection translate(@Nonnull final CodingCollection input,
+      @Nonnull final StringCollection conceptMapUrl,
+      @Nullable final BooleanCollection reverse, @Nullable final StringCollection equivalence,
+      @Nullable final StringCollection target) {
+    return (CodingCollection) input.copyWith(
+        input.getCtx().callUDF("translate_coding",
+            conceptMapUrl.getCtx().singular(),
+            Optional.ofNullable(reverse).map(BooleanCollection::getCtx).map(ColumnCtx::singular)
+                .orElse(StdColumnCtx.of(functions.lit(false))),
+            Optional.ofNullable(equivalence).map(StringCollection::getCtx).map(ColumnCtx::singular)
+                .orElse(StdColumnCtx.of(functions.lit("equivalent")))
+                .transform(c -> functions.split(c, ",")),
+            Optional.ofNullable(target).map(StringCollection::getCtx).map(ColumnCtx::singular)
+                .orElse(ColumnCtx.nullCtx())
+        ));
+  }
+
 }
