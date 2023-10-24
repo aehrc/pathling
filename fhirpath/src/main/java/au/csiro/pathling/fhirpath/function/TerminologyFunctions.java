@@ -17,19 +17,26 @@
 
 package au.csiro.pathling.fhirpath.function;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.sql.Terminology;
+import au.csiro.pathling.sql.udf.PropertyUdf;
+import au.csiro.pathling.utilities.Functions;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.functions;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
+@SuppressWarnings("unused")
 public abstract class TerminologyFunctions {
 
 
@@ -63,9 +70,26 @@ public abstract class TerminologyFunctions {
       @Nonnull final StringCollection code,
       @Nullable final StringCollection type,
       @Nullable final StringCollection language) {
-    // OK: This is actually tricky because the type needs to be a literal. 
-    // It would be better if it was type specifier (but literal can be incorporated as well)
-    throw new UnsupportedOperationException("Not implemented: property()");
+
+    final FHIRDefinedType propertyType = FHIRDefinedType.fromCode(Optional.ofNullable(type)
+        .map(StringCollection::toLiteralValue)
+        .orElse("string"));
+
+    checkUserInput(PropertyUdf.ALLOWED_FHIR_TYPES.contains(propertyType),
+        String.format("Invalid property type: %s", propertyType));
+
+    final ColumnCtx resultCtx = input.getCtx()
+        .mapWithUDF(PropertyUdf.getNameForType(propertyType),
+            code.getCtx().singular(),
+            Optional.ofNullable(language)
+                .map(StringCollection::getCtx)
+                .map(ColumnCtx::singular)
+                .orElse(ColumnCtx.nullCtx())
+        ).flatten().removeNulls();
+
+    return Collection.build(resultCtx.getValue(), propertyType,
+        input.getDefinition().flatMap(Functions.maybeCast(ElementDefinition.class))
+            .filter(__ -> propertyType == FHIRDefinedType.CODING));
   }
 
   /**

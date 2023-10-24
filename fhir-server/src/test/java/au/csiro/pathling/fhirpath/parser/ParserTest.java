@@ -313,17 +313,36 @@ public class ParserTest extends AbstractParserTest {
         .selectOrderedResult()
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
   }
-
-
-
+  
   @Test
-  void testSimpleSubsumesAndSubsumedBy() {
+  void testSimpleSubsumes() {
 
     setupSubsumes(terminologyService);
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
     // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
     
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.coding.subsumes(http://snomed.info/sct|40055000)")
+        .isElementPath(BooleanCollection.class)
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testSimpleSubsumes-one.tsv");
+
+    assertThatResultOf(ResourceType.CONDITION,
+        "code.subsumes($this)")
+        .isElementPath(BooleanCollection.class)
+        .selectOrderedResult()
+        .hasRows(spark, "responses/ParserTest/testSimpleSubsumes-self.tsv");
+  }
+  
+  @Test
+  void testSimpleSubsumedBy() {
+
+    setupSubsumes(terminologyService);
+    // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
+    // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
+    // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
+
     assertThatResultOf(ResourceType.CONDITION,
         "code.subsumedBy(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanCollection.class)

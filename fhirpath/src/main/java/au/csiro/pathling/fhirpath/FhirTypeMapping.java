@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -40,7 +41,7 @@ public abstract class FhirTypeMapping {
   /**
    * @return the FHIRPath type that the given FHIR type can be automatically converted to
    */
-  @Nonnull
+  @Nullable
   public static FhirPathType get(@Nonnull final FHIRDefinedType fhirType) {
     return FhirTypeMapping.FHIR_TO_FHIRPATH_TYPE.get(fhirType);
   }

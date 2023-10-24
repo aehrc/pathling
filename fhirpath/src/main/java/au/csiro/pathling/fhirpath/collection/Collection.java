@@ -124,6 +124,13 @@ public class Collection implements Comparable, Numeric {
     return new Collection(column, fhirPathType, fhirType, definition);
   }
 
+  @Nonnull
+  public static Collection build(@Nonnull final Column column,
+      @Nonnull final FHIRDefinedType fhirType,
+      @Nonnull final Optional<ElementDefinition> definition) {
+    return getInstance(column, Optional.of(fhirType), definition);
+  }
+
   /**
    * Builds the appropriate subtype of {@link Collection} based upon the supplied
    * {@link ElementDefinition}.
@@ -172,14 +179,14 @@ public class Collection implements Comparable, Numeric {
         .orElseThrow(() -> new IllegalArgumentException("Must have a fhirType or a definition"));
     final Class<? extends Collection> elementPathClass = classForType(resolvedType).orElse(
         Collection.class);
-    final FhirPathType fhirPathType = FhirPathType.forFhirType(resolvedType);
+    final Optional<FhirPathType> fhirPathType = FhirPathType.forFhirType(resolvedType);
 
     try {
       // Call its constructor and return.
       final Constructor<? extends Collection> constructor = elementPathClass
           .getDeclaredConstructor(Column.class, Optional.class, Optional.class, Optional.class);
       return constructor
-          .newInstance(column, Optional.ofNullable(fhirPathType), fhirType, definition);
+          .newInstance(column, fhirPathType, fhirType, definition);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
                    InvocationTargetException e) {
       throw new RuntimeException("Problem building a Collection object", e);
@@ -350,7 +357,7 @@ public class Collection implements Comparable, Numeric {
         .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
         .map(__ -> (CodingCollection) traverse("coding").get());
   }
-  
+
   @Value
   private static class ReferenceImpl implements Reference {
 

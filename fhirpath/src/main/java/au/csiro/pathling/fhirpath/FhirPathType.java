@@ -1,7 +1,7 @@
 package au.csiro.pathling.fhirpath;
 
+import java.util.Optional;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Getter;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -21,9 +21,7 @@ public enum FhirPathType {
   DATETIME("DateTime"),
   TIME("Time"),
   QUANTITY("Quantity"),
-  CODING("Coding"),
-  TYPE_SPECIFIER("TypeSpecifier");
-
+  CODING("Coding");
 
   @Nonnull
   private final String typeSpecifier;
@@ -37,9 +35,9 @@ public enum FhirPathType {
    * @return the corresponding {@link FhirPathType} according to the rules of automatic conversion
    * within the FHIR spec
    */
-  @Nullable
-  public static FhirPathType forFhirType(@Nonnull final FHIRDefinedType fhirType) {
-    return FhirTypeMapping.get(fhirType);
+  @Nonnull
+  public static Optional<FhirPathType> forFhirType(@Nonnull final FHIRDefinedType fhirType) {
+    return Optional.ofNullable(FhirTypeMapping.get(fhirType));
   }
 
 }
