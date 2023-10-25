@@ -17,6 +17,12 @@
 
 package au.csiro.pathling.view;
 
+import static au.csiro.pathling.extract.ExtractResultType.FLAT;
+import static au.csiro.pathling.utilities.Functions.maybeCast;
+
+import au.csiro.pathling.extract.ExtractResultType;
+import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -31,21 +37,29 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @AllArgsConstructor
 public class ExtractView {
 
+  @Nonnull
   ResourceType subjectResource;
+  @Nonnull
   Selection selection;
+  @Nonnull
   Optional<Selection> where;
+  @Nonnull
+  ExtractResultType resultType;
 
   public ExtractView(@Nonnull final ResourceType subjectResource,
-      @Nonnull final Selection selection) {
-    this(subjectResource, selection, Optional.empty());
+      @Nonnull final Selection selection, final Optional<Selection> where) {
+    this(subjectResource, selection, where, ExtractResultType.UNCONSTRAINED);
   }
 
   public Dataset<Row> evaluate(@Nonnull final ViewContext context) {
     final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
         subjectResource);
-    final DatasetResult<Column> selectionResult = selection.evaluate(projectionContext);
+
+    final DatasetResult<Column> selectionResult = selection.evaluate(projectionContext)
+        .map(this::toColumn);
+
     return where.map(projectionContext::evaluate)
-        .map(dr -> dr.toFilter(Function.identity()))
+        .map(dr -> dr.toFilter(cr -> cr.getCollection().getSingleton()))
         .map(selectionResult::andThen)
         .orElse(selectionResult)
         .select(projectionContext.getDataset(), Function.identity());
@@ -60,5 +74,23 @@ public class ExtractView {
       w.toTreeString()
           .forEach(s -> System.out.println("  " + s));
     });
+  }
+
+
+  @Nonnull
+  private Column toColumn(@Nonnull final CollectionResult result) {
+    final Collection collection = result.getCollection();
+    final PrimitiveSelection info = result.getSelection();
+
+    final Collection finalResult = FLAT.equals(resultType)
+                                   ? Optional.of(collection)
+                                       .flatMap(maybeCast(StringCoercible.class))
+                                       .map(StringCoercible::asStringPath).orElseThrow()
+                                   : collection;
+
+    final Column columnResult = info.isAsCollection()
+                                ? finalResult.getColumn()
+                                : finalResult.getSingleton();
+    return info.getAlias().map(columnResult::alias).orElse(columnResult);
   }
 }

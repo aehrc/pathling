@@ -58,7 +58,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
       @Nonnull final ExtractResultType resultType) {
     log.info("Executing request: {}", query);
     final QueryParser queryParser = new QueryParser(new Parser());
-    final ExtractView extractView = queryParser.toView(query);
+    final ExtractView extractView = queryParser.toView(query, resultType);
     extractView.printTree();
     final Dataset<Row> resultDataset = extractView.evaluate(newContext());
     return query.getLimit().map(resultDataset::limit).orElse(resultDataset);

@@ -326,7 +326,8 @@ class ExtractAggregatePOCViewTest {
     final DefaultProjectionContext execContext = DefaultProjectionContext.of(newContext(),
         ResourceType.PATIENT);
 
-    final DatasetResult<Column> groupingResult = groupingSelction.evaluate(execContext);
+    final DatasetResult<Column> groupingResult = groupingSelction.evaluate(execContext).map(
+        cr -> cr.getCollection().getColumn());
     final Dataset<Row> transDs = groupingResult.applyTransform(execContext.getDataset());
 
     transDs.show(false);
@@ -362,7 +363,8 @@ class ExtractAggregatePOCViewTest {
     aggFunctions.forEach(System.out::println);
 
     final Selection aggView = decompose(aggFields);
-    final DatasetResult<Column> aggResult = aggView.evaluate(execContext);
+    final DatasetResult<Column> aggResult = aggView.evaluate(execContext).map(
+        cr -> cr.getCollection().getColumn());
 
     System.out.println("### Pre-grouping ####");
     groupingResult.andThen(aggResult).select(execContext.getDataset(), Function.identity())

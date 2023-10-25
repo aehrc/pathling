@@ -19,6 +19,7 @@ package au.csiro.pathling.query;
 
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.extract.ExtractRequest;
+import au.csiro.pathling.extract.ExtractResultType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.Parser;
@@ -50,6 +51,12 @@ public class QueryParser {
 
   @Nonnull
   public ExtractView toView(@Nonnull final ExtractRequest request) {
+    return toView(request, ExtractResultType.UNCONSTRAINED);
+  }
+
+  @Nonnull
+  public ExtractView toView(@Nonnull final ExtractRequest request,
+      @Nonnull final ExtractResultType resultType) {
 
     final List<PathWithAlias> columns = request.getColumns().stream()
         .map(e -> new PathWithAlias(parser.parse(e.getExpression()),
@@ -63,7 +70,8 @@ public class QueryParser {
         .collect(Collectors.toUnmodifiableList());
 
     return new ExtractView(request.getSubjectResource(),
-        select, decomposeFilter(filter)
+        select, decomposeFilter(filter),
+        resultType
     );
   }
 

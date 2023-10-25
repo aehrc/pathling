@@ -17,21 +17,16 @@
 
 package au.csiro.pathling.view;
 
-import java.util.function.Function;
-import java.util.stream.Stream;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import lombok.Value;
 import javax.annotation.Nonnull;
 
-public interface Selection {
-
-  DatasetResult<CollectionResult> evaluate(@Nonnull final ProjectionContext context);
-
-  default void printTree() {
-    toTreeString().forEach(System.out::println);
-  }
-
-  Stream<String> toTreeString();
+@Value
+public class CollectionResult {
 
   @Nonnull
-  Selection map(@Nonnull final Function<Selection, Selection> mapFunction);
+  Collection collection;
 
+  @Nonnull
+  PrimitiveSelection selection;
 }
