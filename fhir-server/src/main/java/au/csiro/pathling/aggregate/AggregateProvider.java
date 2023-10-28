@@ -42,7 +42,7 @@ import org.springframework.stereotype.Component;
  * HAPI resource provider that provides an entry point for the "aggregate" type-level operation.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/aggregate.html">Aggregate</a>
+ * @see <a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#aggregate">Aggregate</a>
  */
 @Component
 @Scope("prototype")
