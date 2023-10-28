@@ -72,7 +72,7 @@ trm_to_coding <- function(coding_column, system, version = NULL) {
                   ) else NULL)
 }
 
-#' @rdname trm_to_coding
+#' @rdname trm_to_snomed_coding
 #' 
 #' @description
 #' \code{trm_to_snomed_coding()} converts a Column containing codes into a Column that 
@@ -83,6 +83,19 @@ trm_to_coding <- function(coding_column, system, version = NULL) {
 #' @export
 trm_to_snomed_coding <- function(coding_column, version = NULL) {
   trm_to_coding({ { coding_column } }, SNOMED_URI, { { version } })
+}
+
+#' @rdname trm_to_loinc_coding
+#' 
+#' @description
+#' \code{trm_to_loinc_coding()} converts a Column containing codes into a Column that
+#' contains a LOINC Coding struct.
+#' 
+#' @family terminlogy helpers
+#' 
+#' @export
+trm_to_loinc_coding <- function(coding_column, version = NULL) {
+  trm_to_coding({ { coding_column } }, LOINC_URI, { { version } })
 }
 
 #' Terminology helper functions
