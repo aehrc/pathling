@@ -46,7 +46,7 @@ import org.springframework.stereotype.Component;
  * HAPI resource provider that provides an entry point for the "extract" type-level operation.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/extract.html">Extract</a>
+ * @see <a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#extract">Extract</a>
  */
 @Component
 @Scope("prototype")
