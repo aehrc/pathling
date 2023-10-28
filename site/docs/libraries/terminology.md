@@ -207,6 +207,9 @@ translate_result <- csv %>%
                 READ_CODES = !!trm_translate(!!trm_to_snomed_coding(CODE),
                                              concept_map_uri = "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000")
         ) %>%
+        mutate(
+                READ_CODES = explode_outer(READ_CODES[['code']])
+        ) %>%
         select(CODE, DESCRIPTION, READ_CODES) %>%
         show()
 
@@ -281,11 +284,11 @@ Results in:
 
 | CODE      | DESCRIPTION               | READ_CODE |
 |-----------|---------------------------|-----------|
-| 65363002  | Otitis media              | \[X00ik\] |
-| 16114001  | Fracture of ankle         | \[S34..\] |
-| 444814009 | Viral sinusitis           | \[XUjp0\] |
-| 444814009 | Viral sinusitis           | \[XUjp0\] |
-| 43878008  | Streptococcal sore throat | \[A340.\] |
+| 65363002  | Otitis media              | X00ik     |
+| 16114001  | Fracture of ankle         | S34..     |
+| 444814009 | Viral sinusitis           | XUjp0     |
+| 444814009 | Viral sinusitis           | XUjp0     |
+| 43878008  | Streptococcal sore throat | A340.     |
 
 ### Subsumption testing
 
@@ -435,9 +438,7 @@ display term for each code.
 <TabItem value="python" label="Python">
 
 ```python
-from pathling import PathlingContext, to_snomed_coding, property_of, display,
-
-PropertyType
+from pathling import PathlingContext, to_snomed_coding, property_of, display, PropertyType
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
@@ -456,6 +457,32 @@ with_displays = exploded_parents.withColumn(
         "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
 )
 with_displays.show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- ptl_connect()
+csv <- ptl_spark(pc) %>%
+        spark_read_csv(path = 'conditions.csv', header = TRUE)
+
+parents <- csv %>%
+        # Get the parent codes for each code in the dataset. Split each parent code into a separate row.
+        mutate(
+                PARENT = explode_outer(!!trm_property_of(!!trm_to_snomed_coding(CODE), "parent", "code"))
+        ) %>%
+        # Retrieve the preferred term for each parent code.
+        mutate(
+                PARENT = !!trm_display(!!trm_to_snomed_coding(PARENT))
+        ) %>%
+        select(CODE, DESCRIPTION, PARENT) %>%
+        show()
+
+pc %>% ptl_disconnect()
 ```
 
 </TabItem>
@@ -572,6 +599,31 @@ exploded_synonyms.show()
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- ptl_connect()
+csv <- ptl_spark(pc) %>%
+        spark_read_csv(path = 'conditions.csv', header = TRUE)
+
+synonyms <- csv %>%
+        # Get the synonyms for each code in the dataset.
+        mutate(
+                SYNONYMS = !!trm_designation(!!trm_to_snomed_coding(CODE),
+                                             !!trm_to_snomed_coding("900000000000013009"))
+        ) %>%
+        # Split each synonym into a separate row.
+        mutate(SYNONYM = explode_outer(SYNONYMS)) %>%
+        select(CODE, DESCRIPTION, SYNONYM) %>%
+        show()
+
+pc %>% ptl_disconnect()
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -671,7 +723,7 @@ in `display()` and `property_of()` functions.
 ```python
 from pathling import PathlingContext, to_loinc_coding, property_of, display
 
-# Configure the default language preferences prioritising French.
+# Configure the default language preferences to prioritise French.
 pc = PathlingContext.create(accept_language="fr;q=0.9,en;q=0.5")
 csv = pc.spark.read.csv("observations.csv")
 
@@ -690,6 +742,33 @@ def_and_german_display.show()
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+# Configure the default language preferences to prioritise French.
+pc <- ptl_connect(accept_language = "fr;q=0.9,en;q=0.5")
+csv <- ptl_spark(pc) %>%
+        spark_read_csv(path = "observations.csv", header = TRUE)
+
+csv %>%
+        # Get the display names with default language preferences (in French).
+        mutate(
+                DISPLAY = !!trm_display(!!trm_to_loinc_coding(CODE))
+        ) %>%
+        # Get the `display` property values with German as the preferred language.
+        mutate(
+                DISPLAY_DE = explode_outer(!!trm_property_of(!!trm_to_loinc_coding(CODE), "display", "string", accept_language = "de-DE"))
+        ) %>%
+        select(CODE, DESCRIPTION, DISPLAY, DISPLAY_DE) %>%
+        show()
+
+pc %>% ptl_disconnect()
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -699,7 +778,7 @@ import au.csiro.pathling.sql.Terminology
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 
-// Configure the default language preferences prioritising French.
+// Configure the default language preferences to prioritise French.
 val pc = PathlingContext.create(
     TerminologyConfiguration.builder()
             .acceptLangage("fr;q=0.9,en;q=0.5").build()
@@ -733,7 +812,7 @@ import org.apache.spark.sql.Row;
 class MyApp {
 
     public static void main(String[] args) {
-        // Configure the default language preferences prioritising French.
+        // Configure the default language preferences to prioritise French.
         PathlingContext pc = PathlingContext.create(
                 TerminologyConfiguration.builder()
                         .acceptLangage("fr;q=0.9,en;q=0.5").build()
@@ -788,6 +867,21 @@ pc = PathlingContext.create(
         token_endpoint='https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token',
         client_id='[client ID]',
         client_secret='[client secret]'
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- ptl_connect(
+        terminology_server_url = "https://ontology.nhs.uk/production1/fhir",
+        token_endpoint = "https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token",
+        client_id = "[client ID]",
+        client_secret = "[client secret]"
 )
 ```
 
