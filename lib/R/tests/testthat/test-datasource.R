@@ -64,7 +64,7 @@ test_that("datasource ndjson", {
   data_source <- pc %>% ptl_read_ndjson(temp_ndjson_dir())
 
   result <- ndjson_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
@@ -75,7 +75,7 @@ test_that("datasource bundles", {
   data_source <- ptl_read_bundles(pc, bundles_test_data_dir(), c("Patient", "Condition"))
 
   result <- bundles_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 10))
 })
 
@@ -89,7 +89,7 @@ test_that("datasource datasets", {
   ))
 
   result <- ndjson_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
@@ -104,7 +104,7 @@ test_that("datasource parquet", {
   data_source <- pc %>% ptl_read_parquet(temp_parquet_dir())
 
   result <- parquet_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
@@ -119,7 +119,7 @@ test_that("datasource delta", {
   data_source <- pc %>% ptl_read_delta(delta_test_data_dir())
 
   result <- delta_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
@@ -135,7 +135,7 @@ test_that("datasource delta merge", {
   data_source <- pc %>% ptl_read_delta(delta_test_data_dir())
 
   result <- delta_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
@@ -149,7 +149,7 @@ test_that("datasource tables", {
   data_source <- pc %>% ptl_read_tables()
 
   result <- ndjson_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })
 
@@ -163,6 +163,6 @@ test_that("datasource tables with schema", {
   data_source <- pc %>% ptl_read_tables(schema = "test")
 
   result <- ndjson_query(data_source)
-  expect_equal(names(result), "count")
+  expect_equal(colnames(result), "count")
   expect_equal(collect(result), tibble::tibble(count = 71))
 })

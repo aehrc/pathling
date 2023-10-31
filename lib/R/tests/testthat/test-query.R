@@ -26,7 +26,7 @@ test_that("test datasource extract", {
       condition_code = c("10509002", "38341003", "65363002", "44054006", "368581000119106")
   )
 
-  expect_equal(names(result), names(expected_result))
+  expect_equal(colnames(result), colnames(expected_result))
   expect_equal(result %>% sdf_sort("id") %>% head(5) %>% sdf_collect(), expected_result)
 })
 
@@ -48,7 +48,7 @@ test_that("test datasource extract with no filters", {
       condition_code = c("444814009", "195662009", "10509002", "444470001", "68496003")
   )
 
-  expect_equal(names(result), names(expected_result))
+  expect_equal(colnames(result), colnames(expected_result))
   expect_equal(result %>% sdf_sort("id") %>% head(5) %>% sdf_collect(), expected_result)
 })
 
@@ -74,7 +74,7 @@ test_that("test datasource aggregate", {
       patient_count = c(1, 2, 3, 1)
   )
 
-  expect_equal(names(agg_result), names(expected_result))
+  expect_equal(colnames(agg_result), colnames(expected_result))
   expect_equal(agg_result %>% sdf_collect(), expected_result)
 })
 
@@ -102,7 +102,7 @@ test_that("test datasource aggregate with no filters", {
       patient_count = c(3, 2, 3, 1)
   )
 
-  expect_equal(names(agg_result), names(expected_result))
+  expect_equal(colnames(agg_result), colnames(expected_result))
   expect_equal(agg_result %>% sdf_collect(), expected_result)
 })
 
@@ -126,6 +126,6 @@ test_that("test datasource aggregate with no grouping", {
       )
   )
 
-  expect_equal(names(agg_result), names(ResultRow))
+  expect_equal(colnames(agg_result), colnames(ResultRow))
   expect_equal(agg_result %>% sdf_collect(), ResultRow)
 })

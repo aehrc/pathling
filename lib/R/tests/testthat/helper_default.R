@@ -1,3 +1,4 @@
+library(dplyr)
 library(sparklyr)
 def_spark <- function() {
 

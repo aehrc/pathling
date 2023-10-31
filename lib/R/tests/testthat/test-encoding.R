@@ -103,25 +103,22 @@ test_that("element_nesting", {
 
   # default nesting level is 3
   quest_def <- ptl_encode(ptl_def, json_resources_df, "Questionnaire") %>% head(1) %>% sdf_collect()
-  expect_true(
-    "item" %in% names(quest_def) &&
-    "item" %in% names(quest_def$item[[1]][[1]]) &&
-    "item" %in% names(quest_def$item[[1]][[1]]$item[[1]]) &&
-    "item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]) &&
-    !("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]$item[[1]]))
-  )
-
+  expect_true("item" %in% names(quest_def))
+  expect_true("item" %in% names(quest_def$item[[1]][[1]]))
+  expect_true("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]))
+  expect_true("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]))
+  expect_false("item" %in% names(quest_def$item[[1]][[1]]$item[[1]]$item[[1]]$item[[1]]))
+  
   # max nesting level set to 0
-  quest_0 <- ptl_encode(ptl_0, json_resources_df, "Questionnaire") %>% head(1)
-  expect_true("item" %in% names(quest_0) && is.null(quest_0$item[[1]]))
+  quest_0 <- ptl_encode(ptl_0, json_resources_df, "Questionnaire") %>% head(1)  %>% sdf_collect()
+  expect_true("item" %in% names(quest_0))
+  expect_false("item" %in% names(quest_0$item[[1]][[1]]))
 
   # max nesting level set to 1
   quest_1 <- ptl_encode(ptl_1, json_resources_df, "Questionnaire") %>% head(1) %>% sdf_collect()
-  expect_true(
-    "item" %in% names(quest_1) &&
-    "item" %in% names(quest_1$item[[1]][[1]]) &&
-    !("item" %in% names(quest_1$item[[1]][[1]]$item[[1]]))
-  )
+  expect_true("item" %in% names(quest_1))
+  expect_true("item" %in% names(quest_1$item[[1]][[1]]))
+  expect_false("item" %in% names(quest_1$item[[1]][[1]]$item[[1]]))
 })
 
 test_that("extension_support", {
@@ -133,13 +130,13 @@ test_that("extension_support", {
   ptl_ext_on <- ptl_connect(spark_session, enable_extensions = TRUE)
 
   patient_def <- ptl_encode(ptl_def, json_resources_df, "Patient") %>% head(1) %>% sdf_collect()
-  expect_false("_extension" %in% names(patient_def))
+  expect_false("_extension" %in% colnames(patient_def))
 
   # extensions disabled
   patient_off <- ptl_encode(ptl_ext_off, json_resources_df, "Patient") %>% head(1)
-  expect_false("_extension" %in% names(patient_off))
+  expect_false("_extension" %in% colnames(patient_off))
 
   # extensions enabled
   patient_on <- ptl_encode(ptl_ext_on, json_resources_df, "Patient") %>% head(1)
-  expect_true("_extension" %in% names(patient_on))
+  expect_true("_extension" %in% colnames(patient_on))
 })
