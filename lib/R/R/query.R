@@ -43,15 +43,15 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #' @importFrom sparklyr j_invoke sdf_register
 #'
 #' @export
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_aggregate('Patient',
 #'      aggregations = c(patientCount='count()', 'id.count()'),
 #'      groupings = c('gender', givenName='name.given'),
 #'      filters = c('birthDate > @1950-01-01')
 #' )
-#' ptl_disconnect(pc)
+#' pathling_disconnect(pc)
 ds_aggregate <- function(ds, subject_resource, aggregations, groupings = NULL, filters = NULL) {
   q <- j_invoke(ds, "aggregate", as.character(subject_resource))
   
@@ -97,14 +97,14 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = NULL, f
 #' @importFrom sparklyr j_invoke sdf_register
 #' 
 #' @export 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_extract('Patient',
 #'      columns = c('gender', givenName='name.given'),
 #'      filters = c('birthDate > @1950-01-01')
 #' )
-#' ptl_disconnect(pc)
+#' pathling_disconnect(pc)
 ds_extract <- function(ds, subject_resource, columns, filters = NULL) {
   q <- j_invoke(ds, "extract", as.character(subject_resource))
 

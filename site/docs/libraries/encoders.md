@@ -49,14 +49,14 @@ patients.select('id', 'gender', 'birthDate').show()
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
+pc <- pathling_connect()
 
 ndjson <- '/some/path/ndjson/Condition.ndjson'
-json_resources <- ptl_spark(pc) %>% spark_read_text(ndjson)
+json_resources <- pathling_spark(pc) %>% spark_read_text(ndjson)
 
-pc %>% ptl_encode(json_resources, 'Condition') %>% show()
+pc %>% pathling_encode(json_resources, 'Condition') %>% show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -145,14 +145,14 @@ patients.select('id', 'gender', 'birthDate').show()
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
+pc <- pathling_connect()
 
 bundles_dir <- '/some/path/bundles'
-json_bundles <- ptl_spark(pc) %>% spark_read_text(bundles_dir, whole = TRUE)
+json_bundles <- pathling_spark(pc) %>% spark_read_text(bundles_dir, whole = TRUE)
 
-pc %>% ptl_encode_bundle(json_bundles, 'Condition', column = 'contents') %>% show()
+pc %>% pathling_encode_bundle(json_bundles, 'Condition', column = 'contents') %>% show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>

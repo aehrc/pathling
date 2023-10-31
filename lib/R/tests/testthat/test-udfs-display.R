@@ -1,6 +1,6 @@
 test_that("display", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   df <-   spark %>% to_sdf(
       id = c("id-1", "id-2", "id-3"),
@@ -21,7 +21,7 @@ test_that("display", {
   result_df <- df %>%
     select_expr(
       id,
-      result = !!trm_display(code)
+      result = !!tx_display(code)
     )
 
   expect_equal(
@@ -32,7 +32,7 @@ test_that("display", {
   result_df <- df %>%
     select_expr(
       id,
-      result = !!trm_display(code)
+      result = !!tx_display(code)
     )
 
   expect_equal(
@@ -44,7 +44,7 @@ test_that("display", {
     head(1) %>%
     select_expr(
       id,
-      result = !!trm_display(!!trm_to_coding("55915-3", LOINC_URI))
+      result = !!tx_display(!!tx_to_coding("55915-3", LOINC_URI))
     )
 
   expect_equal(
@@ -59,7 +59,7 @@ test_that("display", {
     head(1) %>%
     select_expr(
       id,
-      result = !!trm_display(!!trm_to_coding("55915-3", LOINC_URI), "fr-FR")
+      result = !!tx_display(!!tx_to_coding("55915-3", LOINC_URI), "fr-FR")
     )
 
   expect_equal(

@@ -1,6 +1,6 @@
 test_that("member_of", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   df <- spark %>% to_sdf(
       id = c("code-1", "code-2", "code-3"),
@@ -13,7 +13,7 @@ test_that("member_of", {
   result_df_col <- df %>%
       select_expr(
           id,
-          is_member = !!trm_member_of(code, "http://snomed.info/sct?fhir_vs=refset/723264001"),
+          is_member = !!tx_member_of(code, "http://snomed.info/sct?fhir_vs=refset/723264001"),
       )
 
   expect_equal(
@@ -27,7 +27,7 @@ test_that("member_of", {
   result_df_str <- df %>%
       select_expr(
           id,
-          is_member = !!trm_member_of(code, "http://loinc.org/vs/LP14885-5")
+          is_member = !!tx_member_of(code, "http://loinc.org/vs/LP14885-5")
       )
 
   expect_equal(
@@ -42,8 +42,8 @@ test_that("member_of", {
       head(1) %>%
       select_expr(
           id,
-          result = !!trm_member_of(
-              !!trm_to_snomed_coding("368529001"),
+          result = !!tx_member_of(
+              !!tx_to_snomed_coding("368529001"),
               "http://snomed.info/sct?fhir_vs=refset/723264001"
           )
       )

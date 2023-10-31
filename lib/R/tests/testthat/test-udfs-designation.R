@@ -1,10 +1,10 @@
-USE_DISPLAY <- trm_to_coding("display",
+USE_DISPLAY <- tx_to_coding("display",
                              "http://terminology.hl7.org/CodeSystem/designation-usage"
 )
 
 test_that("designation", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   property_df <-   spark %>% to_sdf(
       id = c("id-1", "id-2", "id-3"),
@@ -18,7 +18,7 @@ test_that("designation", {
   result_df <- property_df %>%
       select_expr(
           id,
-          result = !!trm_designation(code)
+          result = !!tx_designation(code)
       )
 
   expect_equal(
@@ -43,7 +43,7 @@ test_that("designation", {
   result_df <- property_df %>%
       select_expr(
           id,
-          result = !!trm_designation(code, !!USE_DISPLAY)
+          result = !!tx_designation(code, !!USE_DISPLAY)
       )
 
   expect_equal(
@@ -64,7 +64,7 @@ test_that("designation", {
   result_df <- property_df %>%
       select_expr(
           id,
-          result = !!trm_designation(code, !!USE_DISPLAY, "fr-FR")
+          result = !!tx_designation(code, !!USE_DISPLAY, "fr-FR")
       )
 
   expect_equal(
@@ -79,9 +79,9 @@ test_that("designation", {
       head(1) %>%
       select_expr(
           id,
-          result = !!trm_designation(
-              !!trm_to_coding("439319006", SNOMED_URI),
-              !!trm_to_coding("900000000000003001", SNOMED_URI),
+          result = !!tx_designation(
+              !!tx_to_coding("439319006", SNOMED_URI),
+              !!tx_to_coding("900000000000003001", SNOMED_URI),
               "en"
           )
       )

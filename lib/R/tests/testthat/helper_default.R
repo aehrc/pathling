@@ -24,7 +24,7 @@ def_spark <- function() {
   spark
 }
 
-def_ptl_context <- function(spark) {
+def_pathling_context <- function(spark) {
 
   encoders <- spark %>%
       j_invoke_static("au.csiro.pathling.encoders.FhirEncoders", "forR4") %>%

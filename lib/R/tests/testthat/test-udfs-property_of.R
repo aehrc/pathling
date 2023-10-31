@@ -1,6 +1,6 @@
 test_that("property_of", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   df <-   spark %>% to_sdf(
       id = c("id-1", "id-2", "id-3"),
@@ -14,7 +14,7 @@ test_that("property_of", {
   result_df <- df %>%
     select_expr(
       id,
-      result = !!trm_property_of(code, "parent", PropertyType$CODE)
+      result = !!tx_property_of(code, "parent", PropertyType$CODE)
     )
 
   expect_equal(
@@ -32,7 +32,7 @@ test_that("property_of", {
   result_df <- df %>%
     select_expr(
       id,
-      result = !!trm_property_of(code, "inactive", PropertyType$BOOLEAN)
+      result = !!tx_property_of(code, "inactive", PropertyType$BOOLEAN)
     )
 
   expect_equal(
@@ -51,8 +51,8 @@ test_that("property_of", {
     head(1) %>%
     select_expr(
       id,
-      result = !!trm_property_of(
-        !!trm_to_coding("55915-3", LOINC_URI),
+      result = !!tx_property_of(
+        !!tx_to_coding("55915-3", LOINC_URI),
         "display"
       )
     )
@@ -71,8 +71,8 @@ test_that("property_of", {
     head(1) %>%
     select_expr(
       id,
-      result = !!trm_property_of(
-        !!trm_to_coding("55915-3", LOINC_URI),
+      result = !!tx_property_of(
+        !!tx_to_coding("55915-3", LOINC_URI),
         "display",
         accept_language = "de"
       )

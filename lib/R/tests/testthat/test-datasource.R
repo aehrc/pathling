@@ -47,21 +47,21 @@ delta_query <- ndjson_query
 
 test_that("datasource read ndjson", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
-  patients <- ptl_read_ndjson(pc, ndjson_test_data_dir()) %>% ds_read("Patient")
+  patients <- pathling_read_ndjson(pc, ndjson_test_data_dir()) %>% ds_read("Patient")
   expect_equal(patients %>% sdf_nrow(), 9)
 })
 
 test_that("datasource ndjson", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   pc %>%
-      ptl_read_ndjson(ndjson_test_data_dir()) %>%
+      pathling_read_ndjson(ndjson_test_data_dir()) %>%
       ds_write_ndjson(temp_ndjson_dir())
 
-  data_source <- pc %>% ptl_read_ndjson(temp_ndjson_dir())
+  data_source <- pc %>% pathling_read_ndjson(temp_ndjson_dir())
 
   result <- ndjson_query(data_source)
   expect_equal(colnames(result), "count")
@@ -70,9 +70,9 @@ test_that("datasource ndjson", {
 
 test_that("datasource bundles", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
-  data_source <- ptl_read_bundles(pc, bundles_test_data_dir(), c("Patient", "Condition"))
+  data_source <- pathling_read_bundles(pc, bundles_test_data_dir(), c("Patient", "Condition"))
 
   result <- bundles_query(data_source)
   expect_equal(colnames(result), "count")
@@ -81,11 +81,11 @@ test_that("datasource bundles", {
 
 test_that("datasource datasets", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
-  data_source <- ptl_read_datasets(pc, list(
-      "Patient" = ptl_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Patient.ndjson")), "Patient"),
-      "Condition" = ptl_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Condition.ndjson")), "Condition")
+  data_source <- pathling_read_datasets(pc, list(
+      "Patient" = pathling_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Patient.ndjson")), "Patient"),
+      "Condition" = pathling_encode(pc, spark_read_text(spark, file.path(ndjson_test_data_dir(), "Condition.ndjson")), "Condition")
   ))
 
   result <- ndjson_query(data_source)
@@ -95,13 +95,13 @@ test_that("datasource datasets", {
 
 test_that("datasource parquet", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   pc %>%
-      ptl_read_parquet(parquet_test_data_dir()) %>%
+      pathling_read_parquet(parquet_test_data_dir()) %>%
       ds_write_parquet(temp_parquet_dir())
 
-  data_source <- pc %>% ptl_read_parquet(temp_parquet_dir())
+  data_source <- pc %>% pathling_read_parquet(temp_parquet_dir())
 
   result <- parquet_query(data_source)
   expect_equal(colnames(result), "count")
@@ -110,13 +110,13 @@ test_that("datasource parquet", {
 
 test_that("datasource delta", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   pc %>%
-      ptl_read_delta(delta_test_data_dir()) %>%
+      pathling_read_delta(delta_test_data_dir()) %>%
       ds_write_delta(temp_delta_dir())
 
-  data_source <- pc %>% ptl_read_delta(delta_test_data_dir())
+  data_source <- pc %>% pathling_read_delta(delta_test_data_dir())
 
   result <- delta_query(data_source)
   expect_equal(colnames(result), "count")
@@ -125,14 +125,14 @@ test_that("datasource delta", {
 
 test_that("datasource delta merge", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
-  ds <- pc %>% ptl_read_delta(delta_test_data_dir())
+  ds <- pc %>% pathling_read_delta(delta_test_data_dir())
 
   ds %>% ds_write_delta(temp_delta_dir(), import_mode = ImportMode$OVERWRITE)
   ds %>% ds_write_delta(temp_delta_dir(), import_mode = ImportMode$MERGE)
 
-  data_source <- pc %>% ptl_read_delta(delta_test_data_dir())
+  data_source <- pc %>% pathling_read_delta(delta_test_data_dir())
 
   result <- delta_query(data_source)
   expect_equal(colnames(result), "count")
@@ -141,12 +141,12 @@ test_that("datasource delta merge", {
 
 test_that("datasource tables", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   pc %>%
-      ptl_read_ndjson(ndjson_test_data_dir()) %>%
+      pathling_read_ndjson(ndjson_test_data_dir()) %>%
       ds_write_tables()
-  data_source <- pc %>% ptl_read_tables()
+  data_source <- pc %>% pathling_read_tables()
 
   result <- ndjson_query(data_source)
   expect_equal(colnames(result), "count")
@@ -155,12 +155,12 @@ test_that("datasource tables", {
 
 test_that("datasource tables with schema", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   pc %>%
-      ptl_read_ndjson(ndjson_test_data_dir()) %>%
+      pathling_read_ndjson(ndjson_test_data_dir()) %>%
       ds_write_tables(schema = "test")
-  data_source <- pc %>% ptl_read_tables(schema = "test")
+  data_source <- pc %>% pathling_read_tables(schema = "test")
 
   result <- ndjson_query(data_source)
   expect_equal(colnames(result), "count")

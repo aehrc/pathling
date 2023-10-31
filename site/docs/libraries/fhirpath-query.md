@@ -59,8 +59,8 @@ display(result)
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
-data <- pc %>% ptl_read_ndjson("s3://somebucket/synthea/ndjson")
+pc <- pathling_connect()
+data <- pc %>% pathling_read_ndjson("s3://somebucket/synthea/ndjson")
 
 # For patients that have not received a COVID-19 vaccine, extract the given
 # name, family name, phone number and whether the patient has heart disease.
@@ -77,7 +77,7 @@ result <- data %>%
         ) %>%
         show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -195,8 +195,8 @@ display(result)
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
-data <- pc %>% ptl_read_ndjson("s3://somebucket/synthea/ndjson")
+pc <- pathling_connect()
+data <- pc %>% pathling_read_ndjson("s3://somebucket/synthea/ndjson")
 
 # Count the number of female patients, grouped by the type of diabetes that they
 # have been diagnosed with.
@@ -209,7 +209,7 @@ result <- data %>%
                 filters = "gender = 'female'"
         ) %>% show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -312,7 +312,7 @@ data = pc.read.ndjson("/usr/share/staging/ndjson")
 <TabItem value='r' label='R'>
 
 ```r
-data <- pc %>% ptl_read_ndjson("/usr/share/staging/ndjson")
+data <- pc %>% pathling_read_ndjson("/usr/share/staging/ndjson")
 ```
 
 </TabItem>
@@ -374,7 +374,7 @@ data = pc.read.bundles("/usr/share/staging/bundles",
 <TabItem value="r" label="R">
 
 ```r
-data <- pc %>% ptl_read_bundles("/usr/share/staging/bundles",
+data <- pc %>% pathling_read_bundles("/usr/share/staging/bundles",
                                 resource_types = c("Patient", "Condition", "Immunization"))
 ```
 
@@ -419,7 +419,7 @@ data = pc.read.datasets({
 <TabItem value="r" label="R">
 
 ```r
-data <- pc %>% ptl_read_datasets(list(
+data <- pc %>% pathling_read_datasets(list(
         Patient = patient_dataset,
         Condition = condition_dataset,
         Immunization = immunization_dataset
@@ -471,7 +471,7 @@ data = pc.read.parquet("/usr/share/staging/parquet")
 <TabItem value="r" label="R">
 
 ```r
-data <- pc %>% ptl_read_parquet("/usr/share/staging/parquet")
+data <- pc %>% pathling_read_parquet("/usr/share/staging/parquet")
 ```
 
 </TabItem>
@@ -518,7 +518,7 @@ data = pc.read.delta("/usr/share/staging/delta")
 <TabItem value="r" label="R">
 
 ```r
-data <- pc %>% ptl_read_delta("/usr/share/staging/delta")
+data <- pc %>% pathling_read_delta("/usr/share/staging/delta")
 ```
 
 </TabItem>
@@ -564,7 +564,7 @@ data = pc.read.tables("mimic-iv")
 <TabItem value="r" label="R">
 
 ```r
-data <- pc %>% ptl_read_tables("mimic-iv")
+data <- pc %>% pathling_read_tables("mimic-iv")
 ```
 
 </TabItem>

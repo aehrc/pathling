@@ -1,6 +1,6 @@
 test_that("translate", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   df <- spark %>% to_sdf(
       id = c("id-1", "id-2", "id-3"),
@@ -13,7 +13,7 @@ test_that("translate", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_translate(code, "http://snomed.info/sct?fhir_cm=100")
+          result = !!tx_translate(code, "http://snomed.info/sct?fhir_cm=100")
       )
 
   expect_equal(
@@ -31,7 +31,7 @@ test_that("translate", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_translate(
+          result = !!tx_translate(
               code,
               "http://snomed.info/sct?fhir_cm=100",
               equivalences = c("equivalent", "relatedto")
@@ -53,7 +53,7 @@ test_that("translate", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_translate(
+          result = !!tx_translate(
               code,
               "http://snomed.info/sct?fhir_cm=100",
               equivalences = c("equivalent", "relatedto"),
@@ -76,7 +76,7 @@ test_that("translate", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_translate(
+          result = !!tx_translate(
               code,
               "http://snomed.info/sct?fhir_cm=200",
               equivalences = c("equivalent", "relatedto")
@@ -99,8 +99,8 @@ test_that("translate", {
       head(1) %>%
       select_expr(
           id,
-          result = !!trm_translate(
-              !!trm_to_coding("55915-3", LOINC_URI),
+          result = !!tx_translate(
+              !!tx_to_coding("55915-3", LOINC_URI),
               "http://snomed.info/sct?fhir_cm=200",
               reverse = TRUE,
               equivalences = "relatedto"

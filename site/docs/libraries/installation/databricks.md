@@ -51,10 +51,10 @@ if (!nzchar(system.file(package = 'pathling'))) {
 }
 
 library(pathling)
-pc <- ptl_connect(sparklyr::spark_connect(method = "databricks"))
+pc <- pathling_connect(sparklyr::spark_connect(method = "databricks"))
 
 # Code that uses Pathling here.
 # ...
 
-ptl_disconnect(pc)
+pathling_disconnect(pc)
 ```

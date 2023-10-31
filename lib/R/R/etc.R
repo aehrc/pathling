@@ -26,7 +26,7 @@ package_info <- function(pkgname) {
 }
 
 
-ptl_spark_info <- function() {
+pathling_spark_info <- function() {
   metadata <- package_info("pathling")
   list(
       spark_version = metadata[["Config/pathling/SparkVersion"]],
@@ -44,7 +44,7 @@ ptl_spark_info <- function() {
 #' @return List with information about the installed version.
 #' @export
 pathling_install_spark <- function() {
-  spark_info <- ptl_spark_info()
+  spark_info <- pathling_spark_info()
   sparklyr::spark_install(version = spark_info$spark_version, hadoop_version = spark_info$hadoop_version)
 }
 
@@ -53,8 +53,8 @@ pathling_install_spark <- function() {
 #' 
 #' @importFrom rlang .data
 #' @export
-ptl_is_spark_installed <- function() {
-  spark_info <- ptl_spark_info()
+pathling_is_spark_installed <- function() {
+  spark_info <- pathling_spark_info()
   sparklyr::spark_installed_versions() %>%
       sparklyr::filter(.data$spark == spark_info$spark_version, .data$hadoop == spark_info$hadoop_version) %>%
       nrow() > 0
@@ -96,11 +96,11 @@ pathling_examples <- function(...) {
 #'
 #' @export
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' pathling_example_resource(pc, 'Condition')
-#' ptl_disconnect(pc)
+#' pathling_disconnect(pc)
 pathling_example_resource <- function(pc, resource_name) {
-  pc %>% ptl_spark() %>% 
+  pc %>% pathling_spark() %>% 
       sparklyr::spark_read_parquet(pathling_examples("parquet" , paste0(resource_name, ".parquet")))
 }

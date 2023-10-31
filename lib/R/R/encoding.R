@@ -33,14 +33,14 @@
 #' @importFrom sparklyr sdf_register spark_dataframe j_invoke
 #'
 #' @export
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' json_resources_df <- ptl_spark(pc) %>% 
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' json_resources_df <- pathling_spark(pc) %>% 
 #'      sparklyr::spark_read_text(path=system.file('extdata','ndjson', 'Condition.ndjson', 
 #'              package='pathling'))
-#' pc %>% ptl_encode(json_resources_df, 'Condition')
-#' ptl_disconnect(pc)
-ptl_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
+#' pc %>% pathling_encode(json_resources_df, 'Condition')
+#' pathling_disconnect(pc)
+pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
   sdf_register(j_invoke(pc, "encode", spark_dataframe(df), resource_name,
       input_type %||% MimeType$FHIR_JSON, column))
 }
@@ -65,15 +65,15 @@ ptl_encode <- function(pc, df, resource_name, input_type = NULL, column = NULL) 
 #' @importFrom sparklyr sdf_register spark_dataframe j_invoke
 #' 
 #' @export
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' json_resources_df <- ptl_spark(pc) %>% 
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' json_resources_df <- pathling_spark(pc) %>% 
 #'      sparklyr::spark_read_text(path=system.file('extdata','bundle-xml', package='pathling'), 
 #'          whole = TRUE)
-#' pc %>% ptl_encode_bundle(json_resources_df, 'Condition',
+#' pc %>% pathling_encode_bundle(json_resources_df, 'Condition',
 #'      input_type = MimeType$FHIR_XML, column = 'contents')
-#' ptl_disconnect(pc)
-ptl_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
+#' pathling_disconnect(pc)
+pathling_encode_bundle <- function(pc, df, resource_name, input_type = NULL, column = NULL) {
   sdf_register(j_invoke(pc, "encodeBundle",  spark_dataframe(df), resource_name,
       input_type %||% MimeType$FHIR_JSON, column))
 }

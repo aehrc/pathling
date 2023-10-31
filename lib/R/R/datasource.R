@@ -29,7 +29,7 @@ invoke_datasource <- function(pc, name, ...) {
 #' Creates a data source from a directory containing NDJSON files.
 #' 
 #' @description
-#' \code{ptl_read_ndjson()} creates a data source from a directory containing NDJSON files.
+#' \code{pathling_read_ndjson()} creates a data source from a directory containing NDJSON files.
 #' The files must be named with the resource type code and must have the ".ndjson" extension,
 #' e.g. "Patient.ndjson" or "Observation.ndjson".
 #'  
@@ -44,12 +44,12 @@ invoke_datasource <- function(pc, name, ...) {
 #' 
 #' @family Pathling data sources
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' ptl_disconnect(pc)
-ptl_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
+#' pathling_disconnect(pc)
+pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = NULL) {
   #See: issue #1601 (Implement file_name_mappers in R sparkly API)
   stopifnot(file_name_mapper == NULL)
   pc %>% invoke_datasource("ndjson", as.character(path), as.character(extension))
@@ -58,7 +58,7 @@ ptl_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = N
 #' Creates a data source from a directory containing FHIR bundles.
 #' 
 #' @description
-#' \code{ptl_read_bundles()} creates a data source from a directory containing FHIR bundles.
+#' \code{pathling_read_bundles()} creates a data source from a directory containing FHIR bundles.
 #'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the bundles.
@@ -70,13 +70,13 @@ ptl_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mapper = N
 #' 
 #' @family Pathling data sources
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_bundles(pathling_examples('bundle-xml'),
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_bundles(pathling_examples('bundle-xml'),
 #'      c("Patient", "Observation"), MimeType$FHIR_XML)
 #' data_source %>% ds_read('Observation') %>% sparklyr::sdf_nrow()
-#' ptl_disconnect(pc)
-ptl_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR_JSON) {
+#' pathling_disconnect(pc)
+pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR_JSON) {
 
   pc %>% invoke_datasource("bundles", as.character(path),
                            sparklyr::spark_connection(pc) %>% j_to_set(resource_types),
@@ -86,7 +86,7 @@ ptl_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR
 #' Creates an immutable data source from provided resource Spark DataFrames.
 #' 
 #' @description
-#' \code{ptl_read_datasets()} creates an immutable, ad-hoc data source from a named list of Spark DataFrames indexed with
+#' \code{pathling_read_datasets()} creates an immutable, ad-hoc data source from a named list of Spark DataFrames indexed with
 #' resource type codes.
 #'
 #' @param pc The PathlingContext object.
@@ -98,14 +98,14 @@ ptl_read_bundles <- function(pc, path, resource_types, mime_type = MimeType$FHIR
 #' 
 #' @family Pathling data sources
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' patient_df <- pc %>% pathling_example_resource('Patient')
 #' condition_df <- pc %>% pathling_example_resource('Condition')
-#' data_source <- pc %>% ptl_read_datasets(list(Patient = patient_df, Condition = condition_df))
+#' data_source <- pc %>% pathling_read_datasets(list(Patient = patient_df, Condition = condition_df))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' ptl_disconnect(pc)
-ptl_read_datasets <- function(pc, resources) {
+#' pathling_disconnect(pc)
+pathling_read_datasets <- function(pc, resources) {
   resources <- as.list(resources)
   ds <- pc %>% invoke_datasource("datasets")
   for (resource_code in names(resources)) {
@@ -118,7 +118,7 @@ ptl_read_datasets <- function(pc, resources) {
 #' Creates a data source from a directory containing Parquet tables.
 #'
 #' @description
-#' \code{ptl_read_parquet()} creates a data source from a directory containing Parquet tables. 
+#' \code{pathling_read_parquet()} creates a data source from a directory containing Parquet tables. 
 #' Each table must be named according to the name of the resource type that it stores.
 #'
 #' @param pc The PathlingContext object.
@@ -129,19 +129,19 @@ ptl_read_datasets <- function(pc, resources) {
 #' 
 #' @family Pathling data sources
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_parquet(pathling_examples('parquet'))
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_parquet(pathling_examples('parquet'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' ptl_disconnect(pc)
-ptl_read_parquet <- function(pc, path) {
+#' pathling_disconnect(pc)
+pathling_read_parquet <- function(pc, path) {
   pc %>% invoke_datasource("parquet", as.character(path))
 }
 
 #' Creates a data source from a directory containing Delta tables.
 #'
 #' @description
-#' \code{ptl_read_delta()} creates a data source from a directory containing Delta tables.
+#' \code{pathling_read_delta()} creates a data source from a directory containing Delta tables.
 #' Each table must be named according to the name of the resource type that it stores.
 #'
 #' @param pc The PathlingContext object.
@@ -152,18 +152,18 @@ ptl_read_parquet <- function(pc, path) {
 #' 
 #' @family Pathling data sources
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect(enable_delta = TRUE)
-#' data_source <- pc %>% ptl_read_delta(pathling_examples('delta'))
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect(enable_delta = TRUE)
+#' data_source <- pc %>% pathling_read_delta(pathling_examples('delta'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' ptl_disconnect(pc)
-ptl_read_delta <- function(pc, path) {
+#' pathling_disconnect(pc)
+pathling_read_delta <- function(pc, path) {
   pc %>% invoke_datasource("delta", as.character(path))
 }
 
 #' Creates a data source from a set of Spark tables.
 #' 
-#' \code{ptl_read_tables()} creates a data source from a set of Spark tables, 
+#' \code{pathling_read_tables()} creates a data source from a set of Spark tables, 
 #' where the table names are the resource type codes.
 #'
 #' @param pc The PathlingContext object.
@@ -174,13 +174,13 @@ ptl_read_delta <- function(pc, path) {
 #'
 #' @family Pathling data sources
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect(enable_delta = TRUE)
-#' spark <- ptl_spark(pc)
-#' data_source <- pc %>% ptl_read_tables()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect(enable_delta = TRUE)
+#' spark <- pathling_spark(pc)
+#' data_source <- pc %>% pathling_read_tables()
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
-#' ptl_disconnect(pc)
-ptl_read_tables <- function(pc, schema = NULL) {
+#' pathling_disconnect(pc)
+pathling_read_tables <- function(pc, schema = NULL) {
   if (!is.null(schema)) {
     pc %>% invoke_datasource("tables", as.character(schema))
   } else {
@@ -198,12 +198,12 @@ ptl_read_tables <- function(pc, schema = NULL) {
 #' 
 #' @export
 #'
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
-#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' data_source %>% ds_read('Condition') %>% sparklyr::sdf_nrow()
-#' ptl_disconnect(pc)
+#' pathling_disconnect(pc)
 ds_read <- function(ds, resource_code) {
   jdf <- j_invoke(ds, "read", resource_code)
   sdf_register(jdf)
@@ -234,9 +234,9 @@ ImportMode <- list(
 #' @rdname ds_write
 #' @name ds_write_xxxx
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect(enable_delta = TRUE)
-#' data_source <- pc %>% ptl_read_ndjson(pathling_examples('ndjson'))
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect(enable_delta = TRUE)
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of NDJSON files.
 #' data_source %>% ds_write_ndjson(file.path(tempdir(), 'ndjson'))
@@ -250,7 +250,7 @@ ImportMode <- list(
 #' # Write the data to a set of Spark tables in 'fhir' database.
 #' data_source %>% ds_write_tables("default", import_mode = ImportMode$MERGE)
 #' 
-#' ptl_disconnect(pc)
+#' pathling_disconnect(pc)
 NULL
 
 #' 

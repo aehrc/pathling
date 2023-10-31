@@ -73,7 +73,7 @@ Equivalence <- list(
 
 #' Checks if Coding is a member of ValueSet.
 #'
-#' \code{trm_member_of()} takes a Coding or array of Codings column as its input. Returns the column which contains a
+#' \code{tx_member_of()} takes a Coding or array of Codings column as its input. Returns the column which contains a
 #' Boolean value, indicating whether any of the input Codings is a member of the specified FHIR
 #' ValueSet.
 #'
@@ -86,25 +86,25 @@ Equivalence <- list(
 #'
 #' @export
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' 
 #' # Test the codings of the Condition `code` for membership in a SNOMED CT ValueSet.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'          id, 
-#'          is_member = !!trm_member_of(code[['coding']], 
+#'          is_member = !!tx_member_of(code[['coding']], 
 #'                  'http://snomed.info/sct?fhir_vs=refset/723264001'), 
 #'          .keep='none')
 #' 
-#' ptl_disconnect(pc)
-trm_member_of <- function(codings, value_set_uri) {
+#' pathling_disconnect(pc)
+tx_member_of <- function(codings, value_set_uri) {
   rlang::expr(member_of({ { codings } }, { { value_set_uri } }))
 }
 
 #' Translates a Coding column.
 #'
-#' \code{trm_translate()} a Coding column as input. Returns the Column which contains an array of
+#' \code{tx_translate()} a Coding column as input. Returns the Column which contains an array of
 #' Coding value with translation targets from the specified FHIR ConceptMap. There
 #' may be more than one target concept for each input concept. Only the translation with
 #' the specified equivalences are returned.
@@ -123,26 +123,26 @@ trm_member_of <- function(codings, value_set_uri) {
 #' @family terminology functions
 #' 
 #' @export
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' 
 #' # Translates the codings of the Condition `code` using a SNOMED implicit concept map.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
 #'          id,
-#'          translation = !!trm_translate(code[['coding']],
+#'          translation = !!tx_translate(code[['coding']],
 #'                  'http://snomed.info/sct?fhir_cm=900000000000527005'),
 #'          .keep='none')
 #'  
-#' ptl_disconnect(pc)
-trm_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
+#' pathling_disconnect(pc)
+tx_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences = NULL, target = NULL) {
   rlang::expr(translate_coding({ { codings } }, { { concept_map_uri } }, { { reverse } },
                                !!to_array(equivalences), { { target } }))
 }
 
 #' Checks if left Coding subsumes right Coding.
 #'
-#' \code{trm_subsumes()} two Coding columns as input. Returns the Column,
+#' \code{tx_subsumes()} two Coding columns as input. Returns the Column,
 #' which contains a Boolean value,
 #' indicating whether the left Coding subsumes the right Coding.
 #'
@@ -154,25 +154,25 @@ trm_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalence
 #' @family terminology functions
 #'
 #' @export
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' 
 #' # Test the codings of the Condition `code` for subsumption of a SNOMED CT code.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
 #'          id,
-#'          subsumes = !!trm_subsumes(code[['coding']],
-#'              !!trm_to_snomed_coding('444814009')),
+#'          subsumes = !!tx_subsumes(code[['coding']],
+#'              !!tx_to_snomed_coding('444814009')),
 #'          .keep='none')
 #'  
-#' ptl_disconnect(pc)
-trm_subsumes <- function(left_codings, right_codings) {
+#' pathling_disconnect(pc)
+tx_subsumes <- function(left_codings, right_codings) {
   rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, FALSE))
 }
 
 #' Checks if left Coding is subsumed by right Coding.
 #'
-#' \code{trm_subsumed_by()} takes two Coding columns as input. Returns the Column, 
+#' \code{tx_subsumed_by()} takes two Coding columns as input. Returns the Column, 
 #' which contains a Boolean value,
 #' indicating whether the left Coding is subsumed by the right Coding.
 #'
@@ -185,31 +185,31 @@ trm_subsumes <- function(left_codings, right_codings) {
 #' 
 #' @export
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' 
 #' # Test the codings of the Condition `code` for subsumption by a SNOMED CT code.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'     sparklyr::mutate(
 #'          id,
-#'          is_subsumed_by = !!trm_subsumed_by(code[['coding']],
-#'              !!trm_to_snomed_coding('444814009')),
+#'          is_subsumed_by = !!tx_subsumed_by(code[['coding']],
+#'              !!tx_to_snomed_coding('444814009')),
 #'          .keep='none')
 #'  
-#' ptl_disconnect(pc)
-trm_subsumed_by <- function(left_codings, right_codings) {
+#' pathling_disconnect(pc)
+tx_subsumed_by <- function(left_codings, right_codings) {
   rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, TRUE))
 }
 
 #' Retrieves the canonical display name for a Coding.
 #'
-#' \code{trm_display()} takes a Coding column as its input. Returns the Column, which contains the canonical display
+#' \code{tx_display()} takes a Coding column as its input. Returns the Column, which contains the canonical display
 #' name associated with the given code.
 #'
 #' @param coding A Column containing a struct representation of a Coding.
 #' @param accept_language The optional language preferences for the returned display name.
 #'        Overrides the parameter `accept_language` in
-#'        `ptl_connect`.
+#'        `pathling_connect`.
 #'
 #' @return A Column containing the result of the operation (String).
 #'
@@ -217,24 +217,24 @@ trm_subsumed_by <- function(left_codings, right_codings) {
 #' 
 #' @export
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' 
 #' # Get the display nane of the first coding of the Condition resource code with default language
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'          id, 
-#'          display = !!trm_display(code[['coding']][[0]]), 
+#'          display = !!tx_display(code[['coding']][[0]]), 
 #'          .keep='none')
 #' 
-#' ptl_disconnect(pc)
-trm_display <- function(coding, accept_language = NULL) {
+#' pathling_disconnect(pc)
+tx_display <- function(coding, accept_language = NULL) {
   rlang::expr(display({ { coding } }, { { accept_language } }))
 }
 
 #' Retrieves the values of properties for a Coding.
 #'
-#' \code{trm_property_of()} takes a Coding column as its input. 
+#' \code{tx_property_of()} takes a Coding column as its input. 
 #' Returns the Column, which contains the values of properties
 #' for this coding with specified names and types. The type of the result column depends on the
 #' types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
@@ -254,19 +254,19 @@ trm_display <- function(coding, accept_language = NULL) {
 #'
 #' @export
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' 
 #' # Get the (first) value of `inactive` property of the first coding of the Condition resource code
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(id, 
-#'          is_inavtive = (!!trm_property_of(code[['coding']][[0]], 
+#'          is_inavtive = (!!tx_property_of(code[['coding']][[0]], 
 #'                                  "inactive",PropertyType$BOOLEAN))[[0]], 
 #'          .keep='none'
 #'      )
 #' 
-#' ptl_disconnect(pc)
-trm_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
+#' pathling_disconnect(pc)
+tx_property_of <- function(coding, property_code, property_type = "string", accept_language = NULL) {
 
   if (property_type == PropertyType$CODE) {
     rlang::expr(property_code({ { coding } }, { { property_code } }, { { accept_language } }))
@@ -289,7 +289,7 @@ trm_property_of <- function(coding, property_code, property_type = "string", acc
 
 #' Retrieves the values of designations for a Coding.
 #'
-#' \code{trm_designation()} takes a Coding column as its input. Returns the Column, which contains the values of
+#' \code{tx_designation()} takes a Coding column as its input. Returns the Column, which contains the values of
 #' designations (strings) for this coding for the specified use and language. If the language is
 #' not provided (is null), then all designations with the specified type are returned regardless of
 #' their language.
@@ -304,18 +304,18 @@ trm_property_of <- function(coding, property_code, property_type = "string", acc
 #' 
 #' @export
 #' 
-#' @examplesIf ptl_is_spark_installed()
-#' pc <- ptl_connect()
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect()
 #' 
 #' # Get the (first) value of the SNONED-CD designation code '900000000000003001'  
 #' # for the first coding of the Condition resource code for language 'en'.
 #' pc %>% pathling_example_resource('Condition') %>% 
 #'      sparklyr::mutate(
 #'             id, 
-#'             designation = (!!trm_designation(code[['coding']][[0]], 
-#'                      !!trm_to_snomed_coding('900000000000003001'), language = 'en'))[[0]], 
+#'             designation = (!!tx_designation(code[['coding']][[0]], 
+#'                      !!tx_to_snomed_coding('900000000000003001'), language = 'en'))[[0]], 
 #'             .keep='none')
-#' ptl_disconnect(pc)
-trm_designation <- function(coding, use = NULL, language = NULL) {
+#' pathling_disconnect(pc)
+tx_designation <- function(coding, use = NULL, language = NULL) {
   rlang::expr(designation({ { coding } }, { { use } }, { { language } }))
 }

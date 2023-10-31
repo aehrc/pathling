@@ -38,11 +38,11 @@ library(sparklyr)
 library(pathling)
 
 # Create a default Pathling context.
-pc <- ptl_connect()
+pc <- pathling_connect()
 
 # Copy the R data frame to a Spark data frame.
 conditions_sdf <- pc %>%
-        ptl_spark() %>%
+        pathling_spark() %>%
         copy_to(conditions, overwrite = TRUE)
 
 
@@ -55,14 +55,14 @@ VIRAL_DISEASE_ECL <- '<< 64572001|Disease| : (
 # Use Pathling terminology functions and dplyr verbs to find codes for viral 
 # diseases and obtain their display names.
 result <- conditions_sdf %>%
-        filter(!!trm_member_of(!!trm_to_snomed_coding(CODE), !!trm_to_ecl_value_set(VIRAL_DISEASE_ECL))) %>%
-        mutate(DISPLAY_NAME = !!trm_display(!!trm_to_snomed_coding(CODE))) %>%
+        filter(!!tx_member_of(!!tx_to_snomed_coding(CODE), !!tx_to_ecl_value_set(VIRAL_DISEASE_ECL))) %>%
+        mutate(DISPLAY_NAME = !!tx_display(!!tx_to_snomed_coding(CODE))) %>%
         select(CODE, DISPLAY_NAME) %>%
         distinct() %>%
         collect()
 
 # Disconnect from the Pathling context.
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 
 # As we used collect(), result is also an R data frame.
 result %>% show()
@@ -85,10 +85,10 @@ To find out about other Pathling capabilities please explore the examples in
 the help topics for `pathling` functions. In particular these are some good
 starting points:
 
-- `?ptl_connect` for information about creating and configuring Pathling
+- `?pathling_connect` for information about creating and configuring Pathling
   contexts.
-- `?trm_display` and `?trm_to_snomed_coding` for terminology functions.
+- `?tx_display` and `?tx_to_snomed_coding` for terminology functions.
 - `?ds_aggregate` and `?ds_extract` for pathling queries.
-- `?ptl_encode` for encoding of FHIR resources into data frames.
-- `?ptl_read_ndjson` and `?ds_write_ndjson` for reading and writing FHIR
+- `?pathling_encode` for encoding of FHIR resources into data frames.
+- `?pathling_read_ndjson` and `?ds_write_ndjson` for reading and writing FHIR
   resources in various formats.

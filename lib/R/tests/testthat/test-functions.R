@@ -31,6 +31,6 @@ test_that("to_ecl_value_set returns expected ValueSet URI", {
     "%20manufactured%20dose%20form%7C%20%3D%20154011000036109%7Ctablet%7C%20%29%29"
   )
 
-  result <- trm_to_ecl_value_set(ecl)
+  result <- tx_to_ecl_value_set(ecl)
   expect_equal(result, expected)
 })

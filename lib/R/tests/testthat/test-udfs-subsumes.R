@@ -23,14 +23,14 @@ subsumption_df <- function(spark) {
 
 test_that("subsumes", {
   spark <- def_spark()
-  pc <- def_ptl_context(spark)
+  pc <- def_pathling_context(spark)
 
   df <- subsumption_df(spark)
 
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_subsumes(codeA, codeB)
+          result = !!tx_subsumes(codeA, codeB)
       )
 
   expect_equal(
@@ -44,7 +44,7 @@ test_that("subsumes", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_subsumes(codeA, !!trm_to_coding("63816008", SNOMED_URI))
+          result = !!tx_subsumes(codeA, !!tx_to_coding("63816008", SNOMED_URI))
       )
 
   expect_equal(
@@ -58,8 +58,8 @@ test_that("subsumes", {
   result_df <- df %>%
       select_expr(
           id,
-          result = !!trm_subsumes(
-              !!trm_to_coding("55914-3", LOINC_URI),
+          result = !!tx_subsumes(
+              !!tx_to_coding("55914-3", LOINC_URI),
               codeB
           )
       )

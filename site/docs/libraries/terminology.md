@@ -59,8 +59,8 @@ csv.select(
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
-csv <- ptl_spark(pc) %>%
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
         spark_read_csv(path = 'conditions.csv', header = TRUE)
 
 VIRAL_DISEASE_ECL <- '<< 64572001|Disease| : (
@@ -72,12 +72,12 @@ csv %>%
         mutate(
                 CODE,
                 DESCRIPTION,
-                IS_VIRAL_DISEASE = !!trm_member_of(!!trm_to_snomed_coding(CODE), !!trm_to_ecl_value_set(VIRAL_DISEASE_ECL)),
+                IS_VIRAL_DISEASE = !!tx_member_of(!!tx_to_snomed_coding(CODE), !!tx_to_ecl_value_set(VIRAL_DISEASE_ECL)),
                 .keep = "none"
         ) %>%
         show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -198,13 +198,13 @@ translate_result.select(
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
-csv <- ptl_spark(pc) %>%
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
         spark_read_csv(path = 'conditions.csv', header = TRUE)
 
 translate_result <- csv %>%
         mutate(
-                READ_CODES = !!trm_translate(!!trm_to_snomed_coding(CODE),
+                READ_CODES = !!tx_translate(!!tx_to_snomed_coding(CODE),
                                              concept_map_uri = "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000")
         ) %>%
         mutate(
@@ -213,7 +213,7 @@ translate_result <- csv %>%
         select(CODE, DESCRIPTION, READ_CODES) %>%
         show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -331,8 +331,8 @@ csv.select(
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
-csv <- ptl_spark(pc) %>%
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
         spark_read_csv(path = '/Users/gri306/Library/CloudStorage/OneDrive-CSIRO/Data/synthea/10k_csv_20210818/csv/conditions.csv', header = TRUE)
 
 csv %>%
@@ -340,12 +340,12 @@ csv %>%
                 CODE,
                 DESCRIPTION,
                 # 232208008 |Ear, nose and throat disorder|
-                SUBSUMES = !!trm_subsumes(!!trm_to_snomed_coding("232208008"), !!trm_to_snomed_coding(CODE)),
+                SUBSUMES = !!tx_subsumes(!!tx_to_snomed_coding("232208008"), !!tx_to_snomed_coding(CODE)),
                 .keep = "none"
         ) %>%
         show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -466,23 +466,23 @@ with_displays.show()
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
-csv <- ptl_spark(pc) %>%
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
         spark_read_csv(path = 'conditions.csv', header = TRUE)
 
 parents <- csv %>%
         # Get the parent codes for each code in the dataset. Split each parent code into a separate row.
         mutate(
-                PARENT = explode_outer(!!trm_property_of(!!trm_to_snomed_coding(CODE), "parent", "code"))
+                PARENT = explode_outer(!!tx_property_of(!!tx_to_snomed_coding(CODE), "parent", "code"))
         ) %>%
         # Retrieve the preferred term for each parent code.
         mutate(
-                PARENT = !!trm_display(!!trm_to_snomed_coding(PARENT))
+                PARENT = !!tx_display(!!tx_to_snomed_coding(PARENT))
         ) %>%
         select(CODE, DESCRIPTION, PARENT) %>%
         show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -605,22 +605,22 @@ exploded_synonyms.show()
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect()
-csv <- ptl_spark(pc) %>%
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
         spark_read_csv(path = 'conditions.csv', header = TRUE)
 
 synonyms <- csv %>%
         # Get the synonyms for each code in the dataset.
         mutate(
-                SYNONYMS = !!trm_designation(!!trm_to_snomed_coding(CODE),
-                                             !!trm_to_snomed_coding("900000000000013009"))
+                SYNONYMS = !!tx_designation(!!tx_to_snomed_coding(CODE),
+                                             !!tx_to_snomed_coding("900000000000013009"))
         ) %>%
         # Split each synonym into a separate row.
         mutate(SYNONYM = explode_outer(SYNONYMS)) %>%
         select(CODE, DESCRIPTION, SYNONYM) %>%
         show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -749,23 +749,23 @@ library(sparklyr)
 library(pathling)
 
 # Configure the default language preferences to prioritise French.
-pc <- ptl_connect(accept_language = "fr;q=0.9,en;q=0.5")
-csv <- ptl_spark(pc) %>%
+pc <- pathling_connect(accept_language = "fr;q=0.9,en;q=0.5")
+csv <- pathling_spark(pc) %>%
         spark_read_csv(path = "observations.csv", header = TRUE)
 
 csv %>%
         # Get the display names with default language preferences (in French).
         mutate(
-                DISPLAY = !!trm_display(!!trm_to_loinc_coding(CODE))
+                DISPLAY = !!tx_display(!!tx_to_loinc_coding(CODE))
         ) %>%
         # Get the `display` property values with German as the preferred language.
         mutate(
-                DISPLAY_DE = explode_outer(!!trm_property_of(!!trm_to_loinc_coding(CODE), "display", "string", accept_language = "de-DE"))
+                DISPLAY_DE = explode_outer(!!tx_property_of(!!tx_to_loinc_coding(CODE), "display", "string", accept_language = "de-DE"))
         ) %>%
         select(CODE, DESCRIPTION, DISPLAY, DISPLAY_DE) %>%
         show()
 
-pc %>% ptl_disconnect()
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -877,7 +877,7 @@ pc = PathlingContext.create(
 library(sparklyr)
 library(pathling)
 
-pc <- ptl_connect(
+pc <- pathling_connect(
         terminology_server_url = "https://ontology.nhs.uk/production1/fhir",
         token_endpoint = "https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token",
         client_id = "[client ID]",
