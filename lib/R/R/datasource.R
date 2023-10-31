@@ -248,8 +248,7 @@ ImportMode <- list(
 #' data_source %>% ds_write_delta(file.path(tempdir(), 'delta'), import_mode = ImportMode$OVERWRITE)
 #'
 #' # Write the data to a set of Spark tables in 'fhir' database.
-#' ptl_spark(pc) %>% sparklyr::sdf_sql("CREATE DATABASE IF NOT EXISTS fhir")
-#' data_source %>% ds_write_tables("fhir", import_mode = ImportMode$MERGE)
+#' data_source %>% ds_write_tables("default", import_mode = ImportMode$MERGE)
 #' 
 #' ptl_disconnect(pc)
 NULL
