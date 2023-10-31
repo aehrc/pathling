@@ -53,6 +53,34 @@ display(result)
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- ptl_connect()
+data <- pc %>% ptl_read_ndjson( "s3://somebucket/synthea/ndjson")
+
+# For patients that have not received a COVID-19 vaccine, extract the given
+# name, family name, phone number and whether the patient has heart disease.
+result <- data %>%
+        ds_extract(
+                "Patient",
+                columns = c(
+                        "Given name" = "name.first().given.first()",
+                        "Family name" = "name.first().family",
+                        "Phone number" = "telecom.where(system = 'phone').value",
+                        "Heart disease" = "reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))"
+                ),
+                filters = c("Heart disease" = "reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))")
+        )
+
+show(result)
+
+pc %>% ptl_disconnect()
+```
+
 <TabItem value="scala" label="Scala">
 
 ```scala
