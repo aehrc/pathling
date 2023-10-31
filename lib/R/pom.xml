@@ -284,7 +284,7 @@
               <!-- Install dependencies -->
               <execution>
                 <id>R-install-dependencies</id>
-                <phase>generate-sources</phase>
+                <phase>initialize</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>
