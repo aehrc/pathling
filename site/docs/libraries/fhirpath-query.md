@@ -309,6 +309,13 @@ data = pc.read.ndjson("/usr/share/staging/ndjson")
 ```
 
 </TabItem>
+<TabItem value='r' label='R'>
+
+```r
+data <- pc %>% ptl_read_ndjson("/usr/share/staging/ndjson")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -364,6 +371,14 @@ data = pc.read.bundles("/usr/share/staging/bundles",
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% ptl_read_bundles("/usr/share/staging/bundles",
+                                resource_types = c("Patient", "Condition", "Immunization"))
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -398,6 +413,17 @@ data = pc.read.datasets({
     "Condition": condition_dataset,
     "Immunization": immunization_dataset,
 })
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% ptl_read_datasets(list(
+        Patient = patient_dataset,
+        Condition = condition_dataset,
+        Immunization = immunization_dataset
+))
 ```
 
 </TabItem>
@@ -442,6 +468,13 @@ data = pc.read.parquet("/usr/share/staging/parquet")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% ptl_read_parquet("/usr/share/staging/parquet")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -479,6 +512,13 @@ type (`[resource type].parquet`), e.g. `Patient.parquet`, `Condition.parquet`.
 
 ```python
 data = pc.read.delta("/usr/share/staging/delta")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% ptl_read_delta("/usr/share/staging/delta")
 ```
 
 </TabItem>
@@ -521,6 +561,13 @@ data = pc.read.tables("mimic-iv")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% ptl_read_tables("mimic-iv")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -559,6 +606,13 @@ data.write.ndjson("/tmp/ndjson")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_ndjson("/tmp/ndjson")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -588,6 +642,13 @@ e.g. `Patient.parquet`, `Condition.parquet`.
 
 ```python
 data.write.parquet("/usr/share/warehouse/parquet")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_parquet("/usr/share/warehouse/parquet")
 ```
 
 </TabItem>
@@ -629,6 +690,13 @@ data.write.delta("/usr/share/warehouse/delta")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_delta("/usr/share/warehouse/delta")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -665,6 +733,13 @@ feature of Databricks.
 
 ```python
 data.write.tables("test")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_tables("test")
 ```
 
 </TabItem>
