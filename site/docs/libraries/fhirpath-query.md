@@ -60,7 +60,7 @@ library(sparklyr)
 library(pathling)
 
 pc <- ptl_connect()
-data <- pc %>% ptl_read_ndjson( "s3://somebucket/synthea/ndjson")
+data <- pc %>% ptl_read_ndjson("s3://somebucket/synthea/ndjson")
 
 # For patients that have not received a COVID-19 vaccine, extract the given
 # name, family name, phone number and whether the patient has heart disease.
@@ -74,9 +74,8 @@ result <- data %>%
                         "Heart disease" = "reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))"
                 ),
                 filters = c("Heart disease" = "reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))")
-        )
-
-show(result)
+        ) %>%
+        show()
 
 pc %>% ptl_disconnect()
 ```
@@ -189,6 +188,28 @@ display(result)
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- ptl_connect()
+data <- pc %>% ptl_read_ndjson("s3://somebucket/synthea/ndjson")
+
+# Count the number of female patients, grouped by the type of diabetes that they
+# have been diagnosed with.
+result <- data %>%
+        ds_aggregate(
+                "Patient",
+                aggregations = c("Number of patients" = "count()"),
+                groupings = c(
+                        "Type of diabetes" = "reverseResolve(Condition.subject).where(code.subsumedBy(http://snomed.info/sct|73211009)).code.coding.display()"),
+                filters = "gender = 'female'"
+        ) %>% show()
+
+pc %>% ptl_disconnect()
+```
 <TabItem value="scala" label="Scala">
 
 ```scala
