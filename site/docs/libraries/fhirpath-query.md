@@ -80,6 +80,7 @@ result <- data %>%
 pc %>% ptl_disconnect()
 ```
 
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -210,6 +211,8 @@ result <- data %>%
 
 pc %>% ptl_disconnect()
 ```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -316,7 +319,7 @@ val data = pc.read().ndjson("/usr/share/staging/ndjson")
 <TabItem value="java" label="Java">
 
 ```java
-NdjsonSource data=pc.read().ndjson("/usr/share/staging/ndjson");
+NdjsonSource data = pc.read().ndjson("/usr/share/staging/ndjson");
 ```
 
 </TabItem>
@@ -372,7 +375,7 @@ val data = pc.read().bundles("/usr/share/staging/bundles",
 <TabItem value="java" label="Java">
 
 ```java
-BundlesSource data=pc.read().bundles("/usr/share/staging/bundles",
+BundlesSource data = pc.read().bundles("/usr/share/staging/bundles",
         Set.of("Patient","Condition","Immunization"),FhirMimeTypes.FHIR_JSON) 
 ```
 
@@ -411,7 +414,7 @@ val data = pc.read().datasets()
 <TabItem value="java" label="Java">
 
 ```java
-DatasetSource data=pc.read().datasets()
+DatasetSource data = pc.read().datasets()
         .dataset("Patient",patientDataset)
         .dataset("Condition",conditionDataset)
         .dataset("Immunization",immunizationDataset);
@@ -449,7 +452,7 @@ val data = pc.read().parquet("/usr/share/staging/parquet")
 <TabItem value="java" label="Java">
 
 ```java
-ParquetSource data=pc.read().parquet("/usr/share/staging/parquet");
+ParquetSource data = pc.read().parquet("/usr/share/staging/parquet");
 ```
 
 </TabItem>
@@ -489,7 +492,7 @@ val data = pc.read().delta("/usr/share/staging/delta")
 <TabItem value="java" label="Java">
 
 ```java
-DeltaSource data=pc.read().delta("/usr/share/staging/delta");
+DeltaSource data = pc.read().delta("/usr/share/staging/delta");
 ```
 
 </TabItem>
@@ -528,7 +531,7 @@ val data = pc.read().tables("mimic-iv")
 <TabItem value="java" label="Java">
 
 ```java
-CatalogSource data=pc.read().tables("mimic-iv");
+CatalogSource data = pc.read().tables("mimic-iv");
 ```
 
 </TabItem>
