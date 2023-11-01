@@ -585,10 +585,10 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: Python API test report
           fail_on_test_failures: true
-          
+  
   R-api:
     runs-on: ubuntu-latest
-    name: PathlyR API
+    name: Pathling R API
     env:
       R_KEEP_PKG_SOURCE: yes
       SPARK_VERSION: 3.3.1
@@ -621,12 +621,12 @@ jobs:
       - name: Run maven to install dependencies
         run: >-
           mvn --batch-mode install -pl library-runtime -am -DskipTests
-        timeout-minutes: 30   
+        timeout-minutes: 30
       - name: Run the init goal with Maven
         run: >-
           mvn --batch-mode initialize -P '!R-install-deps'
           -pl lib/R
-        timeout-minutes: 30          
+        timeout-minutes: 30
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: lib/R
@@ -649,7 +649,6 @@ jobs:
           # report action to report them.
           PATHLING_OPTS: >-
             -DskipTests 
-            -DskipPathlyrTests=false
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode verify -P '!R-install-deps'
@@ -691,7 +690,7 @@ jobs:
   upload-coverage:
     name: Upload coverage
     runs-on: ubuntu-latest
-    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, python-api]
+    needs: [ encoders, fhir-server-1, fhir-server-2, fhir-server-3, python-api ]
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
@@ -731,7 +730,7 @@ jobs:
 
   deploy-pre-release:
     name: Pre-release deployment
-    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image]
+    needs: [ encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image ]
     runs-on: ubuntu-latest
     # If the branch starts with "release/", we deploy pre-release packages.
     if: startsWith(github.ref, 'refs/heads/release/')
