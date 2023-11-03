@@ -72,26 +72,24 @@ tx_to_coding <- function(coding_column, system, version = NULL) {
                   ) else NULL)
 }
 
-#' @rdname tx_to_snomed_coding
-#' 
 #' @description
 #' \code{tx_to_snomed_coding()} converts a Column containing codes into a Column that 
 #' contains a SNOMED Coding struct.
 #'
-#' @family terminlogy helpers
+#' @family terminology helpers
+#' @rdname tx_to_coding
 #
 #' @export
 tx_to_snomed_coding <- function(coding_column, version = NULL) {
   tx_to_coding({ { coding_column } }, SNOMED_URI, { { version } })
 }
 
-#' @rdname tx_to_loinc_coding
-#' 
 #' @description
 #' \code{tx_to_loinc_coding()} converts a Column containing codes into a Column that
 #' contains a LOINC Coding struct.
 #' 
-#' @family terminlogy helpers
+#' @family terminology helpers
+#' @rdname tx_to_coding
 #' 
 #' @export
 tx_to_loinc_coding <- function(coding_column, version = NULL) {
@@ -108,7 +106,7 @@ tx_to_loinc_coding <- function(coding_column, version = NULL) {
 #'
 #' @return The ValueSet URI.
 #'
-#' @family terminlogy helpers
+#' @family terminology helpers
 #' 
 #' @importFrom utils URLencode
 #' 
