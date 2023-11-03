@@ -38,6 +38,7 @@ pathling_spark_info <- function() {
 #' @return The version of the Pathling R library.
 #' @export
 pathling_version <- function() {
+  metadata <- package_info("pathling")
   metadata[["Config/pathling/Version"]]
 }
 
