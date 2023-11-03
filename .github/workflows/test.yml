@@ -629,7 +629,8 @@ jobs:
           mvn --batch-mode initialize -P '!R-install-deps'
           -pl lib/R
         timeout-minutes: 30
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: lib/R
           extra-packages: |
