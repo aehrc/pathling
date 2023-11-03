@@ -15,13 +15,12 @@
 
 import logging
 import os
-from tempfile import mkdtemp
-
 from pyspark.sql import SparkSession
 from pytest import fixture
+from tempfile import mkdtemp
 
 from pathling import PathlingContext
-from pathling.etc import find_jar as find_pathling_jar
+from pathling._version import __java_version__
 from pathling.fhir import MimeType
 
 PROJECT_DIR = os.path.abspath(
@@ -43,7 +42,10 @@ def spark_session(request):
     spark = (
         SparkSession.builder.appName("pathling-test")
         .master("local[2]")
-        .config("spark.jars", find_pathling_jar())
+        .config(
+            "spark.jars.packages",
+            f"au.csiro.pathling:library-runtime:{__java_version__}",
+        )
         .config("spark.sql.warehouse.dir", mkdtemp())
         .config("spark.driver.memory", "4g")
         .getOrCreate()

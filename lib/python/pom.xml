@@ -70,29 +70,18 @@
                 <include>.coverage</include>
                 <include>pathling/_version.py</include>
                 <include>build</include>
+                <include>build/**/*</include>
                 <include>.pytest_cache</include>
                 <include>pathling.egg-info</include>
+                <include>pathling.egg-info/**/*</include>
                 <include>**/.ipynb_checkpoints</include>
+                <include>metastore_db</include>
+                <include>metastore_db/**/*</include>
+                <include>derby.log</include>
               </includes>
             </fileset>
           </filesets>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy-dependencies</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <excludeTransitive>true</excludeTransitive>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -165,6 +154,7 @@
                 <line># Please do not modify.</line>
                 <line>#</line>
                 <line>__version__="${pathling.pyapi.version}"</line>
+                <line>__java_version__="${project.version}"</line>
               </lines>
             </file>
           </files>

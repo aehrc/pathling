@@ -15,14 +15,13 @@
 
 # noinspection PyPackageRequirements
 
-from typing import Optional, Sequence, TYPE_CHECKING
-
 from deprecated import deprecated
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
+from typing import Optional, Sequence, TYPE_CHECKING
 
+from pathling._version import __java_version__
 from pathling.coding import Coding
-from pathling.etc import find_jar
 from pathling.fhir import MimeType
 
 if TYPE_CHECKING:
@@ -176,23 +175,19 @@ class PathlingContext:
         """
 
         def _new_spark_session():
-            spark_builder = SparkSession.builder.config("spark.jars", find_jar())
             spark_builder = (
-                (
-                    spark_builder.config(
-                        "spark.jars.packages", "io.delta:delta-core_2.12:2.3.0"
-                    )
-                    .config(
-                        "spark.sql.extensions",
-                        "io.delta.sql.DeltaSparkSessionExtension",
-                    )
-                    .config(
-                        "spark.sql.catalog.spark_catalog",
-                        "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-                    )
+                SparkSession.builder.config(
+                    "spark.jars.packages",
+                    f"au.csiro.pathling:library-runtime:{__java_version__},"
+                    f"io.delta:delta-core_2.12:2.3.0",
                 )
-                if enable_delta
-                else spark_builder
+                .config(
+                    "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
+                )
+                .config(
+                    "spark.sql.catalog.spark_catalog",
+                    "org.apache.spark.sql.delta.catalog.DeltaCatalog",
+                )
             )
             return spark_builder.getOrCreate()
 

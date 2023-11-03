@@ -16,9 +16,8 @@
 import glob
 import os
 import sys
+from setuptools import setup
 from typing import Union
-
-from setuptools import setup, find_packages
 
 HERE = os.path.dirname(__file__)
 ROOT_DIR = os.path.abspath(HERE)
@@ -38,26 +37,6 @@ if not __version__:
     exit(1)
 
 #
-# Check for existence of uber-jar for packaging
-#
-JARS_DIR = os.path.join(HERE, "target", "dependency")
-UBER_JAR_GLOB = os.path.join(JARS_DIR, "library-runtime-*.jar")
-jar_files = glob.glob(UBER_JAR_GLOB)
-if not jar_files:
-    print(
-        "ERROR: Cannot find library API JAR in: '%s'.\nMaybe try to run 'mvn package' ..."
-        % JARS_DIR,
-        file=sys.stderr,
-    )
-    exit(1)
-if len(jar_files) > 1:
-    print(
-        "ERROR: Multiple library API JARs found in: '%s'.\nMaybe try to run 'mvn clean' ..."
-        % JARS_DIR,
-        file=sys.stderr,
-    )
-    exit(1)
-#
 # Read the long description
 #
 with open("README.md") as f:
@@ -65,8 +44,7 @@ with open("README.md") as f:
 
 setup(
     name="pathling",
-    packages=find_packages()
-    + ["pathling.jars"],  # this must be the same as the name above
+    packages=["pathling"],
     version=__version__,
     description="Python API for Pathling",
     long_description=long_description,
@@ -85,14 +63,8 @@ setup(
     ],
     license="Apache License, version 2.0",
     python_requires=">=3.7",
-    install_requires=["pyspark>=3.1.0", "deprecated>=1.2.13"],
+    install_requires=["pyspark>=3.1.0,<3.4.0", "deprecated>=1.2.13"],
     include_package_data=True,
-    package_dir={
-        "pathling.jars": "target/dependency",
-    },
-    package_data={
-        "pathling.jars": ["library-runtime-*.jar"],
-    },
     data_files=[
         ("share/pathling/examples", glob.glob("examples/*.py")),
         (
