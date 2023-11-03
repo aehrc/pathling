@@ -1,23 +1,22 @@
 library(dplyr)
 library(sparklyr)
+
 def_spark <- function() {
 
   temp_warehouse_dir <- file.path(tempdir(), 'warehouse')
   spark <- sparklyr::spark_connect(
-    master = "local[1]",
-#    version = "3.3.1",
-#    packages = "io.delta:delta-core_2.12:2.3.0",
-    config = list(
-      "sparklyr.shell.packages" = "io.delta:delta-core_2.12:2.3.0",
-      "sparklyr.shell.driver-memory" = "4G",
-      "sparklyr.shell.driver-java-options" = '"-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896"',
-      "sparklyr.shell.conf" = c(
-        "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
-        "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
-        "spark.sql.catalogImplementation=hive",
-        sprintf("spark.sql.warehouse.dir=\'%s\'", temp_warehouse_dir)
+      master = "local[1]",
+      config = list(
+          "sparklyr.shell.packages" = paste("au.csiro.pathling:library-runtime:", pathling_version(), ",io.delta:delta-core_2.12:2.3.0"),
+          "sparklyr.shell.driver-memory" = "4G",
+          "sparklyr.shell.driver-java-options" = '"-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896"',
+          "sparklyr.shell.conf" = c(
+              "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+              "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog",
+              "spark.sql.catalogImplementation=hive",
+              sprintf("spark.sql.warehouse.dir=\'%s\'", temp_warehouse_dir)
+          )
       )
-    )
   )
 
   spark %>% sdf_sql("CREATE DATABASE IF NOT EXISTS test")
@@ -38,7 +37,7 @@ def_pathling_context <- function(spark) {
 
   spark %>%
       j_invoke_static("au.csiro.pathling.library.PathlingContext", "create",
-                    spark_session(spark), encoders, terminology_service_factory)
+                      spark_session(spark), encoders, terminology_service_factory)
 }
 
 

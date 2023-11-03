@@ -546,7 +546,7 @@ jobs:
           path: /home/runner/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements.txt') }}
           restore-keys: ${{ runner.os }}-pip
-      - name: Run the verify goal with Maven
+      - name: Run the install goal with Maven
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
@@ -558,7 +558,7 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
         run: >-
-          mvn --batch-mode verify
+          mvn --batch-mode install
           -pl lib/python -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
@@ -646,7 +646,7 @@ jobs:
         run: |
           sparklyr::spark_install(version = Sys.getenv("SPARK_VERSION"), hadoop_version = Sys.getenv("HADOOP_VERSION"))
         shell: Rscript {0}
-      - name: Run the verify goal with Maven
+      - name: Run the install goal with Maven
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
@@ -654,7 +654,7 @@ jobs:
             -DskipTests 
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
-          mvn --batch-mode verify -P '!R-install-deps'
+          mvn --batch-mode install -P '!R-install-deps'
           -pl lib/R -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
