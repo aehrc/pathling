@@ -92,3 +92,42 @@ starting points:
 - `?pathling_encode` for encoding of FHIR resources into data frames.
 - `?pathling_read_ndjson` and `?ds_write_ndjson` for reading and writing FHIR
   resources in various formats.
+
+## Developer notes (MacOS)
+
+The following packages are needed to generate pdf manuals:
+
+    brew install basictex
+    brew install freetype
+
+Then run the following to install the `inconsolata` fonts used in R manuals:
+
+    # Install texlive packages needed to build R package vignettes
+    sudo tlmgr update --self
+    sudo tlmgr update --all
+    sudo tlmgr install titling framed inconsolata
+    sudo tlmgr install collection-fontsrecommended
+
+The following packages may be needed to build the dependencies of `devtools`.
+
+    brew install harfbuzz fribidi
+    brew install libjpeg
+    brew install libtiff
+    brew install libgit2
+
+
+To setup the dev environment, run the following commands:
+
+Use miniconda to install R in the activated dev environment:
+
+    # run 'conda activate your-dev-env-name' first
+    conda install -y -c conda-forge r-base=4.1.3
+
+Install the `devtools` R package:
+
+    Rscript --vanilla -e 'install.packages("devtools", repos="https://cloud.r-project.org/")'
+
+Pathling is copyright © 2018-2023, Commonwealth Scientific and Industrial
+Research Organisation
+(CSIRO) ABN 41 687 119 230. Licensed under
+the [Apache License, version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
