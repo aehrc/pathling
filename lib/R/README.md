@@ -13,7 +13,7 @@ Prerequisites: `R >= 3.5.0` (has been tested with `R 4.3.1`)
 * Install the `pathling`
   package: `remotes::install_url('[package URL]', upgrade = FALSE)`
 * Install Spark version required by
-  Pathling: `pathling::pathling_spark_install()`
+  Pathling: `pathling::pathling_install_spark()`
 
 ### Running on Windows
 

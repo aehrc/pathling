@@ -15,7 +15,10 @@
 
 spark_dependencies <- function(spark_version, scala_version, ...) {
   sparklyr::spark_dependency(
-      jars = Sys.glob(file.path(system.file('java', package = "pathling"), "library-runtime-*.jar"))
+      packages = c(
+          paste("au.csiro.pathling:library-runtime:", pathling_version()),
+          "io.delta:delta-core_2.12:2.3.0"
+      )
   )
 }
 

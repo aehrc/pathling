@@ -28,7 +28,7 @@
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>r</artifactId>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
   <name>Pathling R API</name>
   <description>A library for using Pathling with R.</description>
@@ -62,7 +62,7 @@
       TODO: This to to work around sparklyr not containing a working download URL for Spark 
         3.3.2. Once this is resolved, this can be the same as the project Spark version.
     -->
-    <pathling.Rapi.sparkVersion>3.3.1</pathling.Rapi.sparkVersion>
+    <pathling.Rapi.sparkVersion>3.3.2</pathling.Rapi.sparkVersion>
     <pathling.Rapi.hadoopVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopVersion>
     <pathling.Rapi.packageName>pathling</pathling.Rapi.packageName>
     <!--suppress UnresolvedMavenProperty -->
@@ -134,18 +134,6 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>copy-dependencies</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <includeScope>runtime</includeScope>
-              <excludeTransitive>true</excludeTransitive>
-              <outputDirectory>${project.basedir}/inst/java</outputDirectory>
-            </configuration>
-          </execution>
-          <execution>
             <id>copy-test-data</id>
             <phase>generate-test-resources</phase>
             <goals>
@@ -188,6 +176,8 @@
               <executable>sed</executable>
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
+                <argument>-e</argument>
+                <argument>s/%pathling.version%/${project.version}/</argument>
                 <argument>-e</argument>
                 <argument>s/%pathling.Rapi.version%/${pathling.Rapi.version}/</argument>
                 <argument>-e</argument>

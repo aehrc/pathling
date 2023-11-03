@@ -25,7 +25,6 @@ package_info <- function(pkgname) {
   read_dcf(path)
 }
 
-
 pathling_spark_info <- function() {
   metadata <- package_info("pathling")
   list(
@@ -34,6 +33,13 @@ pathling_spark_info <- function() {
   )
 }
 
+#' Returns the version of the Pathling R library.
+#' 
+#' @return The version of the Pathling R library.
+#' @export
+pathling_version <- function() {
+  metadata[["Config/pathling/Version"]]
+}
 
 #' Installs the version of Spark/Hadoop required by pathling.
 #' 

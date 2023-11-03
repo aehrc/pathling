@@ -74,7 +74,6 @@ StorageType <- list(
 #'   expiry when deciding whether to send it with a terminology request
 #' @param accept_language The default value of the Accept-Language HTTP header passed to the
 #'   terminology server
-#' @param enable_delta Enables the use of Delta for storage of FHIR data
 #'
 #' @return \code{pathling_connect()} returns a PathlingContext instance initialized with the specified configuration.
 #'
@@ -120,8 +119,7 @@ pathling_connect <- function(
     client_secret = NULL,
     scope = NULL,
     token_expiry_tolerance = 120,
-    accept_language = NULL,
-    enable_delta = FALSE
+    accept_language = NULL
 ) {
 
 
@@ -129,18 +127,10 @@ pathling_connect <- function(
 
 
   new_spark_connection <- function() {
-    config <- if (enable_delta) {
-      list(
-          "sparklyr.shell.packages" = "io.delta:delta-core_2.12:2.3.0",
-          "sparklyr.shell.conf" = c(
-              "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
-              "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
-          )
-      )
-    } else {
-      sparklyr::spark_config()
-    }
-    sparklyr::spark_connect(master = "local", config = config, version = spark_info$spark_version)
+    sparklyr::spark_connect(master = "local[*]", config = list("sparklyr.shell.conf" = c(
+        "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+        "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+    )), version = spark_info$spark_version)
   }
 
   spark <- if (!is.null(spark)) {
@@ -152,7 +142,7 @@ pathling_connect <- function(
   spark_runtime_version <- sparklyr::spark_version(spark)
   if (package_version(spark_runtime_version) < spark_info$spark_version) {
     warning(sprintf("Incompatible version of spark: %s, while Pathling requires at least: %s",
-                 spark_runtime_version, spark_info$spark_version))
+                    spark_runtime_version, spark_info$spark_version))
   }
 
   encoders_config <- spark %>%
