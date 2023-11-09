@@ -157,7 +157,7 @@ public class QueryParser {
 
   static boolean isTraversal(@Nonnull final PathWithAlias pathWithAlias) {
     final FhirPath<Collection> path = pathWithAlias.getPath();
-    return path instanceof Paths.Traversal || path.isNull();
+    return path.first() instanceof Paths.Traversal || path.isNull();
   }
 
   static Stream<? extends Selection> decomposeSelection(@Nonnull final FhirPath<Collection> parent,

@@ -23,8 +23,6 @@ public class StaticFunctionRegistry extends InMemoryFunctionRegistry<NamedFuncti
 
   public StaticFunctionRegistry() {
     super(new Builder<String, NamedFunction>()
-        .put("resolve", new ResolveFunction())
-        .put("iif", new IifFunction())
         .put("until", new UntilFunction())
         .putAll(WrappedFunction.mapOf(StandardFunctions.class))
         .putAll(WrappedFunction.mapOf(TerminologyFunctions.class))

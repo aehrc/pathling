@@ -73,20 +73,22 @@ public class StandardFunctions {
       @Nonnull final CollectionExpression expression) {
     return input.filter(expression.requireBoolean().toColumnFunction(input));
   }
-  //
-  //
-  // // Maybe these too can be implemented as colum functions????
-  // @FhirpathFunction
-  // public Collection iif(@Nonnull final Collection input,
-  //     @Nonnull CollectionExpression expression, @Nonnull Collection thenValue,
-  //     @Nonnull Collection otherwiseValue) {
-  //   // if we do not need to modify the context then maybe enough to just pass the bound expressions
-  //   // (but in fact it's lazy eval anyway and at some point we should check
-  //   functions.when(requireBoolean(expression).apply(input).getSingleton(), thenValue.getColumn())
-  //       .otherwise(otherwiseValue.getColumn());
-  //   // we need to check that the result of the expression is boolean
-  //   return Collection.nullCollection();
-  // }
+
+
+  // Maybe these too can be implemented as colum functions????
+  @FhirpathFunction
+  public Collection iif(@Nonnull final Collection input,
+      @Nonnull CollectionExpression expression, @Nonnull Collection thenValue,
+      @Nonnull Collection otherwiseValue) {
+
+    // we need to pre-evaluate both expressions to determine that they have the same type
+    // this may however cause some issues because we only use one of them (and as such we only need to apply one side effect).
+    
+    // functions.when(requireBoolean(expression).apply(input).getSingleton(), thenValue.getColumn())
+    //     .otherwise(otherwiseValue.getColumn());
+
+    return Collection.nullCollection();
+  }
 
   /**
    * This function allows the selection of only the first element of a collection.
@@ -224,7 +226,7 @@ public class StandardFunctions {
     return ((StringCoercible) input).asStringPath();
   }
 
-  public StandardFunctions() {
+  private StandardFunctions() {
   }
 
   // extended functions
