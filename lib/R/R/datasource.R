@@ -153,7 +153,7 @@ pathling_read_parquet <- function(pc, path) {
 #' @family Pathling data sources
 #' 
 #' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect(enable_delta = TRUE)
+#' pc <- pathling_connect()
 #' data_source <- pc %>% pathling_read_delta(pathling_examples('delta'))
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
 #' pathling_disconnect(pc)
@@ -175,7 +175,7 @@ pathling_read_delta <- function(pc, path) {
 #' @family Pathling data sources
 #' 
 #' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect(enable_delta = TRUE)
+#' pc <- pathling_connect()
 #' spark <- pathling_spark(pc)
 #' data_source <- pc %>% pathling_read_tables()
 #' data_source %>% ds_read('Patient') %>% sparklyr::sdf_nrow()
@@ -235,7 +235,18 @@ ImportMode <- list(
 #' @name ds_write_xxxx
 #' 
 #' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect(enable_delta = TRUE)
+#' # Create a temporary warehouse location, which will be used when we call ds_write_tables().
+#' temp_dir_path <- tempfile()
+#' dir.create(temp_dir_path)
+#' sc <- sparklyr::spark_connect(master = "local[*]", config = list(
+#'   "sparklyr.shell.conf" = c(
+#'     paste0("spark.sql.warehouse.dir=", temp_dir_path),
+#'     "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension",
+#'     "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+#'   )
+#' ), version = pathling_spark_info()$spark_version)
+#'
+#' pc <- pathling_connect(sc)
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of NDJSON files.
@@ -251,6 +262,7 @@ ImportMode <- list(
 #' data_source %>% ds_write_tables("default", import_mode = ImportMode$MERGE)
 #' 
 #' pathling_disconnect(pc)
+#' unlink(temp_dir_path, recursive = TRUE)
 NULL
 
 #' 

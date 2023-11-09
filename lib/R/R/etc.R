@@ -25,6 +25,10 @@ package_info <- function(pkgname) {
   read_dcf(path)
 }
 
+#' Returns the Spark and Hadoop versions used by the Pathling R library.
+#' 
+#' @return A list containing the Spark and Hadoop versions, under the keys 'spark_version' and 'hadoop_version' respectively.
+#' @export
 pathling_spark_info <- function() {
   metadata <- package_info("pathling")
   list(

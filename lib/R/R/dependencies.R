@@ -16,7 +16,7 @@
 spark_dependencies <- function(spark_version, scala_version, ...) {
   sparklyr::spark_dependency(
       packages = c(
-          paste("au.csiro.pathling:library-runtime:", pathling_version()),
+          paste0("au.csiro.pathling:library-runtime:", pathling_version()),
           "io.delta:delta-core_2.12:2.3.0"
       )
   )

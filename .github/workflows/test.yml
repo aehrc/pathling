@@ -651,7 +651,9 @@ jobs:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
           PATHLING_OPTS: >-
-            -DskipTests 
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode install -P '!R-install-deps'

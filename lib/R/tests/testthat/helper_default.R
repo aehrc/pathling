@@ -7,7 +7,6 @@ def_spark <- function() {
   spark <- sparklyr::spark_connect(
       master = "local[1]",
       config = list(
-          "sparklyr.shell.packages" = paste("au.csiro.pathling:library-runtime:", pathling_version(), ",io.delta:delta-core_2.12:2.3.0"),
           "sparklyr.shell.driver-memory" = "4G",
           "sparklyr.shell.driver-java-options" = '"-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896"',
           "sparklyr.shell.conf" = c(
