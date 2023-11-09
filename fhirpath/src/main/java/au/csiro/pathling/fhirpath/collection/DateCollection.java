@@ -18,13 +18,13 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.fhirpath.Temporal.buildDateArithmeticOperation;
-import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.sql.dates.date.DateAddDurationFunction;
@@ -49,24 +49,30 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class DateCollection extends Collection implements Materializable<DateType>,
     Comparable, Temporal, StringCoercible {
 
-  protected DateCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
+  protected DateCollection(@Nonnull final ColumnCtx columnCtx,
+      @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+    super(columnCtx, type, fhirType, definition);
   }
 
   /**
-   * Returns a new instance with the specified column and definition.
+   * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param column The column to use
+   * @param columnCtx The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link DateCollection}
    */
   @Nonnull
-  public static DateCollection build(@Nonnull final Column column,
+  public static DateCollection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new DateCollection(column, Optional.of(FhirPathType.DATE),
+    return new DateCollection(columnCtx, Optional.of(FhirPathType.DATE),
         Optional.of(FHIRDefinedType.DATE), definition);
+  }
+
+  @Nonnull
+  public static DateCollection build(@Nonnull final ColumnCtx columnCtx) {
+    return DateCollection.build(columnCtx, Optional.empty());
   }
 
   /**
@@ -79,7 +85,7 @@ public class DateCollection extends Collection implements Materializable<DateTyp
   @Nonnull
   public static DateCollection fromLiteral(@Nonnull final String fhirPath) throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateCollection.build(lit(dateString), Optional.empty());
+    return DateCollection.build(ColumnCtx.literal(dateString));
   }
 
   @Nonnull
@@ -113,8 +119,8 @@ public class DateCollection extends Collection implements Materializable<DateTyp
 
   @Nonnull
   @Override
-  public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
+  public StringCollection asStringPath() {
+    return map(ColumnCtx::asString, StringCollection::build);
   }
 
 }

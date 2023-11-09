@@ -45,7 +45,7 @@ public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAsser
   @Nonnull
   public LiteralPathAssertion has(@Nullable final Object expected) {
     // TODO: consider this implementation - we may want to evaluate the expression instead
-    final Expression maybeLiteral = result.getColumn().expr();
+    final Expression maybeLiteral = result.getColumnCtx().getValue().expr();
     assertTrue(maybeLiteral instanceof Literal);
     assertEquals(expected, ((Literal) maybeLiteral).value());
     return this;

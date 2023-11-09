@@ -59,7 +59,7 @@ public class ExtractView {
         .map(this::toColumn);
 
     return where.map(projectionContext::evaluate)
-        .map(dr -> dr.toFilter(cr -> cr.getCollection().getSingleton()))
+        .map(dr -> dr.toFilter(cr -> cr.getCollection().asSingular().getCtx().getValue()))
         .map(selectionResult::andThen)
         .orElse(selectionResult)
         .select(projectionContext.getDataset(), Function.identity());
@@ -89,8 +89,8 @@ public class ExtractView {
                                    : collection;
 
     final Column columnResult = info.isAsCollection()
-                                ? finalResult.getColumn()
-                                : finalResult.getSingleton();
+                                ? finalResult.getColumnCtx().getValue()
+                                : finalResult.asSingular().getColumnCtx().getValue();
     return info.getAlias().map(columnResult::alias).orElse(columnResult);
   }
 }

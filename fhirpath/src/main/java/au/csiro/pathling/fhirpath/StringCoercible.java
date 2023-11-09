@@ -1,6 +1,7 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.StringCollection;
 import javax.annotation.Nonnull;
 
 /**
@@ -15,6 +16,6 @@ public interface StringCoercible {
    * @return a new {@link Collection} representing the String representation of this path
    */
   @Nonnull
-  Collection asStringPath();
+  StringCollection asStringPath();
 
 }

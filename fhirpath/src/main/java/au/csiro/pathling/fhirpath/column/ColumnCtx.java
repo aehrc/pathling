@@ -17,73 +17,141 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import au.csiro.pathling.encoders.ValueFunctions;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.column.ColumnPaths.Call;
+import au.csiro.pathling.fhirpath.column.ColumnPaths.GetField;
+import au.csiro.pathling.fhirpath.column.ColumnPaths.VectorizedCall;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
+import org.apache.spark.sql.types.DataType;
+import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 
-public abstract class ColumnCtx {
-
-  private static final Column NULL_LITERAL = functions.lit(null);
-
-  static class NullCtx extends ColumnCtx {
-
-    private static final ColumnCtx INSTANCE = new NullCtx();
+public class ColumnCtx {
 
 
-    @Override
-    public Column getValue() {
-      return NULL_LITERAL;
-    }
+  @Nonnull
+  final ColumnPath path;
+  private static final ColumnCtx NULL_CTC = new ColumnCtx(ColumnPath.nullPath());
 
-    @Override
-    protected ColumnCtx copyOf(@Nonnull final Column newValue) {
-      return this;
-    }
+  protected ColumnCtx(@Nonnull final ColumnPath path) {
+    this.path = path;
+  }
 
-    @Nonnull
-    @Override
-    public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
-        @Nonnull final Function<Column, Column> singularExpression) {
-      return this;
-    }
+  protected ColumnCtx() {
+    this(ColumnPath.nullPath());
+  }
 
-    @Nonnull
-    @Override
-    public ColumnCtx flatten() {
-      return this;
-    }
 
-    @Nonnull
-    @Override
-    public ColumnCtx traverse(@Nonnull final String fieldName) {
-      return this;
-    }
+  private ColumnCtx andThen(@Nonnull final ColumnPath nextPath) {
+    return new ColumnCtx(path.andThen(nextPath));
+  }
+
+  @Nonnull
+  @Deprecated
+  public static ColumnCtx of(@Nonnull Column column) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Nonnull
+  protected static ColumnCtx of(@Nonnull ColumnPath columnPath) {
+    return new ColumnCtx(columnPath);
   }
 
   @Nonnull
   public static ColumnCtx nullCtx() {
-    return NullCtx.INSTANCE;
+    return NULL_CTC;
   }
 
-  public abstract Column getValue();
-
-  protected abstract ColumnCtx copyOf(@Nonnull final Column newValue);
+  @Nonnull
+  public static ColumnCtx literal(@Nonnull final Object value) {
+    return of(new ColumnPaths.Literal(value));
+  }
 
   @Nonnull
-  public abstract ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
-      @Nonnull final Function<Column, Column> singularExpression);
+  public static ColumnCtx resource(@Nonnull final ResourceType resourceType) {
+    return of(new ColumnPaths.Resource(resourceType));
+  }
+
+  @Nonnull
+  public static ColumnCtx biOperator(@Nonnull final ColumnCtx left, @Nonnull final ColumnCtx right,
+      @Nonnull final BiFunction<Column, Column, Column> operator) {
+    return of(new ColumnPaths.Operator2(left.path, right.path, operator));
+  }
+
+  @Nonnull
+  public Optional<Object> asLiteralValue() {
+    return Optional.of(path)
+        .filter(ColumnPaths.Literal.class::isInstance)
+        .map(ColumnPaths.Literal.class::cast)
+        .map(ColumnPaths.Literal::getValue);
+  }
+
+  @Nonnull
+  public Optional<String> asStringValue() {
+    return asLiteralValue()
+        .filter(String.class::isInstance)
+        .map(Object::toString);
+  }
+
+  @Nonnull
+  @NotImplemented
+  public ColumnCtx reverseResolve(@Nonnull final ResourceType resourceType,
+      @Nonnull final ResourceType foreignResourceType) {
+    return of(new ColumnPaths.ReverseJoin(resourceType, foreignResourceType));
+  }
+
+  @Nonnull
+  public ColumnCtx resolve(@Nonnull final ResourceType foreignResourceType) {
+    return of(new ColumnPaths.Join(foreignResourceType));
+  }
+
+  public ColumnCtx call(@Nonnull final Function<Column, Column> mapper) {
+    return of(new Call(mapper));
+  }
+
+  @Nonnull
+  public ColumnCtx getField(@Nonnull final String fieldName) {
+    return andThen(new GetField(fieldName));
+  }
+
+  @Nonnull
+  public ColumnCtx cast(@Nonnull final DataType stringType) {
+    return call(c -> c.cast(stringType));
+  }
+
+  @Nonnull
+  public ColumnCtx asString() {
+    return cast(DataTypes.StringType);
+  }
 
 
   @Nonnull
-  public abstract ColumnCtx flatten();
+  public ColumnCtx rlike(@Nonnull final String regex) {
+    return call(c -> c.rlike(regex));
+  }
+
+  public Column getValue() {
+    throw new UnsupportedOperationException();
+  }
 
   @Nonnull
-  public abstract ColumnCtx traverse(@Nonnull final String fieldName);
+  public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+      @Nonnull final Function<Column, Column> singularExpression) {
+    return of(new VectorizedCall(arrayExpression, singularExpression));
+  }
 
+  @Nonnull
+  public ColumnCtx flatten() {
+    return call(ValueFunctions::unnest);
+  }
 
   @Nonnull
   public ColumnCtx toArray() {
@@ -95,7 +163,7 @@ public abstract class ColumnCtx {
 
   @Nonnull
   public ColumnCtx combine(@Nonnull final ColumnCtx other) {
-    return copyOf(functions.concat(toArray().getValue(), other.toArray().getValue()));
+    return biOperator(this, other, (l, r) -> functions.concat(l, r));
   }
 
   @SuppressWarnings("unused")
@@ -108,7 +176,8 @@ public abstract class ColumnCtx {
 
   @Nonnull
   public ColumnCtx orElse(@Nonnull final Object value) {
-    return copyOf(functions.coalesce(getValue(), functions.lit(value)));
+    throw new UnsupportedOperationException();
+    //return copyOf(functions.coalesce(getValue(), functions.lit(value)));
   }
 
   @Nonnull
@@ -122,13 +191,14 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx filter(final Function<Column, Column> lambda) {
-    return vectorize(
-        c -> functions.filter(c, lambda::apply),
-        c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
-    );
+  @NotImplemented
+  public ColumnCtx filter(final Function<ColumnCtx, ColumnCtx> lambda) {
+    throw new UnsupportedOperationException();
+    // return vectorize(
+    //     c -> functions.filter(c, lambda::apply),
+    //     c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
+    // );
   }
-
 
   @Nonnull
   public ColumnCtx removeNulls() {
@@ -162,7 +232,6 @@ public abstract class ColumnCtx {
 
   @Nonnull
   public ColumnCtx first() {
-
     return vectorize(c -> c.getItem(0), Function.identity());
   }
 
@@ -176,7 +245,6 @@ public abstract class ColumnCtx {
         Function.identity()
     );
   }
-
 
   @Nonnull
   public ColumnCtx count() {
@@ -195,19 +263,16 @@ public abstract class ColumnCtx {
 
   @Nonnull
   public ColumnCtx explode() {
-    //  TODO: this actually cannot should return DatasetResult as filtering is required here
-    return vectorize(functions::explode, Function.identity());
+    return andThen(new ColumnPaths.Explode(false));
   }
 
   @Nonnull
   public ColumnCtx explode_outer() {
-    //  TODO: this actually cannot should return DatasetResult as filtering is required here
-    return vectorize(functions::explode_outer, Function.identity());
+    return andThen(new ColumnPaths.Explode(true));
   }
 
-
   @Nonnull
-  public ColumnCtx join(@Nonnull final String separator) {
+  public ColumnCtx resolve(@Nonnull final String separator) {
     return vectorize(c -> functions.array_join(c, separator), Function.identity());
   }
 
@@ -262,11 +327,50 @@ public abstract class ColumnCtx {
             .toArray(Column[]::new)));
 
   }
-  
+
+
   @Nonnull
   public ColumnCtx callUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
-    return copyOf(functions.callUDF(udfName,
-        Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnCtx::getValue))
-            .toArray(Column[]::new)));
+    return of(new ColumnPaths.CallUDF(udfName, args));
   }
+
+  // @Nonnull
+  // public ColumnCtx callUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
+  //   return copyOf(functions.callUDF(udfName,
+  //       Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnCtx::getValue))
+  //           .toArray(Column[]::new)));
+  // }
+  //
+  // public StdColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+  //     @Nonnull final Function<Column, Column> singularExpression) {
+  //   return StdColumnCtx.of(
+  //       ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
+  // }
+  //
+  // @Override
+  // @Nonnull
+  // public StdColumnCtx getField(@Nonnull final String fieldName) {
+  //   return of(ValueFunctions.unnest(value.getField(fieldName)));
+  // }
+  //
+  // @Nonnull
+  // public One<ColumnCtx> explode() {
+  //   //  TODO: this actually cannot should return DatasetResult as filtering is required here
+  //   final ColumnCtx exploded = vectorize(functions::explode, Function.identity());
+  //   final String materializedColumnName = randomAlias();
+  //   return DatasetResult.one(copyOf(functions.col(materializedColumnName)),
+  //       ds -> ds.withColumn(
+  //               materializedColumnName, exploded.getValue())
+  //           .filter(functions.col(materializedColumnName).isNotNull()));
+  // }
+  //
+  // @Nonnull
+  // public One<ColumnCtx> explode_outer() {
+  //   //  TODO: this actually cannot should return DatasetResult as filtering is required here
+  //   final ColumnCtx exploded = vectorize(functions::explode_outer, Function.identity());
+  //   final String materializedColumnName = randomAlias();
+  //   return DatasetResult.one(copyOf(functions.col(materializedColumnName)),
+  //       ds -> ds.withColumn(
+  //           materializedColumnName, exploded.getValue()));
+  // }
 }

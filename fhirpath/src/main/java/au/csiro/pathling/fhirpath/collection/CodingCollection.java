@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.struct;
 
@@ -25,6 +24,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
@@ -45,26 +45,39 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class CodingCollection extends Collection implements Materializable<Coding>,
     Comparable, StringCoercible {
 
-  protected CodingCollection(@Nonnull final Column column,
+  protected CodingCollection(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+    super(columnCtx, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified column and definition.
    *
-   * @param column The column to use
+   * @param columnCtx The column to use
    * @param definition The definition to use
    * @return A new instance of {@link CodingCollection}
    */
   @Nonnull
-  public static CodingCollection build(@Nonnull final Column column,
+  public static CodingCollection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new CodingCollection(column, Optional.of(FhirPathType.CODING),
+    return new CodingCollection(columnCtx, Optional.of(FhirPathType.CODING),
         Optional.of(FHIRDefinedType.CODING), definition);
   }
+
+
+  /**
+   * Returns a new instance with the specified column and no definition.
+   *
+   * @param columnCtx The column to use
+   * @return A new instance of {@link CodingCollection}
+   */
+  @Nonnull
+  public static CodingCollection build(@Nonnull final ColumnCtx columnCtx) {
+    return build(columnCtx, Optional.empty());
+  }
+
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -78,7 +91,11 @@ public class CodingCollection extends Collection implements Materializable<Codin
       throws IllegalArgumentException {
     final Coding coding = CodingLiteral.fromString(fhirPath);
     final Column column = buildColumn(coding);
-    return CodingCollection.build(column, Optional.empty());
+    // TODO: I am not sure if this should actually be a literal or not 
+    // given that this is a struct of literals
+    // probably yes on the ColumnCtx level provided that there is also a way to encode Codings there
+    // (so it should be moved entirely into the Column Ctx)
+    return CodingCollection.build(ColumnCtx.of(column));
   }
 
   @Nonnull
@@ -135,9 +152,8 @@ public class CodingCollection extends Collection implements Materializable<Codin
 
   @Nonnull
   @Override
-  public Collection asStringPath() {
-    final Column valueColumn = callUDF(CodingToLiteral.FUNCTION_NAME, getColumn());
-    return CodingCollection.build(valueColumn, Optional.empty());
+  public StringCollection asStringPath() {
+    return map(c -> c.mapWithUDF(CodingToLiteral.FUNCTION_NAME), StringCollection::build);
   }
 
 }

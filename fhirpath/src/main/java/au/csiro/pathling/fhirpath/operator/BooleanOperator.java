@@ -20,11 +20,10 @@ package au.csiro.pathling.fhirpath.operator;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import java.util.Optional;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import org.apache.spark.sql.Column;
 
 /**
@@ -51,49 +50,48 @@ public class BooleanOperator implements BinaryOperator {
   public Collection invoke(@Nonnull final BinaryOperatorInput input) {
     final Collection left = input.getLeft();
     final Collection right = input.getRight();
-    final EvaluationContext context = input.getContext();
 
     checkUserInput(left instanceof BooleanCollection,
         "Left operand to " + type + " operator must be Boolean");
     checkUserInput(right instanceof BooleanCollection,
         "Right operand to " + type + " operator must be Boolean");
-    
-    final Column leftValue = left.getColumn();
-    final Column rightValue = right.getColumn();
 
-    // Based on the type of operator, create the correct column expression.
-    final Column valueColumn;
-    switch (type) {
-      case AND:
-        valueColumn = leftValue.and(rightValue);
-        break;
-      case OR:
-        valueColumn = leftValue.or(rightValue);
-        break;
-      case XOR:
-        valueColumn = when(
-            leftValue.isNull().or(rightValue.isNull()), null
-        ).when(
-            leftValue.equalTo(true).and(rightValue.equalTo(false)).or(
-                leftValue.equalTo(false).and(rightValue.equalTo(true))
-            ), true
-        ).otherwise(false);
-        break;
-      case IMPLIES:
-        valueColumn = when(
-            leftValue.equalTo(true), rightValue
-        ).when(
-            leftValue.equalTo(false), true
-        ).otherwise(
-            when(rightValue.equalTo(true), true)
-                .otherwise(null)
-        );
-        break;
-      default:
-        throw new AssertionError("Unsupported boolean operator encountered: " + type);
-    }
-
-    return BooleanCollection.build(valueColumn, Optional.empty());
+    final ColumnCtx resultCtx = ColumnCtx.biOperator(left.getCtx(), right.getCtx(),
+        (leftValue, rightValue) -> {
+          // Based on the type of operator, create the correct column expression.
+          final Column valueColumn;
+          switch (type) {
+            case AND:
+              valueColumn = leftValue.and(rightValue);
+              break;
+            case OR:
+              valueColumn = leftValue.or(rightValue);
+              break;
+            case XOR:
+              valueColumn = when(
+                  leftValue.isNull().or(rightValue.isNull()), null
+              ).when(
+                  leftValue.equalTo(true).and(rightValue.equalTo(false)).or(
+                      leftValue.equalTo(false).and(rightValue.equalTo(true))
+                  ), true
+              ).otherwise(false);
+              break;
+            case IMPLIES:
+              valueColumn = when(
+                  leftValue.equalTo(true), rightValue
+              ).when(
+                  leftValue.equalTo(false), true
+              ).otherwise(
+                  when(rightValue.equalTo(true), true)
+                      .otherwise(null)
+              );
+              break;
+            default:
+              throw new AssertionError("Unsupported boolean operator encountered: " + type);
+          }
+          return valueColumn;
+        });
+    return BooleanCollection.build(resultCtx);
   }
 
   /**

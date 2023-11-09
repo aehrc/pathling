@@ -1,13 +1,13 @@
 /*
  * Copyright 2023 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
- *  
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *  
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *  
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import java.util.Optional;
 import java.util.function.Function;
@@ -41,7 +42,7 @@ public class FhirViewFunctions {
 
   @FhirpathFunction
   public static StringCollection getResourceKey(@Nonnull final ResourceCollection input) {
-    return StringCollection.build(input.getKeyColumn().getValue());
+    return StringCollection.build(input.getKeyColumn());
   }
 
   @FhirpathFunction
@@ -55,7 +56,7 @@ public class FhirViewFunctions {
     // TODO: add support for other types of references
     return Optional.ofNullable(typeSpecifier)
         .map(ts -> ts.toFhirType().toCode() + "/.+")
-        .<Function<Column, Column>>map(
+        .<Function<ColumnCtx, ColumnCtx>>map(
             regex -> (c -> c.getField(REFERENCE_ELEMENT_NAME).rlike(regex)))
         .map(input::filter).orElse(input)
         .traverse(REFERENCE_ELEMENT_NAME).orElse(Collection.nullCollection());

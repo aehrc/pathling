@@ -48,59 +48,60 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  * @author John Grimes
  */
 public class IntegerCollection extends Collection implements
-    Materializable<PrimitiveType>, Comparable, Numeric, StringCoercible {
+    Materializable<PrimitiveType<?>>, Comparable, Numeric, StringCoercible {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(IntegerCollection.class, DecimalCollection.class);
 
-  protected IntegerCollection(@Nonnull final Column column,
+  protected IntegerCollection(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+    super(columnCtx, type, fhirType, definition);
   }
 
   /**
-   * Returns a new instance with the specified column and definition.
+   * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param column The column to use
+   * @param columnCtx The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link IntegerCollection}
    */
   @Nonnull
-  public static IntegerCollection build(@Nonnull final Column column,
+  public static IntegerCollection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new IntegerCollection(column, Optional.of(FhirPathType.INTEGER),
+    return new IntegerCollection(columnCtx, Optional.of(FhirPathType.INTEGER),
         Optional.of(FHIRDefinedType.INTEGER), definition);
   }
 
   @Nonnull
-  public static IntegerCollection build(@Nonnull final Column column) {
-    return build(column, Optional.empty());
+  public static IntegerCollection build(final ColumnCtx columnCtx) {
+    return build(columnCtx, Optional.empty());
   }
 
 
   @Nonnull
-  public static IntegerCollection build(final ColumnCtx columnCtx) {
-    return build(columnCtx.getValue());
+  public static IntegerCollection fromValue(final int value) {
+    return IntegerCollection.build(ColumnCtx.literal(value));
   }
+
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
-   * @param fhirPath The FHIRPath representation of the literal
+   * @param integerLiteral The FHIRPath representation of the literal
    * @return A new instance of {@link IntegerCollection}
    * @throws NumberFormatException if the literal is malformed
    */
-  public static IntegerCollection fromLiteral(@Nonnull final String fhirPath)
+  @Nonnull
+  public static IntegerCollection fromLiteral(@Nonnull final String integerLiteral)
       throws NumberFormatException {
-    final int value = Integer.parseInt(fhirPath);
-    return IntegerCollection.build(lit(value));
+    return IntegerCollection.fromValue(Integer.parseInt(integerLiteral));
   }
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getFhirValueFromRow(@Nonnull final Row row,
+  public Optional<PrimitiveType<?>> getFhirValueFromRow(@Nonnull final Row row,
       final int columnNumber) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
@@ -150,7 +151,7 @@ public class IntegerCollection extends Collection implements
   @Nonnull
   @Override
   public Optional<Column> getNumericValueColumn() {
-    return Optional.ofNullable(getColumn().cast(DataTypes.LongType));
+    return Optional.ofNullable(this.getColumnCtx().cast(DataTypes.LongType).getValue());
   }
 
   @Nonnull
@@ -183,11 +184,12 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(valueColumn, Optional.empty());
+          return IntegerCollection.build(ColumnCtx.of(valueColumn));
         case DIVISION:
-          final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType());
+          final Column numerator = source.getColumnCtx().cast(DecimalCollection.getDecimalType())
+              .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(valueColumn, Optional.empty());
+          return DecimalCollection.build(ColumnCtx.of(valueColumn));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -196,8 +198,8 @@ public class IntegerCollection extends Collection implements
 
   @Override
   @Nonnull
-  public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
+  public StringCollection asStringPath() {
+    return map(ColumnCtx::asString, StringCollection::build);
   }
 
 }

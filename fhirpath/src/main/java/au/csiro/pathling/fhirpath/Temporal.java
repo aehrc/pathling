@@ -21,11 +21,8 @@ import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
-import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 /**
  * Describes a path that represents a temporal value such as DateTime or Date, and can be the
@@ -81,10 +78,8 @@ public interface Temporal {
         default:
           throw new AssertionError("Unsupported date arithmetic operation: " + operation);
       }
-
-      final Column valueColumn = functions.callUDF(functionName, source.getColumn(),
-          target.getColumn());
-      return DateTimeCollection.build(valueColumn, Optional.empty());
+      return DateTimeCollection.build(
+          source.getColumnCtx().callUDF(functionName, target.getColumnCtx()));
     };
   }
 

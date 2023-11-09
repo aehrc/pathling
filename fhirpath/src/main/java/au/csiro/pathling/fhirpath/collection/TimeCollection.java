@@ -17,18 +17,15 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static org.apache.spark.sql.functions.lit;
-
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.TimeType;
 
@@ -40,25 +37,38 @@ import org.hl7.fhir.r4.model.TimeType;
 public class TimeCollection extends Collection implements Materializable<TimeType>,
     Comparable, StringCoercible {
 
-  public TimeCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
+  public TimeCollection(@Nonnull final ColumnCtx columnCtx,
+      @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+    super(columnCtx, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified column and definition.
    *
-   * @param column The column to use
+   * @param columnCtx The column to use
    * @param definition The definition to use
    * @return A new instance of {@link TimeCollection}
    */
   @Nonnull
-  public static TimeCollection build(@Nonnull final Column column,
+  public static TimeCollection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new TimeCollection(column, Optional.of(FhirPathType.TIME),
+    return new TimeCollection(columnCtx, Optional.of(FhirPathType.TIME),
         Optional.of(FHIRDefinedType.TIME), definition);
   }
+
+  /**
+   * Returns a new instance with the specified column and nno definition.
+   *
+   * @param columnCtx The column to use
+   * @return A new instance of {@link TimeCollection}
+   */
+  @Nonnull
+  public static TimeCollection build(@Nonnull final ColumnCtx columnCtx) {
+    return build(columnCtx, Optional.empty());
+  }
+
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -69,7 +79,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) {
     final String timeString = literal.replaceFirst("^@T", "");
-    return TimeCollection.build(lit(timeString), Optional.empty());
+    return TimeCollection.build(ColumnCtx.literal(timeString));
   }
 
   @Nonnull
@@ -83,8 +93,8 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
 
   @Nonnull
   @Override
-  public Collection asStringPath() {
-    return StringCollection.build(getColumn().cast(DataTypes.StringType), Optional.empty());
+  public StringCollection asStringPath() {
+    return map(ColumnCtx::asString, StringCollection::build);
   }
 
 }

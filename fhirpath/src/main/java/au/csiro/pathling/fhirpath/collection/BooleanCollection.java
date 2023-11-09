@@ -44,25 +44,30 @@ public class BooleanCollection extends Collection implements Materializable<Bool
       .of(BooleanCollection.class);
   private static final BooleanCollection FALSE_COLLECTION = BooleanCollection.fromValue(false);
 
-  protected BooleanCollection(@Nonnull final Column column,
+  protected BooleanCollection(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+    super(columnCtx, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified column and definition.
    *
-   * @param column The column to use
+   * @param columnCtx The column to use
    * @param definition The definition to use
    * @return A new instance of {@link BooleanCollection}
    */
   @Nonnull
-  public static BooleanCollection build(@Nonnull final Column column,
+  public static BooleanCollection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new BooleanCollection(column, Optional.of(FhirPathType.BOOLEAN),
+    return new BooleanCollection(columnCtx, Optional.of(FhirPathType.BOOLEAN),
         Optional.of(FHIRDefinedType.BOOLEAN), definition);
+  }
+  
+  @Nonnull
+  public static BooleanCollection build(@Nonnull final ColumnCtx value) {
+    return BooleanCollection.build(value, Optional.empty());
   }
 
   /**
@@ -78,17 +83,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
 
   @Nonnull
   public static BooleanCollection fromValue(final boolean value) {
-    return BooleanCollection.build(lit(value), Optional.empty());
-  }
-
-  @Nonnull
-  public static BooleanCollection build(@Nonnull final Column column) {
-    return BooleanCollection.build(column, Optional.empty());
-  }
-
-  @Nonnull
-  public static BooleanCollection build(@Nonnull final ColumnCtx value) {
-    return BooleanCollection.build(value.getValue(), Optional.empty());
+    return BooleanCollection.build(ColumnCtx.literal(value));
   }
 
   @Nonnull

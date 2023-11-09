@@ -24,10 +24,8 @@ import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
-import au.csiro.pathling.sql.Terminology;
 import au.csiro.pathling.sql.udf.PropertyUdf;
 import au.csiro.pathling.utilities.Functions;
 import java.util.Optional;
@@ -87,7 +85,7 @@ public abstract class TerminologyFunctions {
                 .orElse(ColumnCtx.nullCtx())
         ).flatten().removeNulls();
 
-    return Collection.build(resultCtx.getValue(), propertyType,
+    return Collection.build(resultCtx, propertyType,
         input.getDefinition().flatMap(Functions.maybeCast(ElementDefinition.class))
             .filter(__ -> propertyType == FHIRDefinedType.CODING));
   }
@@ -148,7 +146,9 @@ public abstract class TerminologyFunctions {
   @FhirpathFunction
   public static BooleanCollection subsumes(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
-    return BooleanCollection.build(Terminology.subsumes(input.getColumn(), codes.getColumn()));
+    return input.map(ctx ->
+            ctx.callUDF("subsumes", codes.getColumnCtx(), ColumnCtx.literal(false)),
+        BooleanCollection::build);
   }
 
   /**
@@ -163,7 +163,9 @@ public abstract class TerminologyFunctions {
   @FhirpathFunction
   public static BooleanCollection subsumedBy(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
-    return BooleanCollection.build(Terminology.subsumed_by(input.getColumn(), codes.getColumn()));
+    return input.map(ctx ->
+            ctx.callUDF("subsumes", codes.getColumnCtx(), ColumnCtx.literal(true)),
+        BooleanCollection::build);
   }
 
   /**
@@ -191,9 +193,9 @@ public abstract class TerminologyFunctions {
         input.getCtx().callUDF("translate_coding",
             conceptMapUrl.getCtx().singular(),
             Optional.ofNullable(reverse).map(BooleanCollection::getCtx).map(ColumnCtx::singular)
-                .orElse(StdColumnCtx.of(functions.lit(false))),
+                .orElse(ColumnCtx.literal(false)),
             Optional.ofNullable(equivalence).map(StringCollection::getCtx).map(ColumnCtx::singular)
-                .orElse(StdColumnCtx.of(functions.lit("equivalent")))
+                .orElse(ColumnCtx.literal("equivalent"))
                 .transform(c -> functions.split(c, ",")),
             Optional.ofNullable(target).map(StringCollection::getCtx).map(ColumnCtx::singular)
                 .orElse(ColumnCtx.nullCtx())

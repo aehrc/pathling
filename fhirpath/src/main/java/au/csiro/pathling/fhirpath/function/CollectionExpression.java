@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.function;
 
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import org.apache.spark.sql.Column;
 
 import javax.annotation.Nonnull;
@@ -38,8 +39,8 @@ public interface CollectionExpression extends Function<Collection, Collection> {
     };
   }
 
-  default Function<Column, Column> toColumnFunction(@Nonnull final Collection input) {
+  default Function<ColumnCtx, ColumnCtx> toColumnFunction(@Nonnull final Collection input) {
     // the type of the element Collection needs to be the same as the input
-    return c -> apply(input.copyWith(c)).getColumn();
+    return c -> apply(input.copyWith(c)).getColumnCtx();
   }
 }

@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 
@@ -48,7 +49,7 @@ public interface Numeric {
    * @return a {@link Column} within the dataset containing the values of the nodes
    */
   @Nonnull
-  Column getColumn();
+  ColumnCtx getColumnCtx();
 
   /**
    * @return a {@link Column} that provides a value that can me used in math operations

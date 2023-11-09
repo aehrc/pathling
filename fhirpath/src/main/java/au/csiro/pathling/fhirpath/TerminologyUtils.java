@@ -60,14 +60,5 @@ public interface TerminologyUtils {
   static boolean isCodingOrCodeableConcept(@Nonnull final Collection result) {
     return isCoding(result) || isCodeableConcept(result);
   }
-
-  @Nonnull
-  static Column getCodingColumn(@Nonnull final Collection result) {
-    check(isCodingOrCodeableConcept(result),
-        "Coding or CodeableConcept path expected");
-    final Column conceptColumn = result.getColumn();
-    return isCodeableConcept(result)
-           ? conceptColumn.getField("coding")
-           : conceptColumn;
-  }
+  
 }

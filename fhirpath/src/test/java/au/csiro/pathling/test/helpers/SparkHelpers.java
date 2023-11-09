@@ -179,22 +179,7 @@ public abstract class SparkHelpers {
       @Nonnull final String unit) {
     return rowForUcumQuantity(new BigDecimal(value), unit);
   }
-
-  @Nonnull
-  public static Dataset<Row> selectValuesAndNodes(@Nonnull final Dataset<Row> dataset,
-      @Nonnull final List<Collection> paths, @Nonnull final EvaluationContext context) {
-    final List<Column> columns = new ArrayList<>();
-    columns.addAll(
-        paths.stream()
-            .map(Collection::getColumn)
-            .collect(toList())
-    );
-
-    // TODO: review 
-    // columns.addAll(new ArrayList<>(context.getNesting().getOrderingColumns()));
-    return dataset.select(columns.toArray(new Column[0]));
-  }
-
+  
   @Value
   public static class IdAndValueColumns {
 

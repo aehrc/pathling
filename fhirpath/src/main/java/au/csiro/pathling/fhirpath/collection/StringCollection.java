@@ -19,20 +19,15 @@ package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathString;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
-import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
-import org.apache.spark.sql.catalyst.expressions.Literal;
-import org.apache.spark.unsafe.types.UTF8String;
 import org.hl7.fhir.r4.model.Base64BinaryType;
 import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -52,23 +47,24 @@ import org.hl7.fhir.r4.model.UuidType;
 public class StringCollection extends Collection implements Materializable<PrimitiveType>,
     StringCoercible {
 
-  public StringCollection(@Nonnull final Column column, @Nonnull final Optional<FhirPathType> type,
+  public StringCollection(@Nonnull final ColumnCtx columnCtx,
+      @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+    super(columnCtx, type, fhirType, definition);
   }
 
   /**
-   * Returns a new instance with the specified column and definition.
+   * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param column The column to use
+   * @param columnCtx The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link StringCollection}
    */
   @Nonnull
-  public static StringCollection build(@Nonnull final Column column,
+  public static StringCollection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new StringCollection(column, Optional.of(FhirPathType.STRING),
+    return new StringCollection(columnCtx, Optional.of(FhirPathType.STRING),
         Optional.of(FHIRDefinedType.STRING), definition);
   }
 
@@ -76,33 +72,26 @@ public class StringCollection extends Collection implements Materializable<Primi
    * Returns a new instance with the specified column.
    */
   @Nonnull
-  public static StringCollection build(@Nonnull final Column column) {
-    return new StringCollection(column, Optional.of(FhirPathType.STRING),
-        Optional.of(FHIRDefinedType.STRING), Optional.empty());
-  }
-
-  /**
-   * Returns a new instance with the specified column context.
-   *
-   * @param column The column context to use
-   * @return A new instance of {@link StringCollection}
-   */
-  @Nonnull
-  public static StringCollection build(@Nonnull final ColumnCtx column) {
-    return build(column.getValue());
+  public static StringCollection build(@Nonnull final ColumnCtx columnCtx) {
+    return build(columnCtx, Optional.empty());
   }
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
    *
-   * @param fhirPath The FHIRPath representation of the literal
+   * @param stringLiteral The FHIRPath representation of the literal
    * @return A new instance of {@link StringCollection}
    */
   @Nonnull
-  public static StringCollection fromLiteral(@Nonnull final String fhirPath) {
-    final String value = parseStringLiteral(fhirPath);
-    return StringCollection.build(lit(value), Optional.empty());
+  public static StringCollection fromLiteral(@Nonnull final String stringLiteral) {
+    return fromValue(parseStringLiteral(stringLiteral));
   }
+  
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final String value) {
+    return StringCollection.build(ColumnCtx.literal(value));
+  }
+
 
   @Nonnull
   public static String parseStringLiteral(final @Nonnull String fhirPath) {
@@ -115,14 +104,9 @@ public class StringCollection extends Collection implements Materializable<Primi
 
   @Nonnull
   public String toLiteralValue() {
-    return Optional.of(getColumn().expr())
-        .filter(Literal.class::isInstance)
-        .map(Literal.class::cast)
-        .map(Literal::value)
-        .filter(UTF8String.class::isInstance)
-        .map(Objects::toString)
+    return getCtx().asStringValue()
         .orElseThrow(() -> new IllegalStateException(
-            "Cannot convert column to literal value: " + getColumn()));
+            "Cannot convert column to literal value: " + this.getColumnCtx()));
   }
 
   /**

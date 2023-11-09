@@ -327,7 +327,7 @@ class ExtractAggregatePOCViewTest {
         ResourceType.PATIENT);
 
     final DatasetResult<Column> groupingResult = groupingSelction.evaluate(execContext).map(
-        cr -> cr.getCollection().getColumn());
+        cr -> cr.getCollection().getColumnCtx().getValue());
     final Dataset<Row> transDs = groupingResult.applyTransform(execContext.getDataset());
 
     transDs.show(false);
@@ -364,7 +364,7 @@ class ExtractAggregatePOCViewTest {
 
     final Selection aggView = decompose(aggFields);
     final DatasetResult<Column> aggResult = aggView.evaluate(execContext).map(
-        cr -> cr.getCollection().getColumn());
+        cr -> cr.getCollection().getColumnCtx().getValue());
 
     System.out.println("### Pre-grouping ####");
     groupingResult.andThen(aggResult).select(execContext.getDataset(), Function.identity())
@@ -472,7 +472,7 @@ class ExtractAggregatePOCViewTest {
     System.out.println(datasetCollectionResult);
 
     final Dataset<Row> groupByDataset = datasetCollectionResult.select(execContext.getDataset(),
-        c -> c.getColumn().alias(c.toString()));
+        c -> c.getColumnCtx().getValue().alias(c.toString()));
 
     System.out.println("### GrouBy dataset  ###");
     groupByDataset.show(false);

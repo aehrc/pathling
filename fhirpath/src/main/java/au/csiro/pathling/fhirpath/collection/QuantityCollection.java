@@ -29,6 +29,7 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -56,26 +57,39 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   private static final Column NO_UNIT_LITERAL = lit(Ucum.NO_UNIT_CODE);
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
-  public QuantityCollection(@Nonnull final Column column,
+  public QuantityCollection(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(column, type, fhirType, definition);
+    super(columnCtx, type, fhirType, definition);
   }
 
   /**
-   * Returns a new instance with the specified column and definition.
+   * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param column The column to use
+   * @param columnCtx The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link QuantityCollection}
    */
   @Nonnull
-  public static QuantityCollection build(@Nonnull final Column column,
+  public static QuantityCollection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new QuantityCollection(column, Optional.of(FhirPathType.QUANTITY),
+    return new QuantityCollection(columnCtx, Optional.of(FhirPathType.QUANTITY),
         Optional.of(FHIRDefinedType.QUANTITY), definition);
   }
+
+
+  /**
+   * Returns a new instance with the specified columnCtx and unknown definition.
+   *
+   * @param columnCtx The columnCtx to use
+   * @return A new instance of {@link QuantityCollection}
+   */
+  @Nonnull
+  public static QuantityCollection build(@Nonnull final ColumnCtx columnCtx) {
+    return build(columnCtx, Optional.empty());
+  }
+
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.
@@ -121,7 +135,8 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   public static QuantityCollection fromCalendarDurationString(@Nonnull final String fhirPath) {
 
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
-    return QuantityCollection.build(column, Optional.empty());
+    // TODO: complex literal handling
+    return QuantityCollection.build(ColumnCtx.of(column));
   }
 
   @Nonnull
@@ -205,7 +220,8 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
     quantity.setCode(unit);
     display.ifPresent(quantity::setUnit);
 
-    return QuantityCollection.build(QuantityEncoding.encodeLiteral(quantity), Optional.empty());
+    // TODO: literal handling
+    return QuantityCollection.build(ColumnCtx.of(QuantityEncoding.encodeLiteral(quantity)));
   }
 
   @Nonnull
@@ -217,13 +233,14 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   @Nonnull
   @Override
   public Optional<Column> getNumericValueColumn() {
-    return Optional.ofNullable(getColumn().getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN));
+    return Optional.of(
+        getColumnCtx().getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
   }
 
   @Nonnull
   @Override
   public Optional<Column> getNumericContextColumn() {
-    return Optional.of(getColumn());
+    return Optional.of(getColumnCtx().getValue());
   }
 
   @Nonnull
@@ -263,7 +280,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(resultQuantityColumn, Optional.empty());
+      return QuantityCollection.build(ColumnCtx.of(resultQuantityColumn));
     };
   }
 
