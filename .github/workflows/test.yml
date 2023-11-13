@@ -554,6 +554,8 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
+            -DskipFhirPathTests
+            -DskipLibraryApiTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
           PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
@@ -616,16 +618,6 @@ jobs:
           use-public-rspm: true
       - name: Install texlive-latex-base
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
-      - name: Extract Spark version
-        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
-      - name: Extract Hadoop version
-        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
-      - name: Cache Spark
-        id: cache-spark
-        uses: actions/cache@v2
-        with:
-          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
       - name: Run the install goal with Maven
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
@@ -635,6 +627,8 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
+            -DskipFhirPathTests
+            -DskipLibraryApiTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode install
@@ -674,16 +668,6 @@ jobs:
           use-public-rspm: true
       - name: Install texlive-latex-base
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
-      - name: Extract Spark version
-        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
-      - name: Extract Hadoop version
-        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
-      - name: Cache Spark
-        id: cache-spark
-        uses: actions/cache@v2
-        with:
-          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
       - name: Run the verify goal with Maven
         env:
           R_KEEP_PKG_SOURCE: yes
