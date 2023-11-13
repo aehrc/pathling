@@ -587,6 +587,7 @@ jobs:
           fail_on_test_failures: true
   
   R-api:
+    name: R API
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
