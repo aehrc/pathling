@@ -626,11 +626,6 @@ jobs:
         with:
           path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
           key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-      - name: Install Spark (via sparklyr)
-        if: steps.cache-spark.outputs.cache-hit != 'true'
-        run: |
-          sparklyr::spark_install(version = Sys.getenv("SPARK_VERSION"), hadoop_version = Sys.getenv("HADOOP_VERSION"))
-        shell: Rscript {0}
       - name: Run the install goal with Maven
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
@@ -689,11 +684,6 @@ jobs:
         with:
           path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
           key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
-      - name: Install Spark (via sparklyr)
-        if: steps.cache-spark.outputs.cache-hit != 'true'
-        run: |
-          sparklyr::spark_install(version = Sys.getenv("SPARK_VERSION"), hadoop_version = Sys.getenv("HADOOP_VERSION"))
-        shell: Rscript {0}
       - name: Run the verify goal with Maven
         env:
           R_KEEP_PKG_SOURCE: yes
