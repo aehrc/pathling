@@ -579,14 +579,6 @@ jobs:
         with:
           name: python-api-coverage
           path: lib/python/**/coverage.xml
-      - name: Publish test results
-        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
-        if: github.actor != 'dependabot[bot]'
-        uses: scacap/action-surefire-report@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: Python API test report
-          fail_on_test_failures: true
   
   R-api:
     name: R API
@@ -635,6 +627,7 @@ jobs:
           -pl lib/R -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
+
   site:
     name: Site
     runs-on: ubuntu-latest
