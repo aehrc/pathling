@@ -197,6 +197,8 @@
               <arguments>
                 <argument>--verbose</argument>
                 <argument>-e</argument>
+                <argument>install.packages("devtools")</argument>
+                <argument>-e</argument>
                 <argument>devtools::install_dev_deps()</argument>
                 <argument>-e</argument>
                 <argument>sparklyr::spark_install(version='${pathling.Rapi.sparkVersion}', hadoop_version='${pathling.Rapi.hadoopVersion}')</argument>

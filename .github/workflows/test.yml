@@ -588,11 +588,6 @@ jobs:
   
   R-api:
     runs-on: ubuntu-latest
-    name: R API
-    env:
-      R_KEEP_PKG_SOURCE: yes
-      SPARK_VERSION: 3.3.2
-      HADOOP_VERSION: 2
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -620,27 +615,16 @@ jobs:
           use-public-rspm: true
       - name: Install texlive-latex-base
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
-      - name: Run maven to install dependencies
-        run: >-
-          mvn --batch-mode install -pl library-runtime -am -DskipTests
-        timeout-minutes: 30
-      - name: Run the init goal with Maven
-        run: >-
-          mvn --batch-mode initialize -P '!R-install-deps'
-          -pl lib/R
-        timeout-minutes: 30
-      - name: Install R dependencies
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          working-directory: lib/R
-          extra-packages: |
-            any::devtools
+      - name: Extract Spark version
+        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Extract Hadoop version
+        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
         with:
-          path: /home/runner/spark/spark-3.3.1-bin-hadoop2
-          key: sparklyr-spark-3.3.1-bin-hadoop2-3
+          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
       - name: Install Spark (via sparklyr)
         if: steps.cache-spark.outputs.cache-hit != 'true'
         run: |
@@ -650,23 +634,20 @@ jobs:
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
+          R_KEEP_PKG_SOURCE: yes
           PATHLING_OPTS: >-
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
-          mvn --batch-mode install -P '!R-install-deps'
+          mvn --batch-mode install
           -pl lib/R -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
   site:
     name: Site
     runs-on: ubuntu-latest
-    env:
-      R_KEEP_PKG_SOURCE: yes
-      SPARK_VERSION: 3.3.2
-      HADOOP_VERSION: 2
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -697,32 +678,29 @@ jobs:
           use-public-rspm: true
       - name: Install texlive-latex-base
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
-      - name: Run maven to install dependencies
-        run: >-
-          mvn --batch-mode install -pl library-runtime -am -DskipTests
-        timeout-minutes: 30
-      - name: Run the init goal with Maven
-        run: >-
-          mvn --batch-mode initialize -P '!R-install-deps'
-          -pl lib/R
-        timeout-minutes: 30
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           working-directory: lib/R
           extra-packages: |
             any::devtools
+      - name: Extract Spark version
+        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Extract Hadoop version
+        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
         with:
-          path: /home/runner/spark/spark-3.3.1-bin-hadoop2
-          key: sparklyr-spark-3.3.1-bin-hadoop2-3
+          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
       - name: Install Spark (via sparklyr)
         if: steps.cache-spark.outputs.cache-hit != 'true'
         run: |
           sparklyr::spark_install(version = Sys.getenv("SPARK_VERSION"), hadoop_version = Sys.getenv("HADOOP_VERSION"))
         shell: Rscript {0}
       - name: Run the verify goal with Maven
+        env:
+          R_KEEP_PKG_SOURCE: yes
         run: >-
           mvn --batch-mode verify
           -pl site -am
