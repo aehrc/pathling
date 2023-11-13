@@ -679,11 +679,6 @@ jobs:
           use-public-rspm: true
       - name: Install texlive-latex-base
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          working-directory: lib/R
-          extra-packages: |
-            any::devtools
       - name: Extract Spark version
         run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
       - name: Extract Hadoop version
