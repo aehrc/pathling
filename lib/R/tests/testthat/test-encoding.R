@@ -1,5 +1,3 @@
-library(dplyr)
-
 spark_session <- function() {
   # # Get the shaded JAR for testing purposes.
   # spark <- sparklyr::spark_connect(master = "local[2]", config = list(
