@@ -666,10 +666,10 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Extract Spark version
         working-directory: lib/R
-        run: echo "SPARK_VERSION=$(mvn -q -pl lib/R -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
       - name: Extract Hadoop version
         working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(mvn -q -pl lib/R -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
