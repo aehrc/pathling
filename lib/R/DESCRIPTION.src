@@ -1,6 +1,6 @@
 Package: pathling
 Type: Package
-Title: A library for using Pathling with R
+Title: A Library for using Pathling with R
 Version: %pathling.Rapi.version%
 Authors@R:
     c(
@@ -16,7 +16,7 @@ Authors@R:
              role = "aut",
              email = "john.grimes@csiro.au")
      )
-Maintainer: Australian e-Health Research Centre, CSIRO <ontoserver-support@csiro.au>
+Maintainer: "Australian e-Health Research Centre, CSIRO" <ontoserver-support@csiro.au>
 Description: R API for Pathling with support for encoding, terminology and queries.
 License: Apache License 2.0 | file LICENSE
 URL: https://pathling.csiro.au/
