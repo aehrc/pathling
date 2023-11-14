@@ -624,7 +624,7 @@ jobs:
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode install
-          -pl lib/R -am
+          -pl lib/R -am -Pdocs
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
 
