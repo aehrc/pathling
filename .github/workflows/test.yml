@@ -601,6 +601,18 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+      - name: Extract Spark version
+        working-directory: lib/R
+        run: echo "SPARK_VERSION=$(mvn -q -pl lib/R -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Extract Hadoop version
+        working-directory: lib/R
+        run: echo "HADOOP_VERSION=$(mvn -q -pl lib/R -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Cache Spark
+        id: cache-spark
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
       - name: Install Pandoc
         uses: r-lib/actions/setup-pandoc@v2
       - name: Install R
@@ -652,6 +664,18 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+      - name: Extract Spark version
+        working-directory: lib/R
+        run: echo "SPARK_VERSION=$(mvn -q -pl lib/R -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Extract Hadoop version
+        working-directory: lib/R
+        run: echo "HADOOP_VERSION=$(mvn -q -pl lib/R -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Cache Spark
+        id: cache-spark
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
       - name: Install Pandoc
         uses: r-lib/actions/setup-pandoc@v2
       - name: Install R
