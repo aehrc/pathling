@@ -4,9 +4,12 @@ Title: A library for using Pathling with R
 Version: %pathling.Rapi.version%
 Authors@R:
     c(
+      person("Australian e-Health Research Centre, CSIRO", 
+             role = c("cph", "cre"),
+             email = "ontoserver-support@csiro.au"),
       person(given = "Piotr",
              family = "Szul",
-             role = c("aut", "cre"),
+             role = "aut",
              email = "piotr.szul@csiro.au"),
       person(given = "John",
              family = "Grimes",
