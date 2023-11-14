@@ -637,7 +637,7 @@ jobs:
           mvn --batch-mode install
           -pl lib/R -am -Pdocs
           ${{ env.PATHLING_OPTS }}
-        timeout-minutes: 30
+        timeout-minutes: 60
 
   site:
     name: Site
