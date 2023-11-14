@@ -555,7 +555,6 @@ jobs:
             -DskipUtilitiesTests
             -DskipTerminologyTests
             -DskipFhirPathTests
-            -DskipLibraryApiTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
           PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
