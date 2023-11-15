@@ -600,6 +600,14 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+      - name: Get R package installation location
+        run: echo "R_PACKAGES=$(Rscript -e '.libPaths()' | grep -o '".*"' | sed 's/"//g' | head -n 1)" >> $GITHUB_ENV
+      - name: Cache R packages
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.R_PACKAGES }}
+          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
+          restore-keys: r-packages-${{ runner.os }}-
       - name: Extract Spark version
         working-directory: lib/R
         run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
