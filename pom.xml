@@ -85,7 +85,7 @@
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.2.13</pathling.dockerJavaVersion>
     <pathling.awsSdkVersion>1.12.503</pathling.awsSdkVersion>
-    <!-- we do not use recent version 1.18.24 as it (wrongly) copies the JSR-380 NonNull 
+    <!-- we do not use recent version 1.18.24 as it (wrongly) copies the JSR-380 NonNull
          annotations from fields to getters resulting in duplicate constraint violations.
          This has been fixed in the main branch but not released yet -->
     <pathling.lombokVersion>1.18.28</pathling.lombokVersion>
@@ -381,6 +381,11 @@
       <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-security</artifactId>
+        <version>${pathling.springBootVersion}</version>
+      </dependency>
+      <dependency>
+      <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
         <version>${pathling.springBootVersion}</version>
       </dependency>
       <dependency>

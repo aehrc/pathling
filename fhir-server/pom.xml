@@ -122,6 +122,10 @@
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
       <scope>test</scope>
@@ -166,6 +170,11 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <version>1.11.3</version>
     </dependency>
 
     <!-- Testing -->
@@ -373,6 +382,7 @@
               </labels>
               <ports>
                 <port>8080</port>
+                <port>8081</port>
                 <port>4040</port>
               </ports>
             </container>
