@@ -601,7 +601,7 @@ jobs:
           restore-keys: |-
             ${{ runner.os }}-maven-
       - name: Get R package installation location
-        run: echo "R_PACKAGES=$(Rscript -e '.libPaths()' | grep -o '".*"' | sed 's/"//g' | head -n 1)" >> $GITHUB_ENV
+        run: echo "R_PACKAGES=$(Rscript -e 'cat(.libPaths(), sep="\n")' | head -n 1)" >> $GITHUB_ENV
       - name: Cache R packages
         uses: actions/cache@v2
         with:
