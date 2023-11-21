@@ -60,6 +60,10 @@
       <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-kubernetes_${pathling.scalaVersion}</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.delta</groupId>
       <artifactId>delta-core_${pathling.scalaVersion}</artifactId>
     </dependency>

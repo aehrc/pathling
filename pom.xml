@@ -300,6 +300,11 @@
         <version>${pathling.sparkVersion}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.spark</groupId>
+        <artifactId>spark-kubernetes_${pathling.scalaVersion}</artifactId>
+        <version>${pathling.sparkVersion}</version>
+      </dependency>
+      <dependency>
         <groupId>io.delta</groupId>
         <artifactId>delta-core_${pathling.scalaVersion}</artifactId>
         <version>${pathling.deltaVersion}</version>
