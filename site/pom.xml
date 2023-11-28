@@ -125,6 +125,11 @@
           <artifactId>r</artifactId>
           <classifier>docs</classifier>
         </dependency>
+        <!-- This JAR contains the built Helm chart for Pathling Server. -->
+        <dependency>
+          <groupId>au.csiro.pathling</groupId>
+          <artifactId>helm</artifactId>
+        </dependency>
         <!-- Lombok is required for Javadoc generation. -->
         <dependency>
           <groupId>org.projectlombok</groupId>
@@ -183,6 +188,19 @@
                   <includeArtifactIds>encoders</includeArtifactIds>
                   <includeClassifiers>javadoc</includeClassifiers>
                   <outputDirectory>${project.build.directory}/site/docs/scala</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
+                <id>unpack-helm-chart</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
+                  <includeArtifactIds>helm</includeArtifactIds>
+                  <excludes>META-INF/**</excludes>
+                  <outputDirectory>${project.build.directory}/site/helm</outputDirectory>
                 </configuration>
               </execution>
             </executions>

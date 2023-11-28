@@ -109,6 +109,7 @@
     <module>lib/js</module>
     <module>lib/python</module>
     <module>lib/R</module>
+    <module>deployment/helm</module>
     <module>site</module>
     <module>utilities</module>
   </modules>
@@ -248,6 +249,11 @@
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>import</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>helm</artifactId>
         <version>${project.version}</version>
       </dependency>
 
