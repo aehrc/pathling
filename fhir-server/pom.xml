@@ -388,8 +388,21 @@
                 <port>8080</port>
                 <port>8081</port>
                 <port>4040</port>
+                <port>7077</port>
               </ports>
+              <entrypoint>
+                <command>/usr/bin/entrypoint.sh</command>
+              </entrypoint>
             </container>
+            <extraDirectories>
+              <paths>src/main/jib</paths>
+              <permissions>
+                <permission>
+                  <file>/usr/bin/entrypoint.sh</file>
+                  <mode>755</mode>
+                </permission>
+              </permissions>
+            </extraDirectories>
           </configuration>
         </plugin>
       </plugins>
