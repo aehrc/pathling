@@ -27,7 +27,7 @@ test_that("test datasource extract", {
   )
 
   expect_equal(colnames(result), colnames(expected_result))
-  expect_equal(result %>% sdf_sort("id", "gender", "condition_code") %>% head(5) %>% sdf_collect(), expected_result)
+  expect_equal(result %>% sdf_sort(c("id", "gender", "condition_code")) %>% head(5) %>% sdf_collect(), expected_result)
 })
 
 
