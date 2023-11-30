@@ -127,10 +127,6 @@
       <artifactId>jakarta.validation-api</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.json4s</groupId>
-      <artifactId>json4s-jackson_${pathling.scalaVersion}</artifactId>
-    </dependency>
 
     <!-- Testing -->
     <dependency>
