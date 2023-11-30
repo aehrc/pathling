@@ -571,11 +571,6 @@
         <version>2.6</version>
       </dependency>
       <dependency>
-        <groupId>org.json4s</groupId>
-        <artifactId>json4s-jackson_2.12</artifactId>
-        <version>4.1.0-M3</version>
-      </dependency>
-      <dependency>
         <groupId>org.infinispan</groupId>
         <artifactId>infinispan-bom</artifactId>
         <version>${pathling.infinispanVersion}</version>
