@@ -573,7 +573,7 @@
       <dependency>
         <groupId>org.json4s</groupId>
         <artifactId>json4s-jackson_2.12</artifactId>
-        <version>3.7.0-M11</version>
+        <version>4.1.0-M3</version>
       </dependency>
       <dependency>
         <groupId>org.infinispan</groupId>
