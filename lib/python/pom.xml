@@ -49,15 +49,6 @@
 
   <build>
     <sourceDirectory>${project.basedir}</sourceDirectory>
-    <resources>
-      <resource>
-        <directory>${project.basedir}</directory>
-        <includes>
-          <include>bunsen/**/*.py</include>
-        </includes>
-      </resource>
-    </resources>
-
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -155,6 +146,9 @@
                 <line>#</line>
                 <line>__version__="${pathling.pyapi.version}"</line>
                 <line>__java_version__="${project.version}"</line>
+                <line>__scala_version__="${pathling.scalaVersion}"</line>
+                <line>__delta_version__="${pathling.deltaVersion}"</line>
+                <line>__hadoop_version__="${pathling.hadoopVersion}"</line>
               </lines>
             </file>
           </files>

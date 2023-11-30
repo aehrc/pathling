@@ -20,7 +20,12 @@ from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame, SparkSession, Column
 from typing import Optional, Sequence, TYPE_CHECKING
 
-from pathling._version import __java_version__
+from pathling._version import (
+    __java_version__,
+    __scala_version__,
+    __delta_version__,
+    __hadoop_version__,
+)
 from pathling.coding import Coding
 from pathling.fhir import MimeType
 
@@ -179,7 +184,8 @@ class PathlingContext:
                 SparkSession.builder.config(
                     "spark.jars.packages",
                     f"au.csiro.pathling:library-runtime:{__java_version__},"
-                    f"io.delta:delta-core_2.12:2.3.0",
+                    f"io.delta:delta-core_{__scala_version__}:{__delta_version__},"
+                    f"org.apache.hadoop:hadoop-aws:{__hadoop_version__}",
                 )
                 .config(
                     "spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension"
