@@ -14,10 +14,12 @@
 #  limitations under the License.
 
 spark_dependencies <- function(spark_version, scala_version, ...) {
+  spark_info <- pathling_spark_info()
   sparklyr::spark_dependency(
       packages = c(
           paste0("au.csiro.pathling:library-runtime:", pathling_version()),
-          "io.delta:delta-core_2.12:2.3.0"
+          paste0("io.delta:delta-core_", spark_info$scala_version, ":", spark_info$delta_version),
+          paste0("org.apache.hadoop:hadoop-aws:", spark_info$hadoop_version)
       )
   )
 }

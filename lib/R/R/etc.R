@@ -33,7 +33,10 @@ pathling_spark_info <- function() {
   metadata <- package_info("pathling")
   list(
       spark_version = metadata[["Config/pathling/SparkVersion"]],
-      hadoop_version = metadata[["Config/pathling/HadoopVersion"]]
+      scala_version = metadata[["Config/pathling/ScalaVersion"]],
+      hadoop_version = metadata[["Config/pathling/HadoopVersion"]],
+      hadoop_major_version = metadata[["Config/pathling/HadoopVersion"]],
+      delta_version = metadata[["Config/pathling/DeltaVersion"]]
   )
 }
 
@@ -56,7 +59,7 @@ pathling_version <- function() {
 #' @export
 pathling_install_spark <- function() {
   spark_info <- pathling_spark_info()
-  sparklyr::spark_install(version = spark_info$spark_version, hadoop_version = spark_info$hadoop_version)
+  sparklyr::spark_install(version = spark_info$spark_version, hadoop_version = spark_info$hadoop_major_version)
 }
 
 #' Checks if the version of Spark/Hadoop reuired by pathling is installed.
@@ -67,7 +70,7 @@ pathling_install_spark <- function() {
 pathling_is_spark_installed <- function() {
   spark_info <- pathling_spark_info()
   sparklyr::spark_installed_versions() %>%
-      sparklyr::filter(.data$spark == spark_info$spark_version, .data$hadoop == spark_info$hadoop_version) %>%
+      sparklyr::filter(.data$spark == spark_info$spark_version, .data$hadoop == spark_info$hadoop_major_version) %>%
       nrow() > 0
 }
 
