@@ -63,7 +63,7 @@ setup(
     ],
     license="Apache License, version 2.0",
     python_requires=">=3.7",
-    install_requires=["pyspark>=3.1.0,<3.4.0", "deprecated>=1.2.13"],
+    install_requires=["pyspark>=3.4.0,<3.5.0", "deprecated>=1.2.13"],
     include_package_data=True,
     data_files=[
         ("share/pathling/examples", glob.glob("examples/*.py")),

@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 # Modified from the Kubernetes Docker image entrypoint script: 
-# https://github.com/apache/spark/blob/v3.3.2/resource-managers/kubernetes/docker/src/main/dockerfiles/spark/entrypoint.sh
+# https://github.com/apache/spark/blob/v3.4.0/resource-managers/kubernetes/docker/src/main/dockerfiles/spark/entrypoint.sh
 
 set -xe
 
