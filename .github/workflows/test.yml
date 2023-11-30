@@ -646,6 +646,11 @@ jobs:
           -pl lib/R -am -Pdocs
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 60
+      - name: Upload package as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: r-package
+          path: lib/R/pathling_*.tar.gz
 
   site:
     name: Site
