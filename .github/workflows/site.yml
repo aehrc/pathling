@@ -21,6 +21,9 @@ jobs:
         with:
           java-version: 11
           distribution: "zulu"
+      - uses: azure/setup-helm@v3
+        with:
+          version: 3.13.2
       - name: Cache local Maven repository
         uses: actions/cache@v3
         with:
