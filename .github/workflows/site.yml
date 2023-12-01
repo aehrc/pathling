@@ -64,6 +64,8 @@ jobs:
         run: |
           mkdir site/target/site/R
           cp lib/R/target/pathling_*.tar.gz site/target/site/R/
+      - name: Copy index.yaml into site
+        run: cp deployment/helm/target/helm/index.yaml site/target/site/helm/
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
