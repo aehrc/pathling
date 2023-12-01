@@ -197,7 +197,7 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: r-package
-          path: lib/R
+          path: pathling_r.tar.gz
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
@@ -206,4 +206,4 @@ jobs:
           draft: true
           prerelease: false
           files: |
-            lib/R/target/pathling_*.tar.gz
+            pathling_r.tar.gz
