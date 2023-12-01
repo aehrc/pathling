@@ -101,6 +101,7 @@
               <artifact>*:*</artifact>
               <excludes>
                 <exclude>META-INF/MANIFEST.MF</exclude>
+                <exclude>META-INF/versions/**</exclude>
               </excludes>
             </filter>
           </filters>
