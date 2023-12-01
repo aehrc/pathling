@@ -116,6 +116,13 @@
                 <include>com/github/benmanes/caffeine/**</include>
               </includes>
             </relocation>
+            <relocation>
+              <pattern>com/</pattern>
+              <shadedPattern>${shaded.dependency.prefix}.com.</shadedPattern>
+              <includes>
+                <include>com/fasterxml/jackson/**</include>
+              </includes>
+            </relocation>
           </relocations>
         </configuration>
       </plugin>
