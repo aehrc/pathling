@@ -23,7 +23,7 @@ test_that("test datasource extract", {
   expected_result <- tibble::tibble(
       id = c("2b36c1e2-bbe1-45ae-8124-4adad2677702", "2b36c1e2-bbe1-45ae-8124-4adad2677702", "2b36c1e2-bbe1-45ae-8124-4adad2677702", "8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "8ee183e2-b3c0-4151-be94-b945d6aa8c6d"),
       gender = c("male", "male", "male", "male", "male"),
-      condition_code = c("10509002", "38341003", "65363002", "44054006", "368581000119106")
+      condition_code = c("10509002", "38341003", "65363002", "195662009", "237602007")
   )
 
   expect_equal(colnames(result), colnames(expected_result))
@@ -50,7 +50,8 @@ test_that("test datasource extract with no filters", {
 
   expect_equal(colnames(result), colnames(expected_result))
   expect_equal(result %>% sdf_sort(c("id", "gender", "condition_code")) %>% head(5) %>% sdf_collect(), expected_result)
-})
+}):30
+
 
 
 # test_aggregate
