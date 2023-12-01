@@ -197,13 +197,15 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: r-package
-          path: pathling_r.tar.gz
+      - name: Extract tag name
+        id: extract_tag
+        run: echo "TAG_NAME=$(echo ${GITHUB_REF#refs/tags/})" >> $GITHUB_ENV
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          name: ${{ github.ref }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
           draft: true
           prerelease: false
           files: |
-            pathling_r.tar.gz
+            pathling_*.tar.gz
