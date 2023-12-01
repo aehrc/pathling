@@ -544,7 +544,7 @@ jobs:
         id: pythoncache
         with:
           path: /home/runner/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
           restore-keys: ${{ runner.os }}-pip
       - name: Run the install goal with Maven
         env:
