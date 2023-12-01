@@ -186,7 +186,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: r-package
-          path: lib/R/pathling_*.tar.gz
+          path: lib/R/target/pathling_*.tar.gz
 
   create-release:
     name: Draft GitHub release
@@ -206,4 +206,4 @@ jobs:
           draft: true
           prerelease: false
           files: |
-            lib/R/pathling_*.tar.gz
+            lib/R/target/pathling_*.tar.gz
