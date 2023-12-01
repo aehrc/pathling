@@ -30,10 +30,10 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Extract Spark version
         working-directory: lib/R
-        run: echo "SPARK_VERSION=$(awk -F'[<>]' '/<pathling.Rapi.sparkVersion>/ {print $3}' pom.xml)" >> $GITHUB_ENV
+        run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Extract Hadoop version
         working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(awk -F'[<>]' '/<pathling.Rapi.hadoopVersion>/ {print $3}' pom.xml)" >> $GITHUB_ENV
+        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
