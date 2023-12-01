@@ -17,7 +17,14 @@
 
 package au.csiro.pathling.async;
 
-import java.util.concurrent.ConcurrentHashMap;
+import au.csiro.pathling.async.Job.JobTag;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -27,11 +34,51 @@ import org.springframework.stereotype.Component;
  *
  * @author John Grimes
  */
+@Slf4j
 @Component
 @Profile("server")
 @ConditionalOnProperty(prefix = "pathling", name = "async.enabled", havingValue = "true")
-public class JobRegistry extends ConcurrentHashMap<String, Job> {
+public class JobRegistry {
 
-  private static final long serialVersionUID = -1895384364583552139L;
+  private final Map<String, Job> jobsById = new HashMap<>();
+  private final Map<JobTag, Job> jobsByTags = new HashMap<>();
 
+  /**
+   * Gets the job with the given tag if it exists, or creates a new one using the given factory
+   * function that accepts the job id.
+   *
+   * @param tag the tag of the job.
+   * @param jobFactory the factory function that accepts the job id and returns a new job.
+   * @return the job.
+   */
+  @Nonnull
+  public synchronized Job getOrCreate(@Nonnull final JobTag tag,
+      @Nonnull final Function<String, Job> jobFactory) {
+
+    final Job existingJob = jobsByTags.get(tag);
+    if (existingJob != null) {
+      log.debug("Returning existing job: {} for tag: {}", existingJob.getId(), tag);
+      return existingJob;
+    } else {
+      final String jobId = UUID.randomUUID().toString();
+      final Job newJob = jobFactory.apply(jobId);
+      log.debug("Created new job: {} for tag: {}", newJob.getId(), tag);
+      assert jobId.equals(newJob.getId());
+      final Job replacedJob = jobsById.put(newJob.getId(), newJob);
+      assert replacedJob == null;
+      jobsByTags.put(tag, newJob);
+      return newJob;
+    }
+  }
+
+  /**
+   * Gets the jobs of the given id if exits or returns null otherwise.
+   *
+   * @param id the id of the job
+   * @return the job or null
+   */
+  @Nullable
+  public synchronized Job get(@Nonnull final String id) {
+    return jobsById.get(id);
+  }
 }

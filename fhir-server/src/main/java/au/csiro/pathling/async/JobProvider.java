@@ -61,7 +61,10 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class JobProvider {
 
-  private static final Pattern ID_PATTERN = Pattern.compile("^\\w{1,50}$");
+
+  // regex for UUID
+  private static final Pattern ID_PATTERN = Pattern.compile(
+      "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
   private static final String PROGRESS_HEADER = "X-Progress";
 
   @Nonnull
@@ -93,6 +96,7 @@ public class JobProvider {
   public IBaseResource job(@Nullable @OperationParam(name = "id") final String id,
       @Nullable final HttpServletRequest request,
       @Nullable final HttpServletResponse response) {
+
     // Validate that the ID looks reasonable.
     if (id == null || !ID_PATTERN.matcher(id).matches()) {
       throw new ResourceNotFoundError("Job ID not found");
