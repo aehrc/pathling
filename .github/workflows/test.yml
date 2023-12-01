@@ -544,9 +544,8 @@ jobs:
         id: pythoncache
         with:
           path: /home/runner/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements.txt') }}
-          restore-keys: ${{ runner.os }}-pip
-      - name: Run the verify goal with Maven
+          key: ${{ runner.os }}-pip-${{ hashFiles('lib/python/requirements/dev.txt', 'lib/python/requirements/package.txt') }}
+      - name: Run the install goal with Maven
         env:
           # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
           # report action to report them.
@@ -554,11 +553,12 @@ jobs:
             -DskipEncodersTests
             -DskipUtilitiesTests
             -DskipTerminologyTests
+            -DskipFhirPathTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
           PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
         run: >-
-          mvn --batch-mode verify
+          mvn --batch-mode install
           -pl lib/python -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
@@ -577,14 +577,79 @@ jobs:
         with:
           name: python-api-coverage
           path: lib/python/**/coverage.xml
-      - name: Publish test results
-        # If the actor is Dependabot, we need to avoid anything that requires access to secrets.
-        if: github.actor != 'dependabot[bot]'
-        uses: scacap/action-surefire-report@v1
+  
+  R-api:
+    name: R API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          check_name: Python API test report
-          fail_on_test_failures: true
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: "zulu"
+      - name: Cache local Maven repository
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Get R package installation location
+        run: echo "R_PACKAGES=$(Rscript -e 'cat(.libPaths(), sep="\n")' | head -n 1)" >> $GITHUB_ENV
+      - name: Cache R packages
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.R_PACKAGES }}
+          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
+          restore-keys: r-packages-${{ runner.os }}-
+      - name: Extract Spark version
+        working-directory: lib/R
+        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Extract Hadoop version
+        working-directory: lib/R
+        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Cache Spark
+        id: cache-spark
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+      - name: Install Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+      - name: Install R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.1.3"
+          use-public-rspm: true
+      - name: Install texlive-latex-base
+        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
+      - name: Run the install goal with Maven
+        env:
+          # If the actor is not Dependabot, we ignore test failures and rely upon the Surefire
+          # report action to report them.
+          R_KEEP_PKG_SOURCE: yes
+          PATHLING_OPTS: >-
+            -DskipEncodersTests
+            -DskipUtilitiesTests
+            -DskipTerminologyTests
+            -DskipFhirPathTests
+            -DskipLibraryApiTests
+            ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
+        run: >-
+          mvn --batch-mode install
+          -pl lib/R -am -Pdocs
+          ${{ env.PATHLING_OPTS }}
+        timeout-minutes: 60
+      - name: Upload package as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: r-package
+          path: lib/R/target/pathling_*.tar.gz
 
   site:
     name: Site
@@ -610,18 +675,41 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+      - name: Extract Spark version
+        working-directory: lib/R
+        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Extract Hadoop version
+        working-directory: lib/R
+        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Cache Spark
+        id: cache-spark
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+      - name: Install Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+      - name: Install R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.1.3"
+          use-public-rspm: true
+      - name: Install texlive-latex-base
+        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
       - name: Run the verify goal with Maven
+        env:
+          R_KEEP_PKG_SOURCE: yes
         run: >-
           mvn --batch-mode verify
           -pl site -am
           -Pdocs
           -DskipTests
-        timeout-minutes: 15
+        timeout-minutes: 30
 
   upload-coverage:
     name: Upload coverage
     runs-on: ubuntu-latest
-    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, python-api]
+    needs: [ encoders, fhir-server-1, fhir-server-2, fhir-server-3, python-api ]
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
@@ -661,7 +749,7 @@ jobs:
 
   deploy-pre-release:
     name: Pre-release deployment
-    needs: [encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image]
+    needs: [ encoders, fhir-server-1, fhir-server-2, fhir-server-3, docker-image ]
     runs-on: ubuntu-latest
     # If the branch starts with "release/", we deploy pre-release packages.
     if: startsWith(github.ref, 'refs/heads/release/')

@@ -29,3 +29,10 @@ _version.py
 metastore_db
 derby.log
 spark-warehouse
+
+
+#R
+*.Rproj
+
+.Rproj.user
+/lib/R/pathlyr/.Rhistory

@@ -20,6 +20,7 @@ from pyspark.sql import Column
 from pyspark.sql.functions import lit, struct
 
 SNOMED_URI = "http://snomed.info/sct"
+LOINC_URI = "http://loinc.org"
 
 
 def to_coding(
@@ -61,6 +62,19 @@ def to_snomed_coding(coding_column: Column, version: Optional[str] = None) -> Co
     :return: a Column containing a Coding struct
     """
     return to_coding(coding_column, SNOMED_URI, version)
+
+
+def to_loinc_coding(coding_column: Column, version: Optional[str] = None) -> Column:
+    """
+    Converts a Column containing codes into a Column that contains a LOINC Coding struct. The
+    Coding struct Column can be used as an input to terminology functions such as `member_of` and
+    `translate`.
+
+    :param coding_column: the Column containing the codes
+    :param version: the version of the code system
+    :return: a Column containing a Coding struct
+    """
+    return to_coding(coding_column, LOINC_URI, version)
 
 
 def to_ecl_value_set(ecl: str) -> str:

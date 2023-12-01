@@ -7,10 +7,8 @@ sidebar_position: 3
 The library also provides a set of functions for querying a FHIR terminology
 server from within your queries and transformations.
 
-import Tabs from "@theme/Tabs"; 
-import TabItem from "@theme/TabItem"; 
-import { JavaInstallation, PythonInstallation, ScalaInstallation } 
-    from "../../src/components/installation";
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
 
 ### Value set membership
 
@@ -31,7 +29,8 @@ process", and a causative agent of "Virus".
 
 ```python
 from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set,
-    member_of
+
+member_of
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
@@ -44,13 +43,41 @@ VIRAL_INFECTION_ECL = """
 """
 
 csv.select(
-    "CODE",
-    "DESCRIPTION",
-    member_of(
-        to_snomed_coding(csv.CODE),
-        to_ecl_value_set(VIRAL_INFECTION_ECL)
-    ).alias("VIRAL_INFECTION"),
+        "CODE",
+        "DESCRIPTION",
+        member_of(
+                to_snomed_coding(csv.CODE),
+                to_ecl_value_set(VIRAL_INFECTION_ECL)
+        ).alias("VIRAL_INFECTION"),
 ).show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
+        spark_read_csv(path = 'conditions.csv', header = TRUE)
+
+VIRAL_DISEASE_ECL <- '<< 64572001|Disease| : (
+      << 370135005|Pathological process| = << 441862004|Infectious process|,
+      << 246075003|Causative agent| = << 49872002|Virus|
+    )'
+
+csv %>%
+        mutate(
+                CODE,
+                DESCRIPTION,
+                IS_VIRAL_DISEASE = !!tx_member_of(!!tx_to_snomed_coding(CODE), !!tx_to_ecl_value_set(VIRAL_DISEASE_ECL)),
+                .keep = "none"
+        ) %>%
+        show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -64,7 +91,8 @@ import au.csiro.pathling.library.TerminologyHelpers._
 val pc = PathlingContext.create()
 val csv = pc.getSpark.read.csv("conditions.csv")
 
-val VIRAL_INFECTION_ECL = """
+val VIRAL_INFECTION_ECL =
+    """
     << 64572001|Disease| : (
       << 370135005|Pathological process| = << 441862004|Infectious process|,
       << 246075003|Causative agent| = << 49872002|Virus|
@@ -91,22 +119,24 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 class MyApp {
+
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
-        
+
         String VIRAL_INFECTION_ECL = """
-            << 64572001|Disease| : (
-              << 370135005|Pathological process| = << 441862004|Infectious process|,
-              << 246075003|Causative agent| = << 49872002|Virus|
-            )
-        """;
+                    << 64572001|Disease| : (
+                      << 370135005|Pathological process| = << 441862004|Infectious process|,
+                      << 246075003|Causative agent| = << 49872002|Virus|
+                    )
+                """;
 
         csv.select(
                 csv.col("CODE"),
                 csv.col("DESCRIPTION"),
                 member_of(toSnomedCoding(csv.col("CODE")),
-                        toEclValueSet(VIRAL_INFECTION_ECL)).alias("VIRAL_INFECTION")
+                        toEclValueSet(VIRAL_INFECTION_ECL)).alias(
+                        "VIRAL_INFECTION")
         ).show();
     }
 }
@@ -130,7 +160,8 @@ Results in:
 
 The `translate` function can be used to translate codes from one code system to
 another using maps that are known to the terminology server. In this example, we
-translate our SNOMED CT diagnosis codes into [Read CTV3](https://digital.nhs.uk/services/terminology-and-classifications/read-codes). 
+translate our SNOMED CT diagnosis codes
+into [Read CTV3](https://digital.nhs.uk/services/terminology-and-classifications/read-codes).
 
 Please note that the
 type of the output column is the array of coding structs, as the translation may
@@ -148,16 +179,41 @@ pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
 translate_result = csv.withColumn(
-    "READ_CODES",
-    translate(
-        to_snomed_coding(csv.CODE),
-        concept_map_uri="http://snomed.info/sct/900000000000207008?"
-                        "fhir_cm=900000000000497000",
-    ).code,
+        "READ_CODES",
+        translate(
+                to_snomed_coding(csv.CODE),
+                concept_map_uri="http://snomed.info/sct/900000000000207008?"
+                                "fhir_cm=900000000000497000",
+        ).code,
 )
 translate_result.select(
-    "CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")
+        "CODE", "DESCRIPTION", explode_outer("READ_CODES").alias("READ_CODE")
 ).show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
+        spark_read_csv(path = 'conditions.csv', header = TRUE)
+
+translate_result <- csv %>%
+        mutate(
+                READ_CODES = !!tx_translate(!!tx_to_snomed_coding(CODE),
+                                             concept_map_uri = "http://snomed.info/sct/900000000000207008?fhir_cm=900000000000497000")
+        ) %>%
+        mutate(
+                READ_CODES = explode_outer(READ_CODES[['code']])
+        ) %>%
+        select(CODE, DESCRIPTION, READ_CODES) %>%
+        show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -198,6 +254,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 class MyApp {
+
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
@@ -211,8 +268,9 @@ class MyApp {
                 ).getField("code")
         );
         translate_result.select(
-                csv.col("CODE"), csv.col("DESCRIPTION"), 
-                explode_outer(translate_result.col("READ_CODES")).alias("READ_CODE")
+                csv.col("CODE"), csv.col("DESCRIPTION"),
+                explode_outer(translate_result.col("READ_CODES")).alias(
+                        "READ_CODE")
         ).show();
     }
 }
@@ -226,11 +284,11 @@ Results in:
 
 | CODE      | DESCRIPTION               | READ_CODE |
 |-----------|---------------------------|-----------|
-| 65363002  | Otitis media              | \[X00ik\] |
-| 16114001  | Fracture of ankle         | \[S34..\] |
-| 444814009 | Viral sinusitis           | \[XUjp0\] |
-| 444814009 | Viral sinusitis           | \[XUjp0\] |
-| 43878008  | Streptococcal sore throat | \[A340.\] |
+| 65363002  | Otitis media              | X00ik     |
+| 16114001  | Fracture of ankle         | S34..     |
+| 444814009 | Viral sinusitis           | XUjp0     |
+| 444814009 | Viral sinusitis           | XUjp0     |
+| 43878008  | Streptococcal sore throat | A340.     |
 
 ### Subsumption testing
 
@@ -261,9 +319,33 @@ left_coding = Coding('http://snomed.info/sct', '232208008')
 right_coding_column = to_snomed_coding(csv.CODE)
 
 csv.select(
-    'CODE', 'DESCRIPTION',
-    subsumes(left_coding, right_coding_column).alias('SUBSUMES')
+        'CODE', 'DESCRIPTION',
+        subsumes(left_coding, right_coding_column).alias('SUBSUMES')
 ).show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
+        spark_read_csv(path = '/Users/gri306/Library/CloudStorage/OneDrive-CSIRO/Data/synthea/10k_csv_20210818/csv/conditions.csv', header = TRUE)
+
+csv %>%
+        mutate(
+                CODE,
+                DESCRIPTION,
+                # 232208008 |Ear, nose and throat disorder|
+                SUBSUMES = !!tx_subsumes(!!tx_to_snomed_coding("232208008"), !!tx_to_snomed_coding(CODE)),
+                .keep = "none"
+        ) %>%
+        show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -289,7 +371,7 @@ csv.select(
             lit("232208008"),
             lit(null),
             lit(null)
-        ), 
+        ),
         toSnomedCoding(csv.col("CODE"))
     ).alias("IS_ENT")
 ).show()
@@ -307,6 +389,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 class MyApp {
+
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
@@ -344,10 +427,10 @@ Results in:
 
 ### Retrieving properties
 
-Some terminologies contain additional properties that are associated with codes. 
+Some terminologies contain additional properties that are associated with codes.
 You can query these properties using the `property_of` function.
 
-There is also a `display` function that can be used to retrieve the preferred 
+There is also a `display` function that can be used to retrieve the preferred
 display term for each code.
 
 <!--suppress CheckEmptyScriptTag -->
@@ -355,26 +438,51 @@ display term for each code.
 <TabItem value="python" label="Python">
 
 ```python
-from pathling import PathlingContext, to_snomed_coding, property_of, display,
-    PropertyType
+from pathling import PathlingContext, to_snomed_coding, property_of, display, PropertyType
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
 
 # Get the parent codes for each code in the dataset.
 parents = csv.withColumn(
-    "PARENTS",
-    property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE),
+        "PARENTS",
+        property_of(to_snomed_coding(csv.CODE), "parent", PropertyType.CODE),
 )
 # Split each parent code into a separate row.
 exploded_parents = parents.selectExpr(
-    "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
+        "CODE", "DESCRIPTION", "explode_outer(PARENTS) AS PARENT"
 )
 # Retrieve the preferred term for each parent code.
 with_displays = exploded_parents.withColumn(
-    "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
+        "PARENT_DISPLAY", display(to_snomed_coding(exploded_parents.PARENT))
 )
 with_displays.show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
+        spark_read_csv(path = 'conditions.csv', header = TRUE)
+
+parents <- csv %>%
+        # Get the parent codes for each code in the dataset. Split each parent code into a separate row.
+        mutate(
+                PARENT = explode_outer(!!tx_property_of(!!tx_to_snomed_coding(CODE), "parent", "code"))
+        ) %>%
+        # Retrieve the preferred term for each parent code.
+        mutate(
+                PARENT = !!tx_display(!!tx_to_snomed_coding(PARENT))
+        ) %>%
+        select(CODE, DESCRIPTION, PARENT) %>%
+        show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -418,6 +526,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 class MyApp {
+
     public static void main(String[] args) {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
@@ -433,7 +542,8 @@ class MyApp {
         );
         // Retrieve the preferred term for each parent code.
         Dataset<Row> with_displays = exploded_parents.withColumn(
-                "PARENT_DISPLAY", Terminology.display(toSnomedCoding(exploded_parents.col("PARENT")))
+                "PARENT_DISPLAY", Terminology.display(
+                        toSnomedCoding(exploded_parents.col("PARENT")))
         );
         with_displays.show();
     }
@@ -446,23 +556,24 @@ class MyApp {
 
 Results in:
 
-| CODE      | DESCRIPTION               | PARENT    | PARENT_DISPLAY                             |
-|-----------|---------------------------|-----------|--------------------------------------------|
-| 65363002  | Otitis media              | 43275000  | Otitis                                     |
-| 65363002  | Otitis media              | 68996008  | Disorder of middle ear                     |
-| 16114001  | Fracture of ankle         | 125603006 | Injury of ankle                            |
-| 16114001  | Fracture of ankle         | 46866001  | Fracture of lower limb                     |
-| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
-| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
-| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
-| 444814009 | Viral sinusitis           | 36971009  | Sinusitis                                  |
-| 444814009 | Viral sinusitis           | 281794004 | Viral upper respiratory tract infection    |
-| 444814009 | Viral sinusitis           | 363166002 | Infective disorder of head                 |
+| CODE      | DESCRIPTION       | PARENT    | PARENT_DISPLAY                          |
+|-----------|-------------------|-----------|-----------------------------------------|
+| 65363002  | Otitis media      | 43275000  | Otitis                                  |
+| 65363002  | Otitis media      | 68996008  | Disorder of middle ear                  |
+| 16114001  | Fracture of ankle | 125603006 | Injury of ankle                         |
+| 16114001  | Fracture of ankle | 46866001  | Fracture of lower limb                  |
+| 444814009 | Viral sinusitis   | 36971009  | Sinusitis                               |
+| 444814009 | Viral sinusitis   | 281794004 | Viral upper respiratory tract infection |
+| 444814009 | Viral sinusitis   | 363166002 | Infective disorder of head              |
+| 444814009 | Viral sinusitis   | 36971009  | Sinusitis                               |
+| 444814009 | Viral sinusitis   | 281794004 | Viral upper respiratory tract infection |
+| 444814009 | Viral sinusitis   | 363166002 | Infective disorder of head              |
 
 ### Retrieving designations
 
 Some terminologies contain additional display terms for codes. These can be used
-for language translations, synonyms, and more. You can query these terms using the `designation` function.
+for language translations, synonyms, and more. You can query these terms using
+the `designation` function.
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
@@ -476,14 +587,40 @@ csv = pc.spark.read.csv("conditions.csv")
 
 # Get the synonyms for each code in the dataset.
 synonyms = csv.withColumn(
-    "SYNONYMS",
-    designation(to_snomed_coding(csv.CODE), Coding.of_snomed("900000000000013009")),
+        "SYNONYMS",
+        designation(to_snomed_coding(csv.CODE),
+                    Coding.of_snomed("900000000000013009")),
 )
 # Split each synonyms into a separate row.
 exploded_synonyms = synonyms.selectExpr(
-    "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
+        "CODE", "DESCRIPTION", "explode_outer(SYNONYMS) AS SYNONYM"
 )
 exploded_synonyms.show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+csv <- pathling_spark(pc) %>%
+        spark_read_csv(path = 'conditions.csv', header = TRUE)
+
+synonyms <- csv %>%
+        # Get the synonyms for each code in the dataset.
+        mutate(
+                SYNONYMS = !!tx_designation(!!tx_to_snomed_coding(CODE),
+                                             !!tx_to_snomed_coding("900000000000013009"))
+        ) %>%
+        # Split each synonym into a separate row.
+        mutate(SYNONYM = explode_outer(SYNONYMS)) %>%
+        select(CODE, DESCRIPTION, SYNONYM) %>%
+        show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -586,22 +723,49 @@ in `display()` and `property_of()` functions.
 ```python
 from pathling import PathlingContext, to_loinc_coding, property_of, display
 
-# Configure the default language preferences prioritising French.
+# Configure the default language preferences to prioritise French.
 pc = PathlingContext.create(accept_language="fr;q=0.9,en;q=0.5")
 csv = pc.spark.read.csv("observations.csv")
 
-
 # Get the display names with default language preferences (in French).
 def_display = csv.withColumn(
-    "DISPLAY", display(to_loinc_coding(csv.CODE))
+        "DISPLAY", display(to_loinc_coding(csv.CODE))
 )
 
 # Get the `display` property values with German as the preferred language.
 def_and_german_display = def_display.withColumn(
-    "DISPLAY_DE",
-    property_of(to_loinc_coding(csv.CODE), "display", accept_language="de-DE"),
+        "DISPLAY_DE",
+        property_of(to_loinc_coding(csv.CODE), "display",
+                    accept_language="de-DE"),
 )
 def_and_german_display.show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+# Configure the default language preferences to prioritise French.
+pc <- pathling_connect(accept_language = "fr;q=0.9,en;q=0.5")
+csv <- pathling_spark(pc) %>%
+        spark_read_csv(path = "observations.csv", header = TRUE)
+
+csv %>%
+        # Get the display names with default language preferences (in French).
+        mutate(
+                DISPLAY = !!tx_display(!!tx_to_loinc_coding(CODE))
+        ) %>%
+        # Get the `display` property values with German as the preferred language.
+        mutate(
+                DISPLAY_DE = explode_outer(!!tx_property_of(!!tx_to_loinc_coding(CODE), "display", "string", accept_language = "de-DE"))
+        ) %>%
+        select(CODE, DESCRIPTION, DISPLAY, DISPLAY_DE) %>%
+        show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -614,7 +778,7 @@ import au.csiro.pathling.sql.Terminology
 import au.csiro.pathling.sql.Terminology._
 import au.csiro.pathling.library.TerminologyHelpers._
 
-// Configure the default language preferences prioritising French.
+// Configure the default language preferences to prioritise French.
 val pc = PathlingContext.create(
     TerminologyConfiguration.builder()
             .acceptLangage("fr;q=0.9,en;q=0.5").build()
@@ -646,8 +810,9 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 class MyApp {
+
     public static void main(String[] args) {
-        // Configure the default language preferences prioritising French.
+        // Configure the default language preferences to prioritise French.
         PathlingContext pc = PathlingContext.create(
                 TerminologyConfiguration.builder()
                         .acceptLangage("fr;q=0.9,en;q=0.5").build()
@@ -662,7 +827,9 @@ class MyApp {
 
         // Get the `display` property values with German as the preferred language.
         Dataset<Row> defAndGermanDisplay = defDisplay.withColumn(
-                "DISPLAY_DE", property_of(toLoincCoding(csv.col("CODE")), "display", "string", "de-DE")
+                "DISPLAY_DE",
+                property_of(toLoincCoding(csv.col("CODE")), "display", "string",
+                        "de-DE")
         );
         defAndGermanDisplay.show();
     }
@@ -674,11 +841,11 @@ class MyApp {
 
 Results in:
 
-| CODE         | DESCRIPTION	                      | DISPLAY                                           | DISPLAY_DE
-|--------------|--------------------------------------|---------------------------------------------------|------------------------------------|
-| 8302-2	   | Body Height	                      | Taille du patient \[Longueur] Patient ; Numérique | Körpergröße
-| 29463-7	   | Body Weight	                      | Poids corporel \[Masse] Patient ; Numérique       | Körpergewicht
-| 718-7	       | Hemoglobin \[Mass/volume] in Blood   | Hémoglobine \[Masse/Volume] Sang ; Numérique      | Hämoglobin \[Masse/Volumen] in Blut 
+| CODE     | DESCRIPTION	                       | DISPLAY                                           | DISPLAY_DE                          
+|----------|------------------------------------|---------------------------------------------------|-------------------------------------|
+| 8302-2	  | Body Height	                       | Taille du patient \[Longueur] Patient ; Numérique | Körpergröße                         
+| 29463-7	 | Body Weight	                       | Poids corporel \[Masse] Patient ; Numérique       | Körpergewicht                       
+| 718-7	   | Hemoglobin \[Mass/volume] in Blood | Hémoglobine \[Masse/Volume] Sang ; Numérique      | Hämoglobin \[Masse/Volumen] in Blut 
 
 ### Authentication
 
@@ -696,10 +863,25 @@ the [NHS terminology server](https://ontology.nhs.uk/):
 from pathling import PathlingContext
 
 pc = PathlingContext.create(
-    terminology_server_url='https://ontology.nhs.uk/production1/fhir',
-    token_endpoint='https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token',
-    client_id='[client ID]',
-    client_secret='[client secret]'
+        terminology_server_url='https://ontology.nhs.uk/production1/fhir',
+        token_endpoint='https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token',
+        client_id='[client ID]',
+        client_secret='[client secret]'
+)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect(
+        terminology_server_url = "https://ontology.nhs.uk/production1/fhir",
+        token_endpoint = "https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token",
+        client_id = "[client ID]",
+        client_secret = "[client secret]"
 )
 ```
 
@@ -726,10 +908,13 @@ import au.csiro.pathling.library.PathlingContext;
 import au.csiro.pathling.library.PathlingContextConfiguration;
 
 class MyApp {
+
     public static void main(String[] args) {
         PathlingContextConfiguration config = PathlingContextConfiguration.builder()
-                .terminologyServerUrl("https://ontology.nhs.uk/production1/fhir")
-                .tokenEndpoint("https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
+                .terminologyServerUrl(
+                        "https://ontology.nhs.uk/production1/fhir")
+                .tokenEndpoint(
+                        "https://ontology.nhs.uk/authorisation/auth/realms/nhs-digital-terminology/protocol/openid-connect/token")
                 .clientId("[client ID]")
                 .clientSecret("[client secret]")
                 .build();

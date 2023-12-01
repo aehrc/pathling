@@ -1,0 +1,17 @@
+bibentry(
+  bibtype = "article",
+  author = c(
+    person("John", "Grimes"),
+    person("Piotr", "Szul"),
+    person("Alejandro", "Metke-Jimenez"),
+    person("Michael", "Lawley"),
+    person("Kylynn", "Loi")
+  ),
+  title = "Pathling: analytics on FHIR",
+  journal = "Journal of Biomedical Semantics",
+  year = 2022,
+  volume = 13,
+  number = 1,
+  pages = "23",
+  publisher = "Springer"
+)

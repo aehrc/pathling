@@ -43,6 +43,11 @@ Additionally, you can set any variable supported by Spring Boot, see
 - `pathling.async.enabled` - (default: `true`) Enables asynchronous processing
   for those operations that support it, when explicitly requested.
 
+- `pathling.async.varyHeadersExcludedFromCacheKey` - (default: `Accept`, 
+  `Accept-Encoding`) A subset  of `pathling.httpCaching.vary` HTTP headers, 
+  which should be excluded from determining that asynchronous requests are 
+  equivalent and can be routed to the same asynchronous job.
+
 ### Encoding
 
 - `pathling.encoding.maxNestingLevel` - (default: `3`) Controls the maximum
@@ -321,5 +326,5 @@ within URLs sent back by the API.
 Pathling can also be run directly within an Apache Spark cluster as a persistent
 application.
 
-For compatibility, Pathling runs Spark 3.3.2 (Scala 2.12), with Hadoop version
+For compatibility, Pathling runs Spark 3.4.1 (Scala 2.12), with Hadoop version
 3.3.3.

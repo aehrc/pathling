@@ -124,19 +124,86 @@ jobs:
           -Pdocker \
           -DskipTests -DskipScalaDocs
         timeout-minutes: 30
+  
+  build-r:
+    name: Build R package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # This is required so that git-commit-id-plugin can find the latest tag.
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: 11
+          distribution: "zulu"
+      - name: Cache local Maven repository
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |-
+            ${{ runner.os }}-maven-
+      - name: Get R package installation location
+        run: echo "R_PACKAGES=$(Rscript -e 'cat(.libPaths(), sep="\n")' | head -n 1)" >> $GITHUB_ENV
+      - name: Cache R packages
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.R_PACKAGES }}
+          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
+          restore-keys: r-packages-${{ runner.os }}-
+      - name: Extract Spark version
+        working-directory: lib/R
+        run: echo "SPARK_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.sparkVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Extract Hadoop version
+        working-directory: lib/R
+        run: echo "HADOOP_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${pathling.Rapi.hadoopVersion}' --non-recursive exec:exec)" >> $GITHUB_ENV
+      - name: Cache Spark
+        id: cache-spark
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/spark/spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop${{ env.HADOOP_VERSION }}
+      - name: Install Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+      - name: Install R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.1.3"
+          use-public-rspm: true
+      - name: Install texlive-latex-base
+        run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra
+      - name: Run the install goal with Maven
+        env:
+          R_KEEP_PKG_SOURCE: yes
+        run: >-
+          mvn --batch-mode install
+          -pl lib/R -am -Pdocs -DskipTests
+        timeout-minutes: 60
+      - name: Upload package as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: r-package
+          path: lib/R/target/pathling_*.tar.gz
 
   create-release:
     name: Draft GitHub release
     runs-on: ubuntu-latest
-    needs: [deploy-maven, deploy-python, deploy-docker]
+    needs: [ deploy-maven, deploy-python, deploy-docker, build-r ]
     steps:
+      - name: Download R package artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: r-package
+          path: lib/R
       - name: Create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
+          name: ${{ github.ref }}
           draft: true
           prerelease: false
+          files: |
+            lib/R/target/pathling_*.tar.gz

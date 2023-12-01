@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.3.1</version>
+    <version>6.4.0</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>python</artifactId>
@@ -49,15 +49,6 @@
 
   <build>
     <sourceDirectory>${project.basedir}</sourceDirectory>
-    <resources>
-      <resource>
-        <directory>${project.basedir}</directory>
-        <includes>
-          <include>bunsen/**/*.py</include>
-        </includes>
-      </resource>
-    </resources>
-
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -70,29 +61,18 @@
                 <include>.coverage</include>
                 <include>pathling/_version.py</include>
                 <include>build</include>
+                <include>build/**/*</include>
                 <include>.pytest_cache</include>
                 <include>pathling.egg-info</include>
+                <include>pathling.egg-info/**/*</include>
                 <include>**/.ipynb_checkpoints</include>
+                <include>metastore_db</include>
+                <include>metastore_db/**/*</include>
+                <include>derby.log</include>
               </includes>
             </fileset>
           </filesets>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>copy-dependencies</id>
-            <phase>generate-resources</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <excludeTransitive>true</excludeTransitive>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -165,6 +145,10 @@
                 <line># Please do not modify.</line>
                 <line>#</line>
                 <line>__version__="${pathling.pyapi.version}"</line>
+                <line>__java_version__="${project.version}"</line>
+                <line>__scala_version__="${pathling.scalaVersion}"</line>
+                <line>__delta_version__="${pathling.deltaVersion}"</line>
+                <line>__hadoop_version__="${pathling.hadoopVersion}"</line>
               </lines>
             </file>
           </files>
@@ -241,7 +225,7 @@
                     <argument>--jars</argument>
                     <argument>${project.build.directory}/dependency/*</argument>
                     <argument>--packages</argument>
-                    <argument>io.delta:delta-core_${pathling.scalaVersion}:${pathling.deltaVersion}</argument>
+                    <argument>au.csiro.pathling:library-runtime:${project.version},io.delta:delta-core_${pathling.scalaVersion}:${pathling.deltaVersion}</argument>
                     <argument>--conf</argument>
                     <argument>spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension</argument>
                     <argument>--conf</argument>

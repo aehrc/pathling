@@ -15,13 +15,12 @@
 
 import logging
 import os
-from tempfile import mkdtemp
-
 from pyspark.sql import SparkSession
 from pytest import fixture
+from tempfile import mkdtemp
 
 from pathling import PathlingContext
-from pathling.etc import find_jar as find_pathling_jar
+from pathling._version import __java_version__
 from pathling.fhir import MimeType
 
 PROJECT_DIR = os.path.abspath(
@@ -43,7 +42,10 @@ def spark_session(request):
     spark = (
         SparkSession.builder.appName("pathling-test")
         .master("local[2]")
-        .config("spark.jars", find_pathling_jar())
+        .config(
+            "spark.jars.packages",
+            f"au.csiro.pathling:library-runtime:{__java_version__}",
+        )
         .config("spark.sql.warehouse.dir", mkdtemp())
         .config("spark.driver.memory", "4g")
         .getOrCreate()
@@ -126,12 +128,12 @@ def test_encode_xml_bundles(def_pathling, xml_bundles_df):
 
 
 def test_element_nesting(spark_session, json_resources_df):
-    ptl_def = PathlingContext.create(spark_session)
-    ptl_0 = PathlingContext.create(spark_session, max_nesting_level=0)
-    ptl_1 = PathlingContext.create(spark_session, max_nesting_level=1)
+    pathling_def = PathlingContext.create(spark_session)
+    pathling_0 = PathlingContext.create(spark_session, max_nesting_level=0)
+    pathling_1 = PathlingContext.create(spark_session, max_nesting_level=1)
 
     # default nesting level is 3
-    quest_def = ptl_def.encode(json_resources_df, "Questionnaire").head()
+    quest_def = pathling_def.encode(json_resources_df, "Questionnaire").head()
     assert (
         ("item" in quest_def)
         and ("item" in quest_def["item"][0])
@@ -141,11 +143,11 @@ def test_element_nesting(spark_session, json_resources_df):
     )
 
     # max nesting level set to 0
-    quest_0 = ptl_0.encode(json_resources_df, "Questionnaire").head()
+    quest_0 = pathling_0.encode(json_resources_df, "Questionnaire").head()
     assert ("item" in quest_0) and ("item" not in quest_0["item"][0])
 
     # max nesting level set to 1
-    quest_1 = ptl_1.encode(json_resources_df, "Questionnaire").head()
+    quest_1 = pathling_1.encode(json_resources_df, "Questionnaire").head()
     assert (
         ("item" in quest_1)
         and ("item" in quest_1["item"][0])
@@ -156,19 +158,19 @@ def test_element_nesting(spark_session, json_resources_df):
 def test_extension_support(spark_session, json_resources_df):
     # by default extension are off
 
-    ptl_def = PathlingContext.create(spark_session)
-    ptl_ext_off = PathlingContext.create(spark_session, enable_extensions=False)
-    ptl_ext_on = PathlingContext.create(spark_session, enable_extensions=True)
+    pathling_def = PathlingContext.create(spark_session)
+    pathling_ext_off = PathlingContext.create(spark_session, enable_extensions=False)
+    pathling_ext_on = PathlingContext.create(spark_session, enable_extensions=True)
 
-    patient_def = ptl_def.encode(json_resources_df, "Patient").head()
+    patient_def = pathling_def.encode(json_resources_df, "Patient").head()
     assert "_extension" not in patient_def
 
     # extensions disabled
-    patient_off = ptl_ext_off.encode(json_resources_df, "Patient").head()
+    patient_off = pathling_ext_off.encode(json_resources_df, "Patient").head()
     assert "_extension" not in patient_off
 
     # extensions enabled
-    patient_on = ptl_ext_on.encode(json_resources_df, "Patient").head()
+    patient_on = pathling_ext_on.encode(json_resources_df, "Patient").head()
     assert "_extension" in patient_on
 
 
@@ -184,18 +186,18 @@ def _get_extension_value_keys(row):
 
 
 def test_open_types(spark_session, json_resources_df):
-    ptl_def = PathlingContext.create(spark_session, enable_extensions=True)
-    ptl_none = PathlingContext.create(
+    pathling_def = PathlingContext.create(spark_session, enable_extensions=True)
+    pathling_none = PathlingContext.create(
         spark_session, enable_extensions=True, enabled_open_types=[]
     )
-    ptl_some = PathlingContext.create(
+    pathling_some = PathlingContext.create(
         spark_session,
         enable_extensions=True,
         enabled_open_types=["boolean", "integer", "string", "Address"],
     )
 
     # Test defaults.
-    patient_def = ptl_def.encode(json_resources_df, "Patient").head()
+    patient_def = pathling_def.encode(json_resources_df, "Patient").head()
     assert "_extension" in patient_def
     assert [
         "valueAddress",
@@ -214,12 +216,12 @@ def test_open_types(spark_session, json_resources_df):
     ] == _get_extension_value_keys(patient_def)
 
     # Explicit empty open types.
-    patient_none = ptl_none.encode(json_resources_df, "Patient").head()
+    patient_none = pathling_none.encode(json_resources_df, "Patient").head()
     assert "_extension" in patient_none
     assert not _get_extension_value_keys(patient_none)
 
     # Some open types present.
-    patient_some = ptl_some.encode(json_resources_df, "Patient").head()
+    patient_some = pathling_some.encode(json_resources_df, "Patient").head()
     assert [
         "valueAddress",
         "valueBoolean",

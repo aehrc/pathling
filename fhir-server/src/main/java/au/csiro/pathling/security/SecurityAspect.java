@@ -34,7 +34,7 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimAccessor;
 import org.springframework.stereotype.Component;
 
 
@@ -112,8 +112,8 @@ public class SecurityAspect {
     String subject = null;
     if (authentication != null) {
       final Object principal = authentication.getPrincipal();
-      if (principal instanceof Jwt) {
-        subject = ((Jwt) principal).getSubject();
+      if (principal instanceof JwtClaimAccessor) {
+        subject = ((JwtClaimAccessor) principal).getSubject();
       }
     }
     return Optional.ofNullable(subject);

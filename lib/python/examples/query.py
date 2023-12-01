@@ -18,7 +18,8 @@ from tempfile import mkdtemp
 
 from pyspark.sql import DataFrame, SparkSession
 
-from pathling import PathlingContext, DataSource, find_jar, Expression as exp
+from pathling import PathlingContext, DataSource, Expression as exp
+from pathling._version import __java_version__
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(HERE, "data")
@@ -33,8 +34,10 @@ NDJSON_DIR_2 = os.path.join(TEMP_DIR, "ndjson")
 
 # Configure Hive, so that we can test out the tables functionality.
 spark = (
-    SparkSession.builder.config("spark.jars", find_jar())
-    .config("spark.jars.packages", "io.delta:delta-core_2.12:2.2.0")
+    SparkSession.builder.config(
+        "spark.jars.packages",
+        f"au.csiro.pathling:library-runtime:{__java_version__},io.delta:delta-core_2.12:2.2.0",
+    )
     .config(
         "spark.sql.extensions",
         "io.delta.sql.DeltaSparkSessionExtension",

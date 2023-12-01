@@ -326,7 +326,7 @@ class DockerImageTest {
       groupingParam.setValue(new StringType(
           "reverseResolve(Condition.subject)"
               + ".code"
-              + ".memberOf('http://snomed.info/sct/32506021000036107/version/20230331?fhir_vs=ecl/"
+              + ".memberOf('http://snomed.info/sct/32506021000036107/version/20231031?fhir_vs=ecl/"
               + "^ 32570581000036105 : "
               + "<< 263502005 = << 90734009')"));
 

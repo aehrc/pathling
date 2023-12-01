@@ -16,13 +16,17 @@
 
 import logging
 import os
-from tempfile import TemporaryDirectory
-
 from pyspark.sql import SparkSession
 from pytest import fixture
+from tempfile import TemporaryDirectory
 
 from pathling import PathlingContext
-from pathling.etc import find_jar as find_pathling_jar
+from pathling._version import (
+    __java_version__,
+    __scala_version__,
+    __delta_version__,
+    __hadoop_version__,
+)
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 LIB_API_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "..", "library-api"))
@@ -62,9 +66,17 @@ def pathling_ctx(request, temp_warehouse_dir):
     spark = (
         SparkSession.builder.appName("pathling-test")
         .master("local[1]")
-        .config("spark.jars", find_pathling_jar(verbose=True))
         .config("spark.driver.memory", "4g")
-        .config("spark.jars.packages", "io.delta:delta-core_2.12:2.3.0")
+        .config(
+            "spark.driver.extraJavaOptions",
+            "-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=7896",
+        )
+        .config(
+            "spark.jars.packages",
+            f"au.csiro.pathling:library-runtime:{__java_version__},"
+            f"io.delta:delta-core_{__scala_version__}:{__delta_version__},"
+            f"org.apache.hadoop:hadoop-aws:{__hadoop_version__}",
+        )
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config(
             "spark.sql.catalog.spark_catalog",
@@ -74,6 +86,7 @@ def pathling_ctx(request, temp_warehouse_dir):
         .config("spark.sql.warehouse.dir", temp_warehouse_dir)
         .getOrCreate()
     )
+    # noinspection SqlNoDataSourceInspection
     spark.sql("CREATE DATABASE IF NOT EXISTS test")
 
     request.addfinalizer(lambda: spark.stop())

@@ -22,8 +22,6 @@ has Delta enabled:
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
-import { JavaInstallation, PythonInstallation, ScalaInstallation }
-from "../../../src/components/installation";
 
 <!--suppress CheckEmptyScriptTag -->
 <Tabs>
