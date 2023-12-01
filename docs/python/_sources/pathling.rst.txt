@@ -44,14 +44,6 @@ pathling.datasource module
    :undoc-members:
    :show-inheritance:
 
-pathling.etc module
--------------------
-
-.. automodule:: pathling.etc
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 pathling.fhir module
 --------------------
 

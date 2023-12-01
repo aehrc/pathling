@@ -3,9 +3,9 @@
         <head>
           <meta http-equiv="X-UA-Compatible" content="IE=edge" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <title>Pathling Encoders 6.3.1 API  - au.csiro.pathling.sql.PruneSyntheticFields</title>
-          <meta name="description" content="Pathling Encoders 6.3.1 API - au.csiro.pathling.sql.PruneSyntheticFields" />
-          <meta name="keywords" content="Pathling Encoders 6.3.1 API au.csiro.pathling.sql.PruneSyntheticFields" />
+          <title>Pathling Encoders 6.4.0 API  - au.csiro.pathling.sql.PruneSyntheticFields</title>
+          <meta name="description" content="Pathling Encoders 6.4.0 API - au.csiro.pathling.sql.PruneSyntheticFields" />
+          <meta name="keywords" content="Pathling Encoders 6.4.0 API au.csiro.pathling.sql.PruneSyntheticFields" />
           <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
           
       
@@ -28,7 +28,7 @@
         </head>
         <body>
       <div id="search">
-        <span id="doc-title">Pathling Encoders 6.3.1 API<span id="doc-version"></span></span>
+        <span id="doc-title">Pathling Encoders 6.4.0 API<span id="doc-version"></span></span>
         <span class="close-results"><span class="left">&lt;</span> Back</span>
         <div id="textfilter">
           <span class="input">
@@ -825,6 +825,22 @@ Other types are not affected.
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>TreeNode</dd></dl></div>
+    </li><li name="org.apache.spark.sql.catalyst.expressions.Expression#freshCopyIfContainsStatefulExpression" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="freshCopyIfContainsStatefulExpression():org.apache.spark.sql.catalyst.expressions.Expression"></a><a id="freshCopyIfContainsStatefulExpression():Expression"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/sql/PruneSyntheticFields.html#freshCopyIfContainsStatefulExpression():org.apache.spark.sql.catalyst.expressions.Expression" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">freshCopyIfContainsStatefulExpression</span><span class="params">()</span><span class="result">: <span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Expression</dd></dl></div>
     </li><li name="org.apache.spark.sql.catalyst.expressions.Expression#genCode" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="genCode(ctx:org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext):org.apache.spark.sql.catalyst.expressions.codegen.ExprCode"></a><a id="genCode(CodegenContext):ExprCode"></a>
       <span class="permalink">
@@ -1105,6 +1121,38 @@ Other types are not affected.
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd>TreeNode</dd></dl></div>
+    </li><li name="org.apache.spark.sql.catalyst.trees.TreeNode#multiTransformDown" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="multiTransformDown(rule:PartialFunction[BaseType,Seq[BaseType]]):Stream[BaseType]"></a><a id="multiTransformDown(PartialFunction[Expression,Seq[Expression]]):Stream[Expression]"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/sql/PruneSyntheticFields.html#multiTransformDown(rule:PartialFunction[BaseType,Seq[BaseType]]):Stream[BaseType]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">multiTransformDown</span><span class="params">(<span name="rule">rule: <span class="extype" name="scala.PartialFunction">PartialFunction</span>[<span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span>, <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span>]]</span>)</span><span class="result">: <span class="extype" name="scala.Stream">Stream</span>[<span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span>]</span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>TreeNode</dd></dl></div>
+    </li><li name="org.apache.spark.sql.catalyst.trees.TreeNode#multiTransformDownWithPruning" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="multiTransformDownWithPruning(cond:org.apache.spark.sql.catalyst.trees.TreePatternBits=&gt;Boolean,ruleId:org.apache.spark.sql.catalyst.rules.RuleId)(rule:PartialFunction[BaseType,Seq[BaseType]]):Stream[BaseType]"></a><a id="multiTransformDownWithPruning((TreePatternBits)⇒Boolean,RuleId)(PartialFunction[Expression,Seq[Expression]]):Stream[Expression]"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/sql/PruneSyntheticFields.html#multiTransformDownWithPruning(cond:org.apache.spark.sql.catalyst.trees.TreePatternBits=&gt;Boolean,ruleId:org.apache.spark.sql.catalyst.rules.RuleId)(rule:PartialFunction[BaseType,Seq[BaseType]]):Stream[BaseType]" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">multiTransformDownWithPruning</span><span class="params">(<span name="cond">cond: (<span class="extype" name="org.apache.spark.sql.catalyst.trees.TreePatternBits">TreePatternBits</span>) ⇒ <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="ruleId">ruleId: <span class="extype" name="org.apache.spark.sql.catalyst.rules.RuleId">RuleId</span></span>)</span><span class="params">(<span name="rule">rule: <span class="extype" name="scala.PartialFunction">PartialFunction</span>[<span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span>, <span class="extype" name="scala.Seq">Seq</span>[<span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span>]]</span>)</span><span class="result">: <span class="extype" name="scala.Stream">Stream</span>[<span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span>]</span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>TreeNode</dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a><a id="ne(AnyRef):Boolean"></a>
       <span class="permalink">
@@ -1464,6 +1512,22 @@ Other types are not affected.
       </span>
       <span class="symbol">
         <span class="name">sql</span><span class="result">: <span class="extype" name="scala.Predef.String">String</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Expression</dd></dl></div>
+    </li><li name="org.apache.spark.sql.catalyst.expressions.Expression#stateful" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="stateful:Boolean"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/sql/PruneSyntheticFields.html#stateful:Boolean" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">stateful</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
       </span>
       
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Expression</dd></dl></div>
@@ -1839,6 +1903,22 @@ Other types are not affected.
     </span>)</span>
               
         </dd></dl></div>
+    </li><li name="org.apache.spark.sql.catalyst.expressions.Expression#withCanonicalizedChildren" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="withCanonicalizedChildren:org.apache.spark.sql.catalyst.expressions.Expression"></a><a id="withCanonicalizedChildren:Expression"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/sql/PruneSyntheticFields.html#withCanonicalizedChildren:org.apache.spark.sql.catalyst.expressions.Expression" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">withCanonicalizedChildren</span><span class="result">: <span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span></span>
+      </span>
+      
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected </dd><dt>Definition Classes</dt><dd>Expression</dd></dl></div>
     </li><li name="au.csiro.pathling.sql.PruneSyntheticFields#withNewChildInternal" visbl="prt" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="withNewChildInternal(newChild:org.apache.spark.sql.catalyst.expressions.Expression):org.apache.spark.sql.catalyst.expressions.Expression"></a><a id="withNewChildInternal(Expression):Expression"></a>
       <span class="permalink">

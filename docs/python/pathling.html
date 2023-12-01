@@ -133,10 +133,6 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#module-pathling.etc">pathling.etc module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#pathling.etc.find_jar"><code class="docutils literal notranslate"><span class="pre">find_jar()</span></code></a></li>
-</ul>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="#module-pathling.fhir">pathling.fhir module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.fhir.MimeType"><code class="docutils literal notranslate"><span class="pre">MimeType</span></code></a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#pathling.fhir.MimeType.FHIR_JSON"><code class="docutils literal notranslate"><span class="pre">MimeType.FHIR_JSON</span></code></a></li>
@@ -152,6 +148,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#module-pathling.functions">pathling.functions module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.functions.to_coding"><code class="docutils literal notranslate"><span class="pre">to_coding()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.functions.to_ecl_value_set"><code class="docutils literal notranslate"><span class="pre">to_ecl_value_set()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pathling.functions.to_loinc_coding"><code class="docutils literal notranslate"><span class="pre">to_loinc_coding()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.functions.to_snomed_coding"><code class="docutils literal notranslate"><span class="pre">to_snomed_coding()</span></code></a></li>
 </ul>
 </li>
@@ -297,7 +294,6 @@
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.designation"><code class="docutils literal notranslate"><span class="pre">designation()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.display"><code class="docutils literal notranslate"><span class="pre">display()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pathling.find_jar"><code class="docutils literal notranslate"><span class="pre">find_jar()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.member_of"><code class="docutils literal notranslate"><span class="pre">member_of()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.property_of"><code class="docutils literal notranslate"><span class="pre">property_of()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pathling.subsumed_by"><code class="docutils literal notranslate"><span class="pre">subsumed_by()</span></code></a></li>
@@ -1091,15 +1087,6 @@ type codes.</p>
 </dd></dl>
 
 </section>
-<section id="module-pathling.etc">
-<span id="pathling-etc-module"></span><h2>pathling.etc module<a class="headerlink" href="#module-pathling.etc" title="Permalink to this heading"></a></h2>
-<dl class="py function">
-<dt class="sig sig-object py" id="pathling.etc.find_jar">
-<span class="sig-prename descclassname"><span class="pre">pathling.etc.</span></span><span class="sig-name descname"><span class="pre">find_jar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/etc.html#find_jar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.etc.find_jar" title="Permalink to this definition"></a></dt>
-<dd><p>Gets the path to the Pathling library JAR, bundled with the python distribution.</p>
-</dd></dl>
-
-</section>
 <section id="module-pathling.fhir">
 <span id="pathling-fhir-module"></span><h2>pathling.fhir module<a class="headerlink" href="#module-pathling.fhir" title="Permalink to this heading"></a></h2>
 <dl class="py class">
@@ -1165,6 +1152,25 @@ function.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>the ValueSet URI</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pathling.functions.to_loinc_coding">
+<span class="sig-prename descclassname"><span class="pre">pathling.functions.</span></span><span class="sig-name descname"><span class="pre">to_loinc_coding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coding_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Column</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Column</span></span></span><a class="reference internal" href="_modules/pathling/functions.html#to_loinc_coding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.functions.to_loinc_coding" title="Permalink to this definition"></a></dt>
+<dd><p>Converts a Column containing codes into a Column that contains a LOINC Coding struct. The
+Coding struct Column can be used as an input to terminology functions such as <cite>member_of</cite> and
+<cite>translate</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coding_column</strong> – the Column containing the codes</p></li>
+<li><p><strong>version</strong> – the version of the code system</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a Column containing a Coding struct</p>
 </dd>
 </dl>
 </dd></dl>
@@ -2388,12 +2394,6 @@ Overrides the parameter <cite>accept_language</cite> in
 <dd class="field-even"><p>a Column containing the result of the operation (String).</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="pathling.find_jar">
-<span class="sig-prename descclassname"><span class="pre">pathling.</span></span><span class="sig-name descname"><span class="pre">find_jar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="_modules/pathling/etc.html#find_jar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.find_jar" title="Permalink to this definition"></a></dt>
-<dd><p>Gets the path to the Pathling library JAR, bundled with the python distribution.</p>
 </dd></dl>
 
 <dl class="py function">
