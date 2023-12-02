@@ -69,15 +69,20 @@
 <div class="section level2">
 <h2 id="local-installation">Local installation<a class="anchor" aria-label="anchor" href="#local-installation"></a>
 </h2>
-<p>Prerequisites: <code>R &gt;= 3.5.0</code> (has been tested with <code>R 4.3.1</code>)</p>
+<p>Prerequisites:</p>
 <ul>
-<li>Install the <code>remotes</code> package: <code>install.packages('remotes')</code>
-</li>
-<li>Install the <code>pathling</code> package: <code>remotes::install_url('https://pathling.csiro.au/R/pathling_6.4.0.tar.gz', upgrade = FALSE)</code>
-</li>
-<li>Install Spark version required by Pathling: <code><a href="reference/pathling_install_spark.html">pathling::pathling_install_spark()</a></code>
-</li>
+<li>R &gt;= 3.5.0 (tested with 4.3.1)</li>
 </ul>
+<p>To install, run these commands:</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Install the `remotes` package.</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">'remotes'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Install the `pathling` package.</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_url.html" class="external-link">install_url</a></span><span class="op">(</span><span class="st">'https://pathling.csiro.au/R/pathling_6.4.0.tar.gz'</span>, upgrade <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Install the Spark version required by Pathling.</span></span>
+<span><span class="fu">pathling</span><span class="fu">::</span><span class="fu"><a href="reference/pathling_install_spark.html">pathling_install_spark</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="running-on-windows">Running on Windows<a class="anchor" aria-label="anchor" href="#running-on-windows"></a>
 </h3>
@@ -93,7 +98,7 @@
 <h2 id="getting-started">Getting started<a class="anchor" aria-label="anchor" href="#getting-started"></a>
 </h2>
 <p>The example below shows how to use <code>pathling</code> terminology functions to find codes and names of viral diseases in an R data frame. The dataframe <code>conditions</code> is an example dataset that comes with the <code>pathling</code> package.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://spark.rstudio.com/" class="external-link">sparklyr</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pathling.csiro.au/" class="external-link">pathling</a></span><span class="op">)</span></span>
 <span></span>
@@ -151,25 +156,25 @@
 <h2 id="developer-notes-macos">Developer notes (MacOS)<a class="anchor" aria-label="anchor" href="#developer-notes-macos"></a>
 </h2>
 <p>The following packages are needed to generate pdf manuals:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>brew install basictex</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>brew install freetype</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>brew install basictex</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>brew install freetype</span></code></pre></div>
 <p>Then run the following to install the <code>inconsolata</code> fonts used in R manuals:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install texlive packages needed to build R package vignettes</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>sudo tlmgr update <span class="sc">--</span>self</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>sudo tlmgr update <span class="sc">--</span>all</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>sudo tlmgr install titling framed inconsolata</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>sudo tlmgr install collection<span class="sc">-</span>fontsrecommended</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install texlive packages needed to build R package vignettes</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>sudo tlmgr update <span class="sc">--</span>self</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>sudo tlmgr update <span class="sc">--</span>all</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>sudo tlmgr install titling framed inconsolata</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>sudo tlmgr install collection<span class="sc">-</span>fontsrecommended</span></code></pre></div>
 <p>The following packages may be needed to build the dependencies of <code>devtools</code>.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>brew install harfbuzz fribidi</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>brew install libjpeg</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>brew install libtiff</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>brew install libgit2</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>brew install harfbuzz fribidi</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>brew install libjpeg</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>brew install libtiff</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>brew install libgit2</span></code></pre></div>
 <p>To setup the dev environment, run the following commands:</p>
 <p>Use miniconda to install R in the activated dev environment:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run 'conda activate your-dev-env-name' first</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>conda install <span class="sc">-</span>y <span class="sc">-</span>c conda<span class="sc">-</span>forge r<span class="sc">-</span>base<span class="ot">=</span><span class="dv">4</span>.<span class="fl">1.3</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run 'conda activate your-dev-env-name' first</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>conda install <span class="sc">-</span>y <span class="sc">-</span>c conda<span class="sc">-</span>forge r<span class="sc">-</span>base<span class="ot">=</span><span class="dv">4</span>.<span class="fl">1.3</span></span></code></pre></div>
 <p>Install the <code>devtools</code> R package:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>Rscript <span class="sc">--</span>vanilla <span class="sc">-</span>e <span class="st">'install.packages("devtools", repos="https://cloud.r-project.org/")'</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>Rscript <span class="sc">--</span>vanilla <span class="sc">-</span>e <span class="st">'install.packages("devtools", repos="https://cloud.r-project.org/")'</span></span></code></pre></div>
 <p>Pathling is copyright © 2018-2023, Commonwealth Scientific and Industrial Research Organisation (CSIRO) ABN 41 687 119 230. Licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0" class="external-link">Apache License, version 2.0</a>.</p>
 </div>
 </div>
