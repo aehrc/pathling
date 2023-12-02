@@ -69,7 +69,7 @@ their default values.
 | `pathling.imagePullSecrets`           | `[ ]`                   | A list of [image pull secrets](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) to use                                                |
 | `pathling.tolerations`                | `[ ]`                   | A list of [tolerations](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) to apply to the pod                                                  |
 | `pathling.affinity`                   | `~`                     | [Affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity) to apply to the pod                                         |
-| `pathling.config`                     | `{ }`                   | A map of [configuration values](/server/configuration) to pass to Pathling                                                                                                  |
+| `pathling.config`                     | `{ }`                   | A map of [configuration values](/docs/server/configuration) to pass to Pathling                                                                                             |
 | `pathling.secretConfig`               | `{ }`                   | A map of secret configuration values to pass to Pathling, these values will be stored using [Kubernetes secrets](https://kubernetes.io/docs/concepts/configuration/secret/) |
 
 ## Example configuration
