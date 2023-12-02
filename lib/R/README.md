@@ -7,13 +7,22 @@ that aid the use of FHIR terminology services and FHIR data within R code.
 
 ## Local installation
 
-Prerequisites: `R >= 3.5.0` (has been tested with `R 4.3.1`)
+Prerequisites:
 
-* Install the `remotes` package: `install.packages('remotes')`
-* Install the `pathling`
-  package: `remotes::install_url('https://pathling.csiro.au/R/pathling_6.4.0.tar.gz', upgrade = FALSE)`
-* Install Spark version required by
-  Pathling: `pathling::pathling_install_spark()`
+- R >= 3.5.0 (tested with 4.3.1)
+
+To install, run these commands:
+
+```r
+# Install the `remotes` package.
+install.packages('remotes')
+
+# Install the `pathling` package.
+remotes::install_url('https://pathling.csiro.au/R/pathling_6.4.0.tar.gz', upgrade = FALSE)
+
+# Install the Spark version required by Pathling.
+pathling::pathling_install_spark()
+```
 
 ### Running on Windows
 
