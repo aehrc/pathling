@@ -2,12 +2,12 @@ apiVersion: v1
 entries:
   pathling:
   - apiVersion: v2
-    created: "2023-12-01T14:27:35.994529908Z"
+    created: "2023-12-02T01:34:09.474820261Z"
     description: A Helm chart for Pathling Server
-    digest: b0e1a1cb6ef317bf0d29487e0c0304d3d1d776a85ccde70aa82039efd88c769d
+    digest: 89050b03a7461f07cb14926bbfd37c8a765403c648d0cf1f3b8344e4f12ba5d4
     name: pathling
     type: application
     urls:
     - https://pathling.csiro.au/helm/pathling-1.0.0.tgz
     version: 1.0.0
-generated: "2023-12-01T14:27:35.994043497Z"
+generated: "2023-12-02T01:34:09.474354042Z"
