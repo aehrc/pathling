@@ -17,7 +17,7 @@ Authors@R:
              email = "john.grimes@csiro.au")
      )
 Maintainer: "Australian e-Health Research Centre, CSIRO" <ontoserver-support@csiro.au>
-Description: R API for Pathling with support for encoding, terminology and queries.
+Description: R API for Pathling, a tool for querying and transforming electronic health record data that is represented using the Fast Healthcare Interoperability Resources (FHIR) standard.
 License: Apache License 2.0 | file LICENSE
 URL: https://pathling.csiro.au/
 BugReports: https://github.com/aehrc/pathling/issues
