@@ -22,7 +22,7 @@ Prerequisites: `R >= 3.5.0` (has been tested with `R 4.3.1`)
 
 * Install the `remotes` package: `install.packages('remotes')`
 * Install the `pathling`
-  package: `remotes::install_url('https://pathling.csiro.au/R/pathling_6.4.0.9000.tar.gz', upgrade = FALSE)`
+  package: `remotes::install_url('https://pathling.csiro.au/R/pathling_6.4.0.tar.gz', upgrade = FALSE)`
 * Install Spark version required by
   Pathling: `pathling::pathling_spark_install()`
 
