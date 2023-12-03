@@ -32,6 +32,10 @@
 
   <name>Pathling Helm Chart</name>
   <description>A Helm chart for deploying Pathling Server on Kubernetes.</description>
+  
+  <properties>
+    <pathling.artifactHub.id>d13033b5-7473-4df3-90fa-f1e0dd8b46e4</pathling.artifactHub.id>
+  </properties>
 
   <build>
     <plugins>
@@ -81,9 +85,38 @@
           <classesDirectory>${project.build.directory}/helm</classesDirectory>
           <includes>
             <include>index.yaml</include>
+            <include>artifacthub-repo.yml</include>
             <include>*.tgz</include>
           </includes>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>ru.yaal.maven</groupId>
+        <artifactId>write-text-files-maven-plugin</artifactId>
+        <version>1.1</version>
+        <executions>
+          <execution>
+            <id>write-artifacthub-config</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>write-text-files</goal>
+            </goals>
+            <configuration>
+              <charset>UTF-8</charset>
+              <files>
+                <file>
+                  <path>${project.build.directory}/helm/artifacthub-repo.yml</path>
+                  <lines>
+                    <line>repositoryId: ${pathling.artifactHub.id}</line>
+                    <line>owners:</line>
+                    <line xml:space="preserve">  - name: John Grimes</line>
+                    <line xml:space="preserve">    email: John.Grimes@csiro.au</line>
+                  </lines>
+                </file>
+              </files>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
