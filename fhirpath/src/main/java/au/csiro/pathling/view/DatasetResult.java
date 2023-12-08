@@ -17,16 +17,16 @@
 
 package au.csiro.pathling.view;
 
-import lombok.Value;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import lombok.Value;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
 /**
  * Encapsulates the result of a view query.
@@ -44,11 +44,11 @@ public interface DatasetResult<T> {
   @Nonnull
   default DatasetResult<T> andThen(@Nonnull final DatasetResult<T> next) {
     return new Composite<>(
-            Stream.concat(this.asStream(), next.asStream())
-                    .collect(Collectors.toUnmodifiableList()),
-            // TODOmaybe just use identity() here
-            getTransform().map(t -> next.getTransform().map(t::andThen).orElse(t))
-                    .or(next::getTransform)
+        Stream.concat(this.asStream(), next.asStream())
+            .collect(Collectors.toUnmodifiableList()),
+        // TODOmaybe just use identity() here
+        getTransform().map(t -> next.getTransform().map(t::andThen).orElse(t))
+            .or(next::getTransform)
     );
   }
 
@@ -57,6 +57,7 @@ public interface DatasetResult<T> {
     return getTransform().map(t -> t.apply(dataset)).orElse(dataset);
   }
 
+  <K> DatasetResult<K> map(@Nonnull final Function<T, K> mapper);
 
   @Nonnull
   static <T> DatasetResult<T> empty() {
@@ -65,8 +66,15 @@ public interface DatasetResult<T> {
   }
 
   @Nonnull
-  static <T> DatasetResult<T> of(@Nonnull final T value) {
+  static <T> DatasetResult.One<T> pureOne(@Nonnull final T value) {
     return new One<>(value, Optional.empty());
+  }
+
+
+  @Nonnull
+  static <T> DatasetResult.One<T> one(@Nonnull final T value,
+      @Nonnull final Function<Dataset<Row>, Dataset<Row>> transform) {
+    return new One<>(value, Optional.of(transform));
   }
 
   @Nonnull
@@ -75,7 +83,13 @@ public interface DatasetResult<T> {
     return new Transform<>(transform);
   }
 
-  default <K> DatasetResult<K> asTransform() {
+  default DatasetResult<T> asTransform() {
+    //noinspection unchecked
+    return (DatasetResult<T>) getTransform().map(DatasetResult::fromTransform).orElse(empty());
+  }
+
+
+  default <K> DatasetResult<K> asAnyTransform() {
     //noinspection unchecked
     return (DatasetResult<K>) getTransform().map(DatasetResult::fromTransform).orElse(empty());
   }
@@ -96,11 +110,12 @@ public interface DatasetResult<T> {
         .collect(Collectors.toUnmodifiableList());
     return filterColumns.isEmpty()
            ? DatasetResult.empty()
-           : this.<Column>asTransform().andThen(fromTransform(ds -> ds.filter(
+           : this.<Column>asAnyTransform().andThen(fromTransform(ds -> ds.filter(
                filterColumns.stream()
                    .reduce(Column::and).orElseThrow()
            )));
   }
+
 
   @Value
   class Empty<T> implements DatasetResult<T> {
@@ -116,6 +131,11 @@ public interface DatasetResult<T> {
     public Optional<Function<Dataset<Row>, Dataset<Row>>> getTransform() {
       return Optional.empty();
     }
+
+    @Override
+    public <K> DatasetResult<K> map(@Nonnull final Function<T, K> mapper) {
+      return empty();
+    }
   }
 
   @Value
@@ -129,6 +149,30 @@ public interface DatasetResult<T> {
     public Stream<T> asStream() {
       return Stream.of(value);
     }
+
+    @Nonnull
+    public One<T> withTransformOf(@Nonnull final DatasetResult<T> other) {
+      return new One<>(value, other.andThen(this).asTransform().getTransform());
+    }
+
+    @Nonnull
+    public T getPureValue() {
+      if (transform.isPresent()) {
+        throw new IllegalStateException("Cannot get pure value from transformed result");
+      }
+      return value;
+    }
+
+    @Nonnull
+    public <R> One<R> flatMap(@Nonnull final Function<T, One<R>> mapper) {
+      return mapper.apply(value).withTransformOf(this.asAnyTransform());
+    }
+
+    @Override
+    public <K> One<K> map(@Nonnull final Function<T, K> mapper) {
+      return new One<>(mapper.apply(value), transform);
+    }
+
   }
 
   @Value
@@ -136,16 +180,21 @@ public interface DatasetResult<T> {
 
     Function<Dataset<Row>, Dataset<Row>> transform;
 
-    @Nonnull
     @Override
+    @Nonnull
     public Stream<T> asStream() {
       return Stream.empty();
     }
 
-    @Nonnull
     @Override
+    @Nonnull
     public Optional<Function<Dataset<Row>, Dataset<Row>>> getTransform() {
       return Optional.of(transform);
+    }
+
+    @Override
+    public <K> DatasetResult<K> map(@Nonnull final Function<T, K> mapper) {
+      return asAnyTransform();
     }
   }
 
@@ -160,6 +209,11 @@ public interface DatasetResult<T> {
     public Stream<T> asStream() {
       return columns.stream();
     }
-  }
 
+    @Override
+    public <K> Composite<K> map(@Nonnull final Function<T, K> mapper) {
+      return new Composite<>(columns.stream().map(mapper).collect(Collectors.toUnmodifiableList()),
+          transform);
+    }
+  }
 }

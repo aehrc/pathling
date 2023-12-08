@@ -56,34 +56,18 @@ import scala.collection.JavaConverters;
 public class ResourceCollection extends Collection {
 
   /**
-   * A mapping between the names of elements in the resource and the corresponding {@link Column}.
-   */
-  @Nonnull
-  private final Map<String, Column> elementsToColumns;
-
-  /**
    * The {@link ResourceDefinition} for this resource type.
    */
   @Nonnull
   private final ResourceDefinition resourceDefinition;
 
-  /**
-   * The {@link Dataset} containing the resource data.
-   */
-  @Nonnull
-  private final Dataset<Row> dataset;
-
-  protected ResourceCollection(@Nonnull final Column column,
+  protected ResourceCollection(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Map<String, Column> elementsToColumns,
-      @Nonnull final ResourceDefinition resourceDefinition,
-      @Nonnull final Dataset<Row> dataset) {
-    super(column, type, fhirType, definition);
-    this.elementsToColumns = elementsToColumns;
+      @Nonnull final ResourceDefinition resourceDefinition) {
+    super(columnCtx, type, fhirType, definition);
     this.resourceDefinition = resourceDefinition;
-    this.dataset = dataset;
   }
 
   @Nonnull
@@ -99,13 +83,12 @@ public class ResourceCollection extends Collection {
    * Build a new ResourcePath using the supplied {@link FhirContext} and {@link DataSource}.
    *
    * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
-   * @param dataset the {@link Dataset} that contains the resource data
    * @param resourceType the type of the resource
    * @return A shiny new ResourcePath
    */
   @Nonnull
   public static ResourceCollection build(@Nonnull final FhirContext fhirContext,
-      @Nonnull final Dataset<Row> dataset, @Nonnull final ResourceType resourceType) {
+      @Nonnull final ResourceType resourceType) {
 
     // Get the resource definition from HAPI.
     final String resourceCode = resourceType.toCode();
@@ -113,15 +96,10 @@ public class ResourceCollection extends Collection {
         resourceCode);
     final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
 
-    //noinspection ReturnOfNull
-    final Map<String, Column> elementsToColumns = Stream.of(dataset.columns())
-        .collect(Collectors.toUnmodifiableMap(Function.identity(), dataset::col));
-
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(functions.lit(true), Optional.empty(),
-        getFhirType(resourceType), Optional.of(definition), elementsToColumns, definition,
-        dataset);
+    return new ResourceCollection(SingleRowCtx.of(functions.lit(true)), Optional.empty(),
+        getFhirType(resourceType), Optional.of(definition), definition);
   }
 
   /**
@@ -148,13 +126,14 @@ public class ResourceCollection extends Collection {
    * @return the {@link Column} within the dataset pertaining to this element
    */
   @Nonnull
-  public Optional<Column> getElementColumn(@Nonnull final String elementName) {
-    return Optional.ofNullable(elementsToColumns.get(elementName));
+  public Optional<ColumnCtx> getElementColumn(@Nonnull final String elementName) {
+    return Optional.of(functions.col(elementName))
+        .map(StdColumnCtx::of);
   }
 
   @Nonnull
   @Override
-  protected Column getFid() {
+  protected ColumnCtx getFid() {
     return getElementColumn(ExtensionSupport.FID_FIELD_NAME()).orElseThrow(
         () -> new IllegalStateException("Resource does not have an 'id' column"));
   }
@@ -175,29 +154,23 @@ public class ResourceCollection extends Collection {
     return getElementColumn(childDef.getElementName()).map(
         value -> Collection.build(
             // TODO: simplify this
-            functions.when(getCtx().getValue().isNotNull(), value),
+            StdColumnCtx.of(functions.when(getCtx().getValue().isNotNull(), value)),
             childDef)).get();
   }
 
 
   @Nonnull
   @Override
-  public Collection copyWith(@Nonnull final Column newValue) {
+  public Collection copyWith(@Nonnull final ColumnCtx newValue) {
     return new ResourceCollection(newValue, getType(), getFhirType(), getDefinition(),
-        elementsToColumns, resourceDefinition, dataset);
+        resourceDefinition);
   }
 
   @Nonnull
-  public StdColumnCtx getKeyColumn() {
+  public ColumnCtx getKeyColumn() {
     return getElementColumn("id_versioned")
-        .map(StdColumnCtx::of)
         .orElseThrow(
             () -> new IllegalStateException("Resource does not have an 'id_versioned' column"));
   }
 
-  @Nonnull
-  @Override
-  public ColumnCtx getCtx() {
-    return SingleRowCtx.of(getColumn());
-  }
 }

@@ -85,7 +85,7 @@ public class AbstractParserTest {
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
     final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource.read(resourceType), resourceType);
+        .build(fhirContext, resourceType);
 
     evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .dataset(dataSource.read(resourceType))
@@ -106,7 +106,7 @@ public class AbstractParserTest {
   protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
     final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, dataSource.read(resourceType), resourceType);
+        .build(fhirContext, resourceType);
 
     final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
         .dataset(dataSource.read(resourceType))

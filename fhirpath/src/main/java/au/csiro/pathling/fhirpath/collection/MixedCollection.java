@@ -1,16 +1,13 @@
 package au.csiro.pathling.fhirpath.collection;
 
-import static au.csiro.pathling.utilities.Preconditions.checkArgument;
-
-import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.Reference;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
-import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import lombok.Value;
 
 /**
  * Represents a polymorphic collection, which can be resolved to any one of a number of data types.
@@ -18,27 +15,58 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
  * @author John Grimes
  */
 @Getter
-public class MixedCollection extends Collection {
+public abstract class MixedCollection extends Collection {
 
-  /**
-   * The definition of this choice element.
-   */
-  @Nonnull
-  private final ChoiceChildDefinition choiceDefinition;
+  @Value
+  public static class Element extends MixedCollection {
 
-  @Nonnull
-  private final Collection parent;
+    /**
+     * The definition of this choice element.
+     */
+    @Nonnull
+    ChoiceChildDefinition choiceDefinition;
 
-  protected MixedCollection(@Nonnull final Column column,
-      @Nonnull final Optional<FhirPathType> type,
-      @Nonnull final Optional<FHIRDefinedType> fhirType,
-      @Nonnull final Optional<? extends NodeDefinition> definition,
-      @Nonnull final Collection parent) {
-    super(column, type, fhirType, definition);
-    checkArgument(definition.isPresent() && definition.get() instanceof ChoiceChildDefinition,
-        "definition must be a ChoiceElementDefinition");
-    this.choiceDefinition = (ChoiceChildDefinition) definition.get();
-    this.parent = parent;
+    @Nonnull
+    Collection parent;
+
+    /**
+     * Returns a new collection representing just the elements of this collection with the specified
+     * type.
+     *
+     * @param type The type of element to return
+     * @return A new collection representing just the elements of this collection with the specified
+     * type
+     */
+    @Nonnull
+    public Collection resolveType(@Nonnull final TypeSpecifier type) {
+      return choiceDefinition.getChildByType(type.toFhirType().toCode()).map(
+          parent::traverseElement
+      ).orElse(Collection.nullCollection());
+    }
+  }
+
+  @Value
+  public static class Resource extends MixedCollection {
+
+    @Nonnull
+    Reference reference;
+
+    /**
+     * Returns a new collection representing just the elements of this collection with the specified
+     * type.
+     *
+     * @param type The type of element to return
+     * @return A new collection representing just the elements of this collection with the specified
+     * type
+     */
+    @Nonnull
+    public Collection resolveType(@Nonnull final TypeSpecifier type) {
+      return reference.resolve(type.toResourceType());
+    }
+  }
+
+  protected MixedCollection() {
+    super(ColumnCtx.nullCtx(), Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   /**
@@ -48,10 +76,15 @@ public class MixedCollection extends Collection {
    * @return A new instance of {@link MixedCollection}
    */
   @Nonnull
-  public static MixedCollection build(@Nonnull final Collection parent,
+  public static MixedCollection buildElement(@Nonnull final Collection parent,
       @Nonnull final ChoiceChildDefinition definition) {
-    return new MixedCollection(functions.lit(null), Optional.empty(), Optional.empty(),
-        Optional.of(definition), parent);
+    return new Element(definition, parent);
+  }
+
+
+  @Nonnull
+  public static MixedCollection buildResource(@Nonnull final Reference reference) {
+    return new Resource(reference);
   }
 
 
@@ -73,9 +106,5 @@ public class MixedCollection extends Collection {
    * type
    */
   @Nonnull
-  public Optional<Collection> resolveChoice(@Nonnull final String type) {
-    return choiceDefinition.getChildByType(type).map(
-        parent::traverseElement
-    );
-  }
+  abstract public Collection resolveType(@Nonnull final TypeSpecifier type);
 }

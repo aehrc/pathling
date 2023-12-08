@@ -104,5 +104,4 @@ public class BooleanCollection extends Collection implements Materializable<Bool
   public boolean isComparableTo(@Nonnull final Collection path) {
     return COMPARABLE_TYPES.contains(path.getClass());
   }
-
 }

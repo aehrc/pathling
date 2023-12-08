@@ -79,7 +79,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
         //         "Parameter " + parameter + " is not nullable and no argument was provided"));
       } else if (Collection.class.isAssignableFrom(parameter.getType())) {
         // evaluate collection types 
-        return resolveCollection(argument.eval(input, evaluationContext), parameter);
+        return resolveCollection(argument.apply(input, evaluationContext), parameter);
       } else if (CollectionExpression.class.isAssignableFrom(parameter.getType())) {
         // bind with context
         return (CollectionExpression) (c -> argument.apply(c, evaluationContext));

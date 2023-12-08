@@ -27,7 +27,7 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.QueryParser;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.view.AggregationView;
-import au.csiro.pathling.view.ViewContext;
+import au.csiro.pathling.view.ExecutionContext;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import java.util.List;
@@ -81,8 +81,8 @@ public class AggregateQueryExecutor extends QueryExecutor {
         Collections.emptyList(), Collections.emptyList());
   }
 
-  protected ViewContext newContext() {
-    return new ViewContext(sparkSession, fhirContext, dataSource);
+  protected ExecutionContext newContext() {
+    return new ExecutionContext(sparkSession, fhirContext, dataSource);
   }
 
   //

@@ -45,7 +45,6 @@ import au.csiro.pathling.fhirpath.path.Literals.UcumQuantityLiteral;
 import java.text.ParseException;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.fhirpath.path.Paths.StringLiteral;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 /**

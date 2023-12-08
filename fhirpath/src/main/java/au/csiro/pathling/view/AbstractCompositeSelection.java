@@ -19,17 +19,15 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import lombok.AllArgsConstructor;
-import lombok.Value;
-import lombok.experimental.NonFinal;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.spark.sql.Column;
-
-import javax.annotation.Nonnull;
+import au.csiro.pathling.view.DatasetResult.One;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import lombok.AllArgsConstructor;
+import lombok.Value;
+import lombok.experimental.NonFinal;
 
 @Value
 @NonFinal
@@ -40,10 +38,10 @@ public abstract class AbstractCompositeSelection implements Selection {
   List<Selection> components;
 
   @Override
-  public DatasetResult<Column> evaluate(@Nonnull final ProjectionContext context) {
-    final Pair<ProjectionContext, DatasetResult<Column>> pathContext = subContext(context, path);
-    return components.stream().map(s -> s.evaluate(pathContext.getLeft()))
-        .reduce(pathContext.getRight(), DatasetResult::andThen);
+  public DatasetResult<CollectionResult> evaluate(@Nonnull final ProjectionContext context) {
+    final One<ProjectionContext> subContextResult = subContext(context, path);
+    return components.stream().map(s -> s.evaluate(subContextResult.getValue()))
+        .reduce(subContextResult.asAnyTransform(), DatasetResult::andThen);
   }
 
   @Override
@@ -72,11 +70,10 @@ public abstract class AbstractCompositeSelection implements Selection {
       @Nonnull final List<Selection> newComponents);
 
   @Nonnull
-  protected Pair<ProjectionContext, DatasetResult<Column>> subContext(
+  protected One<ProjectionContext> subContext(
       @Nonnull final ProjectionContext context,
       @Nonnull final FhirPath<Collection> parent) {
     return context.subContext(parent);
   }
-
 
 }

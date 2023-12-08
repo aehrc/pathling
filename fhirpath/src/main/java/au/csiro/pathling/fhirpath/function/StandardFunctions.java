@@ -30,6 +30,7 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.MixedCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.utilities.Functions;
@@ -83,7 +84,7 @@ public class StandardFunctions {
 
     // we need to pre-evaluate both expressions to determine that they have the same type
     // this may however cause some issues because we only use one of them (and as such we only need to apply one side effect).
-    
+
     // functions.when(requireBoolean(expression).apply(input).getSingleton(), thenValue.getColumn())
     //     .otherwise(otherwiseValue.getColumn());
 
@@ -135,7 +136,8 @@ public class StandardFunctions {
     return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
         where(extensionCollection, c -> c.traverse(URL_ELEMENT_NAME).map(
                 urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
-            .map(BooleanCollection::build).orElse(BooleanCollection.falseCollection()))
+            .map(col -> BooleanCollection.build(StdColumnCtx.of(col)))
+            .orElse(BooleanCollection.falseCollection()))
     ).orElse(Collection.nullCollection());
   }
 
@@ -151,8 +153,7 @@ public class StandardFunctions {
       @Nonnull final TypeSpecifier typeSpecifier) {
     // TODO: This should work on any collection type - not just mixed
     // if the type of the collection does not match the required type then it should return an empty collection.
-    return input.resolveChoice(typeSpecifier.toFhirType().toCode())
-        .orElse(Collection.nullCollection());
+    return input.resolveType(typeSpecifier);
   }
 
   @FhirpathFunction
@@ -231,51 +232,13 @@ public class StandardFunctions {
 
   // extended functions
   @FhirpathFunction
-  public static ResourceCollection reverseResolve(@Nonnull final Collection input,
+  public static ResourceCollection reverseResolve(@Nonnull final ResourceCollection input,
       @Nonnull final FhirPath<Collection> reference,
       @Nonnull final EvaluationContext evaluationContext) {
-    // TODO: decompose the reference - this should be done in a better way
-    // TODO: maybe it should be '
-    final List<String> names = reference.asStream()
-        .map(Functions.maybeCast(Paths.Traversal.class))
-        .flatMap(Optional::stream)
-        .map(Paths.Traversal::getPropertyName)
-        .collect(Collectors.toUnmodifiableList());
-    Preconditions.checkUserInput(names.size() == 2,
-        "Reference must be in format: <ResourceType>.<referenceFieldName>");
-    final ResourceType foreignResourceType = ResourceType.fromCode(names.get(0));
-    final String foreignReferenceField = names.get(1);
 
-    final Dataset<Row> dataset = evaluationContext.getDataSource().read(foreignResourceType);
-    // TODO join and aggregate
-    // not quite sure how to deal with extensions here - somehow nees to merge the maps as well
-    // but in general
-    // group by foreignReferenceField and collect_list(on everything else)
-
-    final ResourceCollection foreignResource = ResourceCollection.build(
-        evaluationContext.getFhirContext(),
-        dataset,
-        foreignResourceType);
-
-    final Column referenceColumn = foreignResource.traverse(
-            foreignReferenceField)
-        .flatMap(c -> c.traverse("reference"))
-        .map(Collection::getColumn)
-        .orElseThrow();
-
-    final List<Column> aggs = Stream.of(dataset.columns())
-        .map(c -> functions.collect_list(c).alias(foreignResourceType.toCode() + "_" + c))
-        .collect(Collectors.toUnmodifiableList());
-
-    final Dataset<Row> foreignDataset = dataset.groupBy(referenceColumn.alias("ref_xxx"))
-        .agg(aggs.get(0), aggs.subList(1, aggs.size()).toArray(new Column[0]));
-
-    final Dataset<Row> joinedDataset = dataset.join(foreignDataset,
-        dataset.col("id_versioned").equalTo(foreignDataset.col("ref_xxx")), "left_outer");
-
-    return ResourceCollection.build(evaluationContext.getFhirContext(), joinedDataset,
-        foreignResourceType);
-
+    throw new UnsupportedOperationException("reverseResolve() is not yet implemented");
+    // return evaluationContext.resolveReverseReference(input.getResourceType(),
+    //     reference.toExpression());
   }
 
 }

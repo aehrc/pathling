@@ -17,10 +17,11 @@
 
 package au.csiro.pathling.fhirpath;
 
+import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
-import javax.annotation.Nonnull;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a FHIRPath type specifier, which is a namespace and a type name.
@@ -73,6 +74,14 @@ public class TypeSpecifier {
       throw new IllegalStateException("Not a FHIR type: " + this);
     }
     return FHIRDefinedType.fromCode(typeName);
+  }
+  
+  @Nonnull
+  public ResourceType toResourceType() {
+    if (!isFhirType()) {
+      throw new IllegalStateException("Not a FHIR type: " + this);
+    }
+    return ResourceType.fromCode(typeName);
   }
 
   /**

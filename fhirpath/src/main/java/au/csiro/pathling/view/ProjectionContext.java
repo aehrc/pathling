@@ -19,10 +19,8 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import java.util.Optional;
+import au.csiro.pathling.view.DatasetResult.One;
 import javax.annotation.Nonnull;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
@@ -32,12 +30,9 @@ public interface ProjectionContext {
   Dataset<Row> getDataset();
 
   @Nonnull
-  default DatasetResult<Column> evaluate(@Nonnull final Selection selection) {
+  default DatasetResult<CollectionResult> evaluate(@Nonnull final Selection selection) {
     return selection.evaluate(this);
   }
-  
-  @Nonnull
-  Collection evaluateInternal(@Nonnull final FhirPath<Collection> path);
 
   /**
    * Creates a new execution context that is a sub-context of this one, with the given path.
@@ -47,32 +42,22 @@ public interface ProjectionContext {
    * @return the new sub-context
    */
   @Nonnull
-  Pair<ProjectionContext, DatasetResult<Column>> subContext(@Nonnull final FhirPath<Collection> parent,
-                                                    boolean unnest, boolean withNulls);
+  One<ProjectionContext> subContext(@Nonnull final FhirPath<Collection> parent,
+      boolean unnest, boolean withNulls);
 
   @Nonnull
-  default Pair<ProjectionContext, DatasetResult<Column>> subContext(
+  default One<ProjectionContext> subContext(
       @Nonnull final FhirPath<Collection> parent,
       final boolean unnest) {
     return subContext(parent, unnest, false);
   }
 
   @Nonnull
-  default Pair<ProjectionContext, DatasetResult<Column>> subContext(
+  default One<ProjectionContext> subContext(
       @Nonnull final FhirPath<Collection> parent) {
     return subContext(parent, false);
   }
 
-  /**
-   * Evaluates the given FHIRPath path and returns the result as a column.
-   *
-   * @param path the path to evaluate
-   * @param singularise whether to singularise the result
-   * @return the result as a column
-   */
-  @Nonnull
-  One<Column> evalExpression(@Nonnull final FhirPath<Collection> path, final boolean singularise);
-
 
   /**
    * Evaluates the given FHIRPath path and returns the result as a column.
@@ -81,40 +66,6 @@ public interface ProjectionContext {
    * @return the result as a column
    */
   @Nonnull
-  default One<Column> evalExpression(@Nonnull final FhirPath<Collection> path) {
-    return evalExpression(path, true);
-  }
+  One<Collection> evalExpression(@Nonnull final FhirPath<Collection> path);
 
-
-  /**
-   * Evaluates the given FHIRPath path and returns the result as a column with the given alias.
-   *
-   * @param path the path to evaluate
-   * @param singularise whether to singularise the result
-   * @param alias the alias to use for the column
-   * @return the result as a column
-   */
-  @Nonnull
-  default One<Column> evalExpression(@Nonnull final FhirPath<Collection> path,
-      final boolean singularise,
-      @Nonnull final String alias) {
-    return evalExpression(path, singularise).map(c -> c.as(alias));
-  }
-
-  /**
-   * Evaluates the given FHIRPath path and returns the result as a column with the given alias.
-   *
-   * @param path the path to evaluate
-   * @param singularise whether to singularise the result
-   * @param maybeAlias the alias to use for the column
-   * @return the result as a column
-   */
-  @Nonnull
-  default One<Column> evalExpression(@Nonnull final FhirPath<Collection> path,
-      final boolean singularise,
-      @Nonnull final
-      Optional<String> maybeAlias) {
-    return maybeAlias.map(alias -> evalExpression(path, singularise, alias))
-        .orElse(evalExpression(path, singularise));
-  }
 }

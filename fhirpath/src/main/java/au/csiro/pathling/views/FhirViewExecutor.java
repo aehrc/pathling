@@ -11,7 +11,7 @@ import au.csiro.pathling.view.ForEachSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
-import au.csiro.pathling.view.ViewContext;
+import au.csiro.pathling.view.ExecutionContext;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
 import java.util.Optional;
@@ -49,9 +49,9 @@ public class FhirViewExecutor {
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
 
-    final ViewContext viewContext = new ViewContext(sparkSession, fhirContext, dataSource);
+    final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext, dataSource);
     final ExtractView extractView = toExtractView(view);
-    return extractView.evaluate(viewContext);
+    return extractView.evaluate(executionContext);
   }
 
   @Nonnull

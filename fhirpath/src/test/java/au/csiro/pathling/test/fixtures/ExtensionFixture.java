@@ -71,20 +71,21 @@ public interface ExtensionFixture {
 
   static Dataset<Row> toElementDataset(final Dataset<Row> resourceLikeDataset,
       final ResourceCollection baseResourceCollection) {
-    // Construct element dataset from the resource dataset so that the resource path
-    // can be used as the current resource for this element path.
-
-    final IdAndValueColumns idAndValueColumns = SparkHelpers
-        .getIdAndValueColumns(resourceLikeDataset, true);
-    final Dataset<Row> resourceDataset = baseResourceCollection.getDataset();
-    final Column[] elementColumns = Stream.of(
-            idAndValueColumns.getId().named().name(),
-            checkPresent(idAndValueColumns.getEid()).named().name(),
-            idAndValueColumns.getValues().get(0).named().name(), "_extension")
-        .map(baseResourceCollection::getElementColumn)
-        .toArray(Column[]::new);
-
-    return resourceDataset.select(elementColumns);
+    // // Construct element dataset from the resource dataset so that the resource path
+    // // can be used as the current resource for this element path.
+    //
+    // final IdAndValueColumns idAndValueColumns = SparkHelpers
+    //     .getIdAndValueColumns(resourceLikeDataset, true);
+    // final Dataset<Row> resourceDataset = baseResourceCollection.getDataset();
+    // final Column[] elementColumns = Stream.of(
+    //         idAndValueColumns.getId().named().name(),
+    //         checkPresent(idAndValueColumns.getEid()).named().name(),
+    //         idAndValueColumns.getValues().get(0).named().name(), "_extension")
+    //     .map(baseResourceCollection::getElementColumn)
+    //     .toArray(Column[]::new);
+    //
+    // return resourceDataset.select(elementColumns);
+    throw new UnsupportedOperationException();
   }
 
 }

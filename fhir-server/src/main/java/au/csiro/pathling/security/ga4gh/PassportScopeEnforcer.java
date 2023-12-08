@@ -84,8 +84,7 @@ public class PassportScopeEnforcer extends QueryExecutor {
 
       // Build a new expression parser, and parse all the column expressions within the query.
       final ResourceCollection inputContext = ResourceCollection
-          .build(getFhirContext(), getDataSource().read(subjectResource), subjectResource
-          );
+          .build(getFhirContext(), subjectResource);
       return filterDataset(inputContext, filters, dataset, dataset.col("id"), Column::or);
     }
   }

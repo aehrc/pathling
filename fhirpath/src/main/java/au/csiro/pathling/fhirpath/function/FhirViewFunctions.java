@@ -57,7 +57,7 @@ public class FhirViewFunctions {
     return Optional.ofNullable(typeSpecifier)
         .map(ts -> ts.toFhirType().toCode() + "/.+")
         .<Function<ColumnCtx, ColumnCtx>>map(
-            regex -> (c -> c.getField(REFERENCE_ELEMENT_NAME).rlike(regex)))
+            regex -> (c -> c.traverse(REFERENCE_ELEMENT_NAME).rlike(regex)))
         .map(input::filter).orElse(input)
         .traverse(REFERENCE_ELEMENT_NAME).orElse(Collection.nullCollection());
   }

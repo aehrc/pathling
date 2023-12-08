@@ -15,41 +15,24 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.view;
+package au.csiro.pathling.fhirpath;
 
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
 import au.csiro.pathling.view.DatasetResult.One;
-import lombok.EqualsAndHashCode;
-import lombok.Value;
-
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import javax.annotation.Nonnull;
-import java.util.List;
 
-@EqualsAndHashCode(callSuper = true)
-@Value
-public class ForEachSelection extends AbstractCompositeSelection {
-
-  public ForEachSelection(final FhirPath<Collection> parent, final List<Selection> components) {
-    super(parent, components);
-  }
+public interface Reference {
 
   @Nonnull
-  @Override
-  protected String getName() {
-    return "forEach";
-  }
+  ReferenceDefinition getDefinition();
 
   @Nonnull
-  @Override
-  protected ForEachSelection copy(@Nonnull final List<Selection> newComponents) {
-    return new ForEachSelection(path, newComponents);
-  }
+  ResourceCollection reverseResolve(@Nonnull final ResourceCollection parentCollection,
+      @Nonnull ResourceType thisResourceType);
 
   @Nonnull
-  @Override
-  protected One<ProjectionContext> subContext(@Nonnull final ProjectionContext context,
-      @Nonnull final FhirPath<Collection> parent) {
-    return context.subContext(parent, true);
-  }
+  ResourceCollection resolve(@Nonnull final ResourceType foreignResourceType);
 }

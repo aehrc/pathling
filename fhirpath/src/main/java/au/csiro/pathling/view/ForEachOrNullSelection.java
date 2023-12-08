@@ -19,10 +19,9 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.view.DatasetResult.One;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.spark.sql.Column;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -49,7 +48,7 @@ public class ForEachOrNullSelection extends AbstractCompositeSelection {
 
   @Nonnull
   @Override
-  protected Pair<ProjectionContext, DatasetResult<Column>> subContext(@Nonnull final ProjectionContext context,
+  protected One<ProjectionContext> subContext(@Nonnull final ProjectionContext context,
                                                               @Nonnull final FhirPath<Collection> parent) {
     return context.subContext(parent, true, true);
   }

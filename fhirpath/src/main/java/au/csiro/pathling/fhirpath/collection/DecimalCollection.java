@@ -26,6 +26,7 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -141,10 +142,10 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         case MULTIPLICATION:
         case DIVISION:
           result = result.cast(getDecimalType());
-          return DecimalCollection.build(ColumnCtx.of(result));
+          return DecimalCollection.build(StdColumnCtx.of(result));
         case MODULUS:
           result = result.cast(DataTypes.LongType);
-          return IntegerCollection.build(ColumnCtx.of(result));
+          return IntegerCollection.build(StdColumnCtx.of(result));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

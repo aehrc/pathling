@@ -20,14 +20,15 @@ package au.csiro.pathling.fhirpath.path;
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.EvaluationContext;
+import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.QuantityCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import javax.annotation.Nonnull;
 import lombok.Value;
 import org.fhir.ucum.UcumException;
-import javax.annotation.Nonnull;
 
 public final class Literals {
 
@@ -35,7 +36,7 @@ public final class Literals {
   }
 
   @Value
-  public static class StringLiteral implements PureFhirPath<Collection> {
+  public static class StringLiteral implements FhirPath<Collection> {
 
     @Nonnull
     String value;
@@ -55,7 +56,7 @@ public final class Literals {
   }
 
   @Value
-  public static class BooleanLiteral implements PureFhirPath<Collection> {
+  public static class BooleanLiteral implements FhirPath<Collection> {
 
     @Nonnull
     String value;
@@ -74,7 +75,7 @@ public final class Literals {
   }
 
   @Value
-  public static class CodingLiteral implements PureFhirPath<Collection> {
+  public static class CodingLiteral implements FhirPath<Collection> {
 
     @Nonnull
     String value;
@@ -97,7 +98,7 @@ public final class Literals {
   }
 
   @Value
-  public static class CalendarDurationLiteral implements PureFhirPath<Collection> {
+  public static class CalendarDurationLiteral implements FhirPath<Collection> {
 
     @Nonnull
     String value;
@@ -116,7 +117,7 @@ public final class Literals {
   }
 
   @Value
-  public static class UcumQuantityLiteral implements PureFhirPath<Collection> {
+  public static class UcumQuantityLiteral implements FhirPath<Collection> {
 
     @Nonnull
     String value;

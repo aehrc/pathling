@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -184,12 +185,12 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(ColumnCtx.of(valueColumn));
+          return IntegerCollection.build(StdColumnCtx.of(valueColumn));
         case DIVISION:
           final Column numerator = source.getColumnCtx().cast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(ColumnCtx.of(valueColumn));
+          return DecimalCollection.build(StdColumnCtx.of(valueColumn));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

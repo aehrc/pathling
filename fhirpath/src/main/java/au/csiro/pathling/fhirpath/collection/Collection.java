@@ -17,11 +17,15 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
+
 import au.csiro.pathling.encoders.ExtensionSupport;
-import au.csiro.pathling.fhirpath.ColumnHelpers;
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.Reference;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
@@ -29,22 +33,23 @@ import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
-import au.csiro.pathling.utilities.Preconditions;
+import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
 import com.google.common.collect.ImmutableMap;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
+import org.apache.avro.reflect.AvroAlias;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Represents a collection of nodes that are the result of evaluating a FHIRPath expression.
@@ -86,7 +91,7 @@ public class Collection implements Comparable, Numeric {
    * A {@link Column} representing the result of evaluating this expression.
    */
   @Nonnull
-  private final Column column;
+  private final ColumnCtx columnCtx;
 
   /**
    * The type of the result of evaluating this expression, if known.
@@ -110,25 +115,25 @@ public class Collection implements Comparable, Numeric {
    * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
    * definition.
    *
-   * @param column a {@link Column} containing the result of the expression
+   * @param columnCtx a {@link Column} containing the result of the expression
    * @param fhirPathType the {@link FhirPathType} that this path should be based upon
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    */
   @Nonnull
-  public static Collection build(@Nonnull final Column column,
+  public static Collection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    return new Collection(column, fhirPathType, fhirType, definition);
+    return new Collection(columnCtx, fhirPathType, fhirType, definition);
   }
 
   @Nonnull
-  public static Collection build(@Nonnull final Column column,
+  public static Collection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final FHIRDefinedType fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
-    return getInstance(column, Optional.of(fhirType), definition);
+    return getInstance(columnCtx, Optional.of(fhirType), definition);
   }
 
   /**
@@ -137,16 +142,16 @@ public class Collection implements Comparable, Numeric {
    * <p>
    * Use this builder when the path is the child of another path, and will need to be traversable.
    *
-   * @param column a {@link Column} containing the result of the expression
+   * @param columnCtx a {@link Column} containing the result of the expression
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    */
   @Nonnull
-  public static Collection build(@Nonnull final Column column,
+  public static Collection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
-      return getInstance(column, optionalFhirType, Optional.of(definition));
+      return getInstance(columnCtx, optionalFhirType, Optional.of(definition));
     } else {
       throw new IllegalArgumentException(
           "Attempted to build a Collection with an ElementDefinition with no fhirType");
@@ -159,18 +164,18 @@ public class Collection implements Comparable, Numeric {
    * <p>
    * Use this builder when the path is derived, e.g. the result of a function.
    *
-   * @param column a {@link Column} containing the result of the expression
+   * @param columnCtx a {@link ColumnCtx} containing the result of the expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @return a new {@link Collection}
    */
   @Nonnull
-  public static Collection build(@Nonnull final Column column,
+  public static Collection build(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final FHIRDefinedType fhirType) {
-    return getInstance(column, Optional.of(fhirType), Optional.empty());
+    return getInstance(columnCtx, Optional.of(fhirType), Optional.empty());
   }
 
   @Nonnull
-  private static Collection getInstance(@Nonnull final Column column,
+  private static Collection getInstance(@Nonnull final ColumnCtx columnCtx,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
     // Look up the class that represents an element with the specified FHIR type.
@@ -184,9 +189,9 @@ public class Collection implements Comparable, Numeric {
     try {
       // Call its constructor and return.
       final Constructor<? extends Collection> constructor = elementPathClass
-          .getDeclaredConstructor(Column.class, Optional.class, Optional.class, Optional.class);
+          .getDeclaredConstructor(ColumnCtx.class, Optional.class, Optional.class, Optional.class);
       return constructor
-          .newInstance(column, fhirPathType, fhirType, definition);
+          .newInstance(columnCtx, fhirPathType, fhirType, definition);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
                    InvocationTargetException e) {
       throw new RuntimeException("Problem building a Collection object", e);
@@ -226,7 +231,7 @@ public class Collection implements Comparable, Numeric {
   protected Collection traverseChild(@Nonnull final ChildDefinition childDef) {
     // It is only possible to traverse to a child with an element definition.
     if (childDef instanceof ChoiceChildDefinition) {
-      return MixedCollection.build(this, (ChoiceChildDefinition) childDef);
+      return MixedCollection.buildElement(this, (ChoiceChildDefinition) childDef);
     } else if (childDef instanceof ElementChildDefinition) {
       return traverseElement((ElementChildDefinition) childDef);
     } else {
@@ -239,25 +244,29 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   protected Collection traverseElement(@Nonnull final ElementDefinition childDef) {
     // It is only possible to traverse to a child with an element definition.
-    return Collection.build(getCtx().traverse(childDef.getElementName()).getValue(), childDef);
+    return Collection.build(getCtx().traverse(childDef.getElementName()), childDef);
   }
 
   @Nonnull
+  @NotImplemented
   protected Optional<Collection> traverseExtensions(
       @Nonnull final ChildDefinition extensionDefinition) {
-    // check the provided definition is of an extension
-    Preconditions.checkArgument(extensionDefinition instanceof ElementDefinition,
-        "Cannot traverse to an extension with a non-ElementDefinition");
-    return getExtensionMap().map(em ->
-        Collection.build(
-            // We need here to deal with the situation where _fid is an array of element ids
-            StdColumnCtx.of(getFid()).transform(em::apply).flatten().getValue(),
-            (ElementDefinition) extensionDefinition));
+    //   // check the provided definition is of an extension
+    //   Preconditions.checkArgument(extensionDefinition instanceof ElementDefinition,
+    //       "Cannot traverse to an extension with a non-ElementDefinition");
+    //   return getExtensionMap().map(em ->
+    //       Collection.build(
+    //           // We need here to deal with the situation where _fid is an array of element ids
+    //           getFid().transform(em::apply).flatten().getValue(),
+    //           (ElementDefinition) extensionDefinition));
+
+    // TODO: Maybe push it back to ColumnCtx
+    return Optional.empty();
   }
 
   @Nonnull
-  protected Column getFid() {
-    return column.getField(ExtensionSupport.FID_FIELD_NAME());
+  protected ColumnCtx getFid() {
+    return columnCtx.traverse(ExtensionSupport.FID_FIELD_NAME());
   }
 
   @Nonnull
@@ -311,36 +320,45 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public static Collection nullCollection() {
-    return new Collection(functions.lit(null), Optional.empty(), Optional.empty(),
+    return new Collection(ColumnCtx.nullCtx(), Optional.empty(), Optional.empty(),
         Optional.empty());
   }
 
   @Nonnull
-  public Collection copyWith(@Nonnull final Column newValue) {
-    // TODO: This is very very suspicious 
-    // Really need to understand what the relationships between all the different types
-    // some of them seem redundant
+  public Collection copyWith(@Nonnull final ColumnCtx newValue) {
     return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition);
   }
 
   @Nonnull
-  public Collection copyWith(@Nonnull final ColumnCtx newValue) {
-    return copyWith((newValue).getValue());
+  public Collection filter(@Nonnull final Function<ColumnCtx, ColumnCtx> lambda) {
+    return map(ctx -> ctx.filter(col -> lambda.apply(StdColumnCtx.of(col)).getValue()));
   }
 
   @Nonnull
-  public Collection filter(@Nonnull final Function<Column, Column> lambda) {
-    return copyWith(getCtx().filter(lambda));
-  }
-
-  public Column getSingleton() {
-    return ColumnHelpers.singular(getColumn());
+  public Collection asSingular() {
+    return map(ColumnCtx::singular);
   }
 
   @Nonnull
-  // TODO: Find a better name
+  public Collection map(@Nonnull final Function<ColumnCtx, ColumnCtx> mapper) {
+    return copyWith(mapper.apply(getCtx()));
+  }
+
+  @Nonnull
+  public <C extends Collection> C map(@Nonnull final Function<ColumnCtx, ColumnCtx> mapper,
+      @Nonnull final Function<ColumnCtx, C> constructor) {
+    return constructor.apply(mapper.apply(getCtx()));
+  }
+
+
+  @Nonnull
+  public <C extends Collection> C flatMap(@Nonnull final Function<ColumnCtx, C> mapper) {
+    return mapper.apply(getCtx());
+  }
+
+  @Nonnull
   public ColumnCtx getCtx() {
-    return StdColumnCtx.of(getColumn());
+    return this.columnCtx;
   }
 
 
@@ -356,6 +374,11 @@ public class Collection implements Comparable, Numeric {
     return getFhirType()
         .filter(FHIRDefinedType.CODEABLECONCEPT::equals)
         .map(__ -> (CodingCollection) traverse("coding").get());
+  }
+
+  @Nonnull
+  public Column getColumn() {
+    return columnCtx.getValue();
   }
 
   @Value
@@ -376,107 +399,42 @@ public class Collection implements Comparable, Numeric {
 
     @Nonnull
     @Override
-    public One<Collection> reverseResolve(@Nonnull final ResourceCollection masterCollection,
-        @Nonnull final ResourceType thisResourceType) {
+    public ResourceCollection reverseResolve(@Nonnull final ResourceCollection masterCollection,
+        @Nonnull final ResourceType foreignResourceType) {
 
-      final ReferenceDefinition referenceDefinition = getDefinition();
-
-      checkUserInput(
-          referenceDefinition.getReferenceTypes().contains(masterCollection.getResourceType()),
-          "Reference in argument to reverseResolve does not support input resource type: "
-              + masterCollection.getResourceType());
-      // TODO: Finish
-      final Column referenceColumn = referenceCollection.traverse("reference")
-          .map(Collection::getSingleton)
-          .orElseThrow();
-
-      final String joinId = thisResourceType.toCode();
-
-      final Function<Dataset<Row>, Dataset<Row>> sideEffect = ds -> {
-        final String joinKeyColumn = joinId + "__key";
-
-        // see if the join is already present
-        final Optional<String> maybeExisingKeyColumn = Stream.of(ds.columns())
-            .filter(joinKeyColumn::equals).findFirst();
-
-        if (maybeExisingKeyColumn.isEmpty()) {
-
-          final Dataset<Row> foreignDataset = context.getDataSource().read(thisResourceType);
-          final List<Column> aggs = Stream.of(foreignDataset.columns())
-              .map(c -> functions.collect_list(c).alias(joinId + "_" + c))
-              .collect(Collectors.toUnmodifiableList());
-
-          final Dataset<Row> foreignDatasetAgg = foreignDataset.groupBy(
-                  referenceColumn.alias(joinId + "__key"))
-              .agg(aggs.get(0), aggs.subList(1, aggs.size()).toArray(new Column[0]));
-
-          return ds.join(foreignDatasetAgg,
-              ds.col("id_versioned").equalTo(foreignDatasetAgg.col(joinKeyColumn)), "left_outer");
-        } else {
-          return ds;
-        }
-      };
-
-      return DatasetResult.one(ResourceCollection.build(
-          context.getFhirContext(),
-          thisResourceType,
-          Optional.of(joinId)), sideEffect);
+      // final ReferenceDefinition referenceDefinition = getDefinition();
+      //
+      // checkUserInput(
+      //     referenceDefinition.getReferenceTypes().contains(masterCollection.getResourceType()),
+      //     "Reference in argument to reverseResolve does not support input resource type: "
+      //         + masterCollection.getResourceType());
+      // // TODO: Finish
+      // final ColumnCtx referenceCtx = referenceCollection.traverse("reference")
+      //     .map(Collection::asSingular)
+      //     .map(Collection::getCtx)
+      //     .orElseThrow();
+      //
+      // return ResourceCollection.build(
+      //     referenceCtx.reverseResolve(masterCollection.getResourceType(), foreignResourceType),
+      //     context.getFhirContext(),
+      //     foreignResourceType);
+      throw new UnsupportedOperationException();
     }
 
     @Nonnull
     @Override
-    public One<Collection> resolve(@Nonnull final ResourceType foreignResourceType) {
+    public ResourceCollection resolve(@Nonnull final ResourceType foreignResourceType) {
 
-      final One<ColumnCtx> referenceColumn = referenceCollection.traverse(
-              "reference")
-          .get().getCtx().explode_outer();
-
-      // maybe better to use subquery here
-      // but regardless it needs to be collected after the join (or maybe just groupped by the current context)
-
-      final String joinId = foreignResourceType.toCode() + randomAlias();
-
-      final Function<Dataset<Row>, Dataset<Row>> sideEffect = ds -> {
-        final Dataset<Row> foreignDataset = context.getDataSource()
-            .read(foreignResourceType);
-
-        // reproject the foreign dataset before joining
-
-        final Dataset<Row> foreignDatasetPrefixed = foreignDataset.select(
-            Stream.of(foreignDataset.columns())
-                .map(foreignDataset::col)
-                .map(c -> c.alias(joinId + "_" + c))
-                .toArray(Column[]::new));
-
-        final Dataset<Row> joinedDs = ds.join(foreignDatasetPrefixed,
-            referenceColumn.getValue().getValue()
-                .equalTo(
-                    foreignDatasetPrefixed.col(joinId + "_id_versioned")),
-            "left_outer");
-
-        // and now we need to aggregate the joinedDS by the current "id" combining the values of the joined_dataset
-        final List<Column> aggs = Stream.concat(
-            Stream.of(ds.columns()).filter(c -> !c.equals("id"))
-                .map(c -> functions.first(c).alias(c)),
-            Stream.of(foreignDatasetPrefixed.columns())
-                .map(c -> functions.collect_list(c).alias(c))
-        ).collect(Collectors.toUnmodifiableList());
-
-        // TODO: this should actually the be current grouping context
-        return joinedDs.groupBy(functions.col("id"))
-            .agg(aggs.get(0), aggs.subList(1, aggs.size()).toArray(new Column[0]));
-      };
-
-      final Function<Dataset<Row>, Dataset<Row>> totalSideEffect = referenceColumn.getTransform()
-          .map(t -> t.andThen(sideEffect)).orElse(sideEffect);
-
-      // TODO: rewrite the joning of transforms
-      return DatasetResult.one(ResourceCollection.build(
-          context.getFhirContext(),
-          foreignResourceType,
-          Optional.of(joinId)), totalSideEffect);
+      // final ColumnCtx referenceCtx = referenceCollection.traverse(
+      //         "reference")
+      //     .map(Collection::getCtx)
+      //     .orElseThrow();
+      //
+      // return ResourceCollection.build(
+      //     referenceCtx.resolve(foreignResourceType),
+      //     context.getFhirContext(),
+      //     foreignResourceType);
+      throw new UnsupportedOperationException();
     }
   }
-
-
 }

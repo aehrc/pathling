@@ -30,6 +30,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -136,7 +137,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
     // TODO: complex literal handling
-    return QuantityCollection.build(ColumnCtx.of(column));
+    return QuantityCollection.build(StdColumnCtx.of(column));
   }
 
   @Nonnull
@@ -221,7 +222,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
     display.ifPresent(quantity::setUnit);
 
     // TODO: literal handling
-    return QuantityCollection.build(ColumnCtx.of(QuantityEncoding.encodeLiteral(quantity)));
+    return QuantityCollection.build(StdColumnCtx.of(QuantityEncoding.encodeLiteral(quantity)));
   }
 
   @Nonnull
@@ -234,7 +235,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   @Override
   public Optional<Column> getNumericValueColumn() {
     return Optional.of(
-        getColumnCtx().getField(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
+        getColumnCtx().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
   }
 
   @Nonnull
@@ -280,7 +281,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(ColumnCtx.of(resultQuantityColumn));
+      return QuantityCollection.build(StdColumnCtx.of(resultQuantityColumn));
     };
   }
 

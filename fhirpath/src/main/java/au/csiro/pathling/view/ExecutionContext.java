@@ -23,7 +23,7 @@ import lombok.Value;
 import org.apache.spark.sql.SparkSession;
 
 @Value
-public class ViewContext {
+public class ExecutionContext {
 
   SparkSession spark;
   FhirContext fhirContext;

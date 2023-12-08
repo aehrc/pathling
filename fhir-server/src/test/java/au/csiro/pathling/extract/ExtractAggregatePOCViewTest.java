@@ -45,7 +45,7 @@ import au.csiro.pathling.view.ForEachOrNullSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
-import au.csiro.pathling.view.ViewContext;
+import au.csiro.pathling.view.ExecutionContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.Streams;
@@ -177,8 +177,8 @@ class ExtractAggregatePOCViewTest {
   }
 
 
-  ViewContext newContext() {
-    return new ViewContext(spark, fhirContext, dataSource);
+  ExecutionContext newContext() {
+    return new ExecutionContext(spark, fhirContext, dataSource);
   }
 
   @Test
@@ -252,7 +252,6 @@ class ExtractAggregatePOCViewTest {
     System.out.println(resultDataset.logicalPlan());
     System.out.println(resultDataset.queryExecution().executedPlan());
   }
-
 
 
   @Test
@@ -465,7 +464,7 @@ class ExtractAggregatePOCViewTest {
     groupByCollections.forEach(c -> System.out.println(c.getFhirType()));
 
     final DatasetResult<Collection> datasetCollectionResult = groupByCollections.stream()
-        .map(DatasetResult::of)
+        .map(c -> (DatasetResult<Collection>) DatasetResult.pureOne(c))
         .reduce(DatasetResult.empty(), DatasetResult::andThen);
 
     System.out.println("### Grouping Collection Result: ###");

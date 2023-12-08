@@ -26,8 +26,6 @@ import au.csiro.pathling.view.DatasetResult.One;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Value;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -35,31 +33,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class DefaultProjectionContext implements ProjectionContext {
 
+  @Nonnull
   EvaluationContext evaluationContext;
-
-  @Nonnull
-  @Override
-  public One<Column> evalExpression(@Nonnull final FhirPath<Collection> path,
-      final boolean singularise) {
-    return singularise
-           ? evaluateInternal(path).map(Collection::getSingleton)
-           : evaluateInternal(path).map(Collection::getColumn);
-  }
-
-  @Nonnull
-  private One<Column> unnestColumn(@Nonnull final Column column, final boolean keepNulls) {
-
-    final String materializedColumnName = randomAlias();
-
-    return new One<>(functions.col(materializedColumnName),
-        Optional.of(ds -> {
-          final Dataset<Row> newDs = ds.withColumn(
-              materializedColumnName, column);
-          return !keepNulls
-                 ? newDs.filter(newDs.col(materializedColumnName).isNotNull())
-                 : newDs;
-        }));
-  }
 
   @Nonnull
   @Override
@@ -69,38 +44,38 @@ public class DefaultProjectionContext implements ProjectionContext {
 
   @Nonnull
   @Override
-  public Collection evaluateInternal(@Nonnull final FhirPath<Collection> path) {
-    return path.apply(evaluationContext.getInputContext(), evaluationContext);
+  public One<Collection> evalExpression(@Nonnull final FhirPath<Collection> path) {
+    return DatasetResult.pureOne(
+        path.apply(evaluationContext.getInputContext(), evaluationContext));
   }
 
   @Nonnull
   @Override
-  public Pair<ProjectionContext, DatasetResult<Column>> subContext(
+  public One<ProjectionContext> subContext(
       @Nonnull final FhirPath<Collection> parent,
       final boolean unnest, final boolean withNulls) {
-    final Collection newInputContext = evaluateInternal(parent);
-
+    final One<Collection> newInputContextResult = evalExpression(parent);
     if (unnest) {
-      final One<Column> unnestedColumn = unnestColumn(
-          withNulls
-          ? newInputContext.getCtx().explode_outer().getValue()
-          : newInputContext.getCtx().explode().getValue(),
-          withNulls);
-      return Pair.of(new DefaultProjectionContext(
-              evaluationContext.withInputContext(newInputContext.copyWith(unnestedColumn.getValue())))
-          , unnestedColumn.asTransform());
+      return newInputContextResult
+          .map(Collection::getCtx)
+          .flatMap(cl -> withNulls
+                         ? cl.explode_outer()
+                         : cl.explode())
+          .map(c -> new DefaultProjectionContext(
+              evaluationContext.withInputContext(newInputContextResult.getValue().copyWith(c))));
+
     } else {
-      return Pair.of(new DefaultProjectionContext(
-          evaluationContext.withInputContext(newInputContext)), DatasetResult.empty());
+      return newInputContextResult.map(cl ->
+          new DefaultProjectionContext(evaluationContext.withInputContext(cl))
+      );
     }
   }
 
   @Nonnull
-  public static DefaultProjectionContext of(@Nonnull final ViewContext context, @Nonnull final
+  public static DefaultProjectionContext of(@Nonnull final ExecutionContext context, @Nonnull final
   ResourceType subjectResource) {
     final Dataset<Row> dataset = context.getDataSource().read(subjectResource);
     final ResourceCollection inputContext = ResourceCollection.build(context.getFhirContext(),
-        dataset,
         subjectResource);
     final EvaluationContext evaluationContext = new EvaluationContext(inputContext, inputContext,
         context.getFhirContext(), context.getSpark(), context.getDataSource(), dataset,

@@ -50,7 +50,7 @@ public class AggregationView {
   Selection select;
   List<FhirPath<Collection>> aggregates;
 
-  public Dataset<Row> evaluate(@Nonnull final ViewContext context) {
+  public Dataset<Row> evaluate(@Nonnull final ExecutionContext context) {
     final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
         subjectResource);
 

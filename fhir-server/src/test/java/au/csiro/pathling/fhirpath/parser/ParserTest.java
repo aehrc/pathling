@@ -45,6 +45,7 @@ import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
+import org.apache.spark.sql.execution.SparkPlan;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Assertions;
