@@ -14,7 +14,7 @@
 #  limitations under the License.
 
 #
-# Placeholders for SQL functions and UDFs
+# Placeholders for SQL functions and UDFs.
 #
 designation <- function(...) { }
 display <- function(...) { }
@@ -30,9 +30,14 @@ property_decimal <- function(...) { }
 property_integer <- function(...) { }
 property_string <- function(...) { }
 
-#' Converts a vector to an expression with the corresponding SQL array litera.
+#' Convert a vector to a SQL array literal 
+#'
+#' Converts a vector to an expression with the corresponding SQL array literal.
+#'
 #' @param value A character or numeric vector to be converted
-#' @return The `quosure` with the SQL array literal that can be used in dplyr::mutate.
+#'
+#' @return The \code{\link{topic-quosure}} with the SQL array literal that can be used in 
+#' \code{\link{dplyr::mutate}}.
 to_array <- function(value) {
   if (!is.null(value)) {
     rlang::new_quosure(rlang::expr(array(!!!value)))
@@ -41,8 +46,20 @@ to_array <- function(value) {
   }
 }
 
-
-#' Allowed property types.
+#' Coding property data types
+#' 
+#' The following data types are supported:
+#' \itemize{
+#'   \item \code{STRING} - A string value.
+#'   \item \code{INTEGER} - An integer value.
+#'   \item \code{BOOLEAN} - A boolean value.
+#'   \item \code{DECIMAL} - A decimal value.
+#'   \item \code{DATETIME} - A date/time value.
+#'   \item \code{CODE} - A code value.
+#'   \item \code{CODING} - A Coding value.
+#' }
+#'
+#' @seealso \href{https://hl7.org/fhir/R4/datatypes.html}{FHIR R4 - Data Types}
 #'
 #' @export
 PropertyType <- list(
@@ -55,7 +72,23 @@ PropertyType <- list(
     CODING = "Coding"
 )
 
-#' Concept map equivalences.
+#' Concept map equivalence types
+#'
+#' The following values are supported:
+#' \itemize{
+#'   \item \code{RELATEDTO} - The concepts are related to each other, and have at least some overlap in meaning, but the exact relationship is not known.
+#'   \item \code{EQUIVALENT} - The definitions of the concepts mean the same thing (including when structural implications of meaning are considered) (i.e. extensionally identical).
+#'   \item \code{EQUAL} - The definitions of the concepts are exactly the same (i.e. only grammatical differences) and structural implications of meaning are identical or irrelevant (i.e. intentionally identical).
+#'   \item \code{WIDER} - The target mapping is wider in meaning than the source concept.
+#'   \item \code{SUBSUMES} - The target mapping subsumes the meaning of the source concept (e.g. the source is-a target).
+#'   \item \code{NARROWER} - The target mapping is narrower in meaning than the source concept. The sense in which the mapping is narrower SHALL be described in the comments in this case, and applications should be careful when attempting to use these mappings operationally.
+#'   \item \code{SPECIALIZES} - The target mapping specializes the meaning of the source concept (e.g. the target is-a source).
+#'   \item \code{INEXACT} - There is some similarity between the concepts, but the exact relationship is not known.
+#'   \item \code{UNMATCHED} - This is an explicit assertion that there is no mapping between the source and target concept.
+#'   \item \code{DISJOINT} - This is an explicit assertion that the target concept is not in any way related to the source concept.
+#' }
+#'
+#' @seealso \href{https://hl7.org/fhir/R4/valueset-concept-map-equivalence.html}{FHIR R4 - ConceptMapEquivalence}
 #'
 #' @export
 Equivalence <- list(
@@ -71,16 +104,19 @@ Equivalence <- list(
     DISJOINT = "disjoint"
 )
 
-#' Checks if Coding is a member of ValueSet.
+#' Test membership within a value set
 #'
-#' \code{tx_member_of()} takes a Coding or array of Codings column as its input. Returns the column which contains a
+#' Takes a Coding or array of Codings column as its input. Returns the column which contains a
 #' Boolean value, indicating whether any of the input Codings is a member of the specified FHIR
 #' ValueSet.
 #'
-#' @param codings A Column containing a struct representation of a Coding or an array of such structs.
+#' @param codings A Column containing a struct representation of a Coding or an array of such 
+#' structs.
 #' @param value_set_uri An identifier for a FHIR ValueSet.
 #'
 #' @return A Column containing the result of the operation.
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#value-set-membership}{Pathling documentation - Value set membership}
 #' 
 #' @family terminology functions
 #'
@@ -89,7 +125,8 @@ Equivalence <- list(
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
 #' 
-#' # Test the codings of the Condition `code` for membership in a SNOMED CT ValueSet.
+#' # Test the Condition codings for membership in the SNOMED CT 'Lateralisable body structure 
+#' reference set' (723264001).
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'          id, 
@@ -102,13 +139,12 @@ tx_member_of <- function(codings, value_set_uri) {
   rlang::expr(member_of({ { codings } }, { { value_set_uri } }))
 }
 
-#' Translates a Coding column.
+#' Translate between value sets
 #'
-#' \code{tx_translate()} a Coding column as input. Returns the Column which contains an array of
+#' Takes a Coding column as input. Returns the Column which contains an array of
 #' Coding value with translation targets from the specified FHIR ConceptMap. There
 #' may be more than one target concept for each input concept. Only the translation with
 #' the specified equivalences are returned.
-#' See also \code{\link{Equivalence}}.
 #'
 #' @param codings A Column containing a struct representation of a Coding.
 #' @param concept_map_uri An identifier for a FHIR ConceptMap.
@@ -119,6 +155,9 @@ tx_member_of <- function(codings, value_set_uri) {
 #'   target specified, the server should return all known translations.
 #'
 #' @return A Column containing the result of the operation (an array of Coding structs).
+#' 
+#' @seealso \code{\link{Equivalence}}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#concept-translation}{Pathling documentation - Concept translation}
 #'
 #' @family terminology functions
 #' 
@@ -140,16 +179,17 @@ tx_translate <- function(codings, concept_map_uri, reverse = FALSE, equivalences
                                !!to_array(equivalences), { { target } }))
 }
 
-#' Checks if left Coding subsumes right Coding.
+#' Test subsumption between codings
 #'
-#' \code{tx_subsumes()} two Coding columns as input. Returns the Column,
-#' which contains a Boolean value,
+#' Takes two Coding columns as input. Returns a Column that contains a Boolean value,
 #' indicating whether the left Coding subsumes the right Coding.
 #'
 #' @param left_codings A Column containing a struct representation of a Coding or an array of Codings.
 #' @param right_codings A Column containing a struct representation of a Coding or an array of Codings.
 #'
 #' @return A Column containing the result of the operation (boolean).
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#subsumption-testing}{Pathling documentation - Subsumption testing}
 #' 
 #' @family terminology functions
 #'
@@ -170,16 +210,17 @@ tx_subsumes <- function(left_codings, right_codings) {
   rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, FALSE))
 }
 
-#' Checks if left Coding is subsumed by right Coding.
+#' Test subsumption between codings
 #'
-#' \code{tx_subsumed_by()} takes two Coding columns as input. Returns the Column, 
-#' which contains a Boolean value,
+#' Takes two Coding columns as input. Returns a Column that contains a Boolean value,
 #' indicating whether the left Coding is subsumed by the right Coding.
 #'
 #' @param left_codings A Column containing a struct representation of a Coding or an array of Codings.
 #' @param right_codings A Column containing a struct representation of a Coding or an array of Codings.
 #'
 #' @return A Column containing the result of the operation (boolean).
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#subsumption-testing}{Pathling documentation - Subsumption testing}
 #'
 #' @family terminology functions
 #' 
@@ -201,17 +242,18 @@ tx_subsumed_by <- function(left_codings, right_codings) {
   rlang::expr(subsumes({ { left_codings } }, { { right_codings } }, TRUE))
 }
 
-#' Retrieves the canonical display name for a Coding.
+#' Get the display text for codings
 #'
-#' \code{tx_display()} takes a Coding column as its input. Returns the Column, which contains the canonical display
+#' Takes a Coding column as its input. Returns a Column that contains the canonical display
 #' name associated with the given code.
 #'
 #' @param coding A Column containing a struct representation of a Coding.
 #' @param accept_language The optional language preferences for the returned display name.
-#'        Overrides the parameter `accept_language` in
-#'        `pathling_connect`.
+#'        Overrides the parameter `accept_language` in \code{\link{pathling_connect}}.
 #'
 #' @return A Column containing the result of the operation (String).
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#multi-language-support}{Pathling documentation - Multi-language support}
 #'
 #' @family terminology functions
 #' 
@@ -220,7 +262,7 @@ tx_subsumed_by <- function(left_codings, right_codings) {
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
 #' 
-#' # Get the display nane of the first coding of the Condition resource code with default language
+#' # Get the display name of the first coding of the Condition resource, with the default language.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(
 #'          id, 
@@ -232,15 +274,12 @@ tx_display <- function(coding, accept_language = NULL) {
   rlang::expr(display({ { coding } }, { { accept_language } }))
 }
 
-#' Retrieves the values of properties for a Coding.
+#' Get properties for codings
 #'
-#' \code{tx_property_of()} takes a Coding column as its input. 
-#' Returns the Column, which contains the values of properties
+#' Takes a Coding column as its input. Returns a Column that contains the values of properties
 #' for this coding with specified names and types. The type of the result column depends on the
 #' types of the properties. Primitive FHIR types are mapped to their corresponding SQL primitives.
-#' Complex types are mapped to their corresponding structs. The allowed property types are:
-#' code | Coding | string | integer | boolean | dateTime | decimal.
-#' See also \code{\link{PropertyType}}.
+#' Complex types are mapped to their corresponding structs.
 #'
 #' @param coding A Column containing a struct representation of a Coding.
 #' @param property_code The code of the property to retrieve.
@@ -250,6 +289,9 @@ tx_display <- function(coding, accept_language = NULL) {
 #'
 #' @return The Column containing the result of the operation (array of property values).
 #' 
+#' @seealso \code{\link{PropertyType}}
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#retrieving-properties}{Pathling documentation - Retrieving properties}
+#' 
 #' @family terminology functions
 #'
 #' @export
@@ -257,7 +299,7 @@ tx_display <- function(coding, accept_language = NULL) {
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
 #' 
-#' # Get the (first) value of `inactive` property of the first coding of the Condition resource code
+#' # Get the (first) value of the `inactive` property of the first coding of the Condition resource.
 #' pc %>% pathling_example_resource('Condition') %>%
 #'      sparklyr::mutate(id, 
 #'          is_inavtive = (!!tx_property_of(code[['coding']][[0]], 
@@ -287,11 +329,11 @@ tx_property_of <- function(coding, property_code, property_type = "string", acce
   }
 }
 
-#' Retrieves the values of designations for a Coding.
+#' Get designations for codings
 #'
-#' \code{tx_designation()} takes a Coding column as its input. Returns the Column, which contains the values of
-#' designations (strings) for this coding for the specified use and language. If the language is
-#' not provided (is null), then all designations with the specified type are returned regardless of
+#' Takes a Coding column as its input. Returns a Column that contains the values of designations 
+#' (strings) for this coding that match the specified use and language. If the language is
+#' not provided, then all designations with the specified type are returned regardless of
 #' their language.
 #'
 #' @param coding A Column containing a struct representation of a Coding.
@@ -299,6 +341,8 @@ tx_property_of <- function(coding, property_code, property_type = "string", acce
 #' @param language The language of the designations.
 #'
 #' @return The Column containing the result of the operation (array of strings with designation values).
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/terminology#retrieving-designations}{Pathling documentation - Retrieving designations}
 #'
 #' @family Terminology functions
 #' 
@@ -307,8 +351,8 @@ tx_property_of <- function(coding, property_code, property_type = "string", acce
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
 #' 
-#' # Get the (first) value of the SNONED-CD designation code '900000000000003001'  
-#' # for the first coding of the Condition resource code for language 'en'.
+#' # Get the (first) SNOMED CT "Fully specified name" ('900000000000003001')  
+#' # for the first coding of the Condition resource, in the 'en' language.
 #' pc %>% pathling_example_resource('Condition') %>% 
 #'      sparklyr::mutate(
 #'             id, 

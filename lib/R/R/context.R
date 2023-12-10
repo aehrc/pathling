@@ -14,29 +14,34 @@
 #  limitations under the License.
 
 
-#' The type of storage to use for the terminology cache
+#' Terminology cache storage type
+#' 
+#' The type of storage to use for the terminology cache.
+#'
+#' The following values are supported:
+#' \itemize{
+#'   \item \code{MEMORY} - Use an in-memory cache
+#'   \item \code{DISK} - Use a disk-based cache
+#' }
+#' 
 #' @export
 StorageType <- list(
     MEMORY = "memory",
     DISK = "disk"
 )
 
-
-#' Pathling context lifecycle management functions. 
+#' Create or retrieve the Pathling context
 #' 
-#' @rdname pathling_context
-#' @name pathling_context
-#' 
-#' @description
-#' \code{pathling_connect()} creates a PathlingContext with the given configuration options.
+#' Creates a Pathling context with the given configuration options.
 #'
-#' @details
-#' If no SparkSession is provided, and there is not one already present in this process - a new
-#' SparkSession will be created.
+#' If no Spark session is provided and there is not one already present in this process, a new
+#' one will be created.
 #'
 #' If a SparkSession is not provided, and one is already running within the current process, it
-#' will be reused - and it is assumed that the Pathling library API JAR is already on the
-#' classpath. If you are running your own cluster, make sure it is on the list of packages.
+#' will be reused.
+#'
+#' It is assumed that the Pathling library API JAR is already on the classpath. If you are running 
+#' your own cluster, make sure it is on the list of packages.
 #' 
 #' @param spark A pre-configured SparkSession instance, use this if you need to control the way
 #'   that the session is set up
@@ -75,9 +80,11 @@ StorageType <- list(
 #' @param accept_language The default value of the Accept-Language HTTP header passed to the
 #'   terminology server
 #'
-#' @return \code{pathling_connect()} returns a PathlingContext instance initialized with the specified configuration.
+#' @return A Pathling context instance initialized with the specified configuration
 #'
 #' @importFrom sparklyr j_invoke_static j_invoke
+#' 
+#' @family context lifecycle functions
 #'
 #' @export
 #' 
@@ -207,27 +214,30 @@ pathling_connect <- function(
                   encoders_config, terminology_config)
 }
 
-#' @description
-#' \code{pathling_spark()} obtains the Spark connection associated with a Pathling context.
+#' Get the Spark session
+#' 
+#' Returns the Spark connection associated with a Pathling context.
 #'
 #' @param pc The PathlingContext object.
 #' 
-#' @return \code{pathling_spark()} returns spark connection associated with this Pathling context.
-#'
-#' @rdname pathling_context
+#' @return The Spark connection associated with this Pathling context.
+#' 
+#' @family context lifecycle functions
 #' 
 #' @export
 pathling_spark <- function(pc) {
   sparklyr::spark_connection(pc)
 }
 
-#' @description
-#' \code{pathling_disconnect()} disconnects the Spark connection associated with a Pathling context.
+#' Disconnect from the Spark session
+#'
+#' Disconnects the Spark connection associated with a Pathling context.
+#' 
 #' @param pc The PathlingContext object.
 #' 
-#' @return NULL
+#' @return No return value, called for side effects only.
 #' 
-#' @rdname pathling_context
+#' @family context lifecycle functions
 #'
 #' @export
 pathling_disconnect <- function(pc) {
@@ -235,16 +245,14 @@ pathling_disconnect <- function(pc) {
   invisible(NULL)
 }
 
-#' @description
-#' \code{pathling_disconnect_all()} disconnects all Spark connections.
+#' Disconnect all Spark connections
 #' 
-#' @return NULL
-#'
-#' @rdname pathling_context
+#' @return No return value, called for side effects only.
+#' 
+#' @family context lifecycle functions
 #' 
 #' @export
 pathling_disconnect_all <- function() {
   sparklyr::spark_disconnect_all()
   invisible(NULL)
 }
-

@@ -15,20 +15,20 @@
 
 library(purrr)
 
-#' Encode FHIR Resources
+#' Encode FHIR JSON or XML to a dataframe
 #'
 #' Takes a Spark DataFrame with string representations of FHIR resources in the given column and
 #' encodes the resources of the given types as Spark DataFrame.
 #'
-#' @param pc The PathlingContext object.
+#' @param pc The Pathling context object.
 #' @param df A Spark DataFrame containing the resources to encode.
 #' @param resource_name The name of the FHIR resource to extract (e.g., "Condition", "Observation").
-#' @param input_type The mime type of input string encoding. Defaults to "application/fhir+json".
+#' @param input_type The MIME type of input string encoding. Defaults to "application/fhir+json".
 #' @param column The column in which the resources to encode are stored. If set to NULL, the input
 #'   DataFrame is assumed to have one column of type string.
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #' 
-#' @family Pathling encoding
+#' @family encoding functions
 #'
 #' @importFrom rlang `%||%`
 #' @importFrom sparklyr sdf_register spark_dataframe j_invoke
@@ -46,12 +46,12 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
       input_type %||% MimeType$FHIR_JSON, column))
 }
 
-#' Encodes FHIR Bundles into Spark DataFrame
+#' Encode FHIR Bundles to a dataframe
 #'
-#' Takes a dataframe with string representations of FHIR bundles in the given column and encodes
-#' the resources of the given types as Spark DataFrame.
+#' Takes a dataframe with string representations of FHIR bundles in the given column and outputs
+#' a dataframe of encoded resources.
 #'
-#' @param pc A PathlingContext instance.
+#' @param pc A Pathling context object.
 #' @param df A Spark DataFrame containing the bundles with the resources to encode.
 #' @param resource_name The name of the FHIR resource to extract (Condition, Observation, etc.).
 #' @param input_type The MIME type of the input string encoding. Defaults to 'application/fhir+json'.
@@ -60,7 +60,7 @@ pathling_encode <- function(pc, df, resource_name, input_type = NULL, column = N
 #'
 #' @return A Spark DataFrame containing the given type of resources encoded into Spark columns.
 #'
-#' @family Pathling encoding
+#' @family encoding functions
 #' 
 #' @importFrom rlang `%||%`
 #' @importFrom sparklyr sdf_register spark_dataframe j_invoke

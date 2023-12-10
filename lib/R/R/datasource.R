@@ -13,7 +13,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
  #'@importFrom sparklyr j_invoke
 data_sources <- function(pc) {
   j_invoke(pc, "read")
@@ -26,12 +25,25 @@ invoke_datasource <- function(pc, name, ...) {
       j_invoke(name, ...)
 }
 
-#' Creates a data source from a directory containing NDJSON files.
+#' ImportMode
 #' 
-#' @description
-#' \code{pathling_read_ndjson()} creates a data source from a directory containing NDJSON files.
-#' The files must be named with the resource type code and must have the ".ndjson" extension,
-#' e.g. "Patient.ndjson" or "Observation.ndjson".
+#' The following import modes are supported:
+#' \itemize{
+#'   \item{\code{OVERWRITE}: Overwrite any existing data.}
+#'   \item{\code{MERGE}: Merge the new data with the existing data based on resource ID.}
+#' }
+#'
+#' @export
+ImportMode <- list(
+    OVERWRITE = "overwrite",
+    MERGE = "merge"
+)
+
+#' Create a data source from NDJSON
+#' 
+#' Creates a data source from a directory containing NDJSON files. The files must be named with the 
+#' resource type code and must have the ".ndjson" extension, e.g. "Patient.ndjson" or 
+#' "Observation.ndjson".
 #'  
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the NDJSON files.
@@ -39,10 +51,12 @@ invoke_datasource <- function(pc, name, ...) {
 #' @param file_name_mapper An optional function that maps a filename to the set of resource types
 #'   that it contains. Currently not implemented.
 #' @return A DataSource object that can be used to run queries against the data.
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#ndjson}{Pathling documentation - Reading NDJSON}
 #'
 #' @export
 #' 
-#' @family Pathling data sources
+#' @family data source functions
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
@@ -55,10 +69,9 @@ pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mappe
   pc %>% invoke_datasource("ndjson", as.character(path), as.character(extension))
 }
 
-#' Creates a data source from a directory containing FHIR bundles.
+#' Create a data source from FHIR bundles
 #' 
-#' @description
-#' \code{pathling_read_bundles()} creates a data source from a directory containing FHIR bundles.
+#' Creates a data source from a directory containing FHIR bundles.
 #'
 #' @param pc The PathlingContext object.
 #' @param path The URI of the directory containing the bundles.
@@ -66,9 +79,11 @@ pathling_read_ndjson <- function(pc, path, extension = "ndjson", file_name_mappe
 #' @param mime_type The MIME type of the bundles. Defaults to "application/fhir+json".
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#fhir-bundles}{Pathling documentation - Reading Bundles}
+#' 
 #' @export
 #' 
-#' @family Pathling data sources
+#' @family data source functions
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
@@ -83,20 +98,21 @@ pathling_read_bundles <- function(pc, path, resource_types, mime_type = MimeType
                            as.character(mime_type))
 }
 
-#' Creates an immutable data source from provided resource Spark DataFrames.
+#' Create a data source from datasets
 #' 
-#' @description
-#' \code{pathling_read_datasets()} creates an immutable, ad-hoc data source from a named list of Spark DataFrames indexed with
+#' Creates an immutable, ad-hoc data source from a named list of Spark datasets indexed with
 #' resource type codes.
 #'
 #' @param pc The PathlingContext object.
-#' @param resources A name list of Spark DataFrames, where the keys are resource type codes
+#' @param resources A name list of Spark datasets, where the keys are resource type codes
 #'   and the values are the data frames containing the resource data.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#datasets}{Pathling documentation - Reading datasets}
+#' 
 #' @export
 #' 
-#' @family Pathling data sources
+#' @family data source functions
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
@@ -115,7 +131,7 @@ pathling_read_datasets <- function(pc, resources) {
   ds
 }
 
-#' Creates a data source from a directory containing Parquet tables.
+#' Create a data source from Parquet tables
 #'
 #' @description
 #' \code{pathling_read_parquet()} creates a data source from a directory containing Parquet tables. 
@@ -125,9 +141,11 @@ pathling_read_datasets <- function(pc, resources) {
 #' @param path The URI of the directory containing the Parquet tables.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#parquet}{Pathling documentation - Reading Parquet}
+#' 
 #' @export
 #' 
-#' @family Pathling data sources
+#' @family data source functions
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
@@ -138,7 +156,7 @@ pathling_read_parquet <- function(pc, path) {
   pc %>% invoke_datasource("parquet", as.character(path))
 }
 
-#' Creates a data source from a directory containing Delta tables.
+#' Create a data source from Delta tables
 #'
 #' @description
 #' \code{pathling_read_delta()} creates a data source from a directory containing Delta tables.
@@ -148,9 +166,11 @@ pathling_read_parquet <- function(pc, path) {
 #' @param path The URI of the directory containing the Delta tables.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#delta-lake}{Pathling documentation - Reading Delta}
+#' 
 #' @export
 #' 
-#' @family Pathling data sources
+#' @family data source functions
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
@@ -161,7 +181,7 @@ pathling_read_delta <- function(pc, path) {
   pc %>% invoke_datasource("delta", as.character(path))
 }
 
-#' Creates a data source from a set of Spark tables.
+#' Create a data source from managed tables
 #' 
 #' \code{pathling_read_tables()} creates a data source from a set of Spark tables, 
 #' where the table names are the resource type codes.
@@ -170,9 +190,11 @@ pathling_read_delta <- function(pc, path) {
 #' @param schema An optional schema name that should be used to qualify the table names.
 #' @return A DataSource object that can be used to run queries against the data.
 #' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#managed-tables}{Pathling documentation - Reading managed tables}
+#' 
 #' @export
 #'
-#' @family Pathling data sources
+#' @family data source functions
 #' 
 #' @examplesIf pathling_is_spark_installed()
 #' pc <- pathling_connect()
@@ -188,8 +210,7 @@ pathling_read_tables <- function(pc, schema = NULL) {
   }
 }
 
-
-#' Reads the data for the given resource type from the data source.
+#' Get data for a resource type from a data source
 #'
 #' @param ds The DataSource object.
 #' @param resource_code A string representing the type of FHIR resource to read data from.
@@ -222,18 +243,111 @@ invoke_datasink <- function(ds, name, ...) {
 }
 
 
-#' Import modes.
-#'
-#' @export
-ImportMode <- list(
-    OVERWRITE = "overwrite",
-    MERGE = "merge"
-)
-
-#' Functions to perists data sources in various formats.
-#' @rdname ds_write
-#' @name ds_write_xxxx
+#' Write FHIR data to NDJSON files
 #' 
+#' Writes the data from a data source to a directory of NDJSON files. The files will be named using 
+#' the resource type and the ".ndjson" extension.
+#'
+#' @param ds The DataSource object.
+#' @param path The URI of the directory to write the files to.
+#' @param file_name_mapper An optional function that can be used to customise the mapping 
+#'  of the resource type to the file name. Currently not implemented.
+#'
+#' @return No return value, called for side effects only.
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#ndjson-1}{Pathling documentation - Writing NDJSON}
+#' 
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect(sc)
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
+#' 
+#' # Write the data to a directory of NDJSON files.
+#' data_source %>% ds_write_ndjson(file.path(tempdir(), 'ndjson'))
+#' 
+#' pathling_disconnect(pc)
+#' 
+#' @family data sink functions
+#' 
+#' @export
+ds_write_ndjson <- function(ds, path, file_name_mapper = NULL) {
+  #See: issue #1601 (Implement file_name_mappers in R sparkly API)
+  stopifnot(file_name_mapper == NULL)
+  invoke_datasink(ds, "ndjson", path)
+}
+
+#' Write FHIR data to Parquet files
+#' 
+#' Writes the data from a data source to a directory of Parquet files.
+#'
+#' @param ds The DataSource object.
+#' @param path The URI of the directory to write the files to.
+#'
+#' @return No return value, called for side effects only.
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#parquet-1}{Pathling documentation - Writing Parquet}
+#' 
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect(sc)
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
+#' 
+#' # Write the data to a directory of Parquet files.
+#' data_source %>% ds_write_parquet(file.path(tempdir(), 'parquet'))
+#' 
+#' pathling_disconnect(pc)
+#' 
+#' @family data sink functions
+#' 
+#' @export
+ds_write_parquet <- function(ds, path) {
+  invoke_datasink(ds, "parquet", path)
+}
+
+#' Write FHIR data to Delta files
+#' 
+#' Writes the data from a data source to a directory of Delta files.
+#'
+#' @param ds The DataSource object.
+#' @param path The URI of the directory to write the files to.
+#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any 
+#'      existing data, "merge" will merge the new data with the existing data based on resource ID.
+#'
+#' @return No return value, called for side effects only.
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#delta-lake-1}{Pathling documentation - Writing Delta}
+#' 
+#' @seealso \code{\link{ImportMode}}
+#' 
+#' @examplesIf pathling_is_spark_installed()
+#' pc <- pathling_connect(sc)
+#' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
+#' 
+#' # Write the data to a directory of Delta files.
+#' data_source %>% ds_write_delta(file.path(tempdir(), 'delta'), import_mode = ImportMode$OVERWRITE)
+#' 
+#' pathling_disconnect(pc)
+#' 
+#' @family data sink functions
+#' 
+#' @export
+ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
+  invoke_datasink(ds, "delta", path, import_mode)
+}
+
+#' Write FHIR data to managed tables
+#' 
+#' Writes the data from a data source to a set of tables in the Spark catalog.
+#'
+#' @param ds The DataSource object.
+#' @param schema The name of the schema to write the tables to.
+#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any 
+#'      existing data, "merge" will merge the new data with the existing data based on resource ID.
+#' 
+#' @return No return value, called for side effects only.
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#managed-tables-1}{Pathling documentation - Writing managed tables}
+#' 
+#' @seealso \code{\link{ImportMode}}
+#'
 #' @examplesIf pathling_is_spark_installed()
 #' # Create a temporary warehouse location, which will be used when we call ds_write_tables().
 #' temp_dir_path <- tempfile()
@@ -249,86 +363,13 @@ ImportMode <- list(
 #' pc <- pathling_connect(sc)
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
-#' # Write the data to a directory of NDJSON files.
-#' data_source %>% ds_write_ndjson(file.path(tempdir(), 'ndjson'))
-#' 
-#' # Write the data to a directory of Parquet files.
-#' data_source %>% ds_write_parquet(file.path(tempdir(), 'parquet'))
-#' 
-#' # Write the data to a directory of Delta files.
-#' data_source %>% ds_write_delta(file.path(tempdir(), 'delta'), import_mode = ImportMode$OVERWRITE)
-#'
-#' # Write the data to a set of Spark tables in 'fhir' database.
+#' # Write the data to a set of Spark tables in the 'default' database.
 #' data_source %>% ds_write_tables("default", import_mode = ImportMode$MERGE)
 #' 
 #' pathling_disconnect(pc)
 #' unlink(temp_dir_path, recursive = TRUE)
-NULL
-
 #' 
-#' @description
-#' \code{ds_write_ndjson()} writes the data to a directory of NDJSON files. 
-#' The files will be named using the resource type and the ".ndjson" extension.
-#'
-#' @param ds The DataSource object.
-#' @param path The URI of the directory to write the files to.
-#' @param file_name_mapper An optional function that can be used to customise the mapping 
-#'  of the resource type to the file name. Currently not implemented.
-#'
-#' @return NULL
-#'
-#' @rdname ds_write
-#'
-#' @export
-ds_write_ndjson <- function(ds, path, file_name_mapper = NULL) {
-  #See: issue #1601 (Implement file_name_mappers in R sparkly API)
-  stopifnot(file_name_mapper == NULL)
-  invoke_datasink(ds, "ndjson", path)
-}
-
-#' @description
-#' \code{ds_write_parquet()} writes the data to a directory of Parquet files.
-#'
-#' @param ds The DataSource object.
-#' @param path The URI of the directory to write the files to.
-#'
-#' @return NULL
-#' 
-#' @rdname ds_write
-#' 
-#' @export
-ds_write_parquet <- function(ds, path) {
-  invoke_datasink(ds, "parquet", path)
-}
-
-#' @description
-#' \code{ds_write_delta()} writes the data to a directory of Delta files.
-#'
-#' @param ds The DataSource object.
-#' @param path The URI of the directory to write the files to.
-#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any 
-#'      existing data, "merge" will merge the new data with the existing data based on resource ID.
-#'
-#' @return NULL
-#' 
-#' @rdname ds_write
-#' 
-#' @export
-ds_write_delta <- function(ds, path, import_mode = ImportMode$OVERWRITE) {
-  invoke_datasink(ds, "delta", path, import_mode)
-}
-
-#' @description
-#' \code{ds_write_tables()} writes the data to a set of tables in the Spark catalog.
-#'
-#' @param ds The DataSource object.
-#' @param schema The name of the schema to write the tables to.
-#' @param import_mode The import mode to use when writing the data - "overwrite" will overwrite any 
-#'      existing data, "merge" will merge the new data with the existing data based on resource ID.
-#'
-#' @return NULL
-#' 
-#' @rdname ds_write
+#' @family data sink functions
 #' 
 #' @export
 ds_write_tables <- function(ds, schema = NULL, import_mode = ImportMode$OVERWRITE) {

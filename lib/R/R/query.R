@@ -23,9 +23,10 @@ for_each_with_name <-function(sequence, FUN, ...) {
   }
 }
 
-#' Executes an aggregate query for FHIR data.
+#' Execute an aggregate query
 #'
-#' The query calculates summary values based on aggregations and groupings of FHIR resources.
+#' Executes an aggregate query over FHIR data. The query calculates summary values based on 
+#' aggregations and groupings of FHIR resources.
 #'
 #' @param ds The DataSource object containing the data to be queried.
 #' @param subject_resource A string representing the type of FHIR resource to aggregate data from.
@@ -38,9 +39,11 @@ for_each_with_name <-function(sequence, FUN, ...) {
 #'   Boolean value. Multiple filters are combined using logical AND operation.
 #' @return A Spark DataFrame containing the aggregated data.
 #' 
-#' @family Pathling queries
+#' @family FHIRPath queries
 #' 
 #' @importFrom sparklyr j_invoke sdf_register
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#aggregate}{Pathling documentation - Aggregate}
 #'
 #' @export
 #' @examplesIf pathling_is_spark_installed()
@@ -80,9 +83,10 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = NULL, f
   sdf_register(j_invoke(q, "execute"))
 }
 
-#' Executes an extract query for FHIR data.
+#' Execute an extract query
 #' 
-#' The query extracts specified columns from FHIR resources in the tabular format.
+#' Executes an extract query over FHIR data. This type of query extracts specified columns from 
+#' FHIR resources in a tabular format.
 #'
 #' @param ds The DataSource object containing the data to be queried.
 #' @param subject_resource A string representing the type of FHIR resource to extract data from.
@@ -92,9 +96,11 @@ ds_aggregate <- function(ds, subject_resource, aggregations, groupings = NULL, f
 #'   Boolean value. Multiple filters are combined using AND logic.
 #' @return A Spark DataFrame containing the extracted data.
 #' 
-#' @family Pathling queries
+#' @family FHIRPath queries
 #' 
 #' @importFrom sparklyr j_invoke sdf_register
+#' 
+#' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#extract}{Pathling documentation - Extract}
 #' 
 #' @export 
 #' @examplesIf pathling_is_spark_installed()
@@ -124,7 +130,3 @@ ds_extract <- function(ds, subject_resource, columns, filters = NULL) {
 
   sdf_register(j_invoke(q, "execute"))
 }
-
-
-
-

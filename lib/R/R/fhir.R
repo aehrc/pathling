@@ -15,7 +15,15 @@
 
 
 
-#' Constants for FHIR encoding mime types
+#' FHIR MIME types
+#'
+#' The following MIME types are supported:
+#' \itemize{
+#'   \item{\code{FHIR_JSON}: FHIR resources encoded as JSON}
+#'   \item{\code{FHIR_XML}: FHIR resources encoded as XML}
+#' }
+#' 
+#' @seealso \href{https://hl7.org/fhir/R4/formats.html}{FHIR R4 - Resource Formats}
 #'
 #' @export
 MimeType <- list(
@@ -23,7 +31,12 @@ MimeType <- list(
   FHIR_XML = "application/fhir+xml"
 )
 
-#' Constants for FHIR versions
+#' FHIR versions
+#'
+#' The following FHIR versions are supported:
+#' \itemize{
+#'   \item{\code{R4}: FHIR R4}
+#' }
 #'
 #' @export
 Version <- list(
