@@ -6,14 +6,6 @@ yet, please [get into contact](https://pathling.csiro.au/#contact) with us
 or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
 understand your use case.
 
-## R integration
-
-Language-specific APIs will be developed that will allow users of R
-to access the functionality within Pathling within their own language
-environment.
-
-See [R integration](https://github.com/aehrc/pathling/issues/193).
-
 ## Additional FHIRPath functions
 
 Implementation of a number of functions is planned:
