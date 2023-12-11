@@ -49,13 +49,28 @@
     <loc>/reference/ds_read.html</loc>
   </url>
   <url>
-    <loc>/reference/ds_write.html</loc>
+    <loc>/reference/ds_write_delta.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ds_write_ndjson.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ds_write_parquet.html</loc>
+  </url>
+  <url>
+    <loc>/reference/ds_write_tables.html</loc>
   </url>
   <url>
     <loc>/reference/index.html</loc>
   </url>
   <url>
-    <loc>/reference/pathling_context.html</loc>
+    <loc>/reference/pathling_connect.html</loc>
+  </url>
+  <url>
+    <loc>/reference/pathling_disconnect.html</loc>
+  </url>
+  <url>
+    <loc>/reference/pathling_disconnect_all.html</loc>
   </url>
   <url>
     <loc>/reference/pathling_encode.html</loc>
@@ -94,6 +109,9 @@
     <loc>/reference/pathling_read_tables.html</loc>
   </url>
   <url>
+    <loc>/reference/pathling_spark.html</loc>
+  </url>
+  <url>
     <loc>/reference/pathling_spark_info.html</loc>
   </url>
   <url>
@@ -128,6 +146,12 @@
   </url>
   <url>
     <loc>/reference/tx_to_ecl_value_set.html</loc>
+  </url>
+  <url>
+    <loc>/reference/tx_to_loinc_coding.html</loc>
+  </url>
+  <url>
+    <loc>/reference/tx_to_snomed_coding.html</loc>
   </url>
   <url>
     <loc>/reference/tx_translate.html</loc>

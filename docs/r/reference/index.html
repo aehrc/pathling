@@ -50,35 +50,35 @@
       </tr></tbody><tbody><tr><td>
           <p><code><a href="Equivalence.html">Equivalence</a></code> </p>
         </td>
-        <td><p>Concept map equivalences.</p></td>
+        <td><p>Concept map equivalence types</p></td>
       </tr><tr><td>
           <p><code><a href="ImportMode.html">ImportMode</a></code> </p>
         </td>
-        <td><p>Import modes.</p></td>
+        <td><p>ImportMode</p></td>
       </tr><tr><td>
           <p><code><a href="LOINC_URI.html">LOINC_URI</a></code> </p>
         </td>
-        <td><p>The URI of the LOINC code system.</p></td>
+        <td><p>LOINC system URI</p></td>
       </tr><tr><td>
           <p><code><a href="MimeType.html">MimeType</a></code> </p>
         </td>
-        <td><p>Constants for FHIR encoding mime types</p></td>
+        <td><p>FHIR MIME types</p></td>
       </tr><tr><td>
           <p><code><a href="PropertyType.html">PropertyType</a></code> </p>
         </td>
-        <td><p>Allowed property types.</p></td>
+        <td><p>Coding property data types</p></td>
       </tr><tr><td>
           <p><code><a href="SNOMED_URI.html">SNOMED_URI</a></code> </p>
         </td>
-        <td><p>The URI of the SNOMED code system.</p></td>
+        <td><p>SNOMED CT system URI</p></td>
       </tr><tr><td>
           <p><code><a href="StorageType.html">StorageType</a></code> </p>
         </td>
-        <td><p>The type of storage to use for the terminology cache</p></td>
+        <td><p>Terminology cache storage type</p></td>
       </tr><tr><td>
           <p><code><a href="Version.html">Version</a></code> </p>
         </td>
-        <td><p>Constants for FHIR versions</p></td>
+        <td><p>FHIR versions</p></td>
       </tr><tr><td>
           <p><code><a href="conditions.html">conditions</a></code> </p>
         </td>
@@ -86,119 +86,151 @@
       </tr><tr><td>
           <p><code><a href="ds_aggregate.html">ds_aggregate()</a></code> </p>
         </td>
-        <td><p>Executes an aggregate query for FHIR data.</p></td>
+        <td><p>Execute an aggregate query</p></td>
       </tr><tr><td>
           <p><code><a href="ds_extract.html">ds_extract()</a></code> </p>
         </td>
-        <td><p>Executes an extract query for FHIR data.</p></td>
+        <td><p>Execute an extract query</p></td>
       </tr><tr><td>
           <p><code><a href="ds_read.html">ds_read()</a></code> </p>
         </td>
-        <td><p>Reads the data for the given resource type from the data source.</p></td>
+        <td><p>Get data for a resource type from a data source</p></td>
       </tr><tr><td>
-          <p><code><a href="ds_write.html">ds_write_ndjson()</a></code> <code><a href="ds_write.html">ds_write_parquet()</a></code> <code><a href="ds_write.html">ds_write_delta()</a></code> <code><a href="ds_write.html">ds_write_tables()</a></code> </p>
+          <p><code><a href="ds_write_delta.html">ds_write_delta()</a></code> </p>
         </td>
-        <td><p>Functions to perists data sources in various formats.</p></td>
+        <td><p>Write FHIR data to Delta files</p></td>
       </tr><tr><td>
-          <p><code><a href="pathling_context.html">pathling_connect()</a></code> <code><a href="pathling_context.html">pathling_spark()</a></code> <code><a href="pathling_context.html">pathling_disconnect()</a></code> <code><a href="pathling_context.html">pathling_disconnect_all()</a></code> </p>
+          <p><code><a href="ds_write_ndjson.html">ds_write_ndjson()</a></code> </p>
         </td>
-        <td><p>Pathling context lifecycle management functions.</p></td>
+        <td><p>Write FHIR data to NDJSON files</p></td>
+      </tr><tr><td>
+          <p><code><a href="ds_write_parquet.html">ds_write_parquet()</a></code> </p>
+        </td>
+        <td><p>Write FHIR data to Parquet files</p></td>
+      </tr><tr><td>
+          <p><code><a href="ds_write_tables.html">ds_write_tables()</a></code> </p>
+        </td>
+        <td><p>Write FHIR data to managed tables</p></td>
+      </tr><tr><td>
+          <p><code><a href="pathling_connect.html">pathling_connect()</a></code> </p>
+        </td>
+        <td><p>Create or retrieve the Pathling context</p></td>
+      </tr><tr><td>
+          <p><code><a href="pathling_disconnect.html">pathling_disconnect()</a></code> </p>
+        </td>
+        <td><p>Disconnect from the Spark session</p></td>
+      </tr><tr><td>
+          <p><code><a href="pathling_disconnect_all.html">pathling_disconnect_all()</a></code> </p>
+        </td>
+        <td><p>Disconnect all Spark connections</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_encode.html">pathling_encode()</a></code> </p>
         </td>
-        <td><p>Encode FHIR Resources</p></td>
+        <td><p>Encode FHIR JSON or XML to a dataframe</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_encode_bundle.html">pathling_encode_bundle()</a></code> </p>
         </td>
-        <td><p>Encodes FHIR Bundles into Spark DataFrame</p></td>
+        <td><p>Encode FHIR Bundles to a dataframe</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_example_resource.html">pathling_example_resource()</a></code> </p>
         </td>
-        <td><p>Reads example FHIR resource data frame.</p></td>
+        <td><p>Read resource from Pathling example data</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_examples.html">pathling_examples()</a></code> </p>
         </td>
-        <td><p>Constructs the path to the package example data.</p></td>
+        <td><p>Get path to Pathling example data</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_install_spark.html">pathling_install_spark()</a></code> </p>
         </td>
-        <td><p>Installs the version of Spark/Hadoop required by pathling.</p></td>
+        <td><p>Install Spark</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_is_spark_installed.html">pathling_is_spark_installed()</a></code> </p>
         </td>
-        <td><p>Checks if the version of Spark/Hadoop reuired by pathling is installed.</p></td>
+        <td><p>Check if Spark is installed</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_read_bundles.html">pathling_read_bundles()</a></code> </p>
         </td>
-        <td><p>Creates a data source from a directory containing FHIR bundles.</p></td>
+        <td><p>Create a data source from FHIR bundles</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_read_datasets.html">pathling_read_datasets()</a></code> </p>
         </td>
-        <td><p>Creates an immutable data source from provided resource Spark DataFrames.</p></td>
+        <td><p>Create a data source from datasets</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_read_delta.html">pathling_read_delta()</a></code> </p>
         </td>
-        <td><p>Creates a data source from a directory containing Delta tables.</p></td>
+        <td><p>Create a data source from Delta tables</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_read_ndjson.html">pathling_read_ndjson()</a></code> </p>
         </td>
-        <td><p>Creates a data source from a directory containing NDJSON files.</p></td>
+        <td><p>Create a data source from NDJSON</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_read_parquet.html">pathling_read_parquet()</a></code> </p>
         </td>
-        <td><p>Creates a data source from a directory containing Parquet tables.</p></td>
+        <td><p>Create a data source from Parquet tables</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_read_tables.html">pathling_read_tables()</a></code> </p>
         </td>
-        <td><p>Creates a data source from a set of Spark tables.</p></td>
+        <td><p>Create a data source from managed tables</p></td>
+      </tr><tr><td>
+          <p><code><a href="pathling_spark.html">pathling_spark()</a></code> </p>
+        </td>
+        <td><p>Get the Spark session</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_spark_info.html">pathling_spark_info()</a></code> </p>
         </td>
-        <td><p>Returns the Spark and Hadoop versions used by the Pathling R library.</p></td>
+        <td><p>Get versions of Spark and other dependencies</p></td>
       </tr><tr><td>
           <p><code><a href="pathling_version.html">pathling_version()</a></code> </p>
         </td>
-        <td><p>Returns the version of the Pathling R library.</p></td>
+        <td><p>Get version of Pathling</p></td>
       </tr><tr><td>
           <p><code><a href="to_array.html">to_array()</a></code> </p>
         </td>
-        <td><p>Converts a vector to an expression with the corresponding SQL array litera.</p></td>
+        <td><p>Convert a vector to a SQL array literal</p></td>
       </tr><tr><td>
           <p><code><a href="tx_designation.html">tx_designation()</a></code> </p>
         </td>
-        <td><p>Retrieves the values of designations for a Coding.</p></td>
+        <td><p>Get designations for codings</p></td>
       </tr><tr><td>
           <p><code><a href="tx_display.html">tx_display()</a></code> </p>
         </td>
-        <td><p>Retrieves the canonical display name for a Coding.</p></td>
+        <td><p>Get the display text for codings</p></td>
       </tr><tr><td>
           <p><code><a href="tx_member_of.html">tx_member_of()</a></code> </p>
         </td>
-        <td><p>Checks if Coding is a member of ValueSet.</p></td>
+        <td><p>Test membership within a value set</p></td>
       </tr><tr><td>
           <p><code><a href="tx_property_of.html">tx_property_of()</a></code> </p>
         </td>
-        <td><p>Retrieves the values of properties for a Coding.</p></td>
+        <td><p>Get properties for codings</p></td>
       </tr><tr><td>
           <p><code><a href="tx_subsumed_by.html">tx_subsumed_by()</a></code> </p>
         </td>
-        <td><p>Checks if left Coding is subsumed by right Coding.</p></td>
+        <td><p>Test subsumption between codings</p></td>
       </tr><tr><td>
           <p><code><a href="tx_subsumes.html">tx_subsumes()</a></code> </p>
         </td>
-        <td><p>Checks if left Coding subsumes right Coding.</p></td>
+        <td><p>Test subsumption between codings</p></td>
       </tr><tr><td>
-          <p><code><a href="tx_to_coding.html">tx_to_coding()</a></code> <code><a href="tx_to_coding.html">tx_to_snomed_coding()</a></code> <code><a href="tx_to_coding.html">tx_to_loinc_coding()</a></code> </p>
+          <p><code><a href="tx_to_coding.html">tx_to_coding()</a></code> </p>
         </td>
-        <td><p>Functions converting codes into a Column that contains a Coding struct.</p></td>
+        <td><p>Convert codes to Coding structures</p></td>
       </tr><tr><td>
           <p><code><a href="tx_to_ecl_value_set.html">tx_to_ecl_value_set()</a></code> </p>
         </td>
-        <td><p>Terminology helper functions</p></td>
+        <td><p>Convert a SNOMED CT ECL expression to a ValueSet URI</p></td>
+      </tr><tr><td>
+          <p><code><a href="tx_to_loinc_coding.html">tx_to_loinc_coding()</a></code> </p>
+        </td>
+        <td><p>Convert LOINC codes to Coding structures</p></td>
+      </tr><tr><td>
+          <p><code><a href="tx_to_snomed_coding.html">tx_to_snomed_coding()</a></code> </p>
+        </td>
+        <td><p>Convert SNOMED CT codes to Coding structures</p></td>
       </tr><tr><td>
           <p><code><a href="tx_translate.html">tx_translate()</a></code> </p>
         </td>
-        <td><p>Translates a Coding column.</p></td>
+        <td><p>Translate between value sets</p></td>
       </tr></tbody></table></div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
