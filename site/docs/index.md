@@ -5,6 +5,9 @@ use clinical terminology and [FHIR&reg;](https://hl7.org/fhir) within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
+<img loading="lazy" alt="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" src="/assets/images/components-c113e1b5a41778385888b6701f599137.svg#light-mode-only" title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" width="750"/>
+<img loading="lazy" alt="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" src="/assets/images/components-dark-5b71a28d35f10b316a4d39a6eb048eaa.svg#dark-mode-only" title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" width="750"/> 
+
 ## What can it do?
 
 ### Terminology queries
