@@ -17,39 +17,30 @@
 
 package au.csiro.pathling.fhirpath;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import java.util.List;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.function.NamedFunction;
+import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
+import au.csiro.pathling.fhirpath.path.Paths;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import javax.annotation.Nonnull;
-import lombok.Value;
 
-/**
- * Represents the inputs to a FHIRPath function.
- *
- * @author John Grimes
- */
-@Value
-public class FunctionInput {
+public interface PathEvalContext {
 
-  /**
-   * Context and dependencies for use in evaluating the function.
-   */
+
   @Nonnull
-  PathEvalContext context;
+  ResourceCollection resolveResource(@Nonnull final ResourceType resourceType);
 
-  /**
-   * The collection that is the input to the function, i.e. the result of the evaluation of the
-   * expression on the left-hand side of the dot preceding the function invocation, or the left-hand
-   * operand in the case of an operator.
-   */
   @Nonnull
-  Collection input;
+  ResourceCollection resolveReverseJoin(@Nonnull final ResourceType resourceType,
+      @Nonnull final String expression);
 
-  /**
-   * A list of expressions representing the arguments to the function, i.e. the expressions inside
-   * the parentheses following the function invocation, separated by commas, or the right-hand
-   * operand in the case of an operator.
-   */
   @Nonnull
-  List<FhirPath<Collection>> arguments;
+  NamedFunction<Collection> resolveFunction(@Nonnull final String name)
+      throws NoSuchFunctionException;
+
+  @Nonnull
+  Collection resolveVariable(@Nonnull final String name);
 
 }

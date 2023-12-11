@@ -19,6 +19,7 @@ package au.csiro.pathling.fhirpath.parser;
 
 import static au.csiro.pathling.fhirpath.function.StandardFunctions.isTypeSpecifierFunction;
 import static java.util.Objects.requireNonNull;
+import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
@@ -35,11 +36,18 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathVisitor;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.Resource;
 import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
+import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * This class is invoked on the right-hand side of the invocation expression, and can optionally be
@@ -48,6 +56,23 @@ import au.csiro.pathling.fhirpath.path.Paths.Traversal;
  * @author John Grimes
  */
 class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
+
+
+  private static final Set<String> RESOURCE_TYPES = Stream.of(ResourceType.values())
+      .filter(not(ResourceType.NULL::equals))
+      .map(ResourceType::toCode).collect(
+          Collectors.toUnmodifiableSet());
+
+
+  final boolean isRoot;
+
+  public InvocationVisitor(final boolean isRoot) {
+    this.isRoot = isRoot;
+  }
+
+  public InvocationVisitor() {
+    this(false);
+  }
 
   /**
    * This method gets called when an element is on the right-hand side of the invocation expression,
@@ -60,8 +85,12 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
   @Nonnull
   public FhirPath<Collection> visitMemberInvocation(
       @Nullable final MemberInvocationContext ctx) {
-    @Nullable final String fhirPath = requireNonNull(ctx).getText();
-    return new Traversal(requireNonNull(fhirPath));
+    final String fhirPath = requireNonNull(ctx).getText();
+    if (isRoot && RESOURCE_TYPES.contains(fhirPath)) {
+      return new Resource(ResourceType.fromCode(fhirPath));
+    } else {
+      return new Traversal(fhirPath);
+    }
   }
 
   /**

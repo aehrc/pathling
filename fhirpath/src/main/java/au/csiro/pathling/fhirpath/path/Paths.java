@@ -20,9 +20,9 @@ package au.csiro.pathling.fhirpath.path;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
@@ -33,8 +33,11 @@ import au.csiro.pathling.fhirpath.operator.BinaryOperatorInput;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import ca.uhn.fhir.model.api.annotation.Block;
 import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 final public class Paths {
 
@@ -51,7 +54,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       throw new UnsupportedOperationException("TypeSpecifierPath cannot be evaluated directly");
     }
   }
@@ -63,14 +66,8 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
-      if (name.equals("%context")) {
-        return context.getInputContext();
-      } else if (name.equals("%resource") || name.equals("%rootResource")) {
-        return context.getResource();
-      } else {
-        throw new IllegalArgumentException("Unknown constant: " + name);
-      }
+        @Nonnull final PathEvalContext context) {
+      return context.resolveVariable(name);
     }
 
 
@@ -84,30 +81,44 @@ final public class Paths {
   @Value
   public static class EvalOperator implements FhirPath<Collection> {
 
+    @Nonnull
     FhirPath<Collection> leftPath;
+
+    @Nonnull
     FhirPath<Collection> rightPath;
+
+    @Nonnull
     BinaryOperator operator;
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return operator.invoke(new BinaryOperatorInput(context, leftPath.apply(input, context),
           rightPath.apply(input, context)));
+    }
+
+
+    @Override
+    public Stream<FhirPath<Collection>> children() {
+      return Stream.of(leftPath, rightPath);
     }
   }
 
   @Value
   public static class EvalFunction implements FhirPath<Collection> {
 
+    @Nonnull
     String functionIdentifier;
+
+    @Nonnull
     List<FhirPath<Collection>> arguments;
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       final NamedFunction<Collection> function;
       try {
-        function = context.getFunctionRegistry().getInstance(functionIdentifier);
+        function = context.resolveFunction(functionIdentifier);
       } catch (final NoSuchFunctionException e) {
         throw new InvalidUserInputError(e.getMessage());
       }
@@ -122,16 +133,23 @@ final public class Paths {
       return functionIdentifier + "(" + arguments.stream().map(FhirPath::toExpression)
           .collect(Collectors.joining(",")) + ")";
     }
+
+
+    @Override
+    public Stream<FhirPath<Collection>> children() {
+      return arguments.stream();
+    }
   }
 
   @Value
   public static class Traversal implements FhirPath<Collection> {
 
+    @Nonnull
     String propertyName;
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       final Optional<Collection> result = input.traverse(propertyName);
       checkUserInput(result.isPresent(), "No such child: " + propertyName);
       return result.get();
@@ -144,6 +162,25 @@ final public class Paths {
     }
   }
 
+  @Value
+  public static class Resource implements FhirPath<Collection> {
+
+    @Nonnull
+    ResourceType resourceType;
+
+    @Override
+    public Collection apply(@Nonnull final Collection input,
+        @Nonnull final PathEvalContext context) {
+      return context.resolveResource(resourceType);
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return resourceType.toCode();
+    }
+  }
+
 
   @Value
   public static class Invocation implements FhirPath<Collection> {
@@ -153,7 +190,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return invocationVerb.apply(invocationSubject.apply(input, context),
           context);
     }
@@ -164,7 +201,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return input;
     }
   }
@@ -176,7 +213,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return StringCollection.fromLiteral(value);
     }
 

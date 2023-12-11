@@ -19,8 +19,8 @@ package au.csiro.pathling.fhirpath.path;
 
 import au.csiro.pathling.encoders.terminology.ucum.Ucum;
 import au.csiro.pathling.errors.InvalidUserInputError;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -43,7 +43,7 @@ public final class Literals {
 
     @Override
     public StringCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return StringCollection.fromLiteral(value);
     }
 
@@ -63,7 +63,7 @@ public final class Literals {
 
     @Override
     public BooleanCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return BooleanCollection.fromLiteral(value);
     }
 
@@ -82,7 +82,7 @@ public final class Literals {
 
     @Override
     public CodingCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       try {
         return CodingCollection.fromLiteral(value);
       } catch (final IllegalArgumentException e) {
@@ -105,7 +105,7 @@ public final class Literals {
 
     @Override
     public QuantityCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return QuantityCollection.fromCalendarDurationString(value);
     }
 
@@ -124,7 +124,7 @@ public final class Literals {
 
     @Override
     public QuantityCollection apply(@Nonnull final Collection input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       try {
         return QuantityCollection.fromUcumString(value, Ucum.service());
       } catch (final UcumException e) {

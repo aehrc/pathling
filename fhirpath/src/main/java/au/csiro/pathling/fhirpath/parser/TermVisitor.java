@@ -42,7 +42,7 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
   @Nonnull
   public FhirPath<Collection> visitInvocationTerm(
       @Nullable final InvocationTermContext ctx) {
-    return new InvocationVisitor().visit(requireNonNull(ctx).invocation());
+    return new InvocationVisitor(true).visit(requireNonNull(ctx).invocation());
   }
 
   @Override

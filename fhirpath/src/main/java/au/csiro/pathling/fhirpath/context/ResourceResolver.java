@@ -15,38 +15,18 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.context;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
-import au.csiro.pathling.fhirpath.PathEvalContext;
-import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import javax.annotation.Nonnull;
-import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-/**
- * Represents the inputs to a binary operator in FHIRPath.
- *
- * @author John Grimes
- */
-@Value
-public class BinaryOperatorInput {
+public interface ResourceResolver {
 
-  /**
-   * Context and dependencies for use in evaluating the function.
-   */
   @Nonnull
-  PathEvalContext context;
+  ResourceCollection resolveResource(@Nonnull final ResourceType resourceType);
 
-  /**
-   * An expression representing the left operand.
-   */
   @Nonnull
-  Collection left;
-
-  /**
-   * An expression representing the right operand.
-   */
-  @Nonnull
-  Collection right;
-
+  ResourceCollection resolveReverseJoin(@Nonnull final ResourceType resourceType,
+      @Nonnull final String expression);
 }

@@ -22,6 +22,8 @@ import static java.util.Objects.nonNull;
 
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.PathEvalContext;
+import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
@@ -31,6 +33,7 @@ import au.csiro.pathling.fhirpath.collection.MixedCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.context.FhirpathContext;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.utilities.Functions;
@@ -219,7 +222,7 @@ public class StandardFunctions {
     return "ofType".equals(functionName) || "getReferenceKey".equals(functionName);
   }
 
-  // TODO: This should be a string collection with a StringCoerible argument
+  // TODO: This should be a string collection with a StringCoercible argument
   @FhirpathFunction
   public static Collection toString(@Nonnull final Collection input) {
     Preconditions.checkUserInput(input instanceof StringCoercible,
@@ -233,10 +236,21 @@ public class StandardFunctions {
   // extended functions
   @FhirpathFunction
   public static ResourceCollection reverseResolve(@Nonnull final ResourceCollection input,
-      @Nonnull final FhirPath<Collection> reference,
-      @Nonnull final EvaluationContext evaluationContext) {
+      @Nonnull final FhirPath<Collection> referencePath,
+      @Nonnull final PathEvalContext evaluationContext) {
+    // TODO: add all valdation etx.
 
-    throw new UnsupportedOperationException("reverseResolve() is not yet implemented");
+    // resolve the reference to the foreign resource (can it be a join to itself?)
+    // somewhere I need to make sure that the surrogate resource collection is being use for validation
+    Reference reference = referencePath.apply(input, evaluationContext)
+        .asReference(evaluationContext).orElseThrow();
+
+    System.out.println(reference);
+    
+    return evaluationContext.resolveReverseJoin(input.getResourceType(),
+        referencePath.toExpression());
+
+    //throw new UnsupportedOperationException("reverseResolve() is not yet implemented");
     // return evaluationContext.resolveReverseReference(input.getResourceType(),
     //     reference.toExpression());
   }

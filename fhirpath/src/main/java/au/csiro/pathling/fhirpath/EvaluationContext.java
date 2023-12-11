@@ -21,6 +21,7 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
+import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry.NoSuchFunctionException;
 import au.csiro.pathling.fhirpath.parser.ConstantReplacer;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -32,6 +33,8 @@ import lombok.Getter;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
  * Context and dependencies used in the evaluation of a FHIRPath expression.
@@ -39,7 +42,7 @@ import org.apache.spark.sql.SparkSession;
  * @author John Grimes
  */
 @Getter
-public class EvaluationContext {
+public class EvaluationContext implements PathEvalContext {
 
   /**
    * The input context from which the FHIRPath is to be evaluated, referred to through
@@ -150,4 +153,36 @@ public class EvaluationContext {
         dataset, functionRegistry, terminologyServiceFactory, constantReplacer);
   }
 
+
+  @Nonnull
+  @Override
+  public NamedFunction<Collection> resolveFunction(@Nonnull final String name)
+      throws NoSuchFunctionException {
+    return functionRegistry.getInstance(name);
+  }
+
+  @Nonnull
+  @Override
+  public Collection resolveVariable(@Nonnull final String name) {
+    if (name.equals("%context")) {
+      return getInputContext();
+    } else if (name.equals("%resource") || name.equals("%rootResource")) {
+      return getResource();
+    } else {
+      throw new IllegalArgumentException("Unknown constant: " + name);
+    }
+  }
+
+  @Nonnull
+  @Override
+  public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
+    throw new UnsupportedOperationException("resolveResource() not supported in this context");
+  }
+
+  @Nonnull
+  @Override
+  public ResourceCollection resolveReverseJoin(@Nonnull final ResourceType resourceType,
+      @Nonnull final String expression) {
+    throw new UnsupportedOperationException("resolveReverseJoin() not supported in this context");
+  }
 }

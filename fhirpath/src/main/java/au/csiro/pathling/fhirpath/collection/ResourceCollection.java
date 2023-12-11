@@ -102,6 +102,24 @@ public class ResourceCollection extends Collection {
         getFhirType(resourceType), Optional.of(definition), definition);
   }
 
+
+  @Nonnull
+  public static ResourceCollection build(@Nonnull final ColumnCtx columnCtx,
+      @Nonnull final FhirContext fhirContext,
+      @Nonnull final ResourceType resourceType) {
+
+    // Get the resource definition from HAPI.
+    final String resourceCode = resourceType.toCode();
+    final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
+        resourceCode);
+    final ResourceDefinition definition = new ResourceDefinition(resourceType, hapiDefinition);
+
+    // We use a literal column as the resource value - the actual value is not important.
+    // But the non-null value indicates that the resource should be included in any result.
+    return new ResourceCollection(columnCtx, Optional.empty(),
+        getFhirType(resourceType), Optional.of(definition), definition);
+  }
+
   /**
    * @return The set of resource types currently supported by this implementation.
    */
@@ -145,18 +163,18 @@ public class ResourceCollection extends Collection {
     return resourceDefinition.getResourceType();
   }
 
-
-  @Nonnull
-  @Override
-  protected Collection traverseElement(@Nonnull final ElementDefinition childDef) {
-    // TODO: what does mean if an element is present in the definition but not in 
-    // the schema?
-    return getElementColumn(childDef.getElementName()).map(
-        value -> Collection.build(
-            // TODO: simplify this
-            StdColumnCtx.of(functions.when(getCtx().getValue().isNotNull(), value)),
-            childDef)).get();
-  }
+  //
+  // @Nonnull
+  // @Override
+  // protected Collection traverseElement(@Nonnull final ElementDefinition childDef) {
+  //   // TODO: what does mean if an element is present in the definition but not in 
+  //   // the schema?
+  //   return getElementColumn(childDef.getElementName()).map(
+  //       value -> Collection.build(
+  //           // TODO: simplify this
+  //           StdColumnCtx.of(functions.when(getCtx().getValue().isNotNull(), value)),
+  //           childDef)).get();
+  // }
 
 
   @Nonnull

@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
@@ -363,7 +364,7 @@ public class Collection implements Comparable, Numeric {
 
 
   @Nonnull
-  public Optional<Reference> asReference(@Nonnull final EvaluationContext context) {
+  public Optional<Reference> asReference(@Nonnull final PathEvalContext context) {
     return getFhirType()
         .filter(FHIRDefinedType.REFERENCE::equals)
         .map(__ -> new ReferenceImpl(this, context));
@@ -388,7 +389,7 @@ public class Collection implements Comparable, Numeric {
     Collection referenceCollection;
 
     @Nonnull
-    EvaluationContext context;
+    PathEvalContext context;
 
     @Nonnull
     @Override

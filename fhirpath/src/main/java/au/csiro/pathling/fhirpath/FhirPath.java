@@ -20,7 +20,7 @@ public interface FhirPath<I extends Collection> {
 
   FhirPath<?> NULL = new This<>();
 
-  I apply(@Nonnull final I input, @Nonnull final EvaluationContext context);
+  I apply(@Nonnull final I input, @Nonnull final PathEvalContext context);
 
   default FhirPath<I> first() {
     return this;
@@ -50,6 +50,11 @@ public interface FhirPath<I extends Collection> {
     return Stream.of(this);
   }
 
+
+  default Stream<FhirPath<I>> children() {
+    return Stream.empty();
+  }
+
   static <I extends Collection> FhirPath<I> nullPath() {
     //noinspection unchecked
     return (FhirPath<I>) NULL;
@@ -70,7 +75,7 @@ public interface FhirPath<I extends Collection> {
 
     @Override
     public I apply(@Nonnull final I input,
-        @Nonnull final EvaluationContext context) {
+        @Nonnull final PathEvalContext context) {
       return input;
     }
 
@@ -101,7 +106,7 @@ public interface FhirPath<I extends Collection> {
     List<FhirPath<I>> elements;
 
     @Override
-    public I apply(@Nonnull final I input, @Nonnull final EvaluationContext context) {
+    public I apply(@Nonnull final I input, @Nonnull final PathEvalContext context) {
       return elements.stream()
           .reduce(input, (acc, element) -> element.apply(acc, context), (a, b) -> b);
     }

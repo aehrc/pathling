@@ -15,38 +15,34 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath.operator;
+package au.csiro.pathling.fhirpath.context;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
-import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import lombok.Value;
+import javax.annotation.Nonnull;
 
-/**
- * Represents the inputs to a binary operator in FHIRPath.
- *
- * @author John Grimes
- */
-@Value
-public class BinaryOperatorInput {
+@Value(staticConstructor = "of")
+public class FhirpathContext {
 
-  /**
-   * Context and dependencies for use in evaluating the function.
-   */
   @Nonnull
-  PathEvalContext context;
+  ResourceCollection resource;
 
-  /**
-   * An expression representing the left operand.
-   */
   @Nonnull
-  Collection left;
+  Collection inputContext;
 
-  /**
-   * An expression representing the right operand.
-   */
   @Nonnull
-  Collection right;
-
+  public Collection resolveVariable(@Nonnull final String name) {
+    if (name.equals("%context")) {
+      return getInputContext();
+    } else if (name.equals("%resource") || name.equals("%rootResource")) {
+      return getResource();
+    } else {
+      throw new IllegalArgumentException("Unknown constant: " + name);
+    }
+  }
+  
+  public static FhirpathContext ofResource(@Nonnull final ResourceCollection resource) {
+    return of(resource, resource);
+  }
 }

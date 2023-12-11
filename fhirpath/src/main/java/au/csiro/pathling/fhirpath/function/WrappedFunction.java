@@ -22,6 +22,7 @@ import static java.util.Objects.isNull;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
+import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -56,7 +57,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
   @Value
   private static class ParamResolver {
 
-    EvaluationContext evaluationContext;
+    PathEvalContext evaluationContext;
     Collection input;
 
     @Nullable
@@ -65,7 +66,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
 
       if (isNull(argument)) {
         // check the pararmeter is happy with a null value
-        if (EvaluationContext.class.isAssignableFrom(parameter.getType())) {
+        if (PathEvalContext.class.isAssignableFrom(parameter.getType())) {
           // bind type specifier
           return evaluationContext;
         } else if (parameter.getAnnotation(Nullable.class) != null) {
