@@ -67,7 +67,7 @@ pathling_version <- function() {
 #' Install Spark
 #' 
 #' Installs the version of Spark/Hadoop defined in the package metadata using the 
-#' \code{\link{sparklyr::spark_install}} function.
+#' \code{sparklyr::spark_install} function.
 #' 
 #' @return List with information about the installed version.
 #' 

@@ -36,8 +36,7 @@ property_string <- function(...) { }
 #'
 #' @param value A character or numeric vector to be converted
 #'
-#' @return The \code{\link{topic-quosure}} with the SQL array literal that can be used in 
-#' \code{\link{dplyr::mutate}}.
+#' @return The \code{quosure} with the SQL array literal that can be used in \code{dplyr::mutate}.
 to_array <- function(value) {
   if (!is.null(value)) {
     rlang::new_quosure(rlang::expr(array(!!!value)))
