@@ -2,3 +2,5 @@ man/*.Rd
 NAMESPACE
 DESCRIPTION
 tests/testthat/testdata
+pathling.Rcheck
+target.Rcheck
