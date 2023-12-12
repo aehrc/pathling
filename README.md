@@ -16,6 +16,16 @@ includes both language libraries and a server implementation.
 
 [**Read the documentation &rarr;**](https://pathling.csiro.au/docs)
 
+<picture>
+    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components-dark@2x.png"
+            media="(prefers-color-scheme: dark) and (min-resolution: 2dppx)"/>
+    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components-dark.png"
+            media="(prefers-color-scheme: dark)"/>
+    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components@2x.png"
+            media="(prefers-color-scheme: light) and (min-resolution: 2dppx)"/>
+    <img src="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components.png" alt="Components" width="800"/>
+</picture>
+
 ## What can it do?
 
 ### Terminology queries
