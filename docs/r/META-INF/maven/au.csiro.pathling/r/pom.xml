@@ -101,6 +101,12 @@
                 <include>testdata</include>
               </includes>
             </fileset>
+            <fileset>
+              <directory>${project.basedir}</directory>
+              <includes>
+                <include>**/*.Rcheck/**</include>
+              </includes>
+            </fileset>
           </filesets>
         </configuration>
       </plugin>
