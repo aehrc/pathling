@@ -23,7 +23,7 @@ includes both language libraries and a server implementation.
             media="(prefers-color-scheme: dark)"/>
     <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components@2x.png"
             media="(prefers-color-scheme: light) and (min-resolution: 2dppx)"/>
-    <img src="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components.png" alt="Components" width="800"/>
+    <img src="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components.png" alt="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" width="800"/>
 </picture>
 
 ## What can it do?
