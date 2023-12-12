@@ -58,8 +58,8 @@
 
 [data-theme='light'] img[src$='#dark-mode-only'],
 [data-theme='dark'] img[src$='#light-mode-only'],
-[data-theme='light'] svg.dark-mode-only,
-[data-theme='dark'] svg.light-mode-only {
+[data-theme='light'] img.dark-mode-only,
+[data-theme='dark'] img.light-mode-only {
     display: none;
 }
 

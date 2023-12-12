@@ -5,8 +5,13 @@ use clinical terminology and [FHIR&reg;](https://hl7.org/fhir) within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
-![Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services](../src/images/components.svg#light-mode-only "Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services")
-![Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services](../src/images/components-dark.svg#dark-mode-only "Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services")
+import Components from '@site/src/images/components.png';
+import Components2x from '@site/src/images/components@2x.png';
+import ComponentsDark from '@site/src/images/components-dark.png';
+import ComponentsDark2x from '@site/src/images/components-dark@2x.png';
+
+<img src={Components} srcset={`${Components2x} 2x, ${Components} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="light-mode-only" width="800" />
+<img src={ComponentsDark} srcset={`${ComponentsDark2x} 2x, ${ComponentsDark} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="dark-mode-only" width="800" />
 
 ## What can it do?
 
