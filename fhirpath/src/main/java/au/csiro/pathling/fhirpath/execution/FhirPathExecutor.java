@@ -17,7 +17,10 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static au.csiro.pathling.utilities.Functions.maybeCast;
+
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
 import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -25,30 +28,47 @@ import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.context.DefaultPathEvalContext;
 import au.csiro.pathling.fhirpath.context.FhirpathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
-import au.csiro.pathling.fhirpath.path.Paths.Resource;
-import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static au.csiro.pathling.utilities.Functions.maybeCast;
 
 
 @Value
 public class FhirPathExecutor {
-  
+
+  @Value
+  static class DataRootFinderVisitor implements FhirPathStreamVisitor<DataRoot> {
+
+    @Nonnull
+    ResourceType subjectResource;
+
+    @Nonnull
+    @Override
+    public Stream<DataRoot> visitPath(@Nonnull final FhirPath path) {
+      if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
+          .getFunctionIdentifier())) {
+        // actually we know we do not want to visit the children of this function
+        return Stream.of(ExecutorUtils.fromPath(subjectResource, (EvalFunction) path));
+      } else {
+        return visitChildren(path);
+      }
+    }
+  }
+
   class EmptyResourceResolver implements ResourceResolver {
 
     @Nonnull
@@ -130,42 +150,43 @@ public class FhirPathExecutor {
         functionRegistry,
         resourceResolver);
 
-    final List<EvalFunction> reverseJoins = findJoins(path);
+    final List<ReverseResolveRoot> reverseJoins = findJoinsRoots(path).stream()
+        .map(maybeCast(ReverseResolveRoot.class))
+        .flatMap(Optional::stream)
+        .collect(Collectors.toUnmodifiableList());
     // for each join eval the reference column
 
     Dataset<Row> derivedDataset = patients;
-    for (EvalFunction reverseJoin : reverseJoins) {
-      final FhirPath reference = reverseJoin.getArguments().get(0);
-      final Resource foreingResource = (Resource) reference.first();
-      final Dataset<Row> foreignDataset = resourceDataset(foreingResource.getResourceType(),
+    for (ReverseResolveRoot reverseJoin : reverseJoins) {
+      final Dataset<Row> foreignDataset = resourceDataset(reverseJoin.getForeignResourceType(),
           dataSource);
-      final Collection foreignKey = reference.andThen(new Traversal("reference"))
-          .apply(fhirpathContext.getInputContext(), evalContext);
-      final String joinTag =
-          subjectResource.toCode() + "@" + reference.toExpression().replace('.', '_');
+      final String joinTag = reverseJoin.getTag();
+
+      // TODO: make it better
+      final Column referenceColumn = foreignDataset.col(
+          reverseJoin.getForeignResourceType().toCode() + "."
+              + reverseJoin.getForeignResourcePath()).getField("reference");
+
       final Dataset<Row> foreignDatasetJoin =
-          foreignDataset.groupBy(foreignKey.getColumn().alias(joinTag + "_key"))
+          foreignDataset.groupBy(referenceColumn.alias(reverseJoin.getKeyTag()))
               .agg(
                   functions.collect_list(
-                      foreignDataset.col(foreingResource.getResourceType().toCode())
+                      foreignDataset.col(reverseJoin.getForeignResourceType().toCode())
                   ).alias(joinTag)
               );
       derivedDataset = derivedDataset.join(
           foreignDatasetJoin,
-          patients.col("key").equalTo(foreignDatasetJoin.col(joinTag + "_key")),
+          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getKeyTag())),
           "left_outer"
-      ).drop(joinTag + "_key");
+      ).drop(reverseJoin.getKeyTag());
     }
 
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return derivedDataset.select(functions.col("id"), result.getColumn().alias("value"));
   }
 
-  List<EvalFunction> findJoins(@Nonnull final FhirPath path) {
-    return path.asStream()
-        .flatMap(p -> p.children().flatMap(x -> x.asStream()))
-        .map(maybeCast(EvalFunction.class)).flatMap(Optional::stream)
-        .filter(ef -> "reverseResolve".equals(ef.getFunctionIdentifier()))
-        .collect(Collectors.toUnmodifiableList());
+  Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
+    return path.accept(new DataRootFinderVisitor(subjectResource))
+        .collect(Collectors.toUnmodifiableSet());
   }
 }

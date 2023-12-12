@@ -21,11 +21,9 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
-import java.util.List;
 
 class FhirPathExecutorTest {
 
@@ -78,24 +76,4 @@ class FhirPathExecutorTest {
     System.out.println(result);
   }
 
-
-
-  @Test
-  void testJoinPlanner() {
-    final Parser parser = new Parser();
-    final FhirPath path = parser.parse(
-        "reverseResolve(Condition.subject)");
-    System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
-        FhirContext.forR4(),
-        StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
-
-    final List<EvalFunction> joins = validator.findJoins(
-        path);
-    
-    System.out.println(joins);
-    
-  }
-  
 }

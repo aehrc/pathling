@@ -67,6 +67,12 @@ public interface FhirPath {
     return toString();
   }
 
+
+  @Nonnull
+  default <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
+    return visitor.visitPath(this);
+  }
+
   @Value
   class This implements FhirPath {
 
@@ -144,6 +150,13 @@ public interface FhirPath {
       return elements.stream()
           .map(FhirPath::toExpression)
           .collect(Collectors.joining("."));
+    }
+
+
+    @Override
+    @Nonnull
+    public <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
+      return visitor.visitComposite(this);
     }
   }
 
