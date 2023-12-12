@@ -35,7 +35,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import ca.uhn.fhir.model.api.annotation.Block;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -48,7 +47,7 @@ final public class Paths {
    * FHIRPath expression with a type specifier value.
    */
   @Value
-  public static class TypeSpecifierPath implements FhirPath<Collection> {
+  public static class TypeSpecifierPath implements FhirPath {
 
     TypeSpecifier typeSpecifier;
 
@@ -60,7 +59,7 @@ final public class Paths {
   }
 
   @Value
-  public static class ExtConsFhir implements FhirPath<Collection> {
+  public static class ExtConsFhir implements FhirPath {
 
     String name;
 
@@ -79,13 +78,13 @@ final public class Paths {
   }
 
   @Value
-  public static class EvalOperator implements FhirPath<Collection> {
+  public static class EvalOperator implements FhirPath {
 
     @Nonnull
-    FhirPath<Collection> leftPath;
+    FhirPath leftPath;
 
     @Nonnull
-    FhirPath<Collection> rightPath;
+    FhirPath rightPath;
 
     @Nonnull
     BinaryOperator operator;
@@ -99,19 +98,19 @@ final public class Paths {
 
 
     @Override
-    public Stream<FhirPath<Collection>> children() {
+    public Stream<FhirPath> children() {
       return Stream.of(leftPath, rightPath);
     }
   }
 
   @Value
-  public static class EvalFunction implements FhirPath<Collection> {
+  public static class EvalFunction implements FhirPath {
 
     @Nonnull
     String functionIdentifier;
 
     @Nonnull
-    List<FhirPath<Collection>> arguments;
+    List<FhirPath> arguments;
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -136,13 +135,13 @@ final public class Paths {
 
 
     @Override
-    public Stream<FhirPath<Collection>> children() {
+    public Stream<FhirPath> children() {
       return arguments.stream();
     }
   }
 
   @Value
-  public static class Traversal implements FhirPath<Collection> {
+  public static class Traversal implements FhirPath {
 
     @Nonnull
     String propertyName;
@@ -163,7 +162,7 @@ final public class Paths {
   }
 
   @Value
-  public static class Resource implements FhirPath<Collection> {
+  public static class Resource implements FhirPath {
 
     @Nonnull
     ResourceType resourceType;
@@ -183,10 +182,10 @@ final public class Paths {
 
 
   @Value
-  public static class Invocation implements FhirPath<Collection> {
+  public static class Invocation implements FhirPath {
 
-    FhirPath<Collection> invocationSubject;
-    FhirPath<Collection> invocationVerb;
+    FhirPath invocationSubject;
+    FhirPath invocationVerb;
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -197,7 +196,7 @@ final public class Paths {
   }
 
   @Value
-  public static class This implements FhirPath<Collection> {
+  public static class This implements FhirPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
@@ -207,7 +206,7 @@ final public class Paths {
   }
 
   @Value
-  public static class StringLiteral implements FhirPath<Collection> {
+  public static class StringLiteral implements FhirPath {
 
     String value;
 

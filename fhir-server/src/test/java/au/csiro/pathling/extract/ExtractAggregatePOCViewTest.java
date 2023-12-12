@@ -101,16 +101,16 @@ class ExtractAggregatePOCViewTest {
 
 
   @Nonnull
-  static Selection decompose(@Nonnull final List<FhirPath<Collection>> paths) {
+  static Selection decompose(@Nonnull final List<FhirPath> paths) {
     return new FromSelection(new ExtConsFhir("%resource"), decomposeInternal(paths));
   }
 
-  static boolean isTraversal(@Nonnull final FhirPath<Collection> path) {
+  static boolean isTraversal(@Nonnull final FhirPath path) {
     return path instanceof Paths.Traversal || path.isNull();
   }
 
-  static Stream<? extends Selection> decomposeSelection(@Nonnull final FhirPath<Collection> parent,
-      @Nonnull final List<FhirPath<Collection>> children) {
+  static Stream<? extends Selection> decomposeSelection(@Nonnull final FhirPath parent,
+      @Nonnull final List<FhirPath> children) {
 
     // TODO: do not create empty selections.
     return parent.isNull()
@@ -125,12 +125,12 @@ class ExtractAggregatePOCViewTest {
            ).filter(s -> !s.getComponents().isEmpty());
   }
 
-  static List<Selection> decomposeInternal(@Nonnull final List<FhirPath<Collection>> paths) {
-    final Map<FhirPath<Collection>, List<FhirPath<Collection>>> tailsByHeads = paths.stream()
+  static List<Selection> decomposeInternal(@Nonnull final List<FhirPath> paths) {
+    final Map<FhirPath, List<FhirPath>> tailsByHeads = paths.stream()
         .collect(
-            Collectors.groupingBy(FhirPath<Collection>::first, LinkedHashMap::new,
+            Collectors.groupingBy(FhirPath::first, LinkedHashMap::new,
                 Collectors.mapping(
-                    FhirPath<Collection>::suffix,
+                    FhirPath::suffix,
                     Collectors.toList())));
 
     // This needs to be more sophisticated
@@ -312,7 +312,7 @@ class ExtractAggregatePOCViewTest {
     System.out.println("### Expressions: ###");
     grouppingExpressions.forEach(System.out::println);
 
-    final List<FhirPath<Collection>> groupingPaths = grouppingExpressions.stream()
+    final List<FhirPath> groupingPaths = grouppingExpressions.stream()
         .map(parser::parse)
         .collect(Collectors.toUnmodifiableList());
 
@@ -342,20 +342,20 @@ class ExtractAggregatePOCViewTest {
         "name.count().sum()" // .count()
     );
 
-    final List<FhirPath<Collection>> aggPaths = aggregations.stream()
+    final List<FhirPath> aggPaths = aggregations.stream()
         .map(parser::parse)
         .collect(Collectors.toUnmodifiableList());
 
     System.out.println("### Agg Paths ###");
     aggPaths.forEach(System.out::println);
 
-    final List<FhirPath<Collection>> aggFields = aggPaths.stream().map(FhirPath::prefix)
+    final List<FhirPath> aggFields = aggPaths.stream().map(FhirPath::prefix)
         .collect(Collectors.toUnmodifiableList());
 
     System.out.println("### Agg Fields ###");
     aggFields.forEach(System.out::println);
 
-    final List<FhirPath<Collection>> aggFunctions = aggPaths.stream().map(FhirPath::last)
+    final List<FhirPath> aggFunctions = aggPaths.stream().map(FhirPath::last)
         .collect(Collectors.toUnmodifiableList());
 
     System.out.println("### Agg Functions ###");
@@ -443,7 +443,7 @@ class ExtractAggregatePOCViewTest {
 
     final Paths.ExtConsFhir contextPath = new Paths.ExtConsFhir("%resource");
 
-    final List<FhirPath<Collection>> groupingPaths = grouppingExpressions.stream()
+    final List<FhirPath> groupingPaths = grouppingExpressions.stream()
         .map(parser::parse)
         .map(contextPath::andThen)
         .collect(Collectors.toUnmodifiableList());
@@ -491,7 +491,7 @@ class ExtractAggregatePOCViewTest {
 
   @Nonnull
   static Function<Row, AggregateResponse.Grouping> rowToGrouping(
-      @Nonnull final List<FhirPath<Collection>> groupByPaths,
+      @Nonnull final List<FhirPath> groupByPaths,
       @Nonnull final List<Collection> groupByCollections) {
     return row -> {
       final List<Optional<Type>> labels = IntStream.range(0, groupByCollections.size())

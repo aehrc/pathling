@@ -36,7 +36,7 @@ public final class Literals {
   }
 
   @Value
-  public static class StringLiteral implements FhirPath<Collection> {
+  public static class StringLiteral implements FhirPath {
 
     @Nonnull
     String value;
@@ -56,7 +56,7 @@ public final class Literals {
   }
 
   @Value
-  public static class BooleanLiteral implements FhirPath<Collection> {
+  public static class BooleanLiteral implements FhirPath {
 
     @Nonnull
     String value;
@@ -75,7 +75,7 @@ public final class Literals {
   }
 
   @Value
-  public static class CodingLiteral implements FhirPath<Collection> {
+  public static class CodingLiteral implements FhirPath {
 
     @Nonnull
     String value;
@@ -98,7 +98,7 @@ public final class Literals {
   }
 
   @Value
-  public static class CalendarDurationLiteral implements FhirPath<Collection> {
+  public static class CalendarDurationLiteral implements FhirPath {
 
     @Nonnull
     String value;
@@ -117,7 +117,7 @@ public final class Literals {
   }
 
   @Value
-  public static class UcumQuantityLiteral implements FhirPath<Collection> {
+  public static class UcumQuantityLiteral implements FhirPath {
 
     @Nonnull
     String value;

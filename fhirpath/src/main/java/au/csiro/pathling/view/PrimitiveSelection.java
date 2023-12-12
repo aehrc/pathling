@@ -32,18 +32,18 @@ import lombok.Value;
 public class PrimitiveSelection implements Selection {
 
   @Nonnull
-  FhirPath<Collection> path;
+  FhirPath path;
 
   @Nonnull
   Optional<String> alias;
 
   boolean asCollection;
 
-  public PrimitiveSelection(@Nonnull final FhirPath<Collection> path) {
+  public PrimitiveSelection(@Nonnull final FhirPath path) {
     this(path, Optional.empty());
   }
 
-  public PrimitiveSelection(@Nonnull final FhirPath<Collection> path,
+  public PrimitiveSelection(@Nonnull final FhirPath path,
       @Nonnull final Optional<String> alias) {
     this(path, alias, false);
 

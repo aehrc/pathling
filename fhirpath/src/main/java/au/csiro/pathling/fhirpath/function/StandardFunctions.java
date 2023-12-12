@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static java.util.Objects.nonNull;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.Reference;
@@ -33,22 +32,10 @@ import au.csiro.pathling.fhirpath.collection.MixedCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
-import au.csiro.pathling.fhirpath.context.FhirpathContext;
-import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
-import au.csiro.pathling.utilities.Functions;
 import au.csiro.pathling.utilities.Preconditions;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.functions;
-import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Implementation of standard FHIRPath functions.
@@ -236,7 +223,7 @@ public class StandardFunctions {
   // extended functions
   @FhirpathFunction
   public static ResourceCollection reverseResolve(@Nonnull final ResourceCollection input,
-      @Nonnull final FhirPath<Collection> referencePath,
+      @Nonnull final FhirPath referencePath,
       @Nonnull final PathEvalContext evaluationContext) {
     // TODO: add all valdation etx.
 

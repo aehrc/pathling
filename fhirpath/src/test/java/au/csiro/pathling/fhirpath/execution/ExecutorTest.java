@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.execution;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
@@ -107,7 +106,7 @@ public class ExecutorTest {
     when(dataSource.read(ResourceType.PATIENT)).thenReturn(patients);
     patients.select("id", "gender", "name").show();
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "where(gender='female').name.where(family.where($this='Smith').exists()).given.join(',')");
     System.out.println(path.toExpression());
 
@@ -129,7 +128,7 @@ public class ExecutorTest {
     when(dataSource.read(ResourceType.PATIENT)).thenReturn(patients);
     patients.select("id", "gender", "name").show();
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "reverseResolve(Condition.subject).count()");
     System.out.println(path.toExpression());
 

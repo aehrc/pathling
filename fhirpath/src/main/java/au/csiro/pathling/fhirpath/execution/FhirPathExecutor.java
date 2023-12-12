@@ -26,7 +26,6 @@ import au.csiro.pathling.fhirpath.context.DefaultPathEvalContext;
 import au.csiro.pathling.fhirpath.context.FhirpathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
-import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.Resource;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
@@ -49,15 +48,7 @@ import static au.csiro.pathling.utilities.Functions.maybeCast;
 
 @Value
 public class FhirPathExecutor {
-
-  List<EvalFunction> findJoins(@Nonnull final FhirPath<Collection> path) {
-    return path.asStream()
-        .flatMap(p -> p.children().flatMap(x -> x.asStream()))
-        .map(maybeCast(EvalFunction.class)).flatMap(Optional::stream)
-        .filter(ef -> "reverseResolve".equals(ef.getFunctionIdentifier()))
-        .collect(Collectors.toUnmodifiableList());
-  }
-
+  
   class EmptyResourceResolver implements ResourceResolver {
 
     @Nonnull
@@ -92,7 +83,7 @@ public class FhirPathExecutor {
   ResourceType subjectResource;
 
   @Nonnull
-  public Collection validate(@Nonnull final FhirPath<Collection> path) {
+  public Collection validate(@Nonnull final FhirPath path) {
 
     final ResourceResolver resourceResolver = new EmptyResourceResolver();
     final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
@@ -120,7 +111,7 @@ public class FhirPathExecutor {
 
 
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final FhirPath<Collection> path,
+  public Dataset<Row> execute(@Nonnull final FhirPath path,
       @Nonnull final DataSource dataSource) {
 
     // just as above ... but with a more intelligent resourceResolver
@@ -144,7 +135,7 @@ public class FhirPathExecutor {
 
     Dataset<Row> derivedDataset = patients;
     for (EvalFunction reverseJoin : reverseJoins) {
-      final FhirPath<Collection> reference = reverseJoin.getArguments().get(0);
+      final FhirPath reference = reverseJoin.getArguments().get(0);
       final Resource foreingResource = (Resource) reference.first();
       final Dataset<Row> foreignDataset = resourceDataset(foreingResource.getResourceType(),
           dataSource);
@@ -168,5 +159,13 @@ public class FhirPathExecutor {
 
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return derivedDataset.select(functions.col("id"), result.getColumn().alias("value"));
+  }
+
+  List<EvalFunction> findJoins(@Nonnull final FhirPath path) {
+    return path.asStream()
+        .flatMap(p -> p.children().flatMap(x -> x.asStream()))
+        .map(maybeCast(EvalFunction.class)).flatMap(Optional::stream)
+        .filter(ef -> "reverseResolve".equals(ef.getFunctionIdentifier()))
+        .collect(Collectors.toUnmodifiableList());
   }
 }

@@ -18,7 +18,6 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.path.Paths;
 import com.google.common.collect.ImmutableMap;
 import java.util.List;
@@ -48,7 +47,7 @@ public class AggregationView {
   ResourceType subjectResource;
   Selection groupBy;
   Selection select;
-  List<FhirPath<Collection>> aggregates;
+  List<FhirPath> aggregates;
 
   public Dataset<Row> evaluate(@Nonnull final ExecutionContext context) {
     final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,

@@ -33,7 +33,7 @@ class FhirPathExecutorTest {
   void testValidateSimpleResourcePath() {
 
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "where(name.family='Smith').name.given.join(',')");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
@@ -49,7 +49,7 @@ class FhirPathExecutorTest {
   void testValidateReverseResolve() {
 
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "where(name.family='Smith').reverseResolve(Condition.subject).code.coding");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
@@ -66,7 +66,7 @@ class FhirPathExecutorTest {
   void testValidateResourceReference() {
 
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "Patient.id");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
@@ -83,7 +83,7 @@ class FhirPathExecutorTest {
   @Test
   void testJoinPlanner() {
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "reverseResolve(Condition.subject)");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(

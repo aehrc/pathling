@@ -19,7 +19,6 @@ package au.csiro.pathling.view;
 
 import javax.annotation.Nonnull;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import java.util.List;
@@ -28,7 +27,7 @@ import java.util.List;
 @Value
 public class FromSelection extends AbstractCompositeSelection {
 
-  public FromSelection(final FhirPath<Collection> parent, final List<Selection> components) {
+  public FromSelection(final FhirPath parent, final List<Selection> components) {
     super(parent, components);
   }
 

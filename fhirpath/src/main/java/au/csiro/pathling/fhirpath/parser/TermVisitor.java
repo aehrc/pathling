@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.parser;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
@@ -36,24 +35,24 @@ import javax.annotation.Nullable;
  *
  * @author John Grimes
  */
-class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
+class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitInvocationTerm(
+  public FhirPath visitInvocationTerm(
       @Nullable final InvocationTermContext ctx) {
     return new InvocationVisitor(true).visit(requireNonNull(ctx).invocation());
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
+  public FhirPath visitLiteralTerm(@Nullable final LiteralTermContext ctx) {
     return new LiteralTermVisitor().visit(requireNonNull(ctx).literal());
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitExternalConstantTerm(
+  public FhirPath visitExternalConstantTerm(
       @Nullable final ExternalConstantTermContext ctx) {
     @Nullable final String term = requireNonNull(ctx).getText();
     requireNonNull(term);
@@ -62,11 +61,11 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitParenthesizedTerm(
+  public FhirPath visitParenthesizedTerm(
       @Nullable final ParenthesizedTermContext ctx) {
     // TODO: maybe we do not need that and just use the subExpression directly?
     // Parentheses are ignored in the standalone term case.
-    final FhirPath<Collection> subExpression = new Visitor().visit(
+    final FhirPath subExpression = new Visitor().visit(
         requireNonNull(ctx).expression());
     return subExpression;
   }

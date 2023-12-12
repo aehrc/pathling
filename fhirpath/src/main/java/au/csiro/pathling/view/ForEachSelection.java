@@ -18,7 +18,6 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.view.DatasetResult.One;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -30,7 +29,7 @@ import java.util.List;
 @Value
 public class ForEachSelection extends AbstractCompositeSelection {
 
-  public ForEachSelection(final FhirPath<Collection> parent, final List<Selection> components) {
+  public ForEachSelection(final FhirPath parent, final List<Selection> components) {
     super(parent, components);
   }
 
@@ -49,7 +48,7 @@ public class ForEachSelection extends AbstractCompositeSelection {
   @Nonnull
   @Override
   protected One<ProjectionContext> subContext(@Nonnull final ProjectionContext context,
-      @Nonnull final FhirPath<Collection> parent) {
+      @Nonnull final FhirPath parent) {
     return context.subContext(parent, true);
   }
 }

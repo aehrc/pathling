@@ -19,7 +19,6 @@ package au.csiro.pathling.fhirpath.function;
 
 import static java.util.Objects.isNull;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
 import au.csiro.pathling.fhirpath.PathEvalContext;
@@ -62,7 +61,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
 
     @Nullable
     public Object resolveArgument(@Nonnull final Parameter parameter,
-        final FhirPath<Collection> argument) {
+        final FhirPath argument) {
 
       if (isNull(argument)) {
         // check the pararmeter is happy with a null value
@@ -117,7 +116,7 @@ public class WrappedFunction implements NamedFunction<Collection> {
     final ParamResolver resolver = new ParamResolver(functionInput.getContext(),
         functionInput.getInput());
 
-    final List<FhirPath<Collection>> actualArguments = functionInput.getArguments();
+    final List<FhirPath> actualArguments = functionInput.getArguments();
 
     // TODO: make it nicer
     final Stream<Object> resolvedArguments = IntStream.range(0, method.getParameterCount() - 1)

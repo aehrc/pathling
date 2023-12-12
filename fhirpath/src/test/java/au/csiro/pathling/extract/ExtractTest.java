@@ -18,7 +18,6 @@
 package au.csiro.pathling.extract;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
 import java.util.List;
@@ -38,16 +37,16 @@ public class ExtractTest {
   // there can a path
   // best to convert invovation path to the list of expressions.
   @Nonnull
-  static Selection decompose(@Nonnull final List<FhirPath<Collection>> paths) {
+  static Selection decompose(@Nonnull final List<FhirPath> paths) {
     return new FromSelection(new ExtConsFhir("%resource"), decomposeInternal(paths));
   }
 
-  static List<Selection> decomposeInternal(@Nonnull final List<FhirPath<Collection>> paths) {
-    final Map<FhirPath<Collection>, List<FhirPath<Collection>>> tailsByHeads = paths.stream()
+  static List<Selection> decomposeInternal(@Nonnull final List<FhirPath> paths) {
+    final Map<FhirPath, List<FhirPath>> tailsByHeads = paths.stream()
         .collect(
-            Collectors.groupingBy(FhirPath<Collection>::first,
+            Collectors.groupingBy(FhirPath::first,
                 Collectors.mapping(
-                    FhirPath<Collection>::suffix,
+                    FhirPath::suffix,
                     Collectors.toList())));
 
     return tailsByHeads.entrySet().stream()
@@ -97,7 +96,7 @@ public class ExtractTest {
     );
     expressions.stream().map(parser::parse).forEach(System.out::println);
 
-    final List<FhirPath<Collection>> paths = Stream.of(
+    final List<FhirPath> paths = Stream.of(
             "name",
             "name.first().family",
             "name.first().given.last()",
@@ -109,11 +108,11 @@ public class ExtractTest {
 
     paths.forEach(System.out::println);
 
-    final Map<FhirPath<Collection>, List<FhirPath<Collection>>> xxx = paths.stream()
+    final Map<FhirPath, List<FhirPath>> xxx = paths.stream()
         .collect(
-            Collectors.groupingBy(FhirPath<Collection>::first,
+            Collectors.groupingBy(FhirPath::first,
                 Collectors.mapping(
-                    FhirPath<Collection>::suffix,
+                    FhirPath::suffix,
                     Collectors.toList())));
 
     xxx.forEach((k, v) -> System.out.println(k + " -> " + v));

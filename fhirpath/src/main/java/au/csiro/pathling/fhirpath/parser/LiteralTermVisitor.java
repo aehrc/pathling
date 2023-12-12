@@ -52,11 +52,11 @@ import org.antlr.v4.runtime.tree.TerminalNode;
  *
  * @author John Grimes
  */
-class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
+class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitStringLiteral(
+  public FhirPath visitStringLiteral(
       @Nullable final StringLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
@@ -64,7 +64,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
   }
 
   @Override
-  public FhirPath<Collection> visitDateLiteral(@Nullable final DateLiteralContext ctx) {
+  public FhirPath visitDateLiteral(@Nullable final DateLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
 
@@ -79,7 +79,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitDateTimeLiteral(
+  public FhirPath visitDateTimeLiteral(
       @Nullable final DateTimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
@@ -95,7 +95,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
+  public FhirPath visitTimeLiteral(@Nullable final TimeLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
 
@@ -104,7 +104,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitNumberLiteral(
+  public FhirPath visitNumberLiteral(
       @Nullable final NumberLiteralContext ctx) {
     @Nullable final String fhirPath = requireNonNull(ctx).getText();
     requireNonNull(fhirPath);
@@ -126,20 +126,20 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitBooleanLiteral(
+  public FhirPath visitBooleanLiteral(
       @Nullable final BooleanLiteralContext ctx) {
     return new BooleanLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitNullLiteral(@Nullable final NullLiteralContext ctx) {
+  public FhirPath visitNullLiteral(@Nullable final NullLiteralContext ctx) {
     return (input, context) -> Collection.nullCollection();
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitQuantityLiteral(
+  public FhirPath visitQuantityLiteral(
       @Nullable final QuantityLiteralContext ctx) {
     requireNonNull(ctx);
     @Nullable final String number = ctx.quantity().NUMBER().getText();
@@ -153,7 +153,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitCodingLiteral(
+  public FhirPath visitCodingLiteral(
       @Nullable final CodingLiteralContext ctx) {
     return new CodingLiteral(requireNonNull(requireNonNull(ctx).getText()));
   }

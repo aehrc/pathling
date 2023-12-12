@@ -20,7 +20,6 @@ package au.csiro.pathling.fhirpath.parser;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AdditiveExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.AndExpressionContext;
@@ -74,7 +73,7 @@ import javax.annotation.Nonnull;
  *
  * @author Piotr Szul
  */
-class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
+class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   private final boolean isNamespace;
 
@@ -87,64 +86,64 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
   }
 
   @Override
-  public FhirPath<Collection> visitIndexerExpression(
+  public FhirPath visitIndexerExpression(
       final IndexerExpressionContext ctx) {
     throw newUnexpectedExpressionException("IndexerExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitPolarityExpression(
+  public FhirPath visitPolarityExpression(
       final PolarityExpressionContext ctx) {
     throw newUnexpectedExpressionException("PolarityExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitAdditiveExpression(
+  public FhirPath visitAdditiveExpression(
       final AdditiveExpressionContext ctx) {
     throw newUnexpectedExpressionException("AdditiveExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitCombineExpression(
+  public FhirPath visitCombineExpression(
       final CombineExpressionContext ctx) {
     throw newUnexpectedExpressionException("CombineExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitMultiplicativeExpression(
+  public FhirPath visitMultiplicativeExpression(
       final MultiplicativeExpressionContext ctx) {
     throw newUnexpectedExpressionException("MultiplicativeExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitUnionExpression(final UnionExpressionContext ctx) {
+  public FhirPath visitUnionExpression(final UnionExpressionContext ctx) {
     throw newUnexpectedExpressionException("UnionExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitOrExpression(final OrExpressionContext ctx) {
+  public FhirPath visitOrExpression(final OrExpressionContext ctx) {
     throw newUnexpectedExpressionException("OrExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitAndExpression(final AndExpressionContext ctx) {
+  public FhirPath visitAndExpression(final AndExpressionContext ctx) {
     throw newUnexpectedExpressionException("AndExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitMembershipExpression(
+  public FhirPath visitMembershipExpression(
       final MembershipExpressionContext ctx) {
     throw newUnexpectedExpressionException("MembershipExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitInequalityExpression(
+  public FhirPath visitInequalityExpression(
       final InequalityExpressionContext ctx) {
     throw newUnexpectedExpressionException("InequalityExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitInvocationExpression(
+  public FhirPath visitInvocationExpression(
       final InvocationExpressionContext ctx) {
     if (!isNamespace) {
       final TypeSpecifier unqualifiedTypeSpecifier = ((Paths.TypeSpecifierPath) ctx.expression()
@@ -157,173 +156,173 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
   }
 
   @Override
-  public FhirPath<Collection> visitEqualityExpression(
+  public FhirPath visitEqualityExpression(
       final EqualityExpressionContext ctx) {
     throw newUnexpectedExpressionException("EqualityExpression");
   }
 
   @Override
-  public FhirPath<Collection> visitImpliesExpression(
+  public FhirPath visitImpliesExpression(
       final ImpliesExpressionContext ctx) {
     throw newUnexpectedExpressionException("ImpliesExpression");
   }
 
   @SuppressWarnings("RedundantMethodOverride")
   @Override
-  public FhirPath<Collection> visitTermExpression(final TermExpressionContext ctx) {
+  public FhirPath visitTermExpression(final TermExpressionContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
-  public FhirPath<Collection> visitTypeExpression(final TypeExpressionContext ctx) {
+  public FhirPath visitTypeExpression(final TypeExpressionContext ctx) {
     throw newUnexpectedExpressionException("TypeExpression");
   }
 
   @SuppressWarnings("RedundantMethodOverride")
   @Override
-  public FhirPath<Collection> visitInvocationTerm(final InvocationTermContext ctx) {
+  public FhirPath visitInvocationTerm(final InvocationTermContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
-  public FhirPath<Collection> visitLiteralTerm(final LiteralTermContext ctx) {
+  public FhirPath visitLiteralTerm(final LiteralTermContext ctx) {
     throw newUnexpectedExpressionException("LiteralTerm");
   }
 
   @Override
-  public FhirPath<Collection> visitExternalConstantTerm(
+  public FhirPath visitExternalConstantTerm(
       final ExternalConstantTermContext ctx) {
     throw newUnexpectedExpressionException("ExternalConstantTerm");
   }
 
   @Override
-  public FhirPath<Collection> visitParenthesizedTerm(
+  public FhirPath visitParenthesizedTerm(
       final ParenthesizedTermContext ctx) {
     throw newUnexpectedExpressionException("ParenthesizedTerm");
   }
 
   @Override
-  public FhirPath<Collection> visitNullLiteral(final NullLiteralContext ctx) {
+  public FhirPath visitNullLiteral(final NullLiteralContext ctx) {
     throw newUnexpectedExpressionException("NullLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitBooleanLiteral(final BooleanLiteralContext ctx) {
+  public FhirPath visitBooleanLiteral(final BooleanLiteralContext ctx) {
     throw newUnexpectedExpressionException("BooleanLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitStringLiteral(final StringLiteralContext ctx) {
+  public FhirPath visitStringLiteral(final StringLiteralContext ctx) {
     throw newUnexpectedExpressionException("StringLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitNumberLiteral(final NumberLiteralContext ctx) {
+  public FhirPath visitNumberLiteral(final NumberLiteralContext ctx) {
     throw newUnexpectedExpressionException("NumberLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitDateLiteral(final DateLiteralContext ctx) {
+  public FhirPath visitDateLiteral(final DateLiteralContext ctx) {
     throw newUnexpectedExpressionException("DateLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitDateTimeLiteral(final DateTimeLiteralContext ctx) {
+  public FhirPath visitDateTimeLiteral(final DateTimeLiteralContext ctx) {
     throw newUnexpectedExpressionException("DateTimeLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitTimeLiteral(final TimeLiteralContext ctx) {
+  public FhirPath visitTimeLiteral(final TimeLiteralContext ctx) {
     throw newUnexpectedExpressionException("TimeLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitQuantityLiteral(final QuantityLiteralContext ctx) {
+  public FhirPath visitQuantityLiteral(final QuantityLiteralContext ctx) {
     throw newUnexpectedExpressionException("QuantityLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitCodingLiteral(final CodingLiteralContext ctx) {
+  public FhirPath visitCodingLiteral(final CodingLiteralContext ctx) {
     throw newUnexpectedExpressionException("CodingLiteral");
   }
 
   @Override
-  public FhirPath<Collection> visitExternalConstant(final ExternalConstantContext ctx) {
+  public FhirPath visitExternalConstant(final ExternalConstantContext ctx) {
     throw newUnexpectedExpressionException("ExternalConstant");
   }
 
   @SuppressWarnings("RedundantMethodOverride")
   @Override
-  public FhirPath<Collection> visitMemberInvocation(final MemberInvocationContext ctx) {
+  public FhirPath visitMemberInvocation(final MemberInvocationContext ctx) {
     return visitChildren(ctx);
   }
 
   @Override
-  public FhirPath<Collection> visitFunctionInvocation(
+  public FhirPath visitFunctionInvocation(
       final FunctionInvocationContext ctx) {
     throw newUnexpectedExpressionException("FunctionInvocation");
   }
 
   @Override
-  public FhirPath<Collection> visitThisInvocation(final ThisInvocationContext ctx) {
+  public FhirPath visitThisInvocation(final ThisInvocationContext ctx) {
     throw newUnexpectedExpressionException("ThisInvocation");
   }
 
   @Override
-  public FhirPath<Collection> visitIndexInvocation(final IndexInvocationContext ctx) {
+  public FhirPath visitIndexInvocation(final IndexInvocationContext ctx) {
     throw newUnexpectedExpressionException("IndexInvocation");
   }
 
   @Override
-  public FhirPath<Collection> visitTotalInvocation(final TotalInvocationContext ctx) {
+  public FhirPath visitTotalInvocation(final TotalInvocationContext ctx) {
     throw newUnexpectedExpressionException("TotalInvocation");
   }
 
   @Override
-  public FhirPath<Collection> visitFunction(final FunctionContext ctx) {
+  public FhirPath visitFunction(final FunctionContext ctx) {
     throw newUnexpectedExpressionException("Function");
   }
 
   @Override
-  public FhirPath<Collection> visitParamList(final ParamListContext ctx) {
+  public FhirPath visitParamList(final ParamListContext ctx) {
     throw newUnexpectedExpressionException("ParamList");
   }
 
   @Override
-  public FhirPath<Collection> visitQuantity(final QuantityContext ctx) {
+  public FhirPath visitQuantity(final QuantityContext ctx) {
     throw newUnexpectedExpressionException("Quantity");
   }
 
   @Override
-  public FhirPath<Collection> visitUnit(final UnitContext ctx) {
+  public FhirPath visitUnit(final UnitContext ctx) {
     throw newUnexpectedExpressionException("Unit");
   }
 
   @Override
-  public FhirPath<Collection> visitDateTimePrecision(
+  public FhirPath visitDateTimePrecision(
       final DateTimePrecisionContext ctx) {
     throw newUnexpectedExpressionException("DateTimePrecision");
   }
 
   @Override
-  public FhirPath<Collection> visitPluralDateTimePrecision(
+  public FhirPath visitPluralDateTimePrecision(
       final PluralDateTimePrecisionContext ctx) {
     throw newUnexpectedExpressionException("PluralDateTimePrecision");
   }
 
   @Override
-  public FhirPath<Collection> visitTypeSpecifier(final TypeSpecifierContext ctx) {
+  public FhirPath visitTypeSpecifier(final TypeSpecifierContext ctx) {
     throw newUnexpectedExpressionException("TypeSpecifier");
   }
 
   @Override
-  public FhirPath<Collection> visitQualifiedIdentifier(
+  public FhirPath visitQualifiedIdentifier(
       final QualifiedIdentifierContext ctx) {
     throw newUnexpectedExpressionException("QualifiedIdentifier");
   }
 
   @Override
-  public FhirPath<Collection> visitIdentifier(final IdentifierContext ctx) {
+  public FhirPath visitIdentifier(final IdentifierContext ctx) {
     return new Paths.TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
   }
 

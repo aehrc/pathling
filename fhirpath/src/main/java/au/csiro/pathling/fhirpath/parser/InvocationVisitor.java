@@ -24,7 +24,6 @@ import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.FunctionInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.IndexInvocationContext;
@@ -37,7 +36,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -46,7 +44,6 @@ import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.Resource;
 import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
-import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -55,7 +52,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  *
  * @author John Grimes
  */
-class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
+class InvocationVisitor extends FhirPathBaseVisitor<FhirPath> {
 
 
   private static final Set<String> RESOURCE_TYPES = Stream.of(ResourceType.values())
@@ -83,7 +80,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
    */
   @Override
   @Nonnull
-  public FhirPath<Collection> visitMemberInvocation(
+  public FhirPath visitMemberInvocation(
       @Nullable final MemberInvocationContext ctx) {
     final String fhirPath = requireNonNull(ctx).getText();
     if (isRoot && RESOURCE_TYPES.contains(fhirPath)) {
@@ -102,7 +99,7 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
    */
   @Override
   @Nonnull
-  public FhirPath<Collection> visitFunctionInvocation(
+  public FhirPath visitFunctionInvocation(
       @Nullable final FunctionInvocationContext ctx) {
 
     final String functionIdentifier = requireNonNull(ctx).function().identifier().getText();
@@ -111,12 +108,12 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
     // NOTE: Here we assume that a function is either a type specifier function 
     // (and all the arguments are type specifiers) or regular function 
     // (none of the arguments are type specifiers).
-    final FhirPathVisitor<FhirPath<Collection>> paramListVisitor =
+    final FhirPathVisitor<FhirPath> paramListVisitor =
         isTypeSpecifierFunction(functionIdentifier)
         ? new TypeSpecifierVisitor()
         : new Visitor();
 
-    final List<FhirPath<Collection>> arguments = Optional.ofNullable(paramList)
+    final List<FhirPath> arguments = Optional.ofNullable(paramList)
         .map(ParamListContext::expression)
         .map(p -> p.stream()
             .map(paramListVisitor::visit)
@@ -128,21 +125,21 @@ class InvocationVisitor extends FhirPathBaseVisitor<FhirPath<Collection>> {
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitThisInvocation(
+  public FhirPath visitThisInvocation(
       @Nullable final ThisInvocationContext ctx) {
     return new This();
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitIndexInvocation(
+  public FhirPath visitIndexInvocation(
       @Nullable final IndexInvocationContext ctx) {
     throw new InvalidUserInputError("$index is not supported");
   }
 
   @Override
   @Nonnull
-  public FhirPath<Collection> visitTotalInvocation(
+  public FhirPath visitTotalInvocation(
       @Nullable final TotalInvocationContext ctx) {
     throw new InvalidUserInputError("$total is not supported");
   }

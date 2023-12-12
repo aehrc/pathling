@@ -42,19 +42,19 @@ public interface ProjectionContext {
    * @return the new sub-context
    */
   @Nonnull
-  One<ProjectionContext> subContext(@Nonnull final FhirPath<Collection> parent,
+  One<ProjectionContext> subContext(@Nonnull final FhirPath parent,
       boolean unnest, boolean withNulls);
 
   @Nonnull
   default One<ProjectionContext> subContext(
-      @Nonnull final FhirPath<Collection> parent,
+      @Nonnull final FhirPath parent,
       final boolean unnest) {
     return subContext(parent, unnest, false);
   }
 
   @Nonnull
   default One<ProjectionContext> subContext(
-      @Nonnull final FhirPath<Collection> parent) {
+      @Nonnull final FhirPath parent) {
     return subContext(parent, false);
   }
 
@@ -66,6 +66,6 @@ public interface ProjectionContext {
    * @return the result as a column
    */
   @Nonnull
-  One<Collection> evalExpression(@Nonnull final FhirPath<Collection> path);
+  One<Collection> evalExpression(@Nonnull final FhirPath path);
 
 }

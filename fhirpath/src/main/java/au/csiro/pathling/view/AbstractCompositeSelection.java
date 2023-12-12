@@ -18,7 +18,6 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.view.DatasetResult.One;
 import java.util.List;
 import java.util.function.Function;
@@ -34,7 +33,7 @@ import lombok.experimental.NonFinal;
 @AllArgsConstructor
 public abstract class AbstractCompositeSelection implements Selection {
 
-  protected FhirPath<Collection> path;
+  protected FhirPath path;
   List<Selection> components;
 
   @Override
@@ -72,7 +71,7 @@ public abstract class AbstractCompositeSelection implements Selection {
   @Nonnull
   protected One<ProjectionContext> subContext(
       @Nonnull final ProjectionContext context,
-      @Nonnull final FhirPath<Collection> parent) {
+      @Nonnull final FhirPath parent) {
     return context.subContext(parent);
   }
 

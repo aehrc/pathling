@@ -48,7 +48,7 @@ public class Parser {
   @Nonnull
   public Collection evaluate(@Nonnull final String expression,
       @Nonnull final EvaluationContext context) {
-    final FhirPath<Collection> fhirPath = parse(expression);
+    final FhirPath fhirPath = parse(expression);
     return fhirPath.apply(context.getInputContext(), context);
   }
 
@@ -60,7 +60,7 @@ public class Parser {
    * @return a new {@link Collection} object
    */
   @Nonnull
-  public FhirPath<Collection> parse(@Nonnull final String expression) {
+  public FhirPath parse(@Nonnull final String expression) {
     final FhirPathParser parser = buildParser(expression);
 
     return new Visitor().visit(parser.expression());

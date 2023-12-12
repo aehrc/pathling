@@ -17,46 +17,24 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
-import au.csiro.pathling.aggregate.AggregateRequest;
-import au.csiro.pathling.aggregate.AggregateResponse;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.extract.ExtractRequest;
-import au.csiro.pathling.extract.ExtractTest;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths;
-import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
 import au.csiro.pathling.io.CacheableDatabase;
-import au.csiro.pathling.query.QueryParser;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TestHelpers;
-import au.csiro.pathling.view.*;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import com.google.common.collect.Streams;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.spark.sql.*;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
-import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import javax.annotation.Nonnull;
-import java.util.*;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-
-import static au.csiro.pathling.view.AggregationView.AGG_FUNCTIONS;
 
 /**
  * @author John Grimes
@@ -104,7 +82,7 @@ class ExecutorIntegrationTest {
         .show(false);
 
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "where(gender='female').name.where(family.where($this='Oberbrunner298').exists()).given.join(',')");
     System.out.println(path.toExpression());
 
@@ -126,7 +104,7 @@ class ExecutorIntegrationTest {
         .show(false);
 
     final Parser parser = new Parser();
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "reverseResolve(Observation.subject).code.coding.count()");
     System.out.println(path.toExpression());
 
@@ -152,7 +130,7 @@ class ExecutorIntegrationTest {
     //     "where(reverseResolve(Observation.subject).code.coding.count() > 100).name.given.join(',')");
     // System.out.println(path.toExpression());
 
-    final FhirPath<Collection> path = parser.parse(
+    final FhirPath path = parser.parse(
         "reverseResolve(Observation.subject).code.coding.count() > reverseResolve(Condition.subject).code.coding.count()");
     System.out.println(path.toExpression());
 

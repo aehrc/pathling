@@ -44,7 +44,7 @@ public class DefaultProjectionContext implements ProjectionContext {
 
   @Nonnull
   @Override
-  public One<Collection> evalExpression(@Nonnull final FhirPath<Collection> path) {
+  public One<Collection> evalExpression(@Nonnull final FhirPath path) {
     return DatasetResult.pureOne(
         path.apply(evaluationContext.getInputContext(), evaluationContext));
   }
@@ -52,7 +52,7 @@ public class DefaultProjectionContext implements ProjectionContext {
   @Nonnull
   @Override
   public One<ProjectionContext> subContext(
-      @Nonnull final FhirPath<Collection> parent,
+      @Nonnull final FhirPath parent,
       final boolean unnest, final boolean withNulls) {
     final One<Collection> newInputContextResult = evalExpression(parent);
     if (unnest) {
