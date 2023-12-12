@@ -28,7 +28,7 @@ import static au.csiro.pathling.fhirpath.execution.DataRoot.*;
 public class ExecutorUtils {
 
   @Nonnull
-  public static ReverseResolveRoot fromPath(@Nonnull final ResourceRoot master,
+  public static ReverseResolveRoot fromPath(@Nonnull final DataRoot master,
       @Nonnull final EvalFunction reverseJoin) {
     final FhirPath reference = reverseJoin.getArguments().get(0);
     final Resource foreingResource = (Resource) reference.first();

@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import java.util.Set;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class JoinResolverTest {
   void testSimpleJoin() {
     final Parser parser = new Parser();
     final FhirPath path = parser.parse(
-        "reverseResolve(Condition.subject)");
+        "reverseResolve(Condition.subject).id");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
         FhirContext.forR4(),
@@ -50,6 +51,25 @@ class JoinResolverTest {
 
   }
 
+
+  @Test
+  void testSimpleJoinWithNoDependencies() {
+    final Parser parser = new Parser();
+    final FhirPath path = parser.parse(
+        "reverseResolve(Condition.subject)");
+    System.out.println(path.toExpression());
+    final FhirPathExecutor validator = new FhirPathExecutor(
+        FhirContext.forR4(),
+        StaticFunctionRegistry.getInstance(),
+        ResourceType.PATIENT);
+
+    final Set<DataRoot> joins = validator.findJoinsRoots(path);
+    System.out.println(joins);
+    assertEquals(
+        Collections.emptySet(),
+        joins);
+
+  }
 
   @Test
   void testJoinInWhere() {

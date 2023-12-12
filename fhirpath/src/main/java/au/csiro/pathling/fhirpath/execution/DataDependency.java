@@ -15,28 +15,25 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.fhirpath;
+package au.csiro.pathling.fhirpath.execution;
 
-import java.util.stream.Stream;
+
+import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
+import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import javax.annotation.Nonnull;
 
-public interface FhirPathStreamVisitor<E> extends FhirPathVisitor<Stream<E>> {
+@Value(staticConstructor = "of")
+public class DataDependency {
 
   @Nonnull
-  @Override
-  default Stream<E> nullValue() {
-    return Stream.empty();
-  }
+  DataRoot root;
 
   @Nonnull
-  @Override
-  default Stream<E> combiner(@Nonnull final Stream<E> left,
-      @Nonnull final Stream<E> right) {
-    return Stream.concat(left, right);
-  }
+  String element;
 
-  @Nonnull
-  default Stream<E> visitChildren(@Nonnull final FhirPath path) {
-    return path.children().flatMap(x -> x.accept(this));
+  public static DataDependency ofResource(@Nonnull final ResourceType resourceType,
+      @Nonnull final String element) {
+    return new DataDependency(ResourceRoot.of(resourceType), element);
   }
 }

@@ -21,6 +21,7 @@ import static au.csiro.pathling.utilities.Functions.maybeCast;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
+import au.csiro.pathling.fhirpath.FhirPathVisitor;
 import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -28,9 +29,13 @@ import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.context.DefaultPathEvalContext;
 import au.csiro.pathling.fhirpath.context.FhirpathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
+import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
+import au.csiro.pathling.fhirpath.path.Paths.This;
+import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
@@ -66,6 +71,56 @@ public class FhirPathExecutor {
       } else {
         return visitChildren(path);
       }
+    }
+  }
+
+  @Value
+  static class DependencyFinderVisitor implements FhirPathStreamVisitor<DataDependency> {
+
+    @Nonnull
+    Optional<DataRoot> resourceContext;
+
+    @Nonnull
+    @Override
+    public Stream<DataDependency> visitPath(@Nonnull final FhirPath path) {
+      if (path instanceof Traversal) {
+        return resourceContext.map(r -> DataDependency.of(r, ((Traversal) path).getPropertyName()))
+            .stream();
+      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
+          .getFunctionIdentifier())) {
+        return Stream.empty();
+      } else {
+        return visitChildren(path);
+      }
+    }
+
+    @Nonnull
+    @Override
+    public FhirPathVisitor<Stream<DataDependency>> enterContext(@Nonnull final FhirPath path) {
+      if (path instanceof Paths.Resource) {
+        return new DependencyFinderVisitor(Optional.of(ResourceRoot.of(
+            ((Paths.Resource) path).getResourceType())));
+      } else if (isTransparent(path)) {
+        return this;
+      } else if (path instanceof EvalFunction && "reverseResolve".equals(((EvalFunction) path)
+          .getFunctionIdentifier())) {
+        return new DependencyFinderVisitor(
+            Optional.of(ExecutorUtils.fromPath(resourceContext.orElseThrow(),
+                (EvalFunction) path)));
+      } else {
+        return resourceContext.isEmpty()
+               ? this
+               : new DependencyFinderVisitor(Optional.empty());
+      }
+    }
+
+    private static final Set<String> TRANSPARENT_FUNCTIONS = Set.of("first", "last", "where");
+
+    static boolean isTransparent(@Nonnull final FhirPath path) {
+      return
+          (path instanceof EvalFunction && TRANSPARENT_FUNCTIONS.contains(((EvalFunction) path)
+              .getFunctionIdentifier()))
+              || (path instanceof This);
     }
   }
 
@@ -186,7 +241,17 @@ public class FhirPathExecutor {
   }
 
   Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
-    return path.accept(new DataRootFinderVisitor(subjectResource))
+    // return path.accept(new DataRootFinderVisitor(subjectResource))
+    //     .collect(Collectors.toUnmodifiableSet());
+    return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
+        .map(DataDependency::getRoot)
+        .filter(ReverseResolveRoot.class::isInstance)
         .collect(Collectors.toUnmodifiableSet());
   }
+
+  Set<DataDependency> findDataDependencies(@Nonnull final FhirPath path) {
+    return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
+        .collect(Collectors.toUnmodifiableSet());
+  }
+
 }

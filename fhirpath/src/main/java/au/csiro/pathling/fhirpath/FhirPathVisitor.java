@@ -18,9 +18,20 @@
 package au.csiro.pathling.fhirpath;
 
 import au.csiro.pathling.fhirpath.FhirPath.Composite;
+import lombok.Value;
 import javax.annotation.Nonnull;
 
 public interface FhirPathVisitor<T> {
+
+  @Value(staticConstructor = "of")
+  class Contextual<T> {
+
+    @Nonnull
+    T value;
+
+    @Nonnull
+    FhirPathVisitor<T> context;
+  }
 
 
   @Nonnull
@@ -35,8 +46,10 @@ public interface FhirPathVisitor<T> {
   @Nonnull
   default T visitComposite(@Nonnull final Composite path) {
     return path.asStream()
-        .reduce(nullValue(), (result, child) -> combiner(result, child.accept(this)),
-            (result1, result2) -> result1);
+        .reduce(Contextual.of(nullValue(), this),
+            (result, child) -> Contextual.of(combiner(result.value, child.accept(result.context)),
+                result.context.enterContext(child)),
+            (result1, result2) -> result1).value;
   }
 
   /**
