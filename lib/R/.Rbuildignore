@@ -13,3 +13,4 @@
 ^README-dev.md$
 ^spark-warehouse
 ^src
+^cran-comments\.md$
