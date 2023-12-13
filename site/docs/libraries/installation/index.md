@@ -25,11 +25,8 @@ Prerequisites:
 To install, run these commands:
 
 ```r
-# Install the `remotes` package.
-install.packages('remotes')
-
 # Install the `pathling` package.
-remotes::install_url('https://pathling.csiro.au/R/pathling_6.4.0.tar.gz', upgrade = FALSE)
+install.packages('pathling')
 
 # Install the Spark version required by Pathling.
 pathling::pathling_install_spark()
