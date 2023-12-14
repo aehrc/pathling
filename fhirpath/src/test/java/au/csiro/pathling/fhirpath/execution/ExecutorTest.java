@@ -111,11 +111,13 @@ public class ExecutorTest {
     System.out.println(path.toExpression());
 
     final FhirPathExecutor executor = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource
+    );
 
-    final Dataset<Row> result = executor.execute(path, dataSource);
+    final Dataset<Row> result = executor.execute(path);
     result.show();
     System.out.println(result.queryExecution().executedPlan().toString());
   }
@@ -133,11 +135,12 @@ public class ExecutorTest {
     System.out.println(path.toExpression());
 
     final FhirPathExecutor executor = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
-    final Dataset<Row> result = executor.execute(path, dataSource);
+    final Dataset<Row> result = executor.execute(path);
     result.show();
     System.out.println(result.queryExecution().executedPlan().toString());
   }

@@ -17,19 +17,25 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Set;
+import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 class DependencyResolverTest {
+
+
+  @Nonnull
+  final DataSource dataSource = mock(DataSource.class);
 
   @Test
   void testImplicitProperty() {
@@ -38,9 +44,10 @@ class DependencyResolverTest {
         "gender");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataDependency> dependencies = validator.findDataDependencies(path);
     System.out.println(dependencies);
@@ -49,7 +56,7 @@ class DependencyResolverTest {
         DataDependency.ofResource(ResourceType.PATIENT, "gender")
     ), dependencies);
   }
-  
+
   @Test
   void testQualifiedProperty() {
     final Parser parser = new Parser();
@@ -57,9 +64,10 @@ class DependencyResolverTest {
         "Patient.gender");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataDependency> dependencies = validator.findDataDependencies(path);
     System.out.println(dependencies);
@@ -76,9 +84,10 @@ class DependencyResolverTest {
         "Patient.name.family = Patient.gender");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataDependency> dependencies = validator.findDataDependencies(path);
     System.out.println(dependencies);
@@ -96,9 +105,10 @@ class DependencyResolverTest {
         "Patient.first().name.family = Condition.last().code");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataDependency> dependencies = validator.findDataDependencies(path);
     System.out.println(dependencies);
@@ -117,9 +127,10 @@ class DependencyResolverTest {
         "Patient.where(name.family = first().gender).last().status");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataDependency> dependencies = validator.findDataDependencies(path);
     System.out.println(dependencies);
@@ -139,9 +150,10 @@ class DependencyResolverTest {
         "where($this.where(identifier.count() >2).exists()).name.given.join(Patient.gender)");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataDependency> dependencies = validator.findDataDependencies(path);
     System.out.println(dependencies);
@@ -160,9 +172,10 @@ class DependencyResolverTest {
         "where(reverseResolve(Condition.subject).code.coding.count() > 20).name");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataDependency> dependencies = validator.findDataDependencies(path);
     System.out.println(dependencies);
@@ -174,8 +187,6 @@ class DependencyResolverTest {
             "code")
     ), dependencies);
 
-
     System.out.println(validator.findDataViews(path));
-    
   }
 }

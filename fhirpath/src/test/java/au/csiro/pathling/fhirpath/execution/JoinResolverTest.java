@@ -18,19 +18,25 @@
 package au.csiro.pathling.fhirpath.execution;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Collections;
 import java.util.Set;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
+import javax.annotation.Nonnull;
 
 class JoinResolverTest {
 
+  @Nonnull
+  final DataSource dataSource = mock(DataSource.class);
+  
   @Test
   void testSimpleJoin() {
     final Parser parser = new Parser();
@@ -38,9 +44,10 @@ class JoinResolverTest {
         "reverseResolve(Condition.subject).id");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataRoot> joins = validator.findJoinsRoots(path);
     System.out.println(joins);
@@ -59,9 +66,10 @@ class JoinResolverTest {
         "reverseResolve(Condition.subject)");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataRoot> joins = validator.findJoinsRoots(path);
     System.out.println(joins);
@@ -78,9 +86,10 @@ class JoinResolverTest {
         "where(reverseResolve(Observation.subject).code.count() > 10).gender");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataRoot> joins = validator.findJoinsRoots(
         path);
@@ -100,9 +109,10 @@ class JoinResolverTest {
         "where(reverseResolve(Condition.encounter).code.count() > 10).reverseResolve(Condition.encounter).code");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.ENCOUNTER,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.ENCOUNTER);
+        dataSource);
 
     final Set<DataRoot> joins = validator.findJoinsRoots(
         path);
@@ -123,9 +133,10 @@ class JoinResolverTest {
         "reverseResolve(Condition.subject).code.count() >  reverseResolve(Observation.subject).code.count()");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataRoot> joins = validator.findJoinsRoots(
         path);
@@ -147,9 +158,10 @@ class JoinResolverTest {
         "reverseResolve(Encounter.subject).reverseResolve(Condition.encounter).code.count()");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Set<DataRoot> joins = validator.findJoinsRoots(
         path);

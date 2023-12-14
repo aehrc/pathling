@@ -17,8 +17,6 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
-import static au.csiro.pathling.utilities.Functions.maybeCast;
-
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
 import au.csiro.pathling.fhirpath.FhirPathVisitor;
@@ -32,19 +30,20 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
+import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import lombok.Builder;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -150,13 +149,16 @@ public class FhirPathExecutor {
   }
 
   @Nonnull
+  ResourceType subjectResource;
+
+  @Nonnull
   FhirContext fhirContext;
 
   @Nonnull
   FunctionRegistry<?> functionRegistry;
 
   @Nonnull
-  ResourceType subjectResource;
+  DataSource dataSource;
 
   @Nonnull
   public Collection validate(@Nonnull final FhirPath path) {
@@ -173,8 +175,7 @@ public class FhirPathExecutor {
 
 
   @Nonnull
-  public Dataset<Row> resourceDataset(@Nonnull final ResourceType resourceType,
-      @Nonnull final DataSource dataSource) {
+  Dataset<Row> resourceDataset(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> dataset = dataSource.read(resourceType);
     return dataset.select(
         dataset.col("id"),
@@ -187,9 +188,8 @@ public class FhirPathExecutor {
 
 
   @Nonnull
-  public Dataset<Row> reverseJoinDataset(@Nonnull final ReverseResolveRoot dataRoot,
-      @Nonnull final List<String> dependencies,
-      @Nonnull final DataSource dataSource) {
+  Dataset<Row> reverseJoinDataset(@Nonnull final ReverseResolveRoot dataRoot,
+      @Nonnull final List<String> dependencies) {
     final Dataset<Row> dataset = dataSource.read(dataRoot.getForeignResourceType());
     final Set<String> columns = Stream.of(dataset.columns())
         .collect(Collectors.toUnmodifiableSet());
@@ -209,17 +209,18 @@ public class FhirPathExecutor {
         );
   }
 
-
+  public Dataset<Row> execute(@Nonnull final String expression) {
+    return execute(new Parser().parse(expression));
+  }
+  
   @Nonnull
-  public Dataset<Row> execute(@Nonnull final FhirPath path,
-      @Nonnull final DataSource dataSource) {
-
+  public Dataset<Row> execute(@Nonnull final FhirPath path) {
     // just as above ... but with a more intelligent resourceResolver
     final ResourceResolver resourceResolver = new EmptyResourceResolver();
 
     // we will need to extract the dependencies and create the map for and the dataset;
     // but for now just make it work for the main resource
-    final Dataset<Row> patients = resourceDataset(subjectResource, dataSource);
+    final Dataset<Row> patients = resourceDataset(subjectResource);
 
     final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
         resourceResolver.resolveResource(subjectResource));
@@ -244,8 +245,7 @@ public class FhirPathExecutor {
 
       final Dataset<Row> foreignDatasetJoin = reverseJoinDataset(
           reverseJoin,
-          reverseJoinsView.getDependencies(),
-          dataSource
+          reverseJoinsView.getDependencies()
       );
 
       derivedDataset = derivedDataset.join(

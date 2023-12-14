@@ -29,7 +29,9 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import org.apache.spark.sql.*;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -87,11 +89,12 @@ class ExecutorIntegrationTest {
     System.out.println(path.toExpression());
 
     final FhirPathExecutor executor = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
-    final Dataset<Row> result = executor.execute(path, dataSource);
+    final Dataset<Row> result = executor.execute(path);
     result.show();
     System.out.println(result.queryExecution().executedPlan().toString());
   }
@@ -99,7 +102,6 @@ class ExecutorIntegrationTest {
 
   @Test
   void testSimpleReverseResolve() {
-
     dataSource.read(ResourceType.PATIENT).select("id", "gender", "name")
         .show(false);
 
@@ -109,11 +111,12 @@ class ExecutorIntegrationTest {
     System.out.println(path.toExpression());
 
     final FhirPathExecutor executor = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
-    final Dataset<Row> result = executor.execute(path, dataSource);
+    final Dataset<Row> result = executor.execute(path);
     result.show();
     System.out.println(result.queryExecution().executedPlan().toString());
   }
@@ -131,11 +134,12 @@ class ExecutorIntegrationTest {
     System.out.println(path.toExpression());
 
     final FhirPathExecutor executor = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
-    final Dataset<Row> result = executor.execute(path, dataSource);
+    final Dataset<Row> result = executor.execute(path);
     result.show();
     System.out.println(result.queryExecution().executedPlan().toString());
   }

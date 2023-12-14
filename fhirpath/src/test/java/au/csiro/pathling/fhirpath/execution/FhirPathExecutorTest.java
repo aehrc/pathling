@@ -21,12 +21,18 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
+import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
+import javax.annotation.Nonnull;
+
+import static org.mockito.Mockito.mock;
 
 class FhirPathExecutorTest {
 
+  @Nonnull
+  final DataSource dataSource = mock(DataSource.class);
   @Test
   void testValidateSimpleResourcePath() {
 
@@ -35,9 +41,10 @@ class FhirPathExecutorTest {
         "where(name.family='Smith').name.given.join(',')");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Collection result = validator.validate(path);
     System.out.println(result);
@@ -51,9 +58,10 @@ class FhirPathExecutorTest {
         "where(name.family='Smith').reverseResolve(Condition.subject).code.coding");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Collection result = validator.validate(path);
     System.out.println(result);
@@ -68,9 +76,10 @@ class FhirPathExecutorTest {
         "Patient.id");
     System.out.println(path.toExpression());
     final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
-        ResourceType.PATIENT);
+        dataSource);
 
     final Collection result = validator.validate(path);
     System.out.println(result);
