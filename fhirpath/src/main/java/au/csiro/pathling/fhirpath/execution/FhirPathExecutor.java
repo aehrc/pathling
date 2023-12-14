@@ -38,6 +38,7 @@ import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.fhirpath.path.Paths.Traversal;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -186,6 +187,30 @@ public class FhirPathExecutor {
 
 
   @Nonnull
+  public Dataset<Row> reverseJoinDataset(@Nonnull final ReverseResolveRoot dataRoot,
+      @Nonnull final List<String> dependencies,
+      @Nonnull final DataSource dataSource) {
+    final Dataset<Row> dataset = dataSource.read(dataRoot.getForeignResourceType());
+    final Set<String> columns = Stream.of(dataset.columns())
+        .collect(Collectors.toUnmodifiableSet());
+    final String joinTag = dataRoot.getTag();
+
+    // TODO: make it better
+    final Column referenceColumn = dataset.col(dataRoot.getForeignResourcePath())
+        .getField("reference");
+    return dataset.groupBy(referenceColumn.alias(dataRoot.getKeyTag()))
+        .agg(
+            functions.collect_list(
+                functions.struct(
+                    dependencies.stream().filter(columns::contains)
+                        .map(dataset::col).toArray(Column[]::new)
+                )
+            ).alias(joinTag)
+        );
+  }
+
+
+  @Nonnull
   public Dataset<Row> execute(@Nonnull final FhirPath path,
       @Nonnull final DataSource dataSource) {
 
@@ -194,8 +219,6 @@ public class FhirPathExecutor {
 
     // we will need to extract the dependencies and create the map for and the dataset;
     // but for now just make it work for the main resource
-    final Dataset<Row> dataset = dataSource.read(subjectResource);
-
     final Dataset<Row> patients = resourceDataset(subjectResource, dataSource);
 
     final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
@@ -205,41 +228,37 @@ public class FhirPathExecutor {
         functionRegistry,
         resourceResolver);
 
-    final List<ReverseResolveRoot> reverseJoins = findJoinsRoots(path).stream()
-        .map(maybeCast(ReverseResolveRoot.class))
-        .flatMap(Optional::stream)
+    final List<DataView> reverseJoinsViews = findDataViews(path).stream()
+        .filter(dv -> dv.getRoot() instanceof ReverseResolveRoot)
         .collect(Collectors.toUnmodifiableList());
+
     // for each join eval the reference column
 
     Dataset<Row> derivedDataset = patients;
-    for (ReverseResolveRoot reverseJoin : reverseJoins) {
-      final Dataset<Row> foreignDataset = resourceDataset(reverseJoin.getForeignResourceType(),
-          dataSource);
-      final String joinTag = reverseJoin.getTag();
+    for (DataView reverseJoinsView : reverseJoinsViews) {
+      final ReverseResolveRoot reverseJoin = (ReverseResolveRoot) reverseJoinsView.getRoot();
 
-      // TODO: make it better
-      final Column referenceColumn = foreignDataset.col(
-          reverseJoin.getForeignResourceType().toCode() + "."
-              + reverseJoin.getForeignResourcePath()).getField("reference");
+      if (!ResourceRoot.of(subjectResource).equals(reverseJoin.getMaster())) {
+        throw new IllegalStateException("Only reverse resolve to subject resource");
+      }
 
-      final Dataset<Row> foreignDatasetJoin =
-          foreignDataset.groupBy(referenceColumn.alias(reverseJoin.getKeyTag()))
-              .agg(
-                  functions.collect_list(
-                      foreignDataset.col(reverseJoin.getForeignResourceType().toCode())
-                  ).alias(joinTag)
-              );
+      final Dataset<Row> foreignDatasetJoin = reverseJoinDataset(
+          reverseJoin,
+          reverseJoinsView.getDependencies(),
+          dataSource
+      );
+
       derivedDataset = derivedDataset.join(
           foreignDatasetJoin,
           patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getKeyTag())),
           "left_outer"
       ).drop(reverseJoin.getKeyTag());
     }
-
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return derivedDataset.select(functions.col("id"), result.getColumn().alias("value"));
   }
 
+  @Nonnull
   Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
     // return path.accept(new DataRootFinderVisitor(subjectResource))
     //     .collect(Collectors.toUnmodifiableSet());
@@ -249,9 +268,21 @@ public class FhirPathExecutor {
         .collect(Collectors.toUnmodifiableSet());
   }
 
+  @Nonnull
   Set<DataDependency> findDataDependencies(@Nonnull final FhirPath path) {
     return path.accept(new DependencyFinderVisitor(Optional.of(ResourceRoot.of(subjectResource))))
         .collect(Collectors.toUnmodifiableSet());
   }
+
+
+  @Nonnull
+  List<DataView> findDataViews(@Nonnull final FhirPath path) {
+    return findDataDependencies(path).stream().collect(
+            Collectors.groupingBy(DataDependency::getRoot,
+                Collectors.mapping(DataDependency::getElement, Collectors.toUnmodifiableList()))
+        ).entrySet().stream().map(e -> DataView.of(e.getKey(), e.getValue()))
+        .collect(Collectors.toUnmodifiableList());
+  }
+
 
 }

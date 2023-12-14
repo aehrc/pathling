@@ -126,14 +126,9 @@ class ExecutorIntegrationTest {
         .show(false);
 
     final Parser parser = new Parser();
-    // final FhirPath<Collection> path = parser.parse(
-    //     "where(reverseResolve(Observation.subject).code.coding.count() > 100).name.given.join(',')");
-    // System.out.println(path.toExpression());
-
     final FhirPath path = parser.parse(
         "reverseResolve(Observation.subject).code.coding.count() > reverseResolve(Condition.subject).code.coding.count()");
     System.out.println(path.toExpression());
-
 
     final FhirPathExecutor executor = new FhirPathExecutor(
         FhirContext.forR4(),

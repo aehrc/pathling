@@ -173,5 +173,9 @@ class DependencyResolverTest {
             ReverseResolveRoot.ofResource(ResourceType.PATIENT, ResourceType.CONDITION, "subject"),
             "code")
     ), dependencies);
+
+
+    System.out.println(validator.findDataViews(path));
+    
   }
 }
