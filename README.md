@@ -28,6 +28,28 @@ includes both language libraries and a server implementation.
 
 ## What can it do?
 
+### Query and transformation of FHIR data
+
+[FHIR R4](https://hl7.org/fhir) is the dominant standard for exchanging health
+data. It comes in both [JSON](https://hl7.org/fhir/json.html)
+or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
+different types of resources, such
+as [Patient](https://hl7.org/fhir/patient.html), 
+[Observation](https://hl7.org/fhir/observation.html), 
+[Condition](https://hl7.org/fhir/condition.html), 
+[Procedure](https://hl7.org/fhir/procedure.html), and many more.
+
+Pathling is capable of reading all the different types of FHIR resources into a
+format suitable for data analysis tasks. This makes the following things
+possible:
+
+- Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
+- Transforming data into other formats, such as CSV
+  or [Parquet](https://parquet.apache.org/)
+- Performing terminology queries against coded fields within the FHIR data
+
+See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more information.
+
 ### Terminology queries
 
 Health data often contains codes from systems such
@@ -50,28 +72,6 @@ Examples of the types of questions that can be answered include:
   definition?
 
 See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology) for more information.
-
-### Query and transformation of FHIR data
-
-[FHIR R4](https://hl7.org/fhir) is the dominant standard for exchanging health
-data. It comes in both [JSON](https://hl7.org/fhir/json.html)
-or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
-different types of resources, such
-as [Patient](https://hl7.org/fhir/patient.html), 
-[Observation](https://hl7.org/fhir/observation.html), 
-[Condition](https://hl7.org/fhir/condition.html), 
-[Procedure](https://hl7.org/fhir/procedure.html), and many more.
-
-Pathling is capable of reading all the different types of FHIR resources into a
-format suitable for data analysis tasks. This makes the following things
-possible:
-
-- Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
-- Transforming data into other formats, such as CSV
-  or [Parquet](https://parquet.apache.org/)
-- Performing terminology queries against coded fields within the FHIR data
-
-See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more information.
 
 ### FHIR analytics API
 
