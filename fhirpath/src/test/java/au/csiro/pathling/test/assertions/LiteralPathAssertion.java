@@ -20,6 +20,7 @@ package au.csiro.pathling.test.assertions;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.Literal;
 import javax.annotation.Nonnull;
@@ -35,9 +36,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @NotImplemented
 public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAssertion> {
 
-  LiteralPathAssertion(@Nonnull final Collection result,
-      @Nonnull final EvaluationContext evaluationContext) {
-    super(result, evaluationContext);
+  LiteralPathAssertion(@Nonnull final CollectionDataset datasetResult) {
+    super(datasetResult);
   }
 
   //TODO: LiteralPathAssertion

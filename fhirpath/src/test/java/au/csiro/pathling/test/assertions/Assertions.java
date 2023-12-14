@@ -27,6 +27,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.DataFrameReader;
 import org.apache.spark.sql.Dataset;
@@ -38,16 +39,15 @@ import org.opentest4j.AssertionFailedError;
 public abstract class Assertions {
 
   @Nonnull
-  public static FhirPathAssertion assertThat(@Nonnull final Collection result,
-      @Nonnull final EvaluationContext evaluationContext) {
-    return new FhirPathAssertion(result, evaluationContext);
+  public static FhirPathAssertion assertThat(@Nonnull final CollectionDataset datasetResult) {
+    return new FhirPathAssertion(datasetResult);
   }
 
-  @Nonnull
-  public static ResourcePathAssertion assertThat(@Nonnull final ResourceCollection fhirPath,
-      @Nonnull final EvaluationContext evaluationContext) {
-    return new ResourcePathAssertion(fhirPath, evaluationContext);
-  }
+  // @Nonnull
+  // public static ResourcePathAssertion assertThat(@Nonnull final ResourceCollection fhirPath,
+  //     @Nonnull final EvaluationContext evaluationContext) {
+  //   return new ResourcePathAssertion(fhirPath, evaluationContext);
+  // }
 
   // @Nonnull
   // public static ElementPathAssertion assertThat(@Nonnull final PrimitivePath fhirPath) {

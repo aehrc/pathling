@@ -15,18 +15,20 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.test.assertions;
+package au.csiro.pathling.fhirpath.execution;
 
-import au.csiro.pathling.fhirpath.execution.CollectionDataset;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
+import lombok.Value;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
 
-/**
- * @author John Grimes
- */
-public class FhirPathAssertion extends BaseFhirPathAssertion<FhirPathAssertion> {
+@Value(staticConstructor = "of")
+public class CollectionDataset {
 
-  FhirPathAssertion(@Nonnull final CollectionDataset result) {
-    super(result);
-  }
+  @Nonnull
+  Dataset<Row> dataset;
 
+  @Nonnull
+  Collection value;
 }

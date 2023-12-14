@@ -58,7 +58,7 @@ public class ParserTest extends AbstractParserTest {
 
   @SuppressWarnings("SameParameterValue")
   private <T extends Throwable> T assertThrows(final Class<T> errorType, final String expression) {
-    return Assertions.assertThrows(errorType, () -> parser.evaluate(expression, evaluationContext));
+    return Assertions.assertThrows(errorType, () -> executor.evaluate(expression));
   }
 
   private TranslateExpectations setupMockTranslationFor_195662009_444814009(
@@ -314,7 +314,7 @@ public class ParserTest extends AbstractParserTest {
         .selectOrderedResult()
         .hasRows(expectedCountResult.changeValue(PATIENT_ID_bbd33563, 0L));
   }
-  
+
   @Test
   void testSimpleSubsumes() {
 
@@ -322,7 +322,7 @@ public class ParserTest extends AbstractParserTest {
     // Viral sinusitis (disorder) = http://snomed.info/sct|444814009 not in (PATIENT_ID_2b36c1e2,
     // PATIENT_ID_bbd33563, PATIENT_ID_7001ad9c)
     // Chronic sinusitis (disorder) = http://snomed.info/sct|40055000 in (PATIENT_ID_7001ad9c)
-    
+
     assertThatResultOf(ResourceType.CONDITION,
         "code.coding.subsumes(http://snomed.info/sct|40055000)")
         .isElementPath(BooleanCollection.class)
@@ -335,7 +335,7 @@ public class ParserTest extends AbstractParserTest {
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSimpleSubsumes-self.tsv");
   }
-  
+
   @Test
   void testSimpleSubsumedBy() {
 
@@ -356,6 +356,7 @@ public class ParserTest extends AbstractParserTest {
         .selectOrderedResult()
         .hasRows(spark, "responses/ParserTest/testSimpleSubsumes-self.tsv");
   }
+
   @Test
   void testSubsumesAndSubsumedBy() {
 

@@ -43,7 +43,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import lombok.Builder;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -212,7 +211,7 @@ public class FhirPathExecutor {
   public Dataset<Row> execute(@Nonnull final String expression) {
     return execute(new Parser().parse(expression));
   }
-  
+
   @Nonnull
   public Dataset<Row> execute(@Nonnull final FhirPath path) {
     // just as above ... but with a more intelligent resourceResolver
@@ -256,6 +255,57 @@ public class FhirPathExecutor {
     }
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return derivedDataset.select(functions.col("id"), result.getColumn().alias("value"));
+  }
+
+
+  @Nonnull
+  public CollectionDataset evaluate(@Nonnull final FhirPath path) {
+    // just as above ... but with a more intelligent resourceResolver
+    final ResourceResolver resourceResolver = new EmptyResourceResolver();
+
+    // we will need to extract the dependencies and create the map for and the dataset;
+    // but for now just make it work for the main resource
+    final Dataset<Row> patients = resourceDataset(subjectResource);
+
+    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+        resourceResolver.resolveResource(subjectResource));
+    final PathEvalContext evalContext = new DefaultPathEvalContext(
+        fhirpathContext,
+        functionRegistry,
+        resourceResolver);
+
+    final List<DataView> reverseJoinsViews = findDataViews(path).stream()
+        .filter(dv -> dv.getRoot() instanceof ReverseResolveRoot)
+        .collect(Collectors.toUnmodifiableList());
+
+    // for each join eval the reference column
+
+    Dataset<Row> derivedDataset = patients;
+    for (final DataView reverseJoinsView : reverseJoinsViews) {
+      final ReverseResolveRoot reverseJoin = (ReverseResolveRoot) reverseJoinsView.getRoot();
+
+      if (!ResourceRoot.of(subjectResource).equals(reverseJoin.getMaster())) {
+        throw new IllegalStateException("Only reverse resolve to subject resource");
+      }
+
+      final Dataset<Row> foreignDatasetJoin = reverseJoinDataset(
+          reverseJoin,
+          reverseJoinsView.getDependencies()
+      );
+
+      derivedDataset = derivedDataset.join(
+          foreignDatasetJoin,
+          patients.col("key").equalTo(foreignDatasetJoin.col(reverseJoin.getKeyTag())),
+          "left_outer"
+      ).drop(reverseJoin.getKeyTag());
+    }
+    final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
+    return CollectionDataset.of(derivedDataset, result);
+  }
+
+  @Nonnull
+  public CollectionDataset evaluate(@Nonnull final String fhirpathExpression) {
+    return evaluate(new Parser().parse(fhirpathExpression));
   }
 
   @Nonnull

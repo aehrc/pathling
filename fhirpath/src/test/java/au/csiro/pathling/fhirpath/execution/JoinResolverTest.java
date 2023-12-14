@@ -36,7 +36,7 @@ class JoinResolverTest {
 
   @Nonnull
   final DataSource dataSource = mock(DataSource.class);
-  
+
   @Test
   void testSimpleJoin() {
     final Parser parser = new Parser();
@@ -55,10 +55,8 @@ class JoinResolverTest {
         Set.of(
             ReverseResolveRoot.ofResource(ResourceType.PATIENT, ResourceType.CONDITION, "subject")),
         joins);
-
   }
-
-
+  
   @Test
   void testSimpleJoinWithNoDependencies() {
     final Parser parser = new Parser();

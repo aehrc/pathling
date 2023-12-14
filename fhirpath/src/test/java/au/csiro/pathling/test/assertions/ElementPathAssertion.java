@@ -20,6 +20,7 @@ package au.csiro.pathling.test.assertions;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import javax.annotation.Nonnull;
 
 /**
@@ -29,9 +30,8 @@ import javax.annotation.Nonnull;
 @NotImplemented
 public class ElementPathAssertion extends BaseFhirPathAssertion<ElementPathAssertion> {
 
-  ElementPathAssertion(@Nonnull final Collection result,
-      @Nonnull final EvaluationContext evaluationContext) {
-    super(result, evaluationContext);
+  ElementPathAssertion(@Nonnull final CollectionDataset datasetResult) {
+    super(datasetResult);
   }
 
   // TODO: check

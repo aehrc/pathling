@@ -24,6 +24,7 @@ import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -45,33 +46,25 @@ import static org.junit.jupiter.api.Assertions.fail;
 public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> {
 
   @Nonnull
+  protected final CollectionDataset datasetResult;
   protected final Collection result;
 
-  @Nonnull
-  private final EvaluationContext evaluationContext;
-
-  BaseFhirPathAssertion(@Nonnull final Collection result,
-      @Nonnull final EvaluationContext evaluationContext) {
-    this.result = result;
-    this.evaluationContext = evaluationContext;
+  BaseFhirPathAssertion(@Nonnull final CollectionDataset datasetResult) {
+    this.datasetResult = datasetResult;
+    this.result = datasetResult.getValue();
   }
 
   // TODO: implement with columns
 
   @Nonnull
   public DatasetAssert selectResult() {
-    final Column[] selection = new Column[]{
-        evaluationContext.getResource().traverse("id").get().getColumn().alias("id"),
-        result.getColumn().alias("value")
-    };
-    // and exploded the result if needed to compare with CSV 
-    final Dataset<Row> resultDataset = evaluationContext.getDataset()
-        .select(selection);
+    final Dataset<Row> resultDataset = datasetResult.getDataset()
+        .select(functions.col("id"), result.getColumn().alias("value"));
     final StructType schema = resultDataset.schema();
     final Dataset<Row> explodedDataset = schema.fields()[schema.fieldIndex(
         "value")].dataType() instanceof ArrayType
                                          ? resultDataset.select(resultDataset.col("id"),
-        functions.explode(resultDataset.col("value"))
+        functions.explode_outer(resultDataset.col("value"))
             .alias("value"))
                                          : resultDataset;
 
@@ -80,15 +73,17 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   @Nonnull
   public DatasetAssert selectOrderedResult() {
+    final Dataset<Row> resultDataset = datasetResult.getDataset()
+        .select(functions.col("id"), result.getColumn().alias("value"));
+    final StructType schema = resultDataset.schema();
+    final Dataset<Row> explodedDataset = schema.fields()[schema.fieldIndex(
+        "value")].dataType() instanceof ArrayType
+                                         ? resultDataset.select(resultDataset.col("id"),
+        functions.explode_outer(resultDataset.col("value"))
+            .alias("value"))
+                                         : resultDataset;
 
-    //
-    final Column[] selection = new Column[]{
-        evaluationContext.getResource().traverse("id").get().getColumn(),
-        result.getColumn()
-    };
-    // TODO: Update this to make sure that it is ordered
-    // and exploded is needed
-    return DatasetAssert.of(evaluationContext.getDataset().select(selection));
+    return DatasetAssert.of(explodedDataset.orderBy("id"));
   }
 
   //
@@ -146,18 +141,18 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   public ElementPathAssertion isElementPath(final Class<? extends Collection> ofType) {
     assertTrue(ofType.isAssignableFrom(result.getClass()));
-    return new ElementPathAssertion(result, evaluationContext);
+    return new ElementPathAssertion(datasetResult);
   }
 
   public ResourcePathAssertion isResourcePath() {
     assertTrue(ResourceCollection.class.isAssignableFrom(result.getClass()));
-    return new ResourcePathAssertion((ResourceCollection) result, evaluationContext);
+    return new ResourcePathAssertion((ResourceCollection) result, datasetResult);
   }
 
   public LiteralPathAssertion isLiteralPath(final Class<? extends Collection> ofType) {
     assertTrue(ofType.isAssignableFrom(result.getClass()));
     assertTrue(result.getColumn().expr() instanceof Literal);
-    return new LiteralPathAssertion(result, evaluationContext);
+    return new LiteralPathAssertion(datasetResult);
   }
 
   @SuppressWarnings("unchecked")

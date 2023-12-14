@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -65,9 +67,7 @@ public class AbstractParserTest {
   @MockBean
   protected DataSource dataSource;
 
-  Parser parser;
-
-  EvaluationContext evaluationContext;
+  FhirPathExecutor executor;
 
   @BeforeEach
   void setUp() {
@@ -77,21 +77,14 @@ public class AbstractParserTest {
         ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
         ResourceType.CAREPLAN);
 
-    parser = new Parser();
     setSubjectResource(ResourceType.PATIENT);
   }
-
+  
 
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
-    final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, resourceType);
-
-    evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
-        .dataset(dataSource.read(resourceType))
-        .resource(subjectResource)
-        .inputContext(subjectResource)
-        .build();
+    executor = new FhirPathExecutor(resourceType, fhirContext, StaticFunctionRegistry.getInstance(),
+        dataSource);
   }
 
   void mockResource(final ResourceType... resourceTypes) {
@@ -105,20 +98,14 @@ public class AbstractParserTest {
   @Nonnull
   protected FhirPathAssertion assertThatResultOf(@Nonnull final ResourceType resourceType,
       @Nonnull final String expression) {
-    final ResourceCollection subjectResource = ResourceCollection
-        .build(fhirContext, resourceType);
 
-    final EvaluationContext evaluationContext = new EvaluationContextBuilder(spark, fhirContext)
-        .dataset(dataSource.read(resourceType))
-        .resource(subjectResource)
-        .inputContext(subjectResource)
-        .build();
-    return assertThat(parser.evaluate(expression, evaluationContext), evaluationContext);
+    setSubjectResource(resourceType);
+    return assertThat(executor.evaluate(expression));
   }
 
   @SuppressWarnings("SameParameterValue")
   FhirPathAssertion assertThatResultOf(final String expression) {
-    return assertThat(parser.evaluate(expression, evaluationContext), evaluationContext);
+    return assertThat(executor.evaluate(expression));
   }
 
 }
