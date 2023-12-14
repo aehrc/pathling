@@ -16,10 +16,8 @@ source and installing
 the [library runtime Maven package](https://central.sonatype.com/artifact/au.csiro.pathling/library-runtime).
 
 You can the optionally install
-the [PyPI package](https://pypi.org/project/pathling/) for Python support.
-
-You can also install the R package, but as it has not yet been published to CRAN
-you will need the follow the [instructions here](#r-installation).
+the [PyPI package](https://pypi.org/project/pathling/) for Python support, 
+and/or the [R package](https://cran.r-project.org/package=pathling).
 
 Once the cluster is restarted, Pathling should be available for use within
 notebooks.
@@ -36,25 +34,4 @@ Options > Spark > Environment Variables__ and add the following:
 
 ```bash
 JNAME=zulu11-ca-amd64
-```
-
-## R installation
-
-In a notebook, use the following code to install the R package and connect to
-the Databricks cluster:
-
-```r
-# Install the Pathling R API, if not installed.
-# Replace [package URL] with the URL of the package source distribution.
-if (!nzchar(system.file(package = 'pathling'))) {
-    remotes::install_url('[package URL]', upgrade = FALSE)
-}
-
-library(pathling)
-pc <- pathling_connect(sparklyr::spark_connect(method = "databricks"))
-
-# Code that uses Pathling here.
-# ...
-
-pathling_disconnect(pc)
 ```
