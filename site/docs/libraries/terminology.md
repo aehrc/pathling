@@ -28,9 +28,7 @@ process", and a causative agent of "Virus".
 <TabItem value="python" label="Python">
 
 ```python
-from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set,
-
-member_of
+from pathling import PathlingContext, to_snomed_coding, to_ecl_value_set, member_of
 
 pc = PathlingContext.create()
 csv = pc.spark.read.csv("conditions.csv")
