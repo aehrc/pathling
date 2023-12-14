@@ -19,7 +19,10 @@ package au.csiro.pathling.fhirpath.operator;
 
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import org.apache.spark.sql.functions;
 import javax.annotation.Nonnull;
 
 /**
@@ -32,18 +35,20 @@ public class CombineOperator implements BinaryOperator {
 
   private static final String NAME = "combine";
 
-  // @Nonnull
-  // @Override
-  // public Collection invoke(@Nonnull final BinaryOperatorInput input) {
-  //   final Collection left = input.getLeft();
-  //   final Collection right = input.getRight();
-  //
-  //   // TODO: check the condition
-  //   checkUserInput(left.getFhirType().equals(right.getFhirType()),
-  //       "Collection must have the same type");
-  //   // and also need to
-  //
-  //   return null;
-  //   // return functions.concat(left.getColumn(), right.getColumn());
-  // }
+  @Nonnull
+  @Override
+  public Collection invoke(@Nonnull final BinaryOperatorInput input) {
+    final Collection left = input.getLeft();
+    final Collection right = input.getRight();
+
+    // TODO: check the condition
+    checkUserInput(left.getFhirType().equals(right.getFhirType()),
+        "Collection must have the same type");
+    // and also need to
+
+    return left.copyWith(
+        ColumnCtx.biOperator(left.getCtx().toArray(), right.getCtx().toArray(),
+            functions::concat)
+    );
+  }
 }

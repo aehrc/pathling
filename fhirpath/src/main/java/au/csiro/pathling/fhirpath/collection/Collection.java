@@ -17,11 +17,8 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
-
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Comparable;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.PathEvalContext;
@@ -46,7 +43,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
-import org.apache.avro.reflect.AvroAlias;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -438,4 +434,17 @@ public class Collection implements Comparable, Numeric {
       throw new UnsupportedOperationException();
     }
   }
+
+  @Deprecated
+  @Nonnull
+  public String getExpression() {
+    return "??";
+  }
+
+  @Deprecated
+  public boolean isSingular() {
+    return true;
+  }
+
+
 }

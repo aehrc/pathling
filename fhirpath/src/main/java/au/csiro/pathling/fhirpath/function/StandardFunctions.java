@@ -68,7 +68,7 @@ public class StandardFunctions {
 
   // Maybe these too can be implemented as colum functions????
   @FhirpathFunction
-  public Collection iif(@Nonnull final Collection input,
+  public static Collection iif(@Nonnull final Collection input,
       @Nonnull CollectionExpression expression, @Nonnull Collection thenValue,
       @Nonnull Collection otherwiseValue) {
 

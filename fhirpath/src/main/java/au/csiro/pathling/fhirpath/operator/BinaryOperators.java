@@ -29,8 +29,8 @@ public class BinaryOperators {
   public static BooleanCollection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
     return BooleanCollection.build(collection.getCtx().vectorize(
-        c -> functions.array_contains(c, element.asSingular()),
-        c -> c.equalTo(element.asSingular()))
+        c -> functions.array_contains(c, element.asSingular().getColumn()),
+        c -> c.equalTo(element.asSingular().getColumn()))
     );
   }
 

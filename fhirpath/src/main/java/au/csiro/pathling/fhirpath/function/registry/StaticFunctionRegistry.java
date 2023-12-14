@@ -1,9 +1,7 @@
 package au.csiro.pathling.fhirpath.function.registry;
 
 import au.csiro.pathling.fhirpath.function.FhirViewFunctions;
-import au.csiro.pathling.fhirpath.function.IifFunction;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
-import au.csiro.pathling.fhirpath.function.ResolveFunction;
 import au.csiro.pathling.fhirpath.function.StandardFunctions;
 import au.csiro.pathling.fhirpath.function.TerminologyFunctions;
 import au.csiro.pathling.fhirpath.function.UntilFunction;
