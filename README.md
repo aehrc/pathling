@@ -10,7 +10,7 @@
 [![Test](https://github.com/aehrc/pathling/workflows/Test/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3ATest) [![CodeFactor](https://www.codefactor.io/repository/github/aehrc/pathling/badge)](https://www.codefactor.io/repository/github/aehrc/pathling) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/main/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
 
 Pathling is a set of tools that make it easier to
-use clinical terminology and [FHIR&reg;](https://hl7.org/fhir) within health
+use [FHIR&reg;](https://hl7.org/fhir/R4) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
@@ -30,7 +30,7 @@ includes both language libraries and a server implementation.
 
 ### Query and transformation of FHIR data
 
-[FHIR R4](https://hl7.org/fhir) is the dominant standard for exchanging health
+[FHIR R4](https://hl7.org/fhir/R4) is the dominant standard for exchanging health
 data. It comes in both [JSON](https://hl7.org/fhir/json.html)
 or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
 different types of resources, such

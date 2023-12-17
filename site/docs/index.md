@@ -1,7 +1,7 @@
 # Overview
 
 Pathling is a set of tools that make it easier to
-use clinical terminology and [FHIR&reg;](https://hl7.org/fhir) within health
+use [FHIR&reg;](https://hl7.org/fhir) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 

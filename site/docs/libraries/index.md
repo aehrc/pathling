@@ -6,8 +6,8 @@ sidebar_label: Introduction
 # Libraries
 
 Pathling provides a set of libraries that provide assistance with
-using [FHIR](https://hl7.org/fhir)
-and [terminology services](https://hl7.org/fhir/terminology-service.html) from
+using [FHIR](https://hl7.org/fhir/R4)
+and [terminology services](https://hl7.org/fhir/R4/terminology-service.html) from
 Apache Spark applications and data science workflows.
 
 The libraries are available for:
