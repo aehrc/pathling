@@ -176,4 +176,21 @@ class JoinResolverTest {
     //     joins);
   }
 
+
+  @Test
+  void testSimpleResolve() {
+    final Parser parser = new Parser();
+    final FhirPath path = parser.parse(
+        "subject.resolve().ofType(Patient).id");
+    System.out.println(path.toExpression());
+    final FhirPathExecutor validator = new FhirPathExecutor(
+        ResourceType.ENCOUNTER,
+        FhirContext.forR4(),
+        StaticFunctionRegistry.getInstance(),
+        dataSource);
+
+    final Set<DataRoot> joins = validator.findJoinsRoots(
+        path);
+    System.out.println(joins);
+  }
 }

@@ -62,6 +62,31 @@ public interface DataRoot {
     }
   }
 
+  @Value(staticConstructor = "of")
+  class ResolveRoot implements DataRoot {
+
+    @Nonnull
+    DataRoot master;
+    @Nonnull
+    ResourceType foreignResourceType;
+    @Nonnull
+    String masterResourcePath;
+
+    @Nonnull
+    @Override
+    public String getTag() {
+      return master.getTag() + "@" + foreignResourceType.toCode() + "_"
+          + masterResourcePath.replace(".", "_");
+    }
+    
+    public static ResolveRoot ofResource(@Nonnull final ResourceType masterType,
+        @Nonnull final ResourceType foreignResourceType,
+        @Nonnull final String masterResourcePath) {
+      return new ResolveRoot(ResourceRoot.of(masterType), foreignResourceType,
+          masterResourcePath);
+    }
+  }
+  
   @Nonnull
   String getTag();
 
