@@ -257,7 +257,7 @@ class MyApp {
         PathlingContext pc = PathlingContext.create();
         Dataset<Row> csv = pc.getSpark().read().csv("conditions.csv");
 
-        val translate_result = csv.withColumn(
+        Dataset<Row> translateResult = csv.withColumn(
                 "READ_CODES",
                 translate(
                         toCoding(csv.col("CODE"), "https://snomed.info/sct"),
@@ -265,7 +265,7 @@ class MyApp {
                         false, null
                 ).getField("code")
         );
-        translate_result.select(
+        translateResult.select(
                 csv.col("CODE"), csv.col("DESCRIPTION"),
                 explode_outer(translate_result.col("READ_CODES")).alias(
                         "READ_CODE")
