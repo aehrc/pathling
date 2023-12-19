@@ -642,7 +642,7 @@ jobs:
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
           mvn --batch-mode install
-          -pl lib/R -am -Pdocs
+          -pl lib/R -am -Pdocs -X
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 60
       - name: Upload package as artifact
