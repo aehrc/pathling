@@ -97,6 +97,24 @@ class SQLPath:
         other_path = _lit_if_needed(other)
         return self._with(lambda c:subsumes(c, other_path(c)))
 
+    def anyTrue(self):
+        return self._vectorize(
+            lambda c: c.isNotNull() & c,
+            lambda c: exists(c, lambda c:c)
+        )
+    def allFalse(self):
+        return self._vectorize(
+            lambda c: c.isNull() | ~c,
+            lambda c: forall(c, lambda c:~c)
+        )
+
+    def allTrue(self):
+        return self._vectorize(
+            lambda c: c.isNull() | c,
+            lambda c: forall(c, lambda c:c)
+        )
+
+    
     def __getattr__(self, name):
         return self._with(lambda c: _unnest(c.getField(name)))
 
