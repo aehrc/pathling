@@ -282,11 +282,8 @@
               <workingDirectory>${project.basedir}</workingDirectory>
               <arguments>
                 <argument>CMD</argument>
-                <argument>INSTALL</argument>
-                <argument>--preclean</argument>
-                <argument>--no-multiarch</argument>
-                <argument>--with-keep.source</argument>
-                <argument>.</argument>
+                <argument>install</argument>
+                <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
               </arguments>
             </configuration>
           </execution>

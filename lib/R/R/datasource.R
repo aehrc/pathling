@@ -258,7 +258,7 @@ invoke_datasink <- function(ds, name, ...) {
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#ndjson-1}{Pathling documentation - Writing NDJSON}
 #' 
 #' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect(sc)
+#' pc <- pathling_connect()
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of NDJSON files.
@@ -287,7 +287,7 @@ ds_write_ndjson <- function(ds, path, file_name_mapper = NULL) {
 #' @seealso \href{https://pathling.csiro.au/docs/libraries/fhirpath-query#parquet-1}{Pathling documentation - Writing Parquet}
 #' 
 #' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect(sc)
+#' pc <- pathling_connect()
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of Parquet files.
@@ -318,7 +318,7 @@ ds_write_parquet <- function(ds, path) {
 #' @seealso \code{\link{ImportMode}}
 #' 
 #' @examplesIf pathling_is_spark_installed()
-#' pc <- pathling_connect(sc)
+#' pc <- pathling_connect()
 #' data_source <- pc %>% pathling_read_ndjson(pathling_examples('ndjson'))
 #' 
 #' # Write the data to a directory of Delta files.
