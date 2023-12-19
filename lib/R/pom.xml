@@ -56,7 +56,7 @@
   <properties>
     <!--suppress UnresolvedMavenProperty -->
     <pathling.Rapi.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.Rapi.version.base>
-    <pathling.Rapi.version.qualifier></pathling.Rapi.version.qualifier>
+    <pathling.Rapi.version.qualifier/>
     <pathling.Rapi.version>${pathling.Rapi.version.base}${pathling.Rapi.version.qualifier}</pathling.Rapi.version>
     <pathling.Rapi.sparkVersion>3.4.0</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
@@ -267,7 +267,7 @@
                 <argument>check</argument>
                 <argument>--output=${project.basedir}/target</argument>
                 <argument>--as-cran</argument>
-                <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
+                <argument>${project.build.directory}/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
               </arguments>
             </configuration>
           </execution>
@@ -283,7 +283,7 @@
               <arguments>
                 <argument>CMD</argument>
                 <argument>install</argument>
-                <argument>target/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
+                <argument>${project.build.directory}/${pathling.Rapi.packageName}_${pathling.Rapi.version}.tar.gz</argument>
               </arguments>
             </configuration>
           </execution>
