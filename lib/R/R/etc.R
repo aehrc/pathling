@@ -47,7 +47,7 @@ pathling_spark_info <- function() {
       spark_version = metadata[["Config/pathling/SparkVersion"]],
       scala_version = metadata[["Config/pathling/ScalaVersion"]],
       hadoop_version = metadata[["Config/pathling/HadoopVersion"]],
-      hadoop_major_version = metadata[["Config/pathling/HadoopVersion"]],
+      hadoop_major_version = metadata[["Config/pathling/HadoopMajorVersion"]],
       delta_version = metadata[["Config/pathling/DeltaVersion"]]
   )
 }
