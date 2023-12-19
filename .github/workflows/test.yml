@@ -558,7 +558,7 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
         run: >-
-          mvn --batch-mode install
+          mvn --batch-mode verify
           -pl lib/python -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
