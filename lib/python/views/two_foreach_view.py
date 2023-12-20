@@ -22,15 +22,15 @@ pc = PathlingContext.create()
 ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parquet/')
 
 view = View('Patient', [
-    Path(_.id.alias('id')),
-    Path(_.identifier.count().alias('countOfId')),
+    Path(_.id).alias('id'),
+    Path(_.identifier.count()).alias('countOfId'),
     ForEach(_.name,
-            Path(_.family.alias('familyName')),
-            Path(_.given.alias('givenName')),
+            Path(_.family).alias('familyName'),
+            Path(_.given).alias('givenName'),
             ),
     ForEach(_.identifier,
-            Path(_.system.alias('idSystem')),
-            Path(_.value.alias('idValue')),
+            Path(_.system).alias('idSystem'),
+            Path(_.value).alias('idValue'),
             ),
 ])
 

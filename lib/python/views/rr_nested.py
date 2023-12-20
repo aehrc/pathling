@@ -22,32 +22,32 @@ pc = PathlingContext.create()
 ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parquet/')
 
 view = View('Patient', [
-    Path(_.id.alias('id')),
+    Path(_.id).alias('id'),
     From(_.Encounter,
-         Path(_.res_count.alias('enc_count')),
-         Path(_.cnd_count.alias('cnd_count'))
+         Path(_.res_count).alias('enc_count'),
+         Path(_.cnd_count).alias('cnd_count')
          ),
     From(_.Condition,
-         Path(_.res_count.alias('cnd_direct_count')),
+         Path(_.res_count).alias('cnd_direct_count'),
          )
 
 ], joins = [
     ReverseView('Encounter', 'subject.reference',
                 [
-                    Path(_.alias('res_count')),
-                    Path(_.Condition.res_count.alias('cnd_count')),
+                    Path(_).alias('res_count'),
+                    Path(_.Condition.res_count).alias('cnd_count'),
                 ], [count, sum],
                 joins = [
                     ReverseView('Condition', 'encounter.reference',
                                 [
-                                    Path(_.alias('res_count')),
+                                    Path(_).alias('res_count'),
                                 ], [count]
                                 )
                 ]
                 ),
     ReverseView('Condition', 'subject.reference',
                 [
-                    Path(_.alias('res_count')),
+                    Path(_).alias('res_count'),
                 ], [count]
                 ),
 ])

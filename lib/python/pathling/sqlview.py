@@ -36,8 +36,19 @@ def col_name(c):
 def to_struct(df,resource_name):
     return df.select(struct(df.columns).alias(resource_name))
 
-def Path(path):
-    return lambda c:[path(c)]
+#def Path(path, alias = None):
+#    return lambda c:[path(c).alias(alias) if alias else path(c)]
+
+class Path:
+    def __init__(self, path, alias = None):
+        self._path = path
+        self._alias = alias
+        
+    def alias(self, alias):
+        return Path(self._path, alias)
+    
+    def __call__(self, c):
+        return [self._path(c).alias(self._alias) if self._alias else self._path(c)]
 
 def From(parent, *paths):
     def do(c):

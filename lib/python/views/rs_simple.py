@@ -29,16 +29,16 @@ ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parq
 # subject.reference.resolve.ofType('Patient').name.given.alias('givenName')
 
 view = View('Condition', [
-    Path(_.id.alias('id')),
-    Path(_.Patient.id.alias('ptn_id')),
-    Path(_.Patient.name.alias('@ptn_name')),
+    Path(_.id).alias('id'),
+    Path(_.Patient.id).alias('ptn_id'),
+    Path(_.Patient.name).alias('@ptn_name'),
 ], joins = [
     JoinOneView('Patient', 'subject.reference', [
-        Path(_.id.alias('id')),
+        Path(_.id).alias('id'),
         ForEachName('name', _.name,
-            Path(_.family.alias('familyName')),
+            Path(_.family).alias('familyName'),
             ForEach(_.given,
-                Path(_.alias('givenName'))
+                Path(_).alias('givenName')
             ),
         )
     ])

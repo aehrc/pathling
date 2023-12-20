@@ -28,15 +28,15 @@ ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parq
 
 
 manyView = JoinManyView('Condition', 'MedicationRequest', 'reasonReference.reference', [
-    Path(_.id.alias('id')),
-    Path(_.code.text.alias('text')),
+    Path(_.id).alias('id'),
+    Path(_.code.text).alias('text'),
 ])
 
 view  = View('MedicationRequest', [
-    Path(_.id.alias('id')),
+    Path(_.id).alias('id'),
     ForEach(lambda c:transform(c.getField('reasonReference'), lambda e:c.getField('Condition')[e.getField('reference')]),
-            Path(_.id.alias('reason_id')),
-            Path(_.text.alias('reason_code')),
+            Path(_.id).alias('reason_id'),
+            Path(_.text).alias('reason_code'),
             )
 ], joins = [
     manyView

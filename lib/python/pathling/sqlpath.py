@@ -84,12 +84,9 @@ class SQLPath:
             lambda c:filter(c, lambda e:expr_f(e))
         )
 
-    def get(self, name):
+    def _getField(self, name):
         return self._with(lambda c: c.getField(name))
         
-    def alias(self, name):
-        return self._with(lambda c:c.alias(name))
-
     def subsumedBy(self, other):
         other_path = _lit_if_needed(other)
         return self._with(lambda c:subsumed_by(c, other_path(c)))
@@ -115,13 +112,21 @@ class SQLPath:
             lambda c: forall(c, lambda c:c)
         )
 
+    def get(self, name):
+        return self._with(lambda c: _unnest(c.getField(name)))
+
     
     def __getattr__(self, name):
-        return self._with(lambda c: _unnest(c.getField(name)))
+        return self.get(name)
 
     def __eq__(self, other):
         other_path = _lit_if_needed(other)
         return SQLPath(lambda c: self(c)==other_path(c))
+
+
+    def __and__(self, other):
+        other_path = _lit_if_needed(other)
+        return SQLPath(lambda c: self(c) & other_path(c))
 
     def __call__(self, c = None):
         return self._col_f(self._parent(c) if self._parent else c)

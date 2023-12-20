@@ -29,30 +29,30 @@ ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parq
 # reverseResolve('MedicationRequest', 'subject.reference').count().alias('mr_count')
 
 view = View('Patient', [
-    Path(_.id.alias('id')),
+    Path(_.id).alias('id'),
     From(_.Condition,
-         Path(_.res_count.alias('cnd_count')),
+         Path(_.res_count).alias('cnd_count'),
          ),
     From(_.Observation,
-         Path(_.res_count.alias('obs_count')),
+         Path(_.res_count).alias('obs_count'),
          ),
     From(_.MedicationRequest,
-         Path(_.res_count.alias('mr_count')),
+         Path(_.res_count).alias('mr_count'),
          ),
 ], joins=[
     ReverseView('Condition', 'subject.reference',
                 [
-                    Path(_.alias('res_count')),
+                    Path(_).alias('res_count'),
                 ], [count]
                 ),
     ReverseView('Observation', 'subject.reference',
                 [
-                    Path(_.alias('res_count')),
+                    Path(_).alias('res_count'),
                 ], [count]
                 ),
     ReverseView('MedicationRequest', 'subject.reference',
                 [
-                    Path(_.alias('res_count')),
+                    Path(_).alias('res_count'),
                 ], [count]
                 )
 ])
