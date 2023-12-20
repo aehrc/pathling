@@ -19,6 +19,10 @@ from uuid import uuid4
 from pyspark.sql.functions import *
 from pathling.sqlpath import _this
 
+
+def print_exec_plan(wdf):
+    print(wdf._jdf.queryExecution().executedPlan().toString())
+
 def uuid_alias():
     return "@" + uuid4().hex
 
@@ -68,13 +72,13 @@ def _form_data_view(data_source, subject_resource, joins):
 
 
 
-def selection(struct_field):
+def _selection(struct_field):
     if struct_field.name.startswith('@'):
         return [ col(struct_field.name).getField(ssf).alias(ssf) for ssf in  struct_field.dataType.elementType.fieldNames()]
     else:
         return [col(struct_field.name)]
 
-def flatten_df(df):
+def _flatten_df(df):
     #
     # let's try with the main level first    
     df_schema = df.schema
@@ -83,17 +87,17 @@ def flatten_df(df):
         unnested_df = df
         for uf in nested_fields:
             unnested_df = unnested_df.withColumn(uf.name, explode_outer(uf.name))
-        return flatten_df(unnested_df.select(list(chain(*[selection(f) for f in df_schema.fields]))))
+        return _flatten_df(unnested_df.select(list(chain(*[_selection(f) for f in df_schema.fields]))))
     else:
         return df
 
 
-def View(subject_resource, selection, joins = []):
+def View(subject_resource, selection, joins = [], flatten = True):
     def do(data_source):
         view_df = _form_data_view(data_source, subject_resource, joins)
-        return view_df.select(From(_this, *selection)(view_df[subject_resource]))
+        result_df = view_df.select(From(_this, *selection)(view_df[subject_resource]))
+        return _flatten_df(result_df) if flatten else result_df
     return do
-
 
 class ReverseView:
     def __init__(self, subject_resource, grouping_key, selection, aggs, joins = []):

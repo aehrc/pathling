@@ -17,6 +17,7 @@
 from pyspark.sql.functions import *
 from pyspark.sql.functions import _to_java_column
 from pathling.udfs import subsumes, subsumed_by
+from pathling.functions import *
 
 def _unnest(c):
     sc = SparkContext._active_spark_context
@@ -142,3 +143,6 @@ _ = SQLPath(lambda c:c)
 _this = _
 Patient = _resource('Patient')
 Condition = _resource('Condition')
+
+def coding(code, system):
+    return to_coding(lit(code), system)
