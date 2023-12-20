@@ -558,7 +558,7 @@ jobs:
           PYSPARK_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
           PYSPARK_DRIVER_PYTHON: ${{ steps.pythoninstall.outputs.python-path }}
         run: >-
-          mvn --batch-mode verify
+          mvn --batch-mode install
           -pl lib/python -am
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
@@ -641,8 +641,8 @@ jobs:
             -DskipLibraryApiTests
             ${{ github.actor == 'dependabot[bot]' && '' || '-Dmaven.test.failure.ignore' }}
         run: >-
-          mvn --batch-mode verify
-          -pl lib/R -am -Pdocs -X
+          mvn --batch-mode install
+          -pl lib/R -am -Pdocs
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 60
       - name: Upload package as artifact
