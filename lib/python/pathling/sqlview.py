@@ -17,7 +17,7 @@ from itertools import chain
 from itertools import zip_longest
 from uuid import uuid4
 from pyspark.sql.functions import *
-from pathling.sqlpath import _this
+from pathling.sqlpath import _this, _unnest
 
 
 def print_exec_plan(wdf):
@@ -47,29 +47,32 @@ class Path:
     def alias(self, alias):
         return Path(self._path, alias)
     
-    def __call__(self, c):
-        return [self._path(c).alias(self._alias) if self._alias else self._path(c)]
+    def __call__(self, c, agg = False):
+        return [self._path(c, agg).alias(self._alias) if self._alias else self._path(c, agg)]
+
 
 def From(parent, *paths):
-    def do(c):
-        return list(chain(*[ p(parent(c)) for p in paths]))
+    def do(c, agg = False):
+        return list(chain(*[ p(parent(c), agg) for p in paths]))
     return do
 
 def ForEach(parent, *paths):
-    def do(c):
+    def do(c, agg = False):
         result =  transform(parent(c), lambda e: struct(
             list(chain(*[ p(e) for p in paths]))
         ))
-        return [result.alias(uuid_alias())]
+        aggResult = _unnest(collect_list(result)) if agg else result
+        return [aggResult.alias(uuid_alias())]
     return do
 
 
 def ForEachName(name,parent, *paths):
-    def do(c):
+    def do(c, agg = False):
         result =  transform(parent(c), lambda e: struct(
             list(chain(*[ p(e) for p in paths]))
         ))
-        return [result.alias(name)]
+        aggResult = _unnest(collect_list(result)) if agg else result
+        return [aggResult.alias(name)]
     return do
 
 
@@ -103,19 +106,35 @@ def _flatten_df(df):
         return df
 
 
-def View(subject_resource, selection, joins = [], flatten = True):
-    def do(data_source):
-        view_df = _form_data_view(data_source, subject_resource, joins)
-        result_df = view_df.select(From(_this, *selection)(view_df[subject_resource]))
-        return _flatten_df(result_df) if flatten else result_df
-    return do
+# def View(subject_resource, selection, joins = [], flatten = True):
+#     def do(data_source):
+#         view_df = _form_data_view(data_source, subject_resource, joins)
+#         result_df = view_df.select(From(_this, *selection)(view_df[subject_resource]))
+#         return _flatten_df(result_df) if flatten else result_df
+#     return do
+
+class View:
+    def __init__(self, subject_resource, selection, joins = [], flatten = True):
+        self._subject_resource = subject_resource
+        self._selection = selection
+        self._joins = joins
+        self._flatten = flatten
+        
+    def __call__(self, data_source):
+        view_df = self.data_view(data_source)
+        result_df = view_df.select(From(_this, *self._selection)(view_df[self._subject_resource]))
+        return _flatten_df(result_df) if self._flatten else result_df    
+
+    def data_view(self, data_source):
+        return _form_data_view(data_source, self._subject_resource, self._joins)
+
+
 
 class ReverseView:
-    def __init__(self, subject_resource, grouping_key, selection, aggs, joins = []):
+    def __init__(self, subject_resource, grouping_key, selection, joins = []):
         self.subject_resource = subject_resource
         self.grouping_key = grouping_key
         self.selection = selection
-        self.aggs = aggs
         self.joins = joins
 
     @property
@@ -131,11 +150,9 @@ class ReverseView:
         subject_resource = self.subject_resource
         grouping_key = self.grouping_key
         selection = self.selection
-        aggs = self.aggs
-
         data_df = _form_data_view(data_source, subject_resource, self.joins)
         agg_df = data_df.groupBy(col(subject_resource + "." + grouping_key).alias(subject_resource + "_key")) \
-            .agg(struct(*[ a(c).alias(col_name(c)) for a,c in zip_longest(aggs, From(_this, *selection)(data_df[subject_resource]))]).alias(subject_resource))
+            .agg(struct(*From(_this, *selection)(data_df[subject_resource], agg=True)).alias(subject_resource))
         return agg_df
 
 

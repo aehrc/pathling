@@ -46,26 +46,29 @@ def _ifArray(c, single_f, array_f):
 
 class SQLPath:
 
-    def __init__(self, col_f, parent = None):
+    def __init__(self, col_f, parent = None, agg_f = None):
         self._col_f = col_f
         self._parent = parent
+        self._agg_f = agg_f
 
-    def _with(self, col_f):
-        return SQLPath(col_f, self)
+    def _with(self, col_f, agg_f = None):
+        return SQLPath(col_f, self, agg_f)
 
-    def _vectorize(self, single_f, many_f):
-        return self._with(lambda c: _ifArray(c, single_f, many_f))
+    def _vectorize(self, single_f, many_f, agg_f = None):
+        return self._with(lambda c: _ifArray(c, single_f, many_f), agg_f)
 
     def count(self):
         return self._vectorize(
             lambda c: when(c.isNotNull(), 1).othewise(0),
-            size
+            size, 
+            sum
         )
 
     def first(self):
         return self._vectorize(
             lambda c:c,
-            lambda c:c.getItem(0)
+            lambda c:c.getItem(0),
+            first
         )
 
 
@@ -98,12 +101,14 @@ class SQLPath:
     def anyTrue(self):
         return self._vectorize(
             lambda c: c.isNotNull() & c,
-            lambda c: exists(c, lambda c:c)
+            lambda c: exists(c, lambda c:c),
+            max
         )
     def allFalse(self):
         return self._vectorize(
             lambda c: c.isNull() | ~c,
-            lambda c: forall(c, lambda c:~c)
+            lambda c: forall(c, lambda c:~c),
+            min
         )
 
     def allTrue(self):
@@ -113,7 +118,8 @@ class SQLPath:
         )
 
     def get(self, name):
-        return self._with(lambda c: _unnest(c.getField(name)))
+        return self._with(lambda c: _unnest(c.getField(name)), 
+                          agg_f = lambda ac: _unnest(collect_list(ac)))
 
     
     def __getattr__(self, name):
@@ -128,8 +134,15 @@ class SQLPath:
         other_path = _lit_if_needed(other)
         return SQLPath(lambda c: self(c) & other_path(c))
 
-    def __call__(self, c = None):
-        return self._col_f(self._parent(c) if self._parent else c)
+    def __call__(self, c = None, agg = False):
+        col_result =  self._col_f(self._parent(c) if self._parent else self._col_f(c))
+        return col_result if not agg else self._agg(col_result)
+    
+    def _agg(self, c):
+        if self._agg_f:
+            return self._agg_f(c) 
+        else: 
+            raise Exception("Cannot aggregate")
     
 def _resource(resource_type):
     return SQLPath(lambda c:col(resource_type))
@@ -144,7 +157,7 @@ def _lit_if_needed(value):
         else _cons(value) if isinstance(value, Column) \
         else _lit(value)
 
-_ = SQLPath(lambda c:c)
+_ = SQLPath(lambda c:c, agg_f=count)
 _this = _
 Patient = _resource('Patient')
 Condition = _resource('Condition')

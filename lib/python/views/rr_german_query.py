@@ -37,8 +37,9 @@ ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parq
 view = View('Patient', [
     Path(_.id).alias('id'),
     From(_.MedicationRequest,
-         Path(_.sub1 & _.sub2).alias('mr_cnd'),
-         ),
+          Path(_.sub1).alias('mr_sub1'),
+          Path(_.sub2).alias('mr_sub2'),
+          ),
     From(_.Condition,
          Path(_.sub1).alias('cnd_sub1'),
          Path(_.sub2).alias('cnd_sub2'),
@@ -54,8 +55,7 @@ view = View('Patient', [
                     Path(_.medicationCodeableConcept._getField('coding')
                          .subsumedBy(coding('106892', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
                          .anyTrue()).alias('sub2')
-                ], [max, max]
-                ),
+                ]),
     ReverseView('Condition', 'subject.reference',
                 [
                     Path(_.code._getField('coding')
@@ -67,15 +67,14 @@ view = View('Patient', [
                     Path(_.code._getField('coding')
                          .subsumedBy(coding('N17', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
                          .allFalse()).alias('sub3'),
-                ], [max, min, min]
-                )
+                ])
 ])
 
 result = view(ds)
 result.show(5)
 
 agg_result = result \
-    .filter(col('mr_cnd') & col('cnd_sub1') & col('cnd_sub2') & col('cnd_sub3')) \
+    .filter(col('mr_sub1') & col('mr_sub2') & col('cnd_sub1') & col('cnd_sub2') & col('cnd_sub3')) \
     .groupBy() \
     .agg(count('*'))
 

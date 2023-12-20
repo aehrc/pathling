@@ -43,18 +43,15 @@ view = View('Patient', [
     ReverseView('Condition', 'subject.reference',
                 [
                     Path(_).alias('res_count'),
-                ], [count]
-                ),
+                ]),
     ReverseView('Observation', 'subject.reference',
                 [
                     Path(_).alias('res_count'),
-                ], [count]
-                ),
+                ]),
     ReverseView('MedicationRequest', 'subject.reference',
                 [
                     Path(_).alias('res_count'),
-                ], [count]
-                )
+                ])
 ])
 result = view(ds)
 result.show(5)

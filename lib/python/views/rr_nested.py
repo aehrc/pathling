@@ -36,20 +36,18 @@ view = View('Patient', [
                 [
                     Path(_).alias('res_count'),
                     Path(_.Condition.res_count).alias('cnd_count'),
-                ], [count, sum],
+                ],
                 joins = [
                     ReverseView('Condition', 'encounter.reference',
                                 [
                                     Path(_).alias('res_count'),
-                                ], [count]
-                                )
+                                ])
                 ]
                 ),
     ReverseView('Condition', 'subject.reference',
                 [
                     Path(_).alias('res_count'),
-                ], [count]
-                ),
+                ]),
 ])
 
 result = view(ds)
