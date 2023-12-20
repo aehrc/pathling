@@ -59,7 +59,7 @@ jobs:
           -pl site -am
           -Pdocs
           -DskipTests
-        timeout-minutes: 30
+        timeout-minutes: 45
       - name: Copy R package into site
         run: |
           mkdir site/target/site/R
