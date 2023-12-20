@@ -117,19 +117,18 @@ def _flatten_df(df):
 #     return do
 
 class View:
-    def __init__(self, subject_resource, selection, filter= [], joins = [],  flatten = True):
+    def __init__(self, subject_resource, selection, filter= [], joins = []):
         self._subject_resource = subject_resource
         self._selection = selection
         self._joins = joins
         self._filter = filter
-        self._flatten = flatten
         
-    def __call__(self, data_source):
+    def __call__(self, data_source, flatten = True):
         view_df = self.data_view(data_source)
         result_df = view_df.select(From(_this, *self._selection)(view_df[self._subject_resource]))
         if self._filter:
             result_df = result_df.filter(reduce(lambda a,b:a&b, From(_this, *self._filter)(view_df[self._subject_resource])))
-        return _flatten_df(result_df) if self._flatten else result_df    
+        return _flatten_df(result_df) if flatten else result_df    
 
     def data_view(self, data_source):
         return _form_data_view(data_source, self._subject_resource, self._joins)
