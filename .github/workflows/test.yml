@@ -708,7 +708,7 @@ jobs:
           -pl site -am
           -Pdocs
           -DskipTests
-        timeout-minutes: 30
+        timeout-minutes: 45
 
   upload-coverage:
     name: Upload coverage
