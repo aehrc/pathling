@@ -75,8 +75,17 @@ class SQLPath:
     def empty(self):
         return self._vectorize(
             lambda c: c.isNull(),
-            lambda c: size(c) == 0
+            lambda c: size(c) == 0,
+            min
         )
+
+    def exists(self):
+        return self._vectorize(
+            lambda c: c.isNotNull(),
+            lambda c: size(c) > 0, 
+            max
+        )
+
 
     def noT(self):
         return self._with(lambda c: ~c)
@@ -135,7 +144,7 @@ class SQLPath:
         return SQLPath(lambda c: self(c) & other_path(c))
 
     def __call__(self, c = None, agg = False):
-        col_result =  self._col_f(self._parent(c) if self._parent else self._col_f(c))
+        col_result =  self._col_f(self._parent(c) if self._parent else c)
         return col_result if not agg else self._agg(col_result)
     
     def _agg(self, c):

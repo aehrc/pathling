@@ -26,7 +26,10 @@ view = View('Patient',[
     From(_,
          Path(_.name.family).alias('familyName'),
          Path(_.name.given).alias('givenName'),
-         )
+         ),
+    Path(_.name.exists()).alias('hasName'),
+    Path(_.gender.exists()).alias('hasGender'),
+    Path(_.gender.empty() & _.name.exists()).alias('hasGenderAndName'),
 ])
 
 result = view(ds)
