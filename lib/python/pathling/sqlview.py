@@ -12,7 +12,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-
+from functools import reduce
 from itertools import chain
 from uuid import uuid4
 from pyspark.sql.functions import *
@@ -117,15 +117,18 @@ def _flatten_df(df):
 #     return do
 
 class View:
-    def __init__(self, subject_resource, selection, joins = [], flatten = True):
+    def __init__(self, subject_resource, selection, filter= [], joins = [],  flatten = True):
         self._subject_resource = subject_resource
         self._selection = selection
         self._joins = joins
+        self._filter = filter
         self._flatten = flatten
         
     def __call__(self, data_source):
         view_df = self.data_view(data_source)
         result_df = view_df.select(From(_this, *self._selection)(view_df[self._subject_resource]))
+        if self._filter:
+            result_df = result_df.filter(reduce(lambda a,b:a&b, From(_this, *self._filter)(view_df[self._subject_resource])))
         return _flatten_df(result_df) if self._flatten else result_df    
 
     def data_view(self, data_source):
