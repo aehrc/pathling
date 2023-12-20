@@ -14,10 +14,9 @@
 #  limitations under the License.
 
 from itertools import chain
-from itertools import zip_longest
 from uuid import uuid4
 from pyspark.sql.functions import *
-from pathling.sqlpath import _this, _unnest
+from pathling.sqlpath import _this, _unnest, _ifArray
 
 
 def print_exec_plan(wdf):
@@ -58,9 +57,11 @@ def From(parent, *paths):
 
 def ForEach(parent, *paths):
     def do(c, agg = False):
-        result =  transform(parent(c), lambda e: struct(
-            list(chain(*[ p(e) for p in paths]))
-        ))
+        parent_c = parent(c)
+        result = _ifArray(parent_c, 
+            lambda c:when(c.isNotNull(), struct(list(chain(*[ p(c) for p in paths])))),
+            lambda c:transform(c, lambda e: struct(list(chain(*[ p(e) for p in paths])))),
+        )
         aggResult = _unnest(collect_list(result)) if agg else result
         return [aggResult.alias(uuid_alias())]
     return do
@@ -68,9 +69,11 @@ def ForEach(parent, *paths):
 
 def ForEachName(name,parent, *paths):
     def do(c, agg = False):
-        result =  transform(parent(c), lambda e: struct(
-            list(chain(*[ p(e) for p in paths]))
-        ))
+        parent_c = parent(c)
+        result = _ifArray(parent_c,
+              lambda c:when(c.isNotNull(), struct(list(chain(*[ p(c) for p in paths])))),
+              lambda c:transform(c, lambda e: struct(list(chain(*[ p(e) for p in paths])))),
+        )
         aggResult = _unnest(collect_list(result)) if agg else result
         return [aggResult.alias(name)]
     return do

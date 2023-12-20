@@ -36,41 +36,45 @@ ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parq
 
 view = View('Patient', [
     Path(_.id).alias('id'),
-    From(_.MedicationRequest,
-          Path(_.sub1).alias('mr_sub1'),
-          Path(_.sub2).alias('mr_sub2'),
+    From(_.MedicationRequest._data,
+         Path(_.medicationCodeableConcept._getField('coding')
+              .subsumedBy(coding('314076', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
+              .anyTrue()).alias('mr_sub1'),
+         Path(_.medicationCodeableConcept._getField('coding')
+              .subsumedBy(coding('106892', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
+              .anyTrue()).alias('mr_sub2')
           ),
-    From(_.Condition,
-         Path(_.sub1).alias('cnd_sub1'),
-         Path(_.sub2).alias('cnd_sub2'),
-         Path(_.sub3).alias('cnd_sub3'),
+    From(_.Condition._data,
+         Path(_.code._getField('coding')
+              .subsumedBy(coding('160903007', 'http://snomed.info/sct'))
+              .anyTrue()).alias('cnd_sub1'),
+         Path(_.code._getField('coding')
+              .subsumedBy(coding('E10', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
+              .allFalse()).alias('cnd_sub2'),
+         Path(_.code._getField('coding')
+              .subsumedBy(coding('N17', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
+              .allFalse()).alias('cnd_sub3'),
          ),
-
 ], joins = [
     ReverseView('MedicationRequest', 'subject.reference',
                 [
-                    Path(_.medicationCodeableConcept._getField('coding')
-                         .subsumedBy(coding('314076', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
-                         .anyTrue()).alias('sub1'),
-                    Path(_.medicationCodeableConcept._getField('coding')
-                         .subsumedBy(coding('106892', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
-                         .anyTrue()).alias('sub2')
+                    ForEachName('_data', _, 
+                    Path(_.medicationCodeableConcept).alias('medicationCodeableConcept')
+                    )                
                 ]),
     ReverseView('Condition', 'subject.reference',
                 [
-                    Path(_.code._getField('coding')
-                         .subsumedBy(coding('160903007', 'http://snomed.info/sct'))
-                         .anyTrue()).alias('sub1'),
-                    Path(_.code._getField('coding')
-                         .subsumedBy(coding('E10', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
-                         .allFalse()).alias('sub2'),
-                    Path(_.code._getField('coding')
-                         .subsumedBy(coding('N17', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
-                         .allFalse()).alias('sub3'),
+                    ForEachName('_data', _, 
+                        Path(_.code).alias('code'),
+                    )
                 ])
 ])
 
+view.data_view(ds).printSchema()
+
 result = view(ds)
+
+
 #result.show(5)
 
 agg_result = result \

@@ -57,6 +57,14 @@ class SQLPath:
     def _vectorize(self, single_f, many_f, agg_f = None):
         return self._with(lambda c: _ifArray(c, single_f, many_f), agg_f)
 
+
+    def _map(self, col_f, agg_f = None):
+        self._vectorize(
+            lambda c:when(c.isNotNull(), col_f(c)),
+            lambda c:transform(c, col_f),
+            agg_f= agg_f
+        )           
+
     def count(self):
         return self._vectorize(
             lambda c: when(c.isNotNull(), 1).othewise(0),
