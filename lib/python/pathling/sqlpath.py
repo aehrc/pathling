@@ -59,7 +59,7 @@ class SQLPath:
 
 
     def _map(self, col_f, agg_f = None):
-        self._vectorize(
+        return self._vectorize(
             lambda c:when(c.isNotNull(), col_f(c)),
             lambda c:transform(c, col_f),
             agg_f= agg_f
@@ -109,11 +109,11 @@ class SQLPath:
         
     def subsumedBy(self, other):
         other_path = _lit_if_needed(other)
-        return self._with(lambda c:subsumed_by(c, other_path(c)))
+        return self._map(lambda c:subsumed_by(c, other_path(c)))
 
     def subsumes(self, other):
         other_path = _lit_if_needed(other)
-        return self._with(lambda c:subsumes(c, other_path(c)))
+        return self._map(lambda c:subsumes(c, other_path(c)))
 
     def anyTrue(self):
         return self._vectorize(

@@ -36,24 +36,19 @@ ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parq
 
 view = View('Patient', [
     Path(_.id).alias('id'),
-    From(_.MedicationRequest._data,
-         Path(_.medicationCodeableConcept._getField('coding')
-              .subsumedBy(coding('314076', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
+    From(_.MedicationRequest._data.medicationCodeableConcept._getField('coding'),
+         Path(_.subsumedBy(coding('314076', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
               .anyTrue()).alias('mr_sub1'),
-         Path(_.medicationCodeableConcept._getField('coding')
-              .subsumedBy(coding('106892', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
+         Path(_.subsumedBy(coding('106892', 'http://www.nlm.nih.gov/research/umls/rxnorm'))
               .anyTrue()).alias('mr_sub2')
           ),
-    From(_.Condition._data,
-         Path(_.code._getField('coding')
-              .subsumedBy(coding('160903007', 'http://snomed.info/sct'))
+    From(_.Condition._data.code._getField('coding'),
+         Path(_.subsumedBy(coding('160903007', 'http://snomed.info/sct'))
               .anyTrue()).alias('cnd_sub1'),
-         Path(_.code._getField('coding')
-              .subsumedBy(coding('E10', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
+         Path(_.subsumedBy(coding('E10', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
               .allFalse()).alias('cnd_sub2'),
-         Path(_.code._getField('coding')
-              .subsumedBy(coding('N17', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
-              .allFalse()).alias('cnd_sub3'),
+         Path(_.subsumedBy(coding('N17', 'http://fhir.de/CodeSystem/bfarm/icd-10-gm'))
+              .allFalse()).alias('cnd_sub3')
          ),
 ], joins = [
     ReverseView('MedicationRequest', 'subject.reference',
@@ -66,6 +61,7 @@ view = View('Patient', [
                 [
                     ForEachName('_data', _, 
                         Path(_.code).alias('code'),
+                        Path(_.id).alias('id'),
                     )
                 ])
 ])
@@ -73,7 +69,7 @@ view = View('Patient', [
 view.data_view(ds).printSchema()
 
 result = view(ds)
-
+print_exec_plan(result)
 
 #result.show(5)
 
