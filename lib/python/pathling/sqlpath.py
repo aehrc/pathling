@@ -46,10 +46,11 @@ def _ifArray(c, single_f, array_f):
 
 class SQLPath:
 
-    def __init__(self, col_f, parent = None, agg_f = None):
+    def __init__(self, col_f, parent = None, agg_f = None, full_agg_f = None):
         self._col_f = col_f
         self._parent = parent
         self._agg_f = agg_f
+        self._full_agg_f = full_agg_f
 
     def _with(self, col_f, agg_f = None):
         return SQLPath(col_f, self, agg_f)
@@ -67,7 +68,7 @@ class SQLPath:
 
     def count(self):
         return self._vectorize(
-            lambda c: when(c.isNotNull(), 1).othewise(0),
+            lambda c: when(c.isNotNull(), 1).otherwise(0),
             size, 
             sum
         )
@@ -144,20 +145,25 @@ class SQLPath:
 
     def __eq__(self, other):
         other_path = _lit_if_needed(other)
-        return SQLPath(lambda c: self(c)==other_path(c))
-
+        return SQLPath(lambda c: self(c)==other_path(c), 
+                       full_agg_f=lambda c: self(c, agg=True) == other_path(c, agg=True))
 
     def __and__(self, other):
         other_path = _lit_if_needed(other)
-        return SQLPath(lambda c: self(c) & other_path(c))
+        return SQLPath(
+            lambda c: self(c) & other_path(c), 
+            full_agg_f=lambda c: self(c, agg=True) & other_path(c, agg=True)
+        )    
 
     def __call__(self, c = None, agg = False):
-        col_result =  self._col_f(self._parent(c) if self._parent else c)
-        return col_result if not agg else self._agg(col_result)
+        return self._col_f(self._parent(c) if self._parent else c) if not  agg else self._agg(c)
     
     def _agg(self, c):
+        if self._full_agg_f:
+            return self._full_agg_f(c)
         if self._agg_f:
-            return self._agg_f(c) 
+            col_result =  self._col_f(self._parent(c) if self._parent else c)
+            return self._agg_f(col_result) 
         else: 
             raise Exception("Cannot aggregate")
     

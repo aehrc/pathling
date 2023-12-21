@@ -15,36 +15,27 @@
 
 
 from pathling import PathlingContext
+from pathling.sqlpath import *
 from pathling.sqlpath import _
 from pathling.sqlview import *
 
 pc = PathlingContext.create()
 ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parquet/')
 
-#
-# for Condition
-# id.alias('id')
-# subject.reference.resolve.ofType('Patient').id.alias('ptn_id')
-# subject.reference.resolve.ofType('Patient').name.family.alias('familyName')
-# subject.reference.resolve.ofType('Patient').name.given.alias('givenName')
 
-view = View('Condition', [
-    Path(_.id).alias('id'),
-    Path(_.Patient.id).alias('ptn_id'),
-    Path(_.Patient.name).alias('@ptn_name'),
-], joins = [
-    JoinOneView('Patient', 'subject.reference', [
-        Path(_.id).alias('id'),
-        Path(_.gender).alias('gender'), #not used after join       
-        ForEachName('name', _.name,
-            Path(_.family).alias('familyName'),
-            ForEach(_.given,
-                Path(_).alias('givenName')
-            ),
-        )
-    ])
-])
+condition = ds.read('Condition')
 
-result = view(ds)
+cnd = to_struct(condition, 'Condition')
+
+cnd.select(
+    Condition.id().alias('id'),
+).show(5)
+
+result  = cnd.groupBy('Condition.subject.reference') \
+    .agg(
+        (Condition.id(agg=True)).alias('id'),
+        ((Condition.id.exists().anyTrue() & Condition.id_versioned.exists().anyTrue())(agg=True)).alias('hasIds'),
+    )
+
 result.show(5)
 print_exec_plan(result)
