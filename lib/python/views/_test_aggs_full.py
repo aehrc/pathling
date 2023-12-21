@@ -26,36 +26,9 @@ ds = pc.read.parquet('/Users/szu004/dev/pathling-performance/data/synth_100/parq
 condition = ds.read('Condition')
 patient = ds.read('Patient')
 
-
-result_raw  = condition.groupBy('subject.reference') \
-    .agg(
-        collect_list('id').alias('cnd_id'),
-        collect_list('id_versioned').alias('cnd_id_versioned'),
-        collect_list('code').alias('cnd_code'),
-    ).select('reference', 'cnd_id', 'cnd_id_versioned')
-
-print_exec_plan(result_raw)
-
-
 cnd = to_struct(condition, 'Condition')
-
-cnd.select(
-    Condition.id().alias('id'),
-).show(5)
-
-result  = cnd.groupBy('Condition.subject.reference') \
-    .agg(
-        (Condition.id(agg=True)).alias('cnd_id'),
-        (Condition.code(agg=True)).alias('cnd_code'),
-        (Condition.id_versioned(agg=True)).alias('cnd_id_versioned'),
-        ((Condition.id.exists().anyTrue() & Condition.id_versioned.exists().anyTrue())(agg=True)).alias('cnd_hasIds'),
-    ).select('reference', 'cnd_id', 'cnd_hasIds', 'cnd_code')
-
-result.show(5)
+cnd_agg = cnd.groupBy('Condition.subject.reference').agg(collect_list('Condition').alias('Condition'))
+ptn = to_struct(patient.join(cnd_agg, patient.id_versioned == cnd_agg.reference, 'leftouter'), 'Patient')
+                                                                                                                                                
+result = ptn.select('Patient.id', 'Patient.Condition.id')
 print_exec_plan(result)
-
-j_result  = patient.join(result, patient.id_versioned == result.reference, 'leftouter') \
-    .select('id', 'gender', 'cnd_id', 'cnd_hasIds')
-
-j_result.show(5)
-print_exec_plan(j_result)
