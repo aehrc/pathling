@@ -24,7 +24,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.4.1</version>
+    <version>6.4.2-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <artifactId>r</artifactId>
@@ -56,8 +56,13 @@
   <properties>
     <!--suppress UnresolvedMavenProperty -->
     <pathling.Rapi.version.base>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</pathling.Rapi.version.base>
-    <pathling.Rapi.version.qualifier></pathling.Rapi.version.qualifier>
+    <pathling.Rapi.version.qualifier/>
     <pathling.Rapi.version>${pathling.Rapi.version.base}${pathling.Rapi.version.qualifier}</pathling.Rapi.version>
+    <!-- 
+      This needs to maintained as the most recent version of Spark that is in the versions manifest
+      of the sparklyr version that we depend upon that is on the archive site. The reason we can't 
+      use the latest from the CDN is that the files drop off the CDN when a new version is released.
+    -->
     <pathling.Rapi.sparkVersion>3.4.0</pathling.Rapi.sparkVersion>
     <pathling.Rapi.scalaVersion>${pathling.scalaVersion}</pathling.Rapi.scalaVersion>
     <pathling.Rapi.hadoopMajorVersion>${pathling.hadoopMajorVersion}</pathling.Rapi.hadoopMajorVersion>

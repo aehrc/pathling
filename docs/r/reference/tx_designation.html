@@ -20,7 +20,7 @@ their language."><!-- mathjax --><script src="https://cdnjs.cloudflare.com/ajax/
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">6.4.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">6.4.2</span>
       </span>
     </div>
 
@@ -89,8 +89,11 @@ their language.</p>
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># pathling_is_spark_installed()</span></span></span>
-<span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connect_gateway(gatewayAddress, gatewayPort, sessionId,     config = config, isStarting = TRUE):</span> Gateway in localhost:8880 did not respond.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Try running `options(sparklyr.log.console = TRUE)` followed by `sc &lt;- spark_connect(...)` for more debugging info.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get the (first) SNOMED CT "Fully specified name" ('900000000000003001')  </span></span></span>
 <span class="r-in"><span><span class="co"># for the first coding of the Condition resource, in the 'en' language.</span></span></span>
@@ -100,8 +103,9 @@ their language.</p>
 <span class="r-in"><span>            designation <span class="op">=</span> <span class="op">(</span><span class="op">!</span><span class="op">!</span><span class="fu">tx_designation</span><span class="op">(</span><span class="va">code</span><span class="op">[[</span><span class="st">'coding'</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="fl">0</span><span class="op">]</span><span class="op">]</span>, </span></span>
 <span class="r-in"><span>                     <span class="op">!</span><span class="op">!</span><span class="fu"><a href="tx_to_snomed_coding.html">tx_to_snomed_coding</a></span><span class="op">(</span><span class="st">'900000000000003001'</span><span class="op">)</span>, language <span class="op">=</span> <span class="st">'en'</span><span class="op">)</span><span class="op">)</span><span class="op">[[</span><span class="fl">0</span><span class="op">]</span><span class="op">]</span>, </span></span>
 <span class="r-in"><span>            .keep<span class="op">=</span><span class="st">'none'</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
 </code></pre></div>
     </div>
   </div>

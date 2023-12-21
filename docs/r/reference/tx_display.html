@@ -18,7 +18,7 @@ name associated with the given code."><!-- mathjax --><script src="https://cdnjs
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">6.4.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">6.4.2</span>
       </span>
     </div>
 
@@ -88,8 +88,11 @@ Overrides the parameter `accept_language` in <code><a href="pathling_connect.htm
 
     <div id="ref-examples">
     <h2>Examples</h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># pathling_is_spark_installed()</span></span></span>
-<span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in spark_connect_gateway(gatewayAddress, gatewayPort, sessionId,     config = config, isStarting = TRUE):</span> Gateway in localhost:8880 did not respond.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Try running `options(sparklyr.log.console = TRUE)` followed by `sc &lt;- spark_connect(...)` for more debugging info.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get the display name of the first coding of the Condition resource, with the default language.</span></span></span>
 <span class="r-in"><span><span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu"><a href="pathling_example_resource.html">pathling_example_resource</a></span><span class="op">(</span><span class="st">'Condition'</span><span class="op">)</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span></span></span>
@@ -97,9 +100,10 @@ Overrides the parameter `accept_language` in <code><a href="pathling_connect.htm
 <span class="r-in"><span>         <span class="va">id</span>, </span></span>
 <span class="r-in"><span>         display <span class="op">=</span> <span class="op">!</span><span class="op">!</span><span class="fu">tx_display</span><span class="op">(</span><span class="va">code</span><span class="op">[[</span><span class="st">'coding'</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="fl">0</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, </span></span>
 <span class="r-in"><span>         .keep<span class="op">=</span><span class="st">'none'</span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
 </code></pre></div>
     </div>
   </div>
