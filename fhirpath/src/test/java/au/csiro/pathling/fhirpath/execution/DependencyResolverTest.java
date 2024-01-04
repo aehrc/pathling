@@ -43,7 +43,7 @@ class DependencyResolverTest {
     final FhirPath path = parser.parse(
         "gender");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -63,7 +63,7 @@ class DependencyResolverTest {
     final FhirPath path = parser.parse(
         "Patient.gender");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -83,7 +83,7 @@ class DependencyResolverTest {
     final FhirPath path = parser.parse(
         "Patient.name.family = Patient.gender");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -104,7 +104,7 @@ class DependencyResolverTest {
     final FhirPath path = parser.parse(
         "Patient.first().name.family = Condition.last().code");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -126,7 +126,7 @@ class DependencyResolverTest {
     final FhirPath path = parser.parse(
         "Patient.where(name.family = first().gender).last().status");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -149,7 +149,7 @@ class DependencyResolverTest {
     final FhirPath path = parser.parse(
         "where($this.where(identifier.count() >2).exists()).name.given.join(Patient.gender)");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -171,7 +171,7 @@ class DependencyResolverTest {
     final FhirPath path = parser.parse(
         "where(reverseResolve(Condition.subject).code.coding.count() > 20).name");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),

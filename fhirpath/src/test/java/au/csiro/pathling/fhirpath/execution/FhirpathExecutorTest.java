@@ -17,22 +17,23 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static org.mockito.Mockito.mock;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
+import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
-import javax.annotation.Nonnull;
 
-import static org.mockito.Mockito.mock;
-
-class FhirPathExecutorTest {
+class FhirpathExecutorTest {
 
   @Nonnull
   final DataSource dataSource = mock(DataSource.class);
+
   @Test
   void testValidateSimpleResourcePath() {
 
@@ -40,7 +41,7 @@ class FhirPathExecutorTest {
     final FhirPath path = parser.parse(
         "where(name.family='Smith').name.given.join(',')");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final FhirpathExecutor validator = new SingleFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -57,7 +58,7 @@ class FhirPathExecutorTest {
     final FhirPath path = parser.parse(
         "where(name.family='Smith').reverseResolve(Condition.subject).code.coding");
     System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
+    final FhirpathExecutor validator = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -66,23 +67,4 @@ class FhirPathExecutorTest {
     final Collection result = validator.validate(path);
     System.out.println(result);
   }
-
-
-  @Test
-  void testValidateResourceReference() {
-
-    final Parser parser = new Parser();
-    final FhirPath path = parser.parse(
-        "Patient.id");
-    System.out.println(path.toExpression());
-    final FhirPathExecutor validator = new FhirPathExecutor(
-        ResourceType.PATIENT,
-        FhirContext.forR4(),
-        StaticFunctionRegistry.getInstance(),
-        dataSource);
-
-    final Collection result = validator.validate(path);
-    System.out.println(result);
-  }
-
 }

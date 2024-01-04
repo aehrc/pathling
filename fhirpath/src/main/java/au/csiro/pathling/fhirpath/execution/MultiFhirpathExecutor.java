@@ -30,7 +30,6 @@ import au.csiro.pathling.fhirpath.context.ResourceResolver;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
 import au.csiro.pathling.fhirpath.path.Paths.EvalFunction;
 import au.csiro.pathling.fhirpath.path.Paths.This;
@@ -52,7 +51,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 
 @Value
-public class FhirPathExecutor {
+public class MultiFhirpathExecutor implements FhirpathExecutor {
 
   @Value
   static class DataRootFinderVisitor implements FhirPathStreamVisitor<DataRoot> {
@@ -208,10 +207,8 @@ public class FhirPathExecutor {
         );
   }
 
-  public Dataset<Row> execute(@Nonnull final String expression) {
-    return execute(new Parser().parse(expression));
-  }
 
+  @Override
   @Nonnull
   public Dataset<Row> execute(@Nonnull final FhirPath path) {
     // just as above ... but with a more intelligent resourceResolver
@@ -258,6 +255,7 @@ public class FhirPathExecutor {
   }
 
 
+  @Override
   @Nonnull
   public CollectionDataset evaluate(@Nonnull final FhirPath path) {
     // just as above ... but with a more intelligent resourceResolver
@@ -302,12 +300,7 @@ public class FhirPathExecutor {
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return CollectionDataset.of(derivedDataset, result);
   }
-
-  @Nonnull
-  public CollectionDataset evaluate(@Nonnull final String fhirpathExpression) {
-    return evaluate(new Parser().parse(fhirpathExpression));
-  }
-
+  
   @Nonnull
   Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
     // return path.accept(new DataRootFinderVisitor(subjectResource))

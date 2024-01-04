@@ -110,7 +110,7 @@ public class ExecutorTest {
         "where(gender='female').name.where(family.where($this='Smith').exists()).given.join(',')");
     System.out.println(path.toExpression());
 
-    final FhirPathExecutor executor = new FhirPathExecutor(
+    final FhirpathExecutor executor = new SingleFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -134,7 +134,7 @@ public class ExecutorTest {
         "reverseResolve(Condition.subject).count()");
     System.out.println(path.toExpression());
 
-    final FhirPathExecutor executor = new FhirPathExecutor(
+    final FhirpathExecutor executor = new MultiFhirpathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
