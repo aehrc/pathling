@@ -167,6 +167,7 @@ class SQLPath:
         else: 
             raise Exception("Cannot aggregate")
     
+
 def _resource(resource_type):
     return SQLPath(lambda c:col(resource_type))
 

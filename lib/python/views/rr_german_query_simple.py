@@ -61,7 +61,6 @@ view = View('Patient', [
                 [
                     ForEachName('_data', _, 
                         Path(_.code).alias('code'),
-                        Path(_.id).alias('id'),
                     )
                 ])
 ])
