@@ -29,7 +29,7 @@ public interface FhirpathExecutor {
 
   @Nonnull
   Collection validate(@Nonnull final FhirPath path);
-  
+
   @Nonnull
   Dataset<Row> execute(@Nonnull final FhirPath path);
 
@@ -40,9 +40,18 @@ public interface FhirpathExecutor {
   default CollectionDataset evaluate(@Nonnull final String fhirpathExpression) {
     return evaluate(new Parser().parse(fhirpathExpression));
   }
-  
+
   @Nonnull
   default Dataset<Row> execute(@Nonnull final String expression) {
     return execute(new Parser().parse(expression));
   }
+
+  @Nonnull
+  Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext);
+
+  @Nonnull
+  Collection createDefaultInputContext();
+  
+  @Nonnull
+  Dataset<Row> createInitialDataset();
 }

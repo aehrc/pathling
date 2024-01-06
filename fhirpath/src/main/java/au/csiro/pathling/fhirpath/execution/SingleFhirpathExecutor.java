@@ -42,6 +42,33 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 @Value
 public class SingleFhirpathExecutor implements FhirpathExecutor {
 
+  @Nonnull
+  ResourceType subjectResource;
+
+  @Nonnull
+  FhirContext fhirContext;
+
+  @Nonnull
+  FunctionRegistry<?> functionRegistry;
+
+  @Nonnull
+  DataSource dataSource;
+
+  @Override
+  @Nonnull
+  public Collection validate(@Nonnull final FhirPath path) {
+
+    final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
+    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+        resolveResource(subjectResource));
+    final PathEvalContext evalContext = new DefaultPathEvalContext(
+        fhirpathContext,
+        functionRegistry,
+        resourceResolver);
+    return path.apply(fhirpathContext.getInputContext(), evalContext);
+  }
+
+
   static class UnsupportedResourceResolver implements ResourceResolver {
 
     @Nonnull
@@ -76,31 +103,6 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
         fhirContext, resourceType);
   }
 
-  @Nonnull
-  ResourceType subjectResource;
-
-  @Nonnull
-  FhirContext fhirContext;
-
-  @Nonnull
-  FunctionRegistry<?> functionRegistry;
-
-  @Nonnull
-  DataSource dataSource;
-
-  @Override
-  @Nonnull
-  public Collection validate(@Nonnull final FhirPath path) {
-
-    final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
-    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
-        resolveResource(subjectResource));
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
-        fhirpathContext,
-        functionRegistry,
-        resourceResolver);
-    return path.apply(fhirpathContext.getInputContext(), evalContext);
-  }
 
   @Override
   @Nonnull
@@ -145,4 +147,32 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
   public CollectionDataset evaluate(@Nonnull final String fhirpathExpression) {
     return evaluate(new Parser().parse(fhirpathExpression));
   }
+
+  @Nonnull
+  @Override
+  public Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext) {
+    // just as above ... but with a more intelligent resourceResolver
+    final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
+    final FhirpathContext fhirpathContext = FhirpathContext.of(
+        resolveResource(subjectResource), inputContext);
+    final PathEvalContext evalContext = new DefaultPathEvalContext(
+        fhirpathContext,
+        functionRegistry,
+        resourceResolver);
+    return path.apply(fhirpathContext.getInputContext(), evalContext);
+  }
+
+  @Nonnull
+  @Override
+  public Collection createDefaultInputContext() {
+    return resolveResource(subjectResource);
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> createInitialDataset() {
+    return resourceDataset(subjectResource);
+  }
+
+
 }

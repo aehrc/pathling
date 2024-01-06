@@ -300,7 +300,25 @@ public class MultiFhirpathExecutor implements FhirpathExecutor {
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
     return CollectionDataset.of(derivedDataset, result);
   }
-  
+
+  @Nonnull
+  @Override
+  public Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Nonnull
+  @Override
+  public Collection createDefaultInputContext() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Nonnull
+  @Override
+  public Dataset<Row> createInitialDataset() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
   @Nonnull
   Set<DataRoot> findJoinsRoots(@Nonnull final FhirPath path) {
     // return path.accept(new DataRootFinderVisitor(subjectResource))
