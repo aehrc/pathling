@@ -23,24 +23,18 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.column.SingleRowCtx;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
-import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.EnumSet;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -186,9 +180,7 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   public ColumnCtx getKeyColumn() {
-    return getElementColumn("id_versioned")
-        .orElseThrow(
-            () -> new IllegalStateException("Resource does not have an 'id_versioned' column"));
+    return getColumnCtx().traverse("id_versioned");
   }
 
 }

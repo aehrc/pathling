@@ -32,6 +32,7 @@ import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
+import au.csiro.pathling.utilities.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -248,17 +249,15 @@ public class Collection implements Comparable, Numeric {
   @NotImplemented
   protected Optional<Collection> traverseExtensions(
       @Nonnull final ChildDefinition extensionDefinition) {
-    //   // check the provided definition is of an extension
-    //   Preconditions.checkArgument(extensionDefinition instanceof ElementDefinition,
-    //       "Cannot traverse to an extension with a non-ElementDefinition");
-    //   return getExtensionMap().map(em ->
-    //       Collection.build(
-    //           // We need here to deal with the situation where _fid is an array of element ids
-    //           getFid().transform(em::apply).flatten().getValue(),
-    //           (ElementDefinition) extensionDefinition));
-
-    // TODO: Maybe push it back to ColumnCtx
-    return Optional.empty();
+    // check the provided definition is of an extension
+    Preconditions.checkArgument(extensionDefinition instanceof ElementDefinition,
+        "Cannot traverse to an extension with a non-ElementDefinition");
+    return getExtensionMap().map(em ->
+        Collection.build(
+            // We need here to deal with the situation where _fid is an array of element ids
+            getFid().transform(em::apply).flatten(),
+            (ElementDefinition) extensionDefinition)
+    );
   }
 
   @Nonnull

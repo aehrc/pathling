@@ -64,13 +64,12 @@ public class DefaultProjectionContext implements ProjectionContext {
                          : cl.explode())
           .map(c -> withInputContext(newInputContextResult.getValue().copyWith(c)));
     } else {
-      return newInputContextResult.map(cl -> withInputContext(cl)
-      );
+      return newInputContextResult.map(this::withInputContext);
     }
   }
 
   @Nonnull
-  protected DefaultProjectionContext withInputContext(@Nonnull final Collection inputContext) {
+  DefaultProjectionContext withInputContext(@Nonnull final Collection inputContext) {
     return new DefaultProjectionContext(executor, inputContext);
   }
 

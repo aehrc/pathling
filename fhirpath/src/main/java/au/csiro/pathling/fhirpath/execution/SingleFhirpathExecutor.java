@@ -89,13 +89,21 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
   @Nonnull
   Dataset<Row> resourceDataset(@Nonnull final ResourceType resourceType) {
     final Dataset<Row> dataset = dataSource.read(resourceType);
-    return dataset.select(
+
+    final Stream<Column> explicitColumns = Stream.of(
         dataset.col("id"),
         dataset.col("id_versioned").alias("key"),
         functions.struct(
             Stream.of(dataset.columns()).filter(c -> !c.startsWith("_"))
                 .map(dataset::col).toArray(Column[]::new)
-        ).alias(resourceType.toCode()));
+        ).alias(resourceType.toCode())
+    );
+    final Stream<Column> implicitColumns = Stream.of(dataset.columns())
+        .filter(c -> c.startsWith("_"))
+        .map(dataset::col);
+
+    return dataset.select(Stream.concat(explicitColumns, implicitColumns)
+        .toArray(Column[]::new));
   }
 
   ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {

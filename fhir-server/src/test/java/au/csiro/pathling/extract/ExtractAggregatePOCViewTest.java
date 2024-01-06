@@ -23,7 +23,6 @@ import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateResponse;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
@@ -40,12 +39,12 @@ import au.csiro.pathling.view.AbstractCompositeSelection;
 import au.csiro.pathling.view.AggregationView;
 import au.csiro.pathling.view.DatasetResult;
 import au.csiro.pathling.view.DefaultProjectionContext;
+import au.csiro.pathling.view.ExecutionContext;
 import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ForEachOrNullSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
-import au.csiro.pathling.view.ExecutionContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.Streams;
@@ -453,10 +452,9 @@ class ExtractAggregatePOCViewTest {
 
     final DefaultProjectionContext execContext = DefaultProjectionContext.of(newContext(),
         ResourceType.PATIENT);
-    final EvaluationContext evaluationContext = execContext.getEvaluationContext();
 
     final List<Collection> groupByCollections = groupingPaths.stream()
-        .map(p -> p.apply(evaluationContext.getInputContext(), evaluationContext))
+        .map(p -> execContext.evalExpression(p).getValue())
         .collect(Collectors.toUnmodifiableList());
 
     System.out.println("### GroupBy collections: ###");
