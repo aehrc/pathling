@@ -89,14 +89,14 @@ abstract class AbstractFhirViewTestBase {
     void expect(@Nonnull final Supplier<Dataset<Row>> result);
   }
 
-  abstract static class ResultExpectation implements Expectation {
+  interface ResultExpectation extends Expectation {
 
     @Override
-    public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
+    default void expect(@Nonnull final Supplier<Dataset<Row>> result) {
       expectResult(result.get());
     }
 
-    abstract void expectResult(@Nonnull final Dataset<Row> rowDataset);
+    void expectResult(@Nonnull final Dataset<Row> rowDataset);
   }
 
   static class ExpectError implements Expectation {
@@ -108,26 +108,26 @@ abstract class AbstractFhirViewTestBase {
   }
 
   @Value
-  class Expect extends ResultExpectation {
+  class Expect implements ResultExpectation {
 
     Path expectedJson;
     List<String> expectedColumns;
 
     @Override
-    void expectResult(@Nonnull final Dataset<Row> rowDataset) {
+    public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       final Dataset<Row> expectedResult = spark.read().json(expectedJson.toString())
           .selectExpr(expectedColumns.toArray(new String[0]));
-      assertThat(rowDataset).hasRows(expectedResult);
+      assertThat(rowDataset).hasRowsUnordered(expectedResult);
     }
   }
 
   @Value
-  static class ExpectCount extends ResultExpectation {
+  static class ExpectCount implements ResultExpectation {
 
     long count;
 
     @Override
-    void expectResult(@Nonnull final Dataset<Row> rowDataset) {
+    public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       assertEquals(count, rowDataset.count());
     }
   }
@@ -247,7 +247,7 @@ abstract class AbstractFhirViewTestBase {
       @Nonnull final Path expectedPath)
       throws IOException {
     @Nullable
-    JsonNode expectation = null;
+    JsonNode expectation;
     if (nonNull(testDefinition.get("expectError"))) {
       return new ExpectError();
     } else if (nonNull(expectation = testDefinition.get("expectCount"))) {

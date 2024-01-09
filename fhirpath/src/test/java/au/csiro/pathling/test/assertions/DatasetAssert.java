@@ -34,6 +34,8 @@ import java.util.function.UnaryOperator;
 import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.MultiSet;
+import org.apache.commons.collections4.multiset.HashMultiSet;
 import org.apache.commons.io.file.SimplePathVisitor;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -103,15 +105,9 @@ public class DatasetAssert {
 
   @Nonnull
   private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
-    final List<Row> actualRows = dataset.collectAsList();
-    assertEquals(expected.size(), actualRows.size());
-
-    if (!actualRows.containsAll(expected)) {
-      return Assertions.fail("Some rows are missing.", expected, actualRows);
-    }
-    if (!expected.containsAll(actualRows)) {
-      return Assertions.fail("Unexpected rows found.", expected, actualRows);
-    }
+    final MultiSet<Row> actualRows = new HashMultiSet<>(dataset.collectAsList());
+    final MultiSet<Row> expectedRows = new HashMultiSet<>(expected);
+    assertEquals(expectedRows, actualRows);
     return this;
   }
 
