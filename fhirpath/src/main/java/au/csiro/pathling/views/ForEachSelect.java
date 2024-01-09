@@ -1,5 +1,6 @@
 package au.csiro.pathling.views;
 
+import java.util.Collections;
 import java.util.List;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -16,7 +17,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class ForEachSelect extends NestedSelectClause {
+public class ForEachSelect extends SelectClause {
 
   /**
    * Same as from, but unnests a new row for each item in the collection.
@@ -28,6 +29,9 @@ public class ForEachSelect extends NestedSelectClause {
   @SerializedName("forEach")
   String path;
 
+  @NotNull
+  List<Column> column = Collections.emptyList();
+
   /**
    * Nested select relative to the {@link #path}.
    *
@@ -35,7 +39,7 @@ public class ForEachSelect extends NestedSelectClause {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.select">ViewDefinition.select.select</a>
    */
   @NotNull
-  @Size(min = 1)
-  List<SelectClause> select;
+  @Size()
+  List<SelectClause> select = Collections.emptyList();
 
 }

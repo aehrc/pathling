@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class DirectSelect extends SelectClause {
+public class Column implements SelectionElement {
 
   /**
    * Name of the column produced in the output, must be in a database-friendly format.
@@ -25,7 +25,7 @@ public class DirectSelect extends SelectClause {
   @Nullable
   @Size(max = 255)
   @Pattern(regexp = "^[^_][A-Za-z][A-Za-z0-9_]+$")
-  String alias;
+  String name;
 
   /**
    * A FHIRPath expression that evaluates to the value that will be output in the column for each

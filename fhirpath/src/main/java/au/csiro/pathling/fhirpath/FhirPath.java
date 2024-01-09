@@ -52,9 +52,8 @@ public interface FhirPath {
     return Stream.empty();
   }
 
-  static <I extends Collection> FhirPath nullPath() {
-    //noinspection unchecked
-    return (FhirPath) NULL;
+  static FhirPath nullPath() {
+    return NULL;
   }
 
   default boolean isNull() {

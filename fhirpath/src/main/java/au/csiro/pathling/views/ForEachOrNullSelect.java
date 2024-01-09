@@ -1,8 +1,10 @@
 package au.csiro.pathling.views;
 
+import java.util.Collections;
 import java.util.List;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
+import com.google.gson.annotations.SerializedName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -15,7 +17,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class ForEachOrNullSelect extends NestedSelectClause {
+public class ForEachOrNullSelect extends SelectClause {
 
   /**
    * Same as forEach, but produces a single row with a null value if the collection is empty.
@@ -24,8 +26,12 @@ public class ForEachOrNullSelect extends NestedSelectClause {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.forEachOrNull">ViewDefinition.select.forEachOrNull</a>
    */
   @NotNull
+  @SerializedName("forEachOrNull")
   String path;
 
+  @NotNull
+  List<Column> column =  Collections.emptyList();
+  
   /**
    * Nested select relative to the {@link #path}.
    *
@@ -33,7 +39,7 @@ public class ForEachOrNullSelect extends NestedSelectClause {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.select">ViewDefinition.select.select</a>
    */
   @NotNull
-  @Size(min = 1)
-  List<SelectClause> select;
+  @Size()
+  List<SelectClause> select = Collections.emptyList();
 
 }

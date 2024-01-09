@@ -1,7 +1,9 @@
 package au.csiro.pathling.views;
 
 import com.google.gson.annotations.SerializedName;
+import java.util.Collections;
 import java.util.List;
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -15,7 +17,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class FromSelect extends NestedSelectClause {
+public class FromSelect extends SelectClause {
 
   /**
    * Creates a scope for selection relative to a parent FHIRPath expression.
@@ -23,9 +25,12 @@ public class FromSelect extends NestedSelectClause {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.from">ViewDefinition.select.from</a>
    */
-  @NotNull
+  @Nullable
   @SerializedName("from")
   String path;
+
+  @NotNull
+  List<Column> column = Collections.emptyList();
 
   /**
    * Nested select relative to the {@link #path}.
@@ -34,6 +39,5 @@ public class FromSelect extends NestedSelectClause {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.select">ViewDefinition.select.select</a>
    */
   @NotNull
-  List<SelectClause> select;
-
+  List<SelectClause> select = Collections.emptyList();
 }
