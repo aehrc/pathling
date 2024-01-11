@@ -35,6 +35,23 @@ public final class Literals {
   private Literals() {
   }
 
+
+  @Value
+  public static class NullLiteral implements FhirPath {
+
+    @Override
+    public Collection apply(@Nonnull final Collection input,
+        @Nonnull final PathEvalContext context) {
+      return Collection.nullCollection();
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return "{}";
+    }
+  }
+
   @Value
   public static class StringLiteral implements FhirPath {
 

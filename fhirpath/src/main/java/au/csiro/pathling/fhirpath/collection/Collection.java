@@ -316,7 +316,7 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public static Collection nullCollection() {
-    return new Collection(ColumnCtx.nullCtx(), Optional.empty(), Optional.empty(),
+    return new Collection(ColumnCtx.nullCtx(), Optional.empty(), Optional.of(FHIRDefinedType.NULL),
         Optional.empty());
   }
 

@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
@@ -40,6 +39,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralCon
 import au.csiro.pathling.fhirpath.path.Literals.BooleanLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.CalendarDurationLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.CodingLiteral;
+import au.csiro.pathling.fhirpath.path.Literals.NullLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.StringLiteral;
 import au.csiro.pathling.fhirpath.path.Literals.UcumQuantityLiteral;
 import java.text.ParseException;
@@ -134,7 +134,7 @@ class LiteralTermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Override
   @Nonnull
   public FhirPath visitNullLiteral(@Nullable final NullLiteralContext ctx) {
-    return (input, context) -> Collection.nullCollection();
+    return new NullLiteral();
   }
 
   @Override
