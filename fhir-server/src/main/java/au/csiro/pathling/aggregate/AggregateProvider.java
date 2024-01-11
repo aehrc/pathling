@@ -23,14 +23,12 @@ import au.csiro.pathling.async.AsyncSupported;
 import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.Parameters;
@@ -42,7 +40,7 @@ import org.springframework.stereotype.Component;
  * HAPI resource provider that provides an entry point for the "aggregate" type-level operation.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/aggregate.html">Aggregate</a>
+ * @see <a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#aggregate">Aggregate</a>
  */
 @Component
 @Scope("prototype")
@@ -80,9 +78,7 @@ public class AggregateProvider implements IResourceProvider {
    * @param aggregation a list of aggregation expressions
    * @param grouping a list of grouping expressions
    * @param filter a list of filter expressions
-   * @param request the {@link HttpServletRequest} details
-   * @param requestDetails the {@link RequestDetails} containing HAPI inferred info
-   * @param response the {@link HttpServletResponse} response
+   * @param requestDetails the {@link ServletRequestDetails} containing HAPI inferred info
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$aggregate", idempotent = true)
@@ -92,9 +88,7 @@ public class AggregateProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "aggregation") final List<String> aggregation,
       @Nullable @OperationParam(name = "grouping") final List<String> grouping,
       @Nullable @OperationParam(name = "filter") final List<String> filter,
-      @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
-      @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
-      @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
+      @SuppressWarnings("unused") @Nullable final ServletRequestDetails requestDetails) {
     final AggregateRequest query = AggregateRequest.fromUserInput(
         resourceType, Optional.ofNullable(aggregation), Optional.ofNullable(grouping),
         Optional.ofNullable(filter));

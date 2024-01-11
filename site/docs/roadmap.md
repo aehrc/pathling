@@ -6,13 +6,11 @@ yet, please [get into contact](https://pathling.csiro.au/#contact) with us
 or [create an issue](https://github.com/aehrc/pathling/issues/new) to help us
 understand your use case.
 
-## R integration
+## SQL on FHIR support
 
-Language-specific APIs will be developed that will allow users of R
-to access the functionality within Pathling within their own language
-environment.
-
-See [R integration](https://github.com/aehrc/pathling/issues/193).
+We are working on adding support for
+executing [SQL on FHIR views](https://build.fhir.org/ig/FHIR/sql-on-fhir-v2)
+within both the language libraries and server implementation.
 
 ## Additional FHIRPath functions
 

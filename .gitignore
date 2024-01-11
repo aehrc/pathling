@@ -30,3 +30,11 @@ metastore_db
 derby.log
 spark-warehouse
 .*.crc
+
+
+#R
+*.Rproj
+
+.Rproj.user
+/lib/R/pathlyr/.Rhistory
+*.Rcheck

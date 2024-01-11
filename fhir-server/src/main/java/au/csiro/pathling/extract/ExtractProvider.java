@@ -26,14 +26,12 @@ import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.IResourceProvider;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.hl7.fhir.r4.model.IntegerType;
@@ -46,7 +44,7 @@ import org.springframework.stereotype.Component;
  * HAPI resource provider that provides an entry point for the "extract" type-level operation.
  *
  * @author John Grimes
- * @see <a href="https://pathling.csiro.au/docs/extract.html">Extract</a>
+ * @see <a href="https://pathling.csiro.au/docs/libraries/fhirpath-query#extract">Extract</a>
  */
 @Component
 @Scope("prototype")
@@ -84,9 +82,7 @@ public class ExtractProvider implements IResourceProvider {
    * @param column a list of column expressions
    * @param filter a list of filter expressions
    * @param limit a maximum number of rows to return
-   * @param request the {@link HttpServletRequest} details
-   * @param requestDetails the {@link RequestDetails} containing HAPI inferred info
-   * @param response the {@link HttpServletResponse} response
+   * @param requestDetails the {@link ServletRequestDetails} containing HAPI inferred info
    * @return {@link Parameters} object representing the result
    */
   @Operation(name = "$extract", idempotent = true)
@@ -95,9 +91,7 @@ public class ExtractProvider implements IResourceProvider {
       @Nullable @OperationParam(name = "column") final List<String> column,
       @Nullable @OperationParam(name = "filter") final List<String> filter,
       @Nullable @OperationParam(name = "limit") final IntegerType limit,
-      @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
-      @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
-      @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
+      @SuppressWarnings("unused") @Nullable final ServletRequestDetails requestDetails) {
     return invoke(column, filter, limit, requestDetails);
   }
 

@@ -10,13 +10,45 @@
 [![Test](https://github.com/aehrc/pathling/workflows/Test/badge.svg)](https://github.com/aehrc/pathling/actions?query=workflow%3ATest) [![CodeFactor](https://www.codefactor.io/repository/github/aehrc/pathling/badge)](https://www.codefactor.io/repository/github/aehrc/pathling) [![codecov](https://codecov.io/gh/aehrc/pathling/branch/main/graph/badge.svg?token=A2RDYU05DT)](https://codecov.io/gh/aehrc/pathling)
 
 Pathling is a set of tools that make it easier to
-use clinical terminology and [FHIR&reg;](https://hl7.org/fhir) within health
+use [FHIR&reg;](https://hl7.org/fhir/R4) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
 [**Read the documentation &rarr;**](https://pathling.csiro.au/docs)
 
+<picture>
+    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components-dark@2x.png"
+            media="(prefers-color-scheme: dark) and (min-resolution: 2dppx)"/>
+    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components-dark.png"
+            media="(prefers-color-scheme: dark)"/>
+    <source srcset="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components@2x.png"
+            media="(prefers-color-scheme: light) and (min-resolution: 2dppx)"/>
+    <img src="https://raw.githubusercontent.com/aehrc/pathling/main/site/src/images/components.png" alt="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" width="800"/>
+</picture>
+
 ## What can it do?
+
+### Query and transformation of FHIR data
+
+[FHIR R4](https://hl7.org/fhir/R4) is the dominant standard for exchanging health
+data. It comes in both [JSON](https://hl7.org/fhir/json.html)
+or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
+different types of resources, such
+as [Patient](https://hl7.org/fhir/patient.html), 
+[Observation](https://hl7.org/fhir/observation.html), 
+[Condition](https://hl7.org/fhir/condition.html), 
+[Procedure](https://hl7.org/fhir/procedure.html), and many more.
+
+Pathling is capable of reading all the different types of FHIR resources into a
+format suitable for data analysis tasks. This makes the following things
+possible:
+
+- Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
+- Transforming data into other formats, such as CSV
+  or [Parquet](https://parquet.apache.org/)
+- Performing terminology queries against coded fields within the FHIR data
+
+See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more information.
 
 ### Terminology queries
 
@@ -40,28 +72,6 @@ Examples of the types of questions that can be answered include:
   definition?
 
 See [Terminology functions](https://pathling.csiro.au/docs/libraries/terminology) for more information.
-
-### Query and transformation of FHIR data
-
-[FHIR R4](https://hl7.org/fhir) is the dominant standard for exchanging health
-data. It comes in both [JSON](https://hl7.org/fhir/json.html)
-or [XML](https://hl7.org/fhir/xml.html) formats, and can contain over 140
-different types of resources, such
-as [Patient](https://hl7.org/fhir/patient.html), 
-[Observation](https://hl7.org/fhir/observation.html), 
-[Condition](https://hl7.org/fhir/condition.html), 
-[Procedure](https://hl7.org/fhir/procedure.html), and many more.
-
-Pathling is capable of reading all the different types of FHIR resources into a
-format suitable for data analysis tasks. This makes the following things
-possible:
-
-- Querying FHIR data using SQL and [FHIRPath](/docs/fhirpath)
-- Transforming data into other formats, such as CSV
-  or [Parquet](https://parquet.apache.org/)
-- Performing terminology queries against coded fields within the FHIR data
-
-See [Encoders](https://pathling.csiro.au/docs/libraries/encoders) for more information.
 
 ### FHIR analytics API
 

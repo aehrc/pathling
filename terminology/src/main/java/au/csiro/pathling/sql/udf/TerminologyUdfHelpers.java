@@ -24,7 +24,6 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.apache.hadoop.shaded.org.apache.curator.shaded.com.google.common.collect.Streams;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.Coding;
 import scala.collection.JavaConverters;
@@ -76,12 +75,12 @@ public final class TerminologyUdfHelpers {
   @Nullable
   public static Stream<Coding> decodeMany(final @Nullable WrappedArray<Row> codingsRow) {
     return codingsRow != null
-           ? Streams.stream(JavaConverters.asJavaIterable(codingsRow)).filter(Objects::nonNull)
+           ? JavaConverters.asJavaCollection(codingsRow).stream().filter(Objects::nonNull)
                .map(CodingEncoding::decode)
            : null;
   }
 
-  public static boolean isValidCoding(@Nullable Coding coding) {
+  public static boolean isValidCoding(@Nullable final Coding coding) {
     return nonNull(coding) && nonNull(coding.getSystem()) && nonNull(coding.getCode());
   }
 
@@ -89,5 +88,4 @@ public final class TerminologyUdfHelpers {
   public static Stream<Coding> validCodings(@Nonnull final Stream<Coding> codings) {
     return codings.filter(TerminologyUdfHelpers::isValidCoding);
   }
-
 }

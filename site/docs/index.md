@@ -1,34 +1,19 @@
 # Overview
 
 Pathling is a set of tools that make it easier to
-use clinical terminology and [FHIR&reg;](https://hl7.org/fhir) within health
+use [FHIR&reg;](https://hl7.org/fhir) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
+import Components from '@site/src/images/components.png';
+import Components2x from '@site/src/images/components@2x.png';
+import ComponentsDark from '@site/src/images/components-dark.png';
+import ComponentsDark2x from '@site/src/images/components-dark@2x.png';
+
+<img src={Components} srcset={`${Components2x} 2x, ${Components} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="light-mode-only" width="800" />
+<img src={ComponentsDark} srcset={`${ComponentsDark2x} 2x, ${ComponentsDark} 1x`} title="Components of Pathling (i.e. language libraries and server) and the associated use cases, including data prep, ETL, apps and data extract services" className="dark-mode-only" width="800" />
+
 ## What can it do?
-
-### Terminology queries
-
-Health data often contains codes from systems such
-as [SNOMED CT](https://www.snomed.org/snomed-ct/five-step-briefing), [LOINC](https://loinc.org/)
-or [ICD](https://www.who.int/standards/classifications/classification-of-diseases). 
-These codes contain a great deal of information about diagnoses, procedures,
-observations and many other aspects of a patient's clinical record.
-
-It is common to group these codes based upon their properties, relationships to
-other codes, or membership within a pre-defined set. Pathling can automate the
-task of calling out to
-a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html) to
-ask questions about the codes within your data.
-
-Examples of the types of questions that can be answered include:
-
-- Is this SNOMED CT procedure code a type of endoscopy?
-- Does this LOINC test result code have an analyte of bilirubin?
-- Is this ICD-10 code within the pre-defined list of codes within my cohort
-  definition?
-
-See [Terminology functions](/docs/libraries/terminology) for more information.
 
 ### Query and transformation of FHIR data
 
@@ -51,6 +36,29 @@ possible:
 - Performing terminology queries against coded fields within the FHIR data
 
 See [Encoders](/docs/libraries/encoders) for more information.
+
+### Terminology queries
+
+Health data often contains codes from systems such
+as [SNOMED CT](https://www.snomed.org/snomed-ct/five-step-briefing), [LOINC](https://loinc.org/)
+or [ICD](https://www.who.int/standards/classifications/classification-of-diseases).
+These codes contain a great deal of information about diagnoses, procedures,
+observations and many other aspects of a patient's clinical record.
+
+It is common to group these codes based upon their properties, relationships to
+other codes, or membership within a pre-defined set. Pathling can automate the
+task of calling out to
+a [FHIR terminology server](https://hl7.org/fhir/terminology-service.html) to
+ask questions about the codes within your data.
+
+Examples of the types of questions that can be answered include:
+
+- Is this SNOMED CT procedure code a type of endoscopy?
+- Does this LOINC test result code have an analyte of bilirubin?
+- Is this ICD-10 code within the pre-defined list of codes within my cohort
+  definition?
+
+See [Terminology functions](/docs/libraries/terminology) for more information.
 
 ### FHIR analytics API
 

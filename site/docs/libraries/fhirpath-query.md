@@ -1,5 +1,5 @@
 ---
-sidebar_position: 4
+sidebar_position: 3
 ---
 
 # FHIRPath query
@@ -10,11 +10,6 @@ custom views.
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
-import {
-JavaInstallation,
-PythonInstallation,
-ScalaInstallation
-} from "../../src/components/installation";
 
 ## Extract
 
@@ -55,6 +50,34 @@ result = data.extract("Patient",
                           ".not()"]
                       )
 display(result)
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+data <- pc %>% pathling_read_ndjson("s3://somebucket/synthea/ndjson")
+
+# For patients that have not received a COVID-19 vaccine, extract the given
+# name, family name, phone number and whether the patient has heart disease.
+result <- data %>%
+        ds_extract(
+                "Patient",
+                columns = c(
+                        "Given name" = "name.first().given.first()",
+                        "Family name" = "name.first().family",
+                        "Phone number" = "telecom.where(system = 'phone').value",
+                        "Heart disease" = "reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))"
+                ),
+                filters = c("Heart disease" = "reverseResolve(Condition.subject).exists(code.subsumedBy(http://snomed.info/sct|56265001))")
+        ) %>%
+        show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -166,6 +189,30 @@ display(result)
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+data <- pc %>% pathling_read_ndjson("s3://somebucket/synthea/ndjson")
+
+# Count the number of female patients, grouped by the type of diabetes that they
+# have been diagnosed with.
+result <- data %>%
+        ds_aggregate(
+                "Patient",
+                aggregations = c("Number of patients" = "count()"),
+                groupings = c(
+                        "Type of diabetes" = "reverseResolve(Condition.subject).where(code.subsumedBy(http://snomed.info/sct|73211009)).code.coding.display()"),
+                filters = "gender = 'female'"
+        ) %>% show()
+
+pc %>% pathling_disconnect()
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -262,6 +309,13 @@ data = pc.read.ndjson("/usr/share/staging/ndjson")
 ```
 
 </TabItem>
+<TabItem value='r' label='R'>
+
+```r
+data <- pc %>% pathling_read_ndjson("/usr/share/staging/ndjson")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -272,7 +326,7 @@ val data = pc.read().ndjson("/usr/share/staging/ndjson")
 <TabItem value="java" label="Java">
 
 ```java
-NdjsonSource data=pc.read().ndjson("/usr/share/staging/ndjson");
+NdjsonSource data = pc.read().ndjson("/usr/share/staging/ndjson");
 ```
 
 </TabItem>
@@ -317,6 +371,14 @@ data = pc.read.bundles("/usr/share/staging/bundles",
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% pathling_read_bundles("/usr/share/staging/bundles",
+                                resource_types = c("Patient", "Condition", "Immunization"))
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -328,7 +390,7 @@ val data = pc.read().bundles("/usr/share/staging/bundles",
 <TabItem value="java" label="Java">
 
 ```java
-BundlesSource data=pc.read().bundles("/usr/share/staging/bundles",
+BundlesSource data = pc.read().bundles("/usr/share/staging/bundles",
         Set.of("Patient","Condition","Immunization"),FhirMimeTypes.FHIR_JSON) 
 ```
 
@@ -354,6 +416,17 @@ data = pc.read.datasets({
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% pathling_read_datasets(list(
+        Patient = patient_dataset,
+        Condition = condition_dataset,
+        Immunization = immunization_dataset
+))
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -367,7 +440,7 @@ val data = pc.read().datasets()
 <TabItem value="java" label="Java">
 
 ```java
-DatasetSource data=pc.read().datasets()
+DatasetSource data = pc.read().datasets()
         .dataset("Patient",patientDataset)
         .dataset("Condition",conditionDataset)
         .dataset("Immunization",immunizationDataset);
@@ -395,6 +468,13 @@ data = pc.read.parquet("/usr/share/staging/parquet")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% pathling_read_parquet("/usr/share/staging/parquet")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -405,7 +485,7 @@ val data = pc.read().parquet("/usr/share/staging/parquet")
 <TabItem value="java" label="Java">
 
 ```java
-ParquetSource data=pc.read().parquet("/usr/share/staging/parquet");
+ParquetSource data = pc.read().parquet("/usr/share/staging/parquet");
 ```
 
 </TabItem>
@@ -435,6 +515,13 @@ data = pc.read.delta("/usr/share/staging/delta")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% pathling_read_delta("/usr/share/staging/delta")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -445,7 +532,7 @@ val data = pc.read().delta("/usr/share/staging/delta")
 <TabItem value="java" label="Java">
 
 ```java
-DeltaSource data=pc.read().delta("/usr/share/staging/delta");
+DeltaSource data = pc.read().delta("/usr/share/staging/delta");
 ```
 
 </TabItem>
@@ -474,6 +561,13 @@ data = pc.read.tables("mimic-iv")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data <- pc %>% pathling_read_tables("mimic-iv")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -484,7 +578,7 @@ val data = pc.read().tables("mimic-iv")
 <TabItem value="java" label="Java">
 
 ```java
-CatalogSource data=pc.read().tables("mimic-iv");
+CatalogSource data = pc.read().tables("mimic-iv");
 ```
 
 </TabItem>
@@ -509,6 +603,13 @@ according to their resource type (`[resource type].ndjson`), e.g.
 
 ```python
 data.write.ndjson("/tmp/ndjson")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_ndjson("/tmp/ndjson")
 ```
 
 </TabItem>
@@ -541,6 +642,13 @@ e.g. `Patient.parquet`, `Condition.parquet`.
 
 ```python
 data.write.parquet("/usr/share/warehouse/parquet")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_parquet("/usr/share/warehouse/parquet")
 ```
 
 </TabItem>
@@ -582,6 +690,13 @@ data.write.delta("/usr/share/warehouse/delta")
 ```
 
 </TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_delta("/usr/share/warehouse/delta")
+```
+
+</TabItem>
 <TabItem value="scala" label="Scala">
 
 ```scala
@@ -618,6 +733,13 @@ feature of Databricks.
 
 ```python
 data.write.tables("test")
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+data %>% ds_write_tables("test")
 ```
 
 </TabItem>

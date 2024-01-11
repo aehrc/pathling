@@ -22,6 +22,7 @@ import au.csiro.pathling.security.OperationAccess;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -62,9 +63,7 @@ public class ImportProvider {
    * once - multiple occurrences will result in the last input overwriting the previous ones.
    *
    * @param parameters A FHIR {@link Parameters} object describing the import request
-   * @param request the {@link HttpServletRequest} details
-   * @param requestDetails the {@link RequestDetails} containing HAPI inferred info
-   * @param response the {@link HttpServletResponse} response
+   * @param requestDetails the {@link ServletRequestDetails} containing HAPI inferred info
    * @return A FHIR {@link OperationOutcome} resource describing the result
    */
   @Operation(name = "$import")
@@ -72,9 +71,7 @@ public class ImportProvider {
   @OperationAccess("import")
   @AsyncSupported
   public OperationOutcome importOperation(@ResourceParam final Parameters parameters,
-      @SuppressWarnings("unused") @Nullable final HttpServletRequest request,
-      @SuppressWarnings("unused") @Nullable final RequestDetails requestDetails,
-      @SuppressWarnings("unused") @Nullable final HttpServletResponse response) {
+      @SuppressWarnings("unused") @Nullable final ServletRequestDetails requestDetails) {
     return executor.execute(parameters);
   }
 

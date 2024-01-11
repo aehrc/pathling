@@ -4,26 +4,35 @@ title: Installation
 sidebar_label: Installation
 ---
 
-import {
-JavaInstallation,
-PythonInstallation,
-ScalaInstallation
-} from "../../../src/components/installation";
-
 ### Python
 
-<PythonInstallation/>
+Prerequisites:
 
-Once you have Python and pip installed, the command to install the Pathling
-package is:
+- Python 3.8+ with pip
+
+To install, run this command:
 
 ```
-pip install pathling
+pip install pathling  
+```
+
+### R
+
+Prerequisites: 
+
+- R >= 3.5.0 (tested with 4.3.1)
+
+To install, run these commands:
+
+```r
+# Install the `pathling` package.
+install.packages('pathling')
+
+# Install the Spark version required by Pathling.
+pathling::pathling_install_spark()
 ```
 
 ### Scala
-
-<ScalaInstallation/>
 
 To add the Pathling library to your project, add the following to
 your [SBT](https://www.scala-sbt.org/) configuration:
@@ -33,8 +42,6 @@ libraryDependencies += "au.csiro.pathling" % "library-api" % "[version]"
 ```
 
 ### Java
-
-<JavaInstallation/>
 
 To add the Pathling library to your project, add the following to
 your `pom.xml`:

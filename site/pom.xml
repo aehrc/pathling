@@ -13,7 +13,7 @@
   <parent>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>pathling</artifactId>
-    <version>6.3.0</version>
+    <version>6.4.2</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>site</artifactId>
@@ -119,6 +119,17 @@
           <artifactId>python</artifactId>
           <classifier>docs</classifier>
         </dependency>
+        <!-- This is the docs JAR that is built by the R API module. -->
+        <dependency>
+          <groupId>au.csiro.pathling</groupId>
+          <artifactId>r</artifactId>
+          <classifier>docs</classifier>
+        </dependency>
+        <!-- This JAR contains the built Helm chart for Pathling Server. -->
+        <dependency>
+          <groupId>au.csiro.pathling</groupId>
+          <artifactId>helm</artifactId>
+        </dependency>
         <!-- Lombok is required for Javadoc generation. -->
         <dependency>
           <groupId>org.projectlombok</groupId>
@@ -154,6 +165,19 @@
                 </configuration>
               </execution>
               <execution>
+                <id>unpack-r-docs</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
+                  <includeArtifactIds>r</includeArtifactIds>
+                  <excludeTransitive>true</excludeTransitive>
+                  <outputDirectory>${project.build.directory}/site/docs/r</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
                 <id>unpack-scala-docs</id>
                 <phase>package</phase>
                 <goals>
@@ -164,6 +188,19 @@
                   <includeArtifactIds>encoders</includeArtifactIds>
                   <includeClassifiers>javadoc</includeClassifiers>
                   <outputDirectory>${project.build.directory}/site/docs/scala</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
+                <id>unpack-helm-chart</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeGroupIds>au.csiro.pathling</includeGroupIds>
+                  <includeArtifactIds>helm</includeArtifactIds>
+                  <excludes>META-INF/**</excludes>
+                  <outputDirectory>${project.build.directory}/site/helm</outputDirectory>
                 </configuration>
               </execution>
             </executions>

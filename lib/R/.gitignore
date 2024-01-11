@@ -1,0 +1,4 @@
+man/*.Rd
+NAMESPACE
+DESCRIPTION
+tests/testthat/testdata

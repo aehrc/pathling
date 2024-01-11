@@ -20,12 +20,9 @@ from pathling import (
     to_snomed_coding,
     to_ecl_value_set,
     member_of,
-    find_jar,
 )
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-
-print(find_jar())
 
 pc = PathlingContext.create(
     terminology_server_url="http://localhost:8081/fhir",

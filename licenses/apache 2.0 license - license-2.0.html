@@ -45,9 +45,42 @@ dt:hover > .headerlink, p:hover > .headerlink, td:hover > .headerlink, h1:hover 
     window.addEventListener('DOMContentLoaded', (event) => {
         new PagefindUI({ element: "#pagefind-search" });
     });
+    var pageTitle = 'Apache License, Version 2.0';
+    if(pageTitle === '404'){
+      window.addEventListener('DOMContentLoaded', (event) => {
+          new PagefindUI({ element: "#page-404-search" });
+      });
+    }
   </script>
+  
 
-<!-- https://www.apache.org/licenses/LICENSE-2.0 -->
+<!-- https://www.apache.org/licenses/LICENSE-2.0 -->  <!-- Matomo -->
+  <script>
+    var pageTitle = 'Apache License, Version 2.0';
+    var _paq = window._paq = window._paq || [];
+    /* tracker methods like "setCustomDimension" should be called before
+"trackPageView" */
+    /* We explicitly disable cookie tracking to avoid privacy issues */
+    _paq.push(['disableCookies']);
+    if(pageTitle === '404'){
+      /* Track 404 page hits */
+      _paq.push(['setDocumentTitle',  '404/URL = ' +  encodeURIComponent(document.location.pathname+document.location.search) + '/From = ' + encodeURIComponent(document.referrer)]);
+    }
+    /* Measure a visit to flink.apache.org and nightlies.apache.org/flink
+as the same visit */
+    _paq.push(['trackPageView']);
+    _paq.push(['enableLinkTracking']);
+    (function() {
+      var u="//analytics.apache.org/";
+      _paq.push(['setTrackerUrl', u+'matomo.php']);
+      _paq.push(['setSiteId', '37']);
+      var d=document, g=d.createElement('script'),
+s=d.getElementsByTagName('script')[0];
+      g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+    })();
+  </script>
+  <!-- End Matomo Code -->
+
 </head>
 
 <body >
@@ -57,6 +90,7 @@ dt:hover > .headerlink, p:hover > .headerlink, td:hover > .headerlink, h1:hover 
 		<a href="#maincontent">Skip to Main Content</a>
 	</div>
     <nav class="navbar navbar-inverse navbar-fixed-top mainmenu">
+      
       <div class="container">
         <div class="navbar-header">
           <button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#mainnav-collapse">
@@ -67,145 +101,93 @@ dt:hover > .headerlink, p:hover > .headerlink, td:hover > .headerlink, h1:hover 
           </button>
         </div>
         <div class="collapse navbar-collapse" id="mainnav-collapse">
+          <div class="upper-nav">
+            <div class="header-social-icons">
+              <a target="_blank" href="https://infra.apache.org/slack.html"><img src="/images/slack-icon.svg" alt="slack icon"></a>
+              <a target="_blank" href="https://github.com/apache"><img src="/images/github-mark-white.svg" alt="github icon"></a>
+              <a target="_blank" href="https://www.linkedin.com/company/the-apache-software-foundation/"><img src="/images/linkedin-icon.png" alt="linkedIn icon"></a>
+              <a target="_blank" href="https://www.youtube.com/c/TheApacheFoundation"><img src="/images/youtube-icon.svg" alt="youtube icon"></a>
+              <a target="_blank" href="https://twitter.com/TheASF"><img src="/images/x-icon.svg" alt="X icon"></a>
+            </div>
+            <a href="/foundation/sponsorship" class="btn btn-default" onclick="_paq.push(['trackEvent', 'click', 'SponsorASF Button']);">Sponsor the ASF</a>
+          </div>
           <ul class="nav navbar-nav navbar-justified">
-            <li><a href="/index.html#news">News</a></li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">About&nbsp;<span class="caret"></span></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Community&nbsp;<span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
-                <li><a href="/foundation">Overview</a></li>
-                <li><a href="/foundation/how-it-works.html">Process</a></li>
-                <li><a href="/foundation/governance/">Governance</a></li>
-                <li><a href="/theapacheway/index.html">The Apache Way</a></li>
-                <li><a href="/foundation/governance/members.html">Membership</a></li>
-                <li><a href="https://community.apache.org/">Community</a></li>
-                <li><a href="https://diversity.apache.org/">Diversity & Inclusion</a></li>
+                <li><a href="https://community.apache.org/" target="_blank">Contributor Getting Started</a></li>
+                <li><a href="https://community.apache.org/contributors/" target="_blank">Becoming a Committer</a></li>
                 <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
-                <li><a href="/foundation/glossary.html">Glossary</a></li>
-				  <li><a href="/apache-name">About Our Name</a></li>
-                <li><a href="/foundation/preFAQ.html">FAQ</a></li>
-                <li><a href="/foundation/contributing.html">Support Apache</a></li>
-                <li><a href="/press/">Media/Analysts</a></li>
-                <li><a href="/foundation/contact.html">Contact</a></li>
+                <li><a href="/community-resources/">Community Resources</a></li>
+                <li><a href="https://communityovercode.org/" target="_blank">Community Over Code</a></li>
+                <li><a href="https://events.apache.org/" target="_blank">Events</a></li>
+                <li><a href="https://www.redbubble.com/people/comdev/shop" target="_blank">Store</a></li>
               </ul>
             </li>
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Make a Donation&nbsp;<span class="caret"></span></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Projects&nbsp;<span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
-                <li><a href="/foundation/contributing.html">Donate Now</a></li>
-                <li><a href="https://donate.apache.org/">&nbsp;&nbsp;Via Credit Card</a></li>
-                <li><a href="https://donate.apache.org/">&nbsp;&nbsp;Via ACH</a></li>
-                <li><a href="https://donate.apache.org/">&nbsp;&nbsp;Via PayPal</a></li>
-                <li><a href="https://www.redbubble.com/people/comdev">Buy Swag</a></li>
-                <li><a href="/foundation/sponsorship.html">ASF Sponsorship</a></li>
-                <li><a href="/foundation/thanks#targeted-sponsors">Targeted Sponsorship</a></li>
-                <li><a href="/foundation/contributing.html#CorporateGiving">Corporate Giving</a></li>
-              </ul>
-            </li>
-            <li class="dropdown">
-              <a href="#" class="dropdopwn-toggle" data-toggle="dropdown">The Apache Way&nbsp;<span class="caret"></span></a>
-              <ul class="dropdown-menu" role="menu">
-                <li><a href="/theapacheway/index.html">The Apache Way</a></li>
-                <li><a href="https://s.apache.org/GhnI">Sustainable Open Source</a></li>
-                <li><a href="/foundation/how-it-works.html">How it Works</a></li>
-                <li><a href="/foundation/how-it-works.html#meritocracy">Merit</a></li>
-                <li><a href="https://blogs.apache.org/foundation/category/SuccessAtApache">Success at Apache</a></li>
-              </ul>
-            </li>
-            <li class="dropdown">
-              <a href="#" class="dropdopwn-toggle" data-toggle="dropdown">Join Us&nbsp;<span class="caret"></span></a>
-              <ul class="dropdown-menu" role="menu">
-                <li><a href="https://community.apache.org/gettingStarted/101.html">Getting Started</a></li>
-                <li><a href="https://helpwanted.apache.org/">Help Wanted</a></li>
-                <li><a href="https://www.apachecon.com/">ApacheCon</a></li>
-                <li><a href="http://community.apache.org/calendars/">Community Events</a></li>
-                <li><a href="https://tac.apache.org">Travel Assistance</a></li>
-                <li><a href="https://community.apache.org/gsoc.html">Summer of Code</a></li>
-                <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
-                <li><a href="https://community.apache.org/contributors/etiquette">Etiquette</a></li>
-                <li class="dropdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Projects&nbsp;<span class="caret"></span></a>
-                  <ul class="dropdown-menu" role="menu">
-                    <li><a href="/index.html#projects-list">Project List</a></li>
-                    <li><a href="/foundation/how-it-works.html#management">How they work</a></li>
-                    <li><a href="https://community.apache.org/projectIndependence.html">Independence</a></li>
-                    <li><a href="https://projects.apache.org/committees.html?date">Date Founded</a></li>
-                    <li><a href="https://projects.apache.org/projects.html?name">Names</a></li>
-                    <li><a href="https://projects.apache.org/projects.html?category">Categories</a></li>
-                    <li><a href="https://projects.apache.org/projects.html?language">Languages</a></li>
-                    <li><a href="https://projects.apache.org/statistics.html">Statistics</a></li>
-                    <li><a href="https://incubator.apache.org/">Apache Incubator</a></li>
-                    <li><a href="https://helpwanted.apache.org/">Help Wanted</a></li>
-                    <li><a href="/foundation/marks/">Brand Management</a></li>
-                  </ul>
-                </li>
-                <li class="dropdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">People&nbsp;<span class="caret"></span></a>
-                  <ul class="dropdown-menu" role="menu">
-                    <li><a href="/foundation/how-it-works.html#roles">Roles</a></li>
-                    <li><a href="/foundation/members.html">Members</a></li>
-                    <li><a href="https://community.apache.org/contributors/">Committers</a></li>
-                    <li><a href="/foundation/#who-runs-the-asf">Board of Directors</a></li>
-                    <li><a href="/foundation/#who-runs-the-asf">Officers  &amp; Project VPs</a></li>
-                    <li><a href="https://community.zones.apache.org/map.html">Location Map</a></li>
-                    <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
-                    <li><a href="https://people.apache.org/">Committer Directory</a></li>
-                  </ul>
-                </li>
-                <li class="dropdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Community&nbsp;<span class="caret"></span></a>
-                  <ul class="dropdown-menu" role="menu">
-                    <li><a href="https://community.apache.org/about/">Community Development</a></li>
-                    <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
-                    <li><a href="https://community.apache.org/">Get Involved</a></li>
-                    <li><a href="https://community.apache.org/mentoringprogramme.html">Mentoring</a></li>
-                    <li><a href="https://helpwanted.apache.org/">Help Wanted</a></li>
-                    <li><a href="https://community.apache.org/calendars/">Community Events</a></li>
-                    <li><a href="https://community.apache.org/newbiefaq.html">FAQ</a></li>
-                    <li><a href="https://community.apache.org/lists.html">Mailing Lists</a></li>
-                  </ul>
-                </li>
-                <li class="dropdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Infrastructure&nbsp;<span class="caret"></span></a>
-                  <ul class="dropdown-menu" role="menu">
-                    <li><a href="/dev/infrastructure.html">Infra overview</a></li>
-                    <li><a href="https://infra.apache.org/" target="_blank">Policies and Tools</a></li>
-                    <li><a href="https://cwiki.apache.org/confluence/display/INFRA/Index" target="_blank">CWiki</a></li>
-                  </ul>
-                </li>
-                <li class="dropdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">License&nbsp;<span class="caret"></span></a>
-                  <ul class="dropdown-menu" role="menu">
-                    <li><a href="/licenses/LICENSE-2.0">Apache License 2.0</a></li>
-                    <li><a href="/foundation/license-faq.html">Licensing FAQ</a></li>
-                    <li><a href="/licenses/contributor-agreements.html">Contributor License Agreements</a></li>
-                    <li><a href="/licenses/contributor-agreements.html#grants">Software Grants</a></li>
-                    <li><a href="/foundation/marks/list/">Trademarks</a></li>
-					<li><a href="/licenses/exports/">Exports</a></li>
-                  </ul>
-                </li>
-                <li class="dropdown dropdown-submenu visible-xs">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Sponsors&nbsp;<span class="caret"></span></a>
-                  <ul class="dropdown-menu" role="menu">
-                    <li><a href="/foundation/sponsorship.html">Sponsor the ASF</a></li>
-                    <li><a href="/foundation/thanks">Sponsor Thanks</a></li>
-                    <li><a href="/foundation/contributing.html#CorporateGiving">Corporate Giving</a></li>
-                    <li><a href="/foundation/contributing.html">Individual Donations</a></li>
-                    <li><a href="https://www.redbubble.com/people/comdev/">Buy Stuff</a></li>
-                  </ul>
-                </li>
+                <li><a href="/projects">Projects</a></li>
+                <li><a href="https://incubator.apache.org/" target="_blank">Incubator Projects</a></li>
+                <li><a href="https://projects.apache.org/" target="_blank">Projects Directory </a></li>
+                <li><a href="/foundation/mailinglists">Mailing Lists </a></li>
+                <li><a href="/security">Report a Vulnerability</a></li>
               </ul>
             </li>
             <li class="dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Downloads&nbsp;<span class="caret"></span></a>
               <ul class="dropdown-menu" role="menu">
-                <li><a href="https://downloads.apache.org/">Distribution</a></li>
-                <li><a href="https://projects.apache.org/releases.html">Releases</a></li>
-                <li><a href="https://status.apache.org/">Infrastructure Status</a></li>
-                <li><a href="/uptime/">Infrastructure Statistics</a></li>
+                <li><a href="https://downloads.apache.org/" target="_blank">Distributions</a></li>
+                <li><a href="https://projects.apache.org/releases.html" target="_blank">Releases</a></li>
+                <li><a href="https://status.apache.org/" target="_blank">Infrastructure Status</a></li>
+                <li><a href="https://infra-reports.apache.org/#uptime" target="_blank">Infrastructure Statistics</a></li>
               </ul>
             </li>
-            <li class="dropdown hidden-xs">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"><span class="glyphicon glyphicon-search"
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Learn&nbsp;<span class="caret"></span></a>
+              <ul class="dropdown-menu" role="menu">
+                <li><a href="https://news.apache.org/" target="_blank">Blog</a></li>
+                <li><a href="/foundation/how-it-works">How the ASF Works</a></li>
+                <li><a href="/theapacheway/">The Apache Way</a></li>
+                <li><a href="/legal/">Legal &amp; Trademark</a></li>
+                <li><a href="/licenses">Licenses</a></li>
+                <li><a href="/foundation/glossary">Glossary</a></li>
+                <li><a href="/foundation/faq">FAQ</a></li>
+              </ul>
+            </li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Resources &amp; Tools&nbsp;<span class="caret"></span></a>
+              <ul class="dropdown-menu" role="menu">
+                <li><a href="/dev/">Developer Information</a></li>
+                <li><a href="https://cwiki.apache.org/" target="_blank" >Wiki</a></li>
+                <li><a href="https://issues.apache.org/" target="_blank" >Issues</a></li>
+                <li><a href="https://infra.apache.org/slack.html" target="_blank" >Slack</a></li>
+                <li><a href="https://selfserve.apache.org/" target="_blank" >Self Serve Portal</a></li>
+                <li><a href="https://infra.apache.org/" target="_blank" >Infrastructure</a></li>
+                <li><a href="https://whimsy.apache.org/" target="_blank" >Whimsy</a></li>
+                <li><a href="/foundation/press/kit/">Brand Guidelines</a></li>
+                <li><a href="/logos/">Project Logos</a></li>
+              </ul>
+            </li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">About&nbsp;<span class="caret"></span></a>
+              <ul class="dropdown-menu" role="menu">
+                <li><a href="/foundation/">About</a></li>
+                <li><a href="/foundation/sponsors">Our Sponsors</a></li>
+		<li><a href="/foundation/sponsorship">Corporate Sponsorship</a></li>
+                <li><a href="/foundation/individual-supporters">Individual Supporters</a></li>
+                <li><a href="/foundation/leadership">Leadership</a></li>
+                <li><a href="/foundation/members">Members</a></li>
+                <li><a href="https://diversity.apache.org/" target="_blank">Diversity & Inclusion</a></li>
+                <li><a href="/press/">Newsroom</a></li>
+                <li><a href="/foundation/contact">Contact</a></li>
+              </ul>
+            </li>
+            
+           
+            
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle hidden-xs" data-toggle="dropdown" role="button"><span class="glyphicon glyphicon-search"
                   aria-hidden="true"></span><span class="sr-only">Search</span></a>
               <ul class="dropdown-menu search-form" role="search">
                 <li>
@@ -230,81 +212,6 @@ dt:hover > .headerlink, p:hover > .headerlink, td:hover > .headerlink, h1:hover 
     <div class="main">
       <img class="img-responsive center-block visible-home" src="/img/asf-estd-1999-logo.jpg" alt="Apache 20th Anniversary Logo">
 
-      <ul class="nav navbar-nav navbar-justified">
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Projects&nbsp;<span class="caret hidden-sm"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="/index.html#projects-list">Project List</a></li>
-            <li><a href="/foundation/how-it-works.html#management">How they work</a></li>
-            <li><a href="https://community.apache.org/projectIndependence.html">Independence</a></li>
-            <li><a href="https://projects.apache.org/committees.html?date">Date Founded</a></li>
-            <li><a href="https://projects.apache.org/projects.html?name">Names</a></li>
-            <li><a href="https://projects.apache.org/projects.html?category">Categories</a></li>
-            <li><a href="https://projects.apache.org/projects.html?language">Languages</a></li>
-            <li><a href="https://projects.apache.org/statistics.html">Statistics</a></li>
-            <li><a href="https://incubator.apache.org/">Apache Incubator</a></li>
-            <li><a href="https://helpwanted.apache.org/">Help Wanted</a></li>
-            <li><a href="/foundation/marks/">Brand Management</a></li>
-            <li><a href="/foundation/glossary.html">Glossary of Terms</a></li>
-          </ul>
-        </li>
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">People&nbsp;<span class="caret hidden-sm"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="/foundation/how-it-works.html#roles">Roles</a></li>
-            <li><a href="/foundation/members.html">Members</a></li>
-            <li><a href="https://community.apache.org/contributors/">Committers</a></li>
-            <li><a href="/foundation/#who-runs-the-asf">Board of Directors</a></li>
-            <li><a href="/foundation/#who-runs-the-asf">Officers &amp; Project VPs</a></li>
-            <li><a href="https://diversity.apache.org/">Diversity & Inclusion</a></li>
-            <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
-            <li><a href="https://people.apache.org/">Committer Directory</a></li>
-            <li><a href="https://community.zones.apache.org/map.html">Heat Map</a></li>
-          </ul>
-        </li>
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Community&nbsp;<span class="caret hidden-sm"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="https://community.apache.org/about/">Community Development</a></li>
-            <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
-            <li><a href="https://community.apache.org/">Get Involved</a></li>
-            <li><a href="https://community.apache.org/mentoringprogramme.html">Mentoring</a></li>
-            <li><a href="https://helpwanted.apache.org/">Help Wanted</a></li>
-            <li><a href="https://community.apache.org/calendars/">Community Events</a></li>
-            <li><a href="https://community.apache.org/newbiefaq.html">FAQ</a></li>
-            <li><a href="https://community.apache.org/lists.html">Mailing Lists</a></li>
-          </ul>
-        </li>
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Infrastructure&nbsp;<span class="caret"></span></a>
-          <ul class="dropdown-menu" role="menu">
-              <li><a href="/dev/infrastructure.html">Infra overview</a></li>
-              <li><a href="https://infra.apache.org/" target="_blank">Policies and Tools</a></li>
-              <li><a href="https://cwiki.apache.org/confluence/display/INFRA/Index" target="_blank">CWiki</a></li>
-          </ul>
-        </li>
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">License&nbsp;<span class="caret hidden-sm"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="/licenses/LICENSE-2.0">Apache License 2.0</a></li>
-            <li><a href="/foundation/license-faq.html">Licensing FAQ</a></li>
-            <li><a href="/licenses/contributor-agreements.html">Contributor License Agreements</a></li>
-            <li><a href="/licenses/contributor-agreements.html#grants">Software Grants</a></li>
-            <li><a href="/foundation/marks/list/">Trademarks</a></li>
-			<li><a href="/licenses/exports/">Exports</a></li>
-          </ul>
-        </li>
-        <li class="dropdown">
-          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button">Sponsors&nbsp;<span class="caret hidden-sm"></span></a>
-          <ul class="dropdown-menu" role="menu">
-            <li><a href="/foundation/sponsorship.html">Sponsor the ASF</a></li>
-            <li><a href="/foundation/thanks">Sponsor Thanks</a></li>
-            <li><a href="/foundation/contributing.html#CorporateGiving">Corporate Giving</a></li>
-            <li><a href="/foundation/contributing.html">Individual Donations</a></li>
-            <li><a href="https://www.redbubble.com/people/comdev/">Buy Stuff</a></li>
-          </ul>
-        </li>
-      </ul>
     </div>
  
   </header>
@@ -420,16 +327,14 @@ and do not modify the License. You may add Your own attribution notices
 within Derivative Works that You distribute, alongside or as an addendum to
 the NOTICE text from the Work, provided that such additional attribution
 notices cannot be construed as modifying the License.
-<br/>
-<br/>
-You may add Your own copyright statement to Your modifications and may
+</li>
+</ol>
+<p>You may add Your own copyright statement to Your modifications and may
 provide additional or different license terms and conditions for use,
 reproduction, or distribution of Your modifications, or for any such
 Derivative Works as a whole, provided Your use, reproduction, and
 distribution of the Work otherwise complies with the conditions stated in
-this License.
-</li>
-</ol>
+this License.</p>
 <p><strong><a name="contributions">5. Submission of Contributions</a></strong>. Unless You
 explicitly state otherwise, any Contribution intentionally submitted for
 inclusion in the Work by You to the Licensor shall be under the terms and
@@ -504,76 +409,83 @@ limitations under the License.
     <div class="container">
       <div class="row">
         <br />
-        <div class="col-sm-1">
-
-        </div>
         <div class="col-sm-2">
           <h5 class="white">Community</h5>
           <ul class="list-unstyled white" role="menu">
-            <li><a href="http://community.apache.org/">Overview</a></li>
-            <li><a href="/foundation/conferences.html">Conferences</a></li>
-            <li><a href="http://community.apache.org/gsoc.html">Summer of Code</a></li>
-            <li><a href="http://community.apache.org/newcomers/">Getting Started</a></li>
-            <li><a href="/foundation/how-it-works.html">The Apache Way</a></li>
-            <li><a href="https://tac.apache.org">Travel Assistance</a></li>
-            <li><a href="/foundation/getinvolved.html">Get Involved</a></li>
-            <li><a href="/foundation/policies/conduct.html">Code of Conduct</a></li>
-            <li><a href="http://community.apache.org/newbiefaq.html">Community FAQ</a></li>
-            <li><a href="/memorials/">Memorials</a></li>
+            <li><a href="https://community.apache.org/" target="_blank">Contributor Getting Started</a></li>
+            <li><a href="https://community.apache.org/contributors/" target="_blank">Becoming a Committer</a></li>
+            <li><a href="/foundation/policies/conduct">Code of Conduct</a></li>
+            <li><a href="/community-resources/">Community Resources</a></li>
+            <li><a href="https://communityovercode.org/" target="_blank">Community Over Code</a></li>
+            <li><a href="https://events.apache.org/" target="_blank">Events</a></li>
+            <li><a href="https://www.redbubble.com/people/comdev/shop" target="_blank">Store</a></li>
           </ul>
         </div>
 
         <div class="col-sm-2">
-          <h5 class="white">Innovation</h5>
+          <h5 class="white">Projects</h5>
           <ul class="list-unstyled white" role="menu">
-            <li><a href="http://incubator.apache.org/">Incubator</a></li>
-            <li><a href="http://labs.apache.org/">Labs</a></li>
-            <li><a href="/licenses/">Licensing</a></li>
-            <li><a href="/foundation/license-faq.html">Licensing FAQ</a></li>
-            <li><a href="/foundation/marks/">Trademark Policy</a></li>
-            <li><a href="/foundation/contact.html">Contacts</a></li>
+              <li><a href="/projects">Projects</a></li>
+              <li><a href="https://incubator.apache.org/" target="_blank">Incubator Projects</a></li>
+              <li><a href="https://projects.apache.org/" target="_blank">Projects Directory </a></li>
+              <li><a href="/foundation/mailinglists">Mailing Lists </a></li>
+              <li><a href="/security">Report a Vulnerability</a></li>
+          </ul>
+        </div>
+        <div class="col-sm-2">
+          <h5 class="white">Downloads</h5>
+          <ul class="list-unstyled white" role="menu">
+            <li><a href="https://downloads.apache.org/" target="_blank">Distributions</a></li>
+            <li><a href="https://projects.apache.org/releases.html" target="_blank">Releases</a></li>
+            <li><a href="https://status.apache.org/" target="_blank">Infrastructure Status</a></li>
+            <li><a href="https://infra-reports.apache.org/#uptime" target="_blank">Infrastructure Statistics</a></li>
           </ul>
         </div>
 
         <div class="col-sm-2">
-          <h5 class="white">Tech Operations</h5>
+          <h5 class="white">Learn</h5>
           <ul class="list-unstyled white" role="menu">
-            <li><a href="/dev/">Developer Information</a></li>
-            <li><a href="/dev/infrastructure.html">Infrastructure</a></li>
-            <li><a href="/security/">Security</a></li>
-            <li><a href="http://status.apache.org">Status</a></li>
-            <li><a href="/foundation/contact.html">Contacts</a></li>
+            <li><a href="https://news.apache.org/" target="_blank">Blog</a></li>
+            <li><a href="/foundation/how-it-works">How the ASF Works</a></li>
+            <li><a href="/theapacheway/">The Apache Way</a></li>
+            <li><a href="/legal/">Legal &amp; Trademark</a></li>
+            <li><a href="/licenses">Licenses</a></li>
+            <li><a href="/foundation/glossary">Glossary</a></li>
+            <li><a href="/foundation/faq">FAQ</a></li>
           </ul>
         </div>
 
         <div class="col-sm-2">
-          <h5 class="white">Press</h5>
+          <h5 class="white">Resources &amp; Tools</h5>
           <ul class="list-unstyled white" role="menu">
-            <li><a href="/press/">Overview</a></li>
-            <li><a href="https://blogs.apache.org/">ASF News</a></li>
-            <li><a href="https://blogs.apache.org/foundation/">Announcements</a></li>
-            <li><a href="https://twitter.com/TheASF">Twitter Feed</a></li>
-            <li><a href="/press/#contact">Contacts</a></li>
+              <li><a href="/dev/">Developer Information</a></li>
+              <li><a href="https://cwiki.apache.org/" target="_blank" >Wiki</a></li>
+              <li><a href="https://issues.apache.org/" target="_blank" >Issues</a></li>
+              <li><a href="https://infra.apache.org/slack.html" target="_blank" >Slack</a></li>
+              <li><a href="https://selfserve.apache.org/" target="_blank" >Self Serve Portal</a></li>
+              <li><a href="https://infra.apache.org/" target="_blank" >Infrastructure</a></li>
+              <li><a href="https://whimsy.apache.org/" target="_blank" >Whimsy</a></li>
+              <li><a href="/foundation/press/kit/">Brand Guidelines</a></li>
+              <li><a href="/logos/">Project Logos</a></li>
           </ul>
         </div>
 
         <div class="col-sm-2">
-          <h5 class="white">Legal</h5>
+          <h5 class="white">About</h5>
           <ul class="list-unstyled white" role="menu">
-            <li><a href="/legal/">Legal Affairs</a></li>
-            <li><a href="/legal/dmca.html">DMCA</a></li>
-            <li><a href="/licenses/">Licensing</a></li>
-            <li><a href="/foundation/marks/">Trademark Policy</a></li>
-            <li><a href="/foundation/records/">Public Records</a></li>
-            <li><a href="/foundation/policies/privacy.html">Privacy Policy</a></li>
-            <li><a href="/licenses/exports/">Export Information</a></li>
-            <li><a href="/foundation/license-faq.html">Licensing FAQ</a></li>
-            <li><a href="/foundation/contact.html">Contacts</a></li>
+            <li><a href="/foundation/">About</a></li>
+            <li><a href="/foundation/sponsors">Our Sponsors</a></li>
+	    <li><a href="/foundation/sponsorship">Corporate Sponsorship</a></li>
+            <li><a href="/foundation/individual-supporters">Individual Supporters</a></li>
+            <li><a href="/foundation/leadership">Leadership</a></li>
+            <li><a href="/foundation/members">Members</a></li>
+            <li><a href="https://diversity.apache.org/" target="_blank">Diversity & Inclusion</a></li>
+            <li><a href="/press/">Newsroom</a></li>
+            <li><a href="/foundation/contact">Contact</a></li>
+            <li><a href="https://privacy.apache.org/policies/privacy-policy-public.html" target="_blank">Privacy Policy</a></li>
           </ul>
         </div>
 
-        <div class="col-sm-1">
-        </div>
 
       </div>
       <hr class="col-lg-12 hr-white" />
@@ -594,15 +506,15 @@ limitations under the License.
   <script src="/js/slideshow.js"></script>
   <script>
     (function($){
-    $(document).ready(function(){
-    $('ul.dropdown-menu [data-toggle=dropdown]').on('click', function(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    $(this).parent().siblings().removeClass('open');
-    $(this).parent().toggleClass('open');
-    console.log('WOrked');
-    });
-    });
+      $(document).ready(function(){
+        $('ul.dropdown-menu [data-toggle=dropdown]').on('click', function(event) {
+          event.preventDefault();
+          event.stopPropagation();
+          $(this).parent().siblings().removeClass('open');
+          $(this).parent().toggleClass('open');
+          console.log('WOrked');
+        });
+      });
     })(jQuery);
   </script>
 </body>

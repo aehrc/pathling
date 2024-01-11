@@ -25,7 +25,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>6.3.0</version>
+    <version>6.4.2</version>
   </parent>
   <artifactId>library-runtime</artifactId>
   <packaging>jar</packaging>
@@ -101,6 +101,7 @@
               <artifact>*:*</artifact>
               <excludes>
                 <exclude>META-INF/MANIFEST.MF</exclude>
+                <exclude>META-INF/versions/**</exclude>
               </excludes>
             </filter>
           </filters>
@@ -114,6 +115,13 @@
               <shadedPattern>${shaded.dependency.prefix}.com.</shadedPattern>
               <includes>
                 <include>com/github/benmanes/caffeine/**</include>
+              </includes>
+            </relocation>
+            <relocation>
+              <pattern>com/</pattern>
+              <shadedPattern>${shaded.dependency.prefix}.com.</shadedPattern>
+              <includes>
+                <include>com/fasterxml/jackson/**</include>
               </includes>
             </relocation>
           </relocations>

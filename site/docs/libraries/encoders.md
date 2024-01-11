@@ -15,11 +15,6 @@ details.
 
 import Tabs from "@theme/Tabs";
 import TabItem from "@theme/TabItem";
-import {
-JavaInstallation,
-PythonInstallation,
-ScalaInstallation
-} from "../../src/components/installation";
 
 ## Reading in NDJSON
 
@@ -45,6 +40,23 @@ patients = pc.encode(json_resources, 'Patient')
 
 # Do some stuff.
 patients.select('id', 'gender', 'birthDate').show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+
+ndjson <- '/some/path/ndjson/Condition.ndjson'
+json_resources <- pathling_spark(pc) %>% spark_read_text(ndjson)
+
+pc %>% pathling_encode(json_resources, 'Condition') %>% show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>
@@ -124,6 +136,23 @@ patients = pc.encode_bundle(bundles, 'Patient')
 
 # Do some stuff.
 patients.select('id', 'gender', 'birthDate').show()
+```
+
+</TabItem>
+<TabItem value="r" label="R">
+
+```r
+library(sparklyr)
+library(pathling)
+
+pc <- pathling_connect()
+
+bundles_dir <- '/some/path/bundles'
+json_bundles <- pathling_spark(pc) %>% spark_read_text(bundles_dir, whole = TRUE)
+
+pc %>% pathling_encode_bundle(json_bundles, 'Condition', column = 'contents') %>% show()
+
+pc %>% pathling_disconnect()
 ```
 
 </TabItem>

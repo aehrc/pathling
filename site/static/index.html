@@ -43,7 +43,7 @@
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5" />
     <meta name="msapplication-TileColor" content="#da532c" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#17d0f4" />
     <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
   </head>
   <body class="is-preload">
@@ -79,22 +79,14 @@
 
       <!-- Section -->
       <section id="first">
-        <header>
-          <h2>
-            Tap into terminology
-          </h2>
-        </header>
         <div class="content">
           <p>
-            Pathling provides libraries for Python, Java and Scala that make it 
-            easy to call out to a <a href="https://hl7.org/fhir/terminology-service.html">FHIR terminology server</a> 
-            from your <a href="https://spark.apache.org/">Apache Spark</a> 
-            queries.
+            Pathling makes it easier to use <a href="https://hl7.org/fhir/R4">FHIR</a> 
+            and clinical terminology for data analytics.
           </p>
           <ul class="actions">
             <li>
-              <a href="../docs/libraries/terminology" class="button primary large">Read the docs &rarr;</a
-              >
+              <a href="./docs" class="button primary large">Read the docs &rarr;</a>
             </li>
           </ul>
         </div>
@@ -109,17 +101,26 @@
         </header>
         <div class="content">
           <p>
-            Read FHIR data into Apache Spark data sets. Query it using <a
-            href="https://pathling.csiro.au/docs/fhirpath">FHIRPath</a> 
-            or SQL, or transform it for use in other tools.
+            Pathling loads FHIR data into <a href="https://spark.apache.org/">Apache Spark</a>, 
+            enabling you to query it using <a href="https://pathling.csiro.au/docs/fhirpath">FHIRPath</a> 
+            or SQL.
           </p>
-          <ul class="actions">
-            <li>
-              <a href="../docs/libraries/encoders"
-                 class="button primary large">Read the docs &rarr;</a
-              >
-            </li>
-          </ul>
+        </div>
+      </section>
+
+      <!-- Section -->
+      <section>
+        <header>
+          <h2>
+            Tap into terminology
+          </h2>
+        </header>
+        <div class="content">
+          <p>
+            Pathling makes it easy to use terminology within your queries, using a <a
+            href="https://hl7.org/fhir/terminology-service.html">FHIR terminology server</a> 
+            such as <a href="https://ontoserver.csiro.au">Ontoserver</a>.
+          </p>
         </div>
       </section>
 
@@ -132,21 +133,24 @@
         </header>
         <div class="content">
           <p>
-            Stand up a FHIR API that can be used to power analytic web and mobile applications.
+            The Pathling FHIR API enables your web and mobile applications to perform 
+            population-level analytic queries.
           </p>
-          <ul class="actions">
-            <li>
-              <a href="../docs/server" class="button primary large">Read the docs &rarr;</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://go.pathling.app/aggregate?subjectResource=Patient&aggregations%5B0%5D%5Blabel%5D=Number%20of%20patients&aggregations%5B0%5D%5Bexpression%5D=count%28%29&groupings%5B0%5D%5Blabel%5D=Prescribed%20TNF%20inhibitor&groupings%5B0%5D%5Bexpression%5D=reverseResolve%28MedicationRequest.subject%29%0A%20%20.medicationCodeableConcept%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Ftnf-inhibitor%27%29%20%0A%20%20contains%20true&groupings%5B1%5D%5Blabel%5D=Contracted%20lung%20infection&groupings%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Flung-infection%27%29%20%0A%20%20contains%20true&filters%5B0%5D%5Blabel%5D=Rheumatoid%20arthritis&filters%5B0%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Frheumatoid-arthritis%27%29%20%0A%20%20contains%20true&filters%5B1%5D%5Blabel%5D=Chronic%20lung%20disease&filters%5B1%5D%5Bexpression%5D=reverseResolve%28Condition.subject%29%0A%20%20.code%0A%20%20.memberOf%28%27http%3A%2F%2Faehrc.com%2Ffhir%2FValueSet%2Fchronic-lung%27%29%20%0A%20%20contains%20true"
-                class="button large"
-              >Live demo &rarr;</a
-              >
-            </li>
-          </ul>
+        </div>
+      </section>
+
+      <!-- Section -->
+      <section>
+        <header>
+          <h2>
+            Free and open source
+          </h2>
+        </header>
+        <div class="content">
+          <p>
+            Pathling is free and open source software, licensed under the <a
+            href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, version 2.0</a>.
+          </p>
         </div>
       </section>
 
@@ -157,32 +161,33 @@
         </header>
         <div class="content">
           <p>
-            You can get the Pathling libraries via PyPI or Maven Central, and the Pathling 
-            server image via Docker Hub.
+            You can get the Pathling libraries via PyPI, CRAN and Maven Central.
           </p>
           <ul class="feature-icons">
-            <li class="icon solid fa-download">
+            <li class="icon brands fa-python">
               <a href="https://pypi.org/project/pathling/">Pathling on PyPI</a>
             </li>
-            <li class="icon solid fa-download">
+            <li class="icon brands fa-r-project">
+              <a href="https://cran.r-project.org/package=pathling">Pathling on CRAN</a>
+            </li>
+            <li class="icon brands fa-java">
               <a href="https://search.maven.org/search?q=pathling">Pathling on Maven Central</a>
             </li>
-            <li class="icon solid fa-download">
-              <a href="https://www.npmjs.com/search?q=pathling">Pathling on NPM</a>
-            </li>
-            <li class="icon solid fa-download">
+          </ul>
+          <p>
+            You can get the Pathling server image from Docker Hub.
+          </p>
+          <ul class="feature-icons">
+            <li class="icon brands fa-docker">
               <a href="https://hub.docker.com/r/aehrc/pathling">Pathling on Docker Hub</a>
             </li>
           </ul>
           <p>
-            The source code for Pathling is available on GitHub, licensed via 
-            the <a
-            href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, version 2.0</a>. 
-            This means that you are free to use, modify and redistribute the software as you wish, 
-            even for commercial purposes.
+            The source code for Pathling is available on GitHub, along with 
+            issues, pull requests and release notes.
           </p>
           <ul class="feature-icons">
-            <li class="icon solid fa-code">
+            <li class="icon brands fa-github">
               <a href="https://github.com/aehrc/pathling">Pathling on GitHub</a>
             </li>
           </ul>
@@ -196,15 +201,10 @@
         </header>
         <div class="content">
           <p>
-            We also provide the following services:
+            If you would like to report an issue with the software, please <a
+            href="https://github.com/aehrc/pathling/issues/new/choose">create an issue on GitHub</a>.
           </p>
-          <ul class="feature-icons">
-            <li class="icon solid fa-flask">Research and development</li>
-            <li class="icon solid fa-server">Managed hosting</li>
-            <li class="icon solid fa-wrench">Support and maintenance</li>
-            <li class="icon solid fa-lightbulb">Consulting services</li>
-          </ul>
-          <p>Fill out the form below and we'll get in touch.</p>
+          <p>If you would like to collaborate with us, please get in touch:</p>
           <form action="https://usebasin.com/f/28d62caa8170" method="POST">
             <div class="fields">
               <div class="field half">
@@ -254,24 +254,8 @@
         <footer>
           <ul class="items">
             <li>
-              <h3>Email</h3>
-              <a
-                href="mailto:ontoserver-support@csiro.au?subject=Pathling enquiry"
-              >ontoserver-support@csiro.au</a
-              >
-            </li>
-            <li>
               <h3>Phone</h3>
-              <p>+61 3 9545 2176</p>
-            </li>
-            <li>
-              <h3>Address</h3>
-              <p>
-                Level 7, Surgical Treatment and Rehabilitation Service (STARS)<br />
-                Royal Brisbane and Women's Hospital<br />
-                Herston Q 4029<br />
-                Australia
-              </p>
+              <p>1300 363 400</p>
             </li>
             <li>
               <h3>Social media</h3>

@@ -19,6 +19,7 @@ package au.csiro.pathling.config;
 
 import javax.validation.constraints.NotNull;
 import lombok.Data;
+import java.util.List;
 
 /**
  * Represents configuration relating to asynchronous processing.
@@ -31,5 +32,13 @@ public class AsyncConfiguration {
    */
   @NotNull
   private boolean enabled;
-
+  
+  /**
+   * List of headers from exclude from the {@link HttpServerCachingConfiguration#getVary()} list for
+   * the purpose of server side caching of asynchronous requests. These are likely to include
+   * headers like 'Accept' or 'Accept-Encoding' which do not influence in any way the final result
+   * of the async request.
+   */
+  @NotNull
+  private List<String> varyHeadersExcludedFromCacheKey;
 }

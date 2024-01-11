@@ -5,19 +5,25 @@ sidebar_position: 3
 # Databricks installation
 
 Pathling has been tested
-on [Databricks Runtime 12.2](https://docs.databricks.com/release-notes/runtime/12.2.html).
+on [Databricks Runtime 13.3 LTS](https://docs.databricks.com/en/release-notes/runtime/13.3lts.html).
 
 To install the Pathling library on a [Databricks](https://www.databricks.com/)
 cluster, navigate to the "Compute" section and click on the cluster. Click on
 the "Libraries" tab, and click "Install new".
 
-Install both the [PyPI package](https://pypi.org/project/pathling/), and
+Install the core Pathling functionality by selecting "Maven" as the library
+source and installing
 the [library runtime Maven package](https://central.sonatype.com/artifact/au.csiro.pathling/library-runtime).
-Once the cluster is restarted, Pathling should be available for use within 
+
+You can the optionally install
+the [PyPI package](https://pypi.org/project/pathling/) for Python support, 
+and/or the [R package](https://cran.r-project.org/package=pathling).
+
+Once the cluster is restarted, Pathling should be available for use within
 notebooks.
 
-See the Databricks documentation on
-[Libraries](https://docs.databricks.com/libraries/index.html) for more
+See the Databricks documentation
+on [Libraries](https://docs.databricks.com/libraries/index.html) for more
 information.
 
 ## Environment variables

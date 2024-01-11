@@ -6,10 +6,17 @@ sidebar_label: Introduction
 # Libraries
 
 Pathling provides a set of libraries that provide assistance with
-using [FHIR](https://hl7.org/fhir)
-and [terminology services](https://hl7.org/fhir/terminology-service.html) from
-Apache Spark applications and data science workflows. The libraries are
-available for Python, Scala and Java.
+using [FHIR](https://hl7.org/fhir/R4)
+and [terminology services](https://hl7.org/fhir/R4/terminology-service.html) from
+Apache Spark applications and data science workflows.
 
-We also have upcoming support for R, subscribe to
-[this issue](https://github.com/aehrc/pathling/issues/193) for updates.
+The libraries are available for:
+
+- [Python](pathname:///docs/python/pathling.html) (based on [PySpark](https://spark.apache.org/docs/latest/api/python/reference/index.html))
+- [R](pathname:///docs/r/index.html) (based on [sparklyr](https://spark.rstudio.com/))
+- [Scala](pathname:///docs/scala/au/csiro/pathling/index.html)
+- [Java](pathname:///docs/java/index.html)
+
+All the different Pathling library implementations allow you to run queries 
+locally (which is the default), or connect to a remote Spark cluster for 
+processing of large datasets.

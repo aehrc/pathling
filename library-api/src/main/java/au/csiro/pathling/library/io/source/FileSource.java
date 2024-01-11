@@ -82,10 +82,10 @@ public abstract class FileSource extends DatasetSource {
         context.getSpark().sparkContext().hadoopConfiguration());
     try {
       // If the URL is an S3 URL, convert it to S3A.
-      final String convertedPath = FileSystemPersistence.convertS3ToS3aUrl(path);
-      final FileSystem fileSystem = FileSystem.get(new URI(convertedPath), hadoopConfiguration);
+      final Path convertedPath = new Path(FileSystemPersistence.convertS3ToS3aUrl(path));
+      final FileSystem fileSystem = convertedPath.getFileSystem(hadoopConfiguration);
       resourceMap = buildResourceMap(convertedPath, fileSystem);
-    } catch (final IOException | URISyntaxException e) {
+    } catch (final IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -99,13 +99,11 @@ public abstract class FileSource extends DatasetSource {
    * @throws IOException if an error occurs while listing the files
    */
   @Nonnull
-  protected Map<ResourceType, Dataset<Row>> buildResourceMap(final @Nonnull String path,
+  private Map<ResourceType, Dataset<Row>> buildResourceMap(final @Nonnull Path path,
       final FileSystem fileSystem) throws IOException {
-    final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path + "/*"));
+    final FileStatus[] fileStatuses = fileSystem.globStatus(new Path(path, "*"));
     final Map<ResourceType, List<String>> fileNamesByResourceType = Stream.of(fileStatuses)
         .map(FileStatus::getPath)
-        .map(Path::toUri)
-        .map(URI::normalize)
         .map(Object::toString)
         // Filter out any paths that do not have the expected extension.
         .filter(this::checkExtension)

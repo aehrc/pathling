@@ -50,12 +50,10 @@ def test_extract(test_data_source):
             ExtractRow("2b36c1e2-bbe1-45ae-8124-4adad2677702", "male", "10509002"),
             ExtractRow("2b36c1e2-bbe1-45ae-8124-4adad2677702", "male", "38341003"),
             ExtractRow("2b36c1e2-bbe1-45ae-8124-4adad2677702", "male", "65363002"),
-            ExtractRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "44054006"),
-            ExtractRow(
-                "8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "368581000119106"
-            ),
+            ExtractRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "195662009"),
+            ExtractRow("8ee183e2-b3c0-4151-be94-b945d6aa8c6d", "male", "237602007"),
         ],
-        result.orderBy("id").limit(5).collect(),
+        result.orderBy("id", "gender", "condition_code").limit(5).collect(),
     )
 
 
@@ -77,13 +75,13 @@ def test_extract_no_filters(test_data_source):
 
     assert_result(
         [
-            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "444814009"),
-            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "195662009"),
             ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "10509002"),
-            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "444470001"),
-            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "68496003"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "15777000"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "195662009"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "271737000"),
+            ExtractRow("121503c8-9564-4b48-9086-a22df717948e", "female", "363406005"),
         ],
-        result.orderBy("id").limit(5).collect(),
+        result.orderBy("id", "gender", "condition_code").limit(5).collect(),
     )
 
 
@@ -91,22 +89,25 @@ def test_aggregate(test_data_source):
     agg_result = test_data_source.aggregate(
         "Patient",
         aggregations=[fpe("count()").alias("patient_count")],
-        groupings=["gender", "maritalStatus.coding.code"],
+        groupings=[
+            "gender",
+            fpe("maritalStatus.coding.code").alias("marital_status_code"),
+        ],
         filters=["birthDate > @1957-06-06"],
     )
 
     # noinspection PyPep8Naming
-    AggregateRow = Row("gender", "maritalStatus.coding.code", "patient_count")
+    AggregateRow = Row("gender", "marital_status_code", "patient_count")
     assert agg_result.columns == list(AggregateRow)
 
     assert_result(
         [
-            AggregateRow("male", "S", 1),
             AggregateRow("male", "M", 2),
-            AggregateRow("female", "S", 3),
+            AggregateRow("male", "S", 1),
             AggregateRow("female", "M", 1),
+            AggregateRow("female", "S", 3),
         ],
-        agg_result.collect(),
+        agg_result.orderBy("gender", "marital_status_code", "patient_count").collect(),
     )
 
 
@@ -126,12 +127,12 @@ def test_aggregate_no_filter(test_data_source):
 
     assert_result(
         [
-            AggregateRow("male", "S", 3),
             AggregateRow("male", "M", 2),
-            AggregateRow("female", "S", 3),
+            AggregateRow("male", "S", 3),
             AggregateRow("female", "M", 1),
+            AggregateRow("female", "S", 3),
         ],
-        agg_result.collect(),
+        agg_result.orderBy("gender", "marital_status_code", "patient_count").collect(),
     )
 
 
