@@ -25,6 +25,7 @@ import javax.annotation.Nonnull;
 import au.csiro.pathling.view.DatasetResult;
 import au.csiro.pathling.view.DatasetResult.One;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.catalyst.expressions.ArrayJoin;
 import org.apache.spark.sql.catalyst.expressions.Literal;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
@@ -145,7 +146,7 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx filter(final Function<Column, Column> lambda) {
+  public ColumnCtx filter(@Nonnull final Function<Column, Column> lambda) {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
         c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
@@ -153,7 +154,7 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx rlike(String regex) {
+  public ColumnCtx rlike(@Nonnull final String regex) {
     return copyOf(getValue().rlike(regex));
   }
 
@@ -221,8 +222,9 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx join(@Nonnull final String separator) {
-    return vectorize(c -> functions.array_join(c, separator), Function.identity());
+  public ColumnCtx join(@Nonnull final ColumnCtx separator) {
+    return vectorize(c -> new Column(new ArrayJoin(c.expr(), separator.getValue().expr())),
+        Function.identity());
   }
 
   @Nonnull
@@ -285,7 +287,7 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx cast(@Nonnull DataType dataType) {
+  public ColumnCtx cast(@Nonnull final DataType dataType) {
     return copyOf(getValue().cast(dataType));
   }
 
@@ -319,8 +321,8 @@ public abstract class ColumnCtx {
 
 
   @Nonnull
-  public static ColumnCtx biOperator(@Nonnull ColumnCtx left, @Nonnull final ColumnCtx right,
-      @Nonnull final BiFunction<Column, Column, Column> lambda) {
+  public static ColumnCtx biOperator(@Nonnull final ColumnCtx left, @Nonnull final ColumnCtx right,
+                                     @Nonnull final BiFunction<Column, Column, Column> lambda) {
     return StdColumnCtx.of(lambda.apply(left.getValue(), right.getValue()));
   }
 

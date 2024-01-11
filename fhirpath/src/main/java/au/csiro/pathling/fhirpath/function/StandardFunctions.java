@@ -31,6 +31,7 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.MixedCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.utilities.Preconditions;
@@ -69,8 +70,8 @@ public class StandardFunctions {
   // Maybe these too can be implemented as colum functions????
   @FhirpathFunction
   public static Collection iif(@Nonnull final Collection input,
-      @Nonnull CollectionExpression expression, @Nonnull Collection thenValue,
-      @Nonnull Collection otherwiseValue) {
+      @Nonnull CollectionExpression expression, @Nonnull final Collection thenValue,
+      @Nonnull final Collection otherwiseValue) {
 
     // we need to pre-evaluate both expressions to determine that they have the same type
     // this may however cause some issues because we only use one of them (and as such we only need to apply one side effect).
@@ -151,8 +152,8 @@ public class StandardFunctions {
       @Nullable final StringCollection separator) {
     return StringCollection.build(input.getCtx().join(
         nonNull(separator)
-        ? separator.toLiteralValue()
-        : JOIN_DEFAULT_SEPARATOR
+        ? separator.asSingular().getCtx()
+        : ColumnCtx.literal(JOIN_DEFAULT_SEPARATOR)
     ));
   }
 
@@ -229,11 +230,11 @@ public class StandardFunctions {
 
     // resolve the reference to the foreign resource (can it be a join to itself?)
     // somewhere I need to make sure that the surrogate resource collection is being use for validation
-    Reference reference = referencePath.apply(input, evaluationContext)
+    final Reference reference = referencePath.apply(input, evaluationContext)
         .asReference(evaluationContext).orElseThrow();
 
     System.out.println(reference);
-    
+
     return evaluationContext.resolveReverseJoin(input.getResourceType(),
         referencePath.toExpression());
 
