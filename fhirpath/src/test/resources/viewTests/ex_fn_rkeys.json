@@ -24,8 +24,12 @@
         "resource": "Observation",
         "select": [
           {
-            "path": "getResourceKey()",
-            "alias": "id"
+            "column": [
+              {
+                "name": "id",
+                "path": "getResourceKey()"
+              }
+            ]
           }
         ]
       },
@@ -42,9 +46,9 @@
         "select": [
           {
             "forEach": "basedOn",
-            "select": [
+            "column": [
               {
-                "alias": "rid",
+                "name": "rid",
                 "path": "getReferenceKey()"
               }
             ]
@@ -70,9 +74,9 @@
         "select": [
           {
             "forEach": "basedOn.where(getReferenceKey(CarePlan).exists())",
-            "select": [
+            "column": [
               {
-                "alias": "rid",
+                "name": "rid",
                 "path": "getReferenceKey()"
               }
             ]
