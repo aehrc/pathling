@@ -62,20 +62,26 @@
         "resource": "Patient",
         "select": [
           {
-            "alias": "id",
-            "path": "id"
-          },
-          {
-            "forEach": "name",
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              }
+            ],
             "select": [
               {
-                "alias": "family",
-                "path": "family"
-              },
-              {
-                "alias": "given",
-                "path": "given",
-                "collection": true
+                "forEach": "name",
+                "column": [
+                  {
+                    "name": "family",
+                    "path": "family"
+                  },
+                  {
+                    "name": "given",
+                    "path": "given",
+                    "collection": true
+                  }
+                ]
               }
             ]
           }
@@ -120,22 +126,30 @@
         "resource": "Patient",
         "select": [
           {
-            "alias": "id",
-            "path": "id"
-          },
-          {
-            "forEach": "name",
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              }
+            ],
             "select": [
               {
-                "alias": "family",
-                "path": "family"
-              },
-              {
-                "forEach": "given",
+                "forEach": "name",
+                "column": [
+                  {
+                    "name": "family",
+                    "path": "family"
+                  }
+                ],
                 "select": [
                   {
-                    "alias": "given",
-                    "path": "$this"
+                    "forEach": "given",
+                    "column": [
+                      {
+                        "name": "given",
+                        "path": "$this"
+                      }
+                    ]
                   }
                 ]
               }
@@ -182,15 +196,21 @@
         "resource": "Patient",
         "select": [
           {
-            "alias": "id",
-            "path": "id"
-          },
-          {
-            "forEach": "gender",
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              }
+            ],
             "select": [
               {
-                "alias": "gender",
-                "path": "$this"
+                "forEach": "gender",
+                "column": [
+                  {
+                    "name": "gender",
+                    "path": "$this"
+                  }
+                ]
               }
             ]
           }
