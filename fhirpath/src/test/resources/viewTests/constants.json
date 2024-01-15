@@ -1,0 +1,92 @@
+{
+  "title": "Constant tests",
+  "resources": [
+  {
+    "resourceType": "Patient",
+    "id": "pt1",
+    "name": [
+      {
+        "use": "official",
+        "family": "f1.1",
+        "given": [
+          "g1.1"
+        ]
+      },
+      {
+        "family": "f1.2",
+        "given": [
+          "g1.2",
+          "g1.3"
+        ]
+      }
+    ],
+    "gender": "male",
+    "birthDate": "1950-01-01",
+    "address": [
+      {
+        "city": "c1"
+      }
+    ]
+  },
+  {
+    "resourceType": "Patient",
+    "id": "pt2",
+    "name": [
+      {
+        "family": "f2.1",
+        "given": [
+          "g2.1"
+        ]
+      },
+      {
+        "use": "official",
+        "family": "f2.2",
+        "given": [
+          "g2.2",
+          "g2.3"
+        ]
+      }
+    ],
+    "gender": "female",
+    "birthDate": "1950-01-01"
+  }
+],
+  "tests": [
+    {
+      "title": "URI constant",
+      "view": {
+        "resource": "Patient",
+        "constants": [
+          {
+            "name": "loincSystem",
+            "valueUri": "http://loinc.org"
+          }
+        ],
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              },
+              {
+                "name": "loincUri",
+                "path": "%loincSystem"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "loincUri": "http://loinc.org"
+        },
+        {
+          "id": "pt2",
+          "loincUri": "http://loinc.org"
+        }
+      ]
+    }
+  ]
+}
