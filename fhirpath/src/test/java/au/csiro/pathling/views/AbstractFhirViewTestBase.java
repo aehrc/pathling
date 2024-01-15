@@ -7,6 +7,7 @@ import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.io.source.DataSource;
@@ -231,8 +232,11 @@ abstract class AbstractFhirViewTestBase {
 
         final String testName =
             testDefinition.get("title").asText() + " - " + view.get("title").asText();
+        final boolean disabled = Optional.ofNullable(view.get("disabled"))
+            .map(JsonNode::asBoolean).orElse(false);
         result.add(
-            new TestParameters(testName, sourceData, fhirView, getExpectation(view, expectedPath)));
+            new TestParameters(testName, sourceData, fhirView, getExpectation(view, expectedPath),
+                disabled));
         testNumber++;
       }
       return result;
@@ -289,6 +293,7 @@ abstract class AbstractFhirViewTestBase {
   @ParameterizedTest
   @MethodSource("requests")
   void test(@Nonnull final TestParameters parameters) {
+    assumeFalse(parameters.isDisabled(), "Test is disabled");
 
     parameters.getExpectation().expect(() -> {
 
@@ -306,6 +311,7 @@ abstract class AbstractFhirViewTestBase {
     DataSource sourceData;
     FhirView view;
     Expectation expectation;
+    boolean disabled;
 
     @Override
     public String toString() {
