@@ -33,26 +33,31 @@
   ],
   "tests": [
     {
-      "title": "",
-      "description": "union all telecoms",
+      "title": "union all telecoms",
       "view": {
         "resource": "Patient",
         "select": [
           {
-            "alias": "id",
-            "path": "id"
-          },
-          {
-            "union": [
+            "column": [
               {
-                "alias": "phone",
-                "path": "telecom.value",
-                "collection": true
-              },
+                "name": "id",
+                "path": "id"
+              }
+            ],
+            "unionAll": [
               {
-                "alias": "phone",
-                "path": "contact.telecom.value",
-                "collection": true
+                "column": [
+                  {
+                    "name": "phone",
+                    "path": "telecom.value",
+                    "collection": true
+                  },
+                  {
+                    "name": "phone",
+                    "path": "contact.telecom.value",
+                    "collection": true
+                  }
+                ]
               }
             ]
           }
