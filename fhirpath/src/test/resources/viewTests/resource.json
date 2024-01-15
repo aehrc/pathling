@@ -39,12 +39,16 @@
         "resource": "Patient",
         "select": [
           {
-            "path": "id",
-            "alias": "id"
-          },
-          {
-            "path": "count()",
-            "alias": "count"
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              },
+              {
+                "path": "count()",
+                "name": "count"
+              }
+            ]
           }
         ]
       },
@@ -65,12 +69,16 @@
         "resource": "Patient",
         "select": [
           {
-            "path": "id",
-            "alias": "id"
-          },
-          {
-            "path": "where(gender='male').empty()",
-            "alias": "count"
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              },
+              {
+                "path": "where(gender='male').empty()",
+                "name": "count"
+              }
+            ]
           }
         ]
       },
@@ -91,12 +99,16 @@
         "resource": "Patient",
         "select": [
           {
-            "path": "id",
-            "alias": "id"
-          },
-          {
-            "path": "where(gender='male').name.family",
-            "alias": "familyName"
+            "column": [
+              {
+                "path": "id",
+                "alias": "id"
+              },
+              {
+                "path": "where(gender='male').name.family",
+                "alias": "familyName"
+              }
+            ]
           }
         ]
       },
@@ -117,15 +129,19 @@
         "resource": "Patient",
         "select": [
           {
-            "path": "id",
-            "alias": "id"
+            "column": [
+              {
+                "path": "id",
+                "name": "id"
+              }
+            ]
           },
           {
             "forEach": "where(gender='male').name.given",
-            "select": [
+            "column": [
               {
                 "path": "$this",
-                "alias": "givenName"
+                "name": "givenName"
               }
             ]
           }
@@ -149,10 +165,10 @@
         "select": [
           {
             "forEach": "where(gender='male')",
-            "select": [
+            "column": [
               {
                 "path": "id",
-                "alias": "id"
+                "name": "id"
               }
             ]
           }
