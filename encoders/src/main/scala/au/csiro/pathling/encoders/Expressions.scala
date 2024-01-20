@@ -31,12 +31,14 @@ package au.csiro.pathling.encoders
 
 import org.apache.spark.sql.{Column, functions}
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.analysis.{UnresolvedException, UnresolvedExtractValue}
-import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
+import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedAttribute, UnresolvedException, UnresolvedExtractValue}
+import org.apache.spark.sql.catalyst.expressions.{ArraysZip, _}
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
+import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
+import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
 import org.apache.spark.sql.types._
-
 import scala.language.existentials
 
 /**
@@ -308,7 +310,8 @@ case class AttachExtensions(targetObject: Expression,
 }
 
 
-case class UnresolvedIfArray(value: Expression, arrayExpressions: Expression => Expression, elseExpression: Expression => Expression)
+case class UnresolvedIfArray(value: Expression, arrayExpressions: Expression => Expression,
+                             elseExpression: Expression => Expression)
   extends Expression with Unevaluable with NonSQLExpression {
 
   override def mapChildren(f: Expression => Expression): Expression = {
@@ -377,7 +380,8 @@ case class UnresolvedUnnest(value: Expression)
 
 
 object ValueFunctions {
-  def ifArray(value: Column, arrayExpressions: Column => Column, elseExpression: Column => Column): Column = {
+  def ifArray(value: Column, arrayExpressions: Column => Column,
+              elseExpression: Column => Column): Column = {
     val expr = UnresolvedIfArray(value.alias(value.hashCode().toString).expr,
       e => arrayExpressions(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
     new Column(expr)
@@ -387,6 +391,188 @@ object ValueFunctions {
     val expr = UnresolvedUnnest(value.alias(value.hashCode().toString).expr)
     new Column(expr)
   }
-  
+
 }
- 
+
+
+case class StructProduct(children: Seq[Expression], outer:Boolean = false)
+  extends Expression with NonSQLExpression {
+  
+  final override val nodePatterns: Seq[TreePattern] = Seq(ARRAYS_ZIP)
+
+  
+  override lazy val resolved: Boolean =
+    childrenResolved && checkInputDataTypes.isSuccess
+
+  @transient override lazy val checkInputDataTypes: TypeCheckResult = {
+    if (children.forall(_.dataType.isInstanceOf[ArrayType])) TypeCheckSuccess
+    else TypeCheckFailure("Arrays of structs expected")
+  }
+
+  @transient override lazy val dataType: DataType = {
+    val fields = {
+      children
+        .flatMap(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields)
+    }
+    ArrayType(StructType(fields), containsNull = true)
+  }
+
+  override def nullable: Boolean = children.exists(_.nullable)
+
+  private def genericArrayData = classOf[GenericArrayData].getName
+  
+  @transient private lazy val arrayElementTypes =
+    children.map(_.dataType.asInstanceOf[ArrayType].elementType)
+    
+  def emptyInputGenCode(ev: ExprCode): ExprCode = {
+    ev.copy(
+      code"""
+            |${CodeGenerator.javaType(dataType)} ${ev.value} = new $genericArrayData(new Object[0]);
+            |boolean ${ev.isNull} = false;
+    """.stripMargin)
+  }
+  
+  def nonEmptyInputGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    
+    
+    // TODO: reuse computation of children
+  
+    // the number of fields for each child
+    val arritiesOfChildrenScala = children
+      .map(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.length).toArray
+    
+    val arritiesOfChildren = ctx.addReferenceObj("arritiesOfChildren", arritiesOfChildrenScala, "int[]");
+    val sizeOfOutput = arritiesOfChildrenScala.sum
+
+    val offsetsScala = arritiesOfChildrenScala.scanLeft(0)(_ + _).init.toArray
+    val offsets = ctx.addReferenceObj("offsets", offsetsScala, "int[]");     
+
+    val genericInternalRow = classOf[GenericInternalRow].getName
+    val arrVals = ctx.freshName("arrVals")
+    val productSize = ctx.freshName("productSize")
+
+    val currentRow = ctx.freshName("currentRow")
+    val j = ctx.freshName("j")
+    val i = ctx.freshName("i")
+    val args = ctx.freshName("args")
+    val prodIdxs = ctx.freshName("prodIdxs")
+    
+    
+    val evals = children.map(_.genCode(ctx))
+    val getValuesAndProductSize = evals.zipWithIndex.map { case (eval, index) =>
+      s"""
+         |if ($productSize != 0) {
+         |  ${eval.code}
+         |  if (!${eval.isNull}) {
+         |    $arrVals[$index] = ${eval.value};
+         |    $productSize *=  ${eval.value}.numElements();
+         |  } else {
+         |    $productSize = 0;
+         |  }
+         |}
+      """.stripMargin
+    }
+
+    val splittedGetValuesAndProductSize = ctx.splitExpressionsWithCurrentInputs(
+      expressions = getValuesAndProductSize,
+      funcName = "getValuesAndProductSize",
+      returnType = "int",
+      makeSplitFunction = body =>
+        s"""
+           |$body
+           |return $productSize;
+        """.stripMargin,
+      foldFunctions = _.map(funcCall => s"$productSize = $funcCall;").mkString("\n"),
+      extraArguments =
+        ("ArrayData[]", arrVals) ::
+          ("int", productSize) :: Nil)
+
+    
+    // idx -  the the index of the child expression (the array to cross)
+    // i - the index of the product element 
+    val getValueForType = arrayElementTypes.zipWithIndex.map { case (eleType, idx) =>
+      val g = CodeGenerator.getValue(s"$arrVals[$idx]", eleType, s"$prodIdxs[$idx]")
+      val structValue = s"structValue_$idx"
+      s"""
+         | ${CodeGenerator.javaType(eleType)} $structValue = $g; 
+         | // using the base copy the values of all the fields to the output
+         | for(int fi = 0; $structValue != null && fi < $structValue.numFields(); fi++) {
+         |    if(!$structValue.isNullAt(fi)) {
+         |      $currentRow[$offsets[$idx] + fi] = $structValue.get(fi, null);
+         |    }
+         | }
+      """.stripMargin
+    }
+
+    val getValueForTypeSplitted = ctx.splitExpressions(
+      expressions = getValueForType,
+      funcName = "extractValue",
+      arguments =
+        ("int[]", prodIdxs) ::
+          ("Object[]", currentRow) ::
+          ("ArrayData[]", arrVals) :: Nil)
+
+    val initVariables =
+      s"""
+         |ArrayData[] $arrVals = new ArrayData[${children.length}];
+         |int $productSize = 1;
+         |${CodeGenerator.javaType(dataType)} ${ev.value} = null;
+    """.stripMargin
+
+    ev.copy(
+      code"""
+            |// BEGIN: PS_CODE
+            |$initVariables
+            |$splittedGetValuesAndProductSize
+            |//System.out.println("DEBUG: ${this.prettyName}[${this.hashCode()}]" + " productSize: " + $productSize);
+            |//boolean ${ev.isNull} = $productSize == 0;
+            | boolean ${ev.isNull} = false;
+            | if ($productSize > 0 || !$outer) {
+            |  Object[] $args = new Object[$productSize];
+            |  int[] $prodIdxs = new int[${children.length}];
+            |  
+            |  for (int $i = 0; $i < $productSize; $i++) {
+            |    int productBase = $i;
+            |    for (int childIndex = 0; childIndex < ${children.length}; childIndex++) {
+            |      int childArrity = $arrVals[childIndex].numElements();
+            |      $prodIdxs[childIndex] = productBase % childArrity;
+            |      productBase /= childArrity;;       
+            |    }
+            |    Object[] $currentRow = new Object[$sizeOfOutput];
+            |    $getValueForTypeSplitted
+            |    $args[$i] = new $genericInternalRow($currentRow);
+            |  }
+            |  
+            |  ${ev.value} = new $genericArrayData($args);
+            |} else {
+            |  ${ev.value} = new $genericArrayData(new Object[]{null});
+            |}
+            |// END: PS_CODE
+    """.stripMargin)
+  }
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+    if (children.isEmpty) {
+      emptyInputGenCode(ev)
+    } else {
+      nonEmptyInputGenCode(ctx, ev)
+    }
+  }
+
+  override def eval(input: InternalRow): Any = {
+    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+  }
+
+  override def prettyName: String = if (outer) "struct_prod_outer" else "struct_prod"
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): StructProduct =
+    copy(children = newChildren)
+}
+
+
+object ColumnFunctions {
+  @scala.annotation.varargs
+  def structProduct(e: Column*): Column = new Column(StructProduct(e.map(_.expr)))
+  @scala.annotation.varargs
+  def structProduct_outer(e: Column*): Column = new Column(StructProduct(e.map(_.expr), outer = true))
+}
