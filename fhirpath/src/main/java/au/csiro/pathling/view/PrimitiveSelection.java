@@ -27,6 +27,8 @@ import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+
 @Value
 @AllArgsConstructor
 public class PrimitiveSelection implements Selection {
@@ -39,6 +41,9 @@ public class PrimitiveSelection implements Selection {
 
   boolean asCollection;
 
+  @Nonnull
+  String tag = randomAlias();
+
   public PrimitiveSelection(@Nonnull final FhirPath path) {
     this(path, Optional.empty());
   }
@@ -49,12 +54,23 @@ public class PrimitiveSelection implements Selection {
 
   }
 
+  @Nonnull
+  public String getTag() {
+    return alias.orElse("_" + tag);
+  }
+  
   @Override
   public DatasetResult<CollectionResult> evaluate(@Nonnull final ProjectionContext context) {
     final One<Collection> resultCollection = context.evalExpression(path);
     return resultCollection.map(collection -> new CollectionResult(collection, this));
   }
 
+
+  public CollectionResult evaluateCollection(@Nonnull final ProjectionContext context) {
+    final One<Collection> resultCollection = context.evalExpression(path);
+    return new CollectionResult(resultCollection.getPureValue(), this);
+  }
+  
   @Override
   public Stream<String> toTreeString() {
     return Stream.of("select: " + path + " as " + alias + (asCollection

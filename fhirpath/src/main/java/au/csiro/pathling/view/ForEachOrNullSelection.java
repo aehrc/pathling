@@ -18,12 +18,24 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.view.DatasetResult.One;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
+import org.apache.hadoop.shaded.com.google.common.collect.Streams;
+import org.apache.spark.sql.Column;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.functions;
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Stream;
+
+import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 @EqualsAndHashCode(callSuper = true)
 @Value
@@ -44,6 +56,56 @@ public class ForEachOrNullSelection extends AbstractCompositeSelection {
   protected ForEachOrNullSelection copy(@Nonnull final List<Selection> newComponents) {
     return new ForEachOrNullSelection(path, newComponents);
   }
+
+
+  @Override
+  public DatasetResult<CollectionResult> evaluate(@Nonnull final ProjectionContext context) {
+
+    final ProjectionContext subContext = context.withInputContext(
+        context.evalExpression(path).getPureValue());
+
+    final Collection stubInputContext = subContext.getInputContext()
+        .map(__ -> ColumnCtx.nullCtx());
+    
+    // now we need to run the actual transformation on the column
+    final ColumnCtx nestedResult = subContext.getInputContext().getColumnCtx().transform(
+        c -> {
+          // eval 
+          final ProjectionContext elementCtx = context.withInputContext(
+              subContext.getInputContext().map(__ -> StdColumnCtx.of(c)));
+          return functions.struct(
+              components.stream().flatMap(s -> s.evaluate(elementCtx).asStream()).map(
+                  cr -> cr.getCollection().getCtx().getValue()
+                      .alias(cr.getSelection().getTag())).toArray(Column[]::new)
+          );
+        }
+    );
+
+    final ProjectionContext stubSubContext = subContext.withInputContext(stubInputContext);
+    DatasetResult<CollectionResult> myResult = components.stream()
+        .map(s -> s.evaluate(stubSubContext))
+        .reduce(DatasetResult.empty(), DatasetResult::andThen);
+
+    // my transform 
+    Function<Dataset<Row>, Dataset<Row>> explodeTransform = ds -> {
+      final String myNestedAlias = randomAlias();
+      return ds
+          .withColumn(myNestedAlias,
+              nestedResult.vectorize(functions::explode_outer, Function.identity()).getValue())
+          .select(
+              Streams.concat(
+                  Stream.of(ds.columns()).map(ds::col),
+                  myResult.asStream().map(cr -> functions.col(myNestedAlias)
+                      .getField(cr.getSelection().getTag()).alias(cr.getSelection().getTag()))
+              ).toArray(Column[]::new)
+          );
+    };
+
+    return DatasetResult.<CollectionResult>fromTransform(explodeTransform).andThen(myResult)
+        .map(cr -> new CollectionResult(cr.getCollection().copyWith(StdColumnCtx.of(functions.col(cr.getSelection()
+            .getTag()))), cr.getSelection()));
+  }
+
 
   @Nonnull
   @Override

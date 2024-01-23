@@ -17,32 +17,23 @@
 
 package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
-import lombok.Value;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.stream.Stream;
 
-@Value
-public class CollectionResult {
-
-  @Nonnull
-  Collection collection;
+public interface SelectionX {
 
   @Nonnull
-  PrimitiveSelection selection;
+  SelectionResult evaluate(@Nonnull final ProjectionContext context);
 
   @Nonnull
-  public Column getTaggedColumn() {
-    return collection.getColumn().alias(selection.getTag());
-  }
-
-  @Nonnull
-  public CollectionResult toTagReference() {
-    return new CollectionResult(
-        collection.copyWith(StdColumnCtx.of(functions.col(selection.getTag()))), selection);
-
+  default List<CollectionResult> evaluateFlat(@Nonnull final ProjectionContext context) {
+    throw new UnsupportedOperationException("evaluateFlat not implemented");
   }
   
+  // default void printTree() {
+  //   toTreeString().forEach(System.out::println);
+  // }
+  //
+  // Stream<String> toTreeString();
 }

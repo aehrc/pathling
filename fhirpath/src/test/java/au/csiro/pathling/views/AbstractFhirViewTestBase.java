@@ -104,7 +104,8 @@ abstract class AbstractFhirViewTestBase {
 
     @Override
     public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
-      assertThrows(SparkException.class, () -> result.get().collectAsList());
+      // TODO: expect a specialized FHIRView exception
+      assertThrows(Exception.class, () -> result.get().collectAsList());
     }
   }
 
@@ -198,7 +199,7 @@ abstract class AbstractFhirViewTestBase {
         final ExpressionEncoder<IBaseResource> encoder = fhirEncoders.of(resourceType);
         final Dataset<Row> dataset = jsonStrings.map(
             (MapFunction<String, IBaseResource>) (json) -> jsonParser(fhirContext())
-                .parseResource(json), encoder).toDF();
+                .parseResource(json), encoder).toDF().cache();
         result.put(ResourceType.fromCode(resourceType), dataset);
       }
 

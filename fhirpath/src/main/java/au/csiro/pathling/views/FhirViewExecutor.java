@@ -1,24 +1,23 @@
 package au.csiro.pathling.views;
 
-import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.query.QueryParser;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
+import au.csiro.pathling.utilities.Lists;
+import au.csiro.pathling.view.ColumnSelection;
 import au.csiro.pathling.view.ExecutionContext;
-import au.csiro.pathling.view.ExtractView;
-import au.csiro.pathling.view.ForEachOrNullSelection;
-import au.csiro.pathling.view.ForEachSelection;
-import au.csiro.pathling.view.FromSelection;
+import au.csiro.pathling.view.ExtractViewX;
+import au.csiro.pathling.view.ForEachSelectionX;
+import au.csiro.pathling.view.FromSelectionX;
 import au.csiro.pathling.view.PrimitiveSelection;
-import au.csiro.pathling.view.Selection;
+import au.csiro.pathling.view.SelectionX;
+import au.csiro.pathling.view.UnionAllSelection;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -53,16 +52,15 @@ public class FhirViewExecutor {
 
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
-
     final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
         dataSource);
-    final ExtractView extractView = toExtractView(view);
+    final ExtractViewX extractView = toExtractView(view);
     return extractView.evaluate(executionContext);
   }
 
 
   @Nonnull
-  private static List<Selection> toSelections(@Nonnull final List<SelectClause> select,
+  private static List<SelectionX> toSelections(@Nonnull final List<SelectClause> select,
       @Nonnull final Parser parser) {
     return select.stream()
         .map(s -> toSelection(s, parser))
@@ -70,58 +68,78 @@ public class FhirViewExecutor {
   }
 
   @Nonnull
-  private static List<Selection> selectionsFromSelectClause(
+  private static List<SelectionX> selectionsFromSelectClause(
       @Nonnull final SelectClause selectClause,
       @Nonnull final Parser parser) {
-    return Stream.concat(
+
+    final Stream<SelectionX> columnSelection =
+        !selectClause.getColumn().isEmpty()
+        ? Stream.of(new ColumnSelection(
             selectClause.getColumn().stream()
                 .map(c -> new PrimitiveSelection(parser.parse(c.getPath()),
-                    Optional.ofNullable(c.getName()), c.isCollection())),
-            selectClause.getSelect().stream()
-                .map(s -> toSelection(s, parser))
+                    Optional.ofNullable(c.getName()), c.isCollection()))
+                .collect(Collectors.toUnmodifiableList())))
+        : Stream.empty();
+
+    final Stream<SelectionX> unionAll =
+        !selectClause.getUnionAll().isEmpty()
+        ? Stream.of(new UnionAllSelection(toSelections(selectClause.getUnionAll(), parser)))
+        : Stream.empty();
+
+    return Stream.of(
+            columnSelection,
+            selectClause.getSelect().stream().map(s -> toSelection(s, parser)),
+            unionAll
         )
+        .flatMap(Function.identity())
         .collect(Collectors.toUnmodifiableList());
   }
 
   @Nonnull
-  private static Selection toSelection(@Nonnull final SelectClause select,
+  private static SelectionX toSelection(@Nonnull final SelectClause select,
       @Nonnull final Parser parser) {
-    // TODO: move to the classes ???
+    // TODO: remove the classes for each select type and just use SelectClause
     if (select instanceof FromSelect) {
-      return new FromSelection(nonNull(select.getPath())
-                               ? parser.parse(requireNonNull(select.getPath()))
-                               : FhirPath.nullPath(),
+      return new FromSelectionX(
           selectionsFromSelectClause(select, parser));
     } else if (select instanceof ForEachSelect) {
-      return new ForEachSelection(parser.parse(requireNonNull(select.getPath())),
-          selectionsFromSelectClause(select, parser));
+      return new ForEachSelectionX(parser.parse(requireNonNull(select.getPath())),
+          selectionsFromSelectClause(select, parser), false);
     } else if (select instanceof ForEachOrNullSelect) {
-      return new ForEachOrNullSelection(parser.parse(requireNonNull(select.getPath())),
-          selectionsFromSelectClause(select, parser));
+      return new ForEachSelectionX(parser.parse(requireNonNull(select.getPath())),
+          selectionsFromSelectClause(select, parser), true);
     } else {
       throw new IllegalStateException("Unknown select clause type: " + select.getClass());
     }
   }
 
   @Nonnull
-  static ExtractView toExtractView(@Nonnull final FhirView fhirView) {
-
+  static ExtractViewX toExtractView(@Nonnull final FhirView fhirView) {
     final Parser parser = new Parser();
+    final SelectionX selection = parseSelection(fhirView, parser);
+    final Optional<SelectionX> where = parseWhere(fhirView, parser);
+    return new ExtractViewX(ResourceType.fromCode(fhirView.getResource()),
+        selection, where);
+  }
 
-    final List<Selection> selectionComponents = toSelections(fhirView.getSelect(), parser);
+  @Nonnull
+  private static SelectionX parseSelection(@Nonnull FhirView fhirView, Parser parser) {
+    final List<SelectionX> selectionComponents = toSelections(fhirView.getSelect(), parser);
+    return new FromSelectionX(selectionComponents);
+  }
 
-    final Selection selection = new FromSelection(new ExtConsFhir("%resource"),
-        selectionComponents);
+  @Nonnull
+  private static Optional<SelectionX> parseWhere(@Nonnull FhirView fhirView, Parser parser) {
+    final List<PrimitiveSelection> whereComponents = Optional.ofNullable(fhirView.getWhere())
+        .stream().flatMap(List::stream)
+        .map(WhereClause::getExpression)
+        .map(parser::parse)
+        .map(fp -> new PrimitiveSelection(fp))
+        .collect(Collectors.toUnmodifiableList());
 
-    final Optional<Selection> whereSelection = QueryParser.decomposeFilter(
-        Optional.ofNullable(fhirView.getWhere())
-            .stream().flatMap(List::stream)
-            .map(WhereClause::getExpression)
-            .map(parser::parse)
-            .collect(Collectors.toUnmodifiableList()));
-
-    return new ExtractView(ResourceType.fromCode(fhirView.getResource()),
-        selection, whereSelection);
+    final Optional<SelectionX> whereSelection =
+        Lists.optionalOf(whereComponents).map(ColumnSelection::new);
+    return whereSelection;
   }
 
 }

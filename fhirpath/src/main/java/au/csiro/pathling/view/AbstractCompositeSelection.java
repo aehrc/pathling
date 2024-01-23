@@ -34,7 +34,7 @@ import lombok.experimental.NonFinal;
 public abstract class AbstractCompositeSelection implements Selection {
 
   protected FhirPath path;
-  List<Selection> components;
+  protected List<Selection> components;
 
   @Override
   public DatasetResult<CollectionResult> evaluate(@Nonnull final ProjectionContext context) {

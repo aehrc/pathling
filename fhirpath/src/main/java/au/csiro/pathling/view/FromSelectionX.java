@@ -17,32 +17,24 @@
 
 package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+
 import lombok.Value;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import javax.annotation.Nonnull;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Value
-public class CollectionResult {
-
-  @Nonnull
-  Collection collection;
-
-  @Nonnull
-  PrimitiveSelection selection;
-
-  @Nonnull
-  public Column getTaggedColumn() {
-    return collection.getColumn().alias(selection.getTag());
-  }
-
-  @Nonnull
-  public CollectionResult toTagReference() {
-    return new CollectionResult(
-        collection.copyWith(StdColumnCtx.of(functions.col(selection.getTag()))), selection);
-
-  }
+public class FromSelectionX implements SelectionX {
   
+  @Nonnull
+  List<SelectionX> components;
+  
+  @Override
+  @Nonnull
+  public SelectionResult evaluate(@Nonnull final ProjectionContext context) {
+    // evaluate and cross join the subcomponents
+    final List<SelectionResult> subResults = components.stream().map(c -> c.evaluate(context))
+        .collect(Collectors.toUnmodifiableList());
+    return SelectionResult.combine(subResults);
+  }
 }

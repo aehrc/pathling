@@ -21,4 +21,8 @@ public abstract class SelectClause implements SelectionElement {
 
   @Nonnull
   abstract List<SelectClause> getSelect();
+
+  @Nonnull
+  abstract List<SelectClause> getUnionAll();
+  
 }

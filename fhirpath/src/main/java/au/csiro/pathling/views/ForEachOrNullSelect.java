@@ -42,4 +42,8 @@ public class ForEachOrNullSelect extends SelectClause {
   @Size()
   List<SelectClause> select = Collections.emptyList();
 
+  @NotNull
+  @Size()
+  List<SelectClause> unionAll = Collections.emptyList();
+
 }

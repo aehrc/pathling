@@ -14,11 +14,7 @@
 #  limitations under the License.
 
 import os
-from tempfile import mkdtemp
-
-from pyspark.sql import DataFrame, SparkSession
-
-from pathling import PathlingContext, DataSource, find_jar, Expression as exp
+from pathling import PathlingContext
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(HERE, "data")
@@ -60,3 +56,4 @@ view_ds = datasource.view(
 )
 
 view_ds.show()
+view_ds.explain(True)

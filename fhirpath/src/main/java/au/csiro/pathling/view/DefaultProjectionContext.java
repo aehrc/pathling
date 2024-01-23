@@ -68,8 +68,9 @@ public class DefaultProjectionContext implements ProjectionContext {
     }
   }
 
+  @Override
   @Nonnull
-  DefaultProjectionContext withInputContext(@Nonnull final Collection inputContext) {
+  public DefaultProjectionContext withInputContext(@Nonnull final Collection inputContext) {
     return new DefaultProjectionContext(executor, inputContext);
   }
 
