@@ -19,7 +19,6 @@ package au.csiro.pathling.view;
 
 import static au.csiro.pathling.extract.ExtractResultType.FLAT;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 import au.csiro.pathling.extract.ExtractResultType;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -27,7 +26,6 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Value;
@@ -60,31 +58,16 @@ public class ExtractViewX {
         subjectResource);
 
     final SelectionResult selectionResult = selection.evaluate(projectionContext);
-    final String resultAlias = randomAlias();
-    final Dataset<Row> compactedResult =
+    final Dataset<Row> filteredResult =
         evalFilter(projectionContext).map(
                 filterCol -> projectionContext.getDataset().filter(filterCol))
-            .orElse(projectionContext.getDataset())
-            .select(selectionResult.getValue().alias(resultAlias));
-    
-    // NOTE: this could technically be `inline(selectionResult.getValue())` but that 
-    // that seem not to use code generation and fallback to eval() on expressions. 
-    // This can in theory be slower, and for the time being eval() is not implemented on `struct_prod`
-    // Another option would be `inline_outer(compatedResultColumn)` (and not filter) but this seems to 
-    // product a plan where `selectionResult.getValue()` is evaluated twice 
-    // once for the `inline()` and an additional time for a filter() generate by Catalyst.
-    
-     final Column compatedResultColumn = compactedResult.col(resultAlias);
-     final Dataset<Row> explodedResult = compactedResult
-        .filter(functions.size(compatedResultColumn).gt(0))
-        .select(functions.inline_outer(compatedResultColumn));
-     
-    final Dataset<Row> result = explodedResult.select(selectionResult.getCollections().stream()
+            .orElse(projectionContext.getDataset());
+
+    final Dataset<Row> explodedResult = filteredResult
+        .select(functions.inline(selectionResult.getValue()));
+
+    return explodedResult.select(selectionResult.getCollections().stream()
         .map(this::toColumn).toArray(Column[]::new));
-
-    result.explain(true);
-    return result;
-
   }
 
   public void printTree() {

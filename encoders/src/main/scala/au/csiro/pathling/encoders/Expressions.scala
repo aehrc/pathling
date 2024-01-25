@@ -29,16 +29,17 @@
 
 package au.csiro.pathling.encoders
 
-import org.apache.spark.sql.{Column, functions}
+import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.TypeCheckResult.{TypeCheckFailure, TypeCheckSuccess}
-import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedAttribute, UnresolvedException, UnresolvedExtractValue}
-import org.apache.spark.sql.catalyst.expressions.{ArraysZip, _}
+import org.apache.spark.sql.catalyst.analysis.{TypeCheckResult, UnresolvedException}
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
 import org.apache.spark.sql.catalyst.expressions.codegen.{CodeGenerator, CodegenContext, ExprCode, FalseLiteral}
 import org.apache.spark.sql.catalyst.trees.TreePattern.{ARRAYS_ZIP, TreePattern}
 import org.apache.spark.sql.catalyst.util.{ArrayData, GenericArrayData}
 import org.apache.spark.sql.types._
+
 import scala.language.existentials
 
 /**
@@ -395,12 +396,12 @@ object ValueFunctions {
 }
 
 
-case class StructProduct(children: Seq[Expression], outer:Boolean = false)
+case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   extends Expression with NonSQLExpression {
-  
+
   final override val nodePatterns: Seq[TreePattern] = Seq(ARRAYS_ZIP)
 
-  
+
   override lazy val resolved: Boolean =
     childrenResolved && checkInputDataTypes.isSuccess
 
@@ -420,10 +421,17 @@ case class StructProduct(children: Seq[Expression], outer:Boolean = false)
   override def nullable: Boolean = children.exists(_.nullable)
 
   private def genericArrayData = classOf[GenericArrayData].getName
-  
+
   @transient private lazy val arrayElementTypes =
     children.map(_.dataType.asInstanceOf[ArrayType].elementType)
-    
+
+
+  @transient private lazy val arritiesOfChildren = children
+    .map(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.length)
+    .toArray
+  @transient private lazy val sizeOfOutput = arritiesOfChildren.sum
+  @transient private lazy val offsetsScala = arritiesOfChildren.scanLeft(0)(_ + _).init
+
   def emptyInputGenCode(ev: ExprCode): ExprCode = {
     ev.copy(
       code"""
@@ -431,21 +439,20 @@ case class StructProduct(children: Seq[Expression], outer:Boolean = false)
             |boolean ${ev.isNull} = false;
     """.stripMargin)
   }
-  
+
   def nonEmptyInputGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    
-    
-    // TODO: reuse computation of children
-  
+
     // the number of fields for each child
     val arritiesOfChildrenScala = children
-      .map(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.length).toArray
-    
-    val arritiesOfChildren = ctx.addReferenceObj("arritiesOfChildren", arritiesOfChildrenScala, "int[]");
+      .map(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.length)
+      .toArray
+
+    val arritiesOfChildren = ctx
+      .addReferenceObj("arritiesOfChildren", arritiesOfChildrenScala, "int[]");
     val sizeOfOutput = arritiesOfChildrenScala.sum
 
     val offsetsScala = arritiesOfChildrenScala.scanLeft(0)(_ + _).init.toArray
-    val offsets = ctx.addReferenceObj("offsets", offsetsScala, "int[]");     
+    val offsets = ctx.addReferenceObj("offsets", offsetsScala, "int[]");
 
     val genericInternalRow = classOf[GenericInternalRow].getName
     val arrVals = ctx.freshName("arrVals")
@@ -456,8 +463,8 @@ case class StructProduct(children: Seq[Expression], outer:Boolean = false)
     val i = ctx.freshName("i")
     val args = ctx.freshName("args")
     val prodIdxs = ctx.freshName("prodIdxs")
-    
-    
+
+
     val evals = children.map(_.genCode(ctx))
     val getValuesAndProductSize = evals.zipWithIndex.map { case (eval, index) =>
       s"""
@@ -487,7 +494,7 @@ case class StructProduct(children: Seq[Expression], outer:Boolean = false)
         ("ArrayData[]", arrVals) ::
           ("int", productSize) :: Nil)
 
-    
+
     // idx -  the the index of the child expression (the array to cross)
     // i - the index of the product element 
     val getValueForType = arrayElementTypes.zipWithIndex.map { case (eleType, idx) =>
@@ -560,7 +567,42 @@ case class StructProduct(children: Seq[Expression], outer:Boolean = false)
   }
 
   override def eval(input: InternalRow): Any = {
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+    val inputArrays = children.map(_.eval(input).asInstanceOf[ArrayData])
+    val productSize = if (inputArrays.isEmpty || inputArrays.contains(null)) {
+      0
+    } else {
+      inputArrays.map(_.numElements()).product
+    }
+
+    if (productSize > 0 || !outer) {
+      val result = new Array[InternalRow](productSize)
+      val zippedArrs: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
+      for (i <- 0 until productSize) {
+        val productIndexes: Array[Int] = new Array[Int](children.length);
+        var productBase = i;
+        for (childIndex <- children.indices) {
+          val childArrity = inputArrays(childIndex).numElements();
+          productIndexes(childIndex) = productBase % childArrity;
+          productBase = productBase / childArrity;
+        }
+        val currentRowData = new Array[Any](sizeOfOutput)
+        zippedArrs.foreach { case (arr, index) =>
+          if (!arr.isNullAt(productIndexes(index))) {
+            val structData = arr.get(productIndexes(index), arrayElementTypes(index))
+              .asInstanceOf[InternalRow]
+            for (fi <- 0 until structData.numFields) {
+              if (!structData.isNullAt(fi)) {
+                currentRowData(offsetsScala(index) + fi) = structData.get(fi, null)
+              }
+            }
+          }
+        }
+        result(i) = InternalRow.apply(currentRowData: _*)
+      }
+      new GenericArrayData(result)
+    } else {
+      new GenericArrayData(Array[InternalRow](null))
+    }
   }
 
   override def prettyName: String = if (outer) "struct_prod_outer" else "struct_prod"
@@ -573,6 +615,8 @@ case class StructProduct(children: Seq[Expression], outer:Boolean = false)
 object ColumnFunctions {
   @scala.annotation.varargs
   def structProduct(e: Column*): Column = new Column(StructProduct(e.map(_.expr)))
+
   @scala.annotation.varargs
-  def structProduct_outer(e: Column*): Column = new Column(StructProduct(e.map(_.expr), outer = true))
+  def structProduct_outer(e: Column*): Column = new Column(
+    StructProduct(e.map(_.expr), outer = true))
 }
