@@ -112,6 +112,7 @@
     <module>deployment/helm</module>
     <module>site</module>
     <module>utilities</module>
+    <module>bulkclient</module>
   </modules>
 
   <dependencyManagement>
