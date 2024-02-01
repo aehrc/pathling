@@ -1,0 +1,94 @@
+{
+  "transactionTime" : "1706584411382",
+  "request" : "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir/Patient/$export?_outputFormat=ndjson",
+  "requiresAccessToken" : false,
+  "output" : [
+    {
+      "type" : "AllergyIntolerance",
+      "count" : 38,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MzgsInNlY3VyZSI6ZmFsc2V9/fhir/bulkfiles/1.AllergyIntolerance.ndjson"
+    },
+    {
+      "type" : "CarePlan",
+      "count" : 278,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6Mjc4LCJzZWN1cmUiOmZhbHNlfQ/fhir/bulkfiles/1.CarePlan.ndjson"
+    },
+    {
+      "type" : "CareTeam",
+      "count" : 278,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6Mjc4LCJzZWN1cmUiOmZhbHNlfQ/fhir/bulkfiles/1.CareTeam.ndjson"
+    },
+    {
+      "type" : "Claim",
+      "count" : 6083,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6NjA4Mywic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.Claim.ndjson"
+    },
+    {
+      "type" : "Condition",
+      "count" : 639,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6NjM5LCJzZWN1cmUiOmZhbHNlfQ/fhir/bulkfiles/1.Condition.ndjson"
+    },
+    {
+      "type" : "Device",
+      "count" : 4,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6NCwic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.Device.ndjson"
+    },
+    {
+      "type" : "DiagnosticReport",
+      "count" : 897,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6ODk3LCJzZWN1cmUiOmZhbHNlfQ/fhir/bulkfiles/1.DiagnosticReport.ndjson"
+    },
+    {
+      "type" : "DocumentReference",
+      "count" : 3,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6Mywic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.DocumentReference.ndjson"
+    },
+    {
+      "type" : "Encounter",
+      "count" : 3697,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MzY5Nywic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.Encounter.ndjson"
+    },
+    {
+      "type" : "ExplanationOfBenefit",
+      "count" : 3697,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MzY5Nywic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.ExplanationOfBenefit.ndjson"
+    },
+    {
+      "type" : "ImagingStudy",
+      "count" : 16,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MTYsInNlY3VyZSI6ZmFsc2V9/fhir/bulkfiles/1.ImagingStudy.ndjson"
+    },
+    {
+      "type" : "Immunization",
+      "count" : 1287,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MTI4Nywic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.Immunization.ndjson"
+    },
+    {
+      "type" : "MedicationRequest",
+      "count" : 2386,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MjM4Niwic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.MedicationRequest.ndjson"
+    },
+    {
+      "type" : "Observation",
+      "count" : 10000,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MTAwMDAsInNlY3VyZSI6ZmFsc2V9/fhir/bulkfiles/1.Observation.ndjson"
+    },
+    {
+      "type" : "Observation",
+      "count" : 6315,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjoxMDAwMCwibGltaXQiOjYzMTUsInNlY3VyZSI6ZmFsc2V9/fhir/bulkfiles/2.Observation.ndjson"
+    },
+    {
+      "type" : "Patient",
+      "count" : 100,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MTAwLCJzZWN1cmUiOmZhbHNlfQ/fhir/bulkfiles/1.Patient.ndjson"
+    },
+    {
+      "type" : "Procedure",
+      "count" : 2351,
+      "url" : "https://bulk-data.smarthealthit.org/eyJpZCI6ImJjZTdkNjQ4MjFlOWIxOGM3ZmUwODRlNGEwZTcwODY1Iiwib2Zmc2V0IjowLCJsaW1pdCI6MjM1MSwic2VjdXJlIjpmYWxzZX0/fhir/bulkfiles/1.Procedure.ndjson"
+    }
+  ],
+  "deleted" : [],
+  "error" : []
+}

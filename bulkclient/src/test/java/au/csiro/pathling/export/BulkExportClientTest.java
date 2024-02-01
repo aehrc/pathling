@@ -17,12 +17,79 @@
 
 package au.csiro.pathling.export;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import au.csiro.pathling.export.BulkExportResponse.ResourceElement;
+import au.csiro.pathling.export.UrlDownloadService.UrlDownloadEntry;
+import java.net.URI;
+import java.util.Collections;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class BulkExportClientTest {
+public class BulkExportClientTest {
+
+  BulkExportClient client = BulkExportClient.builder()
+      .withFhirEndpointUrl("http://example.com")
+      .withOutputDir("output-dir")
+      .build();
   
   @Test
-  void testExport() {
-    new BulkExportClient().export();
+  void testMapsMultiPartResourceToSeparateFiles() {
+
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .request("fake-request")
+        .output(List.of(
+            new ResourceElement("Condition", "http:/foo.bar/1", 10),
+            new ResourceElement("Condition", "http:/foo.bar/2", 10),
+            new ResourceElement("Condition", "http:/foo.bar/3", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final List<UrlDownloadEntry> downloadUrls = client.getUrlDownloadEntries(
+        response);
+
+    assertEquals(
+        List.of(
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), "Condition_0000.ndjson"),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), "Condition_0001.ndjson"),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), "Condition_0002.ndjson")
+        ),
+        downloadUrls
+    );
+  }
+  
+  @Test
+  void testMapsDifferentResourceToSeparateFiles() {
+
+    final BulkExportClient client = BulkExportClient.builder()
+        .withFhirEndpointUrl("http://example.com")
+        .withOutputDir("output-dir")
+        .withOutputExtension("xjson")
+        .build();    
+    
+    final BulkExportResponse response = BulkExportResponse.builder()
+        .request("fake-request")
+        .output(List.of(
+            new ResourceElement("Patient", "http:/foo.bar/1", 10),
+            new ResourceElement("Condition", "http:/foo.bar/2", 10),
+            new ResourceElement("Observation", "http:/foo.bar/3", 10)
+        ))
+        .deleted(Collections.emptyList())
+        .error(Collections.emptyList())
+        .build();
+
+    final List<UrlDownloadEntry> downloadUrls = client.getUrlDownloadEntries(
+        response);
+
+    assertEquals(
+        List.of(
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), "Patient_0000.xjson"),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), "Condition_0000.xjson"),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), "Observation_0000.xjson")
+        ),
+        downloadUrls
+    );
   }
 }
