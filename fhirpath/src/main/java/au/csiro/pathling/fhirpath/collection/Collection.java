@@ -23,6 +23,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.Reference;
+import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
@@ -240,8 +241,15 @@ public class Collection implements Comparable, Numeric {
   }
 
 
+  /**
+   * Return the child {@link Collection} that results from traversing to the given child element
+   * definition.
+   *
+   * @param childDef the child element definition
+   * @return a new {@link Collection} representing the child element
+   */
   @Nonnull
-  protected Collection traverseElement(@Nonnull final ElementDefinition childDef) {
+  public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
     // It is only possible to traverse to a child with an element definition.
     return Collection.build(getCtx().traverse(childDef.getElementName()), childDef);
   }
@@ -376,6 +384,19 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   public Column getColumn() {
     return columnCtx.getValue();
+  }
+
+  /**
+   * Returns a new collection representing just the elements of this collection with the specified
+   * type.
+   *
+   * @param type The type of element to return
+   * @return A new collection representing just the elements of this collection with the specified
+   * type
+   */
+  @Nonnull
+  public Collection filterByType(@Nonnull final TypeSpecifier type) {
+    return Collection.nullCollection();
   }
 
   @Value

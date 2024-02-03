@@ -29,10 +29,14 @@ public class ChoiceElementCollection extends MixedCollection {
    * type
    */
   @Nonnull
+  @Override
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
-    return choiceDefinition.getChildByType(type.toFhirType().toCode()).map(
-        parent::traverseElement
-    ).orElse(Collection.nullCollection());
+    if (!type.isFhirType()) {
+      return super.filterByType(type);
+    }
+    return choiceDefinition.getChildByType(type.toFhirType().toCode())
+        .map(parent::traverseElement)
+        .orElse(super.filterByType(type));
   }
 
 }

@@ -30,7 +30,6 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
@@ -140,10 +139,8 @@ public class StandardFunctions {
    * @see <a href="https://pathling.csiro.au/docs/fhirpath/functions.html#oftype">ofType</a>
    */
   @FhirpathFunction
-  public static Collection ofType(@Nonnull final MixedCollection input,
+  public static Collection ofType(@Nonnull final Collection input,
       @Nonnull final TypeSpecifier typeSpecifier) {
-    // TODO: This should work on any collection type - not just mixed
-    // if the type of the collection does not match the required type then it should return an empty collection.
     return input.filterByType(typeSpecifier);
   }
 

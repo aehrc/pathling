@@ -1,7 +1,6 @@
 package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.Reference;
-import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
@@ -50,16 +49,5 @@ public abstract class MixedCollection extends Collection {
         "Direct traversal of polymorphic collections is not supported."
             + " Please use 'ofType()' to specify the type of element to traverse.");
   }
-
-  /**
-   * Returns a new collection representing just the elements of this collection with the specified
-   * type.
-   *
-   * @param type The type of element to return
-   * @return A new collection representing just the elements of this collection with the specified
-   * type
-   */
-  @Nonnull
-  abstract public Collection filterByType(@Nonnull final TypeSpecifier type);
 
 }

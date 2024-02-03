@@ -23,8 +23,9 @@ public class MixedResourceCollection extends MixedCollection {
    * type
    */
   @Nonnull
+  @Override
   public Collection filterByType(@Nonnull final TypeSpecifier type) {
     return reference.resolve(type.toResourceType());
   }
- 
+
 }

@@ -61,7 +61,7 @@ public class TypeSpecifier {
   /**
    * @return true if this type specifier is a type in FHIR namespace.
    */
-  private boolean isFhirType() {
+  public boolean isFhirType() {
     return namespace.equals(FHIR_NAMESPACE);
   }
 
