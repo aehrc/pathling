@@ -17,13 +17,16 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static au.csiro.pathling.utilities.Functions.maybeCast;
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+
+import au.csiro.pathling.view.DatasetResult;
+import au.csiro.pathling.view.DatasetResult.One;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.view.DatasetResult;
-import au.csiro.pathling.view.DatasetResult.One;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.catalyst.expressions.ArrayJoin;
 import org.apache.spark.sql.catalyst.expressions.Literal;
@@ -31,52 +34,14 @@ import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
-import static au.csiro.pathling.utilities.Functions.maybeCast;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
-
 
 public abstract class ColumnCtx {
 
-  private static final Column NULL_LITERAL = functions.lit(null);
+  static final Column NULL_LITERAL = functions.lit(null);
 
   @Nonnull
   public ColumnCtx call(@Nonnull final Function<Column, Column> lambda) {
     return copyOf(lambda.apply(getValue()));
-  }
-
-  static class NullCtx extends ColumnCtx {
-
-    private static final ColumnCtx INSTANCE = new NullCtx();
-
-
-    @Override
-    public Column getValue() {
-      return NULL_LITERAL;
-    }
-
-    @Override
-    protected ColumnCtx copyOf(@Nonnull final Column newValue) {
-      return this;
-    }
-
-    @Nonnull
-    @Override
-    public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
-        @Nonnull final Function<Column, Column> singularExpression) {
-      return this;
-    }
-
-    @Nonnull
-    @Override
-    public ColumnCtx flatten() {
-      return this;
-    }
-
-    @Nonnull
-    @Override
-    public ColumnCtx traverse(@Nonnull final String fieldName) {
-      return this;
-    }
   }
 
   @Nonnull
@@ -322,7 +287,7 @@ public abstract class ColumnCtx {
 
   @Nonnull
   public static ColumnCtx biOperator(@Nonnull final ColumnCtx left, @Nonnull final ColumnCtx right,
-                                     @Nonnull final BiFunction<Column, Column, Column> lambda) {
+      @Nonnull final BiFunction<Column, Column, Column> lambda) {
     return StdColumnCtx.of(lambda.apply(left.getValue(), right.getValue()));
   }
 
