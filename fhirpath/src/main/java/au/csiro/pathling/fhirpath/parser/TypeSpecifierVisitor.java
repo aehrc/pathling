@@ -65,7 +65,7 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeSpecifierC
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnitContext;
 import au.csiro.pathling.fhirpath.path.Paths;
-
+import au.csiro.pathling.fhirpath.path.Paths.TypeSpecifierPath;
 import javax.annotation.Nonnull;
 
 /**
@@ -83,6 +83,26 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
 
   TypeSpecifierVisitor() {
     this(false);
+  }
+
+  @Override
+  public FhirPath visitIdentifier(final IdentifierContext ctx) {
+    return new Paths.TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
+  }
+
+  @Override
+  public FhirPath visitInvocationExpression(final InvocationExpressionContext ctx) {
+    // If we are not already in a namespace and there is an invocation, we need to parse the 
+    // right-hand side of the invocation within the namespace.
+    if (!isNamespace) {
+      final TypeSpecifierPath typeSpecifierPath = (TypeSpecifierPath) ctx.expression()
+          .accept(new TypeSpecifierVisitor(true));
+      final TypeSpecifier unqualifiedTypeSpecifier = typeSpecifierPath.getTypeSpecifier();
+      return new Paths.TypeSpecifierPath(
+          unqualifiedTypeSpecifier.withNamespace(ctx.invocation().getText()));
+    } else {
+      throw newUnexpectedExpressionException("InvocationExpression");
+    }
   }
 
   @Override
@@ -140,19 +160,6 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitInequalityExpression(
       final InequalityExpressionContext ctx) {
     throw newUnexpectedExpressionException("InequalityExpression");
-  }
-
-  @Override
-  public FhirPath visitInvocationExpression(
-      final InvocationExpressionContext ctx) {
-    if (!isNamespace) {
-      final TypeSpecifier unqualifiedTypeSpecifier = ((Paths.TypeSpecifierPath) ctx.expression()
-          .accept(new TypeSpecifierVisitor(true))).getTypeSpecifier();
-      return new Paths.TypeSpecifierPath(
-          unqualifiedTypeSpecifier.withNamespace(ctx.invocation().getText()));
-    } else {
-      throw newUnexpectedExpressionException("InvocationExpression");
-    }
   }
 
   @Override
@@ -319,11 +326,6 @@ class TypeSpecifierVisitor extends FhirPathBaseVisitor<FhirPath> {
   public FhirPath visitQualifiedIdentifier(
       final QualifiedIdentifierContext ctx) {
     throw newUnexpectedExpressionException("QualifiedIdentifier");
-  }
-
-  @Override
-  public FhirPath visitIdentifier(final IdentifierContext ctx) {
-    return new Paths.TypeSpecifierPath(new TypeSpecifier(ctx.getText()));
   }
 
   @Nonnull

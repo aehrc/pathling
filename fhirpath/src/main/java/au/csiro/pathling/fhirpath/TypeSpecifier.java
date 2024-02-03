@@ -17,9 +17,12 @@
 
 package au.csiro.pathling.fhirpath;
 
+import java.util.List;
+import java.util.Map;
+import java.util.function.Predicate;
 import javax.annotation.Nonnull;
-import lombok.AllArgsConstructor;
 import lombok.Value;
+import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
@@ -27,11 +30,16 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * Represents a FHIRPath type specifier, which is a namespace and a type name.
  */
 @Value
-@AllArgsConstructor
 public class TypeSpecifier {
 
+  public static final String SYSTEM_NAMESPACE = "System";
   public static final String FHIR_NAMESPACE = "FHIR";
-  public static final String DEFAULT_NAMESPACE = FHIR_NAMESPACE;
+  public static final List<String> NAMESPACE_SEARCH_ORDER = List.of(FHIR_NAMESPACE,
+      SYSTEM_NAMESPACE);
+  public static final Map<String, Predicate<String>> NAMESPACE_VALIDATORS = Map.of(
+      FHIR_NAMESPACE, TypeSpecifier::isValidFhirType,
+      SYSTEM_NAMESPACE, TypeSpecifier::isValidSystemType
+  );
 
   @Nonnull
   String namespace;
@@ -39,14 +47,21 @@ public class TypeSpecifier {
   @Nonnull
   String typeName;
 
-  public TypeSpecifier(@Nonnull final String typeName) {
-    this(DEFAULT_NAMESPACE, typeName);
+  public TypeSpecifier(@Nonnull final String namespace, @Nonnull final String typeName)
+      throws IllegalArgumentException {
+    this.namespace = validateNamespace(namespace);
+    this.typeName = validateTypeName(typeName, namespace);
+  }
+
+  public TypeSpecifier(@Nonnull final String typeName) throws IllegalArgumentException {
+    this.namespace = searchForTypeName(typeName);
+    this.typeName = typeName;
   }
 
   /**
    * @return true if this type specifier is a type in FHIR namespace.
    */
-  boolean isFhirType() {
+  private boolean isFhirType() {
     return namespace.equals(FHIR_NAMESPACE);
   }
 
@@ -75,7 +90,7 @@ public class TypeSpecifier {
     }
     return FHIRDefinedType.fromCode(typeName);
   }
-  
+
   @Nonnull
   public ResourceType toResourceType() {
     if (!isFhirType()) {
@@ -84,28 +99,40 @@ public class TypeSpecifier {
     return ResourceType.fromCode(typeName);
   }
 
-  /**
-   * Creates a type specifier from a FHRI type.
-   *
-   * @return the type specifier
-   */
-  public static TypeSpecifier fromFhirType(@Nonnull final FHIRDefinedType type) {
-    return new TypeSpecifier(FHIR_NAMESPACE, type.toCode());
+  private static String validateNamespace(final String namespace) throws IllegalArgumentException {
+    if (!NAMESPACE_VALIDATORS.containsKey(namespace)) {
+      throw new IllegalArgumentException("Invalid namespace: " + namespace);
+    }
+    return namespace;
   }
 
-  /**
-   * Parses a type specifier from a string.
-   *
-   * @return the parsed type specifier
-   */
-  public static TypeSpecifier fromString(@Nonnull final String typeSpecifier) {
-    final String[] parts = typeSpecifier.split("\\.");
-    if (parts.length == 1) {
-      return new TypeSpecifier(DEFAULT_NAMESPACE, parts[0]);
-    } else if (parts.length == 2) {
-      return new TypeSpecifier(parts[0], parts[1]);
-    } else {
-      throw new IllegalArgumentException("Invalid type specifier: " + typeSpecifier);
+  private static String validateTypeName(final String typeName, final String namespace)
+      throws IllegalArgumentException {
+    if (!NAMESPACE_VALIDATORS.get(namespace).test(typeName)) {
+      throw new IllegalArgumentException("Invalid type name: " + typeName);
+    }
+    return typeName;
+  }
+
+  private static String searchForTypeName(final String typeName) {
+    for (final String namespace : NAMESPACE_SEARCH_ORDER) {
+      if (NAMESPACE_VALIDATORS.get(namespace).test(typeName)) {
+        return namespace;
+      }
+    }
+    throw new IllegalArgumentException("Invalid type name: " + typeName);
+  }
+
+  private static boolean isValidFhirType(final String typeName) {
+    try {
+      return FHIRDefinedType.fromCode(typeName) != null;
+    } catch (final FHIRException e) {
+      return false;
     }
   }
+
+  private static boolean isValidSystemType(final String typeName) {
+    return FhirPathType.isValidFhirPathType(typeName);
+  }
+
 }

@@ -31,6 +31,19 @@ public enum FhirPathType {
   }
 
   /**
+   * @param typeSpecifier a type specifier
+   * @return true if the type specifier is a valid FHIRPath type
+   */
+  public static boolean isValidFhirPathType(@Nonnull final String typeSpecifier) {
+    for (final FhirPathType fhirPathType : FhirPathType.values()) {
+      if (fhirPathType.getTypeSpecifier().equals(typeSpecifier)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * @param fhirType a {@link FHIRDefinedType}
    * @return the corresponding {@link FhirPathType} according to the rules of automatic conversion
    * within the FHIR spec
