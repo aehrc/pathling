@@ -1,6 +1,7 @@
-package au.csiro.pathling.fhirpath.collection;
+package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;

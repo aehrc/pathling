@@ -1,7 +1,8 @@
-package au.csiro.pathling.fhirpath.collection;
+package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import java.util.Optional;
