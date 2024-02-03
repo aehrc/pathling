@@ -7,7 +7,6 @@ import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.Getter;
-import lombok.Value;
 
 /**
  * Represents a polymorphic collection, which can be resolved to any one of a number of data types.
@@ -16,54 +15,6 @@ import lombok.Value;
  */
 @Getter
 public abstract class MixedCollection extends Collection {
-
-  @Value
-  public static class Element extends MixedCollection {
-
-    /**
-     * The definition of this choice element.
-     */
-    @Nonnull
-    ChoiceChildDefinition choiceDefinition;
-
-    @Nonnull
-    Collection parent;
-
-    /**
-     * Returns a new collection representing just the elements of this collection with the specified
-     * type.
-     *
-     * @param type The type of element to return
-     * @return A new collection representing just the elements of this collection with the specified
-     * type
-     */
-    @Nonnull
-    public Collection resolveType(@Nonnull final TypeSpecifier type) {
-      return choiceDefinition.getChildByType(type.toFhirType().toCode()).map(
-          parent::traverseElement
-      ).orElse(Collection.nullCollection());
-    }
-  }
-
-  @Value
-  public static class Resource extends MixedCollection {
-
-    @Nonnull
-    Reference reference;
-
-    /**
-     * Returns a new collection representing just the elements of this collection with the specified
-     * type.
-     *
-     * @param type The type of element to return
-     * @return A new collection representing just the elements of this collection with the specified
-     * type
-     */
-    @Nonnull
-    public Collection resolveType(@Nonnull final TypeSpecifier type) {
-      return reference.resolve(type.toResourceType());
-    }
-  }
 
   protected MixedCollection() {
     super(ColumnCtx.nullCtx(), Optional.empty(), Optional.empty(), Optional.empty());
@@ -78,20 +29,22 @@ public abstract class MixedCollection extends Collection {
   @Nonnull
   public static MixedCollection buildElement(@Nonnull final Collection parent,
       @Nonnull final ChoiceChildDefinition definition) {
-    return new Element(definition, parent);
+    return new ChoiceElementCollection(definition, parent);
   }
 
 
   @Nonnull
   public static MixedCollection buildResource(@Nonnull final Reference reference) {
-    return new Resource(reference);
+    return new MixedResourceCollection(reference);
   }
 
 
   @Nonnull
   @Override
   public Optional<Collection> traverse(@Nonnull final String elementName) {
-    // FHIRPATH_NOTE: this should technically result in unchecked traversal
+    // This should technically result in unchecked traversal, but we don't currently have a way
+    // of implementing this.
+    // See: https://hl7.org/fhirpath/#paths-and-polymorphic-items
     throw new UnsupportedOperationException(
         "Direct traversal of polymorphic collections is not supported."
             + " Please use 'ofType()' to specify the type of element to traverse.");
@@ -106,5 +59,6 @@ public abstract class MixedCollection extends Collection {
    * type
    */
   @Nonnull
-  abstract public Collection resolveType(@Nonnull final TypeSpecifier type);
+  abstract public Collection filterByType(@Nonnull final TypeSpecifier type);
+
 }

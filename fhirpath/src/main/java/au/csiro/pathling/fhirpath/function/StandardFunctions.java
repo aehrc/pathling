@@ -144,7 +144,7 @@ public class StandardFunctions {
       @Nonnull final TypeSpecifier typeSpecifier) {
     // TODO: This should work on any collection type - not just mixed
     // if the type of the collection does not match the required type then it should return an empty collection.
-    return input.resolveType(typeSpecifier);
+    return input.filterByType(typeSpecifier);
   }
 
   @FhirpathFunction
