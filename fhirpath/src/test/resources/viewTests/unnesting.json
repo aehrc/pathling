@@ -191,6 +191,66 @@
       ]
     },
     {
+      "title": "two levels of unnesting with $this and forEachOrNull",
+      "view": {
+        "resource": "Patient",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "id"
+              }
+            ],
+            "select": [
+              {
+                "forEachOrNull": "name",
+                "column": [
+                  {
+                    "name": "family",
+                    "path": "family"
+                  }
+                ],
+                "select": [
+                  {
+                    "forEachOrNull": "suffix",
+                    "column": [
+                      {
+                        "name": "suffix",
+                        "path": "$this"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "pt1",
+          "family": "f1.1",
+          "suffix": null
+        },
+        {
+          "id": "pt1",
+          "family": "f1.2",
+          "suffix": null
+        },
+        {
+          "id": "pt2",
+          "family": "f2.1",
+          "suffix": null
+        },
+        {
+          "id": "pt2",
+          "family": "f2.2",
+          "suffix": null
+        }
+      ]
+    },
+    {
       "title": "unnesting of singular element",
       "view": {
         "resource": "Patient",
