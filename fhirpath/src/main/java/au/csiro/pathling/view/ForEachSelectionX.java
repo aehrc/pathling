@@ -47,7 +47,7 @@ public class ForEachSelectionX implements SelectionX {
     final Collection nestedInputContext = context.evalExpression(path).getPureValue();
 
     // here we need to deal better values that are not nested
-    final Column columnResult = functions.flatten(
+    Column columnResult = functions.flatten(
         functions.transform(
             nestedInputContext.getColumnCtx().toArray().getValue(),
             c -> {
@@ -61,6 +61,9 @@ public class ForEachSelectionX implements SelectionX {
             }
         )
     );
+    if (withNulls) {
+      columnResult = ColumnFunctions.structProduct_outer(columnResult);
+    }
 
     // This is a way to evaluate the expression for the purpose of getting the types of the result.
     final ProjectionContext stubContext = context.withInputContext(
@@ -72,4 +75,5 @@ public class ForEachSelectionX implements SelectionX {
         stubResults.stream().flatMap(sr -> sr.getCollections().stream()).collect(
             Collectors.toUnmodifiableList()), columnResult);
   }
+
 }

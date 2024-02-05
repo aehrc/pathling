@@ -55,7 +55,7 @@ public class SelectionResult {
   }
 
   @Nonnull
-  private static Column structProduct(final boolean outer, @Nonnull final Column... columns) {
+  public static Column structProduct(final boolean outer, @Nonnull final Column... columns) {
     return outer
            ? ColumnFunctions.structProduct_outer(columns)
            : ColumnFunctions.structProduct(columns);
