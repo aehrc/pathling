@@ -39,7 +39,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.spark.SparkException;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -297,7 +296,6 @@ abstract class AbstractFhirViewTestBase {
     assumeFalse(parameters.isDisabled(), "Test is disabled");
 
     parameters.getExpectation().expect(() -> {
-
       final FhirView view = parameters.getView();
       final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
           parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));

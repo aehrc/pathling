@@ -60,5 +60,4 @@ public class SelectionResult {
            ? ColumnFunctions.structProduct_outer(columns)
            : ColumnFunctions.structProduct(columns);
   }
-
 }

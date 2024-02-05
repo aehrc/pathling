@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.view;
 
+import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
-import com.google.common.collect.Streams;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -37,9 +37,9 @@ public class ForEachSelectionX implements SelectionX {
 
   @Nonnull
   List<SelectionX> components;
-  
+
   boolean withNulls;
-  
+
   @Nonnull
   @Override
   public SelectionResult evaluate(@Nonnull final ProjectionContext context) {
@@ -47,32 +47,29 @@ public class ForEachSelectionX implements SelectionX {
     final Collection nestedInputContext = context.evalExpression(path).getPureValue();
 
     // here we need to deal better values that are not nested
-    final List<Column> collect = components.stream().map(s ->
-        functions.flatten(
-            functions.transform(
-                nestedInputContext.getColumnCtx().toArray().getValue(),
-                c -> {
-                  // create the transformation element subcontext
-                  final ProjectionContext elementCtx = context.withInputContext(
-                      nestedInputContext.map(__ -> StdColumnCtx.of(c)));
-                  return s.evaluate(elementCtx).getValue();
-                }
-            )
+    final Column columnResult = functions.flatten(
+        functions.transform(
+            nestedInputContext.getColumnCtx().toArray().getValue(),
+            c -> {
+              // create the transformation element subcontext
+              final ProjectionContext elementCtx = context.withInputContext(
+                  nestedInputContext.map(__ -> StdColumnCtx.of(c)));
+              return ColumnFunctions.structProduct(
+                  components.stream()
+                      .map(s -> s.evaluate(elementCtx).getValue())
+                      .toArray(Column[]::new));
+            }
         )
-    ).collect(Collectors.toUnmodifiableList());
+    );
 
+    // This is a way to evaluate the expression for the purpose of getting the types of the result.
     final ProjectionContext stubContext = context.withInputContext(
         nestedInputContext.map(__ -> ColumnCtx.nullCtx()));
     final List<SelectionResult> stubResults = components.stream().map(s -> s.evaluate(stubContext))
         .collect(Collectors.toUnmodifiableList());
 
-    // map the results 
-    final List<SelectionResult> subResults = Streams.zip(
-        stubResults.stream(),
-        collect.stream(),
-        (sr, c) -> SelectionResult.of(sr.getCollections(), c)
-    ).collect(Collectors.toUnmodifiableList());
-
-    return SelectionResult.combine(subResults, withNulls);
+    return SelectionResult.of(
+        stubResults.stream().flatMap(sr -> sr.getCollections().stream()).collect(
+            Collectors.toUnmodifiableList()), columnResult);
   }
 }
