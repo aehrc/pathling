@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -70,12 +71,13 @@ class BulkExportServiceTest {
   @Test
   void testNonDefaultRequestUri() throws Exception {
     final URI baseUri = URI.create("http://test.com/fhir");
-    assertEquals(URI.create("http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation"),
+    final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
+    assertEquals(URI.create("http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation&_since=2023-01-11T00%3A00%3A00.123Z"),
         BulkExportService.toRequestURI(baseUri, BulkExportRequest.builder()
-            .outputFormat("xml")
-            .type(List.of("Patient", "Observation"))
+            ._outputFormat("xml")
+            ._type(List.of("Patient", "Observation"))
+            ._since(testInstant)
             .build())
     );
   }
-
 }

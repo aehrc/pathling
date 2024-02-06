@@ -21,6 +21,8 @@ import lombok.Builder;
 import lombok.Value;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
@@ -30,9 +32,13 @@ public class BulkExportRequest {
 
   @Nonnull
   @Builder.Default
-  String outputFormat = "ndjson";
+  String _outputFormat = "ndjson";
 
   @Nonnull
   @Builder.Default
-  List<String> type = Collections.emptyList();
+  List<String> _type = Collections.emptyList();
+
+  @Nullable
+  @Builder.Default
+  Instant _since = null;
 }

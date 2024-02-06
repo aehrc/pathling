@@ -25,6 +25,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
@@ -35,6 +39,11 @@ import org.apache.http.client.utils.URIBuilder;
 
 @Slf4j
 class BulkExportService {
+
+  private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
+
+  private static final DateTimeFormatter FHIR_INSTANT_FORMAT = DateTimeFormatter
+      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(UTC_ZONE_ID);
 
   @Nonnull
   final HttpClient httpClient;
@@ -158,14 +167,24 @@ class BulkExportService {
       return Optional.empty();
     }
   }
-  
+
+  @Nonnull
+  static String formatFhirInstant(@Nonnull final Instant instant) {
+    return FHIR_INSTANT_FORMAT.format(instant);
+  }
+
   @Nonnull
   static URI toRequestURI(@Nonnull final URI endpointUri, @Nonnull final BulkExportRequest request)
       throws URISyntaxException {
-    return new URIBuilder(endpointUri)
-        .addParameter("_outputFormat", request.getOutputFormat())
-        .addParameter("_type", String.join(",", request.getType()))
-        .build();
+    URIBuilder uriBuilder = new URIBuilder(endpointUri)
+        .addParameter("_outputFormat", request.get_outputFormat())
+        .addParameter("_type", String.join(",", request.get_type()));
+
+    if (request.get_since() != null) {
+      uriBuilder.addParameter("_since",
+          formatFhirInstant(Objects.requireNonNull(request.get_since())));
+    }
+    return uriBuilder.build();
   }
 }
 
