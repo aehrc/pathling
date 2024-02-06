@@ -23,6 +23,7 @@ import org.mockito.Mockito;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -56,4 +57,25 @@ class BulkExportServiceTest {
         bulkExportService.computeTimeToSleep(Optional.of(Duration.ofSeconds(15)),
             Duration.ofSeconds(5)));
   }
+
+
+  @Test
+  void testDefaultRequestUri() throws Exception {
+    final URI baseUri = URI.create("http://example.com/fhir");
+    assertEquals(URI.create("http://example.com/fhir?_outputFormat=ndjson&_type="),
+        BulkExportService.toRequestURI(baseUri, BulkExportRequest.builder().build())
+    );
+  }
+
+  @Test
+  void testNonDefaultRequestUri() throws Exception {
+    final URI baseUri = URI.create("http://test.com/fhir");
+    assertEquals(URI.create("http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation"),
+        BulkExportService.toRequestURI(baseUri, BulkExportRequest.builder()
+            .outputFormat("xml")
+            .type(List.of("Patient", "Observation"))
+            .build())
+    );
+  }
+
 }

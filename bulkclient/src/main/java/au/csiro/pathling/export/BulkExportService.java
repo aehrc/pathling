@@ -27,6 +27,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
@@ -69,16 +70,14 @@ class BulkExportService {
   URI kickOff(@Nonnull final BulkExportRequest request)
       throws IOException, InterruptedException, URISyntaxException {
 
-    final URI requestUri = new URIBuilder(endpointUri)
-        .addParameter("_outputFormat", request.getOutputFormat())
-        .build();
-
+    final URI requestUri = toRequestURI(endpointUri, request);
     final HttpRequest httpRequest = HttpRequest.newBuilder()
         .uri(requestUri)
         .header("accept", "application/fhir+json")
         .header("prefer", "respond-async")
         .build();
 
+    log.debug("KickOff: Request: {}", requestUri);
     final HttpResponse<String> httpResponse = httpClient.send(httpRequest,
         HttpResponse.BodyHandlers.ofString());
 
@@ -159,6 +158,15 @@ class BulkExportService {
     } catch (final NumberFormatException __) {
       return Optional.empty();
     }
+  }
+  
+  @Nonnull
+  static URI toRequestURI(@Nonnull final URI endpointUri, @Nonnull final BulkExportRequest request)
+      throws URISyntaxException {
+    return new URIBuilder(endpointUri)
+        .addParameter("_outputFormat", request.getOutputFormat())
+        .addParameter("_type", String.join(",", request.getType()))
+        .build();
   }
 }
 

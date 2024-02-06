@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,11 +52,15 @@ public class BulkExportClient {
   @Builder.Default
   String outputFormat = "application/fhir+ndjson";
 
+
+  @Nonnull
+  @Builder.Default
+  List<String> type = Collections.emptyList();
+  
   @Nonnull
   @Builder.Default
   String outputFileFormat = "";
-
-
+  
   @Nonnull
   String outputDir;
 
@@ -81,6 +86,7 @@ public class BulkExportClient {
     final BulkExportResponse response = bulkExportService.export(
         BulkExportRequest.builder()
             .outputFormat(outputFormat)
+            .type(type)
             .build()
     );
     log.debug("Export request completed: {}", response);
@@ -119,12 +125,17 @@ public class BulkExportClient {
 
   public static void main(@Nonnull final String[] args) throws Exception {
 
+
+    // With transient errors
+    // final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiJ0cmFuc2llbnRfZXJyb3IiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
+    
     // Bulk Export Demo Server
     final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
 
     BulkExportClient.builder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir("target/export")
+        .withType(List.of("Patient", "Condition"))
         .build()
         .export();
   }
