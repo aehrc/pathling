@@ -54,14 +54,6 @@
     <!-- HAPI FHIR -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-base</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-r4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-client</artifactId>
     </dependency>
     
@@ -116,10 +108,6 @@
       <groupId>com.github.tomakehurst</groupId>
       <artifactId>wiremock-jre8-standalone</artifactId>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
     </dependency>
   </dependencies>
 

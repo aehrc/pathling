@@ -159,6 +159,23 @@
       </dependency>
       <dependency>
         <groupId>au.csiro.pathling</groupId>
+        <artifactId>bulkclient</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>bulkclient</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>bulkclient</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
         <artifactId>fhirpath</artifactId>
         <version>${project.version}</version>
       </dependency>
