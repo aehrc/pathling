@@ -14,15 +14,18 @@
 #  limitations under the License.
 from typing import Sequence, Optional
 
-from py4j.java_gateway import JavaObject
+from py4j.java_gateway import JavaObject, JVMView
 from pyspark import SparkContext
+
+from datetime import datetime
 
 
 def bulk_export(
     fhirEndpointUrl: str,
     outputDirUrl: str,
     _outputFormat: str = 'ndjson',
-    _type: Optional[Sequence[str]] = None
+    _type: Optional[Sequence[str]] = None,
+    _since: Optional[datetime] = None
 ):
     """
     Bulk export FHIR resources from a FHIR server.
@@ -30,17 +33,24 @@ def bulk_export(
     :param outputDirUrl: the output directory URL
     :param _outputFormat: the output format
     :param _type: the resource types to export
+    :param _since: the value of the `_since` parameter for Bulk Data kick-off request 
     """
 
     if SparkContext._active_spark_context is None:
         raise ValueError("No active SparkContext")
-    jvm_bulk_export: JavaObject = SparkContext._active_spark_context._jvm.au.csiro.pathling.export
+
+    jvm: Optional[JVMView] = SparkContext._active_spark_context._jvm
+    jvm_bulk_export: JavaObject = jvm.au.csiro.pathling.export
+
+    def datetime_to_instant(dt: datetime) -> JavaObject:
+        return jvm.java.time.Instant.ofEpochMilli(int(dt.timestamp()))
 
     bulk_export_client = jvm_bulk_export.BulkExportClient.builder() \
         .withFhirEndpointUrl(fhirEndpointUrl) \
         .withOutputDir(outputDirUrl) \
         .withOutputFormat(_outputFormat) \
         .withType(_type or []) \
-        .build() 
- 
+        .withSince(datetime_to_instant(_since) if _since else None) \
+        .build()
+
     bulk_export_client.export()

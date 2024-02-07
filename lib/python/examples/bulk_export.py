@@ -18,7 +18,8 @@ import os
 
 from pathling import PathlingContext
 from pathling.bulkexport import bulk_export
-import uuid
+from datetime import datetime
+from time import time
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 BASE_DIR = os.path.abspath(os.path.join(HERE, os.pardir))
@@ -32,13 +33,14 @@ pc = PathlingContext.create()
 # Smart Bulk Data Server https://bulk-data.smarthealthit.org/index.html
 # 100 Patients, System level export
 fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir"
-outputDirUrl = os.path.join(TARGET_DIR, "export-%s" % uuid.uuid4().hex)
+outputDirUrl = os.path.join(TARGET_DIR, "export-%s" % int(time()))
 
 print(f"Exporting from: {fhirEndpointUrl} to {outputDirUrl}")
 bulk_export(
     fhirEndpointUrl,
     outputDirUrl, 
     _outputFormat="ndjson",
-    _type=["Patient", "Condition"]
+    _type=["Patient", "Condition"], 
+    _since = datetime.fromisoformat('2024-01-01T00:00:00')
 )
 
