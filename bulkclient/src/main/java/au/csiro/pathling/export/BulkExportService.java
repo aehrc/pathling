@@ -17,8 +17,11 @@
 
 package au.csiro.pathling.export;
 
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.export.BulkExportService.MaybeOperationOutcome.Issue;
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -29,20 +32,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import com.google.gson.JsonSyntaxException;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.utils.URIBuilder;
-
-import static java.util.Objects.nonNull;
 
 
 @Slf4j
@@ -129,7 +128,7 @@ class BulkExportService {
   }
 
   @Nonnull
-  Either<BulkExportResponse, Optional<Integer>> checkStatus(@Nonnull final URI statusUri)
+  Either<BulkExportResponse, Optional<RetryValue>> checkStatus(@Nonnull final URI statusUri)
       throws IOException, InterruptedException {
     final HttpRequest statusRequest = HttpRequest.newBuilder()
         .uri(statusUri)
@@ -148,12 +147,12 @@ class BulkExportService {
     } else if (statusResponse.statusCode() == HttpStatus.SC_ACCEPTED) {
       return Either.left(
           statusResponse.headers().firstValue("retry-after")
-              .flatMap(BulkExportService::parseRetryAfter));
+              .flatMap(RetryValue::parse));
       // TODO: ad handling of too many requests
     } else {
       if (isTransientError(statusResponse)) {
         log.debug("CheckStatus: Transient error encountered:  {}", statusResponse.body());
-        return Either.left(Optional.of((int) transientErrorBreak.getSeconds()));
+        return Either.left(Optional.of(RetryValue.after((transientErrorBreak))));
       }
       throw new IOException("CheckStatus: HTTP Error in response: " + statusResponse.statusCode());
     }
@@ -166,14 +165,14 @@ class BulkExportService {
     while (System.currentTimeMillis() <= poolingExitTime) {
       TimeUnit.MILLISECONDS.sleep(minPoolingTimeout.toMillis());
       log.debug("Pooling: " + poolingURI);
-      final Either<BulkExportResponse, Optional<Integer>> statusResponse = checkStatus(poolingURI);
+      final Either<BulkExportResponse, Optional<RetryValue>> statusResponse = checkStatus(
+          poolingURI);
       if (!statusResponse.isEmpty()) {
         return statusResponse.getRight();
       } else {
         final Duration timeToSleep = computeTimeToSleep(
-            statusResponse.getLeft().map(Duration::ofSeconds),
-            Duration.ofMillis(poolingExitTime - System.currentTimeMillis())
-        );
+            statusResponse.getLeft().map(rv -> rv.until(Instant.now())),
+            Duration.ofMillis(poolingExitTime - System.currentTimeMillis()));
         log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
         TimeUnit.MILLISECONDS.sleep(timeToSleep.toMillis());
       }
@@ -196,17 +195,7 @@ class BulkExportService {
     }
     return result;
   }
-
-
-  @Nonnull
-  static Optional<Integer> parseRetryAfter(@Nonnull final String retryAfter) {
-    try {
-      return Optional.of(Integer.parseInt(retryAfter));
-    } catch (final NumberFormatException __) {
-      return Optional.empty();
-    }
-  }
-
+  
   @Nonnull
   static String formatFhirInstant(@Nonnull final Instant instant) {
     return FHIR_INSTANT_FORMAT.format(instant);
@@ -215,7 +204,7 @@ class BulkExportService {
   @Nonnull
   static URI toRequestURI(@Nonnull final URI endpointUri, @Nonnull final BulkExportRequest request)
       throws URISyntaxException {
-    URIBuilder uriBuilder = new URIBuilder(endpointUri)
+    final URIBuilder uriBuilder = new URIBuilder(endpointUri)
         .addParameter("_outputFormat", request.get_outputFormat())
         .addParameter("_type", String.join(",", request.get_type()));
 
