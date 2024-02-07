@@ -41,6 +41,7 @@ The following features are not currently supported by this specification:
 
 - Primitive extensions
 - Profiled resources
+- Contained resources
 
 ## Schema structure
 
