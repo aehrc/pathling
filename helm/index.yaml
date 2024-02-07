@@ -2,9 +2,9 @@ apiVersion: v1
 entries:
   pathling:
   - apiVersion: v2
-    created: "2024-02-07T05:10:08.433480935Z"
+    created: "2024-02-07T05:14:30.974212755Z"
     description: A Helm chart for Pathling Server
-    digest: adb5bed1a6a886e4c5f98590db470ac97fc0ee61f668dbeebde490627d270451
+    digest: 18a56f1e5b80f257b53be4825107e0c7f367a17dad6def14582906af56c4048b
     icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
     keywords:
     - spark
@@ -22,4 +22,4 @@ entries:
     urls:
     - https://pathling.csiro.au/helm/pathling-1.0.0.tgz
     version: 1.0.0
-generated: "2024-02-07T05:10:08.432940124Z"
+generated: "2024-02-07T05:14:30.973486392Z"
