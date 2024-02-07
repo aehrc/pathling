@@ -1,5 +1,6 @@
 ---
 sidebar_position: 2
+description: Instructions for getting started with Pathling server.
 ---
 
 # Getting started

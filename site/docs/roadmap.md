@@ -1,3 +1,7 @@
+---
+description: We are continually adding new features to the various different components of Pathling.
+---
+
 # Roadmap
 
 We are continually adding new features to the various different components of

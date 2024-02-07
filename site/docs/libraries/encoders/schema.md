@@ -1,3 +1,7 @@
+---
+description: A scheme for representing FHIR resources within a Parquet schema.
+---
+
 # Parquet specification
 
 This specification describes a scheme for representing FHIR resources within a 

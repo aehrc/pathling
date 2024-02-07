@@ -1,6 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Introduction
+description: Pathling provides a set of libraries that provide assistance with using FHIR and terminology services from Apache Spark applications and data science workflows.
 ---
 
 # Libraries

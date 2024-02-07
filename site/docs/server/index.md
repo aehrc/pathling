@@ -1,6 +1,7 @@
 ---
 sidebar_position: 1
 sidebar_label: Introduction
+description: Pathling provides a server based on the HL7 FHIR standard, implementing special functionality designed to ease the delivery of apps and augment tasks related to health data analytics.
 ---
 
 # Server

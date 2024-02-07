@@ -1,5 +1,6 @@
 ---
 sidebar_position: 3
+description: Instructions for installing the Pathling library on a Databricks cluster.
 ---
 
 # Databricks installation

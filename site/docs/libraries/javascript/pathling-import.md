@@ -1,3 +1,7 @@
+---
+description: A set of functions written in TypeScript that facilitate the export of resources from a FHIR server and import into Pathling, via a staging S3 bucket. They can also be used as AWS Lambda functions.
+---
+
 # pathling-import
 
 [pathling-import](https://www.npmjs.com/package/pathling-import) is a set of

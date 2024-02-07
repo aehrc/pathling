@@ -1,5 +1,6 @@
 ---
 sidebar_position: 5
+description: Pathling implements the update and batch operations from the FHIR REST API, to allow for the creation and update of individual resources within the server.
 ---
 
 # Update and batch

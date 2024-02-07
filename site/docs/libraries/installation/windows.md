@@ -1,5 +1,6 @@
 ---
 sidebar_position: 2
+description: Instructions for installing the Pathling libraries on Windows.
 ---
 
 # Windows installation

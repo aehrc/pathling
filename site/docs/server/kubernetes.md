@@ -1,6 +1,7 @@
 ---
 sidebar_position: 10
 sidebar_label: Kubernetes
+description: Instructions for deploying Pathling server on Kubernetes using Helm.
 ---
 
 # Kubernetes

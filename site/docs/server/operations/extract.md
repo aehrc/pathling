@@ -1,5 +1,6 @@
 ---
 sidebar_position: 4
+description: The extract operation allows a user to create arbitrary tabular extracts from FHIR data, by specifying columns in terms of set of FHIRPath expressions that are used to populate them.
 ---
 
 # Extract

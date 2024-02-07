@@ -2,6 +2,7 @@
 sidebar_position: 1
 title: Installation
 sidebar_label: Installation
+description: Instructions for installing the Pathling libraries for Python, R, Scala, and Java.
 ---
 
 ### Python

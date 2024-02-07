@@ -1,6 +1,7 @@
 ---
 sidebar_position: 7
 sidebar_label: Async
+description: Pathling implements the Asynchronous Request Pattern within the FHIR specification, to provide a way to execute long-running requests and check on their progress using a status endpoint.
 ---
 
 # Asynchronous processing

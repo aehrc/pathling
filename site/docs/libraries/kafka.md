@@ -1,5 +1,6 @@
 ---
 sidebar_position: 7
+description: Pathling supports Kafka as a streaming data source, and all the operations available within the library are able to execute continuously across a stream of data.
 ---
 
 # Kafka integration

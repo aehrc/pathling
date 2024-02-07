@@ -1,5 +1,6 @@
 ---
 sidebar_position: 6
+description: Pathling can perform the role of a resource server within the OpenID Connect framework.
 ---
 
 # Authorization

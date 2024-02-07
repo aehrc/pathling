@@ -1,5 +1,6 @@
 ---
 sidebar_position: 3
+description: The Pathling library can be used to query datasets of FHIR resources using FHIRPath. This is useful for aggregating data, and creating custom views.
 ---
 
 # FHIRPath query

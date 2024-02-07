@@ -1,5 +1,6 @@
 ---
 sidebar_position: 5
+description: Configuration options for the Pathling server.
 ---
 
 # Configuration

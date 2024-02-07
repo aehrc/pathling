@@ -1,5 +1,6 @@
 ---
 sidebar_position: 4
+description: Instructions for configuring Apache Spark to use the Pathling library.
 ---
 
 # Spark configuration

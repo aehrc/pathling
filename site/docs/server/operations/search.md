@@ -1,5 +1,6 @@
 ---
 sidebar_position: 2
+description: Pathling server supports a FHIRPath-based search profile that allows you to retrieve a set of FHIR resources from the server filtered by one or more FHIRPath expressions.
 ---
 
 # Search

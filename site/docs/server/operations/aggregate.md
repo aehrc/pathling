@@ -1,5 +1,6 @@
 ---
 sidebar_position: 3
+description: The aggregate operation allows a user to perform aggregate queries on data held within the Pathling FHIR server.
 ---
 
 # Aggregate
