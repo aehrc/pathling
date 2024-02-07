@@ -149,28 +149,5 @@ public class BulkExportClient {
       @Nonnull final String extension) {
     return String.format("%s_%04d.%s", resource, chunkNo, extension);
   }
-
-  public static void main(@Nonnull final String[] args) throws Exception {
-
-    // With transient errors
-    // final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiJ0cmFuc2llbnRfZXJyb3IiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-
-    final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
-    // Bulk Export Demo Server
-    final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-    final String outputDir = "target/export-" + Instant.now().toEpochMilli();
-
-    System.out.println(
-        "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
-
-    BulkExportClient.builder()
-        .withFhirEndpointUrl(fhirEndpointUrl)
-        .withOutputDir(outputDir)
-        .withType(List.of("Patient", "Condition"))
-        .withSince(from)
-        .withProgress(ConsoleBulkExportProgress.instance())
-        .build()
-        .export();
-  }
 }
 

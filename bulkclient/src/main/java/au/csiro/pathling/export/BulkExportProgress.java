@@ -17,9 +17,8 @@
 
 package au.csiro.pathling.export;
 
-import org.checkerframework.checker.units.qual.N;
-import javax.annotation.Nonnull;
 import java.net.URI;
+import javax.annotation.Nonnull;
 
 public interface BulkExportProgress {
   

@@ -42,15 +42,10 @@
     <!-- Apache Spark -->
     <dependency>
       <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_${pathling.scalaVersion}</artifactId>
+      <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-catalyst_${pathling.scalaVersion}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-
+    
     <!-- HAPI FHIR -->
     <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
@@ -60,6 +55,10 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
