@@ -39,7 +39,7 @@ To add the Pathling library to your project, add the following to
 your [SBT](https://www.scala-sbt.org/) configuration:
 
 ```scala
-libraryDependencies += "au.csiro.pathling" % "library-api" % "[version]"
+libraryDependencies += "au.csiro.pathling" % "library-runtime" % "[version]"
 ```
 
 ### Java
@@ -50,7 +50,7 @@ your `pom.xml`:
 ```xml
 <dependency>
     <groupId>au.csiro.pathling</groupId>
-    <artifactId>library-api</artifactId>
+    <artifactId>library-runtime</artifactId>
     <version>[version]</version>
 </dependency>
 ```
