@@ -18,14 +18,12 @@ import os
 
 from pathling import PathlingContext
 from pathling.bulkexport import bulk_export
-from datetime import datetime
+from datetime import datetime, timezone
 from time import time
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 BASE_DIR = os.path.abspath(os.path.join(HERE, os.pardir))
 TARGET_DIR = os.path.abspath(os.path.join(BASE_DIR, "target"))
-
-print(TARGET_DIR)
 
 # create the context to initialize Java backend for SparkSession
 pc = PathlingContext.create()
@@ -38,9 +36,8 @@ outputDirUrl = os.path.join(TARGET_DIR, "export-%s" % int(time()))
 print(f"Exporting from: {fhirEndpointUrl} to {outputDirUrl}")
 bulk_export(
     fhirEndpointUrl,
-    outputDirUrl, 
+    outputDirUrl,
     _outputFormat="ndjson",
-    _type=["Patient", "Condition"], 
-    _since = datetime.fromisoformat('2024-01-01T00:00:00')
+    _type=["Patient", "Condition"],
+    _since=datetime.fromisoformat('2020-01-01T00:00:00').replace(tzinfo=timezone.utc)
 )
-

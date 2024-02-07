@@ -43,7 +43,7 @@ def bulk_export(
     jvm_bulk_export: JavaObject = jvm.au.csiro.pathling.export
 
     def datetime_to_instant(dt: datetime) -> JavaObject:
-        return jvm.java.time.Instant.ofEpochMilli(int(dt.timestamp()))
+        return jvm.java.time.Instant.ofEpochMilli(int(dt.timestamp() * 1000))
 
     bulk_export_client = jvm_bulk_export.BulkExportClient.builder() \
         .withFhirEndpointUrl(fhirEndpointUrl) \
@@ -51,6 +51,7 @@ def bulk_export(
         .withOutputFormat(_outputFormat) \
         .withType(_type or []) \
         .withSince(datetime_to_instant(_since) if _since else None) \
+        .withProgress(jvm_bulk_export.ConsoleBulkExportProgress.instance()) \
         .build()
 
     bulk_export_client.export()

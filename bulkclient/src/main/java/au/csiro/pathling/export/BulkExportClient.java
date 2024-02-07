@@ -79,6 +79,8 @@ public class BulkExportClient {
   @Builder.Default
   String outputExtension = "ndjson";
 
+  @Nullable
+  BulkExportProgress progress;
 
   public void export()
       throws IOException, InterruptedException, URISyntaxException {
@@ -95,6 +97,10 @@ public class BulkExportClient {
     final UrlDownloadService downloadService = new UrlDownloadService(httpClient, fileStore,
         executorService);
 
+    if (progress != null) {
+      progress.onStart();
+    }
+
     final BulkExportResponse response = bulkExportService.export(
         BulkExportRequest.builder()
             ._outputFormat(outputFormat)
@@ -103,12 +109,20 @@ public class BulkExportClient {
             .build()
     );
     log.debug("Export request completed: {}", response);
+    if (progress != null) {
+      progress.onExportComplete(response);
+    }
 
     final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response);
     log.debug("Downloading entries: {}", downloadList);
 
     downloadService.download(downloadList);
     log.debug("Download completed: cleaning up resources");
+
+    if (progress != null) {
+      progress.onComplete();
+    }
+
     executorService.shutdown();
     executorService.awaitTermination(1, TimeUnit.SECONDS);
     executorService.shutdownNow();
@@ -154,6 +168,7 @@ public class BulkExportClient {
         .withOutputDir(outputDir)
         .withType(List.of("Patient", "Condition"))
         .withSince(from)
+        .withProgress(ConsoleBulkExportProgress.instance())
         .build()
         .export();
   }
