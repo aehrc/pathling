@@ -49,4 +49,4 @@ result = med_administrations.select(
 ```
 
 For more information about Spark's Kafka integration, see
-the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/3.3.1/structured-streaming-kafka-integration.html#content).
+the [Structured Streaming + Kafka Integration Guide](https://spark.apache.org/docs/latest/structured-streaming-kafka-integration.html).
