@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.export;
 
+import au.csiro.pathling.export.BulkExportService.MaybeOperationOutcome.Issue;
 import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.URI;
@@ -28,22 +29,51 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import com.google.gson.JsonSyntaxException;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.utils.URIBuilder;
+
+import static java.util.Objects.nonNull;
 
 
 @Slf4j
 class BulkExportService {
 
+  @Value
+  static class MaybeOperationOutcome {
+
+    @Value
+    static class Issue {
+
+      @Nullable
+      String code;
+    }
+
+    @Nullable
+    String resourceType;
+
+    @Nullable
+    List<Issue> issue;
+  }
+
+
   private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
 
   private static final DateTimeFormatter FHIR_INSTANT_FORMAT = DateTimeFormatter
       .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(UTC_ZONE_ID);
+
+
+  private static final Gson GSON = new Gson();
+
 
   @Nonnull
   final HttpClient httpClient;
@@ -61,7 +91,7 @@ class BulkExportService {
   final Duration poolingTimeout = Duration.ofSeconds(60);
 
 
-  final transient Gson gson = new Gson();
+  final Duration transientErrorBreak = Duration.ofSeconds(5);
 
   public BulkExportService(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
     this.httpClient = httpClient;
@@ -109,13 +139,22 @@ class BulkExportService {
     final HttpResponse<String> statusResponse = httpClient.send(statusRequest,
         HttpResponse.BodyHandlers.ofString());
 
+    log.debug("Status: responseReceived: status={}, headers={}", statusResponse.statusCode(),
+        statusResponse.headers());
+    log.debug("Status: responsBody: {}", statusResponse.body());
+
     if (statusResponse.statusCode() == HttpStatus.SC_OK) {
-      return Either.right(gson.fromJson(statusResponse.body(), BulkExportResponse.class));
+      return Either.right(GSON.fromJson(statusResponse.body(), BulkExportResponse.class));
     } else if (statusResponse.statusCode() == HttpStatus.SC_ACCEPTED) {
       return Either.left(
           statusResponse.headers().firstValue("retry-after")
               .flatMap(BulkExportService::parseRetryAfter));
+      // TODO: ad handling of too many requests
     } else {
+      if (isTransientError(statusResponse)) {
+        log.debug("CheckStatus: Transient error encountered:  {}", statusResponse.body());
+        return Either.left(Optional.of((int) transientErrorBreak.getSeconds()));
+      }
       throw new IOException("CheckStatus: HTTP Error in response: " + statusResponse.statusCode());
     }
   }
@@ -185,6 +224,24 @@ class BulkExportService {
           formatFhirInstant(Objects.requireNonNull(request.get_since())));
     }
     return uriBuilder.build();
+  }
+
+  static boolean isTransientError(@Nonnull final HttpResponse<String> statusResponse) {
+    if (statusResponse.headers().allValues("content-type").stream()
+        .anyMatch(h -> h.contains("json"))) {
+      try {
+        final MaybeOperationOutcome operationOutcome = GSON.fromJson(statusResponse.body(),
+            MaybeOperationOutcome.class);
+        return nonNull(operationOutcome)
+            && "OperationOutcome".equals(operationOutcome.getResourceType())
+            && nonNull(operationOutcome.getIssue())
+            && operationOutcome.getIssue().stream().map(Issue::getCode)
+            .anyMatch("transient"::equals);
+      } catch (final JsonSyntaxException ex) {
+        log.debug("Ignoring error while parsing JSON OperationOutcome: {}", ex.getMessage());
+      }
+    }
+    return false;
   }
 }
 

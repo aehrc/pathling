@@ -17,17 +17,23 @@
 
 package au.csiro.pathling.export;
 
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.json.JSONObject;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import wiremock.net.minidev.json.JSONArray;
 
 class BulkExportServiceTest {
 
@@ -72,12 +78,129 @@ class BulkExportServiceTest {
   void testNonDefaultRequestUri() throws Exception {
     final URI baseUri = URI.create("http://test.com/fhir");
     final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
-    assertEquals(URI.create("http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation&_since=2023-01-11T00%3A00%3A00.123Z"),
+    assertEquals(URI.create(
+            "http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation&_since=2023-01-11T00%3A00%3A00.123Z"),
         BulkExportService.toRequestURI(baseUri, BulkExportRequest.builder()
             ._outputFormat("xml")
             ._type(List.of("Patient", "Observation"))
             ._since(testInstant)
             .build())
     );
+  }
+
+
+  private static final JSONObject TRANSIENT_OUTCOME_SINGLE = new JSONObject()
+      .put("resourceType", "OperationOutcome")
+      .put("issue", new JSONArray().appendElement(
+          new JSONObject().put("code", "transient")
+      ));
+
+
+  private static final JSONObject TRANSIENT_OUTCOME_ANY = new JSONObject()
+      .put("resourceType", "OperationOutcome")
+      .put("issue", new JSONArray()
+          .appendElement(new JSONObject().put("code", "other"))
+          .appendElement(new JSONObject().put("code", "transient")
+          ));
+
+  private static final JSONObject TRANSIENT_OUTCOME_NO_ISSUES = new JSONObject()
+      .put("resourceType", "OperationOutcome");
+
+  private static final JSONObject TRANSIENT_OUTCOME_NO_TRANSIENT_ISSUES = new JSONObject()
+      .put("resourceType", "OperationOutcome")
+      .put("issue", new JSONArray()
+          .appendElement(new JSONObject().put("code", "other"))
+          .appendElement(new JSONObject().put("code", "fatal")
+          ));
+
+  @Test
+  void isTransientIfSingleTransientIssue() {
+
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
+        .body(TRANSIENT_OUTCOME_SINGLE.toString())
+        .build();
+    assertTrue(BulkExportService.isTransientError(response));
+  }
+
+  @Test
+  void isTransientIfAnyTransientIssue() {
+
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
+        .body(TRANSIENT_OUTCOME_ANY.toString())
+        .build();
+    assertTrue(BulkExportService.isTransientError(response));
+  }
+
+  @Test
+  void notTransientIfNotJsonContentType() {
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/text")), (x, y) -> true))
+        .body(TRANSIENT_OUTCOME_SINGLE.toString())
+        .build();
+    assertFalse(BulkExportService.isTransientError(response));
+  }
+
+
+  @Test
+  void notTransientIfEmptyBody() {
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
+        .body("")
+        .build();
+    assertFalse(BulkExportService.isTransientError(response));
+  }
+
+  @Test
+  void notTransientIfNotValidJson() {
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
+        .body("{")
+        .build();
+    assertFalse(BulkExportService.isTransientError(response));
+  }
+
+  @Test
+  void notTransientIfNotOperationOutcome() {
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
+        .body("{}")
+        .build();
+    assertFalse(BulkExportService.isTransientError(response));
+  }
+
+  @Test
+  void notTransientIfNoTransientIssues() {
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
+        .body(TRANSIENT_OUTCOME_NO_TRANSIENT_ISSUES.toString())
+        .build();
+    assertFalse(BulkExportService.isTransientError(response));
+  }
+
+  @Test
+  void notTransientIfNoIssues() {
+    final HttpResponse<String> response = TestHttpResponse.builder()
+        .statusCode(500)
+        .headers(
+            HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
+        .body(TRANSIENT_OUTCOME_NO_ISSUES.toString())
+        .build();
+    assertFalse(BulkExportService.isTransientError(response));
   }
 }
