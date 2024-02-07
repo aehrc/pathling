@@ -54,26 +54,26 @@ field within the schema with the same name (except where otherwise specified).
 The data type SHALL be determined by the element type according to the following
 table:
 
-| FHIR type   | Spark SQL type | Additional requirements                                                                      |
-|-------------|----------------|----------------------------------------------------------------------------------------------|
-| boolean     | BOOLEAN        |                                                                                              |
-| canonical   | BINARY (UTF8)  | Compliant with the [FHIR canonical format](https://hl7.org/fhir/R4/datatypes.html#canonical) |
-| code        | BINARY (UTF8)  | Compliant with the [FHIR code format](https://hl7.org/fhir/R4/datatypes.html#code)           |
-| dateTime    | BINARY (UTF8)  | Compliant with the [FHIR dateTime format](https://hl7.org/fhir/R4/datatypes.html#dateTime)   |
-| date        | BINARY (UTF8)  | Compliant with the [FHIR date format](https://hl7.org/fhir/R4/datatypes.html#date)           |
-| decimal     | DECIMAL(32,6)  | See [Decimal type](#decimal-type)                                                            |
-| id          | BINARY (UTF8)  | See [ID type](#id-type)                                                                      |
-| instant     | INT96          |                                                                                              |
-| integer     | INT32          | Compliant with the [FHIR integer format](https://hl7.org/fhir/R4/datatypes.html#integer)     |
-| markdown    | BINARY (UTF8)  | Compliant with the [FHIR markdown format](https://hl7.org/fhir/R4/datatypes.html#markdown)   |
-| oid         | BINARY (UTF8)  | Compliant with the [FHIR oid format](https://hl7.org/fhir/R4/datatypes.html#oid)             |
-| positiveInt | INT32          | liant with the [FHIR positiveInt format](https://hl7.org/fhir/R4/datatypes.html#positiveInt) |
-| string      | BINARY (UTF8)  | Compliant with the [FHIR string format](https://hl7.org/fhir/R4/datatypes.html#string)       |
-| time        | BINARY (UTF8)  | Compliant with the [FHIR time format](https://hl7.org/fhir/R4/datatypes.html#time)           |
-| unsignedInt | INT32          | liant with the [FHIR unsignedInt format](https://hl7.org/fhir/R4/datatypes.html#unsignedInt) |
-| uri         | BINARY (UTF8)  | Compliant with the [FHIR uri format](https://hl7.org/fhir/R4/datatypes.html#uri)             |
-| url         | BINARY (UTF8)  | Compliant with the [FHIR url format](https://hl7.org/fhir/R4/datatypes.html#url)             |
-| uuid        | BINARY (UTF8)  | Compliant with the [FHIR uuid format](https://hl7.org/fhir/R4/datatypes.html#uuid)           |
+| FHIR type   | Spark SQL type | Additional requirements                                                                          |
+|-------------|----------------|--------------------------------------------------------------------------------------------------|
+| boolean     | BOOLEAN        |                                                                                                  |
+| canonical   | BINARY (UTF8)  | Compliant with the [FHIR canonical format](https://hl7.org/fhir/R4/datatypes.html#canonical)     |
+| code        | BINARY (UTF8)  | Compliant with the [FHIR code format](https://hl7.org/fhir/R4/datatypes.html#code)               |
+| dateTime    | BINARY (UTF8)  | Compliant with the [FHIR dateTime format](https://hl7.org/fhir/R4/datatypes.html#dateTime)       |
+| date        | BINARY (UTF8)  | Compliant with the [FHIR date format](https://hl7.org/fhir/R4/datatypes.html#date)               |
+| decimal     | DECIMAL(32,6)  | See [Decimal type](#decimal-type)                                                                |
+| id          | BINARY (UTF8)  | See [ID type](#id-type)                                                                          |
+| instant     | INT96          |                                                                                                  |
+| integer     | INT32          | Compliant with the [FHIR integer format](https://hl7.org/fhir/R4/datatypes.html#integer)         |
+| markdown    | BINARY (UTF8)  | Compliant with the [FHIR markdown format](https://hl7.org/fhir/R4/datatypes.html#markdown)       |
+| oid         | BINARY (UTF8)  | Compliant with the [FHIR oid format](https://hl7.org/fhir/R4/datatypes.html#oid)                 |
+| positiveInt | INT32          | Compliant with the [FHIR positiveInt format](https://hl7.org/fhir/R4/datatypes.html#positiveInt) |
+| string      | BINARY (UTF8)  | Compliant with the [FHIR string format](https://hl7.org/fhir/R4/datatypes.html#string)           |
+| time        | BINARY (UTF8)  | Compliant with the [FHIR time format](https://hl7.org/fhir/R4/datatypes.html#time)               |
+| unsignedInt | INT32          | Compliant with the [FHIR unsignedInt format](https://hl7.org/fhir/R4/datatypes.html#unsignedInt) |
+| uri         | BINARY (UTF8)  | Compliant with the [FHIR uri format](https://hl7.org/fhir/R4/datatypes.html#uri)                 |
+| url         | BINARY (UTF8)  | Compliant with the [FHIR url format](https://hl7.org/fhir/R4/datatypes.html#url)                 |
+| uuid        | BINARY (UTF8)  | Compliant with the [FHIR uuid format](https://hl7.org/fhir/R4/datatypes.html#uuid)               |
 
 ### Complex and backbone elements
 
