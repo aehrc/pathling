@@ -45,7 +45,7 @@ class HdfsFileStore implements FileStore {
       throws IOException {
     final Path filePath = new Path(new Path(rootPath), fileName);
     try (final OutputStream os = fileSystem.create(filePath)) {
-      IOUtils.copy(is, os);
+      IOUtils.copyLarge(is, os);
     }
     return filePath.toUri();
   }

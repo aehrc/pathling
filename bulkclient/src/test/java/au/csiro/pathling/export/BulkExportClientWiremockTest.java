@@ -25,6 +25,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.export.BulkExportException.HttpError;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.base.Charsets;
@@ -36,6 +37,7 @@ import javax.annotation.Nonnull;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import wiremock.net.minidev.json.JSONArray;
 
@@ -45,6 +47,24 @@ class BulkExportClientWiremockTest {
   public static final String RESOURCE_00 = "{}\n{}";
   public static final String RESOURCE_01 = "{}\n{}\n{}";
   public static final String RESOURCE_02 = "{}";
+  public static final String FAILURE_OPERATION_OUTCOME = new JSONObject()
+      .put("resourceType", "OperationOutcome")
+      .put("issue", new JSONArray().appendElement(
+          new JSONObject().put("code", "failure")
+      ))
+      .toString();
+  public static final String TRANSIENT_ISSUE_OPERATION_OUTCOME = new JSONObject()
+      .put("resourceType", "OperationOutcome")
+      .put("issue", new JSONArray().appendElement(
+          new JSONObject().put("code", "transient")
+      ))
+      .toString();
+  public static final String BULK_EXPORT_NO_FILES_RESPONSE = new JSONObject()
+      .put("transactionTime", 4934344343L)
+      .put("request", "http://localhost:8080/$export")
+      .put("requiresAccessToken", false)
+      .put("output", new JSONArray())
+      .toString();
 
 
   @Test
@@ -133,7 +153,7 @@ class BulkExportClientWiremockTest {
     assertEquals(RESOURCE_02,
         FileUtils.readFileToString(new File(exportDir, "Condition_0001.ndjson"), Charsets.UTF_8));
   }
-  
+
   @Test
   void testExportRetriesTransientErrorsInStatusPooling(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
@@ -155,14 +175,7 @@ class BulkExportClientWiremockTest {
         .whenScenarioStateIs("transient-error")
         .willReturn(aResponse().withStatus(500)
             .withHeader("content-type", "application/json")
-            .withBody(
-                new JSONObject()
-                    .put("resourceType", "OperationOutcome")
-                    .put("issue", new JSONArray().appendElement(
-                        new JSONObject().put("code", "transient")
-                    ))
-                    .toString()
-            ))
+            .withBody(TRANSIENT_ISSUE_OPERATION_OUTCOME))
         .willSetStateTo("done")
     );
 
@@ -176,14 +189,10 @@ class BulkExportClientWiremockTest {
     stubFor(get(urlPathEqualTo("/pool"))
         .inScenario("bulk-export")
         .whenScenarioStateIs("done")
-        .willReturn(aResponse().withStatus(200).withBody(
-            new JSONObject()
-                .put("transactionTime", 4934344343L)
-                .put("request", "http://localhost:8080/$export")
-                .put("requiresAccessToken", false)
-                .put("output", new JSONArray())
-                .toString()
-        ))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("content-type", "application/json")
+            .withBody(BULK_EXPORT_NO_FILES_RESPONSE))
     );
 
     System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
@@ -198,9 +207,9 @@ class BulkExportClientWiremockTest {
         .export();
 
   }
-  
+
   @Test
-  void testExporFailOnPersistentErrorsInStatusPooling(
+  void testExportFailOnErrorsInStatusPooling(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
       throws Exception {
 
@@ -216,53 +225,57 @@ class BulkExportClientWiremockTest {
     );
 
     stubFor(get(urlPathEqualTo("/pool"))
-        .inScenario("bulk-export")
-        .whenScenarioStateIs("transient-error")
         .willReturn(aResponse().withStatus(500)
             .withHeader("content-type", "application/json")
-            .withBody(
-                new JSONObject()
-                    .put("resourceType", "OperationOutcome")
-                    .put("issue", new JSONArray().appendElement(
-                        new JSONObject().put("code", "failure")
-                    ))
-                    .toString()
-            ))
-        .willSetStateTo("done")
+            .withBody(FAILURE_OPERATION_OUTCOME))
     );
 
-    stubFor(get(urlPathEqualTo("/pool"))
-        .inScenario("bulk-export")
-        .whenScenarioStateIs("in-progress")
-        .willReturn(aResponse().withStatus(202))
-        .willSetStateTo("done")
-    );
-
-    stubFor(get(urlPathEqualTo("/pool"))
-        .inScenario("bulk-export")
-        .whenScenarioStateIs("done")
-        .willReturn(aResponse().withStatus(200).withBody(
-            new JSONObject()
-                .put("transactionTime", 4934344343L)
-                .put("request", "http://localhost:8080/$export")
-                .put("requiresAccessToken", false)
-                .put("output", new JSONArray())
-                .toString()
-        ))
-    );
-
-    System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
     final File exportDir = Files.createTempDirectory(Paths.get("target"), "bulk-export").toFile();
-    System.out.println("Exporting to: " + exportDir);
-
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
 
-    final IOException ex = Assertions.assertThrows(IOException.class, () ->
+    final HttpError ex = Assertions.assertThrows(HttpError.class, () ->
         BulkExportClient.builder()
             .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
             .withOutputDir(exportDir.toURI().toString())
             .build()
             .export()
     );
+    assertEquals(500, ex.statusCode);
+  }
+
+  @Test
+  @Disabled
+  void testExportFailOnPersistingTransientErrorsInStatusPooling(
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
+      throws Exception {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+
+    stubFor(get(urlPathEqualTo("/$export"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs(STARTED)
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+        .willSetStateTo("transient-error")
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .willReturn(aResponse().withStatus(500)
+            .withHeader("content-type", "application/json")
+            .withBody(TRANSIENT_ISSUE_OPERATION_OUTCOME))
+    );
+
+    final File exportDir = Files.createTempDirectory(Paths.get("target"), "bulk-export").toFile();
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+
+    final HttpError ex = Assertions.assertThrows(HttpError.class, () ->
+        BulkExportClient.builder()
+            .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+            .withOutputDir(exportDir.toURI().toString())
+            .build()
+            .export()
+    );
+    assertEquals(500, ex.statusCode);
   }
 }
