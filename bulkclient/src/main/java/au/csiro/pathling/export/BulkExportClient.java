@@ -93,7 +93,7 @@ public class BulkExportClient {
                                        ? fhirEndpointUrl
                                        : fhirEndpointUrl + "/").resolve("$export");
 
-    final BulkExportService bulkExportService = new BulkExportService(httpClient, endpointUrl);
+    final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient, endpointUrl);
     final UrlDownloadService downloadService = new UrlDownloadService(httpClient, fileStore,
         executorService);
 
@@ -101,7 +101,7 @@ public class BulkExportClient {
       progress.onStart();
     }
 
-    final BulkExportResponse response = bulkExportService.export(
+    final BulkExportResponse response = bulkExportTemplate.export(
         BulkExportRequest.builder()
             ._outputFormat(outputFormat)
             ._type(type)

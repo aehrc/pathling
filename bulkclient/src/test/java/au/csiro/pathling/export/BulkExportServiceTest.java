@@ -40,28 +40,28 @@ class BulkExportServiceTest {
 
   @Test
   void computeTimeToSleep() {
-    final BulkExportService bulkExportService = new BulkExportService(
+    final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(
         Mockito.mock(HttpClient.class), URI.create("http://example.com"));
 
-    assertEquals(bulkExportService.minPoolingTimeout,
-        bulkExportService.computeTimeToSleep(Optional.empty(), Duration.ZERO));
+    assertEquals(bulkExportTemplate.minPoolingTimeout,
+        bulkExportTemplate.computeTimeToSleep(Optional.empty(), Duration.ZERO));
 
-    assertEquals(bulkExportService.minPoolingTimeout,
-        bulkExportService.computeTimeToSleep(Optional.of(Duration.ZERO), Duration.ZERO));
+    assertEquals(bulkExportTemplate.minPoolingTimeout,
+        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ZERO), Duration.ZERO));
 
-    assertEquals(bulkExportService.minPoolingTimeout,
-        bulkExportService.computeTimeToSleep(Optional.of(Duration.ofSeconds(5)), Duration.ZERO));
-
-    assertEquals(Duration.ofSeconds(5),
-        bulkExportService.computeTimeToSleep(Optional.of(Duration.ofSeconds(5)),
-            Duration.ofSeconds(100)));
-
-    assertEquals(bulkExportService.maxPoolingTimeout,
-        bulkExportService.computeTimeToSleep(Optional.of(Duration.ofSeconds(15)),
-            Duration.ofSeconds(100)));
+    assertEquals(bulkExportTemplate.minPoolingTimeout,
+        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(5)), Duration.ZERO));
 
     assertEquals(Duration.ofSeconds(5),
-        bulkExportService.computeTimeToSleep(Optional.of(Duration.ofSeconds(15)),
+        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(5)),
+            Duration.ofSeconds(100)));
+
+    assertEquals(bulkExportTemplate.maxPoolingTimeout,
+        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(15)),
+            Duration.ofSeconds(100)));
+
+    assertEquals(Duration.ofSeconds(5),
+        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(15)),
             Duration.ofSeconds(5)));
   }
 
@@ -70,7 +70,7 @@ class BulkExportServiceTest {
   void testDefaultRequestUri() throws Exception {
     final URI baseUri = URI.create("http://example.com/fhir");
     assertEquals(URI.create("http://example.com/fhir?_outputFormat=ndjson&_type="),
-        BulkExportService.toRequestURI(baseUri, BulkExportRequest.builder().build())
+        BulkExportTemplate.toRequestURI(baseUri, BulkExportRequest.builder().build())
     );
   }
 
@@ -80,7 +80,7 @@ class BulkExportServiceTest {
     final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
     assertEquals(URI.create(
             "http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation&_since=2023-01-11T00%3A00%3A00.123Z"),
-        BulkExportService.toRequestURI(baseUri, BulkExportRequest.builder()
+        BulkExportTemplate.toRequestURI(baseUri, BulkExportRequest.builder()
             ._outputFormat("xml")
             ._type(List.of("Patient", "Observation"))
             ._since(testInstant)
@@ -122,7 +122,7 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
         .body(TRANSIENT_OUTCOME_SINGLE.toString())
         .build();
-    assertTrue(BulkExportService.isTransientError(response));
+    assertTrue(BulkExportTemplate.isTransientError(response));
   }
 
   @Test
@@ -134,7 +134,7 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
         .body(TRANSIENT_OUTCOME_ANY.toString())
         .build();
-    assertTrue(BulkExportService.isTransientError(response));
+    assertTrue(BulkExportTemplate.isTransientError(response));
   }
 
   @Test
@@ -145,7 +145,7 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/text")), (x, y) -> true))
         .body(TRANSIENT_OUTCOME_SINGLE.toString())
         .build();
-    assertFalse(BulkExportService.isTransientError(response));
+    assertFalse(BulkExportTemplate.isTransientError(response));
   }
 
 
@@ -157,7 +157,7 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
         .body("")
         .build();
-    assertFalse(BulkExportService.isTransientError(response));
+    assertFalse(BulkExportTemplate.isTransientError(response));
   }
 
   @Test
@@ -168,7 +168,7 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
         .body("{")
         .build();
-    assertFalse(BulkExportService.isTransientError(response));
+    assertFalse(BulkExportTemplate.isTransientError(response));
   }
 
   @Test
@@ -179,7 +179,7 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
         .body("{}")
         .build();
-    assertFalse(BulkExportService.isTransientError(response));
+    assertFalse(BulkExportTemplate.isTransientError(response));
   }
 
   @Test
@@ -190,7 +190,7 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
         .body(TRANSIENT_OUTCOME_NO_TRANSIENT_ISSUES.toString())
         .build();
-    assertFalse(BulkExportService.isTransientError(response));
+    assertFalse(BulkExportTemplate.isTransientError(response));
   }
 
   @Test
@@ -201,6 +201,6 @@ class BulkExportServiceTest {
             HttpHeaders.of(Map.of("content-type", List.of("application/json")), (x, y) -> true))
         .body(TRANSIENT_OUTCOME_NO_ISSUES.toString())
         .build();
-    assertFalse(BulkExportService.isTransientError(response));
+    assertFalse(BulkExportTemplate.isTransientError(response));
   }
 }

@@ -17,11 +17,7 @@
 
 package au.csiro.pathling.export;
 
-import static java.util.Objects.nonNull;
-
-import au.csiro.pathling.export.BulkExportService.MaybeOperationOutcome.Issue;
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -32,37 +28,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.utils.URIBuilder;
 
 
 @Slf4j
-class BulkExportService {
-
-  @Value
-  static class MaybeOperationOutcome {
-
-    @Value
-    static class Issue {
-
-      @Nullable
-      String code;
-    }
-
-    @Nullable
-    String resourceType;
-
-    @Nullable
-    List<Issue> issue;
-  }
+class BulkExportTemplate {
 
 
   private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
@@ -92,7 +68,7 @@ class BulkExportService {
 
   final Duration transientErrorBreak = Duration.ofSeconds(5);
 
-  public BulkExportService(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
+  public BulkExportTemplate(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
     this.httpClient = httpClient;
     this.endpointUri = endpoingUri;
   }
@@ -123,7 +99,9 @@ class BulkExportService {
           () -> new IllegalStateException(
               "KickOff: No content-location header found in kick-off response"));
     } else {
-      throw new IOException("KickOff: HTTP Error in response: " + httpResponse.statusCode());
+      log.debug("KickOff: errorResponse: status={}, body={}", httpResponse.statusCode(),
+          httpResponse.body());
+      throw BulkExportException.HttpError.of("KickOff: HTTP Error in response", httpResponse);
     }
   }
 
@@ -154,7 +132,8 @@ class BulkExportService {
         log.debug("CheckStatus: Transient error encountered:  {}", statusResponse.body());
         return Either.left(Optional.of(RetryValue.after((transientErrorBreak))));
       }
-      throw new IOException("CheckStatus: HTTP Error in response: " + statusResponse.statusCode());
+      throw BulkExportException.HttpError.of("CheckStatus: HTTP Error in response",
+          statusResponse);
     }
   }
 
@@ -177,7 +156,7 @@ class BulkExportService {
         TimeUnit.MILLISECONDS.sleep(timeToSleep.toMillis());
       }
     }
-    throw new IOException("Pooling timeout exceeded: " + poolingTimeout);
+    throw new BulkExportException.Timeout("Pooling timeout exceeded: " + poolingTimeout);
   }
 
   @Nonnull
@@ -195,7 +174,7 @@ class BulkExportService {
     }
     return result;
   }
-  
+
   @Nonnull
   static String formatFhirInstant(@Nonnull final Instant instant) {
     return FHIR_INSTANT_FORMAT.format(instant);
@@ -216,22 +195,21 @@ class BulkExportService {
   }
 
   static boolean isTransientError(@Nonnull final HttpResponse<String> statusResponse) {
+    return asOperationOutcome(statusResponse).map(OperationOutcome::isTransient)
+        .orElse(false);
+  }
+
+  @Nonnull
+  static Optional<OperationOutcome> asOperationOutcome(
+      @Nonnull final HttpResponse<String> statusResponse) {
     if (statusResponse.headers().allValues("content-type").stream()
         .anyMatch(h -> h.contains("json"))) {
-      try {
-        final MaybeOperationOutcome operationOutcome = GSON.fromJson(statusResponse.body(),
-            MaybeOperationOutcome.class);
-        return nonNull(operationOutcome)
-            && "OperationOutcome".equals(operationOutcome.getResourceType())
-            && nonNull(operationOutcome.getIssue())
-            && operationOutcome.getIssue().stream().map(Issue::getCode)
-            .anyMatch("transient"::equals);
-      } catch (final JsonSyntaxException ex) {
-        log.debug("Ignoring error while parsing JSON OperationOutcome: {}", ex.getMessage());
-      }
+      return OperationOutcome.parse(statusResponse.body());
+    } else {
+      return Optional.empty();
     }
-    return false;
   }
+
 }
 
 
