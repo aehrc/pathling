@@ -20,10 +20,6 @@ package au.csiro.pathling.export;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -34,6 +30,9 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 
 @Value
 @Slf4j
@@ -69,14 +68,13 @@ public class UrlDownloadService {
 
     @Override
     public URI call() throws Exception {
-      final HttpResponse<InputStream> result = httpClient.send(
-          HttpRequest.newBuilder().uri(source).build(),
-          BodyHandlers.ofInputStream()
-      );
-      if (result.statusCode() != 200) {
-        throw new IOException("Failed to download: " + source + " status: " + result.statusCode());
+      final HttpResponse result = httpClient.execute(new HttpGet(source));
+
+      if (result.getStatusLine().getStatusCode() != 200) {
+        throw new IOException(
+            "Failed to download: " + source + " status: " + result.getStatusLine().getStatusCode());
       }
-      try (final InputStream is = result.body()) {
+      try (final InputStream is = result.getEntity().getContent()) {
         log.debug("Downloading:  {}  to: {}", source, fileName);
         return fileStore.writeTo(fileName, is);
       }

@@ -24,7 +24,6 @@ import au.csiro.pathling.export.UrlDownloadService.UrlDownloadEntry;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -40,6 +39,12 @@ import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 
 /**
@@ -82,10 +87,13 @@ public class BulkExportClient {
   @Nullable
   BulkExportProgress progress;
 
+  @Nonnull
+  HttpClientConfiguration httpClientConfig = HttpClientConfiguration.builder().build();
+
   public void export()
       throws IOException, InterruptedException, URISyntaxException {
 
-    final HttpClient httpClient = HttpClient.newHttpClient();
+    final CloseableHttpClient httpClient = buildHttpClient(httpClientConfig);
     final FileStore fileStore = HdfsFileStore.of(outputDir);
     final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -148,6 +156,30 @@ public class BulkExportClient {
   static String toFileName(@Nonnull final String resource, final int chunkNo,
       @Nonnull final String extension) {
     return String.format("%s_%04d.%s", resource, chunkNo, extension);
+  }
+
+
+  private static CloseableHttpClient buildHttpClient(
+      @Nonnull final HttpClientConfiguration clientConfig) {
+
+    final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
+    connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
+    connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
+
+    final RequestConfig defaultRequestConfig = RequestConfig.custom()
+        .setSocketTimeout(clientConfig.getSocketTimeout())
+        .build();
+
+    final HttpClientBuilder clientBuilder = HttpClients.custom()
+        .setDefaultRequestConfig(defaultRequestConfig)
+        .setConnectionManager(connectionManager)
+        .setConnectionManagerShared(false);
+
+    if (clientConfig.isRetryEnabled()) {
+      clientBuilder.setRetryHandler(
+          new DefaultHttpRequestRetryHandler(clientConfig.getRetryCount(), false));
+    }
+    return clientBuilder.build();
   }
 }
 

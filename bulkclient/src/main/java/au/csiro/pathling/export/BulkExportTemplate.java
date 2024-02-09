@@ -21,9 +21,6 @@ import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -33,8 +30,14 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.util.EntityUtils;
 
 
 @Slf4j
@@ -81,55 +84,49 @@ class BulkExportTemplate {
 
   @Nonnull
   URI kickOff(@Nonnull final BulkExportRequest request)
-      throws IOException, InterruptedException, URISyntaxException {
+      throws IOException, URISyntaxException {
 
     final URI requestUri = toRequestURI(endpointUri, request);
-    final HttpRequest httpRequest = HttpRequest.newBuilder()
-        .uri(requestUri)
-        .header("accept", "application/fhir+json")
-        .header("prefer", "respond-async")
-        .build();
-
+    final HttpUriRequest httpRequest = new HttpGet(requestUri);
+    httpRequest.setHeader("accept", "application/fhir+json");
+    httpRequest.setHeader("prefer", "respond-async");
     log.debug("KickOff: Request: {}", requestUri);
-    final HttpResponse<String> httpResponse = httpClient.send(httpRequest,
-        HttpResponse.BodyHandlers.ofString());
-
-    if (httpResponse.statusCode() == HttpStatus.SC_ACCEPTED) {
-      return httpResponse.headers().firstValue("content-location").map(URI::create).orElseThrow(
-          () -> new IllegalStateException(
-              "KickOff: No content-location header found in kick-off response"));
+    final HttpResponse httpResponse = httpClient.execute(httpRequest);
+    final int statusCode = httpResponse.getStatusLine().getStatusCode();
+    if (statusCode == HttpStatus.SC_ACCEPTED) {
+      return Optional.ofNullable(httpResponse.getFirstHeader("content-location"))
+          .map(Header::getValue)
+          .map(URI::create).orElseThrow(
+              () -> new IllegalStateException(
+                  "KickOff: No content-location header found in kick-off response"));
     } else {
-      log.debug("KickOff: errorResponse: status={}, body={}", httpResponse.statusCode(),
-          httpResponse.body());
+      log.debug("KickOff: errorResponse: {}", httpResponse);
       throw BulkExportException.HttpError.of("KickOff: HTTP Error in response", httpResponse);
     }
   }
 
   @Nonnull
   Either<BulkExportResponse, Optional<RetryValue>> checkStatus(@Nonnull final URI statusUri)
-      throws IOException, InterruptedException {
-    final HttpRequest statusRequest = HttpRequest.newBuilder()
-        .uri(statusUri)
-        .header("accept", "application/json")
-        .build();
+      throws IOException {
+    final HttpUriRequest statusRequest = new HttpGet(statusUri);
+    statusRequest.setHeader("accept", "application/json");
 
-    final HttpResponse<String> statusResponse = httpClient.send(statusRequest,
-        HttpResponse.BodyHandlers.ofString());
+    final HttpResponse statusResponse = httpClient.execute(statusRequest);
+    log.debug("Status: responseReceived: {}", statusResponse);
 
-    log.debug("Status: responseReceived: status={}, headers={}", statusResponse.statusCode(),
-        statusResponse.headers());
-    log.debug("Status: responsBody: {}", statusResponse.body());
-
-    if (statusResponse.statusCode() == HttpStatus.SC_OK) {
-      return Either.right(GSON.fromJson(statusResponse.body(), BulkExportResponse.class));
-    } else if (statusResponse.statusCode() == HttpStatus.SC_ACCEPTED) {
+    final int statusCode = statusResponse.getStatusLine().getStatusCode();
+    if (statusCode == HttpStatus.SC_OK) {
+      return Either.right(GSON.fromJson(EntityUtils.toString(statusResponse.getEntity()),
+          BulkExportResponse.class));
+    } else if (statusCode == HttpStatus.SC_ACCEPTED) {
       return Either.left(
-          statusResponse.headers().firstValue("retry-after")
+          Optional.ofNullable(statusResponse.getFirstHeader("retry-after"))
+              .map(Header::getValue)
               .flatMap(RetryValue::parse));
       // TODO: ad handling of too many requests
     } else {
       if (isTransientError(statusResponse)) {
-        log.debug("CheckStatus: Transient error encountered:  {}", statusResponse.body());
+        log.debug("CheckStatus: Transient error encountered:  {}", statusResponse);
         return Either.left(Optional.of(RetryValue.after((transientErrorBreak))));
       }
       throw BulkExportException.HttpError.of("CheckStatus: HTTP Error in response",
@@ -194,18 +191,18 @@ class BulkExportTemplate {
     return uriBuilder.build();
   }
 
-  static boolean isTransientError(@Nonnull final HttpResponse<String> statusResponse) {
+  static boolean isTransientError(@Nonnull final HttpResponse statusResponse) {
     return asOperationOutcome(statusResponse).map(OperationOutcome::isTransient)
         .orElse(false);
   }
 
   @Nonnull
   static Optional<OperationOutcome> asOperationOutcome(
-      @Nonnull final HttpResponse<String> statusResponse) {
-    if (statusResponse.headers().allValues("content-type").stream()
-        .anyMatch(h -> h.contains("json"))) {
-      return OperationOutcome.parse(statusResponse.body());
-    } else {
+      @Nonnull final HttpResponse statusResponse) {
+    try {
+      return OperationOutcome.parse(EntityUtils.toString(statusResponse.getEntity()));
+    } catch (final IOException e) {
+      log.debug("Failed to parse OperationOutcome from response", e);
       return Optional.empty();
     }
   }

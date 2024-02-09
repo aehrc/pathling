@@ -17,29 +17,34 @@
 
 package au.csiro.pathling.export;
 
-import java.net.http.HttpResponse;
+import org.apache.http.HttpResponse;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
 public class BulkExportException extends RuntimeException {
 
-  public BulkExportException(String message) {
+  private static final long serialVersionUID = 7980275150009884077L;
+
+  public BulkExportException(@Nonnull final String message) {
     super(message);
   }
 
-  public BulkExportException(String message, Throwable cause) {
+  public BulkExportException(@Nonnull final String message, final Throwable cause) {
     super(message, cause);
   }
 
   public static class Timeout extends BulkExportException {
 
-    public Timeout(String message) {
+    private static final long serialVersionUID = 2425985144670724776L;
+
+    public Timeout(@Nonnull final String message) {
       super(message);
     }
   }
 
   public static class HttpError extends BulkExportException {
 
+    private static final long serialVersionUID = -2870584282639223558L;
     final int statusCode;
 
     @Nonnull
@@ -52,8 +57,8 @@ public class BulkExportException extends RuntimeException {
       this.operationOutcome = operationOutcome;
     }
 
-    public static HttpError of(@Nonnull final String message, HttpResponse<String> response) {
-      return new HttpError(message, response.statusCode(), OperationOutcome.parse(response.body()));
+    public static HttpError of(@Nonnull final String message, @Nonnull final HttpResponse response) {
+      return new HttpError(message, response.getStatusLine().getStatusCode(), Optional.empty());
     }
   }
 }
