@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.export;
 
+import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -45,29 +46,26 @@ public class UrlDownloadService {
     URI uri;
 
     @Nonnull
-    String objectName;
+    FileHandle objectName;
   }
 
   @Nonnull
   HttpClient httpClient;
 
   @Nonnull
-  FileStore fileStore;
-
-  @Nonnull
   ExecutorService executorService;
 
   @Value
-  class UriDownloadTask implements Callable<URI> {
+  class UriDownloadTask implements Callable<Long> {
 
     @Nonnull
     URI source;
 
     @Nonnull
-    String fileName;
+    FileHandle destination;
 
     @Override
-    public URI call() throws Exception {
+    public Long call() throws Exception {
       final HttpResponse result = httpClient.execute(new HttpGet(source));
 
       if (result.getStatusLine().getStatusCode() != 200) {
@@ -75,32 +73,30 @@ public class UrlDownloadService {
             "Failed to download: " + source + " status: " + result.getStatusLine().getStatusCode());
       }
       try (final InputStream is = result.getEntity().getContent()) {
-        log.debug("Downloading:  {}  to: {}", source, fileName);
-        return fileStore.writeTo(fileName, is);
+        log.debug("Downloading:  {}  to: {}", source, destination);
+        return destination.writeAll(is);
       }
     }
   }
 
-  public List<URI> download(@Nonnull final List<UrlDownloadEntry> urlsToDowload)
-      throws InterruptedException, IOException {
-    final Collection<Callable<URI>> tasks = urlsToDowload.stream()
+  public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlsToDowload)
+      throws InterruptedException {
+    final Collection<Callable<Long>> tasks = urlsToDowload.stream()
         .map(e -> new UriDownloadTask(e.getUri(), e.getObjectName()))
         .collect(
             Collectors.toUnmodifiableList());
 
-    final List<Future<URI>> futures = executorService.invokeAll(tasks);
+    final List<Future<Long>> futures = executorService.invokeAll(tasks);
     while (!futures.stream().allMatch(Future::isDone)) {
       TimeUnit.SECONDS.sleep(1);
     }
-    final List<URI> result = futures.stream().map(f -> {
+    return futures.stream().map(f -> {
       try {
         return f.get();
       } catch (final Exception e) {
         throw new RuntimeException(e);
       }
     }).collect(Collectors.toList());
-    fileStore.commit();
-    return result;
   }
 
 }

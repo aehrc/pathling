@@ -24,14 +24,15 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.base.Charsets;
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
@@ -65,6 +66,11 @@ class BulkExportClientWiremockTest {
       .put("output", new JSONArray())
       .toString();
 
+
+  @Nonnull
+  File getRandomExportLocation() {
+    return Path.of("target", String.format("bulkexport-%s", UUID.randomUUID())).toFile();
+  }
 
   @Test
   void testExport(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
@@ -135,13 +141,13 @@ class BulkExportClientWiremockTest {
     );
 
     System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
-    final File exportDir = Files.createTempDirectory(Paths.get("target"), "bulk-export").toFile();
+    final File exportDir = getRandomExportLocation();
     System.out.println("Exporting to: " + exportDir);
 
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
     BulkExportClient.builder()
         .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
-        .withOutputDir(exportDir.toURI().toString())
+        .withOutputDir(exportDir.getPath())
         .build()
         .export();
 
@@ -195,13 +201,13 @@ class BulkExportClientWiremockTest {
     );
 
     System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
-    final File exportDir = Files.createTempDirectory(Paths.get("target"), "bulk-export").toFile();
+    final File exportDir = getRandomExportLocation();
     System.out.println("Exporting to: " + exportDir);
 
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
     BulkExportClient.builder()
         .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
-        .withOutputDir(exportDir.toURI().toString())
+        .withOutputDir(exportDir.getPath())
         .build()
         .export();
 
@@ -209,8 +215,7 @@ class BulkExportClientWiremockTest {
 
   @Test
   void testExportFailOnErrorsInStatusPooling(
-      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
-      throws Exception {
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
 
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
 
@@ -229,13 +234,13 @@ class BulkExportClientWiremockTest {
             .withBody(FAILURE_OPERATION_OUTCOME))
     );
 
-    final File exportDir = Files.createTempDirectory(Paths.get("target"), "bulk-export").toFile();
+    final File exportDir = getRandomExportLocation();
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
 
     final HttpError ex = Assertions.assertThrows(HttpError.class, () ->
         BulkExportClient.builder()
             .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
-            .withOutputDir(exportDir.toURI().toString())
+            .withOutputDir(exportDir.getPath())
             .build()
             .export()
     );
@@ -245,8 +250,7 @@ class BulkExportClientWiremockTest {
   @Test
   @Disabled
   void testExportFailOnPersistingTransientErrorsInStatusPooling(
-      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
-      throws Exception {
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
 
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
 
@@ -265,16 +269,34 @@ class BulkExportClientWiremockTest {
             .withBody(TRANSIENT_ISSUE_OPERATION_OUTCOME))
     );
 
-    final File exportDir = Files.createTempDirectory(Paths.get("target"), "bulk-export").toFile();
+    final File exportDir = getRandomExportLocation();
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
 
     final HttpError ex = Assertions.assertThrows(HttpError.class, () ->
         BulkExportClient.builder()
             .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
-            .withOutputDir(exportDir.toURI().toString())
+            .withOutputDir(exportDir.getPath())
             .build()
             .export()
     );
     assertEquals(500, ex.statusCode);
+  }
+
+  @Test
+  void testExportFailOnIfOutputLocationExists(
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
+
+    final File exportDir = getRandomExportLocation();
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+    assertTrue(exportDir.mkdirs());
+
+    final BulkExportException ex = Assertions.assertThrows(BulkExportException.class, () ->
+        BulkExportClient.builder()
+            .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+            .withOutputDir(exportDir.getPath())
+            .build()
+            .export()
+    );
+    assertEquals("Destination directory already exists: " + exportDir.getPath(), ex.getMessage());
   }
 }

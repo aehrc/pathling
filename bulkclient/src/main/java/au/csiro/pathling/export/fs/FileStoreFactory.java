@@ -15,17 +15,17 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.export;
+package au.csiro.pathling.export.fs;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
 import javax.annotation.Nonnull;
 
-public interface FileStore {
+public interface FileStoreFactory {
+
+  FileStore createFileStore(@Nonnull final String location) throws IOException;
 
   @Nonnull
-  URI writeTo(@Nonnull String fileName, @Nonnull InputStream inputStream) throws IOException;
-
-  void commit() throws IOException;
+  static FileStoreFactory getLocal() {
+    return LocalFileStore.FACTORY;
+  }
 }

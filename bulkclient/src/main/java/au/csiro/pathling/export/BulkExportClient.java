@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.export.UrlDownloadService.UrlDownloadEntry;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -36,6 +37,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.export.fs.FileStore;
+import au.csiro.pathling.export.fs.FileStore.FileHandle;
+import au.csiro.pathling.export.fs.FileStoreFactory;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -90,11 +94,24 @@ public class BulkExportClient {
   @Nonnull
   HttpClientConfiguration httpClientConfig = HttpClientConfiguration.builder().build();
 
+  @Nonnull
+  @Builder.Default
+  FileStoreFactory fileStoreFactory = FileStoreFactory.getLocal();
+
   public void export()
       throws IOException, InterruptedException, URISyntaxException {
-
+    
+    final FileStore fileStore = fileStoreFactory.createFileStore(outputDir);
+    final FileHandle destinationDir = fileStore.get(outputDir);
+    if (destinationDir.exists()) {
+      throw new BulkExportException(
+          "Destination directory already exists: " + destinationDir.getLocation());
+    } else {
+      log.debug("Creating destination directory: {}", destinationDir.getLocation());
+      destinationDir.mkdirs();
+    }
+    // TODO: close the fileStore and httpClient
     final CloseableHttpClient httpClient = buildHttpClient(httpClientConfig);
-    final FileStore fileStore = HdfsFileStore.of(outputDir);
     final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     final URI endpointUrl = URI.create(fhirEndpointUrl.endsWith("/")
@@ -102,8 +119,7 @@ public class BulkExportClient {
                                        : fhirEndpointUrl + "/").resolve("$export");
 
     final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient, endpointUrl);
-    final UrlDownloadService downloadService = new UrlDownloadService(httpClient, fileStore,
-        executorService);
+    final UrlDownloadService downloadService = new UrlDownloadService(httpClient, executorService);
 
     if (progress != null) {
       progress.onStart();
@@ -121,12 +137,15 @@ public class BulkExportClient {
       progress.onExportComplete(response);
     }
 
-    final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response);
+    final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
     log.debug("Downloading entries: {}", downloadList);
-
     downloadService.download(downloadList);
-    log.debug("Download completed: cleaning up resources");
 
+    final FileHandle successMarker = destinationDir.child("_SUCCESS");
+    log.debug("Marking download as complete with: {}", successMarker.getLocation());
+    successMarker.writeAll(new ByteArrayInputStream(new byte[0]));
+
+    log.debug("Download completed: cleaning up resources");
     if (progress != null) {
       progress.onComplete();
     }
@@ -134,10 +153,13 @@ public class BulkExportClient {
     executorService.shutdown();
     executorService.awaitTermination(1, TimeUnit.SECONDS);
     executorService.shutdownNow();
+    httpClient.close();
+    fileStore.close();
   }
 
   @Nonnull
-  List<UrlDownloadEntry> getUrlDownloadEntries(@Nonnull final BulkExportResponse response) {
+  List<UrlDownloadEntry> getUrlDownloadEntries(@Nonnull final BulkExportResponse response,
+      @Nonnull final FileHandle destinationDir) {
     final Map<String, List<String>> urlsByType = response.getOutput().stream().collect(
         Collectors.groupingBy(BulkExportResponse.ResourceElement::getType, LinkedHashMap::new,
             mapping(BulkExportResponse.ResourceElement::getUrl, toList())));
@@ -146,7 +168,7 @@ public class BulkExportClient {
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())
             .mapToObj(index -> new UrlDownloadEntry(
                     URI.create(entry.getValue().get(index)),
-                    toFileName(entry.getKey(), index, outputExtension)
+                    destinationDir.child(toFileName(entry.getKey(), index, outputExtension))
                 )
             )
         ).collect(Collectors.toUnmodifiableList());

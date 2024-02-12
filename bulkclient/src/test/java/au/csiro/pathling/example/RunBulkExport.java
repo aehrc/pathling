@@ -32,10 +32,10 @@ public class RunBulkExport {
 
 
     // NO ERRORS
-    //final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
+    final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
     
     // With transient errors in status pooling
-    final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiJ0cmFuc2llbnRfZXJyb3IiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
+    // final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiJ0cmFuc2llbnRfZXJyb3IiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
     
     // BULK Status file generation filed
     // final String fhirEndpointUrl =  "https://bulk-data.smarthealthit.org/eyJlcnIiOiJmaWxlX2dlbmVyYXRpb25fZmFpbGVkIiwicGFnZSI6MTAwMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjEsInN0dSI6NCwiZGVsIjowfQ/fhir";

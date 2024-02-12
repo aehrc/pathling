@@ -24,6 +24,7 @@ import au.csiro.pathling.export.UrlDownloadService.UrlDownloadEntry;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import org.junit.jupiter.api.Test;
 
 public class BulkExportClientTest {
@@ -48,13 +49,13 @@ public class BulkExportClientTest {
         .build();
 
     final List<UrlDownloadEntry> downloadUrls = client.getUrlDownloadEntries(
-        response);
+        response, FileHandle.ofLocal("output-dir"));
 
     assertEquals(
         List.of(
-            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), "Condition_0000.ndjson"),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), "Condition_0001.ndjson"),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), "Condition_0002.ndjson")
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), FileHandle.ofLocal("output-dir/Condition_0000.ndjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), FileHandle.ofLocal("output-dir/Condition_0001.ndjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), FileHandle.ofLocal("output-dir/Condition_0002.ndjson"))
         ),
         downloadUrls
     );
@@ -81,13 +82,13 @@ public class BulkExportClientTest {
         .build();
 
     final List<UrlDownloadEntry> downloadUrls = client.getUrlDownloadEntries(
-        response);
+        response, FileHandle.ofLocal("output-dir"));
 
     assertEquals(
         List.of(
-            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), "Patient_0000.xjson"),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), "Condition_0000.xjson"),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), "Observation_0000.xjson")
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), FileHandle.ofLocal("output-dir/Patient_0000.xjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), FileHandle.ofLocal("output-dir/Condition_0000.xjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), FileHandle.ofLocal("output-dir/Observation_0000.xjson"))
         ),
         downloadUrls
     );
