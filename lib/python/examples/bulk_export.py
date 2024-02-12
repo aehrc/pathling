@@ -26,7 +26,7 @@ BASE_DIR = os.path.abspath(os.path.join(HERE, os.pardir))
 TARGET_DIR = os.path.abspath(os.path.join(BASE_DIR, "target"))
 
 # create the context to initialize Java backend for SparkSession
-pc = PathlingContext.create()
+pc = PathlingContext.create(log_level='DEBUG')
 
 # Smart Bulk Data Server https://bulk-data.smarthealthit.org/index.html
 # 100 Patients, System level export

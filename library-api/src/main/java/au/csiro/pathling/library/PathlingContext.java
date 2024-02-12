@@ -42,6 +42,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
@@ -61,6 +66,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 @Slf4j
 public class PathlingContext {
 
+  private static final String PATHLING_LOGGER_NAME = "au.csiro.pathling";
   private static final String COL_INPUT_CODINGS = "inputCodings";
   private static final String COL_ARG_CODINGS = "argCodings";
 
@@ -465,6 +471,27 @@ public class PathlingContext {
       @Nonnull final TerminologyConfiguration configuration) {
     final FhirVersionEnum fhirVersion = FhirContext.forR4().getVersion().getVersion();
     return new DefaultTerminologyServiceFactory(fhirVersion, configuration);
+  }
+
+  /**
+   * Set the log level for the Pathling logger.
+   *
+   * @param levelCode the log level to set. One of log4j2 level e.g. DEBUG, INFO etc.
+   */
+  public static void setLogLevel(@Nonnull final String levelCode) {
+
+    final Level level = Level.toLevel(levelCode.toUpperCase());
+    final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
+    final Configuration config = ctx.getConfiguration();
+    final LoggerConfig maybePathlingLogger = config.getLoggerConfig(
+        PATHLING_LOGGER_NAME);
+    if (PATHLING_LOGGER_NAME.equals(maybePathlingLogger.getName())) {
+      maybePathlingLogger.setLevel(level);
+    } else {
+      config.addLogger(PATHLING_LOGGER_NAME, new LoggerConfig(PATHLING_LOGGER_NAME, level, true));
+    }
+    ctx.updateLoggers();
+    log.debug("Setting log level for '{}' to {}", PATHLING_LOGGER_NAME, level);
   }
 
 }

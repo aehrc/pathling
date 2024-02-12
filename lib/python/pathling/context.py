@@ -103,7 +103,8 @@ class PathlingContext:
         scope: Optional[str] = None,
         token_expiry_tolerance: Optional[int] = 120,
         accept_language: Optional[str] = None,
-        enable_delta=False,
+        enable_delta: bool=False,
+        log_level: str = 'INFO'
     ) -> "PathlingContext":
         """
         Creates a :class:`PathlingContext` with the given configuration options. This should only
@@ -176,6 +177,8 @@ class PathlingContext:
                implementation and the code systems used.
         :param enable_delta: enables the use of Delta for storage of FHIR data.
                Only supported when no SparkSession is provided.
+        :param log_level: the log level to use for the Pathling library. One of log4j2 log level
+                codes, the default is 'INFO'.
         :return: a :class:`PathlingContext` instance initialized with the specified configuration
         """
 
@@ -199,6 +202,8 @@ class PathlingContext:
 
         spark = spark or SparkSession.getActiveSession() or _new_spark_session()
         jvm = spark._jvm
+        
+        jvm.au.csiro.pathling.library.PathlingContext.setLogLevel(log_level)
 
         # Build an encoders configuration object from the provided parameters.
         encoders_config = (
