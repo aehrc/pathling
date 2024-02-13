@@ -32,7 +32,7 @@ public class BulkExportException extends RuntimeException {
   public BulkExportException(@Nonnull final String message, final Throwable cause) {
     super(message, cause);
   }
-
+  
   public static class Timeout extends BulkExportException {
 
     private static final long serialVersionUID = 2425985144670724776L;
@@ -57,8 +57,22 @@ public class BulkExportException extends RuntimeException {
       this.operationOutcome = operationOutcome;
     }
 
-    public static HttpError of(@Nonnull final String message, @Nonnull final HttpResponse response) {
+    public HttpError(@Nonnull final String message, final int statusCode) {
+      this(message, statusCode, Optional.empty());
+    }
+
+    public static HttpError of(@Nonnull final String message,
+        @Nonnull final HttpResponse response) {
       return new HttpError(message, response.getStatusLine().getStatusCode(), Optional.empty());
+    }
+  }
+
+  public static class DownloadError extends BulkExportException {
+
+    private static final long serialVersionUID = 2425985144670724776L;
+
+    public DownloadError(@Nonnull final String message, final Throwable cause) {
+      super(message, cause);
     }
   }
 }

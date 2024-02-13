@@ -20,11 +20,13 @@ package au.csiro.pathling.export;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import au.csiro.pathling.export.UrlDownloadService.UrlDownloadEntry;
+import au.csiro.pathling.export.download.UrlDownloadTemplate;
+import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -88,9 +90,6 @@ public class BulkExportClient {
   @Builder.Default
   String outputExtension = "ndjson";
 
-  @Nullable
-  BulkExportProgress progress;
-
   @Nonnull
   HttpClientConfiguration httpClientConfig = HttpClientConfiguration.builder().build();
 
@@ -98,9 +97,19 @@ public class BulkExportClient {
   @Builder.Default
   FileStoreFactory fileStoreFactory = FileStoreFactory.getLocal();
 
+  @Nonnull
+  @Builder.Default
+  Duration timeOut = Duration.ZERO;
+
   public void export()
       throws IOException, InterruptedException, URISyntaxException {
-    
+
+    final Instant timeOutAt = timeOut != Duration.ZERO
+                              ? Instant.now().plus(timeOut)
+                              : Instant.MAX;
+
+    log.debug("Setting time out at: {} for requested timeout of: {}", timeOutAt, timeOut);
+
     final FileStore fileStore = fileStoreFactory.createFileStore(outputDir);
     final FileHandle destinationDir = fileStore.get(outputDir);
     if (destinationDir.exists()) {
@@ -119,11 +128,8 @@ public class BulkExportClient {
                                        : fhirEndpointUrl + "/").resolve("$export");
 
     final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient, endpointUrl);
-    final UrlDownloadService downloadService = new UrlDownloadService(httpClient, executorService);
-
-    if (progress != null) {
-      progress.onStart();
-    }
+    final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
+        executorService);
 
     final BulkExportResponse response = bulkExportTemplate.export(
         BulkExportRequest.builder()
@@ -133,22 +139,13 @@ public class BulkExportClient {
             .build()
     );
     log.debug("Export request completed: {}", response);
-    if (progress != null) {
-      progress.onExportComplete(response);
-    }
-
     final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
     log.debug("Downloading entries: {}", downloadList);
-    downloadService.download(downloadList);
-
+    downloadTemplate.download(downloadList, timeOutAt);
     final FileHandle successMarker = destinationDir.child("_SUCCESS");
     log.debug("Marking download as complete with: {}", successMarker.getLocation());
     successMarker.writeAll(new ByteArrayInputStream(new byte[0]));
-
     log.debug("Download completed: cleaning up resources");
-    if (progress != null) {
-      progress.onComplete();
-    }
 
     executorService.shutdown();
     executorService.awaitTermination(1, TimeUnit.SECONDS);
@@ -179,7 +176,6 @@ public class BulkExportClient {
       @Nonnull final String extension) {
     return String.format("%s_%04d.%s", resource, chunkNo, extension);
   }
-
 
   private static CloseableHttpClient buildHttpClient(
       @Nonnull final HttpClientConfiguration clientConfig) {

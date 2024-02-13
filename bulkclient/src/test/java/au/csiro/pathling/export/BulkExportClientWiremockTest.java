@@ -24,6 +24,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.export.BulkExportException.HttpError;
@@ -32,6 +33,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.base.Charsets;
 import java.io.File;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.apache.commons.io.FileUtils;
@@ -70,6 +72,15 @@ class BulkExportClientWiremockTest {
   @Nonnull
   File getRandomExportLocation() {
     return Path.of("target", String.format("bulkexport-%s", UUID.randomUUID())).toFile();
+  }
+
+
+  static void assertMarkedSuccess(@Nonnull final File location) {
+    assertTrue(new File(location, "_SUCCESS").exists());
+  }
+
+  static void assertNotMarkedSuccess(@Nonnull final File location) {
+    assertFalse(new File(location, "_SUCCESS").exists());
   }
 
   @Test
@@ -151,6 +162,7 @@ class BulkExportClientWiremockTest {
         .build()
         .export();
 
+    assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
         FileUtils.readFileToString(new File(exportDir, "Patient_0000.ndjson"), Charsets.UTF_8));
     assertEquals(RESOURCE_01,
@@ -211,6 +223,7 @@ class BulkExportClientWiremockTest {
         .build()
         .export();
 
+    assertMarkedSuccess(exportDir);
   }
 
   @Test
@@ -245,6 +258,7 @@ class BulkExportClientWiremockTest {
             .export()
     );
     assertEquals(500, ex.statusCode);
+    assertNotMarkedSuccess(exportDir);
   }
 
   @Test
@@ -280,6 +294,7 @@ class BulkExportClientWiremockTest {
             .export()
     );
     assertEquals(500, ex.statusCode);
+    assertNotMarkedSuccess(exportDir);
   }
 
   @Test
@@ -298,5 +313,183 @@ class BulkExportClientWiremockTest {
             .export()
     );
     assertEquals("Destination directory already exists: " + exportDir.getPath(), ex.getMessage());
+    assertNotMarkedSuccess(exportDir);
+  }
+
+
+  @Test
+  void testExportFailsOnDownloadError(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+    stubFor(get(urlPathEqualTo("/$export"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs(STARTED)
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+        .willSetStateTo("in-progress")
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("in-progress")
+        .willReturn(aResponse().withStatus(202))
+        .willSetStateTo("done")
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("done")
+        .willReturn(aResponse().withStatus(200).withBody(
+            new JSONObject()
+                .put("transactionTime", 4934344343L)
+                .put("request", "http://localhost:8080/$export")
+                .put("requiresAccessToken", false)
+                .put("output", new JSONArray()
+                    .appendElement(new JSONObject()
+                        .put("type", "Patient")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/00")
+                        .put("count", 2)
+                    )
+                    .appendElement(new JSONObject()
+                        .put("type", "Condition")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/01")
+                        .put("count", 3)
+                    )
+                    .appendElement(new JSONObject()
+                        .put("type", "Condition")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/02")
+                        .put("count", 1)
+                    )
+                )
+                .toString()
+        ))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/00"))
+        .willReturn(aResponse()
+            .withStatus(500))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/01"))
+        .willReturn(aResponse()
+            .withFixedDelay(2_000)
+            .withStatus(200)
+            .withBody(RESOURCE_01))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/02"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_02))
+    );
+
+    System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
+    final File exportDir = getRandomExportLocation();
+    System.out.println("Exporting to: " + exportDir);
+
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+
+    final BulkExportException.DownloadError ex = Assertions.assertThrows(
+        BulkExportException.DownloadError.class, () ->
+            BulkExportClient.builder()
+                .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+                .withOutputDir(exportDir.getPath())
+                .build()
+                .export()
+    );
+    assertEquals("Download failed", ex.getMessage());
+    assertEquals(String.format("Failed to download: %s/file/00", wmRuntimeInfo.getHttpBaseUrl()),
+        ex.getCause().getMessage());
+    assertNotMarkedSuccess(exportDir);
+  }
+
+
+  @Test
+  void testExportFailsTimeOutInDownload(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+    stubFor(get(urlPathEqualTo("/$export"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs(STARTED)
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+        .willSetStateTo("in-progress")
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("in-progress")
+        .willReturn(aResponse().withStatus(202))
+        .willSetStateTo("done")
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("done")
+        .willReturn(aResponse().withStatus(200).withBody(
+            new JSONObject()
+                .put("transactionTime", 4934344343L)
+                .put("request", "http://localhost:8080/$export")
+                .put("requiresAccessToken", false)
+                .put("output", new JSONArray()
+                    .appendElement(new JSONObject()
+                        .put("type", "Patient")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/00")
+                        .put("count", 2)
+                    )
+                    .appendElement(new JSONObject()
+                        .put("type", "Condition")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/01")
+                        .put("count", 3)
+                    )
+                    .appendElement(new JSONObject()
+                        .put("type", "Condition")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/02")
+                        .put("count", 1)
+                    )
+                )
+                .toString()
+        ))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/00"))
+        .willReturn(aResponse()
+            .withFixedDelay(2_000)
+            .withStatus(200)
+            .withBody(RESOURCE_00))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/01"))
+        .willReturn(aResponse()
+            .withFixedDelay(2_000)
+            .withStatus(200)
+            .withBody(RESOURCE_01))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/02"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_02))
+    );
+
+    System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
+    final File exportDir = getRandomExportLocation();
+    System.out.println("Exporting to: " + exportDir);
+
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+
+    final BulkExportException.Timeout ex = Assertions.assertThrows(
+        BulkExportException.Timeout.class, () ->
+            BulkExportClient.builder()
+                .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+                .withOutputDir(exportDir.getPath())
+                .withTimeOut(Duration.ofSeconds(2))
+                .build()
+                .export()
+    );
+    assertTrue(ex.getMessage().startsWith("Download timed out at:"));
+    assertNotMarkedSuccess(exportDir);
   }
 }

@@ -18,14 +18,11 @@
 package au.csiro.pathling.export;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.json.JSONObject;
@@ -33,7 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import wiremock.net.minidev.json.JSONArray;
 
-class BulkExportServiceTest {
+class BulkExportTemplateTest {
 
 
   @Test

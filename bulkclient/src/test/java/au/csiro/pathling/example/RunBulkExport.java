@@ -18,7 +18,6 @@
 package au.csiro.pathling.example;
 
 import au.csiro.pathling.export.BulkExportClient;
-import au.csiro.pathling.export.ConsoleBulkExportProgress;
 import javax.annotation.Nonnull;
 import java.time.Instant;
 import java.util.List;
@@ -57,7 +56,6 @@ public class RunBulkExport {
         .withOutputDir(outputDir)
         .withType(List.of("Patient", "Condition"))
         .withSince(from)
-        .withProgress(ConsoleBulkExportProgress.instance())
         .build()
         .export();
   }
