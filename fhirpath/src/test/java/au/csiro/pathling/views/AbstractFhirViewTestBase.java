@@ -60,6 +60,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
+@Slf4j
 abstract class AbstractFhirViewTestBase {
 
   static Path tempDir;
@@ -219,9 +220,16 @@ abstract class AbstractFhirViewTestBase {
       for (final Iterator<JsonNode> it = views.elements(); it.hasNext(); ) {
         final JsonNode view = it.next();
 
-        // Serialize a FhirView object from the view definition in the test.
-        final FhirView fhirView = gson.fromJson(view.get("view").toString(), FhirView.class);
-        ensureValid(fhirView, "View is not valid");
+        final FhirView fhirView;
+        try {
+          // Serialize a FhirView object from the view definition in the test.
+          fhirView = gson.fromJson(view.get("view").toString(), FhirView.class);
+          ensureValid(fhirView, "View is not valid");
+        } catch (final Exception e) {
+          log.info("Exception occurred while parsing test definition:");
+          log.info(view.toPrettyString());
+          throw e;
+        }
 
         // Write the expected JSON to a file, named after the view.
         final Path directory = getTempDir(testDefinition);
