@@ -283,6 +283,8 @@ abstract class AbstractFhirViewTestBase {
                                       ? expectedColumns
                                       : Collections.emptyList());
     } else {
+      log.info("No expectation found for test:");
+      log.info(testDefinition.toPrettyString());
       throw new RuntimeException("No expectation found");
     }
   }
