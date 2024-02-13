@@ -304,6 +304,7 @@ abstract class AbstractFhirViewTestBase {
   @MethodSource("requests")
   void test(@Nonnull final TestParameters parameters) {
     assumeFalse(parameters.isDisabled(), "Test is disabled");
+    log.info("Running test: " + parameters.getTitle());
 
     parameters.getExpectation().expect(() -> {
       final FhirView view = parameters.getView();
