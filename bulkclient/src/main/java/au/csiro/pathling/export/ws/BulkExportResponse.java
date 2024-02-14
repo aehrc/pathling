@@ -25,7 +25,7 @@ import lombok.Value;
 
 @Value
 @Builder
-public class BulkExportResponse {
+public class BulkExportResponse implements  AsyncResponse {
 
   @Nonnull
   Long transactionTime;

@@ -18,7 +18,10 @@
 package au.csiro.pathling.export;
 
 import au.csiro.pathling.export.fhir.OperationOutcome;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
@@ -33,7 +36,7 @@ public class BulkExportException extends RuntimeException {
   public BulkExportException(@Nonnull final String message, final Throwable cause) {
     super(message, cause);
   }
-  
+
   public static class Timeout extends BulkExportException {
 
     private static final long serialVersionUID = 2425985144670724776L;
@@ -51,21 +54,33 @@ public class BulkExportException extends RuntimeException {
     @Nonnull
     final Optional<OperationOutcome> operationOutcome;
 
+    @Nonnull
+    final List<Header> headers;
+
     public HttpError(@Nonnull final String message, final int statusCode,
-        @Nonnull final Optional<OperationOutcome> operationOutcome) {
+        @Nonnull final Optional<OperationOutcome> operationOutcome,
+        @Nonnull final List<Header> headers) {
       super(message);
       this.statusCode = statusCode;
       this.operationOutcome = operationOutcome;
+      this.headers = headers;
     }
 
     public HttpError(@Nonnull final String message, final int statusCode) {
-      this(message, statusCode, Optional.empty());
+      this(message, statusCode, Optional.empty(), Collections.emptyList());
+    }
+
+    public boolean isTransient() {
+      return operationOutcome.map(OperationOutcome::isTransient)
+          .orElse(false);
     }
 
     public static HttpError of(@Nonnull final String message,
         @Nonnull final HttpResponse response) {
-      return new HttpError(message, response.getStatusLine().getStatusCode(), Optional.empty());
+      return new HttpError(message, response.getStatusLine().getStatusCode(), Optional.empty(),
+          Collections.emptyList());
     }
+
   }
 
   public static class DownloadError extends BulkExportException {
@@ -74,6 +89,15 @@ public class BulkExportException extends RuntimeException {
 
     public DownloadError(@Nonnull final String message, final Throwable cause) {
       super(message, cause);
+    }
+  }
+
+  public static class ProtocolError extends BulkExportException {
+
+    private static final long serialVersionUID = -65793456918228699L;
+
+    public ProtocolError(@Nonnull final String message) {
+      super(message);
     }
   }
 }

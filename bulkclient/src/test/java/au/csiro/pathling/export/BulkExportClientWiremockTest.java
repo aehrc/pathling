@@ -39,7 +39,6 @@ import javax.annotation.Nonnull;
 import org.apache.commons.io.FileUtils;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import wiremock.net.minidev.json.JSONArray;
 
@@ -262,7 +261,6 @@ class BulkExportClientWiremockTest {
   }
 
   @Test
-  @Disabled
   void testExportFailOnPersistingTransientErrorsInStatusPooling(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
 

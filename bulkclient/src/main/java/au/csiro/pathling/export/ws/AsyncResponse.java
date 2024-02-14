@@ -15,40 +15,8 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.export.fhir;
+package au.csiro.pathling.export.ws;
 
-import java.net.URI;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import lombok.Builder;
-import lombok.Value;
+public interface AsyncResponse {
 
-@Value
-@Builder
-public class Reference {
-
-  @Nullable
-  String reference;
-
-  @Nullable
-  String type;
-
-  @Nullable
-  String identifier;
-
-  @Nullable
-  String display;
-
-  @SuppressWarnings("unused")
-  public static class ReferenceBuilder {
-
-    ReferenceBuilder identifierFromUri(@Nonnull final URI uri) {
-      return identifier(uri.toString());
-    }
-  }
-
-  @Nonnull
-  public static Reference of(@Nonnull final String reference) {
-    return Reference.builder().reference(reference).build();
-  }
 }
