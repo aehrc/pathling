@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.export;
 
+import au.csiro.pathling.export.fhir.OperationOutcome;
 import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.URI;

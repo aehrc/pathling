@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.export;
 
+import au.csiro.pathling.export.fhir.OperationOutcome;
 import org.apache.http.HttpResponse;
 import java.util.Optional;
 import javax.annotation.Nonnull;

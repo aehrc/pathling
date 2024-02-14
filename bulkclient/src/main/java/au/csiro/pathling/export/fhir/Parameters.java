@@ -15,46 +15,36 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.export;
+package au.csiro.pathling.export.fhir;
 
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
 
 @Value
 @Builder
-public class BulkExportResponse {
-
-  @Nonnull
-  Long transactionTime;
-
-  @Nonnull
-  String request;
-
-  boolean requiresAccessToken;
-
-  @Nonnull
-  @Builder.Default
-  List<ResourceElement> output = Collections.emptyList();
-
-  @Nonnull
-  @Builder.Default
-  List<ResourceElement> deleted = Collections.emptyList();
-
-  @Nonnull
-  @Builder.Default
-  List<ResourceElement> error = Collections.emptyList();
+public class Parameters {
 
   @Value
-  public static class ResourceElement {
+  @Builder
+  public static class Parameter {
 
     @Nonnull
-    String type;
-    @Nonnull
-    String url;
+    String name;
 
-    long count;
+    @Nullable
+    @Builder.Default
+    Reference valueReference = null;
   }
+
+  @Nonnull
+  @Builder.Default
+  String resourceType = "Parameters";
+
+  @Nonnull
+  @Builder.Default
+  List<Parameter> parameter = Collections.emptyList();
 }

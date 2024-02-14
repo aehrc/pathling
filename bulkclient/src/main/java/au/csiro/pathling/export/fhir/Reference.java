@@ -15,31 +15,39 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.export;
+package au.csiro.pathling.export.fhir;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
-import lombok.extern.slf4j.Slf4j;
+import java.net.URI;
 import javax.annotation.Nonnull;
-import java.util.Optional;
+import javax.annotation.Nullable;
+import lombok.Builder;
+import lombok.Value;
 
-@Slf4j
-abstract class GsonSupport {
+@Value
+@Builder
+public class Reference {
 
-  private GsonSupport() {
-  }
+  @Nullable
+  String reference;
 
-  private static final Gson GSON = new Gson();
+  @Nullable
+  String type;
 
-  @Nonnull
-  public static <T> Optional<T> fromJson(@Nonnull final String json,
-      @Nonnull final Class<T> clazz) {
-    try {
-      return Optional.ofNullable(GSON.fromJson(json, clazz));
-    } catch (final JsonSyntaxException ex) {
-      log.debug("Ignoring invalid JSON parsing error: {}", ex.getMessage());
-      return Optional.empty();
+  @Nullable
+  String identifier;
+
+  @Nullable
+  String display;
+
+  public static class ReferenceBuilder {
+
+    ReferenceBuilder identifierFromUri(@Nonnull final URI uri) {
+      return identifier(uri.toString());
     }
   }
 
+  @Nonnull
+  public static Reference of(@Nonnull final String reference) {
+    return Reference.builder().reference(reference).build();
+  }
 }

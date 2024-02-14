@@ -17,40 +17,35 @@
 
 package au.csiro.pathling.export;
 
-import static java.util.Objects.nonNull;
-
-import java.util.List;
-import java.util.Optional;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+import lombok.extern.slf4j.Slf4j;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import lombok.Value;
+import java.util.Optional;
 
-@Value
-public class OperationOutcome {
+@Slf4j
+public abstract class JsonSupport {
 
-  @Value
-  static class Issue {
-
-    @Nullable
-    String code;
+  private JsonSupport() {
   }
 
-  @Nullable
-  String resourceType;
-
-  @Nullable
-  List<Issue> issue;
+  private static final Gson GSON = new Gson();
 
   @Nonnull
-  public static Optional<OperationOutcome> parse(@Nonnull final String jsonString) {
-    return GsonSupport.fromJson(jsonString, OperationOutcome.class)
-        .filter(ou -> "OperationOutcome".equals(ou.getResourceType()));
+  public static <T> Optional<T> fromJson(@Nonnull final String json,
+      @Nonnull final Class<T> clazz) {
+    try {
+      // TODO: also add  JRS-380 based validation
+      return Optional.ofNullable(GSON.fromJson(json, clazz));
+    } catch (final JsonSyntaxException ex) {
+      log.debug("Ignoring invalid JSON parsing error: {}", ex.getMessage());
+      return Optional.empty();
+    }
   }
 
-  public boolean isTransient() {
-    return nonNull(getIssue())
-        && getIssue().stream().map(Issue::getCode)
-        .anyMatch("transient"::equals);
+  @Nonnull
+  public static String toJson(@Nonnull final Object obj) {
+    return GSON.toJson(obj);
   }
 
 }
