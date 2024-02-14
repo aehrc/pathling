@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.export;
+package au.csiro.pathling.export.ws;
 
+import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.fhir.OperationOutcome;
 import com.google.gson.Gson;
 import java.io.IOException;
@@ -42,7 +43,7 @@ import org.apache.http.util.EntityUtils;
 
 
 @Slf4j
-class BulkExportTemplate {
+public class BulkExportTemplate {
 
 
   private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");

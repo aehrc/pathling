@@ -19,7 +19,8 @@ package au.csiro.pathling.export;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import au.csiro.pathling.export.BulkExportResponse.ResourceElement;
+import au.csiro.pathling.export.ws.BulkExportResponse;
+import au.csiro.pathling.export.ws.BulkExportResponse.ResourceElement;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import java.net.URI;
 import java.util.Collections;
