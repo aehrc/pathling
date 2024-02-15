@@ -19,30 +19,40 @@ package au.csiro.pathling.export.ws;
 
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
+import au.csiro.pathling.export.JsonSupport;
+import au.csiro.pathling.export.fhir.FhirUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.ToString;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.Consts;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.util.EntityUtils;
 
 
 @Slf4j
+@ToString
 public class BulkExport {
+
+  public static final ContentType APPLICATION_FHIR_JSON = ContentType.create(
+      "application/fhir+json",
+      Consts.UTF_8);
 
   @Value
   @Builder
@@ -70,19 +80,13 @@ public class BulkExport {
     int maxTransientErrors = 3;
   }
 
-  private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
-
-  private static final DateTimeFormatter FHIR_INSTANT_FORMAT = DateTimeFormatter
-      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(UTC_ZONE_ID);
-
-
   private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   @Nonnull
   final HttpClient httpClient;
 
   @Nonnull
-  final URI endpointUri;
+  final URI fhirEndpointUri;
 
   @Nonnull
   final Config config;
@@ -91,7 +95,7 @@ public class BulkExport {
   public BulkExport(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri,
       @Nonnull final Config config) {
     this.httpClient = httpClient;
-    this.endpointUri = endpoingUri;
+    this.fhirEndpointUri = endpoingUri;
     this.config = config;
   }
 
@@ -110,11 +114,12 @@ public class BulkExport {
   URI kickOff(@Nonnull final BulkExportRequest request)
       throws IOException, URISyntaxException {
 
-    final URI requestUri = toRequestURI(endpointUri, request);
-    final HttpUriRequest httpRequest = new HttpGet(requestUri);
-    httpRequest.setHeader("accept", "application/fhir+json");
-    httpRequest.setHeader("prefer", "respond-async");
-    log.debug("KickOff: Request: {}", requestUri);
+    final HttpUriRequest httpRequest = toHttpRequest(fhirEndpointUri, request);
+    log.debug("KickOff: Request: {}", httpRequest);
+    if (httpRequest instanceof HttpPost) {
+      log.debug("KickOff: Request body: {}",
+          EntityUtils.toString(((HttpPost) httpRequest).getEntity()));
+    }
 
     final AsyncResponse asyncResponse = httpClient.execute(httpRequest,
         AsynResponseHandler.of(BulkExportResponse.class));
@@ -208,13 +213,48 @@ public class BulkExport {
     return result;
   }
 
+
   @Nonnull
-  static String formatFhirInstant(@Nonnull final Instant instant) {
-    return FHIR_INSTANT_FORMAT.format(instant);
+  static HttpUriRequest toHttpRequest(@Nonnull final URI fhirEndpointUri,
+      @Nonnull final BulkExportRequest request)
+      throws URISyntaxException {
+
+    // check if patient is supported for the operation
+    if (!request.getOperation().isPatientSupported() && !request.getPatient().isEmpty()) {
+      throw new BulkExportException.ProtocolError(
+          "'patient' is not supported for operation: " + request.getOperation());
+    }
+    final URI endpointUri = ensurePathEndsWithSlash(fhirEndpointUri).resolve(
+        request.getOperation().getPath());
+    final HttpUriRequest httpRequest;
+
+    if (request.getPatient().isEmpty()) {
+      httpRequest = new HttpGet(toRequestURI(endpointUri, request));
+    } else {
+      final HttpPost postRequest = new HttpPost(endpointUri);
+      postRequest.setEntity(toFhirJsonEntity(request.toParameters()));
+      httpRequest = postRequest;
+    }
+    httpRequest.setHeader("accept", APPLICATION_FHIR_JSON.getMimeType());
+    httpRequest.setHeader("prefer", "respond-async");
+    return httpRequest;
   }
 
   @Nonnull
-  static URI toRequestURI(@Nonnull final URI endpointUri, @Nonnull final BulkExportRequest request)
+  static HttpEntity toFhirJsonEntity(@Nonnull final Object fhirResource) {
+    return new StringEntity(JsonSupport.toJson(fhirResource), APPLICATION_FHIR_JSON);
+  }
+
+  @Nonnull
+  static URI ensurePathEndsWithSlash(@Nonnull final URI uri) {
+    return uri.getPath().endsWith("/")
+           ? uri
+           : URI.create(uri + "/");
+  }
+
+  @Nonnull
+  static URI toRequestURI(@Nonnull final URI endpointUri,
+      @Nonnull final BulkExportRequest request)
       throws URISyntaxException {
     final URIBuilder uriBuilder = new URIBuilder(endpointUri)
         .addParameter("_outputFormat", request.get_outputFormat())
@@ -222,7 +262,7 @@ public class BulkExport {
 
     if (request.get_since() != null) {
       uriBuilder.addParameter("_since",
-          formatFhirInstant(Objects.requireNonNull(request.get_since())));
+          FhirUtils.formatFhirInstant(Objects.requireNonNull(request.get_since())));
     }
     return uriBuilder.build();
   }

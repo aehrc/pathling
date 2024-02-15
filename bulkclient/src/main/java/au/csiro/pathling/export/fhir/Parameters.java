@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.export.fhir;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -38,6 +39,31 @@ public class Parameters {
     @Nullable
     @Builder.Default
     Reference valueReference = null;
+
+    @Nullable
+    @Builder.Default
+    String valueString = null;
+
+    @Nullable
+    @Builder.Default
+    String valueInstant = null;
+
+    @Nonnull
+    public static Parameter of(@Nonnull final String name,
+        final @Nonnull Reference valueReference) {
+      return Parameter.builder().name(name).valueReference(valueReference).build();
+    }
+
+    @Nonnull
+    public static Parameter of(@Nonnull final String name, final @Nonnull String valueString) {
+      return Parameter.builder().name(name).valueString(valueString).build();
+    }
+
+    @Nonnull
+    public static Parameter of(@Nonnull final String name, final @Nonnull Instant valueInstant) {
+      return Parameter.builder().name(name).valueInstant(FhirUtils.formatFhirInstant(valueInstant))
+          .build();
+    }
   }
 
   @Nonnull

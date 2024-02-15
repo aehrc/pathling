@@ -39,13 +39,16 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.fs.FileStore;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.ws.BulkExport;
 import au.csiro.pathling.export.ws.BulkExportRequest;
+import au.csiro.pathling.export.ws.BulkExportRequest.SystemLevel;
 import au.csiro.pathling.export.ws.BulkExportResponse;
 import lombok.Builder;
+import lombok.Singular;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.config.RequestConfig;
@@ -73,6 +76,9 @@ public class BulkExportClient {
   @Builder.Default
   String outputFormat = "application/fhir+ndjson";
 
+  @Nonnull
+  @Builder.Default
+  BulkExportRequest.Operation operation = new SystemLevel();
 
   @Nonnull
   @Builder.Default
@@ -92,6 +98,10 @@ public class BulkExportClient {
   @Nonnull
   @Builder.Default
   String outputExtension = "ndjson";
+
+  @Nonnull
+  @Singular("patient")
+  List<Reference> patient;
 
   @Nonnull
   @Builder.Default
@@ -117,8 +127,8 @@ public class BulkExportClient {
                               : Instant.MAX;
 
     log.debug("Setting time out at: {} for requested timeout of: {}", timeOutAt, timeOut);
-
     final FileStore fileStore = fileStoreFactory.createFileStore(outputDir);
+
     final FileHandle destinationDir = fileStore.get(outputDir);
     if (destinationDir.exists()) {
       throw new BulkExportException(
@@ -131,19 +141,18 @@ public class BulkExportClient {
     final CloseableHttpClient httpClient = buildHttpClient(httpClientConfig);
     final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    final URI endpointUrl = URI.create(fhirEndpointUrl.endsWith("/")
-                                       ? fhirEndpointUrl
-                                       : fhirEndpointUrl + "/").resolve("$export");
-
-    final BulkExport bulkExportTemplate = new BulkExport(httpClient, endpointUrl, bulkExportConfig);
+    final BulkExport bulkExportTemplate = new BulkExport(httpClient, URI.create(fhirEndpointUrl),
+        bulkExportConfig);
     final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
         executorService);
 
     final BulkExportResponse response = bulkExportTemplate.export(
         BulkExportRequest.builder()
+            .operation(operation)
             ._outputFormat(outputFormat)
             ._type(type)
             ._since(since)
+            .patient(patient)
             .build()
     );
     log.debug("Export request completed: {}", response);
