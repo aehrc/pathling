@@ -50,7 +50,9 @@ import org.apache.http.util.EntityUtils;
 @ToString
 public class BulkExport {
 
-  public static final ContentType APPLICATION_FHIR_JSON = ContentType.create(
+  private static final int HTTP_TOO_MANY_REQUESTS = 429;
+
+  private static final ContentType APPLICATION_FHIR_JSON = ContentType.create(
       "application/fhir+json",
       Consts.UTF_8);
 
@@ -79,8 +81,6 @@ public class BulkExport {
     @Builder.Default
     int maxTransientErrors = 3;
   }
-
-  private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   @Nonnull
   final HttpClient httpClient;
@@ -257,9 +257,10 @@ public class BulkExport {
       @Nonnull final BulkExportRequest request)
       throws URISyntaxException {
     final URIBuilder uriBuilder = new URIBuilder(endpointUri)
-        .addParameter("_outputFormat", request.get_outputFormat())
-        .addParameter("_type", String.join(",", request.get_type()));
-
+        .addParameter("_outputFormat", request.get_outputFormat());
+    if (!request.get_type().isEmpty()) {
+      uriBuilder.addParameter("_type", String.join(",", request.get_type()));
+    }
     if (request.get_since() != null) {
       uriBuilder.addParameter("_since",
           FhirUtils.formatFhirInstant(Objects.requireNonNull(request.get_since())));
