@@ -24,11 +24,14 @@ import au.csiro.pathling.export.fhir.OperationOutcome;
 import java.io.IOException;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.util.EntityUtils;
 
+@Slf4j
 class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<AsyncResponse> {
 
   public static final String CONTENT_LOCATION_HEADER = "content-location";
@@ -57,9 +60,14 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
 
   @Nonnull
   private HttpError produceHttpError(@Nonnull final HttpResponse response) {
-    final Optional<OperationOutcome> maybeOutcome = quietBodyAsString(response).flatMap(
-        OperationOutcome::parse);
-    return new HttpError("Http error in async request", response.getStatusLine().getStatusCode(),
+    log.debug("Http error in async request: {}", response);
+    final Optional<OperationOutcome> maybeOutcome = Optional.ofNullable(response.getEntity())
+        .flatMap(e -> Optional.ofNullable(e.getContentType()))
+        .map(Header::getValue)
+        .filter(s -> s.contains("json"))
+        .flatMap(__ -> quietBodyAsString(response))
+        .flatMap(OperationOutcome::parse);
+    return new HttpError("Async Http resonse error", response.getStatusLine().getStatusCode(),
         maybeOutcome, getRetryAfterValue(response));
   }
 

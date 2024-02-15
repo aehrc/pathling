@@ -19,7 +19,9 @@ package au.csiro.pathling.export;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
@@ -28,12 +30,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.export.BulkExportException.HttpError;
+import au.csiro.pathling.export.fhir.Reference;
+import au.csiro.pathling.export.ws.BulkExportRequest;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.base.Charsets;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import org.apache.commons.io.FileUtils;
@@ -83,7 +88,7 @@ class BulkExportClientWiremockTest {
   }
 
   @Test
-  void testExport(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+  void testSystemLevelExport(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
 
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
 
@@ -171,6 +176,120 @@ class BulkExportClientWiremockTest {
   }
 
   @Test
+  void testGroupLevelExportWithPatients(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
+      throws Exception {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+    stubFor(post(urlPathEqualTo("/Group/123/$export"))
+        .inScenario("bulk-export")
+        .withRequestBody(equalToJson(new JSONObject()
+            .put("resourceType", "Parameters")
+            .put("parameter", new JSONArray()
+                .appendElement(new JSONObject()
+                    .put("name", "_outputFormat")
+                    .put("valueString", "application/fhir+ndjson")
+                )
+                .appendElement(new JSONObject()
+                    .put("name", "_type")
+                    .put("valueString", "Patient")
+                )
+                .appendElement(new JSONObject()
+                    .put("name", "_type")
+                    .put("valueString", "Condition")
+                )
+                .appendElement(new JSONObject()
+                    .put("name", "patient")
+                    .put("valueReference", new JSONObject()
+                        .put("reference", "Patient/123")
+                    )
+                )
+            ).toString(), true, true))
+        .whenScenarioStateIs(STARTED)
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+        .willSetStateTo("in-progress")
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("in-progress")
+        .willReturn(aResponse().withStatus(202))
+        .willSetStateTo("done")
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("done")
+        .willReturn(aResponse().withStatus(200).withBody(
+            new JSONObject()
+                .put("transactionTime", 4934344343L)
+                .put("request", "http://localhost:8080/$export")
+                .put("requiresAccessToken", false)
+                .put("output", new JSONArray()
+                    .appendElement(new JSONObject()
+                        .put("type", "Patient")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/00")
+                        .put("count", 2)
+                    )
+                    .appendElement(new JSONObject()
+                        .put("type", "Condition")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/01")
+                        .put("count", 3)
+                    )
+                    .appendElement(new JSONObject()
+                        .put("type", "Condition")
+                        .put("url", wmRuntimeInfo.getHttpBaseUrl() + "/file/02")
+                        .put("count", 1)
+                    )
+                )
+                .toString()
+        ))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/00"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_00))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/01"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_01))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/02"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_02))
+    );
+
+    System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
+    final File exportDir = getRandomExportLocation();
+    System.out.println("Exporting to: " + exportDir);
+
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+    BulkExportClient.builder()
+        .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+        .withOutputDir(exportDir.getPath())
+        .withOperation(new BulkExportRequest.GroupLevel("123"))
+        .withPatient(Reference.of("Patient/123"))
+        .withType(List.of("Patient", "Condition"))
+        .build()
+        .export();
+
+    assertMarkedSuccess(exportDir);
+    assertEquals(RESOURCE_00,
+        FileUtils.readFileToString(new File(exportDir, "Patient_0000.ndjson"), Charsets.UTF_8));
+    assertEquals(RESOURCE_01,
+        FileUtils.readFileToString(new File(exportDir, "Condition_0000.ndjson"), Charsets.UTF_8));
+    assertEquals(RESOURCE_02,
+        FileUtils.readFileToString(new File(exportDir, "Condition_0001.ndjson"), Charsets.UTF_8));
+  }
+
+
+  @Test
   void testExportRetriesTransientErrorsInStatusPooling(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
       throws Exception {
@@ -194,7 +313,7 @@ class BulkExportClientWiremockTest {
             .withBody(TRANSIENT_ISSUE_OPERATION_OUTCOME))
         .willSetStateTo("done")
     );
-    
+
     stubFor(get(urlPathEqualTo("/pool"))
         .inScenario("bulk-export")
         .whenScenarioStateIs("done")
@@ -234,7 +353,7 @@ class BulkExportClientWiremockTest {
                 .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
         .willSetStateTo("too-many-requests")
     );
-    
+
     stubFor(get(urlPathEqualTo("/pool"))
         .inScenario("bulk-export")
         .whenScenarioStateIs("too-many-requests")
@@ -264,7 +383,7 @@ class BulkExportClientWiremockTest {
 
     assertMarkedSuccess(exportDir);
   }
-  
+
   @Test
   void testExportFailOnErrorsInStatusPooling(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
@@ -437,7 +556,8 @@ class BulkExportClientWiremockTest {
                 .export()
     );
     assertEquals("Download failed", ex.getMessage());
-    assertEquals(String.format("Failed to download: %s/file/00: [statusCode: 500]", wmRuntimeInfo.getHttpBaseUrl()),
+    assertEquals(String.format("Failed to download: %s/file/00: [statusCode: 500]",
+            wmRuntimeInfo.getHttpBaseUrl()),
         ex.getCause().getMessage());
     assertNotMarkedSuccess(exportDir);
   }
