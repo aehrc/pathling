@@ -26,13 +26,13 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import wiremock.net.minidev.json.JSONArray;
 
-class BulkExportTemplateTest {
+class BulkExportTest {
   
   @Test
   void testDefaultRequestUri() throws Exception {
     final URI baseUri = URI.create("http://example.com/fhir");
     assertEquals(URI.create("http://example.com/fhir?_outputFormat=ndjson&_type="),
-        BulkExportTemplate.toRequestURI(baseUri, BulkExportRequest.builder().build())
+        BulkExport.toRequestURI(baseUri, BulkExportRequest.builder().build())
     );
   }
 
@@ -42,7 +42,7 @@ class BulkExportTemplateTest {
     final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
     assertEquals(URI.create(
             "http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation&_since=2023-01-11T00%3A00%3A00.123Z"),
-        BulkExportTemplate.toRequestURI(baseUri, BulkExportRequest.builder()
+        BulkExport.toRequestURI(baseUri, BulkExportRequest.builder()
             ._outputFormat("xml")
             ._type(List.of("Patient", "Observation"))
             ._since(testInstant)

@@ -42,9 +42,9 @@ import javax.annotation.Nullable;
 import au.csiro.pathling.export.fs.FileStore;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
+import au.csiro.pathling.export.ws.BulkExport;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportResponse;
-import au.csiro.pathling.export.ws.BulkExportTemplate;
 import lombok.Builder;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
@@ -94,7 +94,12 @@ public class BulkExportClient {
   String outputExtension = "ndjson";
 
   @Nonnull
+  @Builder.Default
   HttpClientConfiguration httpClientConfig = HttpClientConfiguration.builder().build();
+
+  @Nonnull
+  @Builder.Default
+  BulkExport.Config bulkExportConfig = BulkExport.Config.builder().build();
 
   @Nonnull
   @Builder.Default
@@ -130,7 +135,7 @@ public class BulkExportClient {
                                        ? fhirEndpointUrl
                                        : fhirEndpointUrl + "/").resolve("$export");
 
-    final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient, endpointUrl);
+    final BulkExport bulkExportTemplate = new BulkExport(httpClient, endpointUrl, bulkExportConfig);
     final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
         executorService);
 

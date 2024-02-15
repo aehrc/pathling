@@ -30,6 +30,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.ToString;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -38,8 +42,33 @@ import org.apache.http.client.utils.URIBuilder;
 
 
 @Slf4j
-public class BulkExportTemplate {
+public class BulkExport {
 
+  @Value
+  @Builder
+  public static class Config {
+
+    /**
+     * Pooling timeout in seconds
+     */
+    @Builder.Default
+    Duration minPoolingDelay = Duration.ofSeconds(1);
+
+    @Builder.Default
+    Duration maxPoolingDelay = Duration.ofSeconds(60);
+
+    @Builder.Default
+    Duration poolingTimeout = Duration.ofHours(1);
+
+    @Builder.Default
+    Duration transientErrorDelay = Duration.ofSeconds(2);
+
+    @Builder.Default
+    Duration tooManyRequestsDelay = Duration.ofSeconds(2);
+
+    @Builder.Default
+    int maxTransientErrors = 3;
+  }
 
   private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
 
@@ -55,24 +84,21 @@ public class BulkExportTemplate {
   @Nonnull
   final URI endpointUri;
 
-  /**
-   * Pooling timeout in seconds
-   */
-  final Duration minPoolingTimeout = Duration.ofSeconds(1);
+  @Nonnull
+  final Config config;
 
-  final Duration maxPoolingTimeout = Duration.ofSeconds(10);
 
-  final Duration poolingTimeout = Duration.ofSeconds(60);
-
-  final Duration transientErrorDelay = Duration.ofSeconds(2);
-  final Duration tooManyRequestsDelay = Duration.ofSeconds(2);
-
-  final private int maxTransientErrors = 3;
-
-  public BulkExportTemplate(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
+  public BulkExport(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri,
+      @Nonnull final Config config) {
     this.httpClient = httpClient;
     this.endpointUri = endpoingUri;
+    this.config = config;
   }
+
+  public BulkExport(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
+    this(httpClient, endpoingUri, Config.builder().build());
+  }
+
 
   @Nonnull
   public BulkExportResponse export(@Nonnull final BulkExportRequest request)
@@ -114,12 +140,12 @@ public class BulkExportTemplate {
   @Nonnull
   BulkExportResponse pool(@Nonnull final URI poolingURI) throws IOException, InterruptedException {
 
-    final long poolingExitTime = System.currentTimeMillis() + poolingTimeout.toMillis();
+    final long poolingExitTime = System.currentTimeMillis() + config.poolingTimeout.toMillis();
 
     int transientErrorCount = 0;
     Instant nextStatusCheck = Instant.now();
     while (System.currentTimeMillis() <= poolingExitTime) {
-      TimeUnit.MILLISECONDS.sleep(minPoolingTimeout.toMillis());
+      TimeUnit.MILLISECONDS.sleep(config.getMinPoolingDelay().toMillis());
       if ((Instant.now().isAfter(nextStatusCheck))) {
         try {
           log.debug("Pooling: " + poolingURI);
@@ -134,18 +160,18 @@ public class BulkExportTemplate {
                 acceptedResponse.getProgress().orElse("na"),
                 acceptedResponse.getRetryAfter().map(RetryValue::toString).orElse("na"));
             final Duration timeToSleep = computeTimeToSleep(acceptedResponse.getRetryAfter(),
-                minPoolingTimeout);
+                config.getMinPoolingDelay());
             log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
             nextStatusCheck = Instant.now().plus(timeToSleep);
           }
         } catch (final HttpError ex) {
-          if (ex.isTransient() && ++transientErrorCount <= maxTransientErrors) {
+          if (ex.isTransient() && ++transientErrorCount <= config.maxTransientErrors) {
             // log retrying a transient error
             // TODO: extract from headers
             log.debug("Pooling: Retrying transient error {} ouf of {} : '{}'",
-                transientErrorCount, maxTransientErrors, ex.getMessage());
+                transientErrorCount, config.maxTransientErrors, ex.getMessage());
             final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
-                transientErrorDelay);
+                config.transientErrorDelay);
             log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
             nextStatusCheck = Instant.now().plus(timeToSleep);
           } else if (HTTP_TOO_MANY_REQUESTS == ex.getStatusCode()) {
@@ -153,7 +179,7 @@ public class BulkExportTemplate {
             log.debug("Pooling: Got too many requests error with retry-after: '{}'",
                 ex.getRetryAfter().map(RetryValue::toString).orElse("na"));
             final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
-                tooManyRequestsDelay);
+                config.tooManyRequestsDelay);
             log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
             nextStatusCheck = Instant.now().plus(timeToSleep);
           } else {
@@ -164,7 +190,7 @@ public class BulkExportTemplate {
         }
       }
     }
-    throw new BulkExportException.Timeout("Pooling timeout exceeded: " + poolingTimeout);
+    throw new BulkExportException.Timeout("Pooling timeout exceeded: " + config.poolingTimeout);
   }
 
   @Nonnull
@@ -173,11 +199,11 @@ public class BulkExportTemplate {
     Duration result = requestedDuration
         .map(rv -> rv.until(Instant.now())).orElse(defaultDuration);
 
-    if (result.compareTo(maxPoolingTimeout) > 0) {
-      result = maxPoolingTimeout;
+    if (result.compareTo(config.maxPoolingDelay) > 0) {
+      result = config.maxPoolingDelay;
     }
-    if (result.compareTo(minPoolingTimeout) < 0) {
-      result = minPoolingTimeout;
+    if (result.compareTo(config.minPoolingDelay) < 0) {
+      result = config.minPoolingDelay;
     }
     return result;
   }
