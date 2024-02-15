@@ -36,5 +36,5 @@ public class AcceptedAsyncResponse implements AsyncResponse {
 
   @Nonnull
   @Builder.Default
-  Optional<RetryValue> retryValue = Optional.empty();
+  Optional<RetryValue> retryAfter = Optional.empty();
 }

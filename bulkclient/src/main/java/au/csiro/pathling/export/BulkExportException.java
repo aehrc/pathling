@@ -18,12 +18,13 @@
 package au.csiro.pathling.export;
 
 import au.csiro.pathling.export.fhir.OperationOutcome;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import java.util.Collections;
-import java.util.List;
+import au.csiro.pathling.export.ws.RetryValue;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
+import lombok.Getter;
+import org.apache.http.HttpResponse;
 
 public class BulkExportException extends RuntimeException {
 
@@ -46,6 +47,7 @@ public class BulkExportException extends RuntimeException {
     }
   }
 
+  @Getter
   public static class HttpError extends BulkExportException {
 
     private static final long serialVersionUID = -2870584282639223558L;
@@ -55,19 +57,19 @@ public class BulkExportException extends RuntimeException {
     final Optional<OperationOutcome> operationOutcome;
 
     @Nonnull
-    final List<Header> headers;
+    final Optional<RetryValue> retryAfter;
 
     public HttpError(@Nonnull final String message, final int statusCode,
         @Nonnull final Optional<OperationOutcome> operationOutcome,
-        @Nonnull final List<Header> headers) {
-      super(message);
+        @Nonnull final Optional<RetryValue> retryAfter) {
+      super(toDetailedMessage(message, statusCode, operationOutcome, retryAfter));
       this.statusCode = statusCode;
       this.operationOutcome = operationOutcome;
-      this.headers = headers;
+      this.retryAfter = retryAfter;
     }
 
     public HttpError(@Nonnull final String message, final int statusCode) {
-      this(message, statusCode, Optional.empty(), Collections.emptyList());
+      this(message, statusCode, Optional.empty(), Optional.empty());
     }
 
     public boolean isTransient() {
@@ -75,13 +77,30 @@ public class BulkExportException extends RuntimeException {
           .orElse(false);
     }
 
+    @Nonnull
     public static HttpError of(@Nonnull final String message,
         @Nonnull final HttpResponse response) {
       return new HttpError(message, response.getStatusLine().getStatusCode(), Optional.empty(),
-          Collections.emptyList());
+          Optional.empty());
     }
 
+
+    @Nonnull
+    private static String toDetailedMessage(@Nonnull final String message, final int statusCode,
+        @Nonnull final Optional<OperationOutcome> operationOutcome,
+        @Nonnull final Optional<RetryValue> retryAfter) {
+
+      final String details = Stream.of(
+              Optional.of("statusCode: " + statusCode),
+              operationOutcome.map(o -> "operationOutcome: " + o),
+              retryAfter.map(o -> "retryAfter: " + o))
+          .flatMap(Optional::stream)
+          .collect(Collectors.joining(", "));
+
+      return String.format("%s: [%s]", message, details);
+    }
   }
+
 
   public static class DownloadError extends BulkExportException {
 

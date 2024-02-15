@@ -194,11 +194,51 @@ class BulkExportClientWiremockTest {
             .withBody(TRANSIENT_ISSUE_OPERATION_OUTCOME))
         .willSetStateTo("done")
     );
-
+    
     stubFor(get(urlPathEqualTo("/pool"))
         .inScenario("bulk-export")
-        .whenScenarioStateIs("in-progress")
-        .willReturn(aResponse().withStatus(202))
+        .whenScenarioStateIs("done")
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("content-type", "application/json")
+            .withBody(BULK_EXPORT_NO_FILES_RESPONSE))
+    );
+
+    System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
+    final File exportDir = getRandomExportLocation();
+    System.out.println("Exporting to: " + exportDir);
+
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+    BulkExportClient.builder()
+        .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+        .withOutputDir(exportDir.getPath())
+        .build()
+        .export();
+
+    assertMarkedSuccess(exportDir);
+  }
+
+
+  @Test
+  void testExportRetriesTooManyRequest429SatusInPooling(
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
+      throws Exception {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
+
+    stubFor(get(urlPathEqualTo("/$export"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs(STARTED)
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+        .willSetStateTo("too-many-requests")
+    );
+    
+    stubFor(get(urlPathEqualTo("/pool"))
+        .inScenario("bulk-export")
+        .whenScenarioStateIs("too-many-requests")
+        .willReturn(aResponse().withStatus(429).withHeader("retry-after", "3"))
         .willSetStateTo("done")
     );
 
@@ -224,7 +264,7 @@ class BulkExportClientWiremockTest {
 
     assertMarkedSuccess(exportDir);
   }
-
+  
   @Test
   void testExportFailOnErrorsInStatusPooling(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
@@ -397,7 +437,7 @@ class BulkExportClientWiremockTest {
                 .export()
     );
     assertEquals("Download failed", ex.getMessage());
-    assertEquals(String.format("Failed to download: %s/file/00", wmRuntimeInfo.getHttpBaseUrl()),
+    assertEquals(String.format("Failed to download: %s/file/00: [statusCode: 500]", wmRuntimeInfo.getHttpBaseUrl()),
         ex.getCause().getMessage());
     assertNotMarkedSuccess(exportDir);
   }

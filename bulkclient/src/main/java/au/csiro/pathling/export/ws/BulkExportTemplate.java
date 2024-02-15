@@ -46,6 +46,9 @@ public class BulkExportTemplate {
   private static final DateTimeFormatter FHIR_INSTANT_FORMAT = DateTimeFormatter
       .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(UTC_ZONE_ID);
 
+
+  private static final int HTTP_TOO_MANY_REQUESTS = 429;
+
   @Nonnull
   final HttpClient httpClient;
 
@@ -61,7 +64,8 @@ public class BulkExportTemplate {
 
   final Duration poolingTimeout = Duration.ofSeconds(60);
 
-  final Duration transientErrorBreak = Duration.ofSeconds(2);
+  final Duration transientErrorDelay = Duration.ofSeconds(2);
+  final Duration tooManyRequestsDelay = Duration.ofSeconds(2);
 
   final private int maxTransientErrors = 3;
 
@@ -128,10 +132,9 @@ public class BulkExportTemplate {
             final AcceptedAsyncResponse acceptedResponse = (AcceptedAsyncResponse) asyncResponse;
             log.debug("Pooling: progress: '{}', retry-after: {}",
                 acceptedResponse.getProgress().orElse("na"),
-                acceptedResponse.getRetryValue().map(RetryValue::toString).orElse("na"));
-            final Duration timeToSleep = computeTimeToSleep(
-                acceptedResponse.getRetryValue().map(rv -> rv.until(Instant.now())),
-                Duration.ofMillis(poolingExitTime - System.currentTimeMillis()));
+                acceptedResponse.getRetryAfter().map(RetryValue::toString).orElse("na"));
+            final Duration timeToSleep = computeTimeToSleep(acceptedResponse.getRetryAfter(),
+                minPoolingTimeout);
             log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
             nextStatusCheck = Instant.now().plus(timeToSleep);
           }
@@ -139,9 +142,20 @@ public class BulkExportTemplate {
           if (ex.isTransient() && ++transientErrorCount <= maxTransientErrors) {
             // log retrying a transient error
             // TODO: extract from headers
-            log.debug("Pooling: Transient error {} ouf of {} - retrying", transientErrorCount,
-                maxTransientErrors);
-            nextStatusCheck = Instant.now().plus(transientErrorBreak);
+            log.debug("Pooling: Retrying transient error {} ouf of {} : '{}'",
+                transientErrorCount, maxTransientErrors, ex.getMessage());
+            final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
+                transientErrorDelay);
+            log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
+            nextStatusCheck = Instant.now().plus(timeToSleep);
+          } else if (HTTP_TOO_MANY_REQUESTS == ex.getStatusCode()) {
+            // handle too many requests
+            log.debug("Pooling: Got too many requests error with retry-after: '{}'",
+                ex.getRetryAfter().map(RetryValue::toString).orElse("na"));
+            final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
+                tooManyRequestsDelay);
+            log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
+            nextStatusCheck = Instant.now().plus(timeToSleep);
           } else {
             // TODO: Add handling of back-off error
             log.debug("Pooling: Http error: {}", ex.getMessage());
@@ -154,12 +168,11 @@ public class BulkExportTemplate {
   }
 
   @Nonnull
-  Duration computeTimeToSleep(@Nonnull final Optional<Duration> requestedDuration,
-      @Nonnull final Duration maxDuration) {
-    Duration result = requestedDuration.orElse(minPoolingTimeout);
-    if (result.compareTo(maxDuration) > 0) {
-      result = maxDuration;
-    }
+  Duration computeTimeToSleep(@Nonnull final Optional<RetryValue> requestedDuration,
+      @Nonnull final Duration defaultDuration) {
+    Duration result = requestedDuration
+        .map(rv -> rv.until(Instant.now())).orElse(defaultDuration);
+
     if (result.compareTo(maxPoolingTimeout) > 0) {
       result = maxPoolingTimeout;
     }

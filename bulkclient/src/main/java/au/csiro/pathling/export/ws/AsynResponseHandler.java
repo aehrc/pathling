@@ -20,13 +20,10 @@ package au.csiro.pathling.export.ws;
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.JsonSupport;
+import au.csiro.pathling.export.fhir.OperationOutcome;
 import java.io.IOException;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.export.fhir.OperationOutcome;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ResponseHandler;
@@ -38,16 +35,12 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
   public static final String X_PROGRESS_HEADER = "x-progress";
   public static final String RETRY_AFTER_HEADER = "retry-after";
 
-  private static final Set<String> EXCEPTION_HEADERS = Set.of(RETRY_AFTER_HEADER);
-
   @Nonnull
   private final Class<T> responseClass;
-
 
   AsynResponseHandler(@Nonnull final Class<T> responseClass) {
     this.responseClass = responseClass;
   }
-
 
   @Override
   public AsyncResponse handleResponse(final HttpResponse response) {
@@ -67,10 +60,7 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
     final Optional<OperationOutcome> maybeOutcome = quietBodyAsString(response).flatMap(
         OperationOutcome::parse);
     return new HttpError("Http error in async request", response.getStatusLine().getStatusCode(),
-        maybeOutcome,
-        Stream.of(response.getAllHeaders()).filter(h -> EXCEPTION_HEADERS.contains(h.getValue()))
-            .collect(
-                Collectors.toUnmodifiableList()));
+        maybeOutcome, getRetryAfterValue(response));
   }
 
   @Nonnull
@@ -81,10 +71,15 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
             .flatMap(h -> Optional.ofNullable(h.getValue())))
         .progress(Optional.ofNullable(response.getFirstHeader(X_PROGRESS_HEADER))
             .flatMap(h -> Optional.ofNullable(h.getValue())))
-        .retryValue(Optional.ofNullable(response.getFirstHeader(RETRY_AFTER_HEADER))
-            .flatMap(h -> Optional.ofNullable(h.getValue()))
-            .flatMap(RetryValue::parse))
+        .retryAfter(getRetryAfterValue(response))
         .build();
+  }
+
+  @Nonnull
+  private static Optional<RetryValue> getRetryAfterValue(@Nonnull final HttpResponse response) {
+    return Optional.ofNullable(response.getFirstHeader(RETRY_AFTER_HEADER))
+        .flatMap(h -> Optional.ofNullable(h.getValue()))
+        .flatMap(RetryValue::parse);
   }
 
   @Nonnull

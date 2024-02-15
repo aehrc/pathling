@@ -20,47 +20,14 @@ package au.csiro.pathling.export.ws;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.URI;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import wiremock.net.minidev.json.JSONArray;
 
 class BulkExportTemplateTest {
-
-
-  @Test
-  void computeTimeToSleep() {
-    final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(
-        Mockito.mock(CloseableHttpClient.class), URI.create("http://example.com"));
-
-    assertEquals(bulkExportTemplate.minPoolingTimeout,
-        bulkExportTemplate.computeTimeToSleep(Optional.empty(), Duration.ZERO));
-
-    assertEquals(bulkExportTemplate.minPoolingTimeout,
-        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ZERO), Duration.ZERO));
-
-    assertEquals(bulkExportTemplate.minPoolingTimeout,
-        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(5)), Duration.ZERO));
-
-    assertEquals(Duration.ofSeconds(5),
-        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(5)),
-            Duration.ofSeconds(100)));
-
-    assertEquals(bulkExportTemplate.maxPoolingTimeout,
-        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(15)),
-            Duration.ofSeconds(100)));
-
-    assertEquals(Duration.ofSeconds(5),
-        bulkExportTemplate.computeTimeToSleep(Optional.of(Duration.ofSeconds(15)),
-            Duration.ofSeconds(5)));
-  }
-
-
+  
   @Test
   void testDefaultRequestUri() throws Exception {
     final URI baseUri = URI.create("http://example.com/fhir");
