@@ -17,18 +17,31 @@
 
 package au.csiro.pathling.export;
 
-import lombok.Builder;
-import lombok.Value;
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
 import javax.annotation.Nonnull;
+import lombok.Value;
 
-@Value
-@Builder
+@Value(staticConstructor = "of")
 public class BulkExportResult {
-  
-  @Value
-  @Builder
+
+
+  @Value(staticConstructor = "of")
   public static class FileResult {
-    @Nonnull String url;
-    @Nonnull String file;
+
+    @Nonnull
+    URI source;
+
+    @Nonnull
+    URI destination;
+
+    long size;
   }
+
+  @Nonnull
+  Instant transactionTime;
+  
+  @Nonnull
+  List<FileResult> results;
 }

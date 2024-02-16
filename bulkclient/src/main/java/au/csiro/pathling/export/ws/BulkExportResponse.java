@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.export.ws;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -28,7 +29,7 @@ import lombok.Value;
 public class BulkExportResponse implements  AsyncResponse {
 
   @Nonnull
-  Long transactionTime;
+  Instant transactionTime;
 
   @Nonnull
   String request;

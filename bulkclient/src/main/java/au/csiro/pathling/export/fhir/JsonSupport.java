@@ -15,13 +15,15 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.export.utils;
+package au.csiro.pathling.export.fhir;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-import lombok.extern.slf4j.Slf4j;
-import javax.annotation.Nonnull;
+import java.time.Instant;
 import java.util.Optional;
+import javax.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class JsonSupport {
@@ -29,7 +31,9 @@ public abstract class JsonSupport {
   private JsonSupport() {
   }
 
-  private static final Gson GSON = new Gson();
+  private static final Gson GSON = new GsonBuilder()
+      .registerTypeAdapter(Instant.class, new InstantDeserializer())
+      .create();
 
   @Nonnull
   public static <T> Optional<T> fromJson(@Nonnull final String json,

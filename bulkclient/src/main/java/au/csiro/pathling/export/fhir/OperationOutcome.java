@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.export.utils.JsonSupport;
 import lombok.Builder;
 import lombok.Value;
 

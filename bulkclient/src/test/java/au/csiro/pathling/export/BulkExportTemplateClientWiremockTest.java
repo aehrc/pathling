@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.ws.BulkExportRequest;
+import au.csiro.pathling.export.ws.BulkExportRequest.GroupLevel;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.base.Charsets;
@@ -78,7 +79,7 @@ class BulkExportTemplateClientWiremockTest {
   public static String bulkExportResponse_3_files(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
     return new JSONObject()
-        .put("transactionTime", 4934344343L)
+        .put("transactionTime", "4934344343")
         .put("request", "http://localhost:8080/$export")
         .put("requiresAccessToken", false)
         .put("output", new JSONArray()
@@ -103,7 +104,7 @@ class BulkExportTemplateClientWiremockTest {
 
   public static String bulkExportResponse_1_file(@Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
     return new JSONObject()
-        .put("transactionTime", 4934344343L)
+        .put("transactionTime","1970-02-27T02:39:04.343Z")
         .put("request", "http://localhost:8080/$export")
         .put("requiresAccessToken", false)
         .put("output", new JSONArray()
@@ -262,15 +263,17 @@ class BulkExportTemplateClientWiremockTest {
     System.out.println("Exporting to: " + exportDir);
 
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
-    BulkExportClient.builder()
+    final BulkExportResult result = BulkExportClient.builder()
         .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
         .withOutputDir(exportDir.getPath())
-        .withOperation(new BulkExportRequest.GroupLevel("123"))
+        .withOperation(new GroupLevel("123"))
         .withPatient(Reference.of("Patient/123"))
         .withType(List.of("Patient", "Condition"))
         .build()
         .export();
 
+    // assertEquals(BulkExportResult.of(Instant.EPOCH, Collections.emptyList()), result);
+    
     assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
         FileUtils.readFileToString(new File(exportDir, "Patient_0000.ndjson"), Charsets.UTF_8));

@@ -20,6 +20,7 @@ package au.csiro.pathling.export;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
+import au.csiro.pathling.export.BulkExportResult.FileResult;
 import au.csiro.pathling.export.download.UrlDownloadTemplate;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import au.csiro.pathling.export.fhir.Reference;
@@ -27,6 +28,7 @@ import au.csiro.pathling.export.fs.FileStore;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.utils.ExecutorServiceResource;
+import au.csiro.pathling.export.utils.HttpClientConfiguration;
 import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportRequest.SystemLevel;
@@ -48,6 +50,7 @@ import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
+import com.google.common.collect.Streams;
 import lombok.Builder;
 import lombok.Singular;
 import lombok.Value;
@@ -124,7 +127,7 @@ public class BulkExportClient {
   @Min(1)
   int maxConcurrentDownloads = 10;
 
-  public void export()
+  public BulkExportResult export()
       throws IOException, InterruptedException, URISyntaxException {
 
     try (
@@ -138,11 +141,13 @@ public class BulkExportClient {
       final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
           executorServiceResource.getExecutorService());
 
-      doExport(fileStore, bulkExportTemplate, downloadTemplate);
+      final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
+      log.info("Export successful: {}" , result);
+      return result;
     }
   }
 
-  void doExport(@Nonnull final FileStore fileStore,
+  BulkExportResult doExport(@Nonnull final FileStore fileStore,
       @Nonnull final BulkExportTemplate bulkExportTemplate,
       @Nonnull final UrlDownloadTemplate downloadTemplate)
       throws URISyntaxException, IOException, InterruptedException {
@@ -174,11 +179,23 @@ public class BulkExportClient {
     log.debug("Export request completed: {}", response);
     final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
     log.debug("Downloading entries: {}", downloadList);
-    downloadTemplate.download(downloadList, timeOutAt);
+    final List<Long> fileSizes = downloadTemplate.download(downloadList, timeOutAt);
     final FileHandle successMarker = destinationDir.child("_SUCCESS");
     log.debug("Marking download as complete with: {}", successMarker.getLocation());
     successMarker.writeAll(new ByteArrayInputStream(new byte[0]));
-    log.debug("Download completed: cleaning up resources");
+    return buildResult(response, downloadList, fileSizes);
+  }
+
+  @Nonnull
+  private BulkExportResult buildResult(@Nonnull final BulkExportResponse response,
+      @Nonnull final List<UrlDownloadEntry> downloadList, @Nonnull final List<Long> fileSizes) {
+
+    return BulkExportResult.of(
+        response.getTransactionTime(),
+        Streams.zip(downloadList.stream(), fileSizes.stream(),
+                (de, size) -> FileResult.of(de.getSource(), de.getDestination().toUri(), size))
+            .collect(Collectors.toUnmodifiableList())
+    );
   }
 
   @Nonnull

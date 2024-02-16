@@ -32,7 +32,7 @@
     <appender-ref ref="TIMING"/>
   </logger>
   <logger level="DEBUG" name="au.csiro"/>
-  <logger level="WARN" name="org.apache.http"/>
+  <logger level="ERROR" name="org.apache.http.wire"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
   </root>

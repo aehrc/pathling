@@ -56,7 +56,7 @@ public class RunBulkExport {
     BulkExportClient.builder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
-        //.withType(List.of("Patient", "Condition"))
+        .withType(List.of("Patient", "Condition"))
         .withSince(from)
         .build()
         .export();
@@ -78,7 +78,7 @@ public class RunBulkExport {
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
         .withType(List.of("Patient", "Condition"))
-        //.withSince(from)
+        .withSince(from)
         .withOperation(new PatientLevel())
         .withPatient(Reference.of("Patient/6c5d9ca9-54d7-42f5-bfae-a7c19cd217f2"))
         .withPatient(Reference.of("Patient/538a9a4e-8437-47d3-8c01-1a17dca8f0be"))
