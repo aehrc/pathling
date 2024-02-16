@@ -30,9 +30,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
-import lombok.Builder;
 import lombok.ToString;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
@@ -48,39 +46,13 @@ import org.apache.http.util.EntityUtils;
 
 @Slf4j
 @ToString
-public class BulkExport {
+public class BulkExportTemplate {
 
   private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
   private static final ContentType APPLICATION_FHIR_JSON = ContentType.create(
       "application/fhir+json",
       Consts.UTF_8);
-
-  @Value
-  @Builder
-  public static class Config {
-
-    /**
-     * Pooling timeout in seconds
-     */
-    @Builder.Default
-    Duration minPoolingDelay = Duration.ofSeconds(1);
-
-    @Builder.Default
-    Duration maxPoolingDelay = Duration.ofSeconds(60);
-
-    @Builder.Default
-    Duration poolingTimeout = Duration.ofHours(1);
-
-    @Builder.Default
-    Duration transientErrorDelay = Duration.ofSeconds(2);
-
-    @Builder.Default
-    Duration tooManyRequestsDelay = Duration.ofSeconds(2);
-
-    @Builder.Default
-    int maxTransientErrors = 3;
-  }
 
   @Nonnull
   final HttpClient httpClient;
@@ -89,20 +61,19 @@ public class BulkExport {
   final URI fhirEndpointUri;
 
   @Nonnull
-  final Config config;
+  final AsyncConfig config;
 
-
-  public BulkExport(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri,
-      @Nonnull final Config config) {
+  public BulkExportTemplate(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri,
+      @Nonnull final AsyncConfig config) {
     this.httpClient = httpClient;
     this.fhirEndpointUri = endpoingUri;
     this.config = config;
   }
 
-  public BulkExport(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
-    this(httpClient, endpoingUri, Config.builder().build());
+  public BulkExportTemplate(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
+    this(httpClient, endpoingUri, AsyncConfig.builder().build());
   }
-  
+
   @Nonnull
   public BulkExportResponse export(@Nonnull final BulkExportRequest request)
       throws URISyntaxException, IOException, InterruptedException {
@@ -144,7 +115,7 @@ public class BulkExport {
   @Nonnull
   BulkExportResponse pool(@Nonnull final URI poolingURI) throws IOException, InterruptedException {
 
-    final long poolingExitTime = System.currentTimeMillis() + config.poolingTimeout.toMillis();
+    final long poolingExitTime = System.currentTimeMillis() + config.getPoolingTimeout().toMillis();
 
     int transientErrorCount = 0;
     Instant nextStatusCheck = Instant.now();
@@ -169,13 +140,13 @@ public class BulkExport {
             nextStatusCheck = Instant.now().plus(timeToSleep);
           }
         } catch (final HttpError ex) {
-          if (ex.isTransient() && ++transientErrorCount <= config.maxTransientErrors) {
+          if (ex.isTransient() && ++transientErrorCount <= config.getMaxTransientErrors()) {
             // log retrying a transient error
             // TODO: extract from headers
             log.debug("Pooling: Retrying transient error {} ouf of {} : '{}'",
-                transientErrorCount, config.maxTransientErrors, ex.getMessage());
+                transientErrorCount, config.getMaxTransientErrors(), ex.getMessage());
             final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
-                config.transientErrorDelay);
+                config.getTransientErrorDelay());
             log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
             nextStatusCheck = Instant.now().plus(timeToSleep);
           } else if (HTTP_TOO_MANY_REQUESTS == ex.getStatusCode()) {
@@ -183,7 +154,7 @@ public class BulkExport {
             log.debug("Pooling: Got too many requests error with retry-after: '{}'",
                 ex.getRetryAfter().map(RetryValue::toString).orElse("na"));
             final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
-                config.tooManyRequestsDelay);
+                config.getTooManyRequestsDelay());
             log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
             nextStatusCheck = Instant.now().plus(timeToSleep);
           } else {
@@ -194,7 +165,8 @@ public class BulkExport {
         }
       }
     }
-    throw new BulkExportException.Timeout("Pooling timeout exceeded: " + config.poolingTimeout);
+    throw new BulkExportException.Timeout(
+        "Pooling timeout exceeded: " + config.getPoolingTimeout());
   }
 
   @Nonnull
@@ -203,11 +175,11 @@ public class BulkExport {
     Duration result = requestedDuration
         .map(rv -> rv.until(Instant.now())).orElse(defaultDuration);
 
-    if (result.compareTo(config.maxPoolingDelay) > 0) {
-      result = config.maxPoolingDelay;
+    if (result.compareTo(config.getMaxPoolingDelay()) > 0) {
+      result = config.getMaxPoolingDelay();
     }
-    if (result.compareTo(config.minPoolingDelay) < 0) {
-      result = config.minPoolingDelay;
+    if (result.compareTo(config.getMinPoolingDelay()) < 0) {
+      result = config.getMinPoolingDelay();
     }
     return result;
   }

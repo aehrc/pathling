@@ -27,10 +27,11 @@ import au.csiro.pathling.export.fs.FileStore;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.utils.ExecutorServiceResource;
-import au.csiro.pathling.export.ws.BulkExport;
+import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportRequest.SystemLevel;
 import au.csiro.pathling.export.ws.BulkExportResponse;
+import au.csiro.pathling.export.ws.BulkExportTemplate;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -109,7 +110,7 @@ public class BulkExportClient {
 
   @Nonnull
   @Builder.Default
-  BulkExport.Config bulkExportConfig = BulkExport.Config.builder().build();
+  AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
   @Nonnull
   @Builder.Default
@@ -131,8 +132,9 @@ public class BulkExportClient {
         final CloseableHttpClient httpClient = createHttpClient();
         final ExecutorServiceResource executorServiceResource = createExecutorServiceResource()
     ) {
-      final BulkExport bulkExportTemplate = new BulkExport(httpClient, URI.create(fhirEndpointUrl),
-          bulkExportConfig);
+      final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient,
+          URI.create(fhirEndpointUrl),
+          asyncConfig);
       final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
           executorServiceResource.getExecutorService());
 
@@ -141,7 +143,7 @@ public class BulkExportClient {
   }
 
   void doExport(@Nonnull final FileStore fileStore,
-      @Nonnull final BulkExport bulkExportTemplate,
+      @Nonnull final BulkExportTemplate bulkExportTemplate,
       @Nonnull final UrlDownloadTemplate downloadTemplate)
       throws URISyntaxException, IOException, InterruptedException {
 

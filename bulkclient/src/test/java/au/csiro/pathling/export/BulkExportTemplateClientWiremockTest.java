@@ -51,7 +51,7 @@ import org.junit.jupiter.api.Test;
 import wiremock.net.minidev.json.JSONArray;
 
 @WireMockTest
-class BulkExportClientWiremockTest {
+class BulkExportTemplateClientWiremockTest {
 
   public static final String RESOURCE_00 = "{}\n{}";
   public static final String RESOURCE_01 = "{}\n{}\n{}";
