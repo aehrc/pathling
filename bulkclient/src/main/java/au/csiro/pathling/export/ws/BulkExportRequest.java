@@ -113,21 +113,4 @@ public class BulkExportRequest {
         .parameter(params)
         .build();
   }
-
-  @Nonnull
-  public static BulkExportRequestBuilder systemBuilder() {
-    return builder();
-  }
-
-  @Nonnull
-  public static BulkExportRequestBuilder patientBuilder() {
-    return new BulkExportRequestBuilder().operation(new PatientLevel());
-  }
-
-  @Nonnull
-  public static BulkExportRequestBuilder groupBuilder(@Nonnull final String id) {
-    return new BulkExportRequestBuilder().operation(new GroupLevel(id));
-  }
-
-
 }

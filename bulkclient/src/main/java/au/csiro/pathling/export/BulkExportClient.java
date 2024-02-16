@@ -31,16 +31,18 @@ import au.csiro.pathling.export.utils.ExecutorServiceResource;
 import au.csiro.pathling.export.utils.HttpClientConfiguration;
 import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportRequest;
+import au.csiro.pathling.export.ws.BulkExportRequest.GroupLevel;
+import au.csiro.pathling.export.ws.BulkExportRequest.PatientLevel;
 import au.csiro.pathling.export.ws.BulkExportRequest.SystemLevel;
 import au.csiro.pathling.export.ws.BulkExportResponse;
 import au.csiro.pathling.export.ws.BulkExportTemplate;
+import com.google.common.collect.Streams;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +52,6 @@ import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
-import com.google.common.collect.Streams;
 import lombok.Builder;
 import lombok.Singular;
 import lombok.Value;
@@ -78,23 +79,23 @@ public class BulkExportClient {
 
   @Nonnull
   @Builder.Default
-  String outputFormat = "application/fhir+ndjson";
-
-  @Nonnull
-  @Builder.Default
   BulkExportRequest.Operation operation = new SystemLevel();
 
   @Nonnull
   @Builder.Default
-  List<String> type = Collections.emptyList();
+  String outputFormat = "application/fhir+ndjson";
 
   @Nullable
   @Builder.Default
   Instant since = null;
 
   @Nonnull
-  @Builder.Default
-  String outputFileFormat = "";
+  @Singular("type")
+  List<String> types;
+
+  @Nonnull
+  @Singular("patient")
+  List<Reference> patients;
 
   @Nonnull
   String outputDir;
@@ -104,8 +105,16 @@ public class BulkExportClient {
   String outputExtension = "ndjson";
 
   @Nonnull
-  @Singular("patient")
-  List<Reference> patient;
+  @Builder.Default
+  Duration timeOut = Duration.ZERO;
+
+  @Builder.Default
+  @Min(1)
+  int maxConcurrentDownloads = 10;
+
+  @Nonnull
+  @Builder.Default
+  FileStoreFactory fileStoreFactory = FileStoreFactory.getLocal();
 
   @Nonnull
   @Builder.Default
@@ -115,17 +124,21 @@ public class BulkExportClient {
   @Builder.Default
   AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
-  @Nonnull
-  @Builder.Default
-  FileStoreFactory fileStoreFactory = FileStoreFactory.getLocal();
 
   @Nonnull
-  @Builder.Default
-  Duration timeOut = Duration.ZERO;
+  public static BulkExportClientBuilder systemBuilder() {
+    return BulkExportClient.builder().withOperation(new SystemLevel());
+  }
 
-  @Builder.Default
-  @Min(1)
-  int maxConcurrentDownloads = 10;
+  @Nonnull
+  public static BulkExportClientBuilder patientBuilder() {
+    return BulkExportClient.builder().withOperation(new PatientLevel());
+  }
+
+  @Nonnull
+  public static BulkExportClientBuilder groupBuilder(@Nonnull final String groupId) {
+    return BulkExportClient.builder().withOperation(new GroupLevel(groupId));
+  }
 
   public BulkExportResult export()
       throws IOException, InterruptedException, URISyntaxException {
@@ -142,7 +155,7 @@ public class BulkExportClient {
           executorServiceResource.getExecutorService());
 
       final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
-      log.info("Export successful: {}" , result);
+      log.info("Export successful: {}", result);
       return result;
     }
   }
@@ -168,13 +181,7 @@ public class BulkExportClient {
       destinationDir.mkdirs();
     }
     final BulkExportResponse response = bulkExportTemplate.export(
-        BulkExportRequest.builder()
-            .operation(operation)
-            ._outputFormat(outputFormat)
-            ._type(type)
-            ._since(since)
-            .patient(patient)
-            .build()
+        buildBulkExportRequest()
     );
     log.debug("Export request completed: {}", response);
     final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
@@ -184,6 +191,16 @@ public class BulkExportClient {
     log.debug("Marking download as complete with: {}", successMarker.getLocation());
     successMarker.writeAll(new ByteArrayInputStream(new byte[0]));
     return buildResult(response, downloadList, fileSizes);
+  }
+
+  private BulkExportRequest buildBulkExportRequest() {
+    return BulkExportRequest.builder()
+        .operation(operation)
+        ._outputFormat(outputFormat)
+        ._type(types)
+        ._since(since)
+        .patient(patients)
+        .build();
   }
 
   @Nonnull

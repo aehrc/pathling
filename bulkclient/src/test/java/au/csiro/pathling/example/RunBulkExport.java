@@ -19,10 +19,9 @@ package au.csiro.pathling.example;
 
 import au.csiro.pathling.export.BulkExportClient;
 import au.csiro.pathling.export.fhir.Reference;
-import au.csiro.pathling.export.ws.BulkExportRequest.PatientLevel;
-import javax.annotation.Nonnull;
 import java.time.Instant;
 import java.util.List;
+import javax.annotation.Nonnull;
 
 /**
  * Example of running the Bulk Export Client
@@ -56,7 +55,7 @@ public class RunBulkExport {
     BulkExportClient.builder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
-        .withType(List.of("Patient", "Condition"))
+        .withTypes(List.of("Patient", "Condition"))
         .withSince(from)
         .build()
         .export();
@@ -74,19 +73,19 @@ public class RunBulkExport {
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    BulkExportClient.builder()
+    BulkExportClient.patientBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
-        .withType(List.of("Patient", "Condition"))
+        .withType("Patient")
+        .withType("Condition")
         .withSince(from)
-        .withOperation(new PatientLevel())
         .withPatient(Reference.of("Patient/6c5d9ca9-54d7-42f5-bfae-a7c19cd217f2"))
         .withPatient(Reference.of("Patient/538a9a4e-8437-47d3-8c01-1a17dca8f0be"))
         .withPatient(Reference.of("Patient/fbfec681-d357-4b28-b1d2-5db6434c7846"))
         .build()
         .export();
   }
-  
+
   public static void main(@Nonnull final String[] args) throws Exception {
     runSystemLevel();
   }
