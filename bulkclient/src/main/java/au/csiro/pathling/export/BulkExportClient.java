@@ -22,6 +22,15 @@ import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.export.download.UrlDownloadTemplate;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
+import au.csiro.pathling.export.fhir.Reference;
+import au.csiro.pathling.export.fs.FileStore;
+import au.csiro.pathling.export.fs.FileStore.FileHandle;
+import au.csiro.pathling.export.fs.FileStoreFactory;
+import au.csiro.pathling.export.utils.ExecutorServiceResource;
+import au.csiro.pathling.export.ws.BulkExport;
+import au.csiro.pathling.export.ws.BulkExportRequest;
+import au.csiro.pathling.export.ws.BulkExportRequest.SystemLevel;
+import au.csiro.pathling.export.ws.BulkExportResponse;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -32,21 +41,12 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.export.fhir.Reference;
-import au.csiro.pathling.export.fs.FileStore;
-import au.csiro.pathling.export.fs.FileStore.FileHandle;
-import au.csiro.pathling.export.fs.FileStoreFactory;
-import au.csiro.pathling.export.ws.BulkExport;
-import au.csiro.pathling.export.ws.BulkExportRequest;
-import au.csiro.pathling.export.ws.BulkExportRequest.SystemLevel;
-import au.csiro.pathling.export.ws.BulkExportResponse;
+import javax.validation.constraints.Min;
 import lombok.Builder;
 import lombok.Singular;
 import lombok.Value;
@@ -119,17 +119,40 @@ public class BulkExportClient {
   @Builder.Default
   Duration timeOut = Duration.ZERO;
 
+  @Builder.Default
+  @Min(1)
+  int maxConcurrentDownloads = 10;
+
   public void export()
       throws IOException, InterruptedException, URISyntaxException {
+
+    try (
+        final FileStore fileStore = createFileStore();
+        final CloseableHttpClient httpClient = createHttpClient();
+        final ExecutorServiceResource executorServiceResource = createExecutorServiceResource()
+    ) {
+      final BulkExport bulkExportTemplate = new BulkExport(httpClient, URI.create(fhirEndpointUrl),
+          bulkExportConfig);
+      final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
+          executorServiceResource.getExecutorService());
+
+      doExport(fileStore, bulkExportTemplate, downloadTemplate);
+    }
+  }
+
+  void doExport(@Nonnull final FileStore fileStore,
+      @Nonnull final BulkExport bulkExportTemplate,
+      @Nonnull final UrlDownloadTemplate downloadTemplate)
+      throws URISyntaxException, IOException, InterruptedException {
 
     final Instant timeOutAt = timeOut != Duration.ZERO
                               ? Instant.now().plus(timeOut)
                               : Instant.MAX;
 
     log.debug("Setting time out at: {} for requested timeout of: {}", timeOutAt, timeOut);
-    final FileStore fileStore = fileStoreFactory.createFileStore(outputDir);
 
     final FileHandle destinationDir = fileStore.get(outputDir);
+
     if (destinationDir.exists()) {
       throw new BulkExportException(
           "Destination directory already exists: " + destinationDir.getLocation());
@@ -137,15 +160,6 @@ public class BulkExportClient {
       log.debug("Creating destination directory: {}", destinationDir.getLocation());
       destinationDir.mkdirs();
     }
-    // TODO: close the fileStore and httpClient
-    final CloseableHttpClient httpClient = buildHttpClient(httpClientConfig);
-    final ExecutorService executorService = Executors.newSingleThreadExecutor();
-
-    final BulkExport bulkExportTemplate = new BulkExport(httpClient, URI.create(fhirEndpointUrl),
-        bulkExportConfig);
-    final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
-        executorService);
-
     final BulkExportResponse response = bulkExportTemplate.export(
         BulkExportRequest.builder()
             .operation(operation)
@@ -163,12 +177,6 @@ public class BulkExportClient {
     log.debug("Marking download as complete with: {}", successMarker.getLocation());
     successMarker.writeAll(new ByteArrayInputStream(new byte[0]));
     log.debug("Download completed: cleaning up resources");
-
-    executorService.shutdown();
-    executorService.awaitTermination(1, TimeUnit.SECONDS);
-    executorService.shutdownNow();
-    httpClient.close();
-    fileStore.close();
   }
 
   @Nonnull
@@ -192,6 +200,29 @@ public class BulkExportClient {
   static String toFileName(@Nonnull final String resource, final int chunkNo,
       @Nonnull final String extension) {
     return String.format("%s_%04d.%s", resource, chunkNo, extension);
+  }
+
+  private FileStore createFileStore() throws IOException {
+    log.debug("Creating FileStore of: {} for outputDir: {}", fileStoreFactory, outputDir);
+    return fileStoreFactory.createFileStore(outputDir);
+  }
+
+  private CloseableHttpClient createHttpClient() {
+    log.debug("Creating HttpClient with configuration: {}", httpClientConfig);
+    return buildHttpClient(httpClientConfig);
+  }
+
+  private ExecutorServiceResource createExecutorServiceResource() {
+    if (maxConcurrentDownloads <= 0) {
+      throw new IllegalArgumentException(
+          "maxConcurrentDownloads must be positive: " + maxConcurrentDownloads);
+    }
+    if (httpClientConfig.getMaxConnectionsPerRoute() < maxConcurrentDownloads) {
+      log.warn("maxConnectionsPerRoute is less than maxConcurrentDownloads: {} < {}",
+          httpClientConfig.getMaxConnectionsPerRoute(), maxConcurrentDownloads);
+    }
+    log.debug("Creating ExecutorService with maxConcurrentDownloads: {}", maxConcurrentDownloads);
+    return ExecutorServiceResource.of(Executors.newFixedThreadPool(maxConcurrentDownloads));
   }
 
   private static CloseableHttpClient buildHttpClient(

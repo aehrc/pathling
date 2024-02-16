@@ -19,7 +19,7 @@ package au.csiro.pathling.export.ws;
 
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
-import au.csiro.pathling.export.JsonSupport;
+import au.csiro.pathling.export.utils.JsonSupport;
 import au.csiro.pathling.export.fhir.FhirUtils;
 import java.io.IOException;
 import java.net.URI;
@@ -102,8 +102,7 @@ public class BulkExport {
   public BulkExport(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
     this(httpClient, endpoingUri, Config.builder().build());
   }
-
-
+  
   @Nonnull
   public BulkExportResponse export(@Nonnull final BulkExportRequest request)
       throws URISyntaxException, IOException, InterruptedException {

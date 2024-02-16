@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.export.fhir;
 
-import au.csiro.pathling.export.JsonSupport;
+import au.csiro.pathling.export.utils.JsonSupport;
 import au.csiro.pathling.export.fhir.Parameters.Parameter;
 import org.json.JSONArray;
 import org.json.JSONObject;

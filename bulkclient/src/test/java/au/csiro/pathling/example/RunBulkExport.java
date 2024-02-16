@@ -56,7 +56,7 @@ public class RunBulkExport {
     BulkExportClient.builder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
-        .withType(List.of("Patient", "Condition"))
+        //.withType(List.of("Patient", "Condition"))
         .withSince(from)
         .build()
         .export();
@@ -88,6 +88,6 @@ public class RunBulkExport {
   }
   
   public static void main(@Nonnull final String[] args) throws Exception {
-    runPatientLevel();
+    runSystemLevel();
   }
 }

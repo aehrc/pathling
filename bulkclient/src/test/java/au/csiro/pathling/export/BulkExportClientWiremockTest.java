@@ -189,7 +189,7 @@ class BulkExportClientWiremockTest {
         .withType(List.of("Patient", "Condition"))
         .build()
         .export();
-
+    
     assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
         FileUtils.readFileToString(new File(exportDir, "Patient_0000.ndjson"), Charsets.UTF_8));

@@ -19,7 +19,7 @@ package au.csiro.pathling.export.ws;
 
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
-import au.csiro.pathling.export.JsonSupport;
+import au.csiro.pathling.export.utils.JsonSupport;
 import au.csiro.pathling.export.fhir.OperationOutcome;
 import java.io.IOException;
 import java.util.Optional;
