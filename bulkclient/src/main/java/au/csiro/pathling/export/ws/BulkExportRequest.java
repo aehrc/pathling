@@ -47,21 +47,37 @@ public class BulkExportRequest {
   @Value
   public static class SystemLevel implements Operation {
 
-    String path = "$export";
-    boolean patientSupported = false;
+    @Nonnull
+    @Override
+    public String getPath() {
+      return "$export";
+    }
+
+    @Override
+    public boolean isPatientSupported() {
+      return false;
+    }
   }
 
   @Value
   public static class PatientLevel implements Operation {
 
-    String path = "Patient/$export";
-    boolean patientSupported = true;
+
+    @Nonnull
+    @Override
+    public String getPath() {
+      return "Patient/$export";
+    }
+
+    @Override
+    public boolean isPatientSupported() {
+      return true;
+    }
   }
 
   @Value
   public static class GroupLevel implements Operation {
 
-    boolean patientSupported = true;
     @Nonnull
     String id;
 
@@ -69,6 +85,11 @@ public class BulkExportRequest {
     @Override
     public String getPath() {
       return String.format("Group/%s/$export", id);
+    }
+
+    @Override
+    public boolean isPatientSupported() {
+      return true;
     }
   }
 
