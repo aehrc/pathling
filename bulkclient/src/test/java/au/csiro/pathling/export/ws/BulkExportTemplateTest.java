@@ -31,7 +31,7 @@ class BulkExportTemplateTest {
   @Test
   void testDefaultRequestUri() throws Exception {
     final URI baseUri = URI.create("http://example.com/fhir");
-    assertEquals(URI.create("http://example.com/fhir?_outputFormat=ndjson&_type="),
+    assertEquals(URI.create("http://example.com/fhir?_outputFormat=ndjson"),
         BulkExportTemplate.toRequestURI(baseUri, BulkExportRequest.builder().build())
     );
   }

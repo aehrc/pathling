@@ -23,6 +23,7 @@ import au.csiro.pathling.export.ws.BulkExportResponse;
 import au.csiro.pathling.export.ws.BulkExportResponse.ResourceElement;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import java.net.URI;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
@@ -34,11 +35,12 @@ public class BulkExportTemplateClientTest {
       .withFhirEndpointUrl("http://example.com")
       .withOutputDir("output-dir")
       .build();
-  
+
   @Test
   void testMapsMultiPartResourceToSeparateFiles() {
 
     final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
         .request("fake-request")
         .output(List.of(
             new ResourceElement("Condition", "http:/foo.bar/1", 10),
@@ -54,14 +56,17 @@ public class BulkExportTemplateClientTest {
 
     assertEquals(
         List.of(
-            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), FileHandle.ofLocal("output-dir/Condition_0000.ndjson")),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), FileHandle.ofLocal("output-dir/Condition_0001.ndjson")),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), FileHandle.ofLocal("output-dir/Condition_0002.ndjson"))
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"),
+                FileHandle.ofLocal("output-dir/Condition_0000.ndjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/2"),
+                FileHandle.ofLocal("output-dir/Condition_0001.ndjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/3"),
+                FileHandle.ofLocal("output-dir/Condition_0002.ndjson"))
         ),
         downloadUrls
     );
   }
-  
+
   @Test
   void testMapsDifferentResourceToSeparateFiles() {
 
@@ -69,9 +74,10 @@ public class BulkExportTemplateClientTest {
         .withFhirEndpointUrl("http://example.com")
         .withOutputDir("output-dir")
         .withOutputExtension("xjson")
-        .build();    
-    
+        .build();
+
     final BulkExportResponse response = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
         .request("fake-request")
         .output(List.of(
             new ResourceElement("Patient", "http:/foo.bar/1", 10),
@@ -87,9 +93,12 @@ public class BulkExportTemplateClientTest {
 
     assertEquals(
         List.of(
-            new UrlDownloadEntry(URI.create("http:/foo.bar/1"), FileHandle.ofLocal("output-dir/Patient_0000.xjson")),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/2"), FileHandle.ofLocal("output-dir/Condition_0000.xjson")),
-            new UrlDownloadEntry(URI.create("http:/foo.bar/3"), FileHandle.ofLocal("output-dir/Observation_0000.xjson"))
+            new UrlDownloadEntry(URI.create("http:/foo.bar/1"),
+                FileHandle.ofLocal("output-dir/Patient_0000.xjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/2"),
+                FileHandle.ofLocal("output-dir/Condition_0000.xjson")),
+            new UrlDownloadEntry(URI.create("http:/foo.bar/3"),
+                FileHandle.ofLocal("output-dir/Observation_0000.xjson"))
         ),
         downloadUrls
     );
