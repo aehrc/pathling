@@ -37,7 +37,7 @@ print(f"Exporting from: {fhirEndpointUrl} to {outputDirUrl}")
 bulk_export(
     fhirEndpointUrl,
     outputDirUrl,
-    _outputFormat="ndjson",
-    _type=["Patient", "Condition"],
-    _since=datetime.fromisoformat('2020-01-01T00:00:00').replace(tzinfo=timezone.utc)
+    outputFormat="ndjson",
+    types=["Patient", "Condition"],
+    since=datetime.fromisoformat('2020-01-01T00:00:00').replace(tzinfo=timezone.utc)
 )
