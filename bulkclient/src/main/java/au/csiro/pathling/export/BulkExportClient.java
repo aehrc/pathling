@@ -125,6 +125,10 @@ public class BulkExportClient {
   AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
 
+  public static class BulkExportClientBuilder {
+    // empty placeholder to for javadoc to recognize the builder
+  }
+  
   @Nonnull
   public static BulkExportClientBuilder systemBuilder() {
     return BulkExportClient.builder().withOperation(new SystemLevel());
