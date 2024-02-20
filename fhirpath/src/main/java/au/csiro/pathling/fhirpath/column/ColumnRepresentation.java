@@ -58,7 +58,8 @@ public abstract class ColumnRepresentation {
   protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
   @Nonnull
-  public abstract ColumnRepresentation vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+  public abstract ColumnRepresentation vectorize(
+      @Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression);
 
 
@@ -87,13 +88,9 @@ public abstract class ColumnRepresentation {
     return copyOf(functions.concat(toArray().getValue(), other.toArray().getValue()));
   }
 
-  @SuppressWarnings("unused")
   @Nonnull
-  public ColumnRepresentation vectorize(@Nonnull final Function<Column, Column> arrayExpression) {
-    // the default implementation just wraps the element info array if needed
-    return vectorize(arrayExpression,
-        c -> arrayExpression.apply(functions.when(c.isNotNull(), functions.array(c))));
-  }
+  public abstract ColumnRepresentation vectorize(
+      @Nonnull final Function<Column, Column> arrayExpression);
 
   @Nonnull
   public ColumnRepresentation orElse(@Nonnull final Object value) {
@@ -237,7 +234,8 @@ public abstract class ColumnRepresentation {
    * Call udf with this column as the first argument.
    */
   @Nonnull
-  public ColumnRepresentation mapWithUDF(@Nonnull final String udfName, @Nonnull final ColumnRepresentation... args) {
+  public ColumnRepresentation mapWithUDF(@Nonnull final String udfName,
+      @Nonnull final ColumnRepresentation... args) {
     return transform(c -> functions.callUDF(udfName,
         Stream.concat(Stream.of(c), Stream.of(args).map(ColumnRepresentation::getValue))
             .toArray(Column[]::new)));
@@ -245,7 +243,8 @@ public abstract class ColumnRepresentation {
   }
 
   @Nonnull
-  public ColumnRepresentation callUDF(@Nonnull final String udfName, @Nonnull final ColumnRepresentation... args) {
+  public ColumnRepresentation callUDF(@Nonnull final String udfName,
+      @Nonnull final ColumnRepresentation... args) {
     return copyOf(functions.callUDF(udfName,
         Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnRepresentation::getValue))
             .toArray(Column[]::new)));
@@ -286,7 +285,8 @@ public abstract class ColumnRepresentation {
 
 
   @Nonnull
-  public static ColumnRepresentation biOperator(@Nonnull final ColumnRepresentation left, @Nonnull final ColumnRepresentation right,
+  public static ColumnRepresentation biOperator(@Nonnull final ColumnRepresentation left,
+      @Nonnull final ColumnRepresentation right,
       @Nonnull final BiFunction<Column, Column, Column> lambda) {
     return ArrayRepresentation.of(lambda.apply(left.getValue(), right.getValue()));
   }
