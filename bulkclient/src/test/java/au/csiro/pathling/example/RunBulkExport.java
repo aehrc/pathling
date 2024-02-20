@@ -19,6 +19,7 @@ package au.csiro.pathling.example;
 
 import au.csiro.pathling.export.BulkExportClient;
 import au.csiro.pathling.export.fhir.Reference;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -52,11 +53,12 @@ public class RunBulkExport {
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    BulkExportClient.builder()
+    BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
         .withTypes(List.of("Patient", "Condition"))
         .withSince(from)
+        .withTimeout(Duration.ofMinutes(5))
         .build()
         .export();
   }

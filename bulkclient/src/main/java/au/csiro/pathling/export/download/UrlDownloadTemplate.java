@@ -17,12 +17,16 @@
 
 package au.csiro.pathling.export.download;
 
+import static au.csiro.pathling.export.utils.TimeoutUtils.hasExpired;
+import static au.csiro.pathling.export.utils.TimeoutUtils.toTimeoutAt;
+
 import au.csiro.pathling.export.BulkExportException.DownloadError;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.BulkExportException.Timeout;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import java.io.InputStream;
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -90,42 +94,46 @@ public class UrlDownloadTemplate {
 
   public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload)
       throws InterruptedException {
-    return download(urlToDownload, Instant.MAX);
+    return download(urlToDownload, Duration.ZERO);
   }
 
   public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload,
-      @Nonnull final Instant timeout)
+      @Nonnull final Duration timeout)
       throws InterruptedException {
+
+    final Instant timeoutAt = toTimeoutAt(timeout);
 
     final Collection<Callable<Long>> tasks = urlToDownload.stream()
         .map(e -> new UriDownloadTask(e.getSource(), e.getDestination()))
-        .collect(
-            Collectors.toUnmodifiableList());
+        .collect(Collectors.toUnmodifiableList());
 
     // submitting the task independently
     final List<Future<Long>> futures = tasks.stream().map(executorService::submit)
         .collect(Collectors.toUnmodifiableList());
 
-    // wait for all the futures to complete or any to fail
-    while (!futures.stream().allMatch(Future::isDone)
-        && futures.stream().noneMatch(f -> asException(f).isPresent())) {
-      if (Instant.now().isAfter(timeout)) {
-        log.debug("Cancelling download due to time limit {} exceeded", timeout);
-        futures.forEach(f -> f.cancel(true));
-        throw new Timeout("Download timed out at: " + timeout);
+    try {
+      // wait for all the futures to complete or any to fail
+      while (!futures.stream().allMatch(Future::isDone)
+          && futures.stream().noneMatch(f -> asException(f).isPresent())) {
+        if (hasExpired(timeoutAt)) {
+          log.error("Cancelling download due to time limit {} exceeded at: {}", timeout, timeoutAt);
+          throw new Timeout("Download timed out at: " + timeout);
+        }
+        TimeUnit.SECONDS.sleep(1);
       }
-      TimeUnit.SECONDS.sleep(1);
+      // check if any of the futures failed
+      futures.stream().map(UrlDownloadTemplate::asException)
+          .filter(Optional::isPresent).flatMap(Optional::stream)
+          .findAny()
+          .ifPresent(e -> {
+            log.error("Cancelling the download because of '{}'", unwrap(e).getMessage());
+            throw new DownloadError("Download failed", unwrap(e));
+          });
+      return futures.stream().map(UrlDownloadTemplate::asValue).collect(Collectors.toList());
+    } finally {
+      // cancel all the futures
+      futures.forEach(f -> f.cancel(true));
     }
-    futures.stream().map(UrlDownloadTemplate::asException)
-        .filter(Optional::isPresent).flatMap(Optional::stream)
-        .findAny()
-        .ifPresent(e -> {
-          // cancel all the futures
-          log.debug("Cancelling the download because of '{}'", unwrap(e).getMessage());
-          futures.forEach(f -> f.cancel(true));
-          throw new DownloadError("Download failed", unwrap(e));
-        });
-    return futures.stream().map(UrlDownloadTemplate::asValue).collect(Collectors.toList());
   }
 
   static <T> Optional<Exception> asException(@Nonnull final Future<T> f) {

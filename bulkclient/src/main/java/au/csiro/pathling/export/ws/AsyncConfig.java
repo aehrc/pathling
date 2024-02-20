@@ -34,10 +34,7 @@ public class AsyncConfig {
 
   @Builder.Default
   Duration maxPoolingDelay = Duration.ofSeconds(60);
-
-  @Builder.Default
-  Duration poolingTimeout = Duration.ofHours(1);
-
+  
   @Builder.Default
   Duration transientErrorDelay = Duration.ofSeconds(2);
 

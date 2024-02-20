@@ -691,7 +691,7 @@ class BulkExportTemplateClientWiremockTest {
             BulkExportClient.builder()
                 .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
                 .withOutputDir(exportDir.getPath())
-                .withTimeOut(Duration.ofSeconds(2))
+                .withTimeout(Duration.ofSeconds(2))
                 .build()
                 .export()
     );

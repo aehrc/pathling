@@ -29,6 +29,7 @@ import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.utils.ExecutorServiceResource;
 import au.csiro.pathling.export.utils.HttpClientConfiguration;
+import au.csiro.pathling.export.utils.TimeoutUtils;
 import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportRequest.GroupLevel;
@@ -104,9 +105,13 @@ public class BulkExportClient {
   @Builder.Default
   String outputExtension = "ndjson";
 
+  /**
+   * The maximum time to wait for the export to complete. If zero or negative (default), the export
+   * will not time out.
+   */
   @Nonnull
   @Builder.Default
-  Duration timeOut = Duration.ZERO;
+  Duration timeout = Duration.ZERO;
 
   @Builder.Default
   @Min(1)
@@ -128,7 +133,7 @@ public class BulkExportClient {
   public static class BulkExportClientBuilder {
     // empty placeholder to for javadoc to recognize the builder
   }
-  
+
   @Nonnull
   public static BulkExportClientBuilder systemBuilder() {
     return BulkExportClient.builder().withOperation(new SystemLevel());
@@ -169,11 +174,8 @@ public class BulkExportClient {
       @Nonnull final UrlDownloadTemplate downloadTemplate)
       throws URISyntaxException, IOException, InterruptedException {
 
-    final Instant timeOutAt = timeOut != Duration.ZERO
-                              ? Instant.now().plus(timeOut)
-                              : Instant.MAX;
-
-    log.debug("Setting time out at: {} for requested timeout of: {}", timeOutAt, timeOut);
+    final Instant timeoutAt = TimeoutUtils.toTimeoutAt(timeout);
+    log.debug("Setting timeout at: {} for requested timeout of: {}", timeoutAt, timeout);
 
     final FileHandle destinationDir = fileStore.get(outputDir);
 
@@ -184,13 +186,13 @@ public class BulkExportClient {
       log.debug("Creating destination directory: {}", destinationDir.getLocation());
       destinationDir.mkdirs();
     }
-    final BulkExportResponse response = bulkExportTemplate.export(
-        buildBulkExportRequest()
-    );
+    final BulkExportResponse response = bulkExportTemplate.export(buildBulkExportRequest(),
+        TimeoutUtils.toTimeoutAfter(timeoutAt));
     log.debug("Export request completed: {}", response);
     final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
     log.debug("Downloading entries: {}", downloadList);
-    final List<Long> fileSizes = downloadTemplate.download(downloadList, timeOutAt);
+    final List<Long> fileSizes = downloadTemplate.download(downloadList,
+        TimeoutUtils.toTimeoutAfter(timeoutAt));
     final FileHandle successMarker = destinationDir.child("_SUCCESS");
     log.debug("Marking download as complete with: {}", successMarker.getLocation());
     successMarker.writeAll(new ByteArrayInputStream(new byte[0]));

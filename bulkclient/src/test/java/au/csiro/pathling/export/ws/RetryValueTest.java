@@ -22,24 +22,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 
 class RetryValueTest {
   
   @Test
   void testParsesSecondValue() {
-    assertEquals(Optional.of(RetryValue.after(Duration.ofSeconds(5))), RetryValue.parse("5"));
+    assertEquals(Optional.of(RetryValue.after(Duration.ofSeconds(5))), RetryValue.parseHttpValue("5"));
   }
   
   @Test
   void testEmptyForUnparsableStringString() {
-    assertEquals(Optional.empty(), RetryValue.parse("5xxx3"));
+    assertEquals(Optional.empty(), RetryValue.parseHttpValue("5xxx3"));
   }
 
   @Test
   void testParsesHttpDateValue() {
     assertEquals(Optional.of(RetryValue.at(Instant.parse("2019-07-22T23:59:59Z"))),
-        RetryValue.parse("Mon, 22 Jul 2019 23:59:59 GMT"));
+        RetryValue.parseHttpValue("Mon, 22 Jul 2019 23:59:59 GMT"));
   }
   
   @Test 

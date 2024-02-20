@@ -24,6 +24,7 @@ import au.csiro.pathling.export.fhir.OperationOutcome;
 import java.io.IOException;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -87,7 +88,7 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
   private static Optional<RetryValue> getRetryAfterValue(@Nonnull final HttpResponse response) {
     return Optional.ofNullable(response.getFirstHeader(RETRY_AFTER_HEADER))
         .flatMap(h -> Optional.ofNullable(h.getValue()))
-        .flatMap(RetryValue::parse);
+        .flatMap(RetryValue::parseHttpValue);
   }
 
   @Nonnull

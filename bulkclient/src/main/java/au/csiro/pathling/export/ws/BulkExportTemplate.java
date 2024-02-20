@@ -17,10 +17,13 @@
 
 package au.csiro.pathling.export.ws;
 
+import static au.csiro.pathling.export.utils.TimeoutUtils.hasExpired;
+import static au.csiro.pathling.export.utils.TimeoutUtils.toTimeoutAt;
+
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
-import au.csiro.pathling.export.fhir.JsonSupport;
 import au.csiro.pathling.export.fhir.FhirUtils;
+import au.csiro.pathling.export.fhir.JsonSupport;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -75,10 +78,18 @@ public class BulkExportTemplate {
   }
 
   @Nonnull
+  public BulkExportResponse export(@Nonnull final BulkExportRequest request,
+      @Nonnull final Duration timeout)
+      throws URISyntaxException, IOException, InterruptedException {
+    return pool(kickOff(request), timeout);
+  }
+
+  @Nonnull
   public BulkExportResponse export(@Nonnull final BulkExportRequest request)
       throws URISyntaxException, IOException, InterruptedException {
-    return pool(kickOff(request));
+    return export(request, Duration.ZERO);
   }
+
 
   @Nonnull
   URI kickOff(@Nonnull final BulkExportRequest request)
@@ -113,13 +124,13 @@ public class BulkExportTemplate {
   }
 
   @Nonnull
-  BulkExportResponse pool(@Nonnull final URI poolingURI) throws IOException, InterruptedException {
+  BulkExportResponse pool(@Nonnull final URI poolingURI, @Nonnull final Duration timeout)
+      throws IOException, InterruptedException {
 
-    final long poolingExitTime = System.currentTimeMillis() + config.getPoolingTimeout().toMillis();
-
+    final Instant timeoutAt = toTimeoutAt(timeout);
     int transientErrorCount = 0;
     Instant nextStatusCheck = Instant.now();
-    while (System.currentTimeMillis() <= poolingExitTime) {
+    while (!hasExpired(timeoutAt)) {
       TimeUnit.MILLISECONDS.sleep(config.getMinPoolingDelay().toMillis());
       if ((Instant.now().isAfter(nextStatusCheck))) {
         try {
@@ -142,7 +153,6 @@ public class BulkExportTemplate {
         } catch (final HttpError ex) {
           if (ex.isTransient() && ++transientErrorCount <= config.getMaxTransientErrors()) {
             // log retrying a transient error
-            // TODO: extract from headers
             log.debug("Pooling: Retrying transient error {} ouf of {} : '{}'",
                 transientErrorCount, config.getMaxTransientErrors(), ex.getMessage());
             final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
@@ -158,15 +168,15 @@ public class BulkExportTemplate {
             log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
             nextStatusCheck = Instant.now().plus(timeToSleep);
           } else {
-            // TODO: Add handling of back-off error
             log.debug("Pooling: Http error: {}", ex.getMessage());
             throw ex;
           }
         }
       }
     }
+    log.error("Cancelling pooling due to time limit {} exceeded at: {}", timeout, timeoutAt);
     throw new BulkExportException.Timeout(
-        "Pooling timeout exceeded: " + config.getPoolingTimeout());
+        "Pooling timeout exceeded: " + timeout + " at: " + timeoutAt);
   }
 
   @Nonnull

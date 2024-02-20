@@ -37,6 +37,12 @@ public interface RetryValue {
     public Duration until(@Nonnull final Instant time) {
       return Duration.between(time, value);
     }
+
+    @Override
+    @Nonnull
+    public String toString() {
+      return "at(" + value + ")";
+    }
   }
 
   @Value
@@ -49,6 +55,12 @@ public interface RetryValue {
     @Override
     public Duration until(@Nonnull final Instant time) {
       return value;
+    }
+
+    @Override
+    @Nonnull
+    public String toString() {
+      return "after(" + value + ")";
     }
   }
 
@@ -66,9 +78,12 @@ public interface RetryValue {
   Duration until(@Nonnull final Instant time);
 
   @Nonnull
-  static Optional<RetryValue> parse(@Nonnull final String retry) {
+  static Optional<RetryValue> parseHttpValue(@Nonnull final String retry) {
     try {
-      return Optional.of(after(Duration.ofSeconds(Integer.parseInt(retry))));
+      final int seconds = Integer.parseInt(retry);
+      return seconds > 0
+             ? Optional.of(after(Duration.ofSeconds(seconds)))
+             : Optional.empty();
     } catch (final NumberFormatException __) {
       // ignore
     }
