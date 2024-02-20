@@ -36,11 +36,11 @@ import static org.mockito.Mockito.withSettings;
 import au.csiro.pathling.config.EncodingConfiguration;
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.config.HttpClientCachingStorageType;
-import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
+import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Translation;
@@ -119,12 +119,12 @@ public class PathlingContextTest {
 
 
   public static boolean isValidGUID(@Nonnull final String maybeGUID) {
-    Matcher m = GUID_REGEX.matcher(maybeGUID);
+    final Matcher m = GUID_REGEX.matcher(maybeGUID);
     return m.matches();
   }
 
   public static boolean isValidRelativeReference(@Nonnull final String maybeRelativeRef) {
-    Matcher m = RELATIVE_REF_REGEX.matcher(maybeRelativeRef);
+    final Matcher m = RELATIVE_REF_REGEX.matcher(maybeRelativeRef);
     return m.matches();
   }
 
@@ -152,7 +152,7 @@ public class PathlingContextTest {
   }
 
   public <T> void assertValidRelativeRefColumns(@Nonnull final Dataset<T> df,
-      Column... refColumns) {
+                                                final Column... refColumns) {
     Stream.of(refColumns).forEach(c -> assertAllRelativeReferences(
         df.select(c.getField("reference")).as(Encoders.STRING()).collectAsList()));
   }

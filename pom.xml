@@ -95,6 +95,7 @@
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
     <pathling.slf4jVersion>1.7.36</pathling.slf4jVersion>
     <pathling.logbackVersion>1.2.11</pathling.logbackVersion>
+    <pathling.httpclientVersion>4.5.14</pathling.httpclientVersion>
     <pathling.surefireVersion>3.1.2</pathling.surefireVersion>
   </properties>
 
@@ -626,6 +627,12 @@
         <version>${pathling.logbackVersion}</version>
       </dependency>
 
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>${pathling.httpclientVersion}</version>
+      </dependency>
+      
       <!-- CVE-2022-42889-->
       <dependency>
         <groupId>org.apache.commons</groupId>

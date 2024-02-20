@@ -28,7 +28,7 @@ import au.csiro.pathling.export.fs.FileStore;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.utils.ExecutorServiceResource;
-import au.csiro.pathling.export.utils.HttpClientConfiguration;
+import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.export.utils.TimeoutUtils;
 import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportRequest;
@@ -56,12 +56,7 @@ import lombok.Builder;
 import lombok.Singular;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 
 /**
@@ -250,7 +245,7 @@ public class BulkExportClient {
 
   private CloseableHttpClient createHttpClient() {
     log.debug("Creating HttpClient with configuration: {}", httpClientConfig);
-    return buildHttpClient(httpClientConfig);
+    return httpClientConfig.buildHttpClient();
   }
 
   private ExecutorServiceResource createExecutorServiceResource() {
@@ -264,29 +259,6 @@ public class BulkExportClient {
     }
     log.debug("Creating ExecutorService with maxConcurrentDownloads: {}", maxConcurrentDownloads);
     return ExecutorServiceResource.of(Executors.newFixedThreadPool(maxConcurrentDownloads));
-  }
-
-  private static CloseableHttpClient buildHttpClient(
-      @Nonnull final HttpClientConfiguration clientConfig) {
-
-    final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-    connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
-    connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
-
-    final RequestConfig defaultRequestConfig = RequestConfig.custom()
-        .setSocketTimeout(clientConfig.getSocketTimeout())
-        .build();
-
-    final HttpClientBuilder clientBuilder = HttpClients.custom()
-        .setDefaultRequestConfig(defaultRequestConfig)
-        .setConnectionManager(connectionManager)
-        .setConnectionManagerShared(false);
-
-    if (clientConfig.isRetryEnabled()) {
-      clientBuilder.setRetryHandler(
-          new DefaultHttpRequestRetryHandler(clientConfig.getRetryCount(), false));
-    }
-    return clientBuilder.build();
   }
 }
 
