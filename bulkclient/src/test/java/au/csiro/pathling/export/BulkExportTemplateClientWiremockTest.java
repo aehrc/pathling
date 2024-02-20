@@ -335,8 +335,7 @@ class BulkExportTemplateClientWiremockTest {
 
   @Test
   void testExportRetriesTransientErrorsInStatusPooling(
-      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
-      throws Exception {
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
 
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
 
@@ -384,8 +383,7 @@ class BulkExportTemplateClientWiremockTest {
 
   @Test
   void testExportRetriesTooManyRequest429SatusInPooling(
-      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo)
-      throws Exception {
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
 
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
 

@@ -20,6 +20,7 @@ package au.csiro.pathling.export.download;
 import static au.csiro.pathling.export.utils.TimeoutUtils.hasExpired;
 import static au.csiro.pathling.export.utils.TimeoutUtils.toTimeoutAt;
 
+import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.DownloadError;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.BulkExportException.Timeout;
@@ -92,14 +93,12 @@ public class UrlDownloadTemplate {
   }
 
 
-  public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload)
-      throws InterruptedException {
+  public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload) {
     return download(urlToDownload, Duration.ZERO);
   }
 
   public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload,
-      @Nonnull final Duration timeout)
-      throws InterruptedException {
+      @Nonnull final Duration timeout) {
 
     final Instant timeoutAt = toTimeoutAt(timeout);
 
@@ -130,6 +129,9 @@ public class UrlDownloadTemplate {
             throw new DownloadError("Download failed", unwrap(e));
           });
       return futures.stream().map(UrlDownloadTemplate::asValue).collect(Collectors.toList());
+    } catch (final InterruptedException ex) {
+      log.debug("Download interrupted", ex);
+      throw new BulkExportException.SystemError("Download interrupted", ex);
     } finally {
       // cancel all the futures
       futures.forEach(f -> f.cancel(true));

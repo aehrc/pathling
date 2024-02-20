@@ -41,7 +41,6 @@ import com.google.common.collect.Streams;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -149,9 +148,7 @@ public class BulkExportClient {
     return BulkExportClient.builder().withOperation(new GroupLevel(groupId));
   }
 
-  public BulkExportResult export()
-      throws IOException, InterruptedException, URISyntaxException {
-
+  public BulkExportResult export() {
     try (
         final FileStore fileStore = createFileStore();
         final CloseableHttpClient httpClient = createHttpClient();
@@ -166,13 +163,15 @@ public class BulkExportClient {
       final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
       log.info("Export successful: {}", result);
       return result;
+    } catch (final IOException ex) {
+      log.error("Export failed", ex);
+      throw new BulkExportException.SystemError("Export failed", ex);
     }
   }
 
   BulkExportResult doExport(@Nonnull final FileStore fileStore,
       @Nonnull final BulkExportTemplate bulkExportTemplate,
-      @Nonnull final UrlDownloadTemplate downloadTemplate)
-      throws URISyntaxException, IOException, InterruptedException {
+      @Nonnull final UrlDownloadTemplate downloadTemplate) throws IOException {
 
     final Instant timeoutAt = TimeoutUtils.toTimeoutAt(timeout);
     log.debug("Setting timeout at: {} for requested timeout of: {}", timeoutAt, timeout);

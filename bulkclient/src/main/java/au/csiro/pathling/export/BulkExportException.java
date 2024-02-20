@@ -38,6 +38,11 @@ public class BulkExportException extends RuntimeException {
     super(message, cause);
   }
 
+  public BulkExportException(final Throwable cause) {
+    super(cause);
+  }
+  
+  
   public static class Timeout extends BulkExportException {
 
     private static final long serialVersionUID = 2425985144670724776L;
@@ -47,6 +52,18 @@ public class BulkExportException extends RuntimeException {
     }
   }
 
+  public static class SystemError extends BulkExportException {
+
+    private static final long serialVersionUID = 2425985144670724776L;
+
+    public SystemError(@Nonnull final String message, final Throwable cause) {
+      super(message, cause);
+    }
+    public SystemError(final Throwable cause) {
+      super(cause);
+    }
+  }
+  
   @Getter
   public static class HttpError extends BulkExportException {
 
@@ -111,6 +128,9 @@ public class BulkExportException extends RuntimeException {
     }
   }
 
+  
+  
+  
   public static class ProtocolError extends BulkExportException {
 
     private static final long serialVersionUID = -65793456918228699L;

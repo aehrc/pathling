@@ -30,7 +30,7 @@ import javax.annotation.Nonnull;
 public class RunBulkExport {
 
 
-  public static void runSystemLevel() throws Exception {
+  public static void runSystemLevel()  {
 
     // NO ERRORS
     final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
@@ -64,7 +64,7 @@ public class RunBulkExport {
   }
 
 
-  public static void runPatientLevel() throws Exception {
+  public static void runPatientLevel() {
 
     // NO ERRORS
     final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";

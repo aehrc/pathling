@@ -79,9 +79,12 @@ public class BulkExportTemplate {
 
   @Nonnull
   public BulkExportResponse export(@Nonnull final BulkExportRequest request,
-      @Nonnull final Duration timeout)
-      throws URISyntaxException, IOException, InterruptedException {
-    return pool(kickOff(request), timeout);
+      @Nonnull final Duration timeout) {
+    try {
+      return pool(kickOff(request), timeout);
+    } catch (final IOException | URISyntaxException | InterruptedException ex) {
+      throw new BulkExportException.SystemError("System error in bulk export", ex);
+    }
   }
 
   @Nonnull
