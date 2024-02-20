@@ -51,7 +51,11 @@
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
     </dependency>
-
+    <dependency>
+      <groupId>au.csiro.pathling</groupId>
+      <artifactId>bulkclient</artifactId>
+    </dependency>
+    
     <!-- Apache Spark -->
     <dependency>
       <groupId>org.apache.spark</groupId>

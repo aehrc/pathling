@@ -48,13 +48,13 @@ def bulk_export(
 
     jsc: JavaObject = SparkContext._active_spark_context._jsc
     jvm: Optional[JVMView] = SparkContext._active_spark_context._jvm
-    jvm_bulk_export: JavaObject = jvm.au.csiro.pathling.export
+    jvm_pathling: JavaObject = jvm.au.csiro.pathling
 
     def datetime_to_instant(dt: datetime) -> JavaObject:
         return jvm.java.time.Instant.ofEpochMilli(int(dt.timestamp() * 1000))
 
-    bulk_export_client = jvm_bulk_export.BulkExportClient.builder() \
-        .withFileStoreFactory(jvm_bulk_export.fs.HdfsFileStoreFactory.ofSpark(jsc.sc())) \
+    bulk_export_client = jvm_pathling.export.BulkExportClient.builder() \
+        .withFileStoreFactory(jvm_pathling.library.fs.HdfsFileStoreFactory.ofSpark(jsc.sc())) \
         .withFhirEndpointUrl(fhirEndpointUrl) \
         .withOutputDir(outputDirUrl) \
         .withOutputFormat(outputFormat) \

@@ -37,29 +37,18 @@
     <dependency>
       <groupId>au.csiro.pathling</groupId>
       <artifactId>utilities</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.spark</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>ca.uhn.hapi.fhir</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
-    <!-- Apache Spark -->
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_${pathling.scalaVersion}</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    
-    <!-- HAPI FHIR -->
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-base</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-structures-r4</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>ca.uhn.hapi.fhir</groupId>
-      <artifactId>hapi-fhir-client</artifactId>
-    </dependency>
-    
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
@@ -71,6 +60,11 @@
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
     </dependency>
 
     <!-- Testing -->
