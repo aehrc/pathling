@@ -18,7 +18,7 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -41,8 +41,8 @@ public class CollectionResult {
   @Nonnull
   public CollectionResult toTagReference() {
     return new CollectionResult(
-        collection.copyWith(StdColumnCtx.of(functions.col(selection.getTag()))), selection);
+        collection.copyWith(ArrayRepresentation.of(functions.col(selection.getTag()))), selection);
 
   }
-  
+
 }

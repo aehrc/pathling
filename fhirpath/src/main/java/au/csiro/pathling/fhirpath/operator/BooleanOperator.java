@@ -23,7 +23,7 @@ import static org.apache.spark.sql.functions.when;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import org.apache.spark.sql.Column;
 
 /**
@@ -56,7 +56,8 @@ public class BooleanOperator implements BinaryOperator {
     checkUserInput(right instanceof BooleanCollection,
         "Right operand to " + type + " operator must be Boolean");
 
-    final ColumnCtx resultCtx = ColumnCtx.biOperator(left.getCtx(), right.getCtx(),
+    final ColumnRepresentation resultCtx = ColumnRepresentation.biOperator(left.getCtx(),
+        right.getCtx(),
         (leftValue, rightValue) -> {
           // Based on the type of operator, create the correct column expression.
           final Column valueColumn;

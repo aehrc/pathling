@@ -4,9 +4,9 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
-class NullCtx extends ColumnCtx {
+class NullRepresentation extends ColumnRepresentation {
 
-  static final ColumnCtx INSTANCE = new au.csiro.pathling.fhirpath.column.NullCtx();
+  static final ColumnRepresentation INSTANCE = new NullRepresentation();
 
 
   @Override
@@ -15,26 +15,26 @@ class NullCtx extends ColumnCtx {
   }
 
   @Override
-  protected ColumnCtx copyOf(@Nonnull final Column newValue) {
+  protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {
     return this;
   }
 
   @Nonnull
   @Override
-  public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+  public ColumnRepresentation vectorize(@Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression) {
     return this;
   }
 
   @Nonnull
   @Override
-  public ColumnCtx flatten() {
+  public ColumnRepresentation flatten() {
     return this;
   }
 
   @Nonnull
   @Override
-  public ColumnCtx traverse(@Nonnull final String fieldName) {
+  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
     return this;
   }
 }

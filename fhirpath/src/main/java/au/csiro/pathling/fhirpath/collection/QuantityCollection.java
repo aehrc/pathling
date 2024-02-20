@@ -29,8 +29,8 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -58,24 +58,24 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   private static final Column NO_UNIT_LITERAL = lit(Ucum.NO_UNIT_CODE);
   private static final Pattern UCUM_PATTERN = Pattern.compile("([0-9.]+) ('[^']+')");
 
-  public QuantityCollection(@Nonnull final ColumnCtx columnCtx,
+  public QuantityCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param columnCtx The columnCtx to use
+   * @param columnRepresentation The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link QuantityCollection}
    */
   @Nonnull
-  public static QuantityCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new QuantityCollection(columnCtx, Optional.of(FhirPathType.QUANTITY),
+    return new QuantityCollection(columnRepresentation, Optional.of(FhirPathType.QUANTITY),
         Optional.of(FHIRDefinedType.QUANTITY), definition);
   }
 
@@ -83,12 +83,12 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   /**
    * Returns a new instance with the specified columnCtx and unknown definition.
    *
-   * @param columnCtx The columnCtx to use
+   * @param columnRepresentation The columnCtx to use
    * @return A new instance of {@link QuantityCollection}
    */
   @Nonnull
-  public static QuantityCollection build(@Nonnull final ColumnCtx columnCtx) {
-    return build(columnCtx, Optional.empty());
+  public static QuantityCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+    return build(columnRepresentation, Optional.empty());
   }
 
 
@@ -137,7 +137,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
     // TODO: complex literal handling
-    return QuantityCollection.build(StdColumnCtx.of(column));
+    return QuantityCollection.build(ArrayRepresentation.of(column));
   }
 
   @Nonnull
@@ -222,7 +222,8 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
     display.ifPresent(quantity::setUnit);
 
     // TODO: literal handling
-    return QuantityCollection.build(StdColumnCtx.of(QuantityEncoding.encodeLiteral(quantity)));
+    return QuantityCollection.build(
+        ArrayRepresentation.of(QuantityEncoding.encodeLiteral(quantity)));
   }
 
   @Nonnull
@@ -235,13 +236,13 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   @Override
   public Optional<Column> getNumericValueColumn() {
     return Optional.of(
-        getColumnCtx().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
+        getColumnRepresentation().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
   }
 
   @Nonnull
   @Override
   public Optional<Column> getNumericContextColumn() {
-    return Optional.of(getColumnCtx().getValue());
+    return Optional.of(getColumnRepresentation().getValue());
   }
 
   @Nonnull
@@ -281,7 +282,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(StdColumnCtx.of(resultQuantityColumn));
+      return QuantityCollection.build(ArrayRepresentation.of(resultQuantityColumn));
     };
   }
 

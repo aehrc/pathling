@@ -2,7 +2,7 @@ package au.csiro.pathling.fhirpath.collection.mixed;
 
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -17,7 +17,7 @@ import lombok.Getter;
 public abstract class MixedCollection extends Collection {
 
   protected MixedCollection() {
-    super(ColumnCtx.nullCtx(), Optional.empty(), Optional.empty(), Optional.empty());
+    super(ColumnRepresentation.nullCtx(), Optional.empty(), Optional.empty(), Optional.empty());
   }
 
   /**

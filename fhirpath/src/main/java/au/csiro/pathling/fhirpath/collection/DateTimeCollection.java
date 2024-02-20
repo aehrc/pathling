@@ -25,7 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
@@ -54,30 +54,30 @@ public class DateTimeCollection extends Collection implements
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DateCollection.class, DateTimeCollection.class);
 
-  protected DateTimeCollection(@Nonnull final ColumnCtx columnCtx,
+  protected DateTimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param columnCtx The columnCtx to use
+   * @param columnRepresentation The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link DateTimeCollection}
    */
   @Nonnull
-  public static DateTimeCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new DateTimeCollection(columnCtx, Optional.of(FhirPathType.DATETIME),
+    return new DateTimeCollection(columnRepresentation, Optional.of(FhirPathType.DATETIME),
         Optional.of(FHIRDefinedType.DATETIME), definition);
   }
 
   @Nonnull
-  public static DateTimeCollection build(@Nonnull final ColumnCtx columnCtx) {
-    return DateTimeCollection.build(columnCtx, Optional.empty());
+  public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+    return DateTimeCollection.build(columnRepresentation, Optional.empty());
   }
 
   /**
@@ -91,7 +91,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
       throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateTimeCollection.build(ColumnCtx.literal(dateString));
+    return DateTimeCollection.build(ColumnRepresentation.literal(dateString));
   }
 
   @Nonnull
@@ -137,11 +137,12 @@ public class DateTimeCollection extends Collection implements
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    final ColumnCtx valueColumn;
+    final ColumnRepresentation valueColumn;
     if (getFhirType().isPresent() && getFhirType().get() == FHIRDefinedType.INSTANT) {
-      valueColumn = getColumnCtx().call(c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
+      valueColumn = getColumnRepresentation().call(
+          c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
     } else {
-      valueColumn = getColumnCtx();
+      valueColumn = getColumnRepresentation();
     }
     return StringCollection.build(valueColumn);
   }

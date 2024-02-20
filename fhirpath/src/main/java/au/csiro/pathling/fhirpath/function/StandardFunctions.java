@@ -30,8 +30,8 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
@@ -126,7 +126,7 @@ public class StandardFunctions {
     return input.traverse(EXTENSION_ELEMENT_NAME).map(extensionCollection ->
         where(extensionCollection, c -> c.traverse(URL_ELEMENT_NAME).map(
                 urlCollection -> urlCollection.getComparison(EQUALS).apply(url))
-            .map(col -> BooleanCollection.build(StdColumnCtx.of(col)))
+            .map(col -> BooleanCollection.build(ArrayRepresentation.of(col)))
             .orElse(BooleanCollection.falseCollection()))
     ).orElse(Collection.nullCollection());
   }
@@ -150,7 +150,7 @@ public class StandardFunctions {
     return StringCollection.build(input.getCtx().join(
         nonNull(separator)
         ? separator.asSingular().getCtx()
-        : ColumnCtx.literal(JOIN_DEFAULT_SEPARATOR)
+        : ColumnRepresentation.literal(JOIN_DEFAULT_SEPARATOR)
     ));
   }
 

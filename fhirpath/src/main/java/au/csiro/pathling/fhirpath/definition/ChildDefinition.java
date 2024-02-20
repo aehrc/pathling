@@ -21,11 +21,11 @@ public interface ChildDefinition extends NodeDefinition {
    */
   @Nonnull
   static ChildDefinition build(@Nonnull final BaseRuntimeChildDefinition childDefinition) {
-    // TODO: check why this is safe to remove
-    // if (childDefinition instanceof RuntimeChildAny && "valueReference".equals(childDefinition
-    //     .getElementName())) {
-    //   return new ReferenceExtensionDefinition((RuntimeChildAny) childDefinition);
-    // } else 
+    // TODO: Check if this is safe to remove.
+    //   if (childDefinition instanceof RuntimeChildAny && "valueReference".equals(childDefinition
+    //       .getElementName())) {
+    //     return new ReferenceExtensionDefinition((RuntimeChildAny) childDefinition);
+    //   } else 
     if (childDefinition instanceof RuntimeChildResourceDefinition) {
       return new ReferenceDefinition((RuntimeChildResourceDefinition) childDefinition);
     } else if (isChildChoiceDefinition(childDefinition)) {
@@ -53,4 +53,5 @@ public interface ChildDefinition extends NodeDefinition {
    */
   @Nonnull
   Optional<Integer> getMaxCardinality();
+ 
 }

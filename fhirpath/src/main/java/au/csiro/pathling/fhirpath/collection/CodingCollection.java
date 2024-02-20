@@ -24,8 +24,8 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.comparison.CodingSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
@@ -46,24 +46,24 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class CodingCollection extends Collection implements Materializable<Coding>,
     Comparable, StringCoercible {
 
-  protected CodingCollection(@Nonnull final ColumnCtx columnCtx,
+  protected CodingCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified column and definition.
    *
-   * @param columnCtx The column to use
+   * @param columnRepresentation The column to use
    * @param definition The definition to use
    * @return A new instance of {@link CodingCollection}
    */
   @Nonnull
-  public static CodingCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static CodingCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new CodingCollection(columnCtx, Optional.of(FhirPathType.CODING),
+    return new CodingCollection(columnRepresentation, Optional.of(FhirPathType.CODING),
         Optional.of(FHIRDefinedType.CODING), definition);
   }
 
@@ -71,12 +71,12 @@ public class CodingCollection extends Collection implements Materializable<Codin
   /**
    * Returns a new instance with the specified column and no definition.
    *
-   * @param columnCtx The column to use
+   * @param columnRepresentation The column to use
    * @return A new instance of {@link CodingCollection}
    */
   @Nonnull
-  public static CodingCollection build(@Nonnull final ColumnCtx columnCtx) {
-    return build(columnCtx, Optional.empty());
+  public static CodingCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+    return build(columnRepresentation, Optional.empty());
   }
 
 
@@ -96,7 +96,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
     // given that this is a struct of literals
     // probably yes on the ColumnCtx level provided that there is also a way to encode Codings there
     // (so it should be moved entirely into the Column Ctx)
-    return CodingCollection.build(StdColumnCtx.of(column));
+    return CodingCollection.build(ArrayRepresentation.of(column));
   }
 
   @Nonnull

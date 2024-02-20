@@ -94,8 +94,8 @@ public class ExtractViewX {
                                    : collection;
 
     final Column columnResult = info.isAsCollection()
-                                ? finalResult.getColumnCtx().getValue()
-                                : finalResult.asSingular().getColumnCtx().getValue();
+                                ? finalResult.getColumnRepresentation().getValue()
+                                : finalResult.asSingular().getColumnRepresentation().getValue();
     return info.getAlias().map(columnResult::alias).orElse(columnResult);
   }
 
@@ -110,7 +110,7 @@ public class ExtractViewX {
         throw new IllegalArgumentException("Filter must be a boolean expression");
       }
       return whereResult.stream()
-          .map(cr -> cr.getCollection().asSingular().getColumnCtx().getValue())
+          .map(cr -> cr.getCollection().asSingular().getColumnRepresentation().getValue())
           .reduce(Column::and);
     });
   }

@@ -34,7 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 @SpringBootUnitTest
-class StdColumnCtxTest {
+class ArrayRepresentationTest {
 
   // TODO: improve to check the actual values returned.
   class ColumnAsserts {
@@ -42,21 +42,21 @@ class StdColumnCtxTest {
     final List<Column> tests = new ArrayList<>();
 
     @Nonnull
-    ColumnAsserts assertNull(@Nonnull final ColumnCtx column) {
+    ColumnAsserts assertNull(@Nonnull final ColumnRepresentation column) {
       tests.add(column.getValue().isNull());
       return this;
     }
 
     @Nonnull
     ColumnAsserts assertEquals(@Nonnull final Object expectedValue,
-        @Nonnull final ColumnCtx column) {
+        @Nonnull final ColumnRepresentation column) {
       tests.add(column.getValue().equalTo(expectedValue));
       return this;
     }
 
     @Nonnull
-    ColumnAsserts assertEquals(@Nonnull final ColumnCtx expectedValue,
-        @Nonnull final ColumnCtx column) {
+    ColumnAsserts assertEquals(@Nonnull final ColumnRepresentation expectedValue,
+        @Nonnull final ColumnRepresentation column) {
       return assertEquals(expectedValue.getValue(), column);
     }
 
@@ -74,35 +74,36 @@ class StdColumnCtxTest {
   SparkSession spark;
 
   @Nonnull
-  public static StdColumnCtx nullValue() {
-    return StdColumnCtx.of(functions.lit(null));
+  public static ArrayRepresentation nullValue() {
+    return ArrayRepresentation.of(functions.lit(null));
   }
 
   @Nonnull
-  public static StdColumnCtx valueOf(@Nonnull final Object value) {
-    return StdColumnCtx.of(functions.lit(value));
+  public static ArrayRepresentation valueOf(@Nonnull final Object value) {
+    return ArrayRepresentation.of(functions.lit(value));
   }
 
 
   @Nonnull
-  public static StdColumnCtx nullArray() {
-    return StdColumnCtx.of(functions.lit(null).cast(DataTypes.createArrayType(DataTypes.NullType)));
+  public static ArrayRepresentation nullArray() {
+    return ArrayRepresentation.of(
+        functions.lit(null).cast(DataTypes.createArrayType(DataTypes.NullType)));
   }
 
   @Nonnull
-  public static StdColumnCtx emptyArray() {
-    return StdColumnCtx.of(functions.array());
+  public static ArrayRepresentation emptyArray() {
+    return ArrayRepresentation.of(functions.array());
   }
 
   @Nonnull
-  public static StdColumnCtx arrayOf(@Nonnull final Object... values) {
-    return StdColumnCtx.of(functions.array(
+  public static ArrayRepresentation arrayOf(@Nonnull final Object... values) {
+    return ArrayRepresentation.of(functions.array(
         Stream.of(values).map(v -> valueOf(v).getValue()).toArray(Column[]::new)));
   }
 
   @Nonnull
-  public static StdColumnCtx arrayOfOne(@Nonnull final Object value) {
-    return StdColumnCtx.of(functions.array(valueOf(value).getValue()));
+  public static ArrayRepresentation arrayOfOne(@Nonnull final Object value) {
+    return ArrayRepresentation.of(functions.array(valueOf(value).getValue()));
   }
 
 

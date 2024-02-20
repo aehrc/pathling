@@ -35,38 +35,38 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 
 
-public abstract class ColumnCtx {
+public abstract class ColumnRepresentation {
 
   static final Column NULL_LITERAL = functions.lit(null);
 
   @Nonnull
-  public ColumnCtx call(@Nonnull final Function<Column, Column> lambda) {
+  public ColumnRepresentation call(@Nonnull final Function<Column, Column> lambda) {
     return copyOf(lambda.apply(getValue()));
   }
 
   @Nonnull
-  public static ColumnCtx nullCtx() {
-    return NullCtx.INSTANCE;
+  public static ColumnRepresentation nullCtx() {
+    return NullRepresentation.INSTANCE;
   }
 
-  public static ColumnCtx literal(@Nonnull final Object value) {
-    return StdColumnCtx.of(functions.lit(value));
+  public static ColumnRepresentation literal(@Nonnull final Object value) {
+    return ArrayRepresentation.of(functions.lit(value));
   }
 
   public abstract Column getValue();
 
-  protected abstract ColumnCtx copyOf(@Nonnull final Column newValue);
+  protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
   @Nonnull
-  public abstract ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+  public abstract ColumnRepresentation vectorize(@Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression);
 
 
   @Nonnull
-  public abstract ColumnCtx flatten();
+  public abstract ColumnRepresentation flatten();
 
   @Nonnull
-  public abstract ColumnCtx traverse(@Nonnull final String fieldName);
+  public abstract ColumnRepresentation traverse(@Nonnull final String fieldName);
 
   public Optional<String> asStringValue() {
     return Optional.of(getValue().expr())
@@ -75,7 +75,7 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx toArray() {
+  public ColumnRepresentation toArray() {
     return vectorize(
         Function.identity(),
         c -> functions.when(c.isNotNull(), functions.array(c))
@@ -83,25 +83,25 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx combine(@Nonnull final ColumnCtx other) {
+  public ColumnRepresentation combine(@Nonnull final ColumnRepresentation other) {
     return copyOf(functions.concat(toArray().getValue(), other.toArray().getValue()));
   }
 
   @SuppressWarnings("unused")
   @Nonnull
-  public ColumnCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression) {
+  public ColumnRepresentation vectorize(@Nonnull final Function<Column, Column> arrayExpression) {
     // the default implementation just wraps the element info array if needed
     return vectorize(arrayExpression,
         c -> arrayExpression.apply(functions.when(c.isNotNull(), functions.array(c))));
   }
 
   @Nonnull
-  public ColumnCtx orElse(@Nonnull final Object value) {
+  public ColumnRepresentation orElse(@Nonnull final Object value) {
     return copyOf(functions.coalesce(getValue(), functions.lit(value)));
   }
 
   @Nonnull
-  public ColumnCtx singular() {
+  public ColumnRepresentation singular() {
     return vectorize(
         c -> functions.when(functions.size(c).leq(1), c.getItem(0))
             .otherwise(functions.raise_error(
@@ -111,7 +111,7 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx filter(@Nonnull final Function<Column, Column> lambda) {
+  public ColumnRepresentation filter(@Nonnull final Function<Column, Column> lambda) {
     return vectorize(
         c -> functions.filter(c, lambda::apply),
         c -> functions.when(c.isNotNull(), functions.when(lambda.apply(c), c))
@@ -119,12 +119,12 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx rlike(@Nonnull final String regex) {
+  public ColumnRepresentation rlike(@Nonnull final String regex) {
     return copyOf(getValue().rlike(regex));
   }
 
   @Nonnull
-  public ColumnCtx removeNulls() {
+  public ColumnRepresentation removeNulls() {
     return vectorize(
         c -> functions.filter(c, Column::isNotNull),
         Function.identity()
@@ -133,7 +133,7 @@ public abstract class ColumnCtx {
 
 
   @Nonnull
-  public ColumnCtx transform(final Function<Column, Column> lambda) {
+  public ColumnRepresentation transform(final Function<Column, Column> lambda) {
     return vectorize(
         c -> functions.transform(c, lambda::apply),
         c -> functions.when(c.isNotNull(), lambda.apply(c))
@@ -141,7 +141,7 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx aggregate(@Nonnull final Object zeroValue,
+  public ColumnRepresentation aggregate(@Nonnull final Object zeroValue,
       final BiFunction<Column, Column, Column> aggregator) {
 
     return vectorize(
@@ -154,13 +154,13 @@ public abstract class ColumnCtx {
 
 
   @Nonnull
-  public ColumnCtx first() {
+  public ColumnRepresentation first() {
 
     return vectorize(c -> c.getItem(0), Function.identity());
   }
 
 
-  public ColumnCtx last() {
+  public ColumnRepresentation last() {
     // we need to use `element_at()` here are `getItem()` does not support column arguments
     // NOTE: `element_at()` is 1-indexed as opposed to `getItem()` which is 0-indexed
     return vectorize(
@@ -172,7 +172,7 @@ public abstract class ColumnCtx {
 
 
   @Nonnull
-  public ColumnCtx count() {
+  public ColumnRepresentation count() {
     return vectorize(
         c -> functions.when(c.isNull(), 0).otherwise(functions.size(c)),
         c -> functions.when(c.isNull(), 0).otherwise(1)
@@ -180,56 +180,56 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public ColumnCtx empty() {
+  public ColumnRepresentation empty() {
     return vectorize(
         c -> functions.when(c.isNotNull(), functions.size(c).equalTo(0)).otherwise(true),
         Column::isNull);
   }
 
   @Nonnull
-  public ColumnCtx join(@Nonnull final ColumnCtx separator) {
+  public ColumnRepresentation join(@Nonnull final ColumnRepresentation separator) {
     return vectorize(c -> new Column(new ArrayJoin(c.expr(), separator.getValue().expr())),
         Function.identity());
   }
 
   @Nonnull
-  public ColumnCtx not() {
+  public ColumnRepresentation not() {
     return transform(functions::not);
   }
 
   @Nonnull
-  public ColumnCtx sum() {
+  public ColumnRepresentation sum() {
     return aggregate(0, Column::plus);
   }
 
 
   @Nonnull
-  public ColumnCtx max() {
+  public ColumnRepresentation max() {
     return vectorize(functions::array_max, Function.identity());
   }
 
   @Nonnull
-  public ColumnCtx min() {
+  public ColumnRepresentation min() {
     return vectorize(functions::array_min, Function.identity());
   }
 
   @Nonnull
-  public ColumnCtx allTrue() {
+  public ColumnRepresentation allTrue() {
     return min().orElse(true);
   }
 
   @Nonnull
-  public ColumnCtx allFalse() {
+  public ColumnRepresentation allFalse() {
     return max().not().orElse(true);
   }
 
   @Nonnull
-  public ColumnCtx anyTrue() {
+  public ColumnRepresentation anyTrue() {
     return max().orElse(false);
   }
 
   @Nonnull
-  public ColumnCtx anyFalse() {
+  public ColumnRepresentation anyFalse() {
     return min().not().orElse(false);
   }
 
@@ -237,36 +237,36 @@ public abstract class ColumnCtx {
    * Call udf with this column as the first argument.
    */
   @Nonnull
-  public ColumnCtx mapWithUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
+  public ColumnRepresentation mapWithUDF(@Nonnull final String udfName, @Nonnull final ColumnRepresentation... args) {
     return transform(c -> functions.callUDF(udfName,
-        Stream.concat(Stream.of(c), Stream.of(args).map(ColumnCtx::getValue))
+        Stream.concat(Stream.of(c), Stream.of(args).map(ColumnRepresentation::getValue))
             .toArray(Column[]::new)));
 
   }
 
   @Nonnull
-  public ColumnCtx callUDF(@Nonnull final String udfName, @Nonnull final ColumnCtx... args) {
+  public ColumnRepresentation callUDF(@Nonnull final String udfName, @Nonnull final ColumnRepresentation... args) {
     return copyOf(functions.callUDF(udfName,
-        Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnCtx::getValue))
+        Stream.concat(Stream.of(getValue()), Stream.of(args).map(ColumnRepresentation::getValue))
             .toArray(Column[]::new)));
   }
 
   @Nonnull
-  public ColumnCtx cast(@Nonnull final DataType dataType) {
+  public ColumnRepresentation cast(@Nonnull final DataType dataType) {
     return copyOf(getValue().cast(dataType));
   }
 
 
   @Nonnull
-  public ColumnCtx asString() {
+  public ColumnRepresentation asString() {
     return cast(DataTypes.StringType);
   }
 
 
   @Nonnull
-  public One<ColumnCtx> explode() {
+  public One<ColumnRepresentation> explode() {
     //  TODO: this actually cannot should return DatasetResult as filtering is required here
-    final ColumnCtx exploded = vectorize(functions::explode, Function.identity());
+    final ColumnRepresentation exploded = vectorize(functions::explode, Function.identity());
     final String materializedColumnName = randomAlias();
     return DatasetResult.one(copyOf(functions.col(materializedColumnName)),
         ds -> ds.withColumn(
@@ -275,9 +275,9 @@ public abstract class ColumnCtx {
   }
 
   @Nonnull
-  public One<ColumnCtx> explode_outer() {
+  public One<ColumnRepresentation> explode_outer() {
     //  TODO: this actually cannot should return DatasetResult as filtering is required here
-    final ColumnCtx exploded = vectorize(functions::explode_outer, Function.identity());
+    final ColumnRepresentation exploded = vectorize(functions::explode_outer, Function.identity());
     final String materializedColumnName = randomAlias();
     return DatasetResult.one(copyOf(functions.col(materializedColumnName)),
         ds -> ds.withColumn(
@@ -286,9 +286,9 @@ public abstract class ColumnCtx {
 
 
   @Nonnull
-  public static ColumnCtx biOperator(@Nonnull final ColumnCtx left, @Nonnull final ColumnCtx right,
+  public static ColumnRepresentation biOperator(@Nonnull final ColumnRepresentation left, @Nonnull final ColumnRepresentation right,
       @Nonnull final BiFunction<Column, Column, Column> lambda) {
-    return StdColumnCtx.of(lambda.apply(left.getValue(), right.getValue()));
+    return ArrayRepresentation.of(lambda.apply(left.getValue(), right.getValue()));
   }
 
 }

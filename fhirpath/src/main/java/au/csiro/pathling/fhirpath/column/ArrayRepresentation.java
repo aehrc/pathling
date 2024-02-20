@@ -17,43 +17,43 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import au.csiro.pathling.encoders.ValueFunctions;
+
+import java.util.function.Function;
+import javax.annotation.Nonnull;
+
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
-import javax.annotation.Nonnull;
-import java.util.function.Function;
 
 @EqualsAndHashCode(callSuper = true)
 @Value(staticConstructor = "of")
-public class SingleRowCtx extends ColumnCtx {
+public class ArrayRepresentation extends ColumnRepresentation {
 
   Column value;
 
   @Override
-  protected ColumnCtx copyOf(@Nonnull final Column newValue) {
-    return SingleRowCtx.of(newValue);
+  protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {
+    return ArrayRepresentation.of(newValue);
   }
 
   @Override
   @Nonnull
-  public SingleRowCtx vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+  public ArrayRepresentation vectorize(@Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression) {
-    return SingleRowCtx.of(singularExpression.apply(value));
+    return ArrayRepresentation.of(
+        ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
   }
 
   @Override
   @Nonnull
-  public ColumnCtx flatten() {
-    // TODO: ???? What should it be
-    throw new UnsupportedOperationException("Cannot flatten a single row");
+  public ArrayRepresentation flatten() {
+    return of(ValueFunctions.unnest(value));
   }
 
   @Override
   @Nonnull
-  public ColumnCtx traverse(@Nonnull final String fieldName) {
-    return StdColumnCtx.of(
-        functions.when(value.isNotNull(), functions.col(fieldName))
-    );
+  public ArrayRepresentation traverse(@Nonnull final String fieldName) {
+    return of(ValueFunctions.unnest(value.getField(fieldName)));
   }
 }

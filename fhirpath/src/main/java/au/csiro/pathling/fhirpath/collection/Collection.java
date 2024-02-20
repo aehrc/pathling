@@ -27,8 +27,8 @@ import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.definition.ChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ChoiceChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
@@ -87,11 +87,12 @@ public class Collection implements Comparable, Numeric {
           .put(FHIRDefinedType.QUANTITY, QuantityCollection.class)
           .put(FHIRDefinedType.SIMPLEQUANTITY, QuantityCollection.class)
           .build();
+  
   /**
    * A {@link Column} representing the result of evaluating this expression.
    */
   @Nonnull
-  private final ColumnCtx columnCtx;
+  private final ColumnRepresentation columnRepresentation;
 
   /**
    * The type of the result of evaluating this expression, if known.
@@ -115,25 +116,25 @@ public class Collection implements Comparable, Numeric {
    * Builds a generic {@link Collection} with the specified column, FHIRPath type, FHIR type and
    * definition.
    *
-   * @param columnCtx a {@link Column} containing the result of the expression
+   * @param columnRepresentation a {@link Column} containing the result of the expression
    * @param fhirPathType the {@link FhirPathType} that this path should be based upon
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    */
   @Nonnull
-  public static Collection build(@Nonnull final ColumnCtx columnCtx,
+  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    return new Collection(columnCtx, fhirPathType, fhirType, definition);
+    return new Collection(columnRepresentation, fhirPathType, fhirType, definition);
   }
 
   @Nonnull
-  public static Collection build(@Nonnull final ColumnCtx columnCtx,
+  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
-    return getInstance(columnCtx, Optional.of(fhirType), definition);
+    return getInstance(columnRepresentation, Optional.of(fhirType), definition);
   }
 
   /**
@@ -142,16 +143,16 @@ public class Collection implements Comparable, Numeric {
    * <p>
    * Use this builder when the path is the child of another path, and will need to be traversable.
    *
-   * @param columnCtx a {@link Column} containing the result of the expression
+   * @param columnRepresentation a {@link Column} containing the result of the expression
    * @param definition the {@link ElementDefinition} that this path should be based upon
    * @return a new {@link Collection}
    */
   @Nonnull
-  public static Collection build(@Nonnull final ColumnCtx columnCtx,
+  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final ElementDefinition definition) {
     final Optional<FHIRDefinedType> optionalFhirType = definition.getFhirType();
     if (optionalFhirType.isPresent()) {
-      return getInstance(columnCtx, optionalFhirType, Optional.of(definition));
+      return getInstance(columnRepresentation, optionalFhirType, Optional.of(definition));
     } else {
       throw new IllegalArgumentException(
           "Attempted to build a Collection with an ElementDefinition with no fhirType");
@@ -164,18 +165,18 @@ public class Collection implements Comparable, Numeric {
    * <p>
    * Use this builder when the path is derived, e.g. the result of a function.
    *
-   * @param columnCtx a {@link ColumnCtx} containing the result of the expression
+   * @param columnRepresentation a {@link ColumnRepresentation} containing the result of the expression
    * @param fhirType the {@link FHIRDefinedType} that this path should be based upon
    * @return a new {@link Collection}
    */
   @Nonnull
-  public static Collection build(@Nonnull final ColumnCtx columnCtx,
+  public static Collection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FHIRDefinedType fhirType) {
-    return getInstance(columnCtx, Optional.of(fhirType), Optional.empty());
+    return getInstance(columnRepresentation, Optional.of(fhirType), Optional.empty());
   }
 
   @Nonnull
-  private static Collection getInstance(@Nonnull final ColumnCtx columnCtx,
+  private static Collection getInstance(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<ElementDefinition> definition) {
     // Look up the class that represents an element with the specified FHIR type.
@@ -189,9 +190,9 @@ public class Collection implements Comparable, Numeric {
     try {
       // Call its constructor and return.
       final Constructor<? extends Collection> constructor = elementPathClass
-          .getDeclaredConstructor(ColumnCtx.class, Optional.class, Optional.class, Optional.class);
+          .getDeclaredConstructor(ColumnRepresentation.class, Optional.class, Optional.class, Optional.class);
       return constructor
-          .newInstance(columnCtx, fhirPathType, fhirType, definition);
+          .newInstance(columnRepresentation, fhirPathType, fhirType, definition);
     } catch (final NoSuchMethodException | InstantiationException | IllegalAccessException |
                    InvocationTargetException e) {
       throw new RuntimeException("Problem building a Collection object", e);
@@ -268,9 +269,9 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
     // Invoke the traversal method on the column context to get the new column.
-    final ColumnCtx columnCtx = getCtx().traverse(childDef.getElementName());
+    final ColumnRepresentation columnRepresentation = getCtx().traverse(childDef.getElementName());
     // Return a new Collection with the new column and the child definition.
-    return Collection.build(columnCtx, childDef);
+    return Collection.build(columnRepresentation, childDef);
   }
 
   @Nonnull
@@ -285,8 +286,8 @@ public class Collection implements Comparable, Numeric {
   }
 
   @Nonnull
-  protected ColumnCtx getFid() {
-    return columnCtx.traverse(ExtensionSupport.FID_FIELD_NAME());
+  protected ColumnRepresentation getFid() {
+    return columnRepresentation.traverse(ExtensionSupport.FID_FIELD_NAME());
   }
 
   @Nonnull
@@ -340,45 +341,45 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public static Collection nullCollection() {
-    return new Collection(ColumnCtx.nullCtx(), Optional.empty(), Optional.of(FHIRDefinedType.NULL),
+    return new Collection(ColumnRepresentation.nullCtx(), Optional.empty(), Optional.of(FHIRDefinedType.NULL),
         Optional.empty());
   }
 
   @Nonnull
-  public Collection copyWith(@Nonnull final ColumnCtx newValue) {
+  public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
     return getInstance(newValue, getFhirType(), (Optional<ElementDefinition>) definition);
   }
 
   @Nonnull
-  public Collection filter(@Nonnull final Function<ColumnCtx, ColumnCtx> lambda) {
-    return map(ctx -> ctx.filter(col -> lambda.apply(StdColumnCtx.of(col)).getValue()));
+  public Collection filter(@Nonnull final Function<ColumnRepresentation, ColumnRepresentation> lambda) {
+    return map(ctx -> ctx.filter(col -> lambda.apply(ArrayRepresentation.of(col)).getValue()));
   }
 
   @Nonnull
   public Collection asSingular() {
-    return map(ColumnCtx::singular);
+    return map(ColumnRepresentation::singular);
   }
 
   @Nonnull
-  public Collection map(@Nonnull final Function<ColumnCtx, ColumnCtx> mapper) {
+  public Collection map(@Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper) {
     return copyWith(mapper.apply(getCtx()));
   }
 
   @Nonnull
-  public <C extends Collection> C map(@Nonnull final Function<ColumnCtx, ColumnCtx> mapper,
-      @Nonnull final Function<ColumnCtx, C> constructor) {
+  public <C extends Collection> C map(@Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper,
+      @Nonnull final Function<ColumnRepresentation, C> constructor) {
     return constructor.apply(mapper.apply(getCtx()));
   }
 
 
   @Nonnull
-  public <C extends Collection> C flatMap(@Nonnull final Function<ColumnCtx, C> mapper) {
+  public <C extends Collection> C flatMap(@Nonnull final Function<ColumnRepresentation, C> mapper) {
     return mapper.apply(getCtx());
   }
 
   @Nonnull
-  public ColumnCtx getCtx() {
-    return this.columnCtx;
+  public ColumnRepresentation getCtx() {
+    return this.columnRepresentation;
   }
 
 
@@ -398,7 +399,7 @@ public class Collection implements Comparable, Numeric {
 
   @Nonnull
   public Column getColumn() {
-    return columnCtx.getValue();
+    return columnRepresentation.getValue();
   }
 
   /**

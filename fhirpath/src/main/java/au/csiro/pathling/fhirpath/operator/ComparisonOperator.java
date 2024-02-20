@@ -23,7 +23,7 @@ import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import javax.annotation.Nonnull;
 
 /**
@@ -55,7 +55,7 @@ public class ComparisonOperator implements BinaryOperator {
     checkUserInput(left.isComparableTo(right), "Operands must be comparable");
 
     return BooleanCollection.build(
-        ColumnCtx.biOperator(left.getCtx(), right.getCtx(),
+        ColumnRepresentation.biOperator(left.getCtx(), right.getCtx(),
             (l, r) -> left.getComparison(type).apply(right))
     );
   }

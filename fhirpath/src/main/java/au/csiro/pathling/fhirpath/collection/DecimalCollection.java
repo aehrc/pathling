@@ -25,8 +25,8 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -51,36 +51,36 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   private static final org.apache.spark.sql.types.DecimalType DECIMAL_TYPE = DataTypes
       .createDecimalType(DecimalCustomCoder.precision(), DecimalCustomCoder.scale());
 
-  protected DecimalCollection(@Nonnull final ColumnCtx columnCtx,
+  protected DecimalCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> fhirPathType,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<NodeDefinition> definition) {
-    super(columnCtx, fhirPathType, fhirType, definition);
+    super(columnRepresentation, fhirPathType, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified column and definition.
    *
-   * @param columnCtx The column to use
+   * @param columnRepresentation The column to use
    * @param definition The definition to use
    * @return A new instance of {@link DecimalCollection}
    */
   @Nonnull
-  public static DecimalCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static DecimalCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new DecimalCollection(columnCtx, Optional.of(FhirPathType.DECIMAL),
+    return new DecimalCollection(columnRepresentation, Optional.of(FhirPathType.DECIMAL),
         Optional.of(FHIRDefinedType.DECIMAL), definition);
   }
 
   /**
    * Returns a new instance with the specified column and unknown definition.
    *
-   * @param columnCtx The column to use
+   * @param columnRepresentation The column to use
    * @return A new instance of {@link DecimalCollection}
    */
   @Nonnull
-  public static DecimalCollection build(@Nonnull final ColumnCtx columnCtx) {
-    return DecimalCollection.build(columnCtx, Optional.empty());
+  public static DecimalCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+    return DecimalCollection.build(columnRepresentation, Optional.empty());
   }
 
   /**
@@ -94,7 +94,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   public static DecimalCollection fromLiteral(@Nonnull final String literal)
       throws NumberFormatException {
     final BigDecimal value = parseLiteral(literal);
-    return DecimalCollection.build(ColumnCtx.literal(value));
+    return DecimalCollection.build(ColumnRepresentation.literal(value));
   }
 
   @Nonnull
@@ -142,10 +142,10 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         case MULTIPLICATION:
         case DIVISION:
           result = result.cast(getDecimalType());
-          return DecimalCollection.build(StdColumnCtx.of(result));
+          return DecimalCollection.build(ArrayRepresentation.of(result));
         case MODULUS:
           result = result.cast(DataTypes.LongType);
-          return IntegerCollection.build(StdColumnCtx.of(result));
+          return IntegerCollection.build(ArrayRepresentation.of(result));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -155,7 +155,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Nonnull
   @Override
   public Optional<Column> getNumericValueColumn() {
-    return Optional.of(this.getColumnCtx().getValue());
+    return Optional.of(this.getColumnRepresentation().getValue());
   }
 
   @Nonnull
@@ -195,6 +195,6 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return map(ColumnCtx::asString, StringCollection::build);
+    return map(ColumnRepresentation::asString, StringCollection::build);
   }
 }

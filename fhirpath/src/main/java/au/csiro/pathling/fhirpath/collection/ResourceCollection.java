@@ -20,9 +20,9 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.SingleRowCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.SingleRowRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.source.DataSource;
@@ -55,12 +55,12 @@ public class ResourceCollection extends Collection {
   @Nonnull
   private final ResourceDefinition resourceDefinition;
 
-  protected ResourceCollection(@Nonnull final ColumnCtx columnCtx,
+  protected ResourceCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition,
       @Nonnull final ResourceDefinition resourceDefinition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
     this.resourceDefinition = resourceDefinition;
   }
 
@@ -92,13 +92,13 @@ public class ResourceCollection extends Collection {
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(SingleRowCtx.of(functions.lit(true)), Optional.empty(),
+    return new ResourceCollection(SingleRowRepresentation.of(functions.lit(true)), Optional.empty(),
         getFhirType(resourceType), Optional.of(definition), definition);
   }
 
 
   @Nonnull
-  public static ResourceCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static ResourceCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceType resourceType) {
 
@@ -110,7 +110,7 @@ public class ResourceCollection extends Collection {
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(columnCtx, Optional.empty(),
+    return new ResourceCollection(columnRepresentation, Optional.empty(),
         getFhirType(resourceType), Optional.of(definition), definition);
   }
 
@@ -138,14 +138,14 @@ public class ResourceCollection extends Collection {
    * @return the {@link Column} within the dataset pertaining to this element
    */
   @Nonnull
-  public Optional<ColumnCtx> getElementColumn(@Nonnull final String elementName) {
+  public Optional<ColumnRepresentation> getElementColumn(@Nonnull final String elementName) {
     return Optional.of(functions.col(elementName))
-        .map(StdColumnCtx::of);
+        .map(ArrayRepresentation::of);
   }
 
   @Nonnull
   @Override
-  protected ColumnCtx getFid() {
+  protected ColumnRepresentation getFid() {
     return getElementColumn(ExtensionSupport.FID_FIELD_NAME()).orElseThrow(
         () -> new IllegalStateException("Resource does not have an 'id' column"));
   }
@@ -173,14 +173,14 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   @Override
-  public Collection copyWith(@Nonnull final ColumnCtx newValue) {
+  public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
     return new ResourceCollection(newValue, getType(), getFhirType(), getDefinition(),
         resourceDefinition);
   }
 
   @Nonnull
-  public ColumnCtx getKeyColumn() {
-    return getColumnCtx().traverse("id_versioned");
+  public ColumnRepresentation getKeyColumn() {
+    return getColumnRepresentation().traverse("id_versioned");
   }
 
 }

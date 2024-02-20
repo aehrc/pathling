@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import org.apache.commons.lang3.function.TriFunction;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
@@ -91,7 +91,7 @@ public interface Comparable {
    * @return A {@link Column}
    */
   @Nonnull
-  ColumnCtx getColumnCtx();
+  ColumnRepresentation getColumnCtx();
 
   /**
    * @return {@code true} if this path can be compared to the specified class

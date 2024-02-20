@@ -17,17 +17,14 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
-import static org.apache.spark.sql.functions.lit;
-
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Row;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
@@ -44,29 +41,29 @@ public class BooleanCollection extends Collection implements Materializable<Bool
       .of(BooleanCollection.class);
   private static final BooleanCollection FALSE_COLLECTION = BooleanCollection.fromValue(false);
 
-  protected BooleanCollection(@Nonnull final ColumnCtx columnCtx,
+  protected BooleanCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified column and definition.
    *
-   * @param columnCtx The column to use
+   * @param columnRepresentation The column to use
    * @param definition The definition to use
    * @return A new instance of {@link BooleanCollection}
    */
   @Nonnull
-  public static BooleanCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static BooleanCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new BooleanCollection(columnCtx, Optional.of(FhirPathType.BOOLEAN),
+    return new BooleanCollection(columnRepresentation, Optional.of(FhirPathType.BOOLEAN),
         Optional.of(FHIRDefinedType.BOOLEAN), definition);
   }
-  
+
   @Nonnull
-  public static BooleanCollection build(@Nonnull final ColumnCtx value) {
+  public static BooleanCollection build(@Nonnull final ColumnRepresentation value) {
     return BooleanCollection.build(value, Optional.empty());
   }
 
@@ -83,7 +80,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
 
   @Nonnull
   public static BooleanCollection fromValue(final boolean value) {
-    return BooleanCollection.build(ColumnCtx.literal(value));
+    return BooleanCollection.build(ColumnRepresentation.literal(value));
   }
 
   @Nonnull

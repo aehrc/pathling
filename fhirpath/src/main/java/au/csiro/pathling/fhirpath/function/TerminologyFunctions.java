@@ -23,7 +23,7 @@ import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.CodingCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.sql.udf.PropertyUdf;
@@ -51,8 +51,8 @@ public abstract class TerminologyFunctions {
     return StringCollection.build(input.getCtx()
         .mapWithUDF("display", Optional.ofNullable(language)
             .map(StringCollection::getCtx)
-            .map(ColumnCtx::singular)
-            .orElse(ColumnCtx.nullCtx()))
+            .map(ColumnRepresentation::singular)
+            .orElse(ColumnRepresentation.nullCtx()))
         .removeNulls()
     );
   }
@@ -76,13 +76,13 @@ public abstract class TerminologyFunctions {
     checkUserInput(PropertyUdf.ALLOWED_FHIR_TYPES.contains(propertyType),
         String.format("Invalid property type: %s", propertyType));
 
-    final ColumnCtx resultCtx = input.getCtx()
+    final ColumnRepresentation resultCtx = input.getCtx()
         .mapWithUDF(PropertyUdf.getNameForType(propertyType),
             code.getCtx().singular(),
             Optional.ofNullable(language)
                 .map(StringCollection::getCtx)
-                .map(ColumnCtx::singular)
-                .orElse(ColumnCtx.nullCtx())
+                .map(ColumnRepresentation::singular)
+                .orElse(ColumnRepresentation.nullCtx())
         ).flatten().removeNulls();
 
     return Collection.build(resultCtx, propertyType,
@@ -106,12 +106,12 @@ public abstract class TerminologyFunctions {
         .mapWithUDF("designation",
             Optional.ofNullable(use)
                 .map(CodingCollection::getCtx)
-                .map(ColumnCtx::singular)
-                .orElse(ColumnCtx.nullCtx()),
+                .map(ColumnRepresentation::singular)
+                .orElse(ColumnRepresentation.nullCtx()),
             Optional.ofNullable(language)
                 .map(StringCollection::getCtx)
-                .map(ColumnCtx::singular)
-                .orElse(ColumnCtx.nullCtx())
+                .map(ColumnRepresentation::singular)
+                .orElse(ColumnRepresentation.nullCtx())
         )
         .flatten().removeNulls()
     );
@@ -147,7 +147,8 @@ public abstract class TerminologyFunctions {
   public static BooleanCollection subsumes(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
-            ctx.callUDF("subsumes", codes.getColumnCtx(), ColumnCtx.literal(false)),
+            ctx.callUDF("subsumes", codes.getColumnRepresentation(),
+                ColumnRepresentation.literal(false)),
         BooleanCollection::build);
   }
 
@@ -164,7 +165,8 @@ public abstract class TerminologyFunctions {
   public static BooleanCollection subsumedBy(@Nonnull final CodingCollection input,
       @Nonnull final CodingCollection codes) {
     return input.map(ctx ->
-            ctx.callUDF("subsumes", codes.getColumnCtx(), ColumnCtx.literal(true)),
+            ctx.callUDF("subsumes", codes.getColumnRepresentation(),
+                ColumnRepresentation.literal(true)),
         BooleanCollection::build);
   }
 
@@ -192,13 +194,16 @@ public abstract class TerminologyFunctions {
     return (CodingCollection) input.copyWith(
         input.getCtx().callUDF("translate_coding",
             conceptMapUrl.getCtx().singular(),
-            Optional.ofNullable(reverse).map(BooleanCollection::getCtx).map(ColumnCtx::singular)
-                .orElse(ColumnCtx.literal(false)),
-            Optional.ofNullable(equivalence).map(StringCollection::getCtx).map(ColumnCtx::singular)
-                .orElse(ColumnCtx.literal("equivalent"))
+            Optional.ofNullable(reverse).map(BooleanCollection::getCtx)
+                .map(ColumnRepresentation::singular)
+                .orElse(ColumnRepresentation.literal(false)),
+            Optional.ofNullable(equivalence).map(StringCollection::getCtx).map(
+                    ColumnRepresentation::singular)
+                .orElse(ColumnRepresentation.literal("equivalent"))
                 .transform(c -> functions.split(c, ",")),
-            Optional.ofNullable(target).map(StringCollection::getCtx).map(ColumnCtx::singular)
-                .orElse(ColumnCtx.nullCtx())
+            Optional.ofNullable(target).map(StringCollection::getCtx)
+                .map(ColumnRepresentation::singular)
+                .orElse(ColumnRepresentation.nullCtx())
         ));
   }
 

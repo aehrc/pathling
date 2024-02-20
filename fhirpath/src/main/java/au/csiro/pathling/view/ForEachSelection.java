@@ -19,8 +19,8 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.view.DatasetResult.One;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
@@ -52,21 +52,22 @@ public class ForEachSelection extends AbstractCompositeSelection {
         context.evalExpression(path).getPureValue());
 
     final Collection stubInputContext = subContext.getInputContext()
-        .map(__ -> ColumnCtx.nullCtx());
+        .map(__ -> ColumnRepresentation.nullCtx());
 
     // now we need to run the actual transformation on the column
-    final ColumnCtx nestedResult = subContext.getInputContext().getColumnCtx().transform(
-        c -> {
-          // eval 
-          final ProjectionContext elementCtx = context.withInputContext(
-              subContext.getInputContext().map(__ -> StdColumnCtx.of(c)));
-          return functions.struct(
-              components.stream().flatMap(s -> s.evaluate(elementCtx).asStream()).map(
-                  cr -> cr.getCollection().getCtx().getValue()
-                      .alias(cr.getSelection().getTag())).toArray(Column[]::new)
-          );
-        }
-    );
+    final ColumnRepresentation nestedResult = subContext.getInputContext().getColumnRepresentation()
+        .transform(
+            c -> {
+              // eval 
+              final ProjectionContext elementCtx = context.withInputContext(
+                  subContext.getInputContext().map(__ -> ArrayRepresentation.of(c)));
+              return functions.struct(
+                  components.stream().flatMap(s -> s.evaluate(elementCtx).asStream()).map(
+                      cr -> cr.getCollection().getCtx().getValue()
+                          .alias(cr.getSelection().getTag())).toArray(Column[]::new)
+              );
+            }
+        );
 
     final ProjectionContext stubSubContext = subContext.withInputContext(stubInputContext);
     DatasetResult<CollectionResult> myResult = components.stream()
@@ -90,8 +91,9 @@ public class ForEachSelection extends AbstractCompositeSelection {
     };
 
     return DatasetResult.<CollectionResult>fromTransform(explodeTransform).andThen(myResult)
-        .map(cr -> new CollectionResult(cr.getCollection().copyWith(StdColumnCtx.of(functions.col(cr.getSelection()
-            .getTag()))), cr.getSelection()));
+        .map(cr -> new CollectionResult(
+            cr.getCollection().copyWith(ArrayRepresentation.of(functions.col(cr.getSelection()
+                .getTag()))), cr.getSelection()));
   }
 
   @Nonnull

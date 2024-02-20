@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -37,36 +37,36 @@ import org.hl7.fhir.r4.model.TimeType;
 public class TimeCollection extends Collection implements Materializable<TimeType>,
     Comparable, StringCoercible {
 
-  public TimeCollection(@Nonnull final ColumnCtx columnCtx,
+  public TimeCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified column and definition.
    *
-   * @param columnCtx The column to use
+   * @param columnRepresentation The column to use
    * @param definition The definition to use
    * @return A new instance of {@link TimeCollection}
    */
   @Nonnull
-  public static TimeCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static TimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new TimeCollection(columnCtx, Optional.of(FhirPathType.TIME),
+    return new TimeCollection(columnRepresentation, Optional.of(FhirPathType.TIME),
         Optional.of(FHIRDefinedType.TIME), definition);
   }
 
   /**
    * Returns a new instance with the specified column and nno definition.
    *
-   * @param columnCtx The column to use
+   * @param columnRepresentation The column to use
    * @return A new instance of {@link TimeCollection}
    */
   @Nonnull
-  public static TimeCollection build(@Nonnull final ColumnCtx columnCtx) {
-    return build(columnCtx, Optional.empty());
+  public static TimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+    return build(columnRepresentation, Optional.empty());
   }
 
 
@@ -79,7 +79,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   public static TimeCollection fromLiteral(@Nonnull final String literal) {
     final String timeString = literal.replaceFirst("^@T", "");
-    return TimeCollection.build(ColumnCtx.literal(timeString));
+    return TimeCollection.build(ColumnRepresentation.literal(timeString));
   }
 
   @Nonnull
@@ -94,7 +94,7 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
   @Nonnull
   @Override
   public StringCollection asStringPath() {
-    return map(ColumnCtx::asString, StringCollection::build);
+    return map(ColumnRepresentation::asString, StringCollection::build);
   }
 
 }

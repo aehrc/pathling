@@ -18,7 +18,6 @@
 package au.csiro.pathling.fhirpath.collection;
 
 import static au.csiro.pathling.utilities.Preconditions.checkPresent;
-import static org.apache.spark.sql.functions.lit;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
@@ -26,8 +25,8 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -54,36 +53,36 @@ public class IntegerCollection extends Collection implements
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(IntegerCollection.class, DecimalCollection.class);
 
-  protected IntegerCollection(@Nonnull final ColumnCtx columnCtx,
+  protected IntegerCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param columnCtx The columnCtx to use
+   * @param columnRepresentation The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link IntegerCollection}
    */
   @Nonnull
-  public static IntegerCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static IntegerCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new IntegerCollection(columnCtx, Optional.of(FhirPathType.INTEGER),
+    return new IntegerCollection(columnRepresentation, Optional.of(FhirPathType.INTEGER),
         Optional.of(FHIRDefinedType.INTEGER), definition);
   }
 
   @Nonnull
-  public static IntegerCollection build(final ColumnCtx columnCtx) {
-    return build(columnCtx, Optional.empty());
+  public static IntegerCollection build(final ColumnRepresentation columnRepresentation) {
+    return build(columnRepresentation, Optional.empty());
   }
 
 
   @Nonnull
   public static IntegerCollection fromValue(final int value) {
-    return IntegerCollection.build(ColumnCtx.literal(value));
+    return IntegerCollection.build(ColumnRepresentation.literal(value));
   }
 
 
@@ -152,7 +151,7 @@ public class IntegerCollection extends Collection implements
   @Nonnull
   @Override
   public Optional<Column> getNumericValueColumn() {
-    return Optional.ofNullable(this.getColumnCtx().cast(DataTypes.LongType).getValue());
+    return Optional.ofNullable(this.getColumnRepresentation().cast(DataTypes.LongType).getValue());
   }
 
   @Nonnull
@@ -185,12 +184,12 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(StdColumnCtx.of(valueColumn));
+          return IntegerCollection.build(ArrayRepresentation.of(valueColumn));
         case DIVISION:
           final Column numerator = source.getColumnCtx().cast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(StdColumnCtx.of(valueColumn));
+          return DecimalCollection.build(ArrayRepresentation.of(valueColumn));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -200,7 +199,7 @@ public class IntegerCollection extends Collection implements
   @Override
   @Nonnull
   public StringCollection asStringPath() {
-    return map(ColumnCtx::asString, StringCollection::build);
+    return map(ColumnRepresentation::asString, StringCollection::build);
   }
 
 }

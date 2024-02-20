@@ -23,7 +23,7 @@ import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -47,24 +47,24 @@ import org.hl7.fhir.r4.model.UuidType;
 public class StringCollection extends Collection implements Materializable<PrimitiveType>,
     StringCoercible {
 
-  public StringCollection(@Nonnull final ColumnCtx columnCtx,
+  public StringCollection(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<FhirPathType> type,
       @Nonnull final Optional<FHIRDefinedType> fhirType,
       @Nonnull final Optional<? extends NodeDefinition> definition) {
-    super(columnCtx, type, fhirType, definition);
+    super(columnRepresentation, type, fhirType, definition);
   }
 
   /**
    * Returns a new instance with the specified columnCtx and definition.
    *
-   * @param columnCtx The columnCtx to use
+   * @param columnRepresentation The columnCtx to use
    * @param definition The definition to use
    * @return A new instance of {@link StringCollection}
    */
   @Nonnull
-  public static StringCollection build(@Nonnull final ColumnCtx columnCtx,
+  public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final Optional<NodeDefinition> definition) {
-    return new StringCollection(columnCtx, Optional.of(FhirPathType.STRING),
+    return new StringCollection(columnRepresentation, Optional.of(FhirPathType.STRING),
         Optional.of(FHIRDefinedType.STRING), definition);
   }
 
@@ -72,8 +72,8 @@ public class StringCollection extends Collection implements Materializable<Primi
    * Returns a new instance with the specified column.
    */
   @Nonnull
-  public static StringCollection build(@Nonnull final ColumnCtx columnCtx) {
-    return build(columnCtx, Optional.empty());
+  public static StringCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+    return build(columnRepresentation, Optional.empty());
   }
 
   /**
@@ -86,10 +86,10 @@ public class StringCollection extends Collection implements Materializable<Primi
   public static StringCollection fromLiteral(@Nonnull final String stringLiteral) {
     return fromValue(parseStringLiteral(stringLiteral));
   }
-  
+
   @Nonnull
   public static StringCollection fromValue(@Nonnull final String value) {
-    return StringCollection.build(ColumnCtx.literal(value));
+    return StringCollection.build(ColumnRepresentation.literal(value));
   }
 
 
@@ -106,7 +106,7 @@ public class StringCollection extends Collection implements Materializable<Primi
   public String toLiteralValue() {
     return getCtx().asStringValue()
         .orElseThrow(() -> new IllegalStateException(
-            "Cannot convert column to literal value: " + this.getColumnCtx()));
+            "Cannot convert column to literal value: " + this.getColumnRepresentation()));
   }
 
   /**

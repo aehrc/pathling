@@ -20,8 +20,8 @@ package au.csiro.pathling.view;
 import au.csiro.pathling.encoders.ColumnFunctions;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ColumnCtx;
-import au.csiro.pathling.fhirpath.column.StdColumnCtx;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -49,11 +49,11 @@ public class ForEachSelectionX implements SelectionX {
     // here we need to deal better values that are not nested
     Column columnResult = functions.flatten(
         functions.transform(
-            nestedInputContext.getColumnCtx().toArray().getValue(),
+            nestedInputContext.getColumnRepresentation().toArray().getValue(),
             c -> {
               // create the transformation element subcontext
               final ProjectionContext elementCtx = context.withInputContext(
-                  nestedInputContext.map(__ -> StdColumnCtx.of(c)));
+                  nestedInputContext.map(__ -> ArrayRepresentation.of(c)));
               return ColumnFunctions.structProduct(
                   components.stream()
                       .map(s -> s.evaluate(elementCtx).getValue())
@@ -67,7 +67,7 @@ public class ForEachSelectionX implements SelectionX {
 
     // This is a way to evaluate the expression for the purpose of getting the types of the result.
     final ProjectionContext stubContext = context.withInputContext(
-        nestedInputContext.map(__ -> ColumnCtx.nullCtx()));
+        nestedInputContext.map(__ -> ColumnRepresentation.nullCtx()));
     final List<SelectionResult> stubResults = components.stream().map(s -> s.evaluate(stubContext))
         .collect(Collectors.toUnmodifiableList());
 

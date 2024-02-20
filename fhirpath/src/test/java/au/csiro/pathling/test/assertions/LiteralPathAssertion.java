@@ -17,9 +17,7 @@
 
 package au.csiro.pathling.test.assertions;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import org.apache.spark.sql.catalyst.expressions.Expression;
 import org.apache.spark.sql.catalyst.expressions.Literal;
@@ -41,11 +39,11 @@ public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAsser
   }
 
   //TODO: LiteralPathAssertion
-  
+
   @Nonnull
   public LiteralPathAssertion has(@Nullable final Object expected) {
     // TODO: consider this implementation - we may want to evaluate the expression instead
-    final Expression maybeLiteral = result.getColumnCtx().getValue().expr();
+    final Expression maybeLiteral = result.getColumnRepresentation().getValue().expr();
     assertTrue(maybeLiteral instanceof Literal);
     assertEquals(expected, ((Literal) maybeLiteral).value());
     return this;
