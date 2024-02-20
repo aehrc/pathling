@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.collection;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
@@ -24,7 +26,6 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
-import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
 import au.csiro.pathling.fhirpath.column.ColumnCtx;
 import au.csiro.pathling.fhirpath.column.StdColumnCtx;
@@ -34,7 +35,6 @@ import au.csiro.pathling.fhirpath.definition.ElementChildDefinition;
 import au.csiro.pathling.fhirpath.definition.ElementDefinition;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ReferenceDefinition;
-import au.csiro.pathling.utilities.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -216,20 +216,37 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public Optional<Collection> traverse(@Nonnull final String elementName) {
-
+    // We use the implementation of getChildElement in the definition to get the child definition.
     final Optional<? extends ChildDefinition> maybeChildDef = definition.flatMap(
-            def -> def.getChildElement(elementName))
-        .filter(ChildDefinition.class::isInstance);
+        def -> def.getChildElement(elementName));
 
+    // There are two paths here:
+    // 1. If the child is an extension, we have special behaviour for traversing to the extension.
+    // 2. If the child is a regular element, we use the standard traversal method.
     return maybeChildDef.flatMap(
-        childDef -> ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(elementName)
-                    ? traverseExtensions(childDef)
-                    : Optional.of(traverseChild(childDef)));
+        childDef -> {
+          if (ExtensionSupport.EXTENSION_ELEMENT_NAME().equals(elementName)) {
+            check(maybeChildDef.get() instanceof ElementDefinition,
+                "Expected an ElementDefinition for an extension");
+            return traverseExtension((ElementDefinition) childDef);
+          }
+          return Optional.of(traverseChild(childDef));
+        });
   }
 
+  /**
+   * Return the child {@link Collection} that results from traversing to the given child
+   * definition.
+   *
+   * @param childDef the child definition
+   * @return a new {@link Collection} representing the child element
+   */
   @Nonnull
   protected Collection traverseChild(@Nonnull final ChildDefinition childDef) {
-    // It is only possible to traverse to a child with an element definition.
+    // There are two paths here:
+    // 1. If the child is a choice, we have special behaviour for traversing to the choice that 
+    //    results in a mixed collection.
+    // 2. If the child is a regular element, we use the standard traversal method.
     if (childDef instanceof ChoiceChildDefinition) {
       return MixedCollection.buildElement(this, (ChoiceChildDefinition) childDef);
     } else if (childDef instanceof ElementChildDefinition) {
@@ -250,17 +267,15 @@ public class Collection implements Comparable, Numeric {
    */
   @Nonnull
   public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
-    // It is only possible to traverse to a child with an element definition.
-    return Collection.build(getCtx().traverse(childDef.getElementName()), childDef);
+    // Invoke the traversal method on the column context to get the new column.
+    final ColumnCtx columnCtx = getCtx().traverse(childDef.getElementName());
+    // Return a new Collection with the new column and the child definition.
+    return Collection.build(columnCtx, childDef);
   }
 
   @Nonnull
-  @NotImplemented
-  protected Optional<Collection> traverseExtensions(
-      @Nonnull final ChildDefinition extensionDefinition) {
-    // check the provided definition is of an extension
-    Preconditions.checkArgument(extensionDefinition instanceof ElementDefinition,
-        "Cannot traverse to an extension with a non-ElementDefinition");
+  protected Optional<Collection> traverseExtension(
+      @Nonnull final ElementDefinition extensionDefinition) {
     return getExtensionMap().map(em ->
         Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
