@@ -13,6 +13,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from typing import Optional, NamedTuple
+import json
 
 class MimeType:
     """
@@ -29,3 +31,13 @@ class Version:
     """
 
     R4: str = "R4"
+
+
+class Reference(NamedTuple):
+    reference: Optional[str] = None
+    type: Optional[str] = None
+    identifier: Optional[str] = None
+    display: Optional[str] = None
+
+    def to_json(self) -> str:
+        return json.dumps(self._asdict())
