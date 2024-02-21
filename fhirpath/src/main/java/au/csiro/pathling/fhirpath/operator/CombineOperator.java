@@ -21,8 +21,8 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import org.apache.spark.sql.functions;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.functions;
 
 /**
  * Merges the left and right operands into a single collection.
@@ -46,7 +46,7 @@ public class CombineOperator implements BinaryOperator {
     // and also need to
 
     return left.copyWith(
-        ColumnRepresentation.biOperator(left.getCtx().toArray(), right.getCtx().toArray(),
+        ColumnRepresentation.binaryOperator(left.getCtx().toArray(), right.getCtx().toArray(),
             functions::concat)
     );
   }

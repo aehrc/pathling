@@ -49,13 +49,13 @@ public interface Numeric {
    * @return a {@link Column} within the dataset containing the values of the nodes
    */
   @Nonnull
-  ColumnRepresentation getColumnCtx();
+  ColumnRepresentation getColumn();
 
   /**
    * @return a {@link Column} that provides a value that can me used in math operations
    */
   @Nonnull
-  Optional<Column> getNumericValueColumn();
+  Optional<Column> getNumericValue();
 
   /**
    * Provides a {@link Column} that provides additional context that informs the way that math
@@ -65,7 +65,7 @@ public interface Numeric {
    * @return a {@link Column} that provides additional context for math operations
    */
   @Nonnull
-  Optional<Column> getNumericContextColumn();
+  Optional<Column> getNumericContext();
 
   /**
    * The type of the result of evaluating this expression, if known.

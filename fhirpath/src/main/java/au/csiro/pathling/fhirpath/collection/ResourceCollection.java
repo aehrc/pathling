@@ -20,9 +20,8 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.SingleRowRepresentation;
-import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.source.DataSource;
@@ -92,7 +91,8 @@ public class ResourceCollection extends Collection {
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(SingleRowRepresentation.of(functions.lit(true)), Optional.empty(),
+    return new ResourceCollection(ArrayOrSingularRepresentation.of(functions.lit(true)),
+        Optional.empty(),
         getFhirType(resourceType), Optional.of(definition), definition);
   }
 
@@ -140,7 +140,7 @@ public class ResourceCollection extends Collection {
   @Nonnull
   public Optional<ColumnRepresentation> getElementColumn(@Nonnull final String elementName) {
     return Optional.of(functions.col(elementName))
-        .map(ArrayRepresentation::of);
+        .map(ArrayOrSingularRepresentation::of);
   }
 
   @Nonnull
@@ -180,7 +180,7 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   public ColumnRepresentation getKeyColumn() {
-    return getColumnRepresentation().traverse("id_versioned");
+    return getColumn().traverse("id_versioned");
   }
 
 }

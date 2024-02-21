@@ -25,8 +25,8 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -150,14 +150,14 @@ public class IntegerCollection extends Collection implements
 
   @Nonnull
   @Override
-  public Optional<Column> getNumericValueColumn() {
-    return Optional.ofNullable(this.getColumnRepresentation().cast(DataTypes.LongType).getValue());
+  public Optional<Column> getNumericValue() {
+    return Optional.ofNullable(this.getColumn().cast(DataTypes.LongType).getValue());
   }
 
   @Nonnull
   @Override
-  public Optional<Column> getNumericContextColumn() {
-    return getNumericValueColumn();
+  public Optional<Column> getNumericContext() {
+    return this.getNumericValue();
   }
 
   /**
@@ -172,8 +172,8 @@ public class IntegerCollection extends Collection implements
   public static Function<Numeric, Collection> buildMathOperation(@Nonnull final Numeric source,
       @Nonnull final MathOperation operation) {
     return target -> {
-      final Column sourceNumeric = checkPresent(source.getNumericValueColumn());
-      final Column targetNumeric = checkPresent(target.getNumericValueColumn());
+      final Column sourceNumeric = checkPresent(source.getNumericValue());
+      final Column targetNumeric = checkPresent(target.getNumericValue());
       Column valueColumn = operation.getSparkFunction().apply(sourceNumeric, targetNumeric);
 
       switch (operation) {
@@ -184,12 +184,12 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(ArrayRepresentation.of(valueColumn));
+          return IntegerCollection.build(ArrayOrSingularRepresentation.of(valueColumn));
         case DIVISION:
-          final Column numerator = source.getColumnCtx().cast(DecimalCollection.getDecimalType())
+          final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(ArrayRepresentation.of(valueColumn));
+          return DecimalCollection.build(ArrayOrSingularRepresentation.of(valueColumn));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

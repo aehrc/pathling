@@ -29,8 +29,8 @@ import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.comparison.QuantitySqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
@@ -137,7 +137,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
     // TODO: complex literal handling
-    return QuantityCollection.build(ArrayRepresentation.of(column));
+    return QuantityCollection.build(ArrayOrSingularRepresentation.of(column));
   }
 
   @Nonnull
@@ -223,7 +223,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     // TODO: literal handling
     return QuantityCollection.build(
-        ArrayRepresentation.of(QuantityEncoding.encodeLiteral(quantity)));
+        ArrayOrSingularRepresentation.of(QuantityEncoding.encodeLiteral(quantity)));
   }
 
   @Nonnull
@@ -234,15 +234,15 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
   @Nonnull
   @Override
-  public Optional<Column> getNumericValueColumn() {
+  public Optional<Column> getNumericValue() {
     return Optional.of(
-        getColumnRepresentation().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
+        getColumn().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
   }
 
   @Nonnull
   @Override
-  public Optional<Column> getNumericContextColumn() {
-    return Optional.of(getColumnRepresentation().getValue());
+  public Optional<Column> getNumericContext() {
+    return Optional.of(getColumn().getValue());
   }
 
   @Nonnull
@@ -250,10 +250,10 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   public Function<Numeric, Collection> getMathOperation(@Nonnull final MathOperation operation) {
     return target -> {
       final BiFunction<Column, Column, Column> mathOperation = getMathColumnOperation(operation);
-      final Column sourceComparable = checkPresent(((Numeric) this).getNumericValueColumn());
-      final Column targetComparable = checkPresent(target.getNumericValueColumn());
-      final Column sourceContext = checkPresent(((Numeric) this).getNumericContextColumn());
-      final Column targetContext = checkPresent(target.getNumericContextColumn());
+      final Column sourceComparable = checkPresent(((Numeric) this).getNumericValue());
+      final Column targetComparable = checkPresent(target.getNumericValue());
+      final Column sourceContext = checkPresent(((Numeric) this).getNumericContext());
+      final Column targetContext = checkPresent(target.getNumericContext());
       final Column resultColumn = mathOperation.apply(sourceComparable, targetComparable);
       final Column sourceCanonicalizedCode = sourceContext.getField(
           QuantityEncoding.CANONICALIZED_CODE_COLUMN);
@@ -282,7 +282,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(ArrayRepresentation.of(resultQuantityColumn));
+      return QuantityCollection.build(ArrayOrSingularRepresentation.of(resultQuantityColumn));
     };
   }
 

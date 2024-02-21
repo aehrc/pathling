@@ -17,11 +17,18 @@
 
 package au.csiro.pathling.view;
 
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
+import au.csiro.pathling.fhirpath.column.NullRepresentation;
 import au.csiro.pathling.view.DatasetResult.One;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.hadoop.shaded.com.google.common.collect.Streams;
@@ -29,13 +36,6 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-
-import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Stream;
-
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 
 @EqualsAndHashCode(callSuper = true)
 @Value
@@ -52,15 +52,15 @@ public class ForEachSelection extends AbstractCompositeSelection {
         context.evalExpression(path).getPureValue());
 
     final Collection stubInputContext = subContext.getInputContext()
-        .map(__ -> ColumnRepresentation.nullCtx());
+        .map(__ -> NullRepresentation.getInstance());
 
     // now we need to run the actual transformation on the column
-    final ColumnRepresentation nestedResult = subContext.getInputContext().getColumnRepresentation()
+    final ColumnRepresentation nestedResult = subContext.getInputContext().getColumn()
         .transform(
             c -> {
               // eval 
               final ProjectionContext elementCtx = context.withInputContext(
-                  subContext.getInputContext().map(__ -> ArrayRepresentation.of(c)));
+                  subContext.getInputContext().map(__ -> ArrayOrSingularRepresentation.of(c)));
               return functions.struct(
                   components.stream().flatMap(s -> s.evaluate(elementCtx).asStream()).map(
                       cr -> cr.getCollection().getCtx().getValue()
@@ -92,8 +92,9 @@ public class ForEachSelection extends AbstractCompositeSelection {
 
     return DatasetResult.<CollectionResult>fromTransform(explodeTransform).andThen(myResult)
         .map(cr -> new CollectionResult(
-            cr.getCollection().copyWith(ArrayRepresentation.of(functions.col(cr.getSelection()
-                .getTag()))), cr.getSelection()));
+            cr.getCollection()
+                .copyWith(ArrayOrSingularRepresentation.of(functions.col(cr.getSelection()
+                    .getTag()))), cr.getSelection()));
   }
 
   @Nonnull

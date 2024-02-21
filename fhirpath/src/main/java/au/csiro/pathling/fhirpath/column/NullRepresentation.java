@@ -4,10 +4,23 @@ import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
-class NullRepresentation extends ColumnRepresentation {
+/**
+ * Describes a representation of an empty collection.
+ *
+ * @author Piotr Szul
+ * @author John Grimes
+ */
+public class NullRepresentation extends ColumnRepresentation {
 
   static final ColumnRepresentation INSTANCE = new NullRepresentation();
 
+  /**
+   * @return a singleton instance of this class
+   */
+  @Nonnull
+  public static ColumnRepresentation getInstance() {
+    return INSTANCE;
+  }
 
   @Override
   public Column getValue() {
@@ -37,4 +50,5 @@ class NullRepresentation extends ColumnRepresentation {
   public ColumnRepresentation traverse(@Nonnull final String fieldName) {
     return this;
   }
+
 }

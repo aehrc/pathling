@@ -139,10 +139,10 @@ public class DateTimeCollection extends Collection implements
   public StringCollection asStringPath() {
     final ColumnRepresentation valueColumn;
     if (getFhirType().isPresent() && getFhirType().get() == FHIRDefinedType.INSTANT) {
-      valueColumn = getColumnRepresentation().call(
+      valueColumn = getColumn().call(
           c -> date_format(c, SPARK_FHIRPATH_DATETIME_FORMAT));
     } else {
-      valueColumn = getColumnRepresentation();
+      valueColumn = getColumn();
     }
     return StringCollection.build(valueColumn);
   }

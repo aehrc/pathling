@@ -52,8 +52,8 @@ public interface Comparable {
 
     // TODO: Move to the interface (asking for the singular column)
     return target -> compFunction
-        .apply(comparator, ColumnHelpers.singular(source.getColumnCtx().getValue()),
-            ColumnHelpers.singular(target.getColumnCtx().getValue()));
+        .apply(comparator, ColumnHelpers.singular(source.getColumn().getValue()),
+            ColumnHelpers.singular(target.getColumn().getValue()));
   }
 
   /**
@@ -91,7 +91,7 @@ public interface Comparable {
    * @return A {@link Column}
    */
   @Nonnull
-  ColumnRepresentation getColumnCtx();
+  ColumnRepresentation getColumn();
 
   /**
    * @return {@code true} if this path can be compared to the specified class

@@ -24,13 +24,13 @@ import org.apache.spark.sql.functions;
 import javax.annotation.Nonnull;
 
 public class BinaryOperators {
-  
+
   @FhirpathBinaryOperator
   public static BooleanCollection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
     return BooleanCollection.build(collection.getCtx().vectorize(
-        c -> functions.array_contains(c, element.asSingular().getColumn()),
-        c -> c.equalTo(element.asSingular().getColumn()))
+        c -> functions.array_contains(c, element.asSingular().getColumnValue()),
+        c -> c.equalTo(element.asSingular().getColumnValue()))
     );
   }
 
@@ -39,5 +39,5 @@ public class BinaryOperators {
       @Nonnull final Collection collection) {
     return contains(collection, element);
   }
-  
+
 }

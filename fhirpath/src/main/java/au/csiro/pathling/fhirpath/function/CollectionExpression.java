@@ -41,6 +41,6 @@ public interface CollectionExpression extends Function<Collection, Collection> {
   default Function<ColumnRepresentation, ColumnRepresentation> toColumnFunction(
       @Nonnull final Collection input) {
     // the type of the element Collection needs to be the same as the input
-    return c -> apply(input.copyWith(c)).getColumnRepresentation();
+    return c -> apply(input.copyWith(c)).getColumn();
   }
 }

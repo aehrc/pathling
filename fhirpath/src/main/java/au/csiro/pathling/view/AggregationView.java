@@ -55,10 +55,10 @@ public class AggregationView {
 
     final DatasetResult<Column> groupByResult = groupBy.evaluate(projectionContext)
         .map(cr -> cr.getCollection()
-            .getColumnRepresentation().getValue());
+            .getColumn().getValue());
     final DatasetResult<Column> selectResult = select.evaluate(projectionContext)
         .map(cr -> cr.getCollection()
-            .getColumnRepresentation().getValue());
+            .getColumn().getValue());
 
     final Column[] groupingColumns = groupByResult.asStream().toArray(Column[]::new);
     final Column[] selectColumns = selectResult.asStream().toArray(Column[]::new);

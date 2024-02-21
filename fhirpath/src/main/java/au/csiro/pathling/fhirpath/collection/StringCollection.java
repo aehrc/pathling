@@ -106,7 +106,7 @@ public class StringCollection extends Collection implements Materializable<Primi
   public String toLiteralValue() {
     return getCtx().asStringValue()
         .orElseThrow(() -> new IllegalStateException(
-            "Cannot convert column to literal value: " + this.getColumnRepresentation()));
+            "Cannot convert column to literal value: " + this.getColumn()));
   }
 
   /**

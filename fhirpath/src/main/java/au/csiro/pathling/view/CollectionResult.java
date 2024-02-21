@@ -18,11 +18,11 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
-import javax.annotation.Nonnull;
 
 @Value
 public class CollectionResult {
@@ -35,13 +35,14 @@ public class CollectionResult {
 
   @Nonnull
   public Column getTaggedColumn() {
-    return collection.getColumn().alias(selection.getTag());
+    return collection.getColumnValue().alias(selection.getTag());
   }
 
   @Nonnull
   public CollectionResult toTagReference() {
     return new CollectionResult(
-        collection.copyWith(ArrayRepresentation.of(functions.col(selection.getTag()))), selection);
+        collection.copyWith(ArrayOrSingularRepresentation.of(functions.col(selection.getTag()))),
+        selection);
 
   }
 

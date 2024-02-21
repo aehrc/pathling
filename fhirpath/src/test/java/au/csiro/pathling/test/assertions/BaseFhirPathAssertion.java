@@ -20,12 +20,10 @@ package au.csiro.pathling.test.assertions;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
-import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.expressions.Literal;
@@ -59,7 +57,7 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   @Nonnull
   public DatasetAssert selectResult() {
     final Dataset<Row> resultDataset = datasetResult.getDataset()
-        .select(functions.col("id"), result.getColumn().alias("value"));
+        .select(functions.col("id"), result.getColumnValue().alias("value"));
     final StructType schema = resultDataset.schema();
     final Dataset<Row> explodedDataset = schema.fields()[schema.fieldIndex(
         "value")].dataType() instanceof ArrayType
@@ -74,7 +72,7 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   @Nonnull
   public DatasetAssert selectOrderedResult() {
     final Dataset<Row> resultDataset = datasetResult.getDataset()
-        .select(functions.col("id"), result.getColumn().alias("value"));
+        .select(functions.col("id"), result.getColumnValue().alias("value"));
     final StructType schema = resultDataset.schema();
     final Dataset<Row> explodedDataset = schema.fields()[schema.fieldIndex(
         "value")].dataType() instanceof ArrayType
@@ -114,7 +112,7 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
   @Nonnull
   public T hasExpression(@Nonnull final String expression) {
     // TODO: not implemented
-   // fail("Not implemented: hasExpression");
+    // fail("Not implemented: hasExpression");
     // assertEquals(expression, result.getExpression());
     return self();
   }
@@ -151,7 +149,7 @@ public abstract class BaseFhirPathAssertion<T extends BaseFhirPathAssertion<T>> 
 
   public LiteralPathAssertion isLiteralPath(final Class<? extends Collection> ofType) {
     assertTrue(ofType.isAssignableFrom(result.getClass()));
-    assertTrue(result.getColumn().expr() instanceof Literal);
+    assertTrue(result.getColumnValue().expr() instanceof Literal);
     return new LiteralPathAssertion(datasetResult);
   }
 

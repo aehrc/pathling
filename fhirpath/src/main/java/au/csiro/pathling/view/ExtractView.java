@@ -89,8 +89,8 @@ public class ExtractView {
                                    : collection;
 
     final Column columnResult = info.isAsCollection()
-                                ? finalResult.getColumnRepresentation().getValue()
-                                : finalResult.asSingular().getColumnRepresentation().getValue();
+                                ? finalResult.getColumn().getValue()
+                                : finalResult.asSingular().getColumn().getValue();
     return info.getAlias().map(columnResult::alias).orElse(columnResult);
   }
 }

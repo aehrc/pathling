@@ -25,8 +25,8 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
-import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -132,8 +132,8 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   @Override
   public Function<Numeric, Collection> getMathOperation(@Nonnull final MathOperation operation) {
     return target -> {
-      final Column sourceNumeric = checkPresent(((Numeric) this).getNumericValueColumn());
-      final Column targetNumeric = checkPresent(target.getNumericValueColumn());
+      final Column sourceNumeric = checkPresent(((Numeric) this).getNumericValue());
+      final Column targetNumeric = checkPresent(target.getNumericValue());
       Column result = operation.getSparkFunction().apply(sourceNumeric, targetNumeric);
 
       switch (operation) {
@@ -142,10 +142,10 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         case MULTIPLICATION:
         case DIVISION:
           result = result.cast(getDecimalType());
-          return DecimalCollection.build(ArrayRepresentation.of(result));
+          return DecimalCollection.build(ArrayOrSingularRepresentation.of(result));
         case MODULUS:
           result = result.cast(DataTypes.LongType);
-          return IntegerCollection.build(ArrayRepresentation.of(result));
+          return IntegerCollection.build(ArrayOrSingularRepresentation.of(result));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }
@@ -154,14 +154,14 @@ public class DecimalCollection extends Collection implements Materializable<Deci
 
   @Nonnull
   @Override
-  public Optional<Column> getNumericValueColumn() {
-    return Optional.of(this.getColumnRepresentation().getValue());
+  public Optional<Column> getNumericValue() {
+    return Optional.of(this.getColumn().getValue());
   }
 
   @Nonnull
   @Override
-  public Optional<Column> getNumericContextColumn() {
-    return getNumericValueColumn();
+  public Optional<Column> getNumericContext() {
+    return this.getNumericValue();
   }
 
   @Nonnull

@@ -60,7 +60,7 @@ public class DefaultProjectionContext implements ProjectionContext {
       return newInputContextResult
           .map(Collection::getCtx)
           .flatMap(cl -> withNulls
-                         ? cl.explode_outer()
+                         ? cl.explodeOuter()
                          : cl.explode())
           .map(c -> withInputContext(newInputContextResult.getValue().copyWith(c)));
     } else {

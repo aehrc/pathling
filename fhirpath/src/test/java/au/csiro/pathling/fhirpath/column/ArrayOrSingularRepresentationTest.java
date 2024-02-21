@@ -34,7 +34,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 @SpringBootUnitTest
-class ArrayRepresentationTest {
+class ArrayOrSingularRepresentationTest {
 
   // TODO: improve to check the actual values returned.
   class ColumnAsserts {
@@ -74,36 +74,36 @@ class ArrayRepresentationTest {
   SparkSession spark;
 
   @Nonnull
-  public static ArrayRepresentation nullValue() {
-    return ArrayRepresentation.of(functions.lit(null));
+  public static ArrayOrSingularRepresentation nullValue() {
+    return ArrayOrSingularRepresentation.of(functions.lit(null));
   }
 
   @Nonnull
-  public static ArrayRepresentation valueOf(@Nonnull final Object value) {
-    return ArrayRepresentation.of(functions.lit(value));
+  public static ArrayOrSingularRepresentation valueOf(@Nonnull final Object value) {
+    return ArrayOrSingularRepresentation.of(functions.lit(value));
   }
 
 
   @Nonnull
-  public static ArrayRepresentation nullArray() {
-    return ArrayRepresentation.of(
+  public static ArrayOrSingularRepresentation nullArray() {
+    return ArrayOrSingularRepresentation.of(
         functions.lit(null).cast(DataTypes.createArrayType(DataTypes.NullType)));
   }
 
   @Nonnull
-  public static ArrayRepresentation emptyArray() {
-    return ArrayRepresentation.of(functions.array());
+  public static ArrayOrSingularRepresentation emptyArray() {
+    return ArrayOrSingularRepresentation.of(functions.array());
   }
 
   @Nonnull
-  public static ArrayRepresentation arrayOf(@Nonnull final Object... values) {
-    return ArrayRepresentation.of(functions.array(
+  public static ArrayOrSingularRepresentation arrayOf(@Nonnull final Object... values) {
+    return ArrayOrSingularRepresentation.of(functions.array(
         Stream.of(values).map(v -> valueOf(v).getValue()).toArray(Column[]::new)));
   }
 
   @Nonnull
-  public static ArrayRepresentation arrayOfOne(@Nonnull final Object value) {
-    return ArrayRepresentation.of(functions.array(valueOf(value).getValue()));
+  public static ArrayOrSingularRepresentation arrayOfOne(@Nonnull final Object value) {
+    return ArrayOrSingularRepresentation.of(functions.array(valueOf(value).getValue()));
   }
 
 

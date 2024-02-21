@@ -79,7 +79,7 @@ public interface Temporal {
           throw new AssertionError("Unsupported date arithmetic operation: " + operation);
       }
       return DateTimeCollection.build(
-          source.getColumnRepresentation().callUDF(functionName, target.getColumnRepresentation()));
+          source.getColumn().callUdf(functionName, target.getColumn()));
     };
   }
 

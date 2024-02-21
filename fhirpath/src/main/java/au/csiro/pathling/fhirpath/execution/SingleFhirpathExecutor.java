@@ -21,7 +21,7 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.fhirpath.column.ArrayRepresentation;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.context.DefaultPathEvalContext;
 import au.csiro.pathling.fhirpath.context.FhirpathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
@@ -107,7 +107,8 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
   }
 
   ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
-    return ResourceCollection.build(ArrayRepresentation.of(functions.col(resourceType.toCode())),
+    return ResourceCollection.build(
+        ArrayOrSingularRepresentation.of(functions.col(resourceType.toCode())),
         fhirContext, resourceType);
   }
 
@@ -128,7 +129,7 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
         functionRegistry,
         resourceResolver);
     final Collection result = path.apply(fhirpathContext.getInputContext(), evalContext);
-    return dataset.select(functions.col("id"), result.getColumn().alias("value"));
+    return dataset.select(functions.col("id"), result.getColumnValue().alias("value"));
   }
 
 
