@@ -91,7 +91,7 @@ public class ResourceCollection extends Collection {
 
     // We use a literal column as the resource value - the actual value is not important.
     // But the non-null value indicates that the resource should be included in any result.
-    return new ResourceCollection(ArrayOrSingularRepresentation.of(functions.lit(true)),
+    return new ResourceCollection(new ArrayOrSingularRepresentation(functions.lit(true)),
         Optional.empty(),
         getFhirType(resourceType), Optional.of(definition), definition);
   }
@@ -140,7 +140,7 @@ public class ResourceCollection extends Collection {
   @Nonnull
   public Optional<ColumnRepresentation> getElementColumn(@Nonnull final String elementName) {
     return Optional.of(functions.col(elementName))
-        .map(ArrayOrSingularRepresentation::of);
+        .map(ArrayOrSingularRepresentation::new);
   }
 
   @Nonnull
@@ -180,7 +180,7 @@ public class ResourceCollection extends Collection {
 
   @Nonnull
   public ColumnRepresentation getKeyColumn() {
-    return getColumn().traverse("id_versioned");
+    return getColumn().traverse("id_versioned", Optional.of(FHIRDefinedType.STRING));
   }
 
 }

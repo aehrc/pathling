@@ -75,35 +75,35 @@ class ArrayOrSingularRepresentationTest {
 
   @Nonnull
   public static ArrayOrSingularRepresentation nullValue() {
-    return ArrayOrSingularRepresentation.of(functions.lit(null));
+    return new ArrayOrSingularRepresentation(functions.lit(null));
   }
 
   @Nonnull
   public static ArrayOrSingularRepresentation valueOf(@Nonnull final Object value) {
-    return ArrayOrSingularRepresentation.of(functions.lit(value));
+    return new ArrayOrSingularRepresentation(functions.lit(value));
   }
 
 
   @Nonnull
   public static ArrayOrSingularRepresentation nullArray() {
-    return ArrayOrSingularRepresentation.of(
+    return new ArrayOrSingularRepresentation(
         functions.lit(null).cast(DataTypes.createArrayType(DataTypes.NullType)));
   }
 
   @Nonnull
   public static ArrayOrSingularRepresentation emptyArray() {
-    return ArrayOrSingularRepresentation.of(functions.array());
+    return new ArrayOrSingularRepresentation(functions.array());
   }
 
   @Nonnull
   public static ArrayOrSingularRepresentation arrayOf(@Nonnull final Object... values) {
-    return ArrayOrSingularRepresentation.of(functions.array(
+    return new ArrayOrSingularRepresentation(functions.array(
         Stream.of(values).map(v -> valueOf(v).getValue()).toArray(Column[]::new)));
   }
 
   @Nonnull
   public static ArrayOrSingularRepresentation arrayOfOne(@Nonnull final Object value) {
-    return ArrayOrSingularRepresentation.of(functions.array(valueOf(value).getValue()));
+    return new ArrayOrSingularRepresentation(functions.array(valueOf(value).getValue()));
   }
 
 

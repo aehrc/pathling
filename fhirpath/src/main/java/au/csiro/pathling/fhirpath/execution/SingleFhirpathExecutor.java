@@ -108,7 +108,7 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
 
   ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
     return ResourceCollection.build(
-        ArrayOrSingularRepresentation.of(functions.col(resourceType.toCode())),
+        new ArrayOrSingularRepresentation(functions.col(resourceType.toCode())),
         fhirContext, resourceType);
   }
 

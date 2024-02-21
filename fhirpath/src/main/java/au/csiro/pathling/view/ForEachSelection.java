@@ -60,7 +60,7 @@ public class ForEachSelection extends AbstractCompositeSelection {
             c -> {
               // eval 
               final ProjectionContext elementCtx = context.withInputContext(
-                  subContext.getInputContext().map(__ -> ArrayOrSingularRepresentation.of(c)));
+                  subContext.getInputContext().map(__ -> new ArrayOrSingularRepresentation(c)));
               return functions.struct(
                   components.stream().flatMap(s -> s.evaluate(elementCtx).asStream()).map(
                       cr -> cr.getCollection().getColumn().getValue()
@@ -93,7 +93,7 @@ public class ForEachSelection extends AbstractCompositeSelection {
     return DatasetResult.<CollectionResult>fromTransform(explodeTransform).andThen(myResult)
         .map(cr -> new CollectionResult(
             cr.getCollection()
-                .copyWith(ArrayOrSingularRepresentation.of(functions.col(cr.getSelection()
+                .copyWith(new ArrayOrSingularRepresentation(functions.col(cr.getSelection()
                     .getTag()))), cr.getSelection()));
   }
 

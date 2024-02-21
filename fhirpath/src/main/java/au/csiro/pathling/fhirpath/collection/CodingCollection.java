@@ -96,7 +96,7 @@ public class CodingCollection extends Collection implements Materializable<Codin
     // given that this is a struct of literals
     // probably yes on the ColumnCtx level provided that there is also a way to encode Codings there
     // (so it should be moved entirely into the Column Ctx)
-    return CodingCollection.build(ArrayOrSingularRepresentation.of(column));
+    return CodingCollection.build(new ArrayOrSingularRepresentation(column));
   }
 
   @Nonnull

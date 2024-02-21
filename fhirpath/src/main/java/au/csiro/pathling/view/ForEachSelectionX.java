@@ -53,7 +53,7 @@ public class ForEachSelectionX implements SelectionX {
             c -> {
               // create the transformation element subcontext
               final ProjectionContext elementCtx = context.withInputContext(
-                  nestedInputContext.map(__ -> ArrayOrSingularRepresentation.of(c)));
+                  nestedInputContext.map(__ -> new ArrayOrSingularRepresentation(c)));
               return ColumnFunctions.structProduct(
                   components.stream()
                       .map(s -> s.evaluate(elementCtx).getValue())

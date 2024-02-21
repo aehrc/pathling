@@ -273,7 +273,7 @@ public class Collection implements Comparable, Numeric {
   public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
     // Invoke the traversal method on the column context to get the new column.
     final ColumnRepresentation columnRepresentation = getColumn().traverse(
-        childDef.getElementName());
+        childDef.getElementName(), childDef.getFhirType());
     // Return a new Collection with the new column and the child definition.
     return Collection.build(columnRepresentation, childDef);
   }
@@ -284,14 +284,12 @@ public class Collection implements Comparable, Numeric {
     return getExtensionMap().map(em ->
         Collection.build(
             // We need here to deal with the situation where _fid is an array of element ids
-            getFid().transform(em::apply).flatten(),
-            (ElementDefinition) extensionDefinition)
-    );
+            getFid().transform(em::apply).flatten(), extensionDefinition));
   }
 
   @Nonnull
   protected ColumnRepresentation getFid() {
-    return column.traverse(ExtensionSupport.FID_FIELD_NAME());
+    return column.traverse(ExtensionSupport.FID_FIELD_NAME(), Optional.empty());
   }
 
   @Nonnull
@@ -359,7 +357,7 @@ public class Collection implements Comparable, Numeric {
   public Collection filter(
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> lambda) {
     return map(
-        ctx -> ctx.filter(col -> lambda.apply(ArrayOrSingularRepresentation.of(col)).getValue()));
+        ctx -> ctx.filter(col -> lambda.apply(new ArrayOrSingularRepresentation(col)).getValue()));
   }
 
   @Nonnull

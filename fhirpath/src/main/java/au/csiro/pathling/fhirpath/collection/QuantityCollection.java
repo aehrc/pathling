@@ -137,7 +137,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     final Column column = QuantityEncoding.encodeLiteral(parseCalendarDuration(fhirPath));
     // TODO: complex literal handling
-    return QuantityCollection.build(ArrayOrSingularRepresentation.of(column));
+    return QuantityCollection.build(new ArrayOrSingularRepresentation(column));
   }
 
   @Nonnull
@@ -223,7 +223,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
 
     // TODO: literal handling
     return QuantityCollection.build(
-        ArrayOrSingularRepresentation.of(QuantityEncoding.encodeLiteral(quantity)));
+        new ArrayOrSingularRepresentation(QuantityEncoding.encodeLiteral(quantity)));
   }
 
   @Nonnull
@@ -236,7 +236,8 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
   @Override
   public Optional<Column> getNumericValue() {
     return Optional.of(
-        getColumn().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN).getValue());
+        getColumn().traverse(QuantityEncoding.CANONICALIZED_VALUE_COLUMN,
+            Optional.of(FHIRDefinedType.DECIMAL)).getValue());
   }
 
   @Nonnull
@@ -282,7 +283,7 @@ public class QuantityCollection extends Collection implements Comparable, Numeri
       final Column resultQuantityColumn = when(sourceContext.isNull().or(targetContext.isNull()),
           null).otherwise(validResult);
 
-      return QuantityCollection.build(ArrayOrSingularRepresentation.of(resultQuantityColumn));
+      return QuantityCollection.build(new ArrayOrSingularRepresentation(resultQuantityColumn));
     };
   }
 

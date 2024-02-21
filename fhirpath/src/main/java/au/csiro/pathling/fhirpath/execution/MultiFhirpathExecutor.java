@@ -128,7 +128,7 @@ public class MultiFhirpathExecutor implements FhirpathExecutor {
     @Override
     public ResourceCollection resolveResource(@Nonnull final ResourceType resourceType) {
       return ResourceCollection.build(
-          ArrayOrSingularRepresentation.of(functions.col(resourceType.toCode())),
+          new ArrayOrSingularRepresentation(functions.col(resourceType.toCode())),
           fhirContext, resourceType);
     }
 
@@ -141,7 +141,7 @@ public class MultiFhirpathExecutor implements FhirpathExecutor {
       final String resourceName = expression.split("\\.")[0];
       final ResourceType foreignResourceType = ResourceType.fromCode(resourceName);
 
-      return ResourceCollection.build(ArrayOrSingularRepresentation.of(
+      return ResourceCollection.build(new ArrayOrSingularRepresentation(
               functions.col(resourceType.toCode() + "@" + expression.replace('.', '_'))),
           fhirContext, foreignResourceType);
     }

@@ -33,6 +33,7 @@ import org.apache.spark.sql.catalyst.expressions.Literal;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 
 /**
@@ -46,8 +47,6 @@ import org.apache.spark.sql.types.DataTypes;
  */
 public abstract class ColumnRepresentation {
 
-  static final Column NULL_LITERAL = functions.lit(null);
-
   /**
    * Create a new {@link ColumnRepresentation} from a literal value.
    *
@@ -56,7 +55,7 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public static ColumnRepresentation literal(@Nonnull final Object value) {
-    return ArrayOrSingularRepresentation.of(functions.lit(value));
+    return new ArrayOrSingularRepresentation(functions.lit(value));
   }
 
   /**
@@ -72,7 +71,7 @@ public abstract class ColumnRepresentation {
   public static ColumnRepresentation binaryOperator(@Nonnull final ColumnRepresentation left,
       @Nonnull final ColumnRepresentation right,
       @Nonnull final BiFunction<Column, Column, Column> operator) {
-    return ArrayOrSingularRepresentation.of(operator.apply(left.getValue(), right.getValue()));
+    return new ArrayOrSingularRepresentation(operator.apply(left.getValue(), right.getValue()));
   }
 
   /**
@@ -145,6 +144,19 @@ public abstract class ColumnRepresentation {
    */
   @Nonnull
   public abstract ColumnRepresentation traverse(@Nonnull final String fieldName);
+
+  /**
+   * Returns a new {@link ColumnRepresentation} that represents the result of traversing to a nested
+   * field within the current representation. This method also takes the FHIR type of the field into
+   * account to return a more specific representation.
+   *
+   * @param fieldName The name of the field to traverse to
+   * @param fhirType The FHIR type of the field
+   * @return A new {@link ColumnRepresentation} representing the result of the traversal
+   */
+  @Nonnull
+  public abstract ColumnRepresentation traverse(@Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType);
 
   /**
    * Converts the current {@link ColumnRepresentation} to a string value.

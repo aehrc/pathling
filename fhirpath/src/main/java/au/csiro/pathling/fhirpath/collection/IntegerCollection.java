@@ -184,12 +184,12 @@ public class IntegerCollection extends Collection implements
           if (target instanceof DecimalCollection) {
             valueColumn = valueColumn.cast(DataTypes.LongType);
           }
-          return IntegerCollection.build(ArrayOrSingularRepresentation.of(valueColumn));
+          return IntegerCollection.build(new ArrayOrSingularRepresentation(valueColumn));
         case DIVISION:
           final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(ArrayOrSingularRepresentation.of(valueColumn));
+          return DecimalCollection.build(new ArrayOrSingularRepresentation(valueColumn));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

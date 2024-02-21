@@ -18,11 +18,16 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ValueFunctions;
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
-import lombok.Value;
+import lombok.Getter;
+import lombok.ToString;
 import org.apache.spark.sql.Column;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a representation where collections of values are represented as arrays in the dataset.
@@ -30,35 +35,58 @@ import org.apache.spark.sql.Column;
  * @author Piotr Szul
  * @author John Grimes
  */
+@Getter
+@ToString
 @EqualsAndHashCode(callSuper = true)
-@Value(staticConstructor = "of")
+@AllArgsConstructor
 public class ArrayOrSingularRepresentation extends ColumnRepresentation {
 
   Column value;
 
   @Override
   protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {
-    return ArrayOrSingularRepresentation.of(newValue);
+    return new ArrayOrSingularRepresentation(newValue);
   }
 
   @Override
   @Nonnull
-  public ArrayOrSingularRepresentation vectorize(@Nonnull final Function<Column, Column> arrayExpression,
+  public ArrayOrSingularRepresentation vectorize(
+      @Nonnull final Function<Column, Column> arrayExpression,
       @Nonnull final Function<Column, Column> singularExpression) {
-    return ArrayOrSingularRepresentation.of(
+    return new ArrayOrSingularRepresentation(
         ValueFunctions.ifArray(value, arrayExpression::apply, singularExpression::apply));
   }
 
   @Override
   @Nonnull
   public ArrayOrSingularRepresentation flatten() {
-    return of(ValueFunctions.unnest(value));
+    return new ArrayOrSingularRepresentation(ValueFunctions.unnest(value));
+  }
+
+  @Nonnull
+  @Override
+  public ArrayOrSingularRepresentation traverse(@Nonnull final String fieldName) {
+    return new ArrayOrSingularRepresentation(traverseColumn(fieldName));
   }
 
   @Override
   @Nonnull
-  public ArrayOrSingularRepresentation traverse(@Nonnull final String fieldName) {
-    return of(ValueFunctions.unnest(value.getField(fieldName)));
+  public ArrayOrSingularRepresentation traverse(@Nonnull final String fieldName,
+      @Nonnull final Optional<FHIRDefinedType> fhirType) {
+    @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
+    if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
+      return DecimalRepresentation.fromTraversal(this, fieldName);
+    } else {
+      return traverse(fieldName);
+    }
   }
-  
+
+  /**
+   * @param fieldName the name of the field to traverse
+   * @return a new column representing the field
+   */
+  protected Column traverseColumn(@Nonnull final String fieldName) {
+    return value.getField(fieldName);
+  }
+
 }

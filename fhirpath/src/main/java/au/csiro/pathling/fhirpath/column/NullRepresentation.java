@@ -1,8 +1,11 @@
 package au.csiro.pathling.fhirpath.column;
 
+import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Describes a representation of an empty collection.
@@ -13,6 +16,7 @@ import org.apache.spark.sql.Column;
 public class NullRepresentation extends ColumnRepresentation {
 
   static final ColumnRepresentation INSTANCE = new NullRepresentation();
+  static final Column NULL_LITERAL = functions.lit(null);
 
   /**
    * @return a singleton instance of this class
@@ -47,8 +51,15 @@ public class NullRepresentation extends ColumnRepresentation {
 
   @Nonnull
   @Override
-  public ColumnRepresentation traverse(@Nonnull final String fieldName) {
+  public NullRepresentation traverse(@Nonnull final String fieldName) {
     return this;
+  }
+
+  @Nonnull
+  @Override
+  public NullRepresentation traverse(@Nonnull final String fieldName,
+      final Optional<FHIRDefinedType> fhirType) {
+    return traverse(fieldName);
   }
 
 }

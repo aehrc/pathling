@@ -41,7 +41,7 @@ public class CollectionResult {
   @Nonnull
   public CollectionResult toTagReference() {
     return new CollectionResult(
-        collection.copyWith(ArrayOrSingularRepresentation.of(functions.col(selection.getTag()))),
+        collection.copyWith(new ArrayOrSingularRepresentation(functions.col(selection.getTag()))),
         selection);
 
   }
