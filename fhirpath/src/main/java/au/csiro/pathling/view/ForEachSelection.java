@@ -63,7 +63,7 @@ public class ForEachSelection extends AbstractCompositeSelection {
                   subContext.getInputContext().map(__ -> ArrayOrSingularRepresentation.of(c)));
               return functions.struct(
                   components.stream().flatMap(s -> s.evaluate(elementCtx).asStream()).map(
-                      cr -> cr.getCollection().getCtx().getValue()
+                      cr -> cr.getCollection().getColumn().getValue()
                           .alias(cr.getSelection().getTag())).toArray(Column[]::new)
               );
             }

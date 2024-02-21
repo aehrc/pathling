@@ -20,15 +20,15 @@ package au.csiro.pathling.fhirpath.operator;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.validation.FhirpathBinaryOperator;
-import org.apache.spark.sql.functions;
 import javax.annotation.Nonnull;
+import org.apache.spark.sql.functions;
 
 public class BinaryOperators {
 
   @FhirpathBinaryOperator
   public static BooleanCollection contains(@Nonnull final Collection collection,
       @Nonnull final Collection element) {
-    return BooleanCollection.build(collection.getCtx().vectorize(
+    return BooleanCollection.build(collection.getColumn().vectorize(
         c -> functions.array_contains(c, element.asSingular().getColumnValue()),
         c -> c.equalTo(element.asSingular().getColumnValue()))
     );

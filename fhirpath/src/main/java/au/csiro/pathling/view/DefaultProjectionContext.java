@@ -58,7 +58,7 @@ public class DefaultProjectionContext implements ProjectionContext {
     final One<Collection> newInputContextResult = evalExpression(parent);
     if (unnest) {
       return newInputContextResult
-          .map(Collection::getCtx)
+          .map(Collection::getColumn)
           .flatMap(cl -> withNulls
                          ? cl.explodeOuter()
                          : cl.explode())

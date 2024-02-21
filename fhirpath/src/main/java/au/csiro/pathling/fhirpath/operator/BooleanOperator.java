@@ -56,8 +56,8 @@ public class BooleanOperator implements BinaryOperator {
     checkUserInput(right instanceof BooleanCollection,
         "Right operand to " + type + " operator must be Boolean");
 
-    final ColumnRepresentation resultCtx = ColumnRepresentation.binaryOperator(left.getCtx(),
-        right.getCtx(),
+    final ColumnRepresentation resultCtx = ColumnRepresentation.binaryOperator(left.getColumn(),
+        right.getColumn(),
         (leftValue, rightValue) -> {
           // Based on the type of operator, create the correct column expression.
           final Column valueColumn;

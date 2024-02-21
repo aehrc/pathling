@@ -46,7 +46,7 @@ public class CombineOperator implements BinaryOperator {
     // and also need to
 
     return left.copyWith(
-        ColumnRepresentation.binaryOperator(left.getCtx().toArray(), right.getCtx().toArray(),
+        ColumnRepresentation.binaryOperator(left.getColumn().toArray(), right.getColumn().toArray(),
             functions::concat)
     );
   }

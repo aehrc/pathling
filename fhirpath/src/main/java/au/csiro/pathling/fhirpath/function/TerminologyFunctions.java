@@ -49,9 +49,9 @@ public abstract class TerminologyFunctions {
   public static StringCollection display(@Nonnull final CodingCollection input,
       @Nullable final StringCollection language) {
 
-    return StringCollection.build(input.getCtx()
+    return StringCollection.build(input.getColumn()
         .transformWithUdf("display", Optional.ofNullable(language)
-            .map(StringCollection::getCtx)
+            .map(StringCollection::getColumn)
             .map(ColumnRepresentation::singular)
             .orElse(NullRepresentation.getInstance()))
         .removeNulls()
@@ -77,11 +77,11 @@ public abstract class TerminologyFunctions {
     checkUserInput(PropertyUdf.ALLOWED_FHIR_TYPES.contains(propertyType),
         String.format("Invalid property type: %s", propertyType));
 
-    final ColumnRepresentation resultCtx = input.getCtx()
+    final ColumnRepresentation resultCtx = input.getColumn()
         .transformWithUdf(PropertyUdf.getNameForType(propertyType),
-            code.getCtx().singular(),
+            code.getColumn().singular(),
             Optional.ofNullable(language)
-                .map(StringCollection::getCtx)
+                .map(StringCollection::getColumn)
                 .map(ColumnRepresentation::singular)
                 .orElse(NullRepresentation.getInstance())
         ).flatten().removeNulls();
@@ -103,14 +103,14 @@ public abstract class TerminologyFunctions {
       @Nullable final CodingCollection use,
       @Nullable final StringCollection language) {
 
-    return StringCollection.build(input.getCtx()
+    return StringCollection.build(input.getColumn()
         .transformWithUdf("designation",
             Optional.ofNullable(use)
-                .map(CodingCollection::getCtx)
+                .map(CodingCollection::getColumn)
                 .map(ColumnRepresentation::singular)
                 .orElse(NullRepresentation.getInstance()),
             Optional.ofNullable(language)
-                .map(StringCollection::getCtx)
+                .map(StringCollection::getColumn)
                 .map(ColumnRepresentation::singular)
                 .orElse(NullRepresentation.getInstance())
         )
@@ -130,7 +130,7 @@ public abstract class TerminologyFunctions {
   public static BooleanCollection memberOf(@Nonnull final CodingCollection input,
       @Nonnull final StringCollection valueSetURL) {
     return BooleanCollection.build(
-        input.getCtx().callUdf("member_of", valueSetURL.getCtx().singular())
+        input.getColumn().callUdf("member_of", valueSetURL.getColumn().singular())
     );
   }
 
@@ -193,16 +193,16 @@ public abstract class TerminologyFunctions {
       @Nullable final BooleanCollection reverse, @Nullable final StringCollection equivalence,
       @Nullable final StringCollection target) {
     return (CodingCollection) input.copyWith(
-        input.getCtx().callUdf("translate_coding",
-            conceptMapUrl.getCtx().singular(),
-            Optional.ofNullable(reverse).map(BooleanCollection::getCtx)
+        input.getColumn().callUdf("translate_coding",
+            conceptMapUrl.getColumn().singular(),
+            Optional.ofNullable(reverse).map(BooleanCollection::getColumn)
                 .map(ColumnRepresentation::singular)
                 .orElse(ColumnRepresentation.literal(false)),
-            Optional.ofNullable(equivalence).map(StringCollection::getCtx).map(
+            Optional.ofNullable(equivalence).map(StringCollection::getColumn).map(
                     ColumnRepresentation::singular)
                 .orElse(ColumnRepresentation.literal("equivalent"))
                 .transform(c -> functions.split(c, ",")),
-            Optional.ofNullable(target).map(StringCollection::getCtx)
+            Optional.ofNullable(target).map(StringCollection::getColumn)
                 .map(ColumnRepresentation::singular)
                 .orElse(NullRepresentation.getInstance())
         ));

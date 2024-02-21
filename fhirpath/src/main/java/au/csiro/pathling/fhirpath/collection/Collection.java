@@ -272,7 +272,8 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   public Collection traverseElement(@Nonnull final ElementDefinition childDef) {
     // Invoke the traversal method on the column context to get the new column.
-    final ColumnRepresentation columnRepresentation = getCtx().traverse(childDef.getElementName());
+    final ColumnRepresentation columnRepresentation = getColumn().traverse(
+        childDef.getElementName());
     // Return a new Collection with the new column and the child definition.
     return Collection.build(columnRepresentation, childDef);
   }
@@ -369,27 +370,21 @@ public class Collection implements Comparable, Numeric {
   @Nonnull
   public Collection map(
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper) {
-    return copyWith(mapper.apply(getCtx()));
+    return copyWith(mapper.apply(getColumn()));
   }
 
   @Nonnull
   public <C extends Collection> C map(
       @Nonnull final Function<ColumnRepresentation, ColumnRepresentation> mapper,
       @Nonnull final Function<ColumnRepresentation, C> constructor) {
-    return constructor.apply(mapper.apply(getCtx()));
+    return constructor.apply(mapper.apply(getColumn()));
   }
 
 
   @Nonnull
   public <C extends Collection> C flatMap(@Nonnull final Function<ColumnRepresentation, C> mapper) {
-    return mapper.apply(getCtx());
+    return mapper.apply(getColumn());
   }
-
-  @Nonnull
-  public ColumnRepresentation getCtx() {
-    return this.column;
-  }
-
 
   @Nonnull
   public Optional<Reference> asReference(@Nonnull final PathEvalContext context) {

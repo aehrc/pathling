@@ -89,7 +89,7 @@ public class StandardFunctions {
    */
   @FhirpathFunction
   public static Collection first(@Nonnull final Collection input) {
-    return input.copyWith(input.getCtx().first());
+    return input.copyWith(input.getColumn().first());
   }
 
   /**
@@ -100,7 +100,7 @@ public class StandardFunctions {
    */
   @FhirpathFunction
   public static BooleanCollection empty(@Nonnull final Collection input) {
-    return BooleanCollection.build(input.getCtx().empty());
+    return BooleanCollection.build(input.getColumn().empty());
   }
 
   /**
@@ -111,7 +111,7 @@ public class StandardFunctions {
    */
   @FhirpathFunction
   public static IntegerCollection count(@Nonnull final Collection input) {
-    return IntegerCollection.build(input.getCtx().count());
+    return IntegerCollection.build(input.getColumn().count());
   }
 
   /**
@@ -147,9 +147,9 @@ public class StandardFunctions {
   @FhirpathFunction
   public static StringCollection join(@Nonnull final StringCollection input,
       @Nullable final StringCollection separator) {
-    return StringCollection.build(input.getCtx().join(
+    return StringCollection.build(input.getColumn().join(
         nonNull(separator)
-        ? separator.asSingular().getCtx()
+        ? separator.asSingular().getColumn()
         : ColumnRepresentation.literal(JOIN_DEFAULT_SEPARATOR)
     ));
   }
@@ -180,27 +180,27 @@ public class StandardFunctions {
    */
   @FhirpathFunction
   public static BooleanCollection not(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getCtx().not());
+    return BooleanCollection.build(input.getColumn().not());
   }
 
   @FhirpathFunction
   public static BooleanCollection allTrue(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getCtx().allTrue());
+    return BooleanCollection.build(input.getColumn().allTrue());
   }
 
   @FhirpathFunction
   public static BooleanCollection allFalse(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getCtx().allFalse());
+    return BooleanCollection.build(input.getColumn().allFalse());
   }
 
   @FhirpathFunction
   public static BooleanCollection anyTrue(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getCtx().anyTrue());
+    return BooleanCollection.build(input.getColumn().anyTrue());
   }
 
   @FhirpathFunction
   public static BooleanCollection anyFalse(@Nonnull final BooleanCollection input) {
-    return BooleanCollection.build(input.getCtx().anyFalse());
+    return BooleanCollection.build(input.getColumn().anyFalse());
   }
 
   public static boolean isTypeSpecifierFunction(@Nonnull final String functionName) {

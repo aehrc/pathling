@@ -55,7 +55,7 @@ public class ComparisonOperator implements BinaryOperator {
     checkUserInput(left.isComparableTo(right), "Operands must be comparable");
 
     return BooleanCollection.build(
-        ColumnRepresentation.binaryOperator(left.getCtx(), right.getCtx(),
+        ColumnRepresentation.binaryOperator(left.getColumn(), right.getColumn(),
             (l, r) -> left.getComparison(type).apply(right))
     );
   }
