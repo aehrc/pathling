@@ -17,7 +17,7 @@
 import os
 
 from pathling import PathlingContext
-from pathling.bulkexport import bulk_export
+from pathling.bulkexport import BulkExportClient
 from datetime import datetime, timezone
 from time import time
 
@@ -34,10 +34,11 @@ fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxM
 outputDirUrl = os.path.join(TARGET_DIR, "export-%s" % int(time()))
 
 print(f"Exporting from: {fhirEndpointUrl} to {outputDirUrl}")
-bulk_export(
+result = BulkExportClient(
     fhirEndpointUrl,
     outputDirUrl,
     outputFormat="ndjson",
     types=["Patient", "Condition"],
     since=datetime.fromisoformat('2020-01-01T00:00:00').replace(tzinfo=timezone.utc)
-)
+).export()
+print(f"TransactionTime: {result.transactionTime.strftime('%Y-%m-%d %H:%M:%S')}")

@@ -47,5 +47,4 @@ def test_to_ecl_value_set():
         "%202442011000036104%7Cparacetamol%7C%20%20%7D%2C%20%2030523011000036108%7Chas"
         "%20manufactured%20dose%20form%7C%20%3D%20154011000036109%7Ctablet%7C%20))"
     )
-    print(expected)
     assert to_ecl_value_set(ecl) == expected
