@@ -1,12 +1,12 @@
 #  Copyright 2023 Commonwealth Scientific and Industrial Research
 #  Organisation (CSIRO) ABN 41 687 119 230.
-# 
+#
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,61 +24,71 @@ from datetime import datetime, timedelta, timezone
 from pathling.fhir import Reference
 
 
-class Method(Enum):
+class ExportLevel(Enum):
     """
-    The method of bulk export.
+    The level of bulk export.
     """
-    SYSTEM = 'SYSTEM'
-    PATIENT = 'PATIENT'
-    GROUP = 'GROUP'
+
+    SYSTEM = "SYSTEM"
+    PATIENT = "PATIENT"
+    GROUP = "GROUP"
 
 
 class BulkExportResult(NamedTuple):
     """
     The result of a bulk export operation.
     """
+
     transaction_time: datetime
+    """
+    The value of the `transactionTime` field of the Bulk Export final response. 
+    Indicates the server's time when the query is run.
+    """
 
     @classmethod
-    def _from_java(cls, j_result: JavaObject) -> 'BulkExportResult':
+    def _from_java(cls, j_result: JavaObject) -> "BulkExportResult":
         return cls(
             transaction_time=datetime.fromtimestamp(
-                j_result.getTransactionTime().toEpochMilli() / 1000.0, tz=timezone.utc)
+                j_result.getTransactionTime().toEpochMilli() / 1000.0, tz=timezone.utc
+            )
         )
 
 
 # noinspection PyProtectedMember
 class BulkExportClient:
     """
-    Client for bulk export of FHIR resources from a FHIR server.
-    
+    Client for bulk export of FHIR resources from a FHIR server. 
+    See: https://hl7.org/fhir/uv/bulkdata/STU2/export.html
+
     Example use::
-    
+
         BulkExportClient('http://example.com/fhir', 'output-dir').export()
     """
 
     def __init__(
         self,
-        fhirEndpointUrl: str,
-        outputDirUrl: str,
-        method: Optional[Method] = Method.SYSTEM,
-        groupId: Optional[str] = None,
-        outputFormat: str = 'ndjson',
+        fhir_endpoint_url: str,
+        output_dir_url: str,
+        level: Optional[ExportLevel] = ExportLevel.SYSTEM,
+        group_id: Optional[str] = None,
+        output_format: str = "ndjson",
         types: Optional[Sequence[str]] = None,
         since: Optional[datetime] = None,
         patients: Optional[Sequence[Reference]] = None,
-        timeout: Optional[timedelta] = None
+        timeout: Optional[timedelta] = None,
     ):
         """
-        :param fhirEndpointUrl: the FHIR endpoint URL
-        :param outputDirUrl: the output directory URL
-        :param method: the method of bulk export. One of `Method.SYSTEM`, `Method.PATIENT`, `Method.GROUP`
-        :param groupId: the value of the `groupId` parameter the group export.Required for group export.
-        :param outputFormat: the value of the `_outputFormat` parameter for Bulk Export kick-off request
+        :param fhir_endpoint_url: the FHIR endpoint URL
+        :param output_dir_url: the output directory URL
+        :param level: the level of bulk export. One of :class:`ExportLevel` values.
+        :param group_id: the value of the `groupId` parameter the group export. Required for GROUP
+                level export.
+        :param output_format: the value of the `_outputFormat` parameter for Bulk Export kick-off request
         :param types: the value of the `_type` parameter for Bulk Export kick-off request
-        :param since: the value of the `_since` parameter for Bulk Data kick-off request 
+        :param since: the value of the `_since` parameter for Bulk Data kick-off request
         :param patients: the value of the `patient` parameter for Bulk Export kick-off request
-        :param timeout: the maximum time to wait for the export to complete
+        :param timeout: the maximum time to wait for the export to complete. If the export does not
+                complete within this time, an exception is raised. By default, not time limit is set.
         """
 
         if SparkContext._active_spark_context is None:
@@ -95,39 +105,47 @@ class BulkExportClient:
             return jvm.java.time.Duration.ofSeconds(int(td.total_seconds()))
 
         def reference_to_java(ref: Reference) -> JavaObject:
-            return jvm_pathling.export.fhir.Reference.builder() \
-                .reference(ref.reference) \
-                .type(ref.type) \
-                .identifier(ref.identifier) \
-                .display(ref.display) \
+            return (
+                jvm_pathling.export.fhir.Reference.builder()
+                .reference(ref.reference)
+                .type(ref.type)
+                .identifier(ref.identifier)
+                .display(ref.display)
                 .build()
+            )
 
         client_builder = None
-        if method == Method.SYSTEM:
+        if level == ExportLevel.SYSTEM:
             client_builder = jvm_pathling.export.BulkExportClient.systemBuilder()
-        elif method == Method.PATIENT:
+        elif level == ExportLevel.PATIENT:
             client_builder = jvm_pathling.export.BulkExportClient.patientBuilder()
-        elif method == Method.GROUP:
-            if groupId is None:
+        elif level == ExportLevel.GROUP:
+            if group_id is None:
                 raise ValueError("groupId is required for group export")
-            client_builder = jvm_pathling.export.BulkExportClient.groupBuilder(groupId)
+            client_builder = jvm_pathling.export.BulkExportClient.groupBuilder(group_id)
 
-        client_builder \
-            .withFileStoreFactory(jvm_pathling.library.fs.HdfsFileStoreFactory.ofSpark(jsc.sc())) \
-            .withFhirEndpointUrl(fhirEndpointUrl) \
-            .withOutputDir(outputDirUrl) \
-            .withOutputFormat(outputFormat) \
-            .withTypes(types or []) \
-            .withSince(datetime_to_instant(since) if since else None)
+        client_builder.withFileStoreFactory(
+            jvm_pathling.library.fs.HdfsFileStoreFactory.ofSpark(jsc.sc())
+        ).withFhirEndpointUrl(fhir_endpoint_url).withOutputDir(
+            output_dir_url
+        ).withOutputFormat(
+            output_format
+        ).withTypes(
+            types or []
+        ).withSince(
+            datetime_to_instant(since) if since else None
+        )
 
         timeout and client_builder.withTimeout(timedelta_to_duration(timeout))
-        patients and client_builder.withPatients([reference_to_java(ref) for ref in patients])
+        patients and client_builder.withPatients(
+            [reference_to_java(ref) for ref in patients]
+        )
 
         self._jclient = client_builder.build()
 
     def export(self) -> BulkExportResult:
         """
         Runs the bulk export process.
-        :return: the result of the export operation 
+        :return: the result of the export operation od type :class:`BulkExportResult`
         """
         return BulkExportResult._from_java(self._jclient.export())

@@ -35,7 +35,7 @@ from py4j.java_gateway import JVMView
 from pyspark import SparkContext
 
 from pathling.bulkexport import BulkExportClient, BulkExportResult
-from pathling.bulkexport import Method
+from pathling.bulkexport import ExportLevel
 from pathling.fhir import Reference
 
 from flask import Response
@@ -58,8 +58,8 @@ def test_builds_system_client_with_options(pathling_ctx):
     client = BulkExportClient(
         "http://system.com",
         "output-system",
-        method=Method.SYSTEM,
-        outputFormat="fhir+ndjson",
+        level=ExportLevel.SYSTEM,
+        output_format="fhir+ndjson",
         types=["Patient", "Condition"],
         since=datetime.fromtimestamp(10000, tz=timezone.utc),
         timeout=timedelta(minutes=2),
@@ -79,7 +79,7 @@ def test_builds_patient_client_with_options(pathling_ctx):
     client = BulkExportClient(
         "http://patient.com",
         "output-patient",
-        method=Method.PATIENT,
+        level=ExportLevel.PATIENT,
         types=["Observation", "Condition"],
         patients=[Reference("Patient/123"), Reference("Patient/456")],
         since=datetime.fromtimestamp(2000, tz=timezone.utc),
@@ -105,8 +105,8 @@ def test_builds_group_client_with_options(pathling_ctx):
     client = BulkExportClient(
         "http://group.com",
         "output-group",
-        method=Method.GROUP,
-        groupId="123",
+        level=ExportLevel.GROUP,
+        group_id="123",
     )
     j_client = client._jclient
     assert j_client.getFhirEndpointUrl() == "http://group.com"
@@ -126,7 +126,7 @@ def test_raises_error_if_group_without_id(pathling_ctx):
         BulkExportClient(
             "http://group.com",
             "output-group",
-            method=Method.GROUP,
+            level=ExportLevel.GROUP,
         )
     assert exc_info.match("groupId is required for group export")
 
