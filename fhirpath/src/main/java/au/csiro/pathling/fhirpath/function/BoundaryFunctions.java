@@ -20,15 +20,27 @@ public abstract class BoundaryFunctions {
   @FhirpathFunction
   @Nonnull
   public static Collection lowBoundary(@Nonnull final Collection input) {
-    validateType(input, "lowBoundary");
+    return boundary(input, "lowBoundary", "low_boundary_for_decimal");
+  }
+
+  @FhirpathFunction
+  @Nonnull
+  public static Collection highBoundary(@Nonnull final Collection input) {
+    return boundary(input, "highBoundary", "high_boundary_for_decimal");
+  }
+
+  @Nonnull
+  private static Collection boundary(@Nonnull final Collection input,
+      @Nonnull final String functionName, @Nonnull final String udfName) {
+    validateType(input, functionName);
     if (input instanceof DecimalCollection && input.getColumn() instanceof DecimalRepresentation) {
       final DecimalCollection decimalCollection = (DecimalCollection) input;
       final DecimalRepresentation column = (DecimalRepresentation) decimalCollection.getColumn();
       final Column scaleValue = column.getScaleValue().orElseThrow(
           () -> new IllegalArgumentException(
-              "Decimal must have a scale value to be used with lowBoundary"));
+              "Decimal must have a scale value to be used with " + functionName));
       final ColumnRepresentation result = column.call(
-          c -> callUDF("low_boundary_for_decimal", c, scaleValue));
+          c -> callUDF(udfName, c, scaleValue));
       return input.copyWith(result);
     } else {
       throw new NotImplementedException();
