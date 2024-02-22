@@ -3,6 +3,7 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.utilities.Preconditions.check;
 import static org.apache.spark.sql.functions.callUDF;
 
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
@@ -14,7 +15,6 @@ import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.spark.sql.Column;
 
 public abstract class BoundaryFunctions {
@@ -34,7 +34,8 @@ public abstract class BoundaryFunctions {
       // The low boundary of an integer is always the integer itself.
       return input;
     } else {
-      throw new NotImplementedException();
+      throw new InvalidUserInputError(
+          "lowBoundary() can only be applied to a Decimal, Integer, Date, DateTime, or Time path");
     }
   }
 
@@ -53,7 +54,8 @@ public abstract class BoundaryFunctions {
       // The high boundary of an integer is always the integer itself.
       return input;
     } else {
-      throw new NotImplementedException();
+      throw new InvalidUserInputError(
+          "highBoundary() can only be applied to a Decimal, Integer, Date, DateTime, or Time path");
     }
   }
 
