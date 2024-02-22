@@ -7,10 +7,10 @@ public class BoundaryUDFRegistrar extends AbstractUDFRegistrar {
 
   @Override
   protected void registerUDFs(@Nonnull final UDFRegistrar udfRegistrar) {
-    udfRegistrar.register(new HighBoundaryForDateFunction())
+    udfRegistrar.register(new HighBoundaryForDateTimeFunction())
         .register(new HighBoundaryForDecimal())
         .register(new HighBoundaryForTime())
-        .register(new LowBoundaryForDateFunction())
+        .register(new LowBoundaryForDateTimeFunction())
         .register(new LowBoundaryForDecimal())
         .register(new LowBoundaryForTime());
   }
