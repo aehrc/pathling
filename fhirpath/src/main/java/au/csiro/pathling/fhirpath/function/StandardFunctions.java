@@ -31,7 +31,6 @@ import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
 import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
-import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
@@ -150,7 +149,7 @@ public class StandardFunctions {
     return StringCollection.build(input.getColumn().join(
         nonNull(separator)
         ? separator.asSingular().getColumn()
-        : ColumnRepresentation.literal(JOIN_DEFAULT_SEPARATOR)
+        : ArrayOrSingularRepresentation.literal(JOIN_DEFAULT_SEPARATOR)
     ));
   }
 

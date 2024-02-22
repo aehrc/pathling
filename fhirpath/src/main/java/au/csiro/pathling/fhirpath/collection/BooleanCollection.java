@@ -20,6 +20,7 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
@@ -80,7 +81,7 @@ public class BooleanCollection extends Collection implements Materializable<Bool
 
   @Nonnull
   public static BooleanCollection fromValue(final boolean value) {
-    return BooleanCollection.build(ColumnRepresentation.literal(value));
+    return BooleanCollection.build(ArrayOrSingularRepresentation.literal(value));
   }
 
   @Nonnull

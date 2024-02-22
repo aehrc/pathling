@@ -7,7 +7,6 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
-import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.utilities.Utilities;
 
 public class LowBoundaryForDecimal implements SqlFunction2<BigDecimal, Integer, BigDecimal> {
@@ -21,7 +20,7 @@ public class LowBoundaryForDecimal implements SqlFunction2<BigDecimal, Integer, 
 
   @Override
   public DataType getReturnType() {
-    return DataTypes.StringType;
+    return DecimalCustomCoder.decimalType();
   }
 
   @Override

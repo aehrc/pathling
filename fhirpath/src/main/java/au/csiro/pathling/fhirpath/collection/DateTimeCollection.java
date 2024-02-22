@@ -25,6 +25,7 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
+import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
@@ -91,7 +92,7 @@ public class DateTimeCollection extends Collection implements
   public static DateTimeCollection fromLiteral(@Nonnull final String fhirPath)
       throws ParseException {
     final String dateString = fhirPath.replaceFirst("^@", "");
-    return DateTimeCollection.build(ColumnRepresentation.literal(dateString));
+    return DateTimeCollection.build(ArrayOrSingularRepresentation.literal(dateString));
   }
 
   @Nonnull

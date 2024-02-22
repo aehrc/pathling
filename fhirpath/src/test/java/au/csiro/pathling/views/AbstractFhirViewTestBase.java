@@ -5,11 +5,14 @@ import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static scala.collection.JavaConversions.asScalaBuffer;
 
 import au.csiro.pathling.encoders.FhirEncoders;
+import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
@@ -26,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -34,17 +38,20 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.types.DecimalType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
@@ -117,9 +124,30 @@ abstract class AbstractFhirViewTestBase {
 
     @Override
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
-      final Dataset<Row> expectedResult = spark.read().json(expectedJson.toString())
-          .selectExpr(expectedColumns.toArray(new String[0]));
-      assertThat(rowDataset).hasRowsUnordered(expectedResult);
+      // Read the expected JSON with prefersDecimal option set to true.
+      final Dataset<Row> expectedResult = spark.read().option("prefersDecimal", "true")
+          .json(expectedJson.toString());
+
+      // Dynamically create column expressions based on the schema.
+      final List<Column> selectColumns = Arrays.stream(expectedResult.schema().fields())
+          .map(field -> {
+            // Check if the field's data type is DecimalType.
+            if (field.dataType() instanceof DecimalType) {
+              // Use DecimalCustomCoder.decimalType() for the cast type.
+              return col(field.name()).cast(DecimalCustomCoder.decimalType()).alias(field.name());
+            } else {
+              // Add the field to the selection without alteration.
+              return col(field.name());
+            }
+          })
+          .collect(Collectors.toList());
+
+      // Select the data with the dynamically created column expressions.
+      final Dataset<Row> selectedExpectedResult = expectedResult.select(
+          asScalaBuffer(selectColumns).seq());
+
+      // Assert that the rowDataset has rows unordered as in selectedExpectedResult.
+      assertThat(rowDataset).hasRowsAndColumnsUnordered(selectedExpectedResult);
     }
   }
 

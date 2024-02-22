@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import com.google.common.collect.ImmutableSet;
 import java.util.Optional;
@@ -82,7 +83,7 @@ public class IntegerCollection extends Collection implements
 
   @Nonnull
   public static IntegerCollection fromValue(final int value) {
-    return IntegerCollection.build(ColumnRepresentation.literal(value));
+    return IntegerCollection.build(ArrayOrSingularRepresentation.literal(value));
   }
 
 
@@ -189,7 +190,7 @@ public class IntegerCollection extends Collection implements
           final Column numerator = source.getColumn().cast(DecimalCollection.getDecimalType())
               .getValue();
           valueColumn = operation.getSparkFunction().apply(numerator, targetNumeric);
-          return DecimalCollection.build(new ArrayOrSingularRepresentation(valueColumn));
+          return DecimalCollection.build(new DecimalRepresentation(valueColumn));
         default:
           throw new AssertionError("Unsupported math operation encountered: " + operation);
       }

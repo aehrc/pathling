@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MultiSet;
 import org.apache.commons.collections4.multiset.HashMultiSet;
 import org.apache.commons.io.file.SimplePathVisitor;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SaveMode;
@@ -115,6 +116,27 @@ public class DatasetAssert {
   @SuppressWarnings("UnusedReturnValue")
   public DatasetAssert hasRowsUnordered(@Nonnull final Dataset<Row> expected) {
     return hasRowsUnordered(expected.collectAsList());
+  }
+
+  @Nonnull
+  public DatasetAssert hasRowsAndColumnsUnordered(@Nonnull final Dataset<Row> expected) {
+    // First, get the list of columns from the expected and actual datasets, sort them and assert
+    // that they are equal.
+    final List<String> expectedColumns = Arrays.asList(expected.columns());
+    final List<String> actualColumns = Arrays.asList(dataset.columns());
+    expectedColumns.sort(String::compareTo);
+    actualColumns.sort(String::compareTo);
+    assertEquals(expectedColumns, actualColumns);
+
+    // Then re-project the expected and actual datasets using the ordered list of columns.
+    final Dataset<Row> expectedReprojected = expected.select(expectedColumns.stream()
+        .map(expected::col).toArray(Column[]::new));
+    final Dataset<Row> actualReprojected = dataset.select(actualColumns.stream()
+        .map(dataset::col).toArray(Column[]::new));
+
+    // Finally, assert that the re-projected datasets are equal.
+    new DatasetAssert(actualReprojected).hasRowsUnordered(expectedReprojected);
+    return this;
   }
 
   @Nonnull

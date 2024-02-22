@@ -18,6 +18,7 @@
 package au.csiro.pathling.fhirpath.column;
 
 import au.csiro.pathling.encoders.ValueFunctions;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -27,6 +28,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
+import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -42,6 +44,20 @@ import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 public class ArrayOrSingularRepresentation extends ColumnRepresentation {
 
   Column value;
+
+  /**
+   * Create a new {@link ColumnRepresentation} from a literal value.
+   *
+   * @param value The value to represent
+   * @return A new {@link ColumnRepresentation} representing the value
+   */
+  @Nonnull
+  public static ColumnRepresentation literal(@Nonnull final Object value) {
+    if (value instanceof BigDecimal) {
+      return new DecimalRepresentation(functions.lit(value));
+    }
+    return new ArrayOrSingularRepresentation(functions.lit(value));
+  }
 
   @Override
   protected ColumnRepresentation copyOf(@Nonnull final Column newValue) {

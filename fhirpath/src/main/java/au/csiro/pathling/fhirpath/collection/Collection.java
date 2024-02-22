@@ -428,8 +428,7 @@ public class Collection implements Comparable, Numeric {
     @Nonnull
     @Override
     public ReferenceDefinition getDefinition() {
-      return (ReferenceDefinition) referenceCollection.getDefinition()
-          .get();
+      return (ReferenceDefinition) referenceCollection.getDefinition().get();
     }
 
     @Nonnull

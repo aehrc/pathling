@@ -27,6 +27,7 @@ import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -79,7 +80,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
    * @return A new instance of {@link DecimalCollection}
    */
   @Nonnull
-  public static DecimalCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
+  public static DecimalCollection build(@Nonnull final DecimalRepresentation columnRepresentation) {
     return DecimalCollection.build(columnRepresentation, Optional.empty());
   }
 
@@ -94,7 +95,8 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   public static DecimalCollection fromLiteral(@Nonnull final String literal)
       throws NumberFormatException {
     final BigDecimal value = parseLiteral(literal);
-    return DecimalCollection.build(ColumnRepresentation.literal(value));
+    return DecimalCollection.build(
+        (DecimalRepresentation) ArrayOrSingularRepresentation.literal(value));
   }
 
   @Nonnull
@@ -142,7 +144,7 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         case MULTIPLICATION:
         case DIVISION:
           result = result.cast(getDecimalType());
-          return DecimalCollection.build(new ArrayOrSingularRepresentation(result));
+          return DecimalCollection.build(new DecimalRepresentation(result));
         case MODULUS:
           result = result.cast(DataTypes.LongType);
           return IntegerCollection.build(new ArrayOrSingularRepresentation(result));
@@ -197,4 +199,11 @@ public class DecimalCollection extends Collection implements Materializable<Deci
   public StringCollection asStringPath() {
     return map(ColumnRepresentation::asString, StringCollection::build);
   }
+
+  @Nonnull
+  @Override
+  public DecimalCollection copyWith(@Nonnull final ColumnRepresentation newValue) {
+    return (DecimalCollection) super.copyWith(newValue);
+  }
+
 }

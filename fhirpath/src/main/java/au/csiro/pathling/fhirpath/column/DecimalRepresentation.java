@@ -1,5 +1,6 @@
 package au.csiro.pathling.fhirpath.column;
 
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -21,7 +22,7 @@ import org.apache.spark.sql.Column;
 public class DecimalRepresentation extends ArrayOrSingularRepresentation {
 
   public static final String SCALE_SUFFIX = "_scale";
-  private final Column scaleValue;
+  private final Optional<Column> scaleValue;
 
   @Nonnull
   public static DecimalRepresentation fromTraversal(
@@ -30,9 +31,14 @@ public class DecimalRepresentation extends ArrayOrSingularRepresentation {
         column.traverseColumn(fieldName + SCALE_SUFFIX));
   }
 
+  public DecimalRepresentation(@Nonnull final Column value) {
+    super(value);
+    this.scaleValue = Optional.empty();
+  }
+
   public DecimalRepresentation(@Nonnull final Column value, @Nonnull final Column scaleValue) {
     super(value);
-    this.scaleValue = scaleValue;
+    this.scaleValue = Optional.of(scaleValue);
   }
 
 }

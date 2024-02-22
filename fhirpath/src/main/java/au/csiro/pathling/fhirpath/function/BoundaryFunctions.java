@@ -7,10 +7,13 @@ import au.csiro.pathling.fhirpath.collection.DateCollection;
 import au.csiro.pathling.fhirpath.collection.DateTimeCollection;
 import au.csiro.pathling.fhirpath.collection.DecimalCollection;
 import au.csiro.pathling.fhirpath.collection.TimeCollection;
+import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
 import au.csiro.pathling.fhirpath.validation.FhirpathFunction;
 import au.csiro.pathling.utilities.Preconditions;
 import javax.annotation.Nonnull;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.spark.sql.Column;
 
 public abstract class BoundaryFunctions {
 
@@ -18,11 +21,15 @@ public abstract class BoundaryFunctions {
   @Nonnull
   public static Collection lowBoundary(@Nonnull final Collection input) {
     validateType(input, "lowBoundary");
-    if (input instanceof DecimalCollection) {
+    if (input instanceof DecimalCollection && input.getColumn() instanceof DecimalRepresentation) {
       final DecimalCollection decimalCollection = (DecimalCollection) input;
-      return decimalCollection.map(ctx -> ctx.call(c ->
-          callUDF("low_boundary_for_decimal", c))); //, ctx.getNumericContextColumn())
-      // .cast(DecimalCollection.getDecimalType())
+      final DecimalRepresentation column = (DecimalRepresentation) decimalCollection.getColumn();
+      final Column scaleValue = column.getScaleValue().orElseThrow(
+          () -> new IllegalArgumentException(
+              "Decimal must have a scale value to be used with lowBoundary"));
+      final ColumnRepresentation result = column.call(
+          c -> callUDF("low_boundary_for_decimal", c, scaleValue));
+      return input.copyWith(result);
     } else {
       throw new NotImplementedException();
     }
