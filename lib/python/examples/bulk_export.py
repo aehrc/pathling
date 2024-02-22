@@ -21,6 +21,8 @@ from pathling.bulkexport import BulkExportClient
 from datetime import datetime, timezone
 from time import time
 
+from pathling.fhir import as_fhir_instant, from_fhir_instant
+
 HERE = os.path.abspath(os.path.dirname(__file__))
 BASE_DIR = os.path.abspath(os.path.join(HERE, os.pardir))
 TARGET_DIR = os.path.abspath(os.path.join(BASE_DIR, "target"))
@@ -39,6 +41,6 @@ result = BulkExportClient(
     outputDirUrl,
     output_format="ndjson",
     types=["Patient", "Condition"],
-    since=datetime.fromisoformat('2020-01-01T00:00:00').replace(tzinfo=timezone.utc)
+    since=from_fhir_instant('2020-01-01T00:00:00Z')
 ).export()
-print(f"TransactionTime: {result.transaction_time.strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"TransactionTime: {as_fhir_instant(result.transaction_time)}")

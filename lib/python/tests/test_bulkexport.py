@@ -136,7 +136,7 @@ def test_build_correct_export_result(pathling_ctx):
     j_result = jvm.au.csiro.pathling.export.BulkExportResult.of(
         jvm.java.time.Instant.ofEpochMilli(1000_123), []
     )
-    result = BulkExportResult._from_java(j_result)
+    result = BulkExportResult.from_java(j_result)
     assert result.transaction_time == datetime.fromtimestamp(1000.123, tz=timezone.utc)
 
 

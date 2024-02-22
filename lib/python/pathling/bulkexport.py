@@ -17,11 +17,19 @@ from enum import Enum
 from typing import Sequence, Optional, NamedTuple
 
 from py4j.java_gateway import JavaObject, JVMView
-from pyspark import SparkContext
 
 from datetime import datetime, timedelta, timezone
 
 from pathling.fhir import Reference
+
+from pathling.jvm import (
+    jvm_pathling,
+    jvm,
+    get_active_java_spark_context,
+    datetime_to_instant,
+    timedelta_to_duration,
+    instant_to_datetime,
+)
 
 
 class ExportLevel(Enum):
@@ -46,18 +54,19 @@ class BulkExportResult(NamedTuple):
     """
 
     @classmethod
-    def _from_java(cls, j_result: JavaObject) -> "BulkExportResult":
-        return cls(
-            transaction_time=datetime.fromtimestamp(
-                j_result.getTransactionTime().toEpochMilli() / 1000.0, tz=timezone.utc
-            )
-        )
+    def from_java(cls, j_result: JavaObject) -> "BulkExportResult":
+        """
+        Create a BulkExportResult from a Java BulkExportResult.
+        :param j_result: the Java BulkExportResult
+        :return: the equivalent BulkExportResult
+        """
+        return cls(transaction_time=instant_to_datetime(j_result.getTransactionTime()))
 
 
 # noinspection PyProtectedMember
 class BulkExportClient:
     """
-    Client for bulk export of FHIR resources from a FHIR server. 
+    Client for bulk export of FHIR resources from a FHIR server.
     See: https://hl7.org/fhir/uv/bulkdata/STU2/export.html
 
     Example use::
@@ -91,41 +100,22 @@ class BulkExportClient:
                 complete within this time, an exception is raised. By default, not time limit is set.
         """
 
-        if SparkContext._active_spark_context is None:
-            raise ValueError("No active SparkContext")
-
-        jsc: JavaObject = SparkContext._active_spark_context._jsc
-        jvm: Optional[JVMView] = SparkContext._active_spark_context._jvm
-        jvm_pathling: JavaObject = jvm.au.csiro.pathling
-
-        def datetime_to_instant(dt: datetime) -> JavaObject:
-            return jvm.java.time.Instant.ofEpochMilli(int(dt.timestamp() * 1000))
-
-        def timedelta_to_duration(td: timedelta) -> JavaObject:
-            return jvm.java.time.Duration.ofSeconds(int(td.total_seconds()))
-
-        def reference_to_java(ref: Reference) -> JavaObject:
-            return (
-                jvm_pathling.export.fhir.Reference.builder()
-                .reference(ref.reference)
-                .type(ref.type)
-                .identifier(ref.identifier)
-                .display(ref.display)
-                .build()
-            )
+        sc: JavaObject = get_active_java_spark_context().sc()
 
         client_builder = None
         if level == ExportLevel.SYSTEM:
-            client_builder = jvm_pathling.export.BulkExportClient.systemBuilder()
+            client_builder = jvm_pathling().export.BulkExportClient.systemBuilder()
         elif level == ExportLevel.PATIENT:
-            client_builder = jvm_pathling.export.BulkExportClient.patientBuilder()
+            client_builder = jvm_pathling().export.BulkExportClient.patientBuilder()
         elif level == ExportLevel.GROUP:
             if group_id is None:
                 raise ValueError("groupId is required for group export")
-            client_builder = jvm_pathling.export.BulkExportClient.groupBuilder(group_id)
+            client_builder = jvm_pathling().export.BulkExportClient.groupBuilder(
+                group_id
+            )
 
         client_builder.withFileStoreFactory(
-            jvm_pathling.library.fs.HdfsFileStoreFactory.ofSpark(jsc.sc())
+            jvm_pathling().library.fs.HdfsFileStoreFactory.ofSpark(sc)
         ).withFhirEndpointUrl(fhir_endpoint_url).withOutputDir(
             output_dir_url
         ).withOutputFormat(
@@ -137,9 +127,7 @@ class BulkExportClient:
         )
 
         timeout and client_builder.withTimeout(timedelta_to_duration(timeout))
-        patients and client_builder.withPatients(
-            [reference_to_java(ref) for ref in patients]
-        )
+        patients and client_builder.withPatients([ref.to_java() for ref in patients])
 
         self._jclient = client_builder.build()
 
@@ -148,4 +136,4 @@ class BulkExportClient:
         Runs the bulk export process.
         :return: the result of the export operation od type :class:`BulkExportResult`
         """
-        return BulkExportResult._from_java(self._jclient.export())
+        return BulkExportResult.from_java(self._jclient.export())
