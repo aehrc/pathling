@@ -6,7 +6,14 @@ import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.utilities.Utilities;
 
-public class HighBoundaryForTime implements SqlFunction1<String, String> {
+/**
+ * UDF to calculate the high boundary for a time.
+ *
+ * @author John Grimes
+ * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIRPath - Additional functions</a>
+ */
+public class HighBoundaryForTime extends DateTimeBoundaryFunction implements
+    SqlFunction1<String, String> {
 
   private static final long serialVersionUID = 1198815979308332180L;
 
@@ -26,7 +33,7 @@ public class HighBoundaryForTime implements SqlFunction1<String, String> {
     if (s == null) {
       return null;
     }
-    return Utilities.highBoundaryForTime(s, 9);
+    return Utilities.highBoundaryForTime(s, TIME_BOUNDARY_PRECISION);
   }
 
 }
