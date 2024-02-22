@@ -37,12 +37,12 @@ class BulkExportResult(NamedTuple):
     """
     The result of a bulk export operation.
     """
-    transactionTime: datetime
+    transaction_time: datetime
 
     @classmethod
     def _from_java(cls, j_result: JavaObject) -> 'BulkExportResult':
         return cls(
-            transactionTime=datetime.fromtimestamp(
+            transaction_time=datetime.fromtimestamp(
                 j_result.getTransactionTime().toEpochMilli() / 1000.0, tz=timezone.utc)
         )
 

@@ -41,4 +41,4 @@ result = BulkExportClient(
     types=["Patient", "Condition"],
     since=datetime.fromisoformat('2020-01-01T00:00:00').replace(tzinfo=timezone.utc)
 ).export()
-print(f"TransactionTime: {result.transactionTime.strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"TransactionTime: {result.transaction_time.strftime('%Y-%m-%d %H:%M:%S')}")
