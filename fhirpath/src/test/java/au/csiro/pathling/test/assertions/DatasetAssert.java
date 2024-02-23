@@ -106,6 +106,9 @@ public class DatasetAssert {
 
   @Nonnull
   private DatasetAssert hasRowsUnordered(@Nonnull final Collection<Row> expected) {
+    if (expected.isEmpty() && dataset.isEmpty()) {
+      return this;
+    }
     final MultiSet<Row> actualRows = new HashMultiSet<>(dataset.collectAsList());
     final MultiSet<Row> expectedRows = new HashMultiSet<>(expected);
     assertEquals(expectedRows, actualRows);
@@ -120,6 +123,9 @@ public class DatasetAssert {
 
   @Nonnull
   public DatasetAssert hasRowsAndColumnsUnordered(@Nonnull final Dataset<Row> expected) {
+    if (expected.isEmpty() && dataset.isEmpty()) {
+      return this;
+    }
     // First, get the list of columns from the expected and actual datasets, sort them and assert
     // that they are equal.
     final List<String> expectedColumns = Arrays.asList(expected.columns());
