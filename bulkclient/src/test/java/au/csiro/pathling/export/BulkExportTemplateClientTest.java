@@ -57,11 +57,11 @@ public class BulkExportTemplateClientTest {
     assertEquals(
         List.of(
             new UrlDownloadEntry(URI.create("http:/foo.bar/1"),
-                FileHandle.ofLocal("output-dir/Condition_0000.ndjson")),
+                FileHandle.ofLocal("output-dir/Condition.0000.ndjson")),
             new UrlDownloadEntry(URI.create("http:/foo.bar/2"),
-                FileHandle.ofLocal("output-dir/Condition_0001.ndjson")),
+                FileHandle.ofLocal("output-dir/Condition.0001.ndjson")),
             new UrlDownloadEntry(URI.create("http:/foo.bar/3"),
-                FileHandle.ofLocal("output-dir/Condition_0002.ndjson"))
+                FileHandle.ofLocal("output-dir/Condition.0002.ndjson"))
         ),
         downloadUrls
     );
@@ -94,11 +94,11 @@ public class BulkExportTemplateClientTest {
     assertEquals(
         List.of(
             new UrlDownloadEntry(URI.create("http:/foo.bar/1"),
-                FileHandle.ofLocal("output-dir/Patient_0000.xjson")),
+                FileHandle.ofLocal("output-dir/Patient.0000.xjson")),
             new UrlDownloadEntry(URI.create("http:/foo.bar/2"),
-                FileHandle.ofLocal("output-dir/Condition_0000.xjson")),
+                FileHandle.ofLocal("output-dir/Condition.0000.xjson")),
             new UrlDownloadEntry(URI.create("http:/foo.bar/3"),
-                FileHandle.ofLocal("output-dir/Observation_0000.xjson"))
+                FileHandle.ofLocal("output-dir/Observation.0000.xjson"))
         ),
         downloadUrls
     );

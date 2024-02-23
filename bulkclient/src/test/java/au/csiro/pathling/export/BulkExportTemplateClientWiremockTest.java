@@ -192,11 +192,11 @@ class BulkExportTemplateClientWiremockTest {
 
     assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
-        FileUtils.readFileToString(new File(exportDir, "Patient_0000.ndjson"), Charsets.UTF_8));
+        FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
     assertEquals(RESOURCE_01,
-        FileUtils.readFileToString(new File(exportDir, "Condition_0000.ndjson"), Charsets.UTF_8));
+        FileUtils.readFileToString(new File(exportDir, "Condition.0000.ndjson"), Charsets.UTF_8));
     assertEquals(RESOURCE_02,
-        FileUtils.readFileToString(new File(exportDir, "Condition_0001.ndjson"), Charsets.UTF_8));
+        FileUtils.readFileToString(new File(exportDir, "Condition.0001.ndjson"), Charsets.UTF_8));
   }
 
   @Test
@@ -275,7 +275,7 @@ class BulkExportTemplateClientWiremockTest {
 
     assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
-        FileUtils.readFileToString(new File(exportDir, "Patient_0000.ndjson"), Charsets.UTF_8));
+        FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
   }
 
 
@@ -330,7 +330,7 @@ class BulkExportTemplateClientWiremockTest {
 
     assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
-        FileUtils.readFileToString(new File(exportDir, "Patient_0000.ndjson"), Charsets.UTF_8));
+        FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
   }
 
   @Test

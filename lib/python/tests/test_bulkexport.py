@@ -170,7 +170,7 @@ def test_runs_export(pathling_ctx, mock_server, tmp_path):
 
         assert os.path.isdir(output_dir)
         assert os.path.exists(os.path.join(output_dir, "_SUCCESS"))
-        assert os.path.exists(os.path.join(output_dir, "Patient_0000.ndjson"))
-        with open(os.path.join(output_dir, "Patient_0000.ndjson")) as f:
+        assert os.path.exists(os.path.join(output_dir, "Patient.0000.ndjson"))
+        with open(os.path.join(output_dir, "Patient.0000.ndjson")) as f:
             assert f.read() == '{"id":"123"}'
         assert result.transaction_time == datetime.fromtimestamp(0, tz=timezone.utc)

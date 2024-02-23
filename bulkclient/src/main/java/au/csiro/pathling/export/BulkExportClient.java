@@ -235,7 +235,7 @@ public class BulkExportClient {
   @Nonnull
   static String toFileName(@Nonnull final String resource, final int chunkNo,
       @Nonnull final String extension) {
-    return String.format("%s_%04d.%s", resource, chunkNo, extension);
+    return String.format("%s.%04d.%s", resource, chunkNo, extension);
   }
 
   private FileStore createFileStore() throws IOException {
