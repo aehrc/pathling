@@ -202,6 +202,14 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>docs</id>
+      <dependencies>
+        <dependency>
+          <groupId>au.csiro.pathling</groupId>
+          <artifactId>utilities</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
   </profiles>
-
 </project>
