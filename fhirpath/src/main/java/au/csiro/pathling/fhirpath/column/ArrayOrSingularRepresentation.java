@@ -102,7 +102,7 @@ public class ArrayOrSingularRepresentation extends ColumnRepresentation {
    * @return a new column representing the field
    */
   protected Column traverseColumn(@Nonnull final String fieldName) {
-    return value.getField(fieldName);
+    return ValueFunctions.unnest(value.getField(fieldName));
   }
 
 }
