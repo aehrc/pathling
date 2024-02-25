@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.collection.IntegerCollection;
 import au.csiro.pathling.fhirpath.operator.BinaryOperator;
 import au.csiro.pathling.fhirpath.operator.BinaryOperatorType;
 import au.csiro.pathling.fhirpath.operator.BinaryOperators;
@@ -177,14 +179,26 @@ class Visitor extends FhirPathBaseVisitor<FhirPath> {
         ctx.children.get(1).toString());
   }
 
-  // All other FHIRPath constructs are currently unsupported.
-
   @Override
   @Nonnull
   public FhirPath visitIndexerExpression(
       final IndexerExpressionContext ctx) {
-    throw new InvalidUserInputError("Indexer operation is not supported");
+    final EvalOperator operator;
+    try {
+      operator = new EvalOperator(
+          new Visitor().visit(requireNonNull(ctx).expression(0)),
+          new Visitor().visit(ctx.expression(1)),
+          // Get a wrapped version of the index operator.
+          WrappedBinaryOperator.of(
+              BinaryOperators.class.getDeclaredMethod("index", Collection.class,
+                  IntegerCollection.class)));
+    } catch (final NoSuchMethodException e) {
+      throw new RuntimeException(e);
+    }
+    return operator;
   }
+
+  // All other FHIRPath constructs are currently unsupported.
 
   @Override
   @Nonnull
