@@ -125,8 +125,7 @@ abstract class AbstractFhirViewTestBase {
     @Override
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       // Read the expected JSON with prefersDecimal option set to true.
-      final Dataset<Row> expectedResult = spark.read().option("prefersDecimal", "true")
-          .json(expectedJson.toString());
+      final Dataset<Row> expectedResult = spark.read().json(expectedJson.toString());
 
       // Dynamically create column expressions based on the schema.
       final List<Column> selectColumns = Arrays.stream(expectedResult.schema().fields())
