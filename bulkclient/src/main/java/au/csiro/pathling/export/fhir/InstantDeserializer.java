@@ -25,6 +25,8 @@ import com.google.gson.JsonPrimitive;
 import java.lang.reflect.Type;
 import java.time.Instant;
 
+import static au.csiro.pathling.export.fhir.FhirUtils.parseFhirInstant;
+
 public class InstantDeserializer implements JsonDeserializer<Instant> {
 
   @Override
@@ -37,7 +39,7 @@ public class InstantDeserializer implements JsonDeserializer<Instant> {
     try {
       return Instant.ofEpochMilli(primitive.getAsLong());
     } catch (final NumberFormatException ex) {
-      return Instant.parse(primitive.getAsString());
+      return parseFhirInstant(primitive.getAsString());
     }
   }
 }

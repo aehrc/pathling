@@ -31,10 +31,15 @@ public class FhirUtils {
   private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
 
   private static final DateTimeFormatter FHIR_INSTANT_FORMAT = DateTimeFormatter
-      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX").withZone(UTC_ZONE_ID);
+      .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").withZone(UTC_ZONE_ID);
 
   @Nonnull
   public static String formatFhirInstant(@Nonnull final Instant instant) {
     return FHIR_INSTANT_FORMAT.format(instant);
+  }
+
+  @Nonnull
+  public static Instant parseFhirInstant(@Nonnull final String instantString) {
+    return FHIR_INSTANT_FORMAT.parse(instantString, Instant::from);
   }
 }
