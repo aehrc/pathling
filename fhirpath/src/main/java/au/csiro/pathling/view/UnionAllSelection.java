@@ -17,12 +17,18 @@
 
 package au.csiro.pathling.view;
 
+import static java.util.stream.Collectors.toUnmodifiableList;
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.concat;
+import static org.apache.spark.sql.functions.isnull;
+import static org.apache.spark.sql.functions.when;
+
+import au.csiro.pathling.encoders.ValueFunctions;
+import java.util.List;
+import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
-import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Value
 public class UnionAllSelection implements SelectionX {
@@ -33,16 +39,26 @@ public class UnionAllSelection implements SelectionX {
   @Nonnull
   @Override
   public SelectionResult evaluate(@Nonnull final ProjectionContext context) {
+    // Evaluate each component of the union.
+    final List<SelectionResult> results = components.stream().map(c -> c.evaluate(context))
+        .collect(toUnmodifiableList());
 
-    final List<SelectionResult> subResults = components.stream().map(c -> c.evaluate(context))
-        .collect(Collectors.toUnmodifiableList());
-    // combine the results with concat()
-    final Column combinedResult = functions.concat(
-        subResults.stream().map(SelectionResult::getValue).toArray(Column[]::new));
+    // Process each result to ensure that they are all arrays.
+    final Column[] converted = results.stream()
+        .map(SelectionResult::getValue)
+        // When the result is a singular null, convert it to an empty array.
+        .map(col -> when(isnull(col), array())
+            .otherwise(ValueFunctions.ifArray(col,
+                // If the column is an array, return it as is.
+                c -> c,
+                // If the column is a singular value, convert it to an array.
+                functions::array
+            )))
+        .toArray(Column[]::new);
 
-    return SelectionResult.of(
-        subResults.get(0).getCollections(),
-        combinedResult
-    );
+    // Concatenate the converted columns.
+    final Column combinedResult = concat(converted);
+
+    return SelectionResult.of(results.get(0).getCollections(), combinedResult);
   }
 }
