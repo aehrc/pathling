@@ -94,7 +94,8 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
   @Nonnull
   private T produceFinalResponse(@Nonnull final HttpResponse response) {
     return quietBodyAsString(response).flatMap(s -> JsonSupport.fromJson(s, responseClass))
-        .orElseThrow(() -> new BulkExportException.ProtocolError("Invalid successful response"));
+        .orElseThrow(() -> new BulkExportException.ProtocolError(
+            "Invalid successful response: " + response.getStatusLine()));
   }
 
   @Nonnull

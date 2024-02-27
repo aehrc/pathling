@@ -20,6 +20,11 @@ package au.csiro.pathling.export;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
+import au.csiro.pathling.auth.AuthContext;
+import au.csiro.pathling.auth.AuthContext.TokenProvider;
+import au.csiro.pathling.auth.ClientAuthRequestInterceptor;
+import au.csiro.pathling.auth.SymetricAuthTokenProvider;
+import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.export.BulkExportResult.FileResult;
 import au.csiro.pathling.export.download.UrlDownloadTemplate;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
@@ -124,6 +129,10 @@ public class BulkExportClient {
   AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
 
+  @Nonnull
+  @Builder.Default
+  AuthConfiguration authConfig = AuthConfiguration.builder().build();
+
   public static class BulkExportClientBuilder {
     // empty placeholder to for javadoc to recognize the builder
   }
@@ -147,7 +156,8 @@ public class BulkExportClient {
     try (
         final FileStore fileStore = createFileStore();
         final CloseableHttpClient httpClient = createHttpClient();
-        final ExecutorServiceResource executorServiceResource = createExecutorServiceResource()
+        final ExecutorServiceResource executorServiceResource = createExecutorServiceResource();
+        final TokenProvider tokenProvider = createTokenProvider()
     ) {
       final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient,
           URI.create(fhirEndpointUrl),
@@ -155,7 +165,8 @@ public class BulkExportClient {
       final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
           executorServiceResource.getExecutorService());
 
-      final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
+      final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate,
+          tokenProvider);
       log.info("Export successful: {}", result);
       return result;
     } catch (final IOException ex) {
@@ -166,7 +177,8 @@ public class BulkExportClient {
 
   BulkExportResult doExport(@Nonnull final FileStore fileStore,
       @Nonnull final BulkExportTemplate bulkExportTemplate,
-      @Nonnull final UrlDownloadTemplate downloadTemplate) throws IOException {
+      @Nonnull final UrlDownloadTemplate downloadTemplate, final TokenProvider tokenProvider)
+      throws IOException {
 
     final Instant timeoutAt = TimeoutUtils.toTimeoutAt(timeout);
     log.debug("Setting timeout at: {} for requested timeout of: {}", timeoutAt, timeout);
@@ -180,12 +192,14 @@ public class BulkExportClient {
       log.debug("Creating destination directory: {}", destinationDir.getLocation());
       destinationDir.mkdirs();
     }
-    final BulkExportResponse response = bulkExportTemplate.export(buildBulkExportRequest(),
-        TimeoutUtils.toTimeoutAfter(timeoutAt));
+    final BulkExportResponse response = tokenProvider.withToken(
+        () -> bulkExportTemplate.export(buildBulkExportRequest(),
+            TimeoutUtils.toTimeoutAfter(timeoutAt)));
     log.debug("Export request completed: {}", response);
+    
     final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
     log.debug("Downloading entries: {}", downloadList);
-    final List<Long> fileSizes = downloadTemplate.download(downloadList,
+    final List<Long> fileSizes = downloadTemplate.download(downloadList, tokenProvider,
         TimeoutUtils.toTimeoutAfter(timeoutAt));
     final FileHandle successMarker = destinationDir.child("_SUCCESS");
     log.debug("Marking download as complete with: {}", successMarker.getLocation());
@@ -238,16 +252,26 @@ public class BulkExportClient {
     return String.format("%s.%04d.%s", resource, chunkNo, extension);
   }
 
+  @Nonnull
   private FileStore createFileStore() throws IOException {
     log.debug("Creating FileStore of: {} for outputDir: {}", fileStoreFactory, outputDir);
     return fileStoreFactory.createFileStore(outputDir);
   }
 
+  @Nonnull
   private CloseableHttpClient createHttpClient() {
     log.debug("Creating HttpClient with configuration: {}", httpClientConfig);
-    return httpClientConfig.buildHttpClient();
+    return httpClientConfig.clientBuilder().addInterceptorFirst(new ClientAuthRequestInterceptor())
+        .build();
   }
 
+  private TokenProvider createTokenProvider() {
+    return authConfig.isEnabled()
+           ? new SymetricAuthTokenProvider(authConfig)
+           : AuthContext.noAuthProvider();
+  }
+
+  @Nonnull
   private ExecutorServiceResource createExecutorServiceResource() {
     if (maxConcurrentDownloads <= 0) {
       throw new IllegalArgumentException(
