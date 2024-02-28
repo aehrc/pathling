@@ -5,7 +5,7 @@ import javax.annotation.Nonnull;
 import lombok.Value;
 
 /**
- * Holds the value of a {@link Collection} and an associated {@link EvaluationContext}.
+ * Holds the value of a {@link Collection} and an associated {@link LegacyEvaluationContext}.
  *
  * @author John Grimes
  */
@@ -16,6 +16,6 @@ public class FhirPathAndContext {
   Collection result;
 
   @Nonnull
-  EvaluationContext context;
+  LegacyEvaluationContext context;
 
 }

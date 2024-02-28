@@ -38,7 +38,7 @@ import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.view.AbstractCompositeSelection;
 import au.csiro.pathling.view.AggregationView;
 import au.csiro.pathling.view.DatasetResult;
-import au.csiro.pathling.view.DefaultProjectionContext;
+import au.csiro.pathling.view.ProjectionContext;
 import au.csiro.pathling.view.ExecutionContext;
 import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ForEachOrNullSelection;
@@ -321,7 +321,7 @@ class ExtractAggregatePOCViewTest {
     System.out.println("## Raw view ##");
     groupingSelction.printTree();
 
-    final DefaultProjectionContext execContext = DefaultProjectionContext.of(newContext(),
+    final ProjectionContext execContext = ProjectionContext.of(newContext(),
         ResourceType.PATIENT);
 
     final DatasetResult<Column> groupingResult = groupingSelction.evaluate(execContext).map(
@@ -450,7 +450,7 @@ class ExtractAggregatePOCViewTest {
     System.out.println("### GroupBy Paths: ###");
     groupingPaths.forEach(System.out::println);
 
-    final DefaultProjectionContext execContext = DefaultProjectionContext.of(newContext(),
+    final ProjectionContext execContext = ProjectionContext.of(newContext(),
         ResourceType.PATIENT);
 
     final List<Collection> groupByCollections = groupingPaths.stream()

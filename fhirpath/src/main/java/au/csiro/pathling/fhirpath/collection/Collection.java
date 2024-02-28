@@ -21,9 +21,9 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Numeric;
-import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.mixed.MixedCollection;
@@ -385,7 +385,7 @@ public class Collection implements Comparable, Numeric {
   }
 
   @Nonnull
-  public Optional<Reference> asReference(@Nonnull final PathEvalContext context) {
+  public Optional<Reference> asReference(@Nonnull final EvaluationContext context) {
     return getFhirType()
         .filter(FHIRDefinedType.REFERENCE::equals)
         .map(__ -> new ReferenceImpl(this, context));
@@ -423,7 +423,7 @@ public class Collection implements Comparable, Numeric {
     Collection referenceCollection;
 
     @Nonnull
-    PathEvalContext context;
+    EvaluationContext context;
 
     @Nonnull
     @Override

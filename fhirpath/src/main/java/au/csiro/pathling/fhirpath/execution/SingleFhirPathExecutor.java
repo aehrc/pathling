@@ -17,14 +17,14 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
-import au.csiro.pathling.fhirpath.context.DefaultPathEvalContext;
-import au.csiro.pathling.fhirpath.context.FhirpathContext;
+import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
@@ -40,7 +40,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 
 @Value
-public class SingleFhirpathExecutor implements FhirpathExecutor {
+public class SingleFhirPathExecutor implements FhirPathExecutor {
 
   @Nonnull
   ResourceType subjectResource;
@@ -59,9 +59,9 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
   public Collection validate(@Nonnull final FhirPath path) {
 
     final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
-    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resolveResource(subjectResource));
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
+    final EvaluationContext evalContext = new ViewEvaluationContext(
         fhirpathContext,
         functionRegistry,
         resourceResolver);
@@ -122,9 +122,9 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
     // we will need to extract the dependencies and create the map for and the dataset;
     // but for now just make it work for the main resource
     final Dataset<Row> dataset = resourceDataset(subjectResource);
-    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resolveResource(subjectResource));
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
+    final EvaluationContext evalContext = new ViewEvaluationContext(
         fhirpathContext,
         functionRegistry,
         resourceResolver);
@@ -142,9 +142,9 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
     // we will need to extract the dependencies and create the map for and the dataset;
     // but for now just make it work for the main resource
     final Dataset<Row> dataset = resourceDataset(subjectResource);
-    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resolveResource(subjectResource));
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
+    final EvaluationContext evalContext = new ViewEvaluationContext(
         fhirpathContext,
         functionRegistry,
         resourceResolver);
@@ -162,9 +162,9 @@ public class SingleFhirpathExecutor implements FhirpathExecutor {
   public Collection evaluate(@Nonnull final FhirPath path, @Nonnull final Collection inputContext) {
     // just as above ... but with a more intelligent resourceResolver
     final ResourceResolver resourceResolver = new UnsupportedResourceResolver();
-    final FhirpathContext fhirpathContext = FhirpathContext.of(
+    final FhirPathContext fhirpathContext = FhirPathContext.of(
         resolveResource(subjectResource), inputContext);
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
+    final EvaluationContext evalContext = new ViewEvaluationContext(
         fhirpathContext,
         functionRegistry,
         resourceResolver);

@@ -34,7 +34,7 @@ public class FunctionInput {
    * Context and dependencies for use in evaluating the function.
    */
   @Nonnull
-  PathEvalContext context;
+  EvaluationContext context;
 
   /**
    * The collection that is the input to the function, i.e. the result of the evaluation of the

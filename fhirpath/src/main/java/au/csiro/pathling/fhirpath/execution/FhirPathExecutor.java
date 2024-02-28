@@ -25,7 +25,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 
 
-public interface FhirpathExecutor {
+public interface FhirPathExecutor {
 
   @Nonnull
   Collection validate(@Nonnull final FhirPath path);
@@ -51,7 +51,8 @@ public interface FhirpathExecutor {
 
   @Nonnull
   Collection createDefaultInputContext();
-  
+
   @Nonnull
   Dataset<Row> createInitialDataset();
+ 
 }

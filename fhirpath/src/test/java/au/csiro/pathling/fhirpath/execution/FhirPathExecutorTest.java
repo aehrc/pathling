@@ -29,7 +29,7 @@ import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 
-class FhirpathExecutorTest {
+class FhirPathExecutorTest {
 
   @Nonnull
   final DataSource dataSource = mock(DataSource.class);
@@ -41,7 +41,7 @@ class FhirpathExecutorTest {
     final FhirPath path = parser.parse(
         "where(name.family='Smith').name.given.join(',')");
     System.out.println(path.toExpression());
-    final FhirpathExecutor validator = new SingleFhirpathExecutor(
+    final FhirPathExecutor validator = new SingleFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -58,7 +58,7 @@ class FhirpathExecutorTest {
     final FhirPath path = parser.parse(
         "where(name.family='Smith').reverseResolve(Condition.subject).code.coding");
     System.out.println(path.toExpression());
-    final FhirpathExecutor validator = new MultiFhirpathExecutor(
+    final FhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),

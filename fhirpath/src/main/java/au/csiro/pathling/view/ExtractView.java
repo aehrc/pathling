@@ -52,7 +52,7 @@ public class ExtractView {
   }
 
   public Dataset<Row> evaluate(@Nonnull final ExecutionContext context) {
-    final DefaultProjectionContext projectionContext = DefaultProjectionContext.of(context,
+    final ProjectionContext projectionContext = ProjectionContext.of(context,
         subjectResource);
 
     final DatasetResult<Column> selectionResult = selection.evaluate(projectionContext)

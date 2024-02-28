@@ -19,11 +19,11 @@ package au.csiro.pathling.fhirpath.context;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import lombok.Value;
 import javax.annotation.Nonnull;
+import lombok.Value;
 
 @Value(staticConstructor = "of")
-public class FhirpathContext {
+public class FhirPathContext {
 
   @Nonnull
   ResourceCollection resource;
@@ -41,8 +41,9 @@ public class FhirpathContext {
       throw new IllegalArgumentException("Unknown constant: " + name);
     }
   }
-  
-  public static FhirpathContext ofResource(@Nonnull final ResourceCollection resource) {
+
+  public static FhirPathContext ofResource(@Nonnull final ResourceCollection resource) {
     return of(resource, resource);
   }
+  
 }

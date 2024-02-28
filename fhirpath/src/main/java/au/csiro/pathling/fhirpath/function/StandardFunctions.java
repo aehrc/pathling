@@ -20,8 +20,8 @@ package au.csiro.pathling.fhirpath.function;
 import static au.csiro.pathling.fhirpath.Comparable.ComparisonOperation.EQUALS;
 import static java.util.Objects.nonNull;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
-import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.Reference;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
@@ -221,7 +221,7 @@ public class StandardFunctions {
   @FhirpathFunction
   public static ResourceCollection reverseResolve(@Nonnull final ResourceCollection input,
       @Nonnull final FhirPath referencePath,
-      @Nonnull final PathEvalContext evaluationContext) {
+      @Nonnull final EvaluationContext evaluationContext) {
     // TODO: add all valdation etx.
 
     // resolve the reference to the foreign resource (can it be a join to itself?)

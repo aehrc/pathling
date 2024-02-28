@@ -22,10 +22,25 @@ import ca.uhn.fhir.context.FhirContext;
 import lombok.Value;
 import org.apache.spark.sql.SparkSession;
 
+/**
+ * Dependencies for the execution of a FHIR view.
+ */
 @Value
 public class ExecutionContext {
 
+  /**
+   * The {@link SparkSession} for building and executing Spark queries.
+   */
   SparkSession spark;
+
+  /**
+   * The {@link FhirContext} for accessing the FHIR object model.
+   */
   FhirContext fhirContext;
+
+  /**
+   * A {@link DataSource} for the FHIR data that the view will be executed against.
+   */
   DataSource dataSource;
+ 
 }

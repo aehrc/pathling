@@ -17,9 +17,7 @@
 
 package au.csiro.pathling.test.assertions;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
-import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.CollectionDataset;
 import javax.annotation.Nonnull;
 

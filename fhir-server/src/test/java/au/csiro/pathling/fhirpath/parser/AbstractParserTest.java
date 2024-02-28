@@ -21,8 +21,8 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.execution.FhirpathExecutor;
-import au.csiro.pathling.fhirpath.execution.SingleFhirpathExecutor;
+import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
+import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyService;
@@ -65,7 +65,7 @@ public class AbstractParserTest {
   @MockBean
   protected DataSource dataSource;
 
-  FhirpathExecutor executor;
+  FhirPathExecutor executor;
 
   @BeforeEach
   void setUp() {
@@ -81,7 +81,7 @@ public class AbstractParserTest {
 
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
-    executor = new SingleFhirpathExecutor(resourceType, fhirContext,
+    executor = new SingleFhirPathExecutor(resourceType, fhirContext,
         StaticFunctionRegistry.getInstance(),
         dataSource);
   }

@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static org.mockito.Mockito.when;
+
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
@@ -24,6 +26,9 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.List;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -35,11 +40,6 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.function.Function;
-
-import static org.mockito.Mockito.when;
 
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
@@ -110,7 +110,7 @@ public class ExecutorTest {
         "where(gender='female').name.where(family.where($this='Smith').exists()).given.join(',')");
     System.out.println(path.toExpression());
 
-    final FhirpathExecutor executor = new SingleFhirpathExecutor(
+    final FhirPathExecutor executor = new SingleFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -134,7 +134,7 @@ public class ExecutorTest {
         "reverseResolve(Condition.subject).count()");
     System.out.println(path.toExpression());
 
-    final FhirpathExecutor executor = new MultiFhirpathExecutor(
+    final FhirPathExecutor executor = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),

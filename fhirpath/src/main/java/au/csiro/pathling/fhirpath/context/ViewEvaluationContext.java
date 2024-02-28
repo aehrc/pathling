@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.fhirpath.context;
 
-import au.csiro.pathling.fhirpath.PathEvalContext;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
@@ -28,10 +28,10 @@ import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 @Value
-public class DefaultPathEvalContext implements PathEvalContext {
+public class ViewEvaluationContext implements EvaluationContext {
 
   @Nonnull
-  FhirpathContext fhirpathContext;
+  FhirPathContext fhirPathContext;
 
   @Nonnull
   FunctionRegistry<?> functionRegistry;
@@ -62,6 +62,7 @@ public class DefaultPathEvalContext implements PathEvalContext {
   @Nonnull
   @Override
   public Collection resolveVariable(@Nonnull final String name) {
-    return fhirpathContext.resolveVariable(name);
+    return fhirPathContext.resolveVariable(name);
   }
+  
 }

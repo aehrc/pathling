@@ -88,7 +88,7 @@ class ExecutorIntegrationTest {
         "where(gender='female').name.where(family.where($this='Oberbrunner298').exists()).given.join(',')");
     System.out.println(path.toExpression());
 
-    final FhirpathExecutor executor = new SingleFhirpathExecutor(
+    final FhirPathExecutor executor = new SingleFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -110,7 +110,7 @@ class ExecutorIntegrationTest {
         "reverseResolve(Observation.subject).code.coding.count()");
     System.out.println(path.toExpression());
 
-    final FhirpathExecutor executor = new MultiFhirpathExecutor(
+    final FhirPathExecutor executor = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -133,7 +133,7 @@ class ExecutorIntegrationTest {
         "reverseResolve(Observation.subject).code.coding.count() > reverseResolve(Condition.subject).code.coding.count()");
     System.out.println(path.toExpression());
 
-    final FhirpathExecutor executor = new MultiFhirpathExecutor(
+    final FhirPathExecutor executor = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),

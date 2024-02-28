@@ -17,7 +17,7 @@ public interface FhirPath {
 
   FhirPath NULL = new This();
 
-  Collection apply(@Nonnull final Collection input, @Nonnull final PathEvalContext context);
+  Collection apply(@Nonnull final Collection input, @Nonnull final EvaluationContext context);
 
   default FhirPath first() {
     return this;
@@ -77,7 +77,7 @@ public interface FhirPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return input;
     }
 
@@ -109,7 +109,7 @@ public interface FhirPath {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return elements.stream()
           .reduce(input, (acc, element) -> element.apply(acc, context), (a, b) -> b);
     }

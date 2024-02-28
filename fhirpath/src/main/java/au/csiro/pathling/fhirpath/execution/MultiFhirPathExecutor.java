@@ -17,16 +17,16 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FhirPathStreamVisitor;
 import au.csiro.pathling.fhirpath.FhirPathVisitor;
-import au.csiro.pathling.fhirpath.PathEvalContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
-import au.csiro.pathling.fhirpath.context.DefaultPathEvalContext;
-import au.csiro.pathling.fhirpath.context.FhirpathContext;
+import au.csiro.pathling.fhirpath.context.FhirPathContext;
 import au.csiro.pathling.fhirpath.context.ResourceResolver;
+import au.csiro.pathling.fhirpath.context.ViewEvaluationContext;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ResourceRoot;
 import au.csiro.pathling.fhirpath.execution.DataRoot.ReverseResolveRoot;
 import au.csiro.pathling.fhirpath.function.registry.FunctionRegistry;
@@ -51,7 +51,7 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 
 @Value
-public class MultiFhirpathExecutor implements FhirpathExecutor {
+public class MultiFhirPathExecutor implements FhirPathExecutor {
 
   @Value
   static class DataRootFinderVisitor implements FhirPathStreamVisitor<DataRoot> {
@@ -163,9 +163,9 @@ public class MultiFhirpathExecutor implements FhirpathExecutor {
   public Collection validate(@Nonnull final FhirPath path) {
 
     final ResourceResolver resourceResolver = new EmptyResourceResolver();
-    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resourceResolver.resolveResource(subjectResource));
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
+    final EvaluationContext evalContext = new ViewEvaluationContext(
         fhirpathContext,
         functionRegistry,
         resourceResolver);
@@ -219,9 +219,9 @@ public class MultiFhirpathExecutor implements FhirpathExecutor {
     // but for now just make it work for the main resource
     final Dataset<Row> patients = resourceDataset(subjectResource);
 
-    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resourceResolver.resolveResource(subjectResource));
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
+    final EvaluationContext evalContext = new ViewEvaluationContext(
         fhirpathContext,
         functionRegistry,
         resourceResolver);
@@ -266,9 +266,9 @@ public class MultiFhirpathExecutor implements FhirpathExecutor {
     // but for now just make it work for the main resource
     final Dataset<Row> patients = resourceDataset(subjectResource);
 
-    final FhirpathContext fhirpathContext = FhirpathContext.ofResource(
+    final FhirPathContext fhirpathContext = FhirPathContext.ofResource(
         resourceResolver.resolveResource(subjectResource));
-    final PathEvalContext evalContext = new DefaultPathEvalContext(
+    final EvaluationContext evalContext = new ViewEvaluationContext(
         fhirpathContext,
         functionRegistry,
         resourceResolver);

@@ -17,11 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
-import au.csiro.pathling.fhirpath.collection.ResourceCollection;
-import au.csiro.pathling.test.builders.EvaluationContextBuilder;
-import java.util.Collections;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 

@@ -19,7 +19,7 @@ package au.csiro.pathling;
 
 import au.csiro.pathling.QueryHelpers.DatasetWithColumn;
 import au.csiro.pathling.config.QueryConfiguration;
-import au.csiro.pathling.fhirpath.EvaluationContext;
+import au.csiro.pathling.fhirpath.LegacyEvaluationContext;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
@@ -76,14 +76,14 @@ public abstract class QueryExecutor {
 
   @Nonnull
   protected List<Collection> parseExpressions(
-      @Nonnull final EvaluationContext evaluationContext,
+      @Nonnull final LegacyEvaluationContext legacyEvaluationContext,
       @Nonnull final java.util.Collection<String> expressions) {
-    return parseExpressions(evaluationContext, expressions, Optional.empty());
+    return parseExpressions(legacyEvaluationContext, expressions, Optional.empty());
   }
 
   @Nonnull
   protected List<Collection> parseExpressions(
-      @Nonnull final EvaluationContext evaluationContext,
+      @Nonnull final LegacyEvaluationContext legacyEvaluationContext,
       @Nonnull final java.util.Collection<String> expressions,
       @Nonnull final Optional<Dataset<Row>> contextDataset) {
 

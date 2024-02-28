@@ -19,7 +19,7 @@ package au.csiro.pathling.test.builders;
 
 import static org.mockito.Mockito.mock;
 
-import au.csiro.pathling.fhirpath.EvaluationContext;
+import au.csiro.pathling.fhirpath.LegacyEvaluationContext;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
 import au.csiro.pathling.fhirpath.function.NamedFunction;
@@ -122,8 +122,8 @@ public class EvaluationContextBuilder {
   }
 
   @Nonnull
-  public EvaluationContext build() {
-    return new EvaluationContext(inputContext, resource, fhirContext, spark, dataSource,
+  public LegacyEvaluationContext build() {
+    return new LegacyEvaluationContext(inputContext, resource, fhirContext, spark, dataSource,
         dataset, functionRegistry,
         Optional.ofNullable(terminologyServiceFactory), Optional.ofNullable(constantReplacer));
   }

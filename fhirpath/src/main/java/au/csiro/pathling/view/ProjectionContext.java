@@ -19,25 +19,42 @@ package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
+import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
+import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.view.DatasetResult.One;
 import javax.annotation.Nonnull;
+import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
-public interface ProjectionContext {
-
-  @Nonnull
-  Dataset<Row> getDataset();
-
-
-  @Nonnull
-  Collection getInputContext();
-  
-  @Nonnull
-  ProjectionContext withInputContext(@Nonnull final Collection inputContext);
+/**
+ * Dependencies and logic relating to the traversal of FHIRPath expressions.
+ *
+ * @author Piotr Szul
+ */
+@Value
+public class ProjectionContext {
 
   @Nonnull
-  default DatasetResult<CollectionResult> evaluate(@Nonnull final Selection selection) {
+  FhirPathExecutor executor;
+
+  @Nonnull
+  Collection inputContext;
+
+  @Nonnull
+  public Dataset<Row> getDataset() {
+    return executor.createInitialDataset();
+  }
+
+  @Nonnull
+  public ProjectionContext withInputContext(@Nonnull final Collection inputContext) {
+    return new ProjectionContext(executor, inputContext);
+  }
+
+  @Nonnull
+  public DatasetResult<CollectionResult> evaluate(@Nonnull final Selection selection) {
     return selection.evaluate(this);
   }
 
@@ -49,22 +66,31 @@ public interface ProjectionContext {
    * @return the new sub-context
    */
   @Nonnull
-  One<ProjectionContext> subContext(@Nonnull final FhirPath parent,
-      boolean unnest, boolean withNulls);
+  public One<ProjectionContext> subContext(
+      @Nonnull final FhirPath parent,
+      final boolean unnest, final boolean withNulls) {
+    final One<Collection> newInputContextResult = evalExpression(parent);
+    if (unnest) {
+      return newInputContextResult
+          .map(Collection::getColumn)
+          .flatMap(cl -> withNulls
+                         ? cl.explodeOuter()
+                         : cl.explode())
+          .map(c -> withInputContext(newInputContextResult.getValue().copyWith(c)));
+    } else {
+      return newInputContextResult.map(this::withInputContext);
+    }
+  }
 
   @Nonnull
-  default One<ProjectionContext> subContext(
-      @Nonnull final FhirPath parent,
-      final boolean unnest) {
+  One<ProjectionContext> subContext(@Nonnull final FhirPath parent, final boolean unnest) {
     return subContext(parent, unnest, false);
   }
 
   @Nonnull
-  default One<ProjectionContext> subContext(
-      @Nonnull final FhirPath parent) {
+  One<ProjectionContext> subContext(@Nonnull final FhirPath parent) {
     return subContext(parent, false);
   }
-
 
   /**
    * Evaluates the given FHIRPath path and returns the result as a column.
@@ -73,6 +99,19 @@ public interface ProjectionContext {
    * @return the result as a column
    */
   @Nonnull
-  One<Collection> evalExpression(@Nonnull final FhirPath path);
+  public One<Collection> evalExpression(@Nonnull final FhirPath path) {
+    return DatasetResult.pureOne(executor.evaluate(path, inputContext));
+  }
+
+  @Nonnull
+  public static ProjectionContext of(@Nonnull final ExecutionContext context,
+      @Nonnull final ResourceType subjectResource) {
+    final FhirPathExecutor executor = new SingleFhirPathExecutor(
+        subjectResource,
+        context.getFhirContext(),
+        new StaticFunctionRegistry(),
+        context.getDataSource());
+    return new ProjectionContext(executor, executor.createDefaultInputContext());
+  }
 
 }

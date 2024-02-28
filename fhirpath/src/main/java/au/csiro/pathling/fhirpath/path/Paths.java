@@ -22,7 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
-import au.csiro.pathling.fhirpath.PathEvalContext;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
@@ -53,7 +53,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       throw new UnsupportedOperationException("TypeSpecifierPath cannot be evaluated directly");
     }
   }
@@ -65,7 +65,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return context.resolveVariable(name);
     }
 
@@ -91,7 +91,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return operator.invoke(new BinaryOperatorInput(context, leftPath.apply(input, context),
           rightPath.apply(input, context)));
     }
@@ -114,7 +114,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       final NamedFunction<Collection> function;
       try {
         function = context.resolveFunction(functionIdentifier);
@@ -148,7 +148,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       final Optional<Collection> result = input.traverse(propertyName);
       checkUserInput(result.isPresent(), "No such child: " + propertyName);
       return result.get();
@@ -169,7 +169,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return context.resolveResource(resourceType);
     }
 
@@ -189,7 +189,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return invocationVerb.apply(invocationSubject.apply(input, context),
           context);
     }
@@ -200,7 +200,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return input;
     }
   }
@@ -212,7 +212,7 @@ final public class Paths {
 
     @Override
     public Collection apply(@Nonnull final Collection input,
-        @Nonnull final PathEvalContext context) {
+        @Nonnull final EvaluationContext context) {
       return StringCollection.fromLiteral(value);
     }
 

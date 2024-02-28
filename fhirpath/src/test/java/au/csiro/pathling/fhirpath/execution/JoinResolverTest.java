@@ -43,7 +43,7 @@ class JoinResolverTest {
     final FhirPath path = parser.parse(
         "reverseResolve(Condition.subject).id");
     System.out.println(path.toExpression());
-    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
+    final MultiFhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -63,7 +63,7 @@ class JoinResolverTest {
     final FhirPath path = parser.parse(
         "reverseResolve(Condition.subject)");
     System.out.println(path.toExpression());
-    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
+    final MultiFhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -83,7 +83,7 @@ class JoinResolverTest {
     final FhirPath path = parser.parse(
         "where(reverseResolve(Observation.subject).code.count() > 10).gender");
     System.out.println(path.toExpression());
-    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
+    final MultiFhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -106,7 +106,7 @@ class JoinResolverTest {
     final FhirPath path = parser.parse(
         "where(reverseResolve(Condition.encounter).code.count() > 10).reverseResolve(Condition.encounter).code");
     System.out.println(path.toExpression());
-    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
+    final MultiFhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.ENCOUNTER,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -130,7 +130,7 @@ class JoinResolverTest {
     final FhirPath path = parser.parse(
         "reverseResolve(Condition.subject).code.count() >  reverseResolve(Observation.subject).code.count()");
     System.out.println(path.toExpression());
-    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
+    final MultiFhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -155,7 +155,7 @@ class JoinResolverTest {
     final FhirPath path = parser.parse(
         "reverseResolve(Encounter.subject).reverseResolve(Condition.encounter).code.count()");
     System.out.println(path.toExpression());
-    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
+    final MultiFhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
@@ -183,7 +183,7 @@ class JoinResolverTest {
     final FhirPath path = parser.parse(
         "subject.resolve().ofType(Patient).id");
     System.out.println(path.toExpression());
-    final MultiFhirpathExecutor validator = new MultiFhirpathExecutor(
+    final MultiFhirPathExecutor validator = new MultiFhirPathExecutor(
         ResourceType.ENCOUNTER,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
