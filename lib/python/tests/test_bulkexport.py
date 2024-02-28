@@ -81,8 +81,8 @@ def test_builds_patient_client_with_options(pathling_ctx):
         "output-patient",
         level=ExportLevel.PATIENT,
         types=["Observation", "Condition"],
-        patients=[Reference("Patient/123"), Reference("Patient/456")],
         since=datetime.fromtimestamp(2000, tz=timezone.utc),
+        patients=[Reference("Patient/123"), Reference("Patient/456")],
         timeout=timedelta(seconds=2),
     )
     j_client = client._jclient
@@ -103,10 +103,7 @@ def test_builds_patient_client_with_options(pathling_ctx):
 
 def test_builds_group_client_with_options(pathling_ctx):
     client = BulkExportClient(
-        "http://group.com",
-        "output-group",
-        level=ExportLevel.GROUP,
-        group_id="123",
+        "http://group.com", "output-group", level=ExportLevel.GROUP, group_id="123"
     )
     j_client = client._jclient
     assert j_client.getFhirEndpointUrl() == "http://group.com"
@@ -123,11 +120,7 @@ def test_builds_group_client_with_options(pathling_ctx):
 
 def test_raises_error_if_group_without_id(pathling_ctx):
     with pytest.raises(ValueError) as exc_info:
-        BulkExportClient(
-            "http://group.com",
-            "output-group",
-            level=ExportLevel.GROUP,
-        )
+        BulkExportClient("http://group.com", "output-group", level=ExportLevel.GROUP)
     assert exc_info.match("groupId is required for group export")
 
 
@@ -163,10 +156,7 @@ def test_runs_export(pathling_ctx, mock_server, tmp_path):
     output_dir = os.path.join(tmp_path, "export-output")
 
     with mock_server.run():
-        result = BulkExportClient(
-            mock_server.url("/fhir"),
-            output_dir,
-        ).export()
+        result = BulkExportClient(mock_server.url("/fhir"), output_dir).export()
 
         assert os.path.isdir(output_dir)
         assert os.path.exists(os.path.join(output_dir, "_SUCCESS"))

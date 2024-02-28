@@ -30,6 +30,7 @@ from pathling.jvm import (
     timedelta_to_duration,
     instant_to_datetime,
 )
+from pathling.config import auth_config
 
 
 class ExportLevel(Enum):
@@ -80,11 +81,12 @@ class BulkExportClient:
         output_dir_url: str,
         level: Optional[ExportLevel] = ExportLevel.SYSTEM,
         group_id: Optional[str] = None,
-        output_format: str = "ndjson",
+        output_format: str = "application/fhir+ndjson",
         types: Optional[Sequence[str]] = None,
         since: Optional[datetime] = None,
         patients: Optional[Sequence[Reference]] = None,
         timeout: Optional[timedelta] = None,
+        auth_config: Optional[JavaObject] = None,
     ):
         """
         :param fhir_endpoint_url: the FHIR endpoint URL
@@ -98,6 +100,8 @@ class BulkExportClient:
         :param patients: the value of the `patient` parameter for Bulk Export kick-off request
         :param timeout: the maximum time to wait for the export to complete. If the export does not
                 complete within this time, an exception is raised. By default, not time limit is set.
+        :param auth_config: optional authentication configuration created
+                with :func:`pathling.config.auth_config`
         """
 
         sc: JavaObject = get_active_java_spark_context().sc()
@@ -128,6 +132,7 @@ class BulkExportClient:
 
         timeout and client_builder.withTimeout(timedelta_to_duration(timeout))
         patients and client_builder.withPatients([ref.to_java() for ref in patients])
+        auth_config and client_builder.withAuthConfig(auth_config)
 
         self._jclient = client_builder.build()
 
