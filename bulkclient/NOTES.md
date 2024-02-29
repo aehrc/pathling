@@ -1,16 +1,17 @@
+Notes
+-----
 
 
 
-
-References on Bulk Export
-- 
+### References on Bulk Export
+ 
 - Bulk Export Specification: https://build.fhir.org/ig/HL7/bulk-data/export.html
 - Bulk Data Demo Server: https://bulk-data.smarthealthit.org/
 - Bulk Data Client JS (https://github.com/smart-on-fhir/bulk-data-client)
 
 
 
-Authentication:
+### Authentication
 
 - Backend Services: https://www.hl7.org/fhir/smart-app-launch/backend-services.html
 - Asymetric authentication: https://www.hl7.org/fhir/smart-app-launch/client-confidential-asymmetric.html#authenticating-to-the-token-endpoint
@@ -24,8 +25,14 @@ Authentication:
 - Sign and valdate: https://github.com/stevenschwenke/JWTWithJava/blob/main/src/test/java/JWTExperiments.java
 - Read PKCS: https://gist.github.com/simon04/b30c8400f09648b794c25a1f3f1edb32
 - Java JWK: https://www.javadoc.io/doc/com.nimbusds/nimbus-jose-jwt/latest/com/nimbusds/jose/jwk/AsymmetricJWK.html
-- 
-Technical references:
+
+
+### Fhir Servers to try
+
+- HAPI: https://hapi.fhir.org/ (Open endpoint)  
+- Cerner: https://code-console.cerner.com/  (smart-services-auth)  endpoint is: https://fhir-ehr-code.cerner.com/r4/8c040c3c-898b-44ce-9c8a-7840e8793050
+- firely.io (TBD)
+- Bulk Data Demo Server: https://bulk-data.smarthealthit.org/
 
 
 
