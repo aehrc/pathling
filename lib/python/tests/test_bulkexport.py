@@ -47,11 +47,12 @@ def test_builds_default_client(pathling_ctx):
     assert j_client.getFhirEndpointUrl() == "http://example.com"
     assert j_client.getOutputDir() == "output"
     assert j_client.getOperation().getPath() == "$export"  # system level export
-    assert j_client.getOutputFormat() == "ndjson"
+    assert j_client.getOutputFormat() == "application/fhir+ndjson"
     assert j_client.getSince() is None
     assert j_client.getTimeout().isZero()
     assert list(j_client.getTypes()) == []
     assert list(j_client.getPatients()) == []
+    assert j_client.getMaxConcurrentDownloads() == 10
 
 
 def test_builds_system_client_with_options(pathling_ctx):
@@ -63,6 +64,7 @@ def test_builds_system_client_with_options(pathling_ctx):
         types=["Patient", "Condition"],
         since=datetime.fromtimestamp(10000, tz=timezone.utc),
         timeout=timedelta(minutes=2),
+        max_concurrent_downloads=3
     )
     j_client = client._jclient
     assert j_client.getFhirEndpointUrl() == "http://system.com"
@@ -73,6 +75,7 @@ def test_builds_system_client_with_options(pathling_ctx):
     assert j_client.getTimeout().toSeconds() == 120
     assert list(j_client.getTypes()) == ["Patient", "Condition"]
     assert list(j_client.getPatients()) == []
+    assert j_client.getMaxConcurrentDownloads() == 3
 
 
 def test_builds_patient_client_with_options(pathling_ctx):
@@ -91,7 +94,7 @@ def test_builds_patient_client_with_options(pathling_ctx):
     assert (
         j_client.getOperation().getPath() == "Patient/$export"
     )  # patient level export
-    assert j_client.getOutputFormat() == "ndjson"
+    assert j_client.getOutputFormat() == "application/fhir+ndjson"
     assert j_client.getSince().getEpochSecond() == 2000
     assert j_client.getTimeout().toSeconds() == 2
     assert list(j_client.getTypes()) == ["Observation", "Condition"]
@@ -111,7 +114,7 @@ def test_builds_group_client_with_options(pathling_ctx):
     assert (
         j_client.getOperation().getPath() == "Group/123/$export"
     )  # group level export
-    assert j_client.getOutputFormat() == "ndjson"
+    assert j_client.getOutputFormat() == "application/fhir+ndjson"
     assert j_client.getSince() is None
     assert j_client.getTimeout().isZero()
     assert list(j_client.getTypes()) == []
