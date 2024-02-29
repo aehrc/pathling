@@ -29,7 +29,7 @@ Notes
 
 ### Fhir Servers to try
 
-- HAPI: https://hapi.fhir.org/ (Open endpoint)  
+- HAPI: https://hapi.fhir.org/ (Open endpoint: http://hapi.fhir.org/baseR4)  
 - Cerner: https://code-console.cerner.com/  (smart-services-auth)  endpoint is: https://fhir-ehr-code.cerner.com/r4/8c040c3c-898b-44ce-9c8a-7840e8793050
 - firely.io (TBD)
 - Bulk Data Demo Server: https://bulk-data.smarthealthit.org/

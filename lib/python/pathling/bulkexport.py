@@ -86,6 +86,7 @@ class BulkExportClient:
         since: Optional[datetime] = None,
         patients: Optional[Sequence[Reference]] = None,
         timeout: Optional[timedelta] = None,
+        max_concurrent_downloads=10,
         auth_config: Optional[JavaObject] = None,
     ):
         """
@@ -100,6 +101,8 @@ class BulkExportClient:
         :param patients: the value of the `patient` parameter for Bulk Export kick-off request
         :param timeout: the maximum time to wait for the export to complete. If the export does not
                 complete within this time, an exception is raised. By default, not time limit is set.
+        :param max_concurrent_downloads: the maximum number of concurrent downloads to allow.
+                By default, 10.
         :param auth_config: optional authentication configuration created
                 with :func:`pathling.config.auth_config`
         """
@@ -128,6 +131,8 @@ class BulkExportClient:
             types or []
         ).withSince(
             datetime_to_instant(since) if since else None
+        ).withMaxConcurrentDownloads(
+            max_concurrent_downloads
         )
 
         timeout and client_builder.withTimeout(timedelta_to_duration(timeout))
