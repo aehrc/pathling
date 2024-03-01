@@ -21,6 +21,7 @@ import au.csiro.pathling.config.AuthConfiguration;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
+import org.apache.http.auth.AuthScope;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -36,6 +37,8 @@ class ClientAuthProviderTest {
   @Test
   void testGetTokenFromServer() throws IOException {
 
+    System.out.println("clientSecret: " + System.getProperty("pszul.clientSecret"));
+
     final AuthConfiguration smartCDR = AuthConfiguration.builder()
         .tokenEndpoint("https://aehrc-cdr.cc/smartsec_r4/oauth/token")
         .clientId("pathling-bulk-client")
@@ -43,15 +46,16 @@ class ClientAuthProviderTest {
         .scope("system/*.read")
         .build();
 
-    final SymetricAuthTokenProvider clientAuthProvider = new SymetricAuthTokenProvider(smartCDR);
-    final Optional<String> token = clientAuthProvider.getToken();
+    final SymetricAuthTokenProvider clientAuthProvider = new SymetricAuthTokenProvider(smartCDR, new AuthScope("aehrc-cdr.cc", -1));
+    final Optional<String> token = clientAuthProvider.getToken(new AuthScope("aehrc-cdr.cc", -1));
     System.out.println(token);
 
     final CloseableHttpClient authHttpClient = HttpClients.custom()
         .addInterceptorFirst(new ClientAuthRequestInterceptor()).build();
 
-    final URI url = URI.create("https://aehrc-cdr.cc/fhir_r4/Patient/patient-a");
+    final URI url = URI.create("https://aehrc-cdr.cc/fhir_r4/$export?_type=Patient&_outputFormat=application%2Ffhir%2Bndjson");
     final HttpGet getMeta = new HttpGet(url);
+    getMeta.addHeader("Prefer", "respond-async");  
 
     final CloseableHttpResponse response = clientAuthProvider.withToken(
         () -> authHttpClient.execute(getMeta));

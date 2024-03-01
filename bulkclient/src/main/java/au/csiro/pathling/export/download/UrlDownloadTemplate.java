@@ -46,6 +46,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.util.EntityUtils;
 
 @Value
 @Slf4j
@@ -85,8 +86,8 @@ public class UrlDownloadTemplate {
       final HttpResponse result = tokenProvider.withToken(
           () -> httpClient.execute(new HttpGet(source)));
       if (result.getStatusLine().getStatusCode() != 200) {
-        log.error("Failed to download: {}. Status code: {}", source,
-            result.getStatusLine().getStatusCode());
+        log.error("Failed to download: {}. Status: {}. Body: {}", source,
+            result.getStatusLine(), EntityUtils.toString(result.getEntity()));
         throw new HttpError(
             "Failed to download: " + source, result.getStatusLine().getStatusCode());
       }

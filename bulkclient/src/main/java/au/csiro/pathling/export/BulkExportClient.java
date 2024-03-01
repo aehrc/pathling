@@ -61,6 +61,7 @@ import lombok.Builder;
 import lombok.Singular;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.auth.AuthScope;
 import org.apache.http.impl.client.CloseableHttpClient;
 
 
@@ -266,8 +267,9 @@ public class BulkExportClient {
   }
 
   private TokenProvider createTokenProvider() {
+    final URI endpointURI = URI.create(fhirEndpointUrl);
     return authConfig.isEnabled()
-           ? new SymetricAuthTokenProvider(authConfig)
+           ? new SymetricAuthTokenProvider(authConfig, new AuthScope(endpointURI.getHost(), endpointURI.getPort()))
            : AuthContext.noAuthProvider();
   }
 

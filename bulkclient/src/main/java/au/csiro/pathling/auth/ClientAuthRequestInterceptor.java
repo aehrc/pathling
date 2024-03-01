@@ -22,9 +22,12 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.auth.AuthScope;
 import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpCoreContext;
 
 @Slf4j
 public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
@@ -37,7 +40,8 @@ public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
   @Override
   public void process(@Nonnull final HttpRequest request, @Nonnull final HttpContext context)
       throws HttpException, IOException {
-    final Optional<String> maybeAccessToken = AuthContext.getToken();
+    final HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
+    final Optional<String> maybeAccessToken = AuthContext.getToken(new AuthScope(targetHost));
     maybeAccessToken.ifPresent(
         accessToken -> {
           log.debug("Adding access token to request: {}", request.getRequestLine());

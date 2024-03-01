@@ -75,6 +75,10 @@ public class AuthConfiguration implements Serializable {
   @ToString.Exclude
   private String clientSecret;
 
+
+  @Builder.Default
+  private boolean useBasicAuth = false;
+  
   /**
    * A scope value for use with the client credentials grant.
    */
@@ -108,7 +112,7 @@ public class AuthConfiguration implements Serializable {
   public static class AuthConfigValidator implements
       ConstraintValidator<ValidAuthConfiguration, AuthConfiguration> {
 
-      @Override
+    @Override
     public boolean isValid(final AuthConfiguration value,
         final ConstraintValidatorContext context) {
       if (value.isEnabled()) {

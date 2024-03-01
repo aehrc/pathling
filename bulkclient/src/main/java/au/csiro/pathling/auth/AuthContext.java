@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.auth;
 
+import org.apache.http.auth.AuthScope;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -32,7 +33,7 @@ public class AuthContext {
      * @return the current token, if available
      */
     @Nonnull
-    Optional<String> getToken();
+    Optional<String> getToken(@Nonnull final AuthScope requestScope);
 
 
     default <T> T withToken(@Nonnull final Callable<T> supplier) {
@@ -46,10 +47,16 @@ public class AuthContext {
   }
 
   private static final ThreadLocal<TokenProvider> CONTEXT = new ThreadLocal<>();
-  private static final TokenProvider DEFAULT_PROVIDER = Optional::empty;
+  private static final TokenProvider DEFAULT_PROVIDER = new TokenProvider() {
+    @Nonnull
+    @Override
+    public Optional<String> getToken(@Nonnull final AuthScope requestScope) {
+      return Optional.empty();
+    }
+  };
 
-  public static Optional<String> getToken() {
-    return Optional.ofNullable(CONTEXT.get()).flatMap(TokenProvider::getToken);
+  public static Optional<String> getToken(@Nonnull final AuthScope scope) {
+    return Optional.ofNullable(CONTEXT.get()).flatMap(tp -> tp.getToken(scope));
   }
 
   private static <T> T withProvider(@Nonnull final TokenProvider tokenProvider, @Nonnull final

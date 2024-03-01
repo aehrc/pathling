@@ -30,23 +30,47 @@ import javax.annotation.Nonnull;
  */
 public class RunBulkExport {
 
+  public static void runCerner() {
+    final String fhirEndpointUrl = "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d";
+    final String clientSecret = System.getProperty("pszul.cerner.clientSecret");;
+    System.out.println("client secret: " + clientSecret);
 
+    final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
+    // Bulk Export Demo Server
+    final String outputDir = "target/export-" + Instant.now().toEpochMilli();
+
+    System.out.println(
+        "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
+
+    final AuthConfiguration smartCDR = AuthConfiguration.builder()
+        .enabled(true)
+        .tokenEndpoint("https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token")
+        .clientId("4ccde388-534e-482b-b6ca-c55571432c08")
+        .clientSecret(clientSecret)
+        .scope("system/Patient.read")
+        .useBasicAuth(true)
+        .build();
+
+    BulkExportClient.groupBuilder("11ec-d16a-b40370f8-9d31-577f11a339c5")
+        .withAuthConfig(smartCDR)
+        .withFhirEndpointUrl(fhirEndpointUrl)
+        .withOutputDir(outputDir)
+        .withTypes(List.of("Patient"))
+        //.withSince(Instant.now().minus(Duration.ofDays(700)))
+        .withTimeout(Duration.ofMinutes(5))
+        .build()
+        .export();
+    
+  }
+  
+  
   public static void runSystemLevelCdr() {
 
     // NO ERRORS
     final String fhirEndpointUrl = "https://aehrc-cdr.cc/fhir_r4";
-
-    // With transient errors in status pooling
-    // final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiJ0cmFuc2llbnRfZXJyb3IiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-
-    // BULK Status file generation filed
-    // final String fhirEndpointUrl =  "https://bulk-data.smarthealthit.org/eyJlcnIiOiJmaWxlX2dlbmVyYXRpb25fZmFpbGVkIiwicGFnZSI6MTAwMDAsImR1ciI6MTAsInRsdCI6MTUsIm0iOjEsInN0dSI6NCwiZGVsIjowfQ/fhir";
-    // BULK Status some files failed to generate
-    // final String fhirEndpointUrl =  "https://bulk-data.smarthealthit.org/eyJlcnIiOiJzb21lX2ZpbGVfZ2VuZXJhdGlvbl9mYWlsZWQiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-
-    // BULK FILE - File expired
-    //final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiJmaWxlX2V4cGlyZWQiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir";
-
+    final String clientSecret = System.getProperty("pszul.clientSecret");
+    System.out.println("client secret: " + clientSecret);
+    
     final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
     // Bulk Export Demo Server
     final String outputDir = "target/export-" + Instant.now().toEpochMilli();
@@ -58,16 +82,16 @@ public class RunBulkExport {
         .enabled(true)
         .tokenEndpoint("https://aehrc-cdr.cc/smartsec_r4/oauth/token")
         .clientId("pathling-bulk-client")
-        .clientSecret(System.getProperty("pszul.clientSecret"))
-        .scope("system/*.*")
+        .clientSecret(clientSecret)
+        .scope("system/*.read")
         .build();
     
     BulkExportClient.systemBuilder()
         .withAuthConfig(smartCDR)
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
-        .withTypes(List.of("Patient", "Condition"))
-        .withSince(from)
+        .withTypes(List.of("Patient","ExplanationOfBenefit"))
+        //.withSince(Instant.now().minus(Duration.ofDays(700)))
         .withTimeout(Duration.ofMinutes(5))
         .build()
         .export();
@@ -101,7 +125,7 @@ public class RunBulkExport {
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
         .withTypes(List.of("Patient", "Condition"))
-        .withSince(from)
+        //.withSince(from)
         .withTimeout(Duration.ofMinutes(5))
         .build()
         .export();
@@ -133,6 +157,6 @@ public class RunBulkExport {
   }
 
   public static void main(@Nonnull final String[] args) throws Exception {
-    runSystemLevelCdr();
+    runCerner();
   }
 }

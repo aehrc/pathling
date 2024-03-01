@@ -36,3 +36,50 @@ Notes
 
 
 
+#### Cerner resources
+
+Documentation: https://fhir.cerner.com/millennium/bulk-data/#authorization
+Endpoint URL: https://fhir-ehr-code.cerner.com/r4/a658a26c-c581-488c-b301-370b5a0776f7
+token_endpoint: https://authorization.cerner.com/tenants/a658a26c-c581-488c-b301-370b5a0776f7/protocols/oauth2/profiles/smart-v1/token
+
+
+    AllergyIntolerance
+    Binary
+    CarePlan
+    CareTeam
+    Condition
+    Device
+    DiagnosticReport
+    DocumentReference
+    Encounter
+    Goal
+    Immunization
+    Location
+    MedicationRequest
+    Observation
+    Organization
+    Patient
+    Practitioner
+    Procedure
+    Provenance
+
+
+Sandbox:
+
+https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d
+
+
+
+
+In order to call bulk data endpoints in sandbox, you will need to kick off a group export using one of the group ids listed below and then perform the subsequent requests.
+
+Group with 3 patients: 11ec-d16a-c763b73e-98e8-a31715e6a2bf
+Group with 10 patients: 11ec-d16a-b40370f8-9d31-577f11a339c5
+Example
+GET https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d/Group/11ec-d16a-c763b73e-98e8-a31715e6a2bf/$export?_type=Patient
+
+
+Implemented Exports
+Cerner supports only the Group Export operation.
+
+Group Export
