@@ -51,6 +51,8 @@ def test_builds_default_client(pathling_ctx):
     assert j_client.getSince() is None
     assert j_client.getTimeout().isZero()
     assert list(j_client.getTypes()) == []
+    assert list(j_client.getElements()) == []
+    assert list(j_client.getTypeFilters()) == []
     assert list(j_client.getPatients()) == []
     assert j_client.getMaxConcurrentDownloads() == 10
 
@@ -62,9 +64,11 @@ def test_builds_system_client_with_options(pathling_ctx):
         level=ExportLevel.SYSTEM,
         output_format="fhir+ndjson",
         types=["Patient", "Condition"],
+        elements=["id", "status"],
+        type_filters=["Patient?active=true", "Condition?status=active"],
         since=datetime.fromtimestamp(10000, tz=timezone.utc),
         timeout=timedelta(minutes=2),
-        max_concurrent_downloads=3
+        max_concurrent_downloads=3,
     )
     j_client = client._jclient
     assert j_client.getFhirEndpointUrl() == "http://system.com"
@@ -74,6 +78,11 @@ def test_builds_system_client_with_options(pathling_ctx):
     assert j_client.getSince().getEpochSecond() == 10000
     assert j_client.getTimeout().toSeconds() == 120
     assert list(j_client.getTypes()) == ["Patient", "Condition"]
+    assert list(j_client.getElements()) == ["id", "status"]
+    assert list(j_client.getTypeFilters()) == [
+        "Patient?active=true",
+        "Condition?status=active",
+    ]
     assert list(j_client.getPatients()) == []
     assert j_client.getMaxConcurrentDownloads() == 3
 

@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import au.csiro.pathling.utilities.Lists;
 import lombok.Builder;
 import lombok.Value;
 
@@ -105,6 +106,15 @@ public class BulkExportRequest {
   @Builder.Default
   List<String> _type = Collections.emptyList();
 
+
+  @Nonnull
+  @Builder.Default
+  List<String> _elements = Collections.emptyList();
+
+  @Nonnull
+  @Builder.Default
+  List<String> _typeFilter = Collections.emptyList();
+
   @Nullable
   @Builder.Default
   Instant _since = null;
@@ -124,6 +134,10 @@ public class BulkExportRequest {
                 .map(s -> Parameter.of("_since", s)).stream(),
             _type.stream()
                 .map(t -> Parameter.of("_type", t)),
+            Lists.optionalOf(_elements)
+                .map(e -> Parameter.of("_elements", String.join(",", e))).stream(),
+            Lists.optionalOf(_typeFilter)
+                .map(f -> Parameter.of("_typeFilter", String.join(",", f))).stream(),
             patient.stream()
                 .map(p -> Parameter.of("patient", p))
         )

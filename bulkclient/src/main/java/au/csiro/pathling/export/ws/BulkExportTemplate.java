@@ -245,6 +245,12 @@ public class BulkExportTemplate {
     if (!request.get_type().isEmpty()) {
       uriBuilder.addParameter("_type", String.join(",", request.get_type()));
     }
+    if (!request.get_elements().isEmpty()) {
+      uriBuilder.addParameter("_elements", String.join(",", request.get_elements()));
+    }
+    if (!request.get_typeFilter().isEmpty()) {
+      uriBuilder.addParameter("_typeFilter", String.join(",", request.get_typeFilter()));
+    }
     if (request.get_since() != null) {
       uriBuilder.addParameter("_since",
           FhirUtils.formatFhirInstant(Objects.requireNonNull(request.get_since())));

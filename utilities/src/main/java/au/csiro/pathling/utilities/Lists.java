@@ -54,5 +54,21 @@ public abstract class Lists {
   public static List<String> normalizeEmpty(@Nonnull final Optional<List<String>> maybeList) {
     return maybeList.orElse(Collections.emptyList());
   }
-  
+
+
+  /**
+   * Returns an empty optional if the input list is empty; otherwise, returns the optional of the
+   * input list.
+   *
+   * @param list the list to convert to an optional
+   * @param <T> the type of elements in the list
+   * @return an empty optional if the input list is empty; otherwise, the optional of the input list
+   */
+  @Nonnull
+  public static <T> Optional<List<T>> optionalOf(@Nonnull final List<T> list) {
+    return list.isEmpty()
+           ? Optional.empty()
+           : Optional.of(list);
+  }
+
 }

@@ -20,6 +20,7 @@ package au.csiro.pathling.example;
 import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.export.BulkExportClient;
 import au.csiro.pathling.export.fhir.Reference;
+import au.csiro.pathling.export.ws.AsyncConfig;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -32,7 +33,7 @@ public class RunBulkExport {
 
   public static void runCerner() {
     final String fhirEndpointUrl = "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d";
-    final String clientSecret = System.getProperty("pszul.cerner.clientSecret");;
+    final String clientSecret = System.getProperty("pszul.cerner.clientSecret");
     System.out.println("client secret: " + clientSecret);
 
     final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
@@ -44,7 +45,8 @@ public class RunBulkExport {
 
     final AuthConfiguration smartCDR = AuthConfiguration.builder()
         .enabled(true)
-        .tokenEndpoint("https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token")
+        .tokenEndpoint(
+            "https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token")
         .clientId("4ccde388-534e-482b-b6ca-c55571432c08")
         .clientSecret(clientSecret)
         .scope("system/Patient.read")
@@ -60,17 +62,17 @@ public class RunBulkExport {
         .withTimeout(Duration.ofMinutes(5))
         .build()
         .export();
-    
+
   }
-  
-  
+
+
   public static void runSystemLevelCdr() {
 
     // NO ERRORS
     final String fhirEndpointUrl = "https://aehrc-cdr.cc/fhir_r4";
     final String clientSecret = System.getProperty("pszul.clientSecret");
     System.out.println("client secret: " + clientSecret);
-    
+
     final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
     // Bulk Export Demo Server
     final String outputDir = "target/export-" + Instant.now().toEpochMilli();
@@ -80,19 +82,21 @@ public class RunBulkExport {
 
     final AuthConfiguration smartCDR = AuthConfiguration.builder()
         .enabled(true)
+        .useBasicAuth(true)
         .tokenEndpoint("https://aehrc-cdr.cc/smartsec_r4/oauth/token")
         .clientId("pathling-bulk-client")
         .clientSecret(clientSecret)
         .scope("system/*.read")
         .build();
-    
+
     BulkExportClient.systemBuilder()
         .withAuthConfig(smartCDR)
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
-        .withTypes(List.of("Patient","ExplanationOfBenefit"))
+        .withTypes(List.of("MedicationRequest"))
         //.withSince(Instant.now().minus(Duration.ofDays(700)))
-        .withTimeout(Duration.ofMinutes(5))
+        .withAsyncConfig(AsyncConfig.builder().maxPoolingDelay(Duration.ofSeconds(10)).build())
+        .withTimeout(Duration.ofMinutes(60))
         .build()
         .export();
   }
@@ -126,7 +130,8 @@ public class RunBulkExport {
         .withOutputDir(outputDir)
         .withTypes(List.of("Patient", "Condition"))
         //.withSince(from)
-        .withTimeout(Duration.ofMinutes(5))
+        .withAsyncConfig(AsyncConfig.builder().maxPoolingDelay(Duration.ofSeconds(10)).build())
+        .withTimeout(Duration.ofMinutes(60))
         .build()
         .export();
   }
@@ -157,6 +162,6 @@ public class RunBulkExport {
   }
 
   public static void main(@Nonnull final String[] args) throws Exception {
-    runCerner();
+    runSystemLevelCdr();
   }
 }

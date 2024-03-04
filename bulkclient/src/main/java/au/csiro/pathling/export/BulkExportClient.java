@@ -99,6 +99,14 @@ public class BulkExportClient {
   List<Reference> patients;
 
   @Nonnull
+  @Singular("element")
+  List<String> elements;
+
+  @Nonnull
+  @Singular("typeFilter")
+  List<String> typeFilters;
+  
+  @Nonnull
   String outputDir;
 
   @Nonnull
@@ -214,6 +222,8 @@ public class BulkExportClient {
         ._outputFormat(outputFormat)
         ._type(types)
         ._since(since)
+        ._elements(elements)
+        ._typeFilter(typeFilters)
         .patient(patients)
         .build();
   }

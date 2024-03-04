@@ -83,6 +83,8 @@ class BulkExportClient:
         group_id: Optional[str] = None,
         output_format: str = "application/fhir+ndjson",
         types: Optional[Sequence[str]] = None,
+        elements: Optional[Sequence[str]] = None,
+        type_filters: Optional[Sequence[str]] = None,
         since: Optional[datetime] = None,
         patients: Optional[Sequence[Reference]] = None,
         timeout: Optional[timedelta] = None,
@@ -97,6 +99,8 @@ class BulkExportClient:
                 level export.
         :param output_format: the value of the `_outputFormat` parameter for Bulk Export kick-off request
         :param types: the value of the `_type` parameter for Bulk Export kick-off request
+        :param elements: the value of the `_elements` parameter for Bulk Export kick-off request
+        :param type_filters: the value of the `_typeFilter` parameter for Bulk Export kick-off request
         :param since: the value of the `_since` parameter for Bulk Data kick-off request
         :param patients: the value of the `patient` parameter for Bulk Export kick-off request
         :param timeout: the maximum time to wait for the export to complete. If the export does not
@@ -129,6 +133,10 @@ class BulkExportClient:
             output_format
         ).withTypes(
             types or []
+        ).withElements(
+            elements or []
+        ).withTypeFilters(
+            type_filters or []
         ).withSince(
             datetime_to_instant(since) if since else None
         ).withMaxConcurrentDownloads(
