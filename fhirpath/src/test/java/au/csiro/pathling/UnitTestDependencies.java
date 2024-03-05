@@ -26,6 +26,7 @@ import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
+import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.SelectClauseTypeAdapterFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
@@ -141,6 +142,7 @@ public class UnitTestDependencies {
   static Gson gson() {
     final GsonBuilder builder = new GsonBuilder();
     builder.registerTypeAdapterFactory(new SelectClauseTypeAdapterFactory());
+    builder.registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory());
     return builder.create();
   }
 

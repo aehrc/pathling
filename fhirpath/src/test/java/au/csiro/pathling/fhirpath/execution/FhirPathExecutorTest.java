@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static java.util.Collections.emptyMap;
 import static org.mockito.Mockito.mock;
 
 import au.csiro.pathling.fhirpath.FhirPath;
@@ -45,6 +46,7 @@ class FhirPathExecutorTest {
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
+        emptyMap(),
         dataSource);
 
     final Collection result = validator.validate(path);

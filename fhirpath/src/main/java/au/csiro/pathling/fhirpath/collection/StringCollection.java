@@ -85,9 +85,29 @@ public class StringCollection extends Collection implements Materializable<Primi
    */
   @Nonnull
   public static StringCollection fromLiteral(@Nonnull final String stringLiteral) {
+    // TODO: Rationalise this with fromValue.
     return fromValue(parseStringLiteral(stringLiteral));
   }
 
+  /**
+   * Returns a new instance based upon a literal represented by a {@link StringType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   * @implNote This is required for the reflection-based instantiation of collections used in
+   * {@link au.csiro.pathling.view.ProjectionContext#of}.
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final StringType value) {
+    return StringCollection.fromValue(value.getValue());
+  }
+
+  /**
+   * Returns a new instance based upon a literal value.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final String value) {
     return StringCollection.build(ArrayOrSingularRepresentation.literal(value));

@@ -15,6 +15,7 @@ import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.SelectionX;
 import au.csiro.pathling.view.UnionAllSelection;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -118,8 +119,10 @@ public class FhirViewExecutor {
     final Parser parser = new Parser();
     final SelectionX selection = parseSelection(fhirView, parser);
     final Optional<SelectionX> where = parseWhere(fhirView, parser);
-    return new ExtractViewX(ResourceType.fromCode(fhirView.getResource()),
-        selection, where);
+    final List<ConstantDeclaration> constants = Optional.ofNullable(fhirView.getConstant())
+        .orElse(Collections.emptyList());
+    return new ExtractViewX(ResourceType.fromCode(fhirView.getResource()), constants, selection,
+        where);
   }
 
   @Nonnull

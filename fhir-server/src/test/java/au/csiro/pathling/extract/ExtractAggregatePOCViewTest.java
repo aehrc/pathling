@@ -18,6 +18,7 @@
 package au.csiro.pathling.extract;
 
 import static au.csiro.pathling.view.AggregationView.AGG_FUNCTIONS;
+import static java.util.Collections.emptyList;
 
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.aggregate.AggregateResponse;
@@ -28,7 +29,7 @@ import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
-import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
+import au.csiro.pathling.fhirpath.path.Paths.ExternalConstantPath;
 import au.csiro.pathling.io.CacheableDatabase;
 import au.csiro.pathling.query.QueryParser;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
@@ -38,17 +39,16 @@ import au.csiro.pathling.test.helpers.TestHelpers;
 import au.csiro.pathling.view.AbstractCompositeSelection;
 import au.csiro.pathling.view.AggregationView;
 import au.csiro.pathling.view.DatasetResult;
-import au.csiro.pathling.view.ProjectionContext;
 import au.csiro.pathling.view.ExecutionContext;
 import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ForEachOrNullSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
+import au.csiro.pathling.view.ProjectionContext;
 import au.csiro.pathling.view.Selection;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.Streams;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,7 +101,7 @@ class ExtractAggregatePOCViewTest {
 
   @Nonnull
   static Selection decompose(@Nonnull final List<FhirPath> paths) {
-    return new FromSelection(new ExtConsFhir("%resource"), decomposeInternal(paths));
+    return new FromSelection(new ExternalConstantPath("%resource"), decomposeInternal(paths));
   }
 
   static boolean isTraversal(@Nonnull final FhirPath path) {
@@ -322,7 +322,7 @@ class ExtractAggregatePOCViewTest {
     groupingSelction.printTree();
 
     final ProjectionContext execContext = ProjectionContext.of(newContext(),
-        ResourceType.PATIENT);
+        ResourceType.PATIENT, emptyList());
 
     final DatasetResult<Column> groupingResult = groupingSelction.evaluate(execContext).map(
         cr -> cr.getCollection().getColumn().getValue());
@@ -440,7 +440,7 @@ class ExtractAggregatePOCViewTest {
     System.out.println("### Expressions: ###");
     grouppingExpressions.forEach(System.out::println);
 
-    final Paths.ExtConsFhir contextPath = new Paths.ExtConsFhir("%resource");
+    final ExternalConstantPath contextPath = new ExternalConstantPath("%resource");
 
     final List<FhirPath> groupingPaths = grouppingExpressions.stream()
         .map(parser::parse)
@@ -451,7 +451,7 @@ class ExtractAggregatePOCViewTest {
     groupingPaths.forEach(System.out::println);
 
     final ProjectionContext execContext = ProjectionContext.of(newContext(),
-        ResourceType.PATIENT);
+        ResourceType.PATIENT, emptyList());
 
     final List<Collection> groupByCollections = groupingPaths.stream()
         .map(p -> execContext.evalExpression(p).getValue())
@@ -503,7 +503,7 @@ class ExtractAggregatePOCViewTest {
               .orElse(p.getLeft() + ".empty()"))
           .collect(Collectors.joining(" and "));
 
-      return new AggregateResponse.Grouping(labels, Collections.emptyList(),
+      return new AggregateResponse.Grouping(labels, emptyList(),
           Optional.of(drillDown));
     };
   }

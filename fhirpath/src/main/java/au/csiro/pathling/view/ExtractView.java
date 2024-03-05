@@ -19,6 +19,7 @@ package au.csiro.pathling.view;
 
 import static au.csiro.pathling.extract.ExtractResultType.FLAT;
 import static au.csiro.pathling.utilities.Functions.maybeCast;
+import static java.util.Collections.emptyList;
 
 import au.csiro.pathling.extract.ExtractResultType;
 import au.csiro.pathling.fhirpath.StringCoercible;
@@ -53,7 +54,7 @@ public class ExtractView {
 
   public Dataset<Row> evaluate(@Nonnull final ExecutionContext context) {
     final ProjectionContext projectionContext = ProjectionContext.of(context,
-        subjectResource);
+        subjectResource, emptyList());
 
     final DatasetResult<Column> selectionResult = selection.evaluate(projectionContext)
         .map(this::toColumn);

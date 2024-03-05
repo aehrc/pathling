@@ -80,7 +80,26 @@ public class IntegerCollection extends Collection implements
     return build(columnRepresentation, Optional.empty());
   }
 
+  /**
+   * Returns a new instance based upon a literal represented by an {@link IntegerType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link IntegerCollection}
+   * @implNote This is required for the reflection-based instantiation of collections used in
+   * {@link au.csiro.pathling.view.ProjectionContext#of}.
+   */
+  @SuppressWarnings("unused")
+  @Nonnull
+  public static IntegerCollection fromValue(@Nonnull final IntegerType value) {
+    return IntegerCollection.fromValue(value.getValue());
+  }
 
+  /**
+   * Returns a new instance based upon a literal value.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link IntegerCollection}
+   */
   @Nonnull
   public static IntegerCollection fromValue(final int value) {
     return IntegerCollection.build(ArrayOrSingularRepresentation.literal(value));

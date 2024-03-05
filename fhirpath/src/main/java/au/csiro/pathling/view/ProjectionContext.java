@@ -17,16 +17,26 @@
 
 package au.csiro.pathling.view;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+import static java.util.stream.Collectors.toMap;
+
+import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
 import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
 import au.csiro.pathling.view.DatasetResult.One;
+import au.csiro.pathling.views.ConstantDeclaration;
+import java.lang.reflect.InvocationTargetException;
+import java.util.List;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.hl7.fhir.instance.model.api.IBase;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -105,13 +115,39 @@ public class ProjectionContext {
 
   @Nonnull
   public static ProjectionContext of(@Nonnull final ExecutionContext context,
-      @Nonnull final ResourceType subjectResource) {
-    final FhirPathExecutor executor = new SingleFhirPathExecutor(
-        subjectResource,
-        context.getFhirContext(),
-        new StaticFunctionRegistry(),
-        context.getDataSource());
+      @Nonnull final ResourceType subjectResource,
+      @Nonnull final List<ConstantDeclaration> constants) {
+    // Create a map of variables from the provided constants.
+    final Map<String, Collection> variables = constants.stream()
+        .collect(toMap(ConstantDeclaration::getName,
+            ProjectionContext::getCollectionForConstantValue));
+
+    // Create a new FhirPathExecutor.
+    final FhirPathExecutor executor = new SingleFhirPathExecutor(subjectResource,
+        context.getFhirContext(), new StaticFunctionRegistry(), variables, context.getDataSource());
+
+    // Return a new ProjectionContext with the executor and the default input context.
     return new ProjectionContext(executor, executor.createDefaultInputContext());
+  }
+
+  @Nonnull
+  private static Collection getCollectionForConstantValue(@Nonnull final ConstantDeclaration c) {
+    final IBase value = c.getValue();
+    final FHIRDefinedType fhirType = FHIRDefinedType.fromCode(value.fhirType());
+
+    // Get the collection class for the FHIR type.
+    final Class<? extends Collection> collectionClass = Collection.classForType(fhirType)
+        .orElseThrow(() ->
+            new InvalidUserInputError("Unsupported constant type: " + fhirType.toCode()));
+    try {
+      // Invoke the fromValue method on the collection class to get the return value.
+      final Object returnValue = collectionClass.getMethod("fromValue", value.getClass())
+          .invoke(null, value);
+      check(returnValue instanceof Collection);
+      return (Collection) returnValue;
+    } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+      throw new RuntimeException(e);
+    }
   }
 
 }

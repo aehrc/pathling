@@ -19,6 +19,9 @@ package au.csiro.pathling.fhirpath.context;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.ResourceCollection;
+import au.csiro.pathling.fhirpath.variable.EnvironmentVariableResolver;
+import au.csiro.pathling.fhirpath.variable.VariableResolverChain;
+import java.util.Map;
 import javax.annotation.Nonnull;
 import lombok.Value;
 
@@ -32,18 +35,28 @@ public class FhirPathContext {
   Collection inputContext;
 
   @Nonnull
+  EnvironmentVariableResolver variables;
+
+  @Nonnull
   public Collection resolveVariable(@Nonnull final String name) {
     if (name.equals("%context")) {
-      return getInputContext();
+      return inputContext;
     } else if (name.equals("%resource") || name.equals("%rootResource")) {
-      return getResource();
+      return resource;
     } else {
-      throw new IllegalArgumentException("Unknown constant: " + name);
+      return variables.get(name)
+          .orElseThrow(() -> new IllegalArgumentException("Unknown variable: " + name));
     }
   }
 
   public static FhirPathContext ofResource(@Nonnull final ResourceCollection resource) {
-    return of(resource, resource);
+    return of(resource, resource, VariableResolverChain.withDefaults(resource, resource));
   }
-  
+
+  public static FhirPathContext ofResource(@Nonnull final ResourceCollection resource,
+      @Nonnull final Map<String, Collection> additionalVariables) {
+    return of(resource, resource,
+        VariableResolverChain.withDefaults(resource, resource, additionalVariables));
+  }
+
 }

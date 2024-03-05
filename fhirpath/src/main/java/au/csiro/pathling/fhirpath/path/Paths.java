@@ -20,9 +20,9 @@ package au.csiro.pathling.fhirpath.path;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import au.csiro.pathling.errors.InvalidUserInputError;
+import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.FunctionInput;
-import au.csiro.pathling.fhirpath.EvaluationContext;
 import au.csiro.pathling.fhirpath.TypeSpecifier;
 import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.collection.StringCollection;
@@ -59,7 +59,7 @@ final public class Paths {
   }
 
   @Value
-  public static class ExtConsFhir implements FhirPath {
+  public static class ExternalConstantPath implements FhirPath {
 
     String name;
 

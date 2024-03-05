@@ -21,14 +21,16 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathBaseVisitor;
+import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ExternalConstantTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.InvocationTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.LiteralTermContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParenthesizedTermContext;
-import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
-
+import au.csiro.pathling.fhirpath.path.Paths.ExternalConstantPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 /**
  * A term is typically a standalone literal or function invocation.
@@ -54,9 +56,13 @@ class TermVisitor extends FhirPathBaseVisitor<FhirPath> {
   @Nonnull
   public FhirPath visitExternalConstantTerm(
       @Nullable final ExternalConstantTermContext ctx) {
-    @Nullable final String term = requireNonNull(ctx).getText();
+    final ExternalConstantContext constantContext = requireNonNull(
+        requireNonNull(ctx).externalConstant());
+    final String term = Optional.ofNullable((ParseTree) constantContext.identifier())
+        .orElse(constantContext.STRING()).getText();
     requireNonNull(term);
-    return new ExtConsFhir(term);
+
+    return new ExternalConstantPath(term);
   }
 
   @Override

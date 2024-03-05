@@ -23,7 +23,7 @@ import au.csiro.pathling.extract.ExtractResultType;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.fhirpath.path.Paths;
-import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
+import au.csiro.pathling.fhirpath.path.Paths.ExternalConstantPath;
 import au.csiro.pathling.view.AggregationView;
 import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ForEachOrNullSelection;
@@ -129,7 +129,7 @@ public class QueryParser {
     // TODO: this should check/enforce the booleannes of the paths results
     return paths.isEmpty()
            ? Optional.empty()
-           : Optional.of(new FromSelection(new ExtConsFhir("%resource"),
+           : Optional.of(new FromSelection(new ExternalConstantPath("%resource"),
                paths.stream().map(PrimitiveSelection::new)
                    .collect(Collectors.toUnmodifiableList())));
   }
@@ -137,7 +137,7 @@ public class QueryParser {
   @Nonnull
   public static Selection decomposeSimple(@Nonnull final List<FhirPath> paths) {
     // TODO: this can be simplified if we can explode the leaves
-    return new FromSelection(new ExtConsFhir("%resource"),
+    return new FromSelection(new ExternalConstantPath("%resource"),
         paths.stream().map(p -> new ForEachOrNullSelection(p,
                 List.of(new PrimitiveSelection(FhirPath.nullPath()))))
             .collect(Collectors.toUnmodifiableList()));
@@ -151,7 +151,7 @@ public class QueryParser {
 
   @Nonnull
   public static Selection decomposeAliased(@Nonnull final List<PathWithAlias> paths) {
-    return new FromSelection(new ExtConsFhir("%resource"), decomposeInternal(paths));
+    return new FromSelection(new ExternalConstantPath("%resource"), decomposeInternal(paths));
   }
 
   static boolean isTraversal(@Nonnull final PathWithAlias pathWithAlias) {

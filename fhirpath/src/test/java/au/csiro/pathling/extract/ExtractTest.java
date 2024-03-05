@@ -19,17 +19,17 @@ package au.csiro.pathling.extract;
 
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths.ExtConsFhir;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.fhirpath.path.Paths.ExternalConstantPath;
 import au.csiro.pathling.view.AbstractCompositeSelection;
 import au.csiro.pathling.view.ForEachSelection;
 import au.csiro.pathling.view.FromSelection;
 import au.csiro.pathling.view.PrimitiveSelection;
 import au.csiro.pathling.view.Selection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import org.junit.jupiter.api.Test;
 
 public class ExtractTest {
@@ -38,7 +38,7 @@ public class ExtractTest {
   // best to convert invovation path to the list of expressions.
   @Nonnull
   static Selection decompose(@Nonnull final List<FhirPath> paths) {
-    return new FromSelection(new ExtConsFhir("%resource"), decomposeInternal(paths));
+    return new FromSelection(new ExternalConstantPath("%resource"), decomposeInternal(paths));
   }
 
   static List<Selection> decomposeInternal(@Nonnull final List<FhirPath> paths) {
@@ -123,7 +123,6 @@ public class ExtractTest {
     // //             Collectors.toUnmodifiableList())));
     // // str.entrySet().forEach(System.out::println);
 
-    
     final Selection view = decompose(paths);
     System.out.println("## Raw view ##");
     view.printTree();

@@ -60,7 +60,7 @@ public class FhirView {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.constant">ViewDefinition.constant</a>
    */
   @Nullable
-  List<ConstantDeclaration> constants;
+  List<ConstantDeclaration> constant;
 
   /**
    * Defines the content of a column within the view.
@@ -77,7 +77,7 @@ public class FhirView {
    * <p>
    * A FHIRPath expression that defines a filter that must evaluate to true for a resource to be
    * included in the output. The input context is the collection of resources of the type specified
-   * in the resource element. Constants defined in {@link #constants} can be referenced as
+   * in the resource element. Constants defined in {@link #constant} can be referenced as
    * {@code %[name]}. The result of the expression must be of type Boolean.
    *
    * @see <a

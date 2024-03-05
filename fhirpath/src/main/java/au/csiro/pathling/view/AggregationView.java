@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.view;
 
+import static java.util.Collections.emptyList;
+
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.path.Paths;
 import com.google.common.collect.ImmutableMap;
@@ -51,7 +53,7 @@ public class AggregationView {
 
   public Dataset<Row> evaluate(@Nonnull final ExecutionContext context) {
     final ProjectionContext projectionContext = ProjectionContext.of(context,
-        subjectResource);
+        subjectResource, emptyList());
 
     final DatasetResult<Column> groupByResult = groupBy.evaluate(projectionContext)
         .map(cr -> cr.getCollection()

@@ -34,6 +34,7 @@ import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.validation.ValidationUtils;
+import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
 import au.csiro.pathling.views.SelectClauseTypeAdapterFactory;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
@@ -101,6 +102,7 @@ public class PathlingContext {
     FhirpathUDFRegistrar.registerUDFs(spark);
     final GsonBuilder builder = new GsonBuilder();
     builder.registerTypeAdapterFactory(new SelectClauseTypeAdapterFactory());
+    builder.registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory());
     gson = builder.create();
   }
 

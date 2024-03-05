@@ -17,6 +17,7 @@
 
 package au.csiro.pathling.fhirpath.execution;
 
+import static java.util.Collections.emptyMap;
 import static org.mockito.Mockito.when;
 
 import au.csiro.pathling.encoders.FhirEncoders;
@@ -114,6 +115,7 @@ public class ExecutorTest {
         ResourceType.PATIENT,
         FhirContext.forR4(),
         StaticFunctionRegistry.getInstance(),
+        emptyMap(),
         dataSource
     );
 

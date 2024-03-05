@@ -247,16 +247,8 @@ abstract class AbstractFhirViewTestBase {
       for (final Iterator<JsonNode> it = views.elements(); it.hasNext(); ) {
         final JsonNode view = it.next();
 
-        final FhirView fhirView;
-        try {
-          // Serialize a FhirView object from the view definition in the test.
-          fhirView = gson.fromJson(view.get("view").toString(), FhirView.class);
-          ensureValid(fhirView, "View is not valid");
-        } catch (final Exception e) {
-          log.info("Exception occurred while parsing test definition:");
-          log.info(view.toPrettyString());
-          throw e;
-        }
+        // Get the view JSON.
+        final String viewJson = view.get("view").toPrettyString();
 
         // Write the expected JSON to a file, named after the view.
         final Path directory = getTempDir(testDefinition);
@@ -270,7 +262,7 @@ abstract class AbstractFhirViewTestBase {
         final boolean disabled = Optional.ofNullable(view.get("disabled"))
             .map(JsonNode::asBoolean).orElse(false);
         result.add(
-            new TestParameters(testName, sourceData, fhirView, getExpectation(view, expectedPath),
+            new TestParameters(testName, sourceData, viewJson, getExpectation(view, expectedPath),
                 disabled));
         testNumber++;
       }
@@ -334,7 +326,19 @@ abstract class AbstractFhirViewTestBase {
     log.info("Running test: " + parameters.getTitle());
 
     parameters.getExpectation().expect(() -> {
-      final FhirView view = parameters.getView();
+      final FhirView view;
+      try {
+        // Serialize a FhirView object from the view definition in the test.
+        view = gson.fromJson(parameters.getViewJson(), FhirView.class);
+        ensureValid(view, "View is not valid");
+      } catch (final Exception e) {
+        // If parsing the view definition fails, log the JSON and rethrow the exception.
+        log.info("Exception occurred while parsing test definition:");
+        log.info(parameters.getViewJson());
+        throw e;
+      }
+
+      // Create a new executor and build the query.
       final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
           parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));
       return executor.buildQuery(view);
@@ -346,7 +350,7 @@ abstract class AbstractFhirViewTestBase {
 
     String title;
     DataSource sourceData;
-    FhirView view;
+    String viewJson;
     Expectation expectation;
     boolean disabled;
 

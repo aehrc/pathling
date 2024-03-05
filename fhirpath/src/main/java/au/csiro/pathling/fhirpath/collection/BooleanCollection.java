@@ -79,6 +79,26 @@ public class BooleanCollection extends Collection implements Materializable<Bool
     return BooleanCollection.fromValue(literal.equals("true"));
   }
 
+  /**
+   * Returns a new instance based upon a literal represented by a {@link BooleanType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link BooleanCollection}
+   * @implNote This is required for the reflection-based instantiation of collections used in
+   * {@link au.csiro.pathling.view.ProjectionContext#of}.
+   */
+  @SuppressWarnings("unused")
+  @Nonnull
+  public static BooleanCollection fromValue(@Nonnull final BooleanType value) {
+    return BooleanCollection.fromValue(value.getValue());
+  }
+
+  /**
+   * Returns a new instance based upon a literal value.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link BooleanCollection}
+   */
   @Nonnull
   public static BooleanCollection fromValue(final boolean value) {
     return BooleanCollection.build(ArrayOrSingularRepresentation.literal(value));

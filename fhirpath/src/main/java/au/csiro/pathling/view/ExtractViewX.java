@@ -24,6 +24,7 @@ import au.csiro.pathling.extract.ExtractResultType;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.views.ConstantDeclaration;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -42,6 +43,8 @@ public class ExtractViewX {
   @Nonnull
   ResourceType subjectResource;
   @Nonnull
+  List<ConstantDeclaration> constants;
+  @Nonnull
   SelectionX selection;
   @Nonnull
   Optional<SelectionX> where;
@@ -49,13 +52,14 @@ public class ExtractViewX {
   ExtractResultType resultType;
 
   public ExtractViewX(@Nonnull final ResourceType subjectResource,
-      @Nonnull final SelectionX selection, final Optional<SelectionX> where) {
-    this(subjectResource, selection, where, ExtractResultType.UNCONSTRAINED);
+      @Nonnull final List<ConstantDeclaration> constants, @Nonnull final SelectionX selection,
+      final Optional<SelectionX> where) {
+    this(subjectResource, constants, selection, where, ExtractResultType.UNCONSTRAINED);
   }
 
   public Dataset<Row> evaluate(@Nonnull final ExecutionContext context) {
     final ProjectionContext projectionContext = ProjectionContext.of(context,
-        subjectResource);
+        subjectResource, constants);
 
     final SelectionResult selectionResult = selection.evaluate(projectionContext);
     final Dataset<Row> filteredResult =

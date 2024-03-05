@@ -64,5 +64,5 @@ public class ViewEvaluationContext implements EvaluationContext {
   public Collection resolveVariable(@Nonnull final String name) {
     return fhirPathContext.resolveVariable(name);
   }
-  
+
 }
