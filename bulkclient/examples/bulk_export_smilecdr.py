@@ -54,6 +54,7 @@ result = BulkExportClient(
     fhirEndpointUrl,
     outputDirUrl,
     types=["Patient", "Condition"],
+    type_filters=["Patient: name co \"Bin\""],
     timeout = timedelta(minutes=30),
     auth_config=auth_config(
         auth_enabled=True,

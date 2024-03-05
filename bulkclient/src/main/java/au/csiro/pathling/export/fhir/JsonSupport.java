@@ -39,7 +39,6 @@ public abstract class JsonSupport {
   public static <T> Optional<T> fromJson(@Nonnull final String json,
       @Nonnull final Class<T> clazz) {
     try {
-      // TODO: also add  JRS-380 based validation
       return Optional.ofNullable(GSON.fromJson(json, clazz));
     } catch (final JsonSyntaxException ex) {
       log.debug("Ignoring invalid JSON parsing error: {}", ex.getMessage());

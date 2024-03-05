@@ -25,6 +25,7 @@ Notes
 - Sign and valdate: https://github.com/stevenschwenke/JWTWithJava/blob/main/src/test/java/JWTExperiments.java
 - Read PKCS: https://gist.github.com/simon04/b30c8400f09648b794c25a1f3f1edb32
 - Java JWK: https://www.javadoc.io/doc/com.nimbusds/nimbus-jose-jwt/latest/com/nimbusds/jose/jwk/AsymmetricJWK.html
+- HTTP Client OAuth example: https://github.com/mojodna/httpclient-oauth/blob/master/src/examples/org/apache/http/examples/client/ClientOAuthAuthentication.java
 
 
 ### Fhir Servers to try
