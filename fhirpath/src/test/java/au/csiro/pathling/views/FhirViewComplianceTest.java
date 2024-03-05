@@ -17,7 +17,14 @@
 
 package au.csiro.pathling.views;
 
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
 public class FhirViewComplianceTest extends AbstractFhirViewTestBase {
+
+  @RegisterExtension
+  static final Extension JSON_REPORTING_EXTENSION = new JsonReportingExtension(
+      "target/fhir-view-compliance-test.json");
 
   public FhirViewComplianceTest() {
     super("classpath:tests/sql-on-fhir/*.json");

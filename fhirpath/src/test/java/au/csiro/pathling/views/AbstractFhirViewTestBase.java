@@ -256,13 +256,11 @@ abstract class AbstractFhirViewTestBase {
             String.format("%02d_%s.json", testNumber,
                 view.get("title").asText().replaceAll("\\W+", "_"));
         final Path expectedPath = directory.resolve(expectedFileName);
-
-        final String testName =
-            testDefinition.get("title").asText() + " - " + view.get("title").asText();
         final boolean disabled = Optional.ofNullable(view.get("disabled"))
             .map(JsonNode::asBoolean).orElse(false);
         result.add(
-            new TestParameters(testName, sourceData, viewJson, getExpectation(view, expectedPath),
+            new TestParameters(testDefinition.get("title").asText(), view.get("title").asText(),
+                sourceData, viewJson, getExpectation(view, expectedPath),
                 disabled));
         testNumber++;
       }
@@ -348,11 +346,27 @@ abstract class AbstractFhirViewTestBase {
   @Value
   static class TestParameters {
 
-    String title;
+    @Nonnull
+    String suiteName;
+
+    @Nonnull
+    String testName;
+
+    @Nonnull
     DataSource sourceData;
+
+    @Nonnull
     String viewJson;
+
+    @Nonnull
     Expectation expectation;
     boolean disabled;
+
+
+    @Nonnull
+    public String getTitle() {
+      return suiteName + " - " + testName;
+    }
 
     @Override
     public String toString() {
