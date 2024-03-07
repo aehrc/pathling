@@ -73,6 +73,7 @@ public class ProjectionContext {
    *
    * @param parent the path to the sub-context
    * @param unnest whether to unnest the sub-context
+   * @param withNulls whether to include nulls in the unnested sub-context
    * @return the new sub-context
    */
   @Nonnull

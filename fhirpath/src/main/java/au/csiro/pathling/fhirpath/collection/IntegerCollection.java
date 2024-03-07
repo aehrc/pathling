@@ -82,11 +82,12 @@ public class IntegerCollection extends Collection implements
 
   /**
    * Returns a new instance based upon a literal represented by an {@link IntegerType}.
+   * <p>
+   * This is required for the reflection-based instantiation of collections used in
+   * {@link au.csiro.pathling.view.ProjectionContext#of}.
    *
    * @param value The value to use
    * @return A new instance of {@link IntegerCollection}
-   * @implNote This is required for the reflection-based instantiation of collections used in
-   * {@link au.csiro.pathling.view.ProjectionContext#of}.
    */
   @SuppressWarnings("unused")
   @Nonnull

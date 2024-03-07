@@ -91,11 +91,12 @@ public class StringCollection extends Collection implements Materializable<Primi
 
   /**
    * Returns a new instance based upon a literal represented by a {@link StringType}.
+   * <p>
+   * This is required for the reflection-based instantiation of collections used in
+   * {@link au.csiro.pathling.view.ProjectionContext#of}.
    *
    * @param value The value to use
    * @return A new instance of {@link StringCollection}
-   * @implNote This is required for the reflection-based instantiation of collections used in
-   * {@link au.csiro.pathling.view.ProjectionContext#of}.
    */
   @Nonnull
   public static StringCollection fromValue(@Nonnull final StringType value) {
