@@ -14,17 +14,14 @@
 #  limitations under the License.
 
 
-from typing import Dict, Sequence, Optional, Callable
-import json
-
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
+from typing import Dict, Sequence, Optional, Callable
 
 from pathling import PathlingContext
 from pathling.core import (
     ExpOrStr,
-    Expression,
     StringToStringSetMapper,
     SparkConversionsMixin,
 )
@@ -122,18 +119,22 @@ class DataSource(SparkConversionsMixin):
 
     def view(
         self,
-        resource: str,
-        select: Sequence[Dict],
+        resource: Optional[str] = None,
+        select: Optional[Sequence[Dict]] = None,
         constants: Optional[Sequence[Dict]] = None,
         where: Optional[Sequence[Dict]] = None,
+        json: Optional[str] = None,
     ) -> DataFrame:
-        args = locals()
-        query = {
-            key: args[key]
-            for key in ["resource", "select", "constants", "where"]
-            if args[key] is not None
-        }
-        query_json = json.dumps(query)
+        if json:
+            query_json = json
+        else:
+            args = locals()
+            query = {
+                key: args[key]
+                for key in ["resource", "select", "constants", "where"]
+                if args[key] is not None
+            }
+            query_json = json.dumps(query)
         jquery = self._jds.view(resource)
         jquery.json(query_json)
         return self._wrap_df(jquery.execute())
