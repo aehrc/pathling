@@ -23,6 +23,7 @@
 
 package au.csiro.pathling.config;
 
+import ca.uhn.fhir.context.FhirVersionEnum;
 import java.util.Set;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -35,6 +36,13 @@ import lombok.Data;
 @Data
 @Builder
 public class EncodingConfiguration {
+
+  /**
+   * The FHIR version to use for encoding.
+   */
+  @NotNull
+  @Builder.Default
+  private String fhirVersion = FhirVersionEnum.R4.getFhirVersionString();
 
   /**
    * Controls the maximum depth of nested element data that is encoded upon import.

@@ -27,7 +27,7 @@ from pathling._version import (
     __hadoop_version__,
 )
 from pathling.coding import Coding
-from pathling.fhir import MimeType
+from pathling.fhir import MimeType, Version
 
 if TYPE_CHECKING:
     from .datasource import DataSources
@@ -66,6 +66,7 @@ class PathlingContext:
     def create(
         cls,
         spark: Optional[SparkSession] = None,
+        fhir_version: Optional[str] = Version.STU3,
         max_nesting_level: Optional[int] = 3,
         enable_extensions: Optional[bool] = False,
         enabled_open_types: Optional[Sequence[str]] = (
@@ -123,6 +124,7 @@ class PathlingContext:
 
         :param spark: a pre-configured :class:`SparkSession` instance, use this if you need to
                control the way that the session is set up
+        :param fhir_version: the version of FHIR to use, defaults to R4
         :param max_nesting_level: controls the maximum depth of nested element data that is encoded
                upon import. This affects certain elements within FHIR resources that contain
                recursive references, e.g. `QuestionnaireResponse.item
@@ -203,6 +205,7 @@ class PathlingContext:
         # Build an encoders configuration object from the provided parameters.
         encoders_config = (
             jvm.au.csiro.pathling.config.EncodingConfiguration.builder()
+            .fhirVersion(fhir_version)
             .maxNestingLevel(max_nesting_level)
             .enableExtensions(enable_extensions)
             .openTypes(jvm.java.util.HashSet(enabled_open_types))

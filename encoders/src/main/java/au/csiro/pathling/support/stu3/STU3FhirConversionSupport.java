@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2024 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,31 +21,30 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.support.r4;
+package au.csiro.pathling.support.stu3;
 
 import au.csiro.pathling.support.FhirConversionSupport;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import org.hl7.fhir.dstu3.model.Base;
+import org.hl7.fhir.dstu3.model.Bundle;
+import org.hl7.fhir.dstu3.model.Bundle.BundleEntryComponent;
+import org.hl7.fhir.dstu3.model.Reference;
+import org.hl7.fhir.dstu3.model.Resource;
 import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Base;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
-import org.hl7.fhir.r4.model.Reference;
-import org.hl7.fhir.r4.model.Resource;
 
 /**
- * {@link FhirConversionSupport} implementation for FHIR R4.
+ * {@link FhirConversionSupport} implementation for FHIR STU3.
  */
-public class R4FhirConversionSupport extends FhirConversionSupport {
+public class STU3FhirConversionSupport extends FhirConversionSupport {
 
-  private static final long serialVersionUID = -367070946615790595L;
+  private static final long serialVersionUID = -3851536580799176725L;
 
   @Override
   public String fhirType(final IBase base) {
-
     return base.fhirType();
   }
 
@@ -57,9 +56,9 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
   public <T extends IBaseResource> List<IBaseResource> extractEntryFromBundle(
       @Nonnull final IBaseBundle bundle,
       @Nonnull final Class<T> resourceClass) {
-    final Bundle r4Bundle = (Bundle) bundle;
+    final Bundle stu3Bundle = (Bundle) bundle;
 
-    return r4Bundle.getEntry().stream()
+    return stu3Bundle.getEntry().stream()
         .map(BundleEntryComponent::getResource)
         .filter(resourceClass::isInstance)
         .collect(Collectors.toList());
@@ -80,7 +79,7 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
   }
 
   private static void resolveURNReferences(@Nonnull final Resource resource) {
-    R4Traversal.processRecursive(resource, R4FhirConversionSupport::resolveURNReference);
+    STU3Traversal.processRecursive(resource, STU3FhirConversionSupport::resolveURNReference);
   }
 
   /**
@@ -89,11 +88,11 @@ public class R4FhirConversionSupport extends FhirConversionSupport {
   @Nonnull
   @Override
   public IBaseBundle resolveReferences(@Nonnull final IBaseBundle bundle) {
-    final Bundle r4Bundle = (Bundle) bundle;
-    r4Bundle.getEntry().stream()
-        .map(Bundle.BundleEntryComponent::getResource)
-        .forEach(R4FhirConversionSupport::resolveURNReferences);
-    return r4Bundle;
+    final Bundle stu3Bundle = (Bundle) bundle;
+    stu3Bundle.getEntry().stream()
+        .map(BundleEntryComponent::getResource)
+        .forEach(STU3FhirConversionSupport::resolveURNReferences);
+    return stu3Bundle;
   }
 
 }

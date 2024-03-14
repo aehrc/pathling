@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -146,6 +147,8 @@ public class FhirEncoders {
 
         if (fhirVersion == FhirVersionEnum.R4) {
           dataTypesClassName = "au.csiro.pathling.encoders.datatypes.R4DataTypeMappings";
+        } else if (fhirVersion == FhirVersionEnum.DSTU3) {
+          dataTypesClassName = "au.csiro.pathling.encoders.datatypes.Stu3DataTypeMappings";
         } else {
           throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
         }
@@ -176,11 +179,21 @@ public class FhirEncoders {
   /**
    * Returns a builder to create encoders for FHIR R4.
    *
-   * @return a builder for encoders.
+   * @return the builder
    */
+  @Nonnull
   public static Builder forR4() {
-
     return forVersion(FhirVersionEnum.R4);
+  }
+
+  /**
+   * Returns a builder to create encoders for FHIR STU3.
+   *
+   * @return the builder
+   */
+  @Nonnull
+  public static Builder forStu3() {
+    return forVersion(FhirVersionEnum.DSTU3);
   }
 
   /**

@@ -24,6 +24,7 @@
 package au.csiro.pathling.support;
 
 import au.csiro.pathling.support.r4.R4FhirConversionSupport;
+import au.csiro.pathling.support.stu3.STU3FhirConversionSupport;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -85,11 +86,14 @@ public abstract class FhirConversionSupport implements Serializable {
 
   @Nonnull
   private static FhirConversionSupport newInstance(@Nonnull final FhirVersionEnum fhirVersion) {
-    if (!FhirVersionEnum.R4.equals(fhirVersion)) {
-      throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
-    }
     try {
-      return R4FhirConversionSupport.class.getDeclaredConstructor().newInstance();
+      if (FhirVersionEnum.R4.equals(fhirVersion)) {
+        return R4FhirConversionSupport.class.getDeclaredConstructor().newInstance();
+      } else if (FhirVersionEnum.DSTU3.equals(fhirVersion)) {
+        return STU3FhirConversionSupport.class.getDeclaredConstructor().newInstance();
+      } else {
+        throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
+      }
     } catch (final Exception exception) {
       throw new IllegalStateException("Unable to create FHIR support class", exception);
     }

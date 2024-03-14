@@ -55,7 +55,7 @@ class FhirTraversalTest {
   @Test
   void testResourceWithNoElements() {
     Resource patient = new Patient();
-    FhirTraversal.processRecursive(patient, this::collectObject);
+    R4Traversal.processRecursive(patient, this::collectObject);
     assertEquals(Set.of(patient), collection);
   }
 
@@ -69,7 +69,7 @@ class FhirTraversalTest {
     final Patient patient = new Patient();
     patient.setIdElement(id);
     patient.addName(name1).addName(name2);
-    FhirTraversal.processRecursive(patient, this::collectObject);
+    R4Traversal.processRecursive(patient, this::collectObject);
     assertEquals(Set.of(familyName1, familyName2, name1, name2, id, patient),
         collection);
   }
@@ -79,7 +79,7 @@ class FhirTraversalTest {
     final IdType id = new IdType("Patient", "212121");
     id.addExtension(EXTENSION_1).addExtension(EXTENSION_2);
     final Resource patient = new Patient().setIdElement(id);
-    FhirTraversal.processRecursive(patient, this::collectObject);
+    R4Traversal.processRecursive(patient, this::collectObject);
     assertEquals(Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, patient),
         collection);
   }
@@ -90,7 +90,7 @@ class FhirTraversalTest {
     final Patient patient = new Patient();
     patient.setIdElement(id);
     patient.addExtension(EXTENSION_1).addExtension(EXTENSION_2);
-    FhirTraversal.processRecursive(patient, this::collectObject);
+    R4Traversal.processRecursive(patient, this::collectObject);
     assertEquals(Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, patient),
         collection);
   }
@@ -106,7 +106,7 @@ class FhirTraversalTest {
     patient.setIdElement(id);
     patient.addName(name1);
 
-    FhirTraversal.processRecursive(patient, this::collectObject);
+    R4Traversal.processRecursive(patient, this::collectObject);
     assertEquals(
         Set.of(URI_1, STRING_1, EXTENSION_1, URI_2, STRING_2, EXTENSION_2, id, name1, familyName1,
             patient),

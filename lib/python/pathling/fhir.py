@@ -28,4 +28,5 @@ class Version:
     Constants for FHIR versions.
     """
 
-    R4: str = "R4"
+    R4: str = "4.0.1"
+    STU3: str = "3.0.2"

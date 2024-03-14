@@ -21,17 +21,17 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.support.r4;
+package au.csiro.pathling.support.stu3;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
-import org.hl7.fhir.r4.model.Base;
+import org.hl7.fhir.dstu3.model.Base;
 
 /**
  * A utility class for traversing FHIR resources.
  */
-public class FhirTraversal {
+public class STU3Traversal {
 
   private static void processChildrenRecursive(@Nonnull final Base object,
       @Nonnull final Consumer<Base> processor) {

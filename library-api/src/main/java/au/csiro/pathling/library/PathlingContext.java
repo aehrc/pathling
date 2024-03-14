@@ -454,7 +454,15 @@ public class PathlingContext {
 
   @Nonnull
   private static Builder getEncoderBuilder(@Nonnull final EncodingConfiguration config) {
-    return FhirEncoders.forR4()
+    final Builder builder;
+    if (config.getFhirVersion().equals(FhirVersionEnum.DSTU3.getFhirVersionString())) {
+      builder = FhirEncoders.forStu3();
+    } else if (config.getFhirVersion().equals(FhirVersionEnum.R4.getFhirVersionString())) {
+      builder = FhirEncoders.forR4();
+    } else {
+      throw new IllegalArgumentException("Unsupported FHIR version: " + config.getFhirVersion());
+    }
+    return builder
         .withMaxNestingLevel(config.getMaxNestingLevel())
         .withExtensionsEnabled(config.isEnableExtensions())
         .withOpenTypes(config.getOpenTypes());
