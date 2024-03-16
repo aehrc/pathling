@@ -66,7 +66,7 @@ class PathlingContext:
     def create(
         cls,
         spark: Optional[SparkSession] = None,
-        fhir_version: Optional[str] = Version.STU3,
+        fhir_version: Optional[str] = Version.R4,
         max_nesting_level: Optional[int] = 3,
         enable_extensions: Optional[bool] = False,
         enabled_open_types: Optional[Sequence[str]] = (
