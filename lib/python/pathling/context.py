@@ -21,6 +21,7 @@ from pyspark.sql import DataFrame, SparkSession, Column
 from typing import Optional, Sequence, TYPE_CHECKING
 
 from pathling._version import (
+    __version__,
     __java_version__,
     __scala_version__,
     __delta_version__,
@@ -197,6 +198,11 @@ class PathlingContext:
                     "org.apache.spark.sql.delta.catalog.DeltaCatalog",
                 )
             )
+            if __version__.endswith(".dev"):
+                spark_builder = spark_builder.config(
+                    "spark.jars.repositories",
+                    "https://oss.sonatype.org/content/repositories/snapshots",
+                )
             return spark_builder.getOrCreate()
 
         spark = spark or SparkSession.getActiveSession() or _new_spark_session()
