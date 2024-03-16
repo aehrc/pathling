@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2024 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,16 +21,16 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.encoders.datatypes
+package au.csiro.pathling.encoders.datatypes.r4
 
-import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
+import au.csiro.pathling.encoders.datatypes.r4.R4DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
+import au.csiro.pathling.encoders.datatypes.{CustomCoder, DataTypeMappings}
 import au.csiro.pathling.encoders.{ExpressionWithName, StaticField}
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
-import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
@@ -202,7 +202,7 @@ class R4DataTypeMappings extends DataTypeMappings {
         Some(DecimalCustomCoder(elementName))
       case primitive: RuntimePrimitiveDatatypeDefinition
         if classOf[org.hl7.fhir.r4.model.IdType] == primitive.getImplementingClass =>
-        Some(IdCustomCoder(elementName))
+        Some(R4IdCustomCoder(elementName))
       case _ => super.customEncoder(elementDefinition, elementName)
     }
   }

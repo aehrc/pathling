@@ -19,7 +19,7 @@ package au.csiro.pathling.test;
 
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.datatypes.r4.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import java.math.BigDecimal;
 import java.util.List;

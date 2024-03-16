@@ -23,7 +23,7 @@
 
 package au.csiro.pathling.sql.types;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.datatypes.r4.DecimalCustomCoder;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import javax.annotation.Nonnull;

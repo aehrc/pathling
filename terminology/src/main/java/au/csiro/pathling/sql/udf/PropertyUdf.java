@@ -29,7 +29,7 @@ import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.DECIMAL;
 import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.INTEGER;
 import static org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType.STRING;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.datatypes.r4.DecimalCustomCoder;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.terminology.TerminologyService;

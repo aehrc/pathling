@@ -24,10 +24,8 @@
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders.QuantitySupport.{CODE_CANONICALIZED_FIELD_NAME, VALUE_CANONICALIZED_FIELD_NAME}
 import au.csiro.pathling.encoders.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
-import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
-import au.csiro.pathling.encoders.terminology.ucum.Ucum
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import au.csiro.pathling.schema._
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum

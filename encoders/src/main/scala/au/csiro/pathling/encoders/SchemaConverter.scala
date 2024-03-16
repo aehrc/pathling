@@ -24,8 +24,7 @@
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders.QuantitySupport.{CODE_CANONICALIZED_FIELD_NAME, VALUE_CANONICALIZED_FIELD_NAME}
-import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.schema.SchemaVisitor
 import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import ca.uhn.fhir.context._

@@ -25,6 +25,7 @@ package au.csiro.pathling.encoders.datatypes;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.encoders.datatypes.r4.R4DataTypeMappings;
 import au.csiro.pathling.schema.ElementCtx;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeChildChoiceDefinition;
@@ -38,7 +39,7 @@ import org.apache.commons.lang.StringUtils;
 import org.junit.jupiter.api.Test;
 import scala.collection.JavaConverters;
 
-public class R4DatatypeMappingsTest {
+public class R4DataTypeMappingsTest {
 
   private final static FhirContext fhirContext = FhirContext.forR4();
 

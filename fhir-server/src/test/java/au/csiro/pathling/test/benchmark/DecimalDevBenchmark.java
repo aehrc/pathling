@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.test.benchmark;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.datatypes.r4.DecimalCustomCoder;
 import au.csiro.pathling.jmh.AbstractJmhSpringBootState;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import au.csiro.pathling.test.builders.DatasetBuilder;

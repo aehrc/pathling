@@ -27,7 +27,7 @@ import static au.csiro.pathling.encoders.SchemaConverterTest.OPEN_TYPES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings;
+import au.csiro.pathling.encoders.datatypes.r4.R4DataTypeMappings;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import com.google.common.collect.ImmutableSet;

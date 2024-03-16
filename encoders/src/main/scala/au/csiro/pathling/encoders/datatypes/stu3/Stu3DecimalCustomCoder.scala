@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2024 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,17 +21,18 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.encoders.datatypes
+package au.csiro.pathling.encoders.datatypes.stu3
 
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
 import au.csiro.pathling.encoders.ExpressionWithName
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
+import au.csiro.pathling.encoders.datatypes.CustomCoder
+import au.csiro.pathling.encoders.datatypes.stu3.DecimalCustomCoder.decimalType
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
 import org.apache.spark.sql.catalyst.util.ArrayData
 import org.apache.spark.sql.types
 import org.apache.spark.sql.types._
-import org.hl7.fhir.r4.model.DecimalType
+import org.hl7.fhir.dstu3.model.DecimalType
 
 /**
  * Custom coder for DecimalType.
@@ -76,7 +77,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   override def schema(arrayEncoder: Option[DataType => DataType]): Seq[StructField] = {
     def encode(v: DataType): DataType = {
-      arrayEncoder.map(_ (v)).getOrElse(v)
+      arrayEncoder.map(_(v)).getOrElse(v)
     }
 
     Seq(StructField(elementName, encode(decimalType)),

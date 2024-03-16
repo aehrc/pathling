@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2024 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +21,11 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.encoders.datatypes
+package au.csiro.pathling.encoders.datatypes.r4
 
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
 import au.csiro.pathling.encoders.ExpressionWithName
+import au.csiro.pathling.encoders.datatypes.CustomCoder
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, MapObjects, NewInstance, StaticInvoke}
 import org.apache.spark.sql.types._
@@ -40,7 +41,7 @@ import org.hl7.fhir.r4.model.IdType
  *
  * @param elementName the name of the element.
  */
-case class IdCustomCoder(elementName: String) extends CustomCoder {
+case class R4IdCustomCoder(elementName: String) extends CustomCoder {
 
   def primitiveClass: Class[IdType] = classOf[IdType]
 

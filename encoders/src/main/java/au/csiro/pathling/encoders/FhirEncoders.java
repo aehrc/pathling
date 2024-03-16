@@ -146,9 +146,9 @@ public class FhirEncoders {
         final String dataTypesClassName;
 
         if (fhirVersion == FhirVersionEnum.R4) {
-          dataTypesClassName = "au.csiro.pathling.encoders.datatypes.R4DataTypeMappings";
+          dataTypesClassName = "au.csiro.pathling.encoders.datatypes.r4.R4DataTypeMappings";
         } else if (fhirVersion == FhirVersionEnum.DSTU3) {
-          dataTypesClassName = "au.csiro.pathling.encoders.datatypes.Stu3DataTypeMappings";
+          dataTypesClassName = "au.csiro.pathling.encoders.datatypes.stu3.Stu3DataTypeMappings";
         } else {
           throw new IllegalArgumentException("Unsupported FHIR version: " + fhirVersion);
         }
@@ -162,12 +162,10 @@ public class FhirEncoders {
 
         } catch (final Exception createClassException) {
 
-          throw new IllegalStateException("Unable to create the data mappings "
-              + dataTypesClassName
-              + ". This is typically because the HAPI FHIR dependencies for "
-              + "the underlying data model are note present. Make sure the "
-              + " hapi-fhir-structures-* and hapi-fhir-validation-resources-* "
-              + " jars for the desired FHIR version are available on the class path.",
+          throw new IllegalStateException("Unable to create the data mappings " + dataTypesClassName
+              + ". This is typically because the HAPI FHIR dependencies for the underlying data "
+              + "model are not present. Make sure the hapi-fhir-structures-* jars for the desired "
+              + "FHIR version are available on the class path.",
               createClassException);
         }
       }
@@ -230,19 +228,14 @@ public class FhirEncoders {
   @SuppressWarnings("unchecked")
   public final <T extends IBaseResource> ExpressionEncoder<T> of(final Class<T> type) {
 
-    final RuntimeResourceDefinition definition =
-        context.getResourceDefinition(type);
+    final RuntimeResourceDefinition definition = context.getResourceDefinition(type);
 
     final int key = type.getName().hashCode();
 
     synchronized (encoderCache) {
-      return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key, k ->
-          EncoderBuilder.of(definition,
-              context,
-              mappings,
-              maxNestingLevel,
-              JavaConverters.asScalaSet(openTypes).toSet(),
-              enableExtensions));
+      return (ExpressionEncoder<T>) encoderCache.computeIfAbsent(key,
+          k -> EncoderBuilder.of(definition, context, mappings, maxNestingLevel,
+              JavaConverters.asScalaSet(openTypes).toSet(), enableExtensions));
     }
   }
 
@@ -339,8 +332,8 @@ public class FhirEncoders {
      */
     public FhirEncoders getOrCreate() {
 
-      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel,
-          openTypes, enableExtensions);
+      final EncodersKey key = new EncodersKey(fhirVersion, maxNestingLevel, openTypes,
+          enableExtensions);
 
       synchronized (ENCODERS) {
 

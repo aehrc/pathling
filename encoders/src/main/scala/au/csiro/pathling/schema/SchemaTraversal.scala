@@ -27,7 +27,6 @@ import au.csiro.pathling.encoders.ExtensionSupport.EXTENSION_ELEMENT_NAME
 import au.csiro.pathling.schema.SchemaVisitor.isSingular
 import ca.uhn.fhir.context._
 import org.hl7.fhir.instance.model.api.IBase
-import org.hl7.fhir.r4.model.Patient
 
 import scala.collection.convert.ImplicitConversions._
 
@@ -377,7 +376,7 @@ object ElementCtx {
    */
   def forExtension[DT, ST](fhirContext: FhirContext): ElementCtx[DT, ST] = {
     // Extract Extension definition from Patient resource.
-    val baseResourceDefinition = fhirContext.getResourceDefinition(classOf[Patient])
+    val baseResourceDefinition = fhirContext.getResourceDefinition("Patient")
     val extensionChildDefinition = baseResourceDefinition.getChildByName(EXTENSION_ELEMENT_NAME)
     val extensionDefinition = extensionChildDefinition.getChildByName(EXTENSION_ELEMENT_NAME)
       .asInstanceOf[BaseRuntimeElementCompositeDefinition[_]]

@@ -20,7 +20,7 @@ package au.csiro.pathling.test.helpers;
 import static java.util.Objects.requireNonNull;
 import static org.apache.spark.sql.functions.col;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import au.csiro.pathling.encoders.datatypes.r4.DecimalCustomCoder;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

@@ -5,7 +5,7 @@
  * Bunsen is copyright 2017 Cerner Innovation, Inc., and is licensed under
  * the Apache License, version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
  *
- * These modifications are copyright 2023 Commonwealth Scientific and Industrial Research
+ * These modifications are copyright 2024 Commonwealth Scientific and Industrial Research
  * Organisation (CSIRO) ABN 41 687 119 230.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,9 +21,10 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.encoders.datatypes
+package au.csiro.pathling.encoders.datatypes.stu3
 
-import au.csiro.pathling.encoders.datatypes.STU3DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
+import au.csiro.pathling.encoders.datatypes.stu3.Stu3DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
+import au.csiro.pathling.encoders.datatypes.{CustomCoder, DataTypeMappings}
 import au.csiro.pathling.encoders.{ExpressionWithName, StaticField}
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
@@ -31,8 +32,8 @@ import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
+import org.hl7.fhir.dstu3.model._
 import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
-import org.hl7.fhir.r4.model._
 
 import java.util.TimeZone
 import scala.collection.convert.ImplicitConversions.`iterable AsScalaIterable`
@@ -40,7 +41,7 @@ import scala.collection.convert.ImplicitConversions.`iterable AsScalaIterable`
 /**
  * Data type mappings for FHIR STU3.
  */
-class STU3DataTypeMappings extends DataTypeMappings {
+class Stu3DataTypeMappings extends DataTypeMappings {
 
   override def primitiveToDataType(definition: RuntimePrimitiveDatatypeDefinition): DataType = {
 
@@ -52,7 +53,7 @@ class STU3DataTypeMappings extends DataTypeMappings {
     }
   }
 
-  override def baseType(): Class[_ <: IBaseDatatype] = classOf[org.hl7.fhir.r4.model.Type]
+  override def baseType(): Class[_ <: IBaseDatatype] = classOf[org.hl7.fhir.dstu3.model.Type]
 
   override def overrideCompositeExpression(inputObject: Expression,
                                            definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]] = {
@@ -68,7 +69,7 @@ class STU3DataTypeMappings extends DataTypeMappings {
       val display = dataTypeToUtf8Expr(
         Invoke(inputObject,
           "getDisplayElement",
-          ObjectType(classOf[org.hl7.fhir.r4.model.StringType])))
+          ObjectType(classOf[org.hl7.fhir.dstu3.model.StringType])))
 
       Some(List(("reference", reference), ("display", display)))
     } else {
@@ -107,29 +108,29 @@ class STU3DataTypeMappings extends DataTypeMappings {
       case cls if fhirPrimitiveToSparkTypes.get(cls).contains(DataTypes.StringType) =>
         dataTypeToUtf8Expr(inputObject)
 
-      case boolClass if boolClass == classOf[org.hl7.fhir.r4.model.BooleanType] =>
+      case boolClass if boolClass == classOf[org.hl7.fhir.dstu3.model.BooleanType] =>
         Invoke(inputObject, "getValue", DataTypes.BooleanType)
 
-      case tsClass if tsClass == classOf[org.hl7.fhir.r4.model.InstantType] =>
+      case tsClass if tsClass == classOf[org.hl7.fhir.dstu3.model.InstantType] =>
 
         // NOTE: using the instantiation with the new operator is necessary to invoke the auxiliary
         // constructor that is common between version 3.3 and 3.4 of spark catalyst.
         // The 3.4 code is deployed in databricks runtimes version >= 11.1.
         new Cast(dataTypeToUtf8Expr(inputObject), DataTypes.TimestampType, Some("UTC"))
 
-      case base64Class if base64Class == classOf[org.hl7.fhir.r4.model.Base64BinaryType] =>
+      case base64Class if base64Class == classOf[org.hl7.fhir.dstu3.model.Base64BinaryType] =>
 
         Invoke(inputObject, "getValue", DataTypes.BinaryType)
 
-      case intClass if intClass == classOf[org.hl7.fhir.r4.model.IntegerType] =>
+      case intClass if intClass == classOf[org.hl7.fhir.dstu3.model.IntegerType] =>
 
         Invoke(inputObject, "getValue", DataTypes.IntegerType)
 
-      case unsignedIntClass if unsignedIntClass == classOf[org.hl7.fhir.r4.model.UnsignedIntType] =>
+      case unsignedIntClass if unsignedIntClass == classOf[org.hl7.fhir.dstu3.model.UnsignedIntType] =>
 
         Invoke(inputObject, "getValue", DataTypes.IntegerType)
 
-      case unsignedIntClass if unsignedIntClass == classOf[org.hl7.fhir.r4.model.PositiveIntType] =>
+      case unsignedIntClass if unsignedIntClass == classOf[org.hl7.fhir.dstu3.model.PositiveIntType] =>
 
         Invoke(inputObject, "getValue", DataTypes.IntegerType)
 
@@ -159,16 +160,16 @@ class STU3DataTypeMappings extends DataTypeMappings {
           Invoke(getPath, "toString", ObjectType(classOf[String]), Nil)))
 
       // Classes that can be directly encoded as their primitive type.
-      case cls if cls == classOf[org.hl7.fhir.r4.model.BooleanType] ||
-        cls == classOf[org.hl7.fhir.r4.model.Base64BinaryType] ||
-        cls == classOf[org.hl7.fhir.r4.model.IntegerType] ||
-        cls == classOf[org.hl7.fhir.r4.model.UnsignedIntType] ||
-        cls == classOf[org.hl7.fhir.r4.model.PositiveIntType] =>
+      case cls if cls == classOf[org.hl7.fhir.dstu3.model.BooleanType] ||
+        cls == classOf[org.hl7.fhir.dstu3.model.Base64BinaryType] ||
+        cls == classOf[org.hl7.fhir.dstu3.model.IntegerType] ||
+        cls == classOf[org.hl7.fhir.dstu3.model.UnsignedIntType] ||
+        cls == classOf[org.hl7.fhir.dstu3.model.PositiveIntType] =>
         NewInstance(primitiveClass,
           List(getPath),
           ObjectType(primitiveClass))
 
-      case instantClass if instantClass == classOf[org.hl7.fhir.r4.model.InstantType] =>
+      case instantClass if instantClass == classOf[org.hl7.fhir.dstu3.model.InstantType] =>
 
         val millis = StaticField(classOf[TemporalPrecisionEnum],
           ObjectType(classOf[TemporalPrecisionEnum]),
@@ -197,11 +198,11 @@ class STU3DataTypeMappings extends DataTypeMappings {
                              elementName: String): Option[CustomCoder] = {
     elementDefinition match {
       case primitive: RuntimePrimitiveDatatypeDefinition
-        if classOf[org.hl7.fhir.r4.model.DecimalType] == primitive.getImplementingClass =>
+        if classOf[org.hl7.fhir.dstu3.model.DecimalType] == primitive.getImplementingClass =>
         Some(DecimalCustomCoder(elementName))
       case primitive: RuntimePrimitiveDatatypeDefinition
-        if classOf[org.hl7.fhir.r4.model.IdType] == primitive.getImplementingClass =>
-        Some(IdCustomCoder(elementName))
+        if classOf[org.hl7.fhir.dstu3.model.IdType] == primitive.getImplementingClass =>
+        Some(Stu3IdCustomCoder(elementName))
       case _ => super.customEncoder(elementDefinition, elementName)
     }
   }
@@ -216,9 +217,9 @@ class STU3DataTypeMappings extends DataTypeMappings {
 }
 
 /**
- * Companion object for R4DataTypeMappings
+ * Companion object for Stu3DataTypeMappings
  */
-object STU3DataTypeMappings {
+object Stu3DataTypeMappings {
   /**
    * Map associating FHIR primitive datatypes with the Spark types used to encode them.
    */
