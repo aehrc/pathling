@@ -198,6 +198,8 @@ class PathlingContext:
                     "org.apache.spark.sql.delta.catalog.DeltaCatalog",
                 )
             )
+            # If we are running a development version of the library, we need to add the
+            # Sonatype snapshots repository to the list of repositories.
             if __version__.endswith(".dev"):
                 spark_builder = spark_builder.config(
                     "spark.jars.repositories",
