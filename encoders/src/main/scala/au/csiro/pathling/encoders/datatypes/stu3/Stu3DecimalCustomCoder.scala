@@ -26,7 +26,7 @@ package au.csiro.pathling.encoders.datatypes.stu3
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
 import au.csiro.pathling.encoders.ExpressionWithName
 import au.csiro.pathling.encoders.datatypes.CustomCoder
-import au.csiro.pathling.encoders.datatypes.stu3.DecimalCustomCoder.decimalType
+import au.csiro.pathling.encoders.datatypes.stu3.Stu3DecimalCustomCoder.decimalType
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
 import org.apache.spark.sql.catalyst.util.ArrayData
@@ -42,7 +42,7 @@ import org.hl7.fhir.dstu3.model.DecimalType
  *
  * @param elementName the name of the element that this will be used to encode
  */
-case class DecimalCustomCoder(elementName: String) extends CustomCoder {
+case class Stu3DecimalCustomCoder(elementName: String) extends CustomCoder {
 
   def primitiveClass: Class[DecimalType] = classOf[DecimalType]
 
@@ -56,7 +56,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
     } else {
       // Let's to this manually as we need to zip two independent arrays into into one
       val array = StaticInvoke(
-        classOf[DecimalCustomCoder],
+        classOf[Stu3DecimalCustomCoder],
         ObjectType(classOf[Array[Any]]),
         "zipToDecimal",
         addToPath(elementName) :: addToPath(scaleFieldName) :: Nil
@@ -106,7 +106,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
 
 }
 
-object DecimalCustomCoder {
+object Stu3DecimalCustomCoder {
 
   /**
    * SQL DecimalType used to represent FHIR Decimal

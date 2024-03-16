@@ -199,7 +199,7 @@ class Stu3DataTypeMappings extends DataTypeMappings {
     elementDefinition match {
       case primitive: RuntimePrimitiveDatatypeDefinition
         if classOf[org.hl7.fhir.dstu3.model.DecimalType] == primitive.getImplementingClass =>
-        Some(DecimalCustomCoder(elementName))
+        Some(Stu3DecimalCustomCoder(elementName))
       case primitive: RuntimePrimitiveDatatypeDefinition
         if classOf[org.hl7.fhir.dstu3.model.IdType] == primitive.getImplementingClass =>
         Some(Stu3IdCustomCoder(elementName))
