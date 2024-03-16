@@ -17,7 +17,7 @@ from .coding import Coding
 from .context import PathlingContext, StorageType
 from .core import Expression
 from .datasource import DataSources, DataSource
-from .fhir import MimeType, Version
+from .fhir import MimeType, FhirVersion
 from .functions import to_coding, to_snomed_coding, to_ecl_value_set
 from .query import ExtractQuery, AggregateQuery
 from .udfs import (
@@ -36,7 +36,7 @@ __all__ = [
     "PathlingContext",
     "StorageType",
     "MimeType",
-    "Version",
+    "FhirVersion",
     "Coding",
     "member_of",
     "translate",

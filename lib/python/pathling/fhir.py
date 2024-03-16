@@ -23,7 +23,7 @@ class MimeType:
     FHIR_XML: str = "application/fhir+xml"
 
 
-class Version:
+class FhirVersion:
     """
     Constants for FHIR versions.
     """

@@ -27,7 +27,7 @@ from pathling._version import (
     __hadoop_version__,
 )
 from pathling.coding import Coding
-from pathling.fhir import MimeType, Version
+from pathling.fhir import MimeType, FhirVersion
 
 if TYPE_CHECKING:
     from .datasource import DataSources
@@ -66,7 +66,7 @@ class PathlingContext:
     def create(
         cls,
         spark: Optional[SparkSession] = None,
-        fhir_version: Optional[str] = Version.R4,
+        fhir_version: Optional[str] = FhirVersion.R4,
         max_nesting_level: Optional[int] = 3,
         enable_extensions: Optional[bool] = False,
         enabled_open_types: Optional[Sequence[str]] = (
