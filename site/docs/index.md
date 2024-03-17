@@ -9,7 +9,12 @@ use [FHIR&reg;](https://hl7.org/fhir) and clinical terminology within health
 data analytics. It is built on [Apache Spark](https://spark.apache.org), and
 includes both language libraries and a server implementation.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/ZSv2qMGPquU?si=daZ2jgNFpNc3luQx" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+<iframe class="yt-embed" 
+    src="https://www.youtube.com/embed/ZSv2qMGPquU?si=daZ2jgNFpNc3luQx" 
+    title="YouTube video player" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+    allowfullscreen />
 
 ## What can it do?
 
