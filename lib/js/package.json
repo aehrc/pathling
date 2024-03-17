@@ -11,7 +11,7 @@
   "devDependencies": {
     "@babel/preset-env": "^7.16.0",
     "@babel/preset-typescript": "^7.16.0",
-    "@types/fhir": "^0.0.35",
+    "@types/fhir": "^0.0.37",
     "@types/jest": "^29.2.0",
     "@types/node": "^18.x",
     "jest": "^29.2.2",
