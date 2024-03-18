@@ -236,6 +236,11 @@ jobs:
     name: FHIR server (tranche 3)
     runs-on: ubuntu-latest
     steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
+          aws-region: ap-southeast-2
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -320,6 +325,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           check_name: FHIR server test report 3
           fail_on_test_failures: true
+      - name: Upload SQL on FHIR test report to S3
+        run: aws s3 cp fhirpath/target/fhir-view-compliance-test.json s3://pathling-benchmark/test-reports/${{ github.ref }}/sof-test-results.json
 
   # This job builds, tests and scans the FHIR server Docker image.
   docker-image:
