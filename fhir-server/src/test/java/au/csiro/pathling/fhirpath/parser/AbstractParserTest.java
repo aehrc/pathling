@@ -33,6 +33,7 @@ import au.csiro.pathling.test.TimingExtension;
 import au.csiro.pathling.test.assertions.FhirPathAssertion;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Collections;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -82,7 +83,7 @@ public class AbstractParserTest {
   @SuppressWarnings("SameParameterValue")
   void setSubjectResource(@Nonnull final ResourceType resourceType) {
     executor = new SingleFhirPathExecutor(resourceType, fhirContext,
-        StaticFunctionRegistry.getInstance(),
+        StaticFunctionRegistry.getInstance(), Collections.emptyMap(),
         dataSource);
   }
 

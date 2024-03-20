@@ -29,6 +29,7 @@ import au.csiro.pathling.test.SpringBootUnitTest;
 import au.csiro.pathling.test.helpers.TestHelpers;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+import java.util.Collections;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -88,11 +89,9 @@ class ExecutorIntegrationTest {
         "where(gender='female').name.where(family.where($this='Oberbrunner298').exists()).given.join(',')");
     System.out.println(path.toExpression());
 
-    final FhirPathExecutor executor = new SingleFhirPathExecutor(
-        ResourceType.PATIENT,
-        FhirContext.forR4(),
-        StaticFunctionRegistry.getInstance(),
-        dataSource);
+    final FhirPathExecutor executor = new SingleFhirPathExecutor(ResourceType.PATIENT,
+        FhirContext.forR4(), StaticFunctionRegistry.getInstance(),
+        Collections.emptyMap(), dataSource);
 
     final Dataset<Row> result = executor.execute(path);
     result.show();

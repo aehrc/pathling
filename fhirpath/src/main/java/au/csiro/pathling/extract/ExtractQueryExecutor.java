@@ -54,8 +54,6 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
-    final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
-        dataSource);
     return buildQuery(query, ExtractResultType.UNCONSTRAINED);
   }
 
