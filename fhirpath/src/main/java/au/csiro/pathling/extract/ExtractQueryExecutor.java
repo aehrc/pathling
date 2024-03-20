@@ -7,8 +7,8 @@ import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.QueryParser;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ExecutionContext;
+import au.csiro.pathling.view.ExtractView;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -26,11 +26,23 @@ import org.apache.spark.sql.SparkSession;
 @NotImplemented
 public class ExtractQueryExecutor extends QueryExecutor {
 
+  @Nonnull
+  private final FhirContext fhirContext;
+
+  @Nonnull
+  private final SparkSession sparkSession;
+
+  @Nonnull
+  private final DataSource dataSource;
+
   public ExtractQueryExecutor(@Nonnull final QueryConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
       @Nonnull final DataSource dataSource,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
     super(configuration, fhirContext, sparkSession, dataSource, terminologyServiceFactory);
+    this.fhirContext = fhirContext;
+    this.sparkSession = sparkSession;
+    this.dataSource = dataSource;
   }
 
   /**
@@ -42,6 +54,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
+    final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
+        dataSource);
     return buildQuery(query, ExtractResultType.UNCONSTRAINED);
   }
 
