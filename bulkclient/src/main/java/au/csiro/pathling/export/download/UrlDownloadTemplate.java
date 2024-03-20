@@ -20,8 +20,6 @@ package au.csiro.pathling.export.download;
 import static au.csiro.pathling.export.utils.TimeoutUtils.hasExpired;
 import static au.csiro.pathling.export.utils.TimeoutUtils.toTimeoutAt;
 
-import au.csiro.pathling.auth.AuthContext;
-import au.csiro.pathling.auth.AuthContext.TokenProvider;
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.DownloadError;
 import au.csiro.pathling.export.BulkExportException.HttpError;
@@ -77,14 +75,10 @@ public class UrlDownloadTemplate {
     @Nonnull
     FileHandle destination;
 
-    @Nonnull
-    TokenProvider tokenProvider;
-
     @Override
     public Long call() throws Exception {
       log.debug("Starting download from:  {}  to: {}", source, destination);
-      final HttpResponse result = tokenProvider.withToken(
-          () -> httpClient.execute(new HttpGet(source)));
+      final HttpResponse result = httpClient.execute(new HttpGet(source));
       if (result.getStatusLine().getStatusCode() != 200) {
         log.error("Failed to download: {}. Status: {}. Body: {}", source,
             result.getStatusLine(), EntityUtils.toString(result.getEntity()));
@@ -99,19 +93,13 @@ public class UrlDownloadTemplate {
     }
   }
 
-
-  public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload) {
-    return download(urlToDownload, AuthContext.noAuthProvider(), Duration.ZERO);
-  }
-
   public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload,
-      @Nonnull final TokenProvider tokenProvider,
       @Nonnull final Duration timeout) {
 
     final Instant timeoutAt = toTimeoutAt(timeout);
 
     final Collection<Callable<Long>> tasks = urlToDownload.stream()
-        .map(e -> new UriDownloadTask(e.getSource(), e.getDestination(), tokenProvider))
+        .map(e -> new UriDownloadTask(e.getSource(), e.getDestination()))
         .collect(Collectors.toUnmodifiableList());
 
     // submitting the task independently

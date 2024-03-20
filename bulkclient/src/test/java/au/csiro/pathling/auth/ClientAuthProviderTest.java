@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -46,21 +49,30 @@ class ClientAuthProviderTest {
         .scope("system/*.read")
         .build();
 
-    final SymetricAuthTokenProvider clientAuthProvider = new SymetricAuthTokenProvider(smartCDR, new AuthScope("aehrc-cdr.cc", -1));
-    final Optional<String> token = clientAuthProvider.getToken(new AuthScope("aehrc-cdr.cc", -1));
-    System.out.println(token);
+    try (final SymmetricAuthTokenProvider clientAuthProvider = new SymmetricAuthTokenProvider(
+        smartCDR)) {
 
-    final CloseableHttpClient authHttpClient = HttpClients.custom()
-        .addInterceptorFirst(new ClientAuthRequestInterceptor()).build();
+      final Credentials credentials = new SymmetricCredentials(smartCDR.getTokenEndpoint(),
+          smartCDR.getClientId(), smartCDR.getClientSecret(), smartCDR.getScope());
 
-    final URI url = URI.create("https://aehrc-cdr.cc/fhir_r4/$export?_type=Patient&_outputFormat=application%2Ffhir%2Bndjson");
-    final HttpGet getMeta = new HttpGet(url);
-    getMeta.addHeader("Prefer", "respond-async");  
+      final Optional<String> token = clientAuthProvider.getToken(credentials);
+      System.out.println(token);
 
-    final CloseableHttpResponse response = clientAuthProvider.withToken(
-        () -> authHttpClient.execute(getMeta));
-    System.out.println(response);
-    System.out.println(EntityUtils.toString(response.getEntity()));
+      final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+      credentialsProvider.setCredentials(new AuthScope("aehrc-cdr.cc", -1), credentials);
+      final CloseableHttpClient authHttpClient = HttpClients.custom()
+          .setDefaultCredentialsProvider(credentialsProvider)
+          .addInterceptorFirst(new ClientAuthRequestInterceptor(clientAuthProvider)).build();
+
+      final URI url = URI.create(
+          "https://aehrc-cdr.cc/fhir_r4/$export?_type=Patient&_outputFormat=application%2Ffhir%2Bndjson");
+      final HttpGet getMeta = new HttpGet(url);
+      getMeta.addHeader("Prefer", "respond-async");
+
+      final CloseableHttpResponse response = authHttpClient.execute(getMeta);
+      System.out.println(response);
+      System.out.println(EntityUtils.toString(response.getEntity()));
+    }
   }
 
 }

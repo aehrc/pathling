@@ -26,6 +26,9 @@ import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpCoreContext;
 
@@ -34,18 +37,28 @@ public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
 
   public static final String HTTP_AUTHORIZATION = "Authorization";
 
-  public ClientAuthRequestInterceptor() {
+  @Nonnull
+  final TokenProvider tokenProvider;
+
+  public ClientAuthRequestInterceptor(@Nonnull final TokenProvider tokenProvider) {
+    this.tokenProvider = tokenProvider;
   }
 
   @Override
   public void process(@Nonnull final HttpRequest request, @Nonnull final HttpContext context)
       throws HttpException, IOException {
-    final HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
-    final Optional<String> maybeAccessToken = AuthContext.getToken(new AuthScope(targetHost));
-    maybeAccessToken.ifPresent(
-        accessToken -> {
-          log.debug("Adding access token to request: {}", request.getRequestLine());
-          request.addHeader(HTTP_AUTHORIZATION, "Bearer " + accessToken);
-        });
+    final CredentialsProvider credentialsProvider = (CredentialsProvider) context.getAttribute(
+        HttpClientContext.CREDS_PROVIDER);
+    if (credentialsProvider != null) {
+      final HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
+
+      final Credentials credentials = credentialsProvider.getCredentials(new AuthScope(targetHost));
+      final Optional<String> maybeAccessToken = tokenProvider.getToken(credentials);
+      maybeAccessToken.ifPresent(
+          accessToken -> {
+            log.debug("Adding access token to request: {}", request.getRequestLine());
+            request.addHeader(HTTP_AUTHORIZATION, "Bearer " + accessToken);
+          });
+    }
   }
 }

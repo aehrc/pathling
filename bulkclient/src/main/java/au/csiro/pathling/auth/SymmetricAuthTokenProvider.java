@@ -17,32 +17,24 @@
 
 package au.csiro.pathling.auth;
 
-import static java.util.Objects.requireNonNull;
-
-import au.csiro.pathling.auth.AuthContext.TokenProvider;
 import au.csiro.pathling.config.AuthConfiguration;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.NameValuePair;
-import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -55,29 +47,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
 @Slf4j
-public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
-
-  @Value
-  static class SymmetricCredentials {
-
-    @Nonnull
-    String clientId;
-    @Nonnull
-    String clientSecret;
-
-    @Nonnull
-    String toAuthString() {
-      return Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes(
-          StandardCharsets.US_ASCII));
-    }
-
-    @Nonnull
-    List<BasicNameValuePair> toFormParams() {
-      return Stream.of(new BasicNameValuePair("client_id", clientId),
-              new BasicNameValuePair("client_secret", clientSecret))
-          .collect(Collectors.toUnmodifiableList());
-    }
-  }
+public class SymmetricAuthTokenProvider implements Closeable, TokenProvider {
 
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
@@ -87,21 +57,6 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
   @Nonnull
   private final CloseableHttpClient httpClient;
 
-  @Nonnull
-  private final AuthScope authScope;
-
-  @Nonnull
-  private final String tokenEndpoint;
-
-  @Nonnull
-  private final String clientId;
-
-  @Nonnull
-  private final String clientSecret;
-
-  @Nullable
-  private final String scope;
-
   private final long tokenExpiryTolerance;
 
   private final boolean useBasicAuth;
@@ -110,14 +65,8 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
   private static final Map<AccessScope, AccessContext> accessContexts = new HashMap<>();
 
 
-  public SymetricAuthTokenProvider(@Nonnull final AuthConfiguration configuration,
-      @Nonnull final AuthScope authScope) {
+  public SymmetricAuthTokenProvider(@Nonnull final AuthConfiguration configuration) {
     this.httpClient = getHttpClient();
-    this.authScope = authScope;
-    this.tokenEndpoint = requireNonNull(configuration.getTokenEndpoint());
-    this.clientId = requireNonNull(configuration.getClientId());
-    this.clientSecret = requireNonNull(configuration.getClientSecret());
-    this.scope = configuration.getScope();
     this.tokenExpiryTolerance = configuration.getTokenExpiryTolerance();
     this.useBasicAuth = configuration.isUseBasicAuth();
   }
@@ -125,20 +74,21 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
 
   @Nonnull
   @Override
-  public Optional<String> getToken(@Nonnull final AuthScope requestScope) {
-    if (authScope.match(requestScope) > 0) {
-      return doGetToken();
+  public Optional<String> getToken(@Nonnull final Credentials credentials) {
+
+    if (credentials instanceof SymmetricCredentials) {
+      return doGetToken((SymmetricCredentials) credentials);
+    } else {
+      throw new IllegalArgumentException("Credentials must be of type SymmetricAuthCredentials");
     }
-    return Optional.empty();
   }
 
 
   @Nonnull
-  Optional<String> doGetToken() {
+  Optional<String> doGetToken(@Nonnull final SymmetricCredentials credentials) {
     final AccessContext accessContext;
     try {
-      accessContext = ensureAccessContext(clientId, clientSecret, tokenEndpoint,
-          scope, tokenExpiryTolerance);
+      accessContext = ensureAccessContext(credentials, tokenExpiryTolerance);
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
@@ -148,12 +98,12 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
   }
 
   @Nonnull
-  private AccessContext ensureAccessContext(@Nonnull final String clientId,
-      @Nonnull final String clientSecret, @Nonnull final String tokenEndpoint,
-      @Nullable final String scope, final long tokenExpiryTolerance)
+  private AccessContext ensureAccessContext(@Nonnull final SymmetricCredentials credentials,
+      final long tokenExpiryTolerance)
       throws IOException {
     synchronized (accessContexts) {
-      final AccessScope accessScope = new AccessScope(tokenEndpoint, clientId, scope);
+      final AccessScope accessScope = new AccessScope(credentials.getTokenEndpoint(),
+          credentials.getClientId(), credentials.getScope());
       AccessContext accessContext = accessContexts.get(accessScope);
       if (accessContext == null || accessContext.getExpiryTime()
           .isBefore(Instant.now().plusSeconds(tokenExpiryTolerance))) {
@@ -162,7 +112,7 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
         // (2) The token is expired, or;
         // (3) The token is about to expire (within the tolerance).
         log.debug("Getting new token");
-        accessContext = getNewAccessContext(clientId, clientSecret, tokenEndpoint, scope,
+        accessContext = getNewAccessContext(credentials,
             tokenExpiryTolerance);
         accessContexts.put(accessScope, accessContext);
       }
@@ -171,20 +121,10 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
   }
 
   @Nonnull
-  private AccessContext getNewAccessContext(@Nonnull final String clientId,
-      @Nonnull final String clientSecret, @Nonnull final String tokenEndpoint,
-      @Nullable final String scope, final long tokenExpiryTolerance)
-      throws IOException {
-    return getAccessContext(new SymmetricCredentials(clientId, clientSecret), tokenEndpoint, scope,
-        tokenExpiryTolerance);
-  }
-
-  @Nonnull
-  private AccessContext getAccessContext(@Nonnull final SymmetricCredentials authParams,
-      @Nonnull final String tokenEndpoint, @Nullable final String scope,
+  private AccessContext getNewAccessContext(@Nonnull final SymmetricCredentials authParams,
       final long tokenExpiryTolerance) throws IOException {
-    final ClientCredentialsResponse response = clientCredentialsGrant(authParams, tokenEndpoint,
-        scope, tokenExpiryTolerance);
+    final ClientCredentialsResponse response = clientCredentialsGrant(authParams,
+        tokenExpiryTolerance);
     final Instant expires = getExpiryTime(response);
     log.debug("New token will expire at {}", expires);
     return new AccessContext(response, expires);
@@ -192,19 +132,19 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
 
   @Nonnull
   private ClientCredentialsResponse clientCredentialsGrant(
-      @Nonnull final SymmetricCredentials authParams, @Nonnull final String tokenEndpoint,
-      @Nullable final String scope, final long tokenExpiryTolerance)
+      @Nonnull final SymmetricCredentials authParams, final long tokenExpiryTolerance)
       throws IOException {
-    log.debug("Performing client credentials grant using token endpoint: {}", tokenEndpoint);
-    final HttpPost request = new HttpPost(tokenEndpoint);
+    log.debug("Performing client credentials grant using token endpoint: {}",
+        authParams.getTokenEndpoint());
+    final HttpPost request = new HttpPost(authParams.getTokenEndpoint());
     request.addHeader("Content-Type", "application/x-www-form-urlencoded");
     request.addHeader("Accept", "application/json");
     request.addHeader("Cache-Control", "no-cache");
 
     final List<NameValuePair> params = new ArrayList<>();
     params.add(new BasicNameValuePair("grant_type", "client_credentials"));
-    if (scope != null) {
-      params.add(new BasicNameValuePair("scope", scope));
+    if (authParams.getScope() != null) {
+      params.add(new BasicNameValuePair("scope", authParams.getScope()));
     }
     if (useBasicAuth) {
       request.addHeader("Authorization", "Basic " + authParams.toAuthString());
@@ -271,7 +211,5 @@ public class SymetricAuthTokenProvider implements Closeable, TokenProvider {
   @Override
   public void close() throws IOException {
     httpClient.close();
-
   }
-
 }

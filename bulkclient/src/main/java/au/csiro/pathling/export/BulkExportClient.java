@@ -17,14 +17,16 @@
 
 package au.csiro.pathling.export;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import au.csiro.pathling.auth.AuthContext;
-import au.csiro.pathling.auth.AuthContext.TokenProvider;
 import au.csiro.pathling.auth.ClientAuthRequestInterceptor;
-import au.csiro.pathling.auth.SymetricAuthTokenProvider;
+import au.csiro.pathling.auth.SymmetricAuthTokenProvider;
+import au.csiro.pathling.auth.SymmetricCredentials;
+import au.csiro.pathling.auth.TokenProvider;
 import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.export.BulkExportResult.FileResult;
 import au.csiro.pathling.export.download.UrlDownloadTemplate;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
@@ -33,7 +35,6 @@ import au.csiro.pathling.export.fs.FileStore;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.utils.ExecutorServiceResource;
-import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.export.utils.TimeoutUtils;
 import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportRequest;
@@ -51,6 +52,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -62,6 +64,9 @@ import lombok.Singular;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 
 
@@ -105,7 +110,7 @@ public class BulkExportClient {
   @Nonnull
   @Singular("typeFilter")
   List<String> typeFilters;
-  
+
   @Nonnull
   String outputDir;
 
@@ -163,10 +168,10 @@ public class BulkExportClient {
 
   public BulkExportResult export() {
     try (
+        final TokenProvider tokenProvider = createTokenProvider();
         final FileStore fileStore = createFileStore();
-        final CloseableHttpClient httpClient = createHttpClient();
-        final ExecutorServiceResource executorServiceResource = createExecutorServiceResource();
-        final TokenProvider tokenProvider = createTokenProvider()
+        final CloseableHttpClient httpClient = createHttpClient(tokenProvider);
+        final ExecutorServiceResource executorServiceResource = createExecutorServiceResource()
     ) {
       final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient,
           URI.create(fhirEndpointUrl),
@@ -174,11 +179,10 @@ public class BulkExportClient {
       final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
           executorServiceResource.getExecutorService());
 
-      final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate,
-          tokenProvider);
+      final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
       log.info("Export successful: {}", result);
       return result;
-    } catch (final IOException ex) {
+    } catch (final Exception ex) {
       log.error("Export failed", ex);
       throw new BulkExportException.SystemError("Export failed", ex);
     }
@@ -186,7 +190,7 @@ public class BulkExportClient {
 
   BulkExportResult doExport(@Nonnull final FileStore fileStore,
       @Nonnull final BulkExportTemplate bulkExportTemplate,
-      @Nonnull final UrlDownloadTemplate downloadTemplate, final TokenProvider tokenProvider)
+      @Nonnull final UrlDownloadTemplate downloadTemplate)
       throws IOException {
 
     final Instant timeoutAt = TimeoutUtils.toTimeoutAt(timeout);
@@ -201,14 +205,13 @@ public class BulkExportClient {
       log.debug("Creating destination directory: {}", destinationDir.getLocation());
       destinationDir.mkdirs();
     }
-    final BulkExportResponse response = tokenProvider.withToken(
-        () -> bulkExportTemplate.export(buildBulkExportRequest(),
-            TimeoutUtils.toTimeoutAfter(timeoutAt)));
+    final BulkExportResponse response = bulkExportTemplate.export(buildBulkExportRequest(),
+        TimeoutUtils.toTimeoutAfter(timeoutAt));
     log.debug("Export request completed: {}", response);
-    
+
     final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
     log.debug("Downloading entries: {}", downloadList);
-    final List<Long> fileSizes = downloadTemplate.download(downloadList, tokenProvider,
+    final List<Long> fileSizes = downloadTemplate.download(downloadList,
         TimeoutUtils.toTimeoutAfter(timeoutAt));
     final FileHandle successMarker = destinationDir.child("_SUCCESS");
     log.debug("Marking download as complete with: {}", successMarker.getLocation());
@@ -270,17 +273,35 @@ public class BulkExportClient {
   }
 
   @Nonnull
-  private CloseableHttpClient createHttpClient() {
+  private TokenProvider createTokenProvider() {
+    return new SymmetricAuthTokenProvider(authConfig);
+  }
+
+
+  @Nonnull
+  private CloseableHttpClient createHttpClient(@Nonnull final TokenProvider tokenProvider) {
     log.debug("Creating HttpClient with configuration: {}", httpClientConfig);
-    return httpClientConfig.clientBuilder().addInterceptorFirst(new ClientAuthRequestInterceptor())
+
+    final URI endpointURI = URI.create(fhirEndpointUrl);
+    final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+    createCredentials().ifPresent(cr -> credentialsProvider.setCredentials(
+        new AuthScope(endpointURI.getHost(), endpointURI.getPort()), cr));
+    return httpClientConfig.clientBuilder()
+        .setDefaultCredentialsProvider(credentialsProvider)
+        .addInterceptorFirst(new ClientAuthRequestInterceptor(tokenProvider))
         .build();
   }
 
-  private TokenProvider createTokenProvider() {
-    final URI endpointURI = URI.create(fhirEndpointUrl);
-    return authConfig.isEnabled()
-           ? new SymetricAuthTokenProvider(authConfig, new AuthScope(endpointURI.getHost(), endpointURI.getPort()))
-           : AuthContext.noAuthProvider();
+  private Optional<? extends Credentials> createCredentials() {
+    if (authConfig.isEnabled()) {
+      return Optional.of(new SymmetricCredentials(
+          requireNonNull(authConfig.getTokenEndpoint()),
+          requireNonNull(authConfig.getClientId()),
+          requireNonNull(authConfig.getClientSecret()), authConfig.getScope()
+      ));
+    } else {
+      return Optional.empty();
+    }
   }
 
   @Nonnull
