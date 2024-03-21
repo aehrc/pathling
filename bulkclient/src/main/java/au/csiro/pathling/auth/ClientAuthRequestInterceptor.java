@@ -52,8 +52,9 @@ public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
     if (credentialsProvider != null) {
       final HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
 
-      final Credentials credentials = credentialsProvider.getCredentials(new AuthScope(targetHost));
-      final Optional<String> maybeAccessToken = tokenProvider.getToken(credentials);
+      final Optional<Credentials> maybeCredentials = Optional.ofNullable(
+          credentialsProvider.getCredentials(new AuthScope(targetHost)));
+      final Optional<String> maybeAccessToken = maybeCredentials.flatMap(tokenProvider::getToken);
       maybeAccessToken.ifPresent(
           accessToken -> {
             log.debug("Adding access token to request: {}", request.getRequestLine());

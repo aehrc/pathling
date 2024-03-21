@@ -1,0 +1,29 @@
+{
+  "keys": [
+    {
+      "kty": "EC",
+      "crv": "P-384",
+      "x": "eRMJKBwCesmxA50zVR1O5-xoi4TJojvS5l2HEglEkhBEOO08E1ytLbRnXGwA9G2g",
+      "y": "rbGPlGVIu5AQt84AcYzVgqzys1p091sQmmGW1wiLJOhtoVfeDz0tCSlb6tsqAnIf",
+      "key_ops": [
+        "verify"
+      ],
+      "ext": true,
+      "kid": "f4dded3eaa5acf721947994bf6303fa5",
+      "alg": "ES384"
+    },
+    {
+      "kty": "EC",
+      "crv": "P-384",
+      "d": "tQ5_NvsgR4UkQKB-A90rwMVq-Uo_JOV0EPch5ycAFxJ9zSCRI3tprZYEWg9UB7ut",
+      "x": "eRMJKBwCesmxA50zVR1O5-xoi4TJojvS5l2HEglEkhBEOO08E1ytLbRnXGwA9G2g",
+      "y": "rbGPlGVIu5AQt84AcYzVgqzys1p091sQmmGW1wiLJOhtoVfeDz0tCSlb6tsqAnIf",
+      "key_ops": [
+        "sign"
+      ],
+      "ext": true,
+      "kid": "f4dded3eaa5acf721947994bf6303fa5",
+      "alg": "ES384"
+    }
+  ]
+}

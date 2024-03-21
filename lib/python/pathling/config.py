@@ -23,7 +23,8 @@ def auth_config(
     auth_token_endpoint: Optional[str] = None,
     auth_client_id: Optional[str] = None,
     auth_client_secret: Optional[str] = None,
-    auth_use_basic_auth: bool = False,
+    auth_private_key_jwk: Optional[str] = None,
+    auth_use_form_for_basic_auth: bool = False,
     auth_scope: Optional[str] = None,
     auth_token_expiry_tolerance: int = 120,
 ) -> JavaObject:
@@ -33,9 +34,10 @@ def auth_config(
     :param auth_enabled: enables authentication of requests to the fhir endpoint server
     :param auth_token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
     :param auth_client_id: a client ID for use with the client credentials grant
-    :param auth_client_secret: a client secret for use with the client credentials grant
-    :param auth_use_basic_auth: send the client_id and client_secret as basic auth header rather 
-            than in the request body
+    :param auth_client_secret: a client secret for use with the symmetric client authentication
+    :param auth_private_key_jwk: a private key for use with the asymmetric client authentication
+    :param auth_use_form_for_basic_auth: send the client_id and client_secret in request body form 
+            rather than the 'Authorization' header.
     :param auth_scope: a scope value for use with the client credentials grant
     :param auth_token_expiry_tolerance: the minimum number of seconds that a token should have
            before expiry when deciding whether to send it with a terminology request
@@ -48,7 +50,7 @@ def auth_config(
         .tokenEndpoint(auth_token_endpoint)
         .clientId(auth_client_id)
         .clientSecret(auth_client_secret)
-        .useBasicAuth(auth_use_basic_auth)
+        .useFormForBasicAuth(auth_use_form_for_basic_auth)
         .scope(auth_scope)
         .tokenExpiryTolerance(auth_token_expiry_tolerance)
         .build()

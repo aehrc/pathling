@@ -69,16 +69,27 @@ public class AuthConfiguration implements Serializable {
   private String clientId;
 
   /**
-   * A client secret for use with the client credentials grant.
+   * A client secret for use with the symmetric client authentication.
    */
   @Nullable
   @ToString.Exclude
   private String clientSecret;
 
+  /**
+   * A private key in JWK format to use with the asymmetric client authentication.
+   */
+  @Nullable
+  @ToString.Exclude
+  private String privateKeyJWK;
 
+
+  /**
+   * Send the basic authentication credentials in the form body instead of the Authorization
+   * header.
+   */
   @Builder.Default
-  private boolean useBasicAuth = false;
-  
+  private boolean useFormForBasicAuth = false;
+
   /**
    * A scope value for use with the client credentials grant.
    */
@@ -121,7 +132,5 @@ public class AuthConfiguration implements Serializable {
       }
       return true;
     }
-
   }
-
 }

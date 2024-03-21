@@ -17,21 +17,19 @@
 
 package au.csiro.pathling.auth;
 
-import lombok.Value;
-import org.apache.http.auth.Credentials;
-import org.apache.http.message.BasicNameValuePair;
-
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.nio.charset.StandardCharsets;
-import java.security.Principal;
-import java.util.Base64;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import lombok.Value;
+import org.apache.http.Header;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicNameValuePair;
 
 @Value
-public class SymmetricCredentials implements Credentials {
+public class SymmetricClientCredentials implements ClientCredentials {
 
   @Nonnull
   String tokenEndpoint;
@@ -44,27 +42,31 @@ public class SymmetricCredentials implements Credentials {
 
   @Nullable
   String scope;
-  
+
+  boolean sendClientCredentialsInBody;
+
   @Nonnull
   String toAuthString() {
     return Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes(
         StandardCharsets.US_ASCII));
   }
 
+  @Override
   @Nonnull
-  List<BasicNameValuePair> toFormParams() {
-    return Stream.of(new BasicNameValuePair("client_id", clientId),
-            new BasicNameValuePair("client_secret", clientSecret))
-        .collect(Collectors.toUnmodifiableList());
+  public List<BasicNameValuePair> getAssertions() {
+    return !sendClientCredentialsInBody
+           ? List.of(
+        new BasicNameValuePair("client_id", clientId),
+        new BasicNameValuePair("client_secret", clientSecret))
+           : Collections.emptyList();
   }
 
-  @Override
-  public Principal getUserPrincipal() {
-    return null;
-  }
 
   @Override
-  public String getPassword() {
-    return null;
+  @Nonnull
+  public List<Header> getAuthHeaders() {
+    return sendClientCredentialsInBody
+           ? Collections.emptyList()
+           : List.of(new BasicHeader("Authorization", "Basic " + toAuthString()));
   }
 }

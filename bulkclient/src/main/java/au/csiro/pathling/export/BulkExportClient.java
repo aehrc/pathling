@@ -17,13 +17,15 @@
 
 package au.csiro.pathling.export;
 
+import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
+import au.csiro.pathling.auth.AsymmetricClientCredentials;
 import au.csiro.pathling.auth.ClientAuthRequestInterceptor;
-import au.csiro.pathling.auth.SymmetricAuthTokenProvider;
-import au.csiro.pathling.auth.SymmetricCredentials;
+import au.csiro.pathling.auth.AuthTokenProvider;
+import au.csiro.pathling.auth.SymmetricClientCredentials;
 import au.csiro.pathling.auth.TokenProvider;
 import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
@@ -274,7 +276,7 @@ public class BulkExportClient {
 
   @Nonnull
   private TokenProvider createTokenProvider() {
-    return new SymmetricAuthTokenProvider(authConfig);
+    return new AuthTokenProvider(authConfig);
   }
 
 
@@ -294,11 +296,22 @@ public class BulkExportClient {
 
   private Optional<? extends Credentials> createCredentials() {
     if (authConfig.isEnabled()) {
-      return Optional.of(new SymmetricCredentials(
-          requireNonNull(authConfig.getTokenEndpoint()),
-          requireNonNull(authConfig.getClientId()),
-          requireNonNull(authConfig.getClientSecret()), authConfig.getScope()
-      ));
+      if (nonNull(authConfig.getPrivateKeyJWK())) {
+        return Optional.of(new AsymmetricClientCredentials(
+            requireNonNull(authConfig.getTokenEndpoint()),
+            requireNonNull(authConfig.getClientId()),
+            requireNonNull(authConfig.getPrivateKeyJWK()),
+            authConfig.getScope()
+        ));
+      } else {
+        return Optional.of(new SymmetricClientCredentials(
+            requireNonNull(authConfig.getTokenEndpoint()),
+            requireNonNull(authConfig.getClientId()),
+            requireNonNull(authConfig.getClientSecret()),
+            authConfig.getScope(),
+            authConfig.isUseFormForBasicAuth()
+        ));
+      }
     } else {
       return Optional.empty();
     }

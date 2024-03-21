@@ -17,19 +17,47 @@
 
 package au.csiro.pathling.auth;
 
+import java.security.Principal;
+import java.util.Collections;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import lombok.Value;
+import org.apache.http.Header;
+import org.apache.http.auth.Credentials;
+import org.apache.http.message.BasicNameValuePair;
 
-@Value
-public class AccessScope {
+public interface ClientCredentials extends Credentials {
+
+  @Override
+  default Principal getUserPrincipal() {
+    return null;
+  }
+
+  @Override
+  default String getPassword() {
+    return null;
+  }
+
 
   @Nonnull
-  String tokenEndpoint;
+  String getClientId();
 
   @Nonnull
-  String clientId;
+  String getTokenEndpoint();
 
   @Nullable
-  String scope;
+  String getScope();
+  
+  @Nonnull
+  default List<Header> getAuthHeaders() {
+    return Collections.emptyList();
+  }
+
+  @Nonnull
+  List<BasicNameValuePair> getAssertions();
+
+  @Nonnull
+  default AccessScope getAccessScope() {
+    return new AccessScope(getTokenEndpoint(), getClientId(), getScope());
+  }
 }

@@ -49,11 +49,11 @@ class ClientAuthProviderTest {
         .scope("system/*.read")
         .build();
 
-    try (final SymmetricAuthTokenProvider clientAuthProvider = new SymmetricAuthTokenProvider(
+    try (final AuthTokenProvider clientAuthProvider = new AuthTokenProvider(
         smartCDR)) {
 
-      final Credentials credentials = new SymmetricCredentials(smartCDR.getTokenEndpoint(),
-          smartCDR.getClientId(), smartCDR.getClientSecret(), smartCDR.getScope());
+      final Credentials credentials = new SymmetricClientCredentials(smartCDR.getTokenEndpoint(),
+          smartCDR.getClientId(), smartCDR.getClientSecret(), smartCDR.getScope(), false);
 
       final Optional<String> token = clientAuthProvider.getToken(credentials);
       System.out.println(token);

@@ -21,6 +21,7 @@ import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.export.BulkExportClient;
 import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.ws.AsyncConfig;
+import org.apache.commons.io.IOUtils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -50,7 +51,6 @@ public class RunBulkExport {
         .clientId("4ccde388-534e-482b-b6ca-c55571432c08")
         .clientSecret(clientSecret)
         .scope("system/Patient.read")
-        .useBasicAuth(true)
         .build();
 
     BulkExportClient.groupBuilder("11ec-d16a-b40370f8-9d31-577f11a339c5")
@@ -62,9 +62,42 @@ public class RunBulkExport {
         .withTimeout(Duration.ofMinutes(5))
         .build()
         .export();
-
   }
 
+
+  public static void runCernerAssymetric() throws Exception {
+    final String fhirEndpointUrl = "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d";
+
+    final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
+    // Bulk Export Demo Server
+    final String outputDir = "target/export-" + Instant.now().toEpochMilli();
+
+    System.out.println(
+        "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
+
+    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream(
+        "auth/bulk_rs384_priv_jwk.json"));
+    System.out.println("privateKeyJWK: " + privateKeyJWK);
+    
+    final AuthConfiguration smartCDR = AuthConfiguration.builder()
+        .enabled(true)
+        .tokenEndpoint(
+            "https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token")
+        .clientId("4ccde388-534e-482b-b6ca-c55571432c08")
+        .privateKeyJWK(privateKeyJWK)
+        .scope("system/Patient.read")
+        .build();
+
+    BulkExportClient.groupBuilder("11ec-d16a-b40370f8-9d31-577f11a339c5")
+        .withAuthConfig(smartCDR)
+        .withFhirEndpointUrl(fhirEndpointUrl)
+        .withOutputDir(outputDir)
+        .withTypes(List.of("Patient"))
+        //.withSince(Instant.now().minus(Duration.ofDays(700)))
+        .withTimeout(Duration.ofMinutes(5))
+        .build()
+        .export();
+  }
 
   public static void runSystemLevelCdr() {
 
@@ -82,7 +115,6 @@ public class RunBulkExport {
 
     final AuthConfiguration smartCDR = AuthConfiguration.builder()
         .enabled(true)
-        .useBasicAuth(true)
         .tokenEndpoint("https://aehrc-cdr.cc/smartsec_r4/oauth/token")
         .clientId("pathling-bulk-client")
         .clientSecret(clientSecret)
@@ -136,6 +168,83 @@ public class RunBulkExport {
         .export();
   }
 
+  public static void runSystemLevelWithAuthRS384() throws Exception{
+
+    // NO ERRORS
+    final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjAsInNlY3VyZSI6MX0/fhir";
+    final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
+    // Bulk Export Demo Server
+    final String outputDir = "target/export-" + Instant.now().toEpochMilli();
+
+    
+    System.out.println(
+        "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
+
+    final String clientId = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_rs384_clientId.txt"));
+    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_rs384_priv_jwk.json"));
+
+    System.out.println("clientId: " + clientId);
+    System.out.println("privateKeyJWK: " + privateKeyJWK);
+    
+    AuthConfiguration authConfiguration = AuthConfiguration.builder()
+        .enabled(true)
+        .tokenEndpoint("https://bulk-data.smarthealthit.org/auth/token")
+        .clientId(clientId)
+        .privateKeyJWK(privateKeyJWK)
+        .scope("system/*.read")
+        .build();
+    
+    BulkExportClient.systemBuilder()
+        .withFhirEndpointUrl(fhirEndpointUrl)
+        .withOutputDir(outputDir)
+        .withTypes(List.of("Patient", "Condition"))
+        //.withSince(from)
+        .withAsyncConfig(AsyncConfig.builder().maxPoolingDelay(Duration.ofSeconds(10)).build())
+        .withTimeout(Duration.ofMinutes(60))
+        .withAuthConfig(authConfiguration)
+        .build()
+        .export();
+  }
+
+
+  public static void runSystemLevelWithAuthES384() throws Exception{
+
+    // NO ERRORS
+    final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjAsInNlY3VyZSI6MX0/fhir";
+    final Instant from = Instant.parse("2020-01-01T00:00:00.000Z");
+    // Bulk Export Demo Server
+    final String outputDir = "target/export-" + Instant.now().toEpochMilli();
+
+
+    System.out.println(
+        "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
+
+    final String clientId = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_es384_clientId.txt"));
+    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_es384_priv_jkw.json"));
+
+    System.out.println("clientId: " + clientId);
+    System.out.println("privateKeyJWK: " + privateKeyJWK);
+
+    AuthConfiguration authConfiguration = AuthConfiguration.builder()
+        .enabled(true)
+        .tokenEndpoint("https://bulk-data.smarthealthit.org/auth/token")
+        .clientId(clientId)
+        .privateKeyJWK(privateKeyJWK)
+        .scope("system/*.read")
+        .build();
+
+    BulkExportClient.systemBuilder()
+        .withFhirEndpointUrl(fhirEndpointUrl)
+        .withOutputDir(outputDir)
+        .withTypes(List.of("Patient", "Condition"))
+        //.withSince(from)
+        .withAsyncConfig(AsyncConfig.builder().maxPoolingDelay(Duration.ofSeconds(10)).build())
+        .withTimeout(Duration.ofMinutes(60))
+        .withAuthConfig(authConfiguration)
+        .build()
+        .export();
+  }
+  
 
   public static void runPatientLevel() {
 
@@ -162,6 +271,6 @@ public class RunBulkExport {
   }
 
   public static void main(@Nonnull final String[] args) throws Exception {
-    runSystemLevelCdr();
+    runSystemLevelWithAuthRS384();
   }
 }
