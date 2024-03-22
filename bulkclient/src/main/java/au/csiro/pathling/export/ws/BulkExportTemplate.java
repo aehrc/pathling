@@ -72,11 +72,7 @@ public class BulkExportTemplate {
     this.fhirEndpointUri = endpoingUri;
     this.config = config;
   }
-
-  public BulkExportTemplate(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri) {
-    this(httpClient, endpoingUri, AsyncConfig.builder().build());
-  }
-
+  
   @Nonnull
   public BulkExportResponse export(@Nonnull final BulkExportRequest request,
       @Nonnull final Duration timeout) {

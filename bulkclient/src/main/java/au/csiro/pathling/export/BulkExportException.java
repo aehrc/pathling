@@ -24,58 +24,108 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Getter;
-import org.apache.http.HttpResponse;
 
+/**
+ * Exception thrown when an error occurs during a bulk export operation.
+ */
 public class BulkExportException extends RuntimeException {
 
   private static final long serialVersionUID = 7980275150009884077L;
 
+  /**
+   * Constructs a new exception with the specified detail message.
+   *
+   * @param message the detail message.
+   */
   public BulkExportException(@Nonnull final String message) {
     super(message);
   }
 
+  /**
+   * Constructs a new exception with the specified detail message and cause.
+   *
+   * @param message the detail message.
+   * @param cause the cause.
+   */
   public BulkExportException(@Nonnull final String message, final Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Constructs a new exception with the specified cause.
+   *
+   * @param cause the cause.
+   */
   public BulkExportException(final Throwable cause) {
     super(cause);
   }
-  
-  
+
+
+  /**
+   * Exception thrown when a timeout occurs during a bulk export operation.
+   */
   public static class Timeout extends BulkExportException {
 
     private static final long serialVersionUID = 2425985144670724776L;
 
+    /**
+     * Constructs a new exception with the specified detail message.
+     */
     public Timeout(@Nonnull final String message) {
       super(message);
     }
   }
 
+  /**
+   * Exception thrown when a system error occurs during a bulk export operation.
+   */
   public static class SystemError extends BulkExportException {
 
     private static final long serialVersionUID = 2425985144670724776L;
 
+    /**
+     * Constructs a new exception with the specified detail message.
+     *
+     * @param message the detail message.
+     * @param cause the cause.
+     */
     public SystemError(@Nonnull final String message, final Throwable cause) {
       super(message, cause);
     }
-    public SystemError(final Throwable cause) {
-      super(cause);
-    }
   }
-  
+
+  /**
+   * Exception thrown when an HTTP error occurs during a bulk export operation.
+   */
   @Getter
   public static class HttpError extends BulkExportException {
 
     private static final long serialVersionUID = -2870584282639223558L;
+    /**
+     * The HTTP status code.
+     */
     final int statusCode;
 
+    /**
+     * The optional operation outcome.
+     */
     @Nonnull
     final Optional<OperationOutcome> operationOutcome;
 
+    /**
+     * The optional retry value.
+     */
     @Nonnull
     final Optional<RetryValue> retryAfter;
 
+    /**
+     * Constructs a new exception with the specified detail message and http error info.
+     *
+     * @param message the detail message.
+     * @param statusCode the HTTP status code.
+     * @param operationOutcome the optional operation outcome.
+     * @param retryAfter the optional retry value.
+     */
     public HttpError(@Nonnull final String message, final int statusCode,
         @Nonnull final Optional<OperationOutcome> operationOutcome,
         @Nonnull final Optional<RetryValue> retryAfter) {
@@ -85,22 +135,25 @@ public class BulkExportException extends RuntimeException {
       this.retryAfter = retryAfter;
     }
 
+    /**
+     * Constructs a new exception with the specified detail message.
+     *
+     * @param message the detail message.
+     * @param statusCode the HTTP status code.
+     */
     public HttpError(@Nonnull final String message, final int statusCode) {
       this(message, statusCode, Optional.empty(), Optional.empty());
     }
 
+    /**
+     * Returns whether the error is transient based on the operation outcome.
+     *
+     * @return whether the error is transient.
+     */
     public boolean isTransient() {
       return operationOutcome.map(OperationOutcome::isTransient)
           .orElse(false);
     }
-
-    @Nonnull
-    public static HttpError of(@Nonnull final String message,
-        @Nonnull final HttpResponse response) {
-      return new HttpError(message, response.getStatusLine().getStatusCode(), Optional.empty(),
-          Optional.empty());
-    }
-
 
     @Nonnull
     private static String toDetailedMessage(@Nonnull final String message, final int statusCode,
@@ -118,23 +171,36 @@ public class BulkExportException extends RuntimeException {
     }
   }
 
-
+  /**
+   * Exception thrown when an error occurs during a download operation.
+   */
   public static class DownloadError extends BulkExportException {
 
     private static final long serialVersionUID = 2425985144670724776L;
 
+    /**
+     * Constructs a new exception with the specified detail message and cause.
+     *
+     * @param message the detail message.
+     * @param cause the cause.
+     */
     public DownloadError(@Nonnull final String message, final Throwable cause) {
       super(message, cause);
     }
   }
 
-  
-  
-  
+  /**
+   * Exception thrown when unexpected behaviour occurs in async protocol interaction.
+   */
   public static class ProtocolError extends BulkExportException {
 
     private static final long serialVersionUID = -65793456918228699L;
 
+    /**
+     * Constructs a new exception with the specified detail message
+     *
+     * @param message the detailed message
+     */
     public ProtocolError(@Nonnull final String message) {
       super(message);
     }

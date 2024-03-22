@@ -82,40 +82,76 @@ import org.apache.http.impl.client.CloseableHttpClient;
 @Builder(setterPrefix = "with")
 public class BulkExportClient {
 
+  /**
+   * The URL of the FHIR server to export from.
+   */
   @Nonnull
   String fhirEndpointUrl;
 
+  /**
+   * The operation to perform.
+   */
   @Nonnull
   @Builder.Default
   BulkExportRequest.Operation operation = new SystemLevel();
 
+  /**
+   * The format of the output data. The value of the `_outputFormat` parameter in the export
+   * request.
+   */
   @Nonnull
   @Builder.Default
   String outputFormat = "application/fhir+ndjson";
 
+  /**
+   * The time to start the export from. If null, the export will start from the beginning of time.
+   * The value of the `_since` parameter in the export request.
+   */
   @Nullable
   @Builder.Default
   Instant since = null;
 
+  /**
+   * The types of resources to export. The value of the `_type` parameter in the export request.
+   */
   @Nonnull
   @Singular("type")
   List<String> types;
 
+  /**
+   * The reference to the patients to include in the export. The value of the `patient` parameter in
+   * the export request.
+   */
   @Nonnull
   @Singular("patient")
   List<Reference> patients;
 
+  /**
+   * The elements to include in the export. The value of the `_elements` parameter in the export
+   * request.
+   */
   @Nonnull
   @Singular("element")
   List<String> elements;
 
+  /**
+   * The type filters to apply to the export. The value of the `_typeFilter` parameter in the
+   * export
+   */
   @Nonnull
   @Singular("typeFilter")
   List<String> typeFilters;
 
+  /**
+   * The directory to write the output files to. This describes the location in the format expected
+   * by the {@link FileStoreFactory} configured in this client.
+   */
   @Nonnull
   String outputDir;
 
+  /**
+   * The extension to use for the output files.
+   */
   @Nonnull
   @Builder.Default
   String outputExtension = "ndjson";
@@ -128,46 +164,83 @@ public class BulkExportClient {
   @Builder.Default
   Duration timeout = Duration.ZERO;
 
+  /**
+   * The maximum number of concurrent downloads to perform.
+   */
   @Builder.Default
   @Min(1)
   int maxConcurrentDownloads = 10;
 
+  /**
+   * The factory to use to create the {@link FileStore} to write the output files to.
+   */
   @Nonnull
   @Builder.Default
   FileStoreFactory fileStoreFactory = FileStoreFactory.getLocal();
 
+  /**
+   * The configuration for the HTTP client.
+   */
   @Nonnull
   @Builder.Default
   HttpClientConfiguration httpClientConfig = HttpClientConfiguration.builder().build();
 
+  /**
+   * The configuration for the async operations.
+   */
   @Nonnull
   @Builder.Default
   AsyncConfig asyncConfig = AsyncConfig.builder().build();
 
 
+  /**
+   * The configuration for the authentication.
+   */
   @Nonnull
   @Builder.Default
   AuthConfiguration authConfig = AuthConfiguration.builder().build();
 
+  /**
+   * A builder for the {@link BulkExportClient}.
+   */
   public static class BulkExportClientBuilder {
     // empty placeholder to for javadoc to recognize the builder
   }
 
+  /**
+   * Create a builder for a system-level export.
+   * @return the builder configured for a system-level export
+   */
   @Nonnull
   public static BulkExportClientBuilder systemBuilder() {
     return BulkExportClient.builder().withOperation(new SystemLevel());
   }
 
+  /**
+   * Create a builder for a patient-level export.
+   * @return the builder configured for a patient-level export
+   */
   @Nonnull
   public static BulkExportClientBuilder patientBuilder() {
     return BulkExportClient.builder().withOperation(new PatientLevel());
   }
-
+  
+  /**
+   * Create a builder for a group-level export.
+   * @param groupId the group ID to export
+   * @return the builder configured for a group-level export
+   */
   @Nonnull
   public static BulkExportClientBuilder groupBuilder(@Nonnull final String groupId) {
     return BulkExportClient.builder().withOperation(new GroupLevel(groupId));
   }
 
+  /**
+   * Export data from the FHIR server.
+   *
+   * @return the result of the export
+   * @throws BulkExportException if the export fails
+   */
   public BulkExportResult export() {
     try (
         final TokenProvider tokenProvider = createTokenProvider();

@@ -23,25 +23,47 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import lombok.Value;
 
+/**
+ * Represents the result of a bulk export operation.
+ */
 @Value(staticConstructor = "of")
 public class BulkExportResult {
 
 
+  /**
+   * Represents the result of a single file export operation.
+   */
   @Value(staticConstructor = "of")
   public static class FileResult {
 
+    /**
+     * The source URI of the file that was exported.
+     */
     @Nonnull
     URI source;
 
+    /**
+     * The destination URI of the file that was exported.
+     */
     @Nonnull
     URI destination;
 
+    /**
+     * The size of the file that was exported in bytes.
+     */
     long size;
   }
 
+  /**
+   * The time at which the transaction was processed at the server. (transactionTime from the bulk
+   * export response)
+   */
   @Nonnull
   Instant transactionTime;
-  
+
+  /**
+   * The results of the export operation for individual resources.
+   */
   @Nonnull
   List<FileResult> results;
 }
