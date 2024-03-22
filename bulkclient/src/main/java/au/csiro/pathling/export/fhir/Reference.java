@@ -23,30 +23,56 @@ import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Value;
 
+/**
+ * Represents a FHIR resource Reference type.
+ *
+ * @see <a href="https://hl7.org/fhir/r4/references.html">Resource References</a>
+ */
 @Value
 @Builder
 public class Reference {
 
+  /**
+   * The literal reverence, a relative, internal or absolute URL.
+   */
   @Nullable
   String reference;
 
+  /**
+   * The type the reference refers to.
+   */
   @Nullable
   String type;
 
-  @Nullable
-  String identifier;
-
+  /**
+   * Text alternative for the resource
+   */
   @Nullable
   String display;
 
+  /**
+   * Builder for Reference instances.
+   */
   @SuppressWarnings("unused")
   public static class ReferenceBuilder {
 
-    ReferenceBuilder identifierFromUri(@Nonnull final URI uri) {
-      return identifier(uri.toString());
+    /**
+     * Sets the reference value from a URI instance.
+     *
+     * @param uri the URI instance.
+     * @return the ReferenceBuilder instance.
+     */
+    ReferenceBuilder referenceFromUri(@Nonnull final URI uri) {
+      return reference(uri.toString());
     }
   }
 
+  /**
+   * Creates a new Reference instance with the given literal reference.
+   *
+   * @param reference the reference.
+   * @return a new Reference instance.
+   */
   @Nonnull
   public static Reference of(@Nonnull final String reference) {
     return Reference.builder().reference(reference).build();

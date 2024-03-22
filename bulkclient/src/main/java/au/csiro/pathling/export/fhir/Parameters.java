@@ -22,43 +22,84 @@ import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Value;
 
+/**
+ * Represents a FHIR resource Parameters type.
+ *
+ * @see <a href="https://hl7.org/fhir/r4/parameters.html">Parameters</a>
+ */
 @Value
 @Builder
 public class Parameters {
 
+  public static final String RESOURCE_TYPE = "Parameters";
+
+  /**
+   * Represents a parameter backbone element within the Parameters resource. Only one of the
+   * valueXXX fields should be set.
+   */
   @Value
-  @Builder
+  @Builder(access = AccessLevel.PRIVATE)
   public static class Parameter {
 
+    /**
+     * Name from the definition.
+     */
     @Nonnull
     String name;
 
+    /**
+     * Reference value for the parameter.
+     */
     @Nullable
     @Builder.Default
     Reference valueReference = null;
 
+    /**
+     * String value for the parameter.
+     */
     @Nullable
     @Builder.Default
     String valueString = null;
 
+    /**
+     * Instant value for the parameter.
+     */
     @Nullable
     @Builder.Default
     String valueInstant = null;
 
+    /**
+     * Creates a new Parameter instance with the given name and reference value.
+     *
+     * @param name the name of the parameter.
+     * @param valueReference the reference value.
+     * @return a new Parameter instance.
+     */
     @Nonnull
     public static Parameter of(@Nonnull final String name,
         final @Nonnull Reference valueReference) {
       return Parameter.builder().name(name).valueReference(valueReference).build();
     }
 
+    /**
+     * Creates a new Parameter instance with the given name and string value.
+     *
+     * @param name the name of the parameter.
+     * @param valueString the string value.
+     * @return a new Parameter instance.
+     */
     @Nonnull
     public static Parameter of(@Nonnull final String name, final @Nonnull String valueString) {
       return Parameter.builder().name(name).valueString(valueString).build();
     }
 
+    /**
+     * Creates a new Parameter instance with the given name and instant value.
+     */
     @Nonnull
     public static Parameter of(@Nonnull final String name, final @Nonnull Instant valueInstant) {
       return Parameter.builder().name(name).valueInstant(FhirUtils.formatFhirInstant(valueInstant))
@@ -66,11 +107,23 @@ public class Parameters {
     }
   }
 
+  /**
+   * The type of the resource. Should be "Parameters".
+   */
   @Nonnull
   @Builder.Default
-  String resourceType = "Parameters";
+  String resourceType = RESOURCE_TYPE;
 
+  /**
+   * A collection of parameters.
+   */
   @Nonnull
   @Builder.Default
   List<Parameter> parameter = Collections.emptyList();
+
+
+  @Nonnull
+  public String toJson() {
+    return FhirJsonSupport.toJson(this);
+  }
 }

@@ -24,22 +24,33 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonPrimitive;
 import java.lang.reflect.Type;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 
 import static au.csiro.pathling.export.fhir.FhirUtils.parseFhirInstant;
 
-public class InstantDeserializer implements JsonDeserializer<Instant> {
+/**
+ * Gson deserializer for {@link Instant} objects that can handle FHIR instant strings. It also tries
+ * to handle instants in epoch milliseconds.
+ */
+class FhirInstantDeserializer implements JsonDeserializer<Instant> {
 
   @Override
   public Instant deserialize(final JsonElement json, final Type typeOfT,
       final JsonDeserializationContext context) throws JsonParseException {
     if (!json.isJsonPrimitive()) {
-      throw new JsonParseException("Primitive expected  but got " + json);
+      throw new JsonParseException("Failed to parse Instant from non-primitive: " + json);
     }
     final JsonPrimitive primitive = json.getAsJsonPrimitive();
-    try {
+    if (primitive.isNumber()) {
       return Instant.ofEpochMilli(primitive.getAsLong());
-    } catch (final NumberFormatException ex) {
-      return parseFhirInstant(primitive.getAsString());
+    } else if (primitive.isString()) {
+      try {
+        return parseFhirInstant(primitive.getAsString());
+      } catch (final DateTimeParseException dex) {
+        throw new JsonParseException("Failed to parse Instant from string: " + primitive, dex);
+      }
+    } else {
+      throw new JsonParseException("Failed to parse Instant from: " + json);
     }
   }
 }

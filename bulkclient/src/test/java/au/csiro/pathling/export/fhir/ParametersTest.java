@@ -21,6 +21,7 @@ import au.csiro.pathling.export.fhir.Parameters.Parameter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
+import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -33,16 +34,10 @@ class ParametersTest {
 
     final Parameters parameters = Parameters.builder()
         .parameter(List.of(
-            Parameter.builder()
-                .name("reference")
-                .valueReference(Reference.of("Patient/00"))
-                .build(),
-            Parameter.builder()
-                .name("reference")
-                .valueReference(Reference.of("Patient/01"))
-                .build()
-        ))
-        .build();
+                Parameter.of("reference", Reference.of("Patient/00")),
+                Parameter.of("reference", Reference.of("Patient/01"))
+            )
+        ).build();
     assertEquals(
         new JSONObject()
             .put("resourceType", "Parameters")
@@ -59,7 +54,45 @@ class ParametersTest {
                             .put("valueReference", new JSONObject().put("reference", "Patient/01"))
                     )
             ).toString(),
-        new JSONObject(JsonSupport.toJson(parameters)).toString()
+        new JSONObject(parameters.toJson()).toString()
     );
   }
+
+  @Test
+  public void testSerializesParametersOfAllTyes() {
+
+    final String testInstantString = "2023-01-01T00:00:00.123Z";
+
+    final Parameters parameters = Parameters.builder()
+        .parameter(List.of(
+                Parameter.of("reference", Reference.of("Patient/00")),
+                Parameter.of("string", "stringValue"),
+                Parameter.of("instant", Instant.parse(testInstantString))
+            )
+        ).build();
+    assertEquals(
+        new JSONObject()
+            .put("resourceType", "Parameters")
+            .put("parameter",
+                new JSONArray()
+                    .put(
+                        new JSONObject()
+                            .put("name", "reference")
+                            .put("valueReference", new JSONObject().put("reference", "Patient/00"))
+                    )
+                    .put(
+                        new JSONObject()
+                            .put("name", "string")
+                            .put("valueString", "stringValue")
+                    )
+                    .put(
+                        new JSONObject()
+                            .put("name", "instant")
+                            .put("valueInstant", testInstantString)
+                    )
+            ).toString(),
+        new JSONObject(parameters.toJson()).toString()
+    );
+  }
+
 }

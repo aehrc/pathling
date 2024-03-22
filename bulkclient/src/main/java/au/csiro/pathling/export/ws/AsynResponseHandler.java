@@ -19,7 +19,7 @@ package au.csiro.pathling.export.ws;
 
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
-import au.csiro.pathling.export.fhir.JsonSupport;
+import au.csiro.pathling.export.fhir.FhirJsonSupport;
 import au.csiro.pathling.export.fhir.OperationOutcome;
 import java.io.IOException;
 import java.util.Optional;
@@ -93,7 +93,7 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
 
   @Nonnull
   private T produceFinalResponse(@Nonnull final HttpResponse response) {
-    return quietBodyAsString(response).flatMap(s -> JsonSupport.fromJson(s, responseClass))
+    return quietBodyAsString(response).flatMap(s -> FhirJsonSupport.fromJson(s, responseClass))
         .orElseThrow(() -> new BulkExportException.ProtocolError(
             "Invalid successful response: " + response.getStatusLine()));
   }

@@ -23,7 +23,7 @@ import static au.csiro.pathling.export.utils.TimeoutUtils.toTimeoutAt;
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.fhir.FhirUtils;
-import au.csiro.pathling.export.fhir.JsonSupport;
+import au.csiro.pathling.export.fhir.FhirJsonSupport;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -222,7 +222,7 @@ public class BulkExportTemplate {
 
   @Nonnull
   static HttpEntity toFhirJsonEntity(@Nonnull final Object fhirResource) {
-    return new StringEntity(JsonSupport.toJson(fhirResource), APPLICATION_FHIR_JSON);
+    return new StringEntity(FhirJsonSupport.toJson(fhirResource), APPLICATION_FHIR_JSON);
   }
 
   @Nonnull

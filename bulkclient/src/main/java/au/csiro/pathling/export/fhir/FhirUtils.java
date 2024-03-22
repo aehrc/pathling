@@ -17,27 +17,38 @@
 
 package au.csiro.pathling.export.fhir;
 
+import lombok.experimental.UtilityClass;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import javax.annotation.Nonnull;
 
+/**
+ * Utility methods for working with FHIR types and resources.
+ */
+@UtilityClass
 public class FhirUtils {
-
-  private FhirUtils() {
-    //  Utility class
-  }
 
   private static final ZoneId UTC_ZONE_ID = ZoneId.of("UTC");
 
   private static final DateTimeFormatter FHIR_INSTANT_FORMAT = DateTimeFormatter
       .ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX").withZone(UTC_ZONE_ID);
 
+  /**
+   * Formats an {@link Instant} as a FHIR instant string.
+   * @param instant The instant to format.
+   * @return The formatted string.
+   */
   @Nonnull
   public static String formatFhirInstant(@Nonnull final Instant instant) {
     return FHIR_INSTANT_FORMAT.format(instant);
   }
 
+  /**
+   * Parses a FHIR instant string into an {@link Instant}.
+   * @param instantString The string to parse.
+   * @return The parsed instant.
+   */
   @Nonnull
   public static Instant parseFhirInstant(@Nonnull final String instantString) {
     return FHIR_INSTANT_FORMAT.parse(instantString, Instant::from);
