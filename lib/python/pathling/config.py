@@ -50,6 +50,7 @@ def auth_config(
         .tokenEndpoint(auth_token_endpoint)
         .clientId(auth_client_id)
         .clientSecret(auth_client_secret)
+        .privateKeyJWK(auth_private_key_jwk)
         .useFormForBasicAuth(auth_use_form_for_basic_auth)
         .scope(auth_scope)
         .tokenExpiryTolerance(auth_token_expiry_tolerance)

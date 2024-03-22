@@ -27,6 +27,9 @@ import java.io.OutputStream;
 import java.net.URI;
 import javax.annotation.Nonnull;
 
+/**
+ * An implementation of {@link FileStore} that uses the local filesystem.
+ */
 class LocalFileStore implements FileStore {
 
   static final LocalFileStore.Factory FACTORY = new LocalFileStore.Factory();

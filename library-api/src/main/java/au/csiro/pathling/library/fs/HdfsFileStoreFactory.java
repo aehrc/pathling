@@ -51,6 +51,7 @@ public class HdfsFileStoreFactory implements FileStoreFactory {
     this(new Configuration());
   }
 
+  @Nonnull
   @Override
   public FileStore createFileStore(@Nonnull final String location) throws IOException {
     return new HdfsFileStore(FileSystem.get(URI.create(location), configuration));

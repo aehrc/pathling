@@ -17,11 +17,12 @@
 
 package au.csiro.pathling.auth;
 
+import java.io.Closeable;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.http.auth.Credentials;
 
-public interface TokenProvider extends AutoCloseable {
+public interface TokenProvider extends Closeable {
 
   /**
    * Get the current token.

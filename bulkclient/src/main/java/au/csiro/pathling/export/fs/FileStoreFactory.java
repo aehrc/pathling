@@ -20,10 +20,29 @@ package au.csiro.pathling.export.fs;
 import java.io.IOException;
 import javax.annotation.Nonnull;
 
+/**
+ * Factory for creating {@link FileStore} instances.
+ */
 public interface FileStoreFactory {
 
+  /**
+   * Create a new {@link FileStore} instance for the given location. The location can be used to
+   * determine the specific sub-type of file store to create, when necessary, e.g. based on the URI
+   * scheme, but does not imply that the file is constrained to this location.
+   *
+   * @param location the location of the file store
+   * @return a new {@link FileStore} instance
+   * @throws IOException if an error occurs creating the file store
+   */
+ 
+  @Nonnull
   FileStore createFileStore(@Nonnull final String location) throws IOException;
 
+  /**
+   * Get the local file store factory.
+   *
+   * @return the local file store factory
+   */
   @Nonnull
   static FileStoreFactory getLocal() {
     return LocalFileStore.FACTORY;

@@ -257,9 +257,8 @@ public class BulkExportClient {
       final BulkExportResult result = doExport(fileStore, bulkExportTemplate, downloadTemplate);
       log.info("Export successful: {}", result);
       return result;
-    } catch (final Exception ex) {
-      log.error("Export failed", ex);
-      throw new BulkExportException.SystemError("Export failed", ex);
+    } catch (final IOException ex) {
+      throw new BulkExportException.SystemError("System error in bulk export", ex);
     }
   }
 
