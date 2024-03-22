@@ -27,11 +27,22 @@ import java.security.PrivateKey;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
+/**
+ * Utility class for working with JWTs.
+ */
 public class JWTUtils {
 
   private JWTUtils() {
   }
 
+  /**
+   * Get an Algorithm object configured for signing with given private key JWK. It supports RSA
+   * (RSxxx) and  ECDSA (ESxxx) algorithms families. The provided JWK must be a private key for one
+   * of these algorithms.
+   *
+   * @param privateKeyJWT private key JWK
+   * @return Algorithm object
+   */
   @Nonnull
   public static Algorithm getAsymmSigningAlgorithm(@Nonnull final JWK privateKeyJWT) {
     if (!(privateKeyJWT instanceof AsymmetricJWK)) {
@@ -56,7 +67,7 @@ public class JWTUtils {
     }
   }
 
-  public static String toAuto0AlgoName(@Nonnull final String jwkAlgorithm) {
+  private static String toAuto0AlgoName(@Nonnull final String jwkAlgorithm) {
     return jwkAlgorithm
         .replace("RS", "RSA")
         .replace("ES", "ECDSA")

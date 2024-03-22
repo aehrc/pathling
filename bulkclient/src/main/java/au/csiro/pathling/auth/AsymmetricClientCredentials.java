@@ -17,6 +17,13 @@
 
 package au.csiro.pathling.auth;
 
+import static com.auth0.jwt.RegisteredClaims.AUDIENCE;
+import static com.auth0.jwt.RegisteredClaims.EXPIRES_AT;
+import static com.auth0.jwt.RegisteredClaims.ISSUER;
+import static com.auth0.jwt.RegisteredClaims.JWT_ID;
+import static com.auth0.jwt.RegisteredClaims.SUBJECT;
+
+import com.auth0.jwt.HeaderParams;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.nimbusds.jose.jwk.JWK;
@@ -56,12 +63,12 @@ public class AsymmetricClientCredentials implements ClientCredentials {
       final String kid = privateKey.getKeyID();
       final Algorithm algo = JWTUtils.getAsymmSigningAlgorithm(privateKey);
       final String jwt = JWT.create()
-          .withHeader(Map.of("kid", kid))
-          .withClaim("iss", clientId)
-          .withClaim("sub", clientId)
-          .withClaim("aud", tokenEndpoint)
-          .withClaim("exp", Instant.now().plus(Duration.ofMinutes(3)).getEpochSecond())
-          .withClaim("jti", UUID.randomUUID().toString())
+          .withHeader(Map.of(HeaderParams.KEY_ID, kid))
+          .withClaim(ISSUER, clientId)
+          .withClaim(SUBJECT, clientId)
+          .withClaim(AUDIENCE, tokenEndpoint)
+          .withClaim(EXPIRES_AT, Instant.now().plus(Duration.ofMinutes(3)).getEpochSecond())
+          .withClaim(JWT_ID, UUID.randomUUID().toString())
           .sign(algo);
 
       return List.of(

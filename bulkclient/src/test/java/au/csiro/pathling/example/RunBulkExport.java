@@ -220,7 +220,8 @@ public class RunBulkExport {
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
     final String clientId = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_es384_clientId.txt"));
-    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_es384_priv_jkw.json"));
+    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream(
+        "auth/bulk_es384_priv_jwk.json"));
 
     System.out.println("clientId: " + clientId);
     System.out.println("privateKeyJWK: " + privateKeyJWK);
