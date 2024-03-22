@@ -121,20 +121,29 @@ target specified, the server should return all known translations.</p></dd>
 <span class="r-in"><span>         translation <span class="op">=</span> <span class="op">!</span><span class="op">!</span><span class="fu">tx_translate</span><span class="op">(</span><span class="va">code</span><span class="op">[[</span><span class="st">'coding'</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>                 <span class="st">'http://snomed.info/sct?fhir_cm=900000000000527005'</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>         .keep<span class="op">=</span><span class="st">'none'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source: spark&lt;?&gt; [?? x 2]</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    id                                   translation</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> c879c300-7fdf-4b53-aa6a-a2b4a266b30c <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> bb9c4fc1-795a-4492-b065-1f497fe18bb2 <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> e620d7ee-6cfe-4f04-ba06-1d0b39f7624d <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> 0447de38-1f2a-411c-9fd2-a9c62ab1f221 <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> 4025ceb3-04a6-41fb-8569-16a8dcce7ccc <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> 7ed34fb1-0bbf-4c41-a101-1316ec483aa7 <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> 5ef84858-0480-4a34-8f43-fc962fe627b2 <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> 5378726d-7f2b-4c83-9762-eaf385915fa7 <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> 31393667-dd7f-4c94-90c3-6cde75c67d3e <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> 6464e20b-55ec-4685-be3e-55bc3b9602d4 <span style="color: #949494;">&lt;list [0]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ more rows</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `Condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd`.`*` cannot be resolved. Did</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> you mean one of the following?</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd`.`id`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd`.`_fid`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd`.`code`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd`.`meta`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd`.`note`].; line 2 pos 2;</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 'Project ['Condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd.*,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> translate_coding(code#25.coding,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> http://snomed.info/sct?fhir_cm=900000000000527005, false, null, null) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> translation#2186] +- SubqueryAlias</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_8c3457fe_a1f1_41a5_a181_d5bad8fd4edd`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,abatementString#38,recordedDate#39,recorder#40,asserter#41,stage#42,evidence#43,note#44,_fid#45,_extension#46])</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Relation</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,...</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 9 more fields] parquet</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Run `sparklyr::spark_last_error()` to see the full Spark error (multiple lines)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> To use the previous style of error message set</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `options("sparklyr.simple.errors" = TRUE)`</span>
 <span class="r-in"><span> </span></span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
 </code></pre></div>

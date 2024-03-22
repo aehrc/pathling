@@ -87,26 +87,27 @@ Currently the following resources are available: 'Patient' and 'Condition'.</p>
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">pathling_example_resource</span><span class="op">(</span><span class="va">pc</span>, <span class="st">'Condition'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source: spark&lt;Condition_2f42fdbc_a374_471c_8aab_c263aed7a727&gt; [?? x 33]</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    id              id_versioned meta         implicitRules language text        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> c879c300-7fdf-… Condition/c… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> bb9c4fc1-795a-… Condition/b… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> e620d7ee-6cfe-… Condition/e… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> 0447de38-1f2a-… Condition/0… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> 4025ceb3-04a6-… Condition/4… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> 7ed34fb1-0bbf-… Condition/7… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> 5ef84858-0480-… Condition/5… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> 5378726d-7f2b-… Condition/5… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> 31393667-dd7f-… Condition/3… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> 6464e20b-55ec-… Condition/6… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ more rows</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 27 more variables: identifier &lt;list&gt;, clinicalStatus &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   verificationStatus &lt;list&gt;, category &lt;list&gt;, severity &lt;list&gt;, code &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   bodySite &lt;list&gt;, subject &lt;list&gt;, encounter &lt;list&gt;, onsetAge &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   onsetDateTime &lt;chr&gt;, onsetPeriod &lt;list&gt;, onsetRange &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   onsetString &lt;chr&gt;, abatementAge &lt;list&gt;, abatementDateTime &lt;chr&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   abatementPeriod &lt;list&gt;, abatementRange &lt;list&gt;, abatementString &lt;chr&gt;, …</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `Condition_748a957c_5c14_4667_ab16_1f124c10738e`.`*` cannot be resolved. Did</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> you mean one of the following?</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`condition_748a957c_5c14_4667_ab16_1f124c10738e`.`id`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_748a957c_5c14_4667_ab16_1f124c10738e`.`_fid`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_748a957c_5c14_4667_ab16_1f124c10738e`.`code`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_748a957c_5c14_4667_ab16_1f124c10738e`.`meta`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_748a957c_5c14_4667_ab16_1f124c10738e`.`note`].; line 1 pos 7;</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 'GlobalLimit 11 +- 'LocalLimit 11 +- 'Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ['Condition_748a957c_5c14_4667_ab16_1f124c10738e.*] +- SubqueryAlias</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> condition_748a957c_5c14_4667_ab16_1f124c10738e +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_748a957c_5c14_4667_ab16_1f124c10738e`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,abatementString#38,recordedDate#39,recorder#40,asserter#41,stage#42,evidence#43,note#44,_fid#45,_extension#46])</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Relation</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,...</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 9 more fields] parquet</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Run `sparklyr::spark_last_error()` to see the full Spark error (multiple lines)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> To use the previous style of error message set</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `options("sparklyr.simple.errors" = TRUE)`</span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>

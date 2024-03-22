@@ -100,26 +100,1129 @@ DataFrame is assumed to have one column of type string.</p></dd>
 <span class="r-in"><span>     <span class="fu">sparklyr</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/sparklyr/man/spark_read_text.html" class="external-link">spark_read_text</a></span><span class="op">(</span>path<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">'extdata'</span>,<span class="st">'ndjson'</span>, <span class="st">'Condition.ndjson'</span>, </span></span>
 <span class="r-in"><span>             package<span class="op">=</span><span class="st">'pathling'</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">pathling_encode</span><span class="op">(</span><span class="va">json_resources_df</span>, <span class="st">'Condition'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source: spark&lt;?&gt; [?? x 31]</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    id              id_versioned meta         implicitRules language text        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> c879c300-7fdf-… Condition/c… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> bb9c4fc1-795a-… Condition/b… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> e620d7ee-6cfe-… Condition/e… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> 0447de38-1f2a-… Condition/0… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> 4025ceb3-04a6-… Condition/4… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> 7ed34fb1-0bbf-… Condition/7… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> 5ef84858-0480-… Condition/5… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> 5378726d-7f2b-… Condition/5… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> 31393667-dd7f-… Condition/3… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> 6464e20b-55ec-… Condition/6… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ more rows</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 25 more variables: identifier &lt;list&gt;, clinicalStatus &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   verificationStatus &lt;list&gt;, category &lt;list&gt;, severity &lt;list&gt;, code &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   bodySite &lt;list&gt;, subject &lt;list&gt;, encounter &lt;list&gt;, onsetAge &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   onsetDateTime &lt;chr&gt;, onsetPeriod &lt;list&gt;, onsetRange &lt;list&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   onsetString &lt;chr&gt;, abatementAge &lt;list&gt;, abatementDateTime &lt;chr&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   abatementPeriod &lt;list&gt;, abatementRange &lt;list&gt;, abatementString &lt;chr&gt;, …</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`*` cannot be resolved. Did</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> you mean one of the following?</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`id`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`code`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`meta`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`note`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`text`].; line 1 pos 7;</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 'GlobalLimit 11 +- 'LocalLimit 11 +- 'Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ['sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099.*] +- SubqueryAlias</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099 +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [id#133,id_versioned#134,meta#135,implicitRules#136,language#137,text#138,identifier#139,clinicalStatus#140,verificationStatus#141,category#142,severity#143,code#144,bodySite#145,subject#146,encounter#147,onsetAge#148,onsetDateTime#149,onsetPeriod#150,onsetRange#151,onsetString#152,abatementAge#153,abatementDateTime#154,abatementPeriod#155,abatementRange#156,abatementString#157,recordedDate#158,recorder#159,asserter#160,stage#161,evidence#162,note#163])</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- SerializeFromObject [staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getIdElement.getIdPart, true, true, true) AS id#133, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getIdElement.getValue, true, true, true) AS id_versioned#134, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta)) null else named_struct(id, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta.getIdElement.getValueAsString, true, true, true), versionId,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta.getVersionIdElement.getIdPart, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> versionId_versioned, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta.getVersionIdElement.getValue, true, true, true), lastUpdated,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> cast(staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta.getLastUpdatedElement.getValueAsString, true, true, true) as</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> timestamp), source, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta.getSourceElement.getValueAsString, true, true, true), profile,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CanonicalType), true, 2), staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CanonicalType), true, 2).getValueAsString, true, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true), assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta.getProfile, None), security,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 3), if (isnull(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 3))) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 3).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 3).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 3).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 3).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 3).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 3).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getMeta.getSecurity, None), tag, mapobjects(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 4), if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 4))) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 4).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 4).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 4).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 4).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 4).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 4).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition, true]).getMeta.getTag,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> None)) AS meta#135, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getImplicitRulesElement.getValueAsString, true, true, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> implicitRules#136, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getLanguageElement.getValueAsString, true, true, true) AS language#137,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> if (isnull(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getText)) null else named_struct(id, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getText.getIdElement.getValueAsString, true, true, true), status,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getText.getStatusElement.getValueAsString, true, true, true), div,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getText.getDiv.getValueAsString, true, true, true)) AS text#138,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true, 5), if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true, 5))) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true, 5).getIdElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), use, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Identifier),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, 5).getUseElement.getValueAsString, true, true, true), type, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true, 5).getType)) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 5).getType.getIdElement.getValueAsString, true, true, true), coding,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 6), if (isnull(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 6))) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 6).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 6).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 6).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 6).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 6).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 6).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Identifier),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, 5).getType.getCoding, None), text, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Identifier),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, 5).getType.getTextElement.getValueAsString, true, true, true)), system,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true, 5).getSystemElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), value, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Identifier),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, 5).getValueElement.getValueAsString, true, true, true), period, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true, 5).getPeriod)) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 5).getPeriod.getIdElement.getValueAsString, true, true, true), start,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 5).getPeriod.getStartElement.getValueAsString, true, true, true), end,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 5).getPeriod.getEndElement.getValueAsString, true, true, true)), assigner, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true, 5).getAssigner)) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(reference, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Identifier),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, 5).getAssigner.getReferenceElement.getValueAsString, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> display, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Identifier), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 5).getAssigner.getDisplayElement.getValueAsString, true, true, true))),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition, true]).getIdentifier,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> None) AS identifier#139, if (isnull(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getClinicalStatus)) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getClinicalStatus.getIdElement.getValueAsString, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> coding, mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 7), if (isnull(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 7))) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 7).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 7).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 7).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 7).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 7).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 7).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getClinicalStatus.getCoding, None), text, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getClinicalStatus.getTextElement.getValueAsString, true, true, true)) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> clinicalStatus#140, if (isnull(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getVerificationStatus)) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getVerificationStatus.getIdElement.getValueAsString, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> coding, mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 8), if (isnull(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 8))) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 8).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 8).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 8).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 8).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 8).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 8).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getVerificationStatus.getCoding, None), text, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getVerificationStatus.getTextElement.getValueAsString, true, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true)) AS verificationStatus#141, mapobjects(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.CodeableConcept), true, 9), if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true, 9))) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true, 9).getIdElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), coding, mapobjects(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 10), if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 10))) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 10).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 10).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 10).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 10).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 10).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 10).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true, 9).getCoding, None), text,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 9).getTextElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getCategory, None) AS category#142, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getSeverity)) null else named_struct(id, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getSeverity.getIdElement.getValueAsString, true, true, true), coding,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 11), if (isnull(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 11))) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 11).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 11).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 11).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 11).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 11).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 11).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getSeverity.getCoding, None), text, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getSeverity.getTextElement.getValueAsString, true, true, true)) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> severity#143, if (isnull(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getCode)) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getCode.getIdElement.getValueAsString, true, true, true), coding,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 12), if (isnull(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 12))) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 12).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 12).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 12).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 12).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 12).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 12).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getCode.getCoding, None), text, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getCode.getTextElement.getValueAsString, true, true, true)) AS code#144,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true, 13), if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true, 13))) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 13).getIdElement.getValueAsString, true, true, true), coding,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> mapobjects(lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 14), if (isnull(lambdavariable(MapObject,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class org.hl7.fhir.r4.model.Coding), true, 14))) null else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> named_struct(id, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 14).getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 14).getSystemElement.getValueAsString, true, true, true), version,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 14).getVersionElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), code, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class org.hl7.fhir.r4.model.Coding), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 14).getCodeElement.getValueAsString, true, true, true), display,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 14).getDisplayElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), userSelected, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Coding), true, 14).getUserSelectedElement.getValue),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true, 13).getCoding, None), text,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, lambdavariable(MapObject, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.CodeableConcept), true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 13).getTextElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getBodySite, None) AS bodySite#145, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (isnull(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getSubject)) null else named_struct(reference, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getSubject.getReferenceElement.getValueAsString, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> display, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getSubject.getDisplayElement.getValueAsString, true, true, true)) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> subject#146, if (isnull(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getEncounter)) null else named_struct(reference, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getEncounter.getReferenceElement.getValueAsString, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> display, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getEncounter.getDisplayElement.getValueAsString, true, true, true)) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> encounter#147, if (isnull(if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null)) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), value, staticinvoke(class org.apache.spark.sql.types.Decimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> DecimalType(32,6), apply, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValueElement.getValue, true, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true), value_scale, staticinvoke(class java.lang.Math, IntegerType, min, 6, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getValueElement.getValue.scale, true, true, true), comparator,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getComparatorElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), unit, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getUnitElement.getValueAsString, true, true, true), system,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getSystemElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), code, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getCodeElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), _value_canonicalized, if (isnull(staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true))) null else named_struct(value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(38,0),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true), true, true, true).unscaledValue, true, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true), scale, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true), true, true, true).scale), _code_canonicalized,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.lang.String), getCanonicalCode, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true), true, true, true)) AS onsetAge#148,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.DateTimeType)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.DateTimeType)) else null.getValueAsString, true, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS onsetDateTime#149, if (isnull(if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) else null)) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) else null.getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), start, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Period))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Period)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getStartElement.getValueAsString, true, true, true), end,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) else null.getEndElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true)) AS onsetPeriod#150, if (isnull(if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else null))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null else named_struct(id, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getIdElement.getValueAsString, true, true, true), low, if (isnull(if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow)) null else named_struct(id, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getIdElement.getValueAsString, true, true, true), value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(32,6),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, if (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getValueElement.getValue, true, true, true), value_scale,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class java.lang.Math, IntegerType, min, 6, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getValueElement.getValue.scale, true, true, true), comparator,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getComparatorElement.getValueAsString, true, true, true), unit,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getUnitElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getSystemElement.getValueAsString, true, true, true), code,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getCodeElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), _value_canonicalized, if (isnull(staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getCode, true, true, true))) null else named_struct(value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(38,0),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getCode, true, true, true), true, true, true).unscaledValue, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), scale, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.sql.types.FlexiDecimal, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getCode, true, true, true), true, true, true).scale),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _code_canonicalized, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class au.csiro.pathling.encoders.terminology.ucum.Ucum,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.lang.String), getCanonicalCode, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getCode, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true)), high, if (isnull(if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh)) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getIdElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), value, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.types.Decimal, DecimalType(32,6), apply, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getValueElement.getValue, true, true, true), value_scale,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class java.lang.Math, IntegerType, min, 6, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getValueElement.getValue.scale, true, true, true), comparator,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getComparatorElement.getValueAsString, true, true, true), unit,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getUnitElement.getValueAsString, true, true, true), system,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getSystemElement.getValueAsString, true, true, true), code,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCodeElement.getValueAsString, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _value_canonicalized, if (isnull(staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCode, true, true, true))) null else named_struct(value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(38,0),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCode, true, true, true), true, true, true).unscaledValue, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), scale, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.sql.types.FlexiDecimal, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCode, true, true, true), true, true, true).scale),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _code_canonicalized, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class au.csiro.pathling.encoders.terminology.ucum.Ucum,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.lang.String), getCanonicalCode, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getOnset, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getCode, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true))) AS onsetRange#151, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, class org.hl7.fhir.r4.model.StringType))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getOnset, ObjectType(class org.hl7.fhir.r4.model.StringType)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getValueAsString, true, true, true) AS onsetString#152, if (isnull(if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else null))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null else named_struct(id, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getIdElement.getValueAsString, true, true, true), value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(32,6),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, if (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getValueElement.getValue, true, true, true), value_scale,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class java.lang.Math, IntegerType, min, 6, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getValueElement.getValue.scale, true, true, true), comparator,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getComparatorElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), unit, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getUnitElement.getValueAsString, true, true, true), system,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getSystemElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), code, staticinvoke(class org.apache.spark.unsafe.types.UTF8String,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> StringType, fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getCodeElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), _value_canonicalized, if (isnull(staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true))) null else named_struct(value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(38,0),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true), true, true, true).unscaledValue, true, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true), scale, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true), true, true, true).scale), _code_canonicalized,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.lang.String), getCanonicalCode, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Age)) else null.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Age))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Age)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getCode, true, true, true), true, true, true)) AS abatementAge#153,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.DateTimeType)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.DateTimeType)) else null.getValueAsString, true, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS abatementDateTime#154, if (isnull(if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Period))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Period)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null)) null else named_struct(id, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Period))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Period)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getIdElement.getValueAsString, true, true, true), start,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Period)) else null.getStartElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), end, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Period))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Period)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getEndElement.getValueAsString, true, true, true)) AS abatementPeriod#155,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> if (isnull(if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null)) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getIdElement.getValueAsString, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), low, if (isnull(if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow)) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getIdElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), value, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.types.Decimal, DecimalType(32,6), apply, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getValueElement.getValue, true, true, true), value_scale,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class java.lang.Math, IntegerType, min, 6, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getValueElement.getValue.scale, true, true, true), comparator,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getComparatorElement.getValueAsString, true, true, true), unit,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getUnitElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), system, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getSystemElement.getValueAsString, true, true, true), code,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getCodeElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), _value_canonicalized, if (isnull(staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getCode, true, true, true))) null else named_struct(value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(38,0),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getCode, true, true, true), true, true, true).unscaledValue, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), scale, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.sql.types.FlexiDecimal, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getCode, true, true, true), true, true, true).scale),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _code_canonicalized, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class au.csiro.pathling.encoders.terminology.ucum.Ucum,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.lang.String), getCanonicalCode, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getLow.getValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getLow.getCode, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true)), high, if (isnull(if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh)) null else named_struct(id,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getIdElement.getValueAsString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true), value, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.types.Decimal, DecimalType(32,6), apply, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getValueElement.getValue, true, true, true), value_scale,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class java.lang.Math, IntegerType, min, 6, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getValueElement.getValue.scale, true, true, true), comparator,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getComparatorElement.getValueAsString, true, true, true), unit,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getUnitElement.getValueAsString, true, true, true), system,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getSystemElement.getValueAsString, true, true, true), code,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.unsafe.types.UTF8String, StringType,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fromString, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCodeElement.getValueAsString, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _value_canonicalized, if (isnull(staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCode, true, true, true))) null else named_struct(value,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class org.apache.spark.sql.types.Decimal, DecimalType(38,0),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> apply, staticinvoke(class au.csiro.pathling.sql.types.FlexiDecimal,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCode, true, true, true), true, true, true).unscaledValue, true,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true), scale, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.sql.types.FlexiDecimal, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), normalize, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> au.csiro.pathling.encoders.terminology.ucum.Ucum, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> java.math.BigDecimal), getCanonicalValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getValue, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getCode, true, true, true), true, true, true).scale),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _code_canonicalized, staticinvoke(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> staticinvoke(class au.csiro.pathling.encoders.terminology.ucum.Ucum,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ObjectType(class java.lang.String), getCanonicalCode, if</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (instanceof(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, class org.hl7.fhir.r4.model.Range))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> objectcast(assertnotnull(input[0, org.hl7.fhir.r4.model.Condition,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true]).getAbatement, ObjectType(class org.hl7.fhir.r4.model.Range)) else</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> null.getHigh.getValue, if (instanceof(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) objectcast(assertnotnull(input[0,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getCode, true, true, true),</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true))) AS abatementRange#156, ... 7 more fields] +- MapPartitions</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$3814/0x0000000101e46840@33d8074, obj#132:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition +- DeserializeToObject cast(line#4 as</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#131: java.lang.String +- Project [line#4] +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> SubqueryAlias condition_dd3f3bb2_58a4_4265_b14e_e53012b78a4c +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_dd3f3bb2_58a4_4265_b14e_e53012b78a4c`, [line#4]) +- Relation</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [line#4] text</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Run `sparklyr::spark_last_error()` to see the full Spark error (multiple lines)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> To use the previous style of error message set</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `options("sparklyr.simple.errors" = TRUE)`</span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>

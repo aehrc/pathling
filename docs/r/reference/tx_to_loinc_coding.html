@@ -95,20 +95,22 @@
 <span class="r-in"><span><span class="co"># Convert codes to LOINC codings.</span></span></span>
 <span class="r-in"><span><span class="co"># Equivalent to: tx_to_coding(CODE, "http://loinc.org")</span></span></span>
 <span class="r-in"><span><span class="va">condition_df</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">sparklyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>loincCoding <span class="op">=</span> <span class="op">!</span><span class="op">!</span><span class="fu">tx_to_loinc_coding</span><span class="op">(</span><span class="va">CODE</span><span class="op">)</span>, .keep <span class="op">=</span> <span class="st">'none'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source: spark&lt;?&gt; [?? x 1]</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    loincCoding     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> <span style="color: #949494;">&lt;named list [2]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ more rows</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `conditions`.`*` cannot be resolved. Did you mean one of the following?</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`conditions`.`CODE`, `conditions`.`STOP`, `conditions`.`START`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `conditions`.`PATIENT`, `conditions`.`ENCOUNTER`].; line 2 pos 2; 'Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ['conditions.*, CASE WHEN NOT isnull(CODE#18) THEN struct(col1, null, col2,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> cast(http://loinc.org as string), col3, cast(null as string), col4,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> cast(CODE#18 as string), col5, null, col6, null) END AS loincCoding#130] +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> SubqueryAlias conditions +- View (`conditions`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [START#14,STOP#15,PATIENT#16,ENCOUNTER#17,CODE#18,DESCRIPTION#19]) +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> LogicalRDD [START#14, STOP#15, PATIENT#16, ENCOUNTER#17, CODE#18,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> DESCRIPTION#19], false</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Run `sparklyr::spark_last_error()` to see the full Spark error (multiple lines)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> To use the previous style of error message set</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `options("sparklyr.simple.errors" = TRUE)`</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
 </code></pre></div>

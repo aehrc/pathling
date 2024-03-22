@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
-Sun Mar 17 09:45:42 UTC 2024:
-Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-018e-4bcd-7dbb-0000075761f0 
+Fri Mar 22 04:33:17 UTC 2024:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.14.2.0 - (1828579): instance a816c00e-018e-646f-458e-000005d95c10 
 on database directory memory:/home/runner/work/pathling/pathling/lib/R/target/docs/reference/databaseName=metastore_db with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@67424e82 
 Loaded from file:/home/runner/spark/spark-3.4.0-bin-hadoop3/jars/derby-10.14.2.0.jar
 java.vendor=Azul Systems, Inc.

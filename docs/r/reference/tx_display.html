@@ -96,20 +96,27 @@ Overrides the parameter `accept_language` in <code><a href="pathling_connect.htm
 <span class="r-in"><span>         <span class="va">id</span>, </span></span>
 <span class="r-in"><span>         display <span class="op">=</span> <span class="op">!</span><span class="op">!</span><span class="fu">tx_display</span><span class="op">(</span><span class="va">code</span><span class="op">[[</span><span class="st">'coding'</span><span class="op">]</span><span class="op">]</span><span class="op">[[</span><span class="fl">0</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, </span></span>
 <span class="r-in"><span>         .keep<span class="op">=</span><span class="st">'none'</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source: spark&lt;?&gt; [?? x 2]</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    id                                   display                       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                                <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                         </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> c879c300-7fdf-4b53-aa6a-a2b4a266b30c Viral sinusitis               </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> bb9c4fc1-795a-4492-b065-1f497fe18bb2 Type 2 diabetes mellitus      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> e620d7ee-6cfe-4f04-ba06-1d0b39f7624d Anaemia                       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> 0447de38-1f2a-411c-9fd2-a9c62ab1f221 Viral sinusitis               </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> 4025ceb3-04a6-41fb-8569-16a8dcce7ccc Prediabetes                   </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> 7ed34fb1-0bbf-4c41-a101-1316ec483aa7 Viral sinusitis               </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> 5ef84858-0480-4a34-8f43-fc962fe627b2 Miscarriage in first trimester</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> 5378726d-7f2b-4c83-9762-eaf385915fa7 Anaemia                       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> 31393667-dd7f-4c94-90c3-6cde75c67d3e Epidermal burn of skin        </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> 6464e20b-55ec-4685-be3e-55bc3b9602d4 Acute viral pharyngitis       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ more rows</span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `Condition_899fa880_5a8f_495c_b325_1852b9db5ec8`.`*` cannot be resolved. Did</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> you mean one of the following?</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`condition_899fa880_5a8f_495c_b325_1852b9db5ec8`.`id`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_899fa880_5a8f_495c_b325_1852b9db5ec8`.`_fid`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_899fa880_5a8f_495c_b325_1852b9db5ec8`.`code`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_899fa880_5a8f_495c_b325_1852b9db5ec8`.`meta`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_899fa880_5a8f_495c_b325_1852b9db5ec8`.`note`].; line 2 pos 2;</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 'Project ['Condition_899fa880_5a8f_495c_b325_1852b9db5ec8.*,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> display(code#25.coding[0], null) AS display#2186] +- SubqueryAlias</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> condition_899fa880_5a8f_495c_b325_1852b9db5ec8 +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_899fa880_5a8f_495c_b325_1852b9db5ec8`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,abatementString#38,recordedDate#39,recorder#40,asserter#41,stage#42,evidence#43,note#44,_fid#45,_extension#46])</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Relation</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,...</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 9 more fields] parquet</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Run `sparklyr::spark_last_error()` to see the full Spark error (multiple lines)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> To use the previous style of error message set</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `options("sparklyr.simple.errors" = TRUE)`</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
 </code></pre></div>
