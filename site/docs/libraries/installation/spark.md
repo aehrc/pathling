@@ -44,7 +44,7 @@ spark = (
     .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog",
-    )
+    ).getOrCreate()
 )
 
 pc = PathlingContext.create(spark)
