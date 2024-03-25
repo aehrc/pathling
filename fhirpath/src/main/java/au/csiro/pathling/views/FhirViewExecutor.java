@@ -124,23 +124,23 @@ public class FhirViewExecutor {
   }
 
   @Nonnull
-  private static SelectionX parseSelection(@Nonnull FhirView fhirView, Parser parser) {
+  private static SelectionX parseSelection(@Nonnull final FhirView fhirView,
+      @Nonnull final Parser parser) {
     final List<SelectionX> selectionComponents = toSelections(fhirView.getSelect(), parser);
     return new FromSelectionX(selectionComponents);
   }
 
   @Nonnull
-  private static Optional<SelectionX> parseWhere(@Nonnull FhirView fhirView, Parser parser) {
+  private static Optional<SelectionX> parseWhere(@Nonnull final FhirView fhirView,
+      @Nonnull final Parser parser) {
     final List<PrimitiveSelection> whereComponents = Optional.ofNullable(fhirView.getWhere())
         .stream().flatMap(List::stream)
         .map(WhereClause::getExpression)
         .map(parser::parse)
-        .map(fp -> new PrimitiveSelection(fp))
+        .map(PrimitiveSelection::new)
         .collect(Collectors.toUnmodifiableList());
 
-    final Optional<SelectionX> whereSelection =
-        Lists.optionalOf(whereComponents).map(ColumnSelection::new);
-    return whereSelection;
+    return Lists.optionalOf(whereComponents).map(ColumnSelection::new);
   }
 
 }
