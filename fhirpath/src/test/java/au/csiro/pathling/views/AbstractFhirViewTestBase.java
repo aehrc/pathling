@@ -338,7 +338,7 @@ abstract class AbstractFhirViewTestBase {
 
       // Create a new executor and build the query.
       final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
-          parameters.getSourceData(), Optional.ofNullable(terminologyServiceFactory));
+          parameters.getSourceData());
       return executor.buildQuery(view);
     });
   }

@@ -4,7 +4,6 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.utilities.Lists;
 import au.csiro.pathling.view.ColumnSelection;
 import au.csiro.pathling.view.ExecutionContext;
@@ -44,8 +43,7 @@ public class FhirViewExecutor {
   private final DataSource dataSource;
 
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
-      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset,
-      @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory) {
+      @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset) {
     this.fhirContext = fhirContext;
     this.sparkSession = sparkSession;
     this.dataSource = dataset;
@@ -99,15 +97,15 @@ public class FhirViewExecutor {
   @Nonnull
   private static SelectionX toSelection(@Nonnull final SelectClause select,
       @Nonnull final Parser parser) {
-    // TODO: remove the classes for each select type and just use SelectClause
-    if (select instanceof FromSelect) {
-      return new FromSelectionX(
-          selectionsFromSelectClause(select, parser));
+    if (select instanceof ColumnSelect) {
+      return new FromSelectionX(selectionsFromSelectClause(select, parser));
     } else if (select instanceof ForEachSelect) {
-      return new ForEachSelectionX(parser.parse(requireNonNull(select.getPath())),
+      final ForEachSelect forEachSelect = (ForEachSelect) select;
+      return new ForEachSelectionX(parser.parse(requireNonNull(forEachSelect.getPath())),
           selectionsFromSelectClause(select, parser), false);
     } else if (select instanceof ForEachOrNullSelect) {
-      return new ForEachSelectionX(parser.parse(requireNonNull(select.getPath())),
+      final ForEachOrNullSelect forEachOrNullSelect = (ForEachOrNullSelect) select;
+      return new ForEachSelectionX(parser.parse(requireNonNull(forEachOrNullSelect.getPath())),
           selectionsFromSelectClause(select, parser), true);
     } else {
       throw new IllegalStateException("Unknown select clause type: " + select.getClass());

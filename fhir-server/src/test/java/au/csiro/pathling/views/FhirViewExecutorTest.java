@@ -21,7 +21,6 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
-import java.util.Optional;
 import org.apache.spark.sql.SparkSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,8 +44,8 @@ class FhirViewExecutorTest {
 
   @BeforeEach
   void setUp() {
-    executor = new FhirViewExecutor(fhirContext, sparkSession, dataSource,
-        Optional.of(terminologyServiceFactory));
+    executor = new FhirViewExecutor(fhirContext, sparkSession, dataSource
+    );
   }
 
 }

@@ -18,7 +18,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class FromSelect extends SelectClause {
+public class ColumnSelect extends SelectClause {
 
   /**
    * Creates a scope for selection relative to a parent FHIRPath expression.

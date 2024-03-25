@@ -1,10 +1,8 @@
 package au.csiro.pathling.views;
 
-import com.google.gson.annotations.SerializedName;
 import java.util.List;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import lombok.Data;
 
@@ -20,26 +18,6 @@ import lombok.Data;
  */
 @Data
 public class FhirView {
-
-  /**
-   * Name of the view definition, must be in a database-friendly format.
-   *
-   * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.name">ViewDefinition.name</a>
-   */
-  @Nullable
-  @Pattern(regexp = "^[^_][A-Za-z][A-Za-z0-9_]+$")
-  String name;
-
-  /**
-   * Natural language description of the view definition.
-   *
-   * @see <a
-   * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.description">ViewDefinition.description</a>
-   */
-  @SerializedName("desc")
-  @Nullable
-  String description;
 
   /**
    * The FHIR resource that the view is based upon, e.g. 'Patient' or 'Observation'.

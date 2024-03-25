@@ -41,7 +41,7 @@ public class SelectClauseTypeAdapter extends TypeAdapter<SelectClause> {
     } else if (jsonObject.has("forEachOrNull")) {
       return gson.fromJson(jsonObject, ForEachOrNullSelect.class);
     } else {
-      return gson.fromJson(jsonObject, FromSelect.class);
+      return gson.fromJson(jsonObject, ColumnSelect.class);
     }
   }
 }

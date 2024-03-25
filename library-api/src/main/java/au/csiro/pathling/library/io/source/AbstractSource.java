@@ -69,8 +69,8 @@ public abstract class AbstractSource implements QueryableDataSource {
         context.getFhirContext(), context.getSpark(), dataSource,
         Optional.of(context.getTerminologyServiceFactory()));
     final FhirViewExecutor viewExecutor = new FhirViewExecutor(context.getFhirContext(),
-        context.getSpark(), dataSource,
-        Optional.of(context.getTerminologyServiceFactory()));
+        context.getSpark(), dataSource
+    );
 
     // Build the dispatcher using the executors.
     return new QueryDispatcher(aggregateExecutor, extractExecutor, viewExecutor);
