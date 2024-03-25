@@ -114,100 +114,100 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a`.`*` cannot be resolved. Did</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933`.`*` cannot be resolved. Did</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> you mean one of the following?</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [`sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a`.`gender`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a`.`givenName`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a`.`id.count()`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a`.`patientCount`].; line 1</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933`.`gender`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933`.`givenName`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933`.`id.count()`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933`.`patientCount`].; line 1</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> pos 7; 'GlobalLimit 11 +- 'LocalLimit 11 +- 'Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ['sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a.*] +- SubqueryAlias</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a +- View</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> (`sparklyr_tmp_93c050b5_a0ff_4edd_bae6_7c348c8ea15a`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ['sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933.*] +- SubqueryAlias</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933 +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`sparklyr_tmp_d8b89cdb_f4da_4c4a_8c38_d38d8e373933`,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [gender#1720,givenName#1721,patientCount#1722L,id.count()#1723L]) +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> Deduplicate [gender#1720, givenName#1721, patientCount#1722L, id.count()#1723L]</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_sxnxq3#921 AS gender#1720, _xyc9ri#922 AS givenName#1721,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kg3629#1175L AS patientCount#1722L, _81r7cf#1435L AS id.count()#1723L] +- Join</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> LeftOuter, ((_22prs3#1480 &lt;=&gt; _sxnxq3#921) AND (_8waj2x#1525 &lt;=&gt; _xyc9ri#922))</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> :- Project [_tbrhgs#1008, _4r396k#1010, _t0yt9g#1012, _744f08#1014,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#1016, _jle3ln#1018, _mmmy9q#1020, _yjyo0m#1022, _kh3we1#1024,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _2v1dqm#1026, _n9kl8h#1028, _6y7cg0#1030, _nqmadx#1032, _pcnsbr#1034,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#1036, _6fq1s8#1038, _bqwo7p#1040, _doo1p2#1042, _v2648a#1044,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yvg1uf#1046, _wjmylw#1048, _mumucb#1050, _x5wpkq#1052, _u92xqv#1054, ... 19</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> more fields] : +- Project [_sxnxq3#921, _xyc9ri#922, _tbrhgs#1008,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _4r396k#1010, _t0yt9g#1012, _744f08#1014, _8kiflg#1016, _jle3ln#1018,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mmmy9q#1020, _yjyo0m#1022, _kh3we1#1024, _2v1dqm#1026, _n9kl8h#1028,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#1030, _nqmadx#1032, _pcnsbr#1034, _9rkgwr#1036, _6fq1s8#1038,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#1040, _doo1p2#1042, _v2648a#1044, _yvg1uf#1046, _wjmylw#1048,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mumucb#1050, ... 21 more fields] : +- Project [_sxnxq3#921, _xyc9ri#922,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _tbrhgs#1008, _4r396k#1010, _t0yt9g#1012, _744f08#1014, _8kiflg#1016,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#1018, _mmmy9q#1020, _yjyo0m#1022, _kh3we1#1024, _2v1dqm#1026,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#1028, _6y7cg0#1030, _nqmadx#1032, _pcnsbr#1034, _9rkgwr#1036,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6fq1s8#1038, _bqwo7p#1040, _doo1p2#1042, _v2648a#1044, _yvg1uf#1046,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#1048, _mumucb#1050, ... 20 more fields] : +- Project [_sxnxq3#921,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _xyc9ri#922, _tbrhgs#1008, _4r396k#1010, _t0yt9g#1012, _744f08#1014,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#1016, _jle3ln#1018, _mmmy9q#1020, _yjyo0m#1022, _kh3we1#1024,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _2v1dqm#1026, _n9kl8h#1028, _6y7cg0#1030, _nqmadx#1032, _pcnsbr#1034,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#1036, _6fq1s8#1038, _bqwo7p#1040, _doo1p2#1042, _v2648a#1044,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yvg1uf#1046, _wjmylw#1048, _mumucb#1050, ... 19 more fields] : +- Aggregate</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_sxnxq3#921, _xyc9ri#922], [_sxnxq3#921, _xyc9ri#922, first(_tbrhgs#186, true)</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _tbrhgs#1008, first(_4r396k#187, true) AS _4r396k#1010, first(_t0yt9g#188,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _t0yt9g#1012, first(_744f08#189, true) AS _744f08#1014,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_8kiflg#190, true) AS _8kiflg#1016, first(_jle3ln#191, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#1018, first(_mmmy9q#192, true) AS _mmmy9q#1020, first(_yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _yjyo0m#1022, first(_kh3we1#194, true) AS _kh3we1#1024,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_2v1dqm#195, true) AS _2v1dqm#1026, first(_n9kl8h#196, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#1028, first(_6y7cg0#197, true) AS _6y7cg0#1030, first(_nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _nqmadx#1032, first(_pcnsbr#199, true) AS _pcnsbr#1034,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_9rkgwr#200, true) AS _9rkgwr#1036, first(_6fq1s8#201, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6fq1s8#1038, first(_bqwo7p#202, true) AS _bqwo7p#1040, first(_doo1p2#203,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _doo1p2#1042, first(_v2648a#204, true) AS _v2648a#1044,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_yvg1uf#205, true) AS _yvg1uf#1046, first(_wjmylw#206, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#1048, first(_mumucb#207, true) AS _mumucb#1050, ... 19 more fields] :</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _u92xqv#233, ... 18 more fields] : +- Project [_tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, _u92xqv#233, ... 17 more fields] : +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Filter _fwx7hx#287: boolean : +- Join RightOuter, (_v4iu4h#773 &lt;=&gt; _wkf5pi#185)</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> : :- Project [_tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _u92xqv#233, ... 3 more fields] : : +- Project [_wkf5pi#185, _tbrhgs#186,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 4 more fields] : : +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _x5wpkq#208, ... 3 more fields] : : +- Project [_wkf5pi#185, _tbrhgs#186,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 2 more fields] : : +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _x5wpkq#208, CASE WHEN isnull(_wkf5pi#185) THEN cast(null as string) ELSE</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#196 END AS _u92xqv#233] : : +- Project [id#136 AS _wkf5pi#185,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> id_versioned#137 AS _tbrhgs#186, meta#138 AS _4r396k#187, implicitRules#139 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, language#140 AS _744f08#189, text#141 AS _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> identifier#142 AS _jle3ln#191, active#143 AS _mmmy9q#192, name#144 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yjyo0m#193, telecom#145 AS _kh3we1#194, gender#146 AS _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _n9kl8h#196, deceasedBoolean#148 AS _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _nqmadx#198, address#150 AS _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _9rkgwr#200, multipleBirthBoolean#152 AS _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _v2648a#204, communication#156 AS _yvg1uf#205, generalPractitioner#157 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208]</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_b03x48#921 AS gender#1720, _drqzht#922 AS givenName#1721,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _lg61bx#1175L AS patientCount#1722L, _qe07me#1435L AS id.count()#1723L] +- Join</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> LeftOuter, ((_xo8yl0#1480 &lt;=&gt; _b03x48#921) AND (_vq06fg#1525 &lt;=&gt; _drqzht#922))</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> :- Project [_r6n3id#1008, _txtkut#1010, _3bznu0#1012, _5xoqex#1014,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#1016, _khyn1p#1018, _hub6nl#1020, _wd7yla#1022, _l2jbh7#1024,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _szc9ma#1026, _ksgwpn#1028, _cewlq2#1030, _wmxz8u#1032, _2blbrj#1034,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#1036, _32sduh#1038, _er2j4z#1040, _hudyxg#1042, _mlvlpv#1044,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _uxo33f#1046, _7tdbc0#1048, _6kygcx#1050, _r6dwj7#1052, _rjg5iv#1054, ... 19</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> more fields] : +- Project [_b03x48#921, _drqzht#922, _r6n3id#1008,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _txtkut#1010, _3bznu0#1012, _5xoqex#1014, _2gj9ce#1016, _khyn1p#1018,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hub6nl#1020, _wd7yla#1022, _l2jbh7#1024, _szc9ma#1026, _ksgwpn#1028,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#1030, _wmxz8u#1032, _2blbrj#1034, _aex91i#1036, _32sduh#1038,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#1040, _hudyxg#1042, _mlvlpv#1044, _uxo33f#1046, _7tdbc0#1048,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _6kygcx#1050, ... 21 more fields] : +- Project [_b03x48#921, _drqzht#922,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6n3id#1008, _txtkut#1010, _3bznu0#1012, _5xoqex#1014, _2gj9ce#1016,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#1018, _hub6nl#1020, _wd7yla#1022, _l2jbh7#1024, _szc9ma#1026,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#1028, _cewlq2#1030, _wmxz8u#1032, _2blbrj#1034, _aex91i#1036,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _32sduh#1038, _er2j4z#1040, _hudyxg#1042, _mlvlpv#1044, _uxo33f#1046,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#1048, _6kygcx#1050, ... 20 more fields] : +- Project [_b03x48#921,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _drqzht#922, _r6n3id#1008, _txtkut#1010, _3bznu0#1012, _5xoqex#1014,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#1016, _khyn1p#1018, _hub6nl#1020, _wd7yla#1022, _l2jbh7#1024,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _szc9ma#1026, _ksgwpn#1028, _cewlq2#1030, _wmxz8u#1032, _2blbrj#1034,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#1036, _32sduh#1038, _er2j4z#1040, _hudyxg#1042, _mlvlpv#1044,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _uxo33f#1046, _7tdbc0#1048, _6kygcx#1050, ... 19 more fields] : +- Aggregate</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_b03x48#921, _drqzht#922], [_b03x48#921, _drqzht#922, first(_r6n3id#186, true)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _r6n3id#1008, first(_txtkut#187, true) AS _txtkut#1010, first(_3bznu0#188,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _3bznu0#1012, first(_5xoqex#189, true) AS _5xoqex#1014,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_2gj9ce#190, true) AS _2gj9ce#1016, first(_khyn1p#191, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#1018, first(_hub6nl#192, true) AS _hub6nl#1020, first(_wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _wd7yla#1022, first(_l2jbh7#194, true) AS _l2jbh7#1024,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_szc9ma#195, true) AS _szc9ma#1026, first(_ksgwpn#196, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#1028, first(_cewlq2#197, true) AS _cewlq2#1030, first(_wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _wmxz8u#1032, first(_2blbrj#199, true) AS _2blbrj#1034,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_aex91i#200, true) AS _aex91i#1036, first(_32sduh#201, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _32sduh#1038, first(_er2j4z#202, true) AS _er2j4z#1040, first(_hudyxg#203,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _hudyxg#1042, first(_mlvlpv#204, true) AS _mlvlpv#1044,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_uxo33f#205, true) AS _uxo33f#1046, first(_7tdbc0#206, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#1048, first(_6kygcx#207, true) AS _6kygcx#1050, ... 19 more fields] :</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _rjg5iv#233, ... 18 more fields] : +- Project [_r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, _rjg5iv#233, ... 17 more fields] : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Filter _sf2601#287: boolean : +- Join RightOuter, (_ep6xfg#773 &lt;=&gt; _dy3fhr#185)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> : :- Project [_r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _rjg5iv#233, ... 3 more fields] : : +- Project [_dy3fhr#185, _r6n3id#186,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 4 more fields] : : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6dwj7#208, ... 3 more fields] : : +- Project [_dy3fhr#185, _r6n3id#186,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 2 more fields] : : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6dwj7#208, CASE WHEN isnull(_dy3fhr#185) THEN cast(null as string) ELSE</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#196 END AS _rjg5iv#233] : : +- Project [id#136 AS _dy3fhr#185,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> id_versioned#137 AS _r6n3id#186, meta#138 AS _txtkut#187, implicitRules#139 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, language#140 AS _5xoqex#189, text#141 AS _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> identifier#142 AS _khyn1p#191, active#143 AS _hub6nl#192, name#144 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wd7yla#193, telecom#145 AS _l2jbh7#194, gender#146 AS _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _ksgwpn#196, deceasedBoolean#148 AS _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _wmxz8u#198, address#150 AS _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _aex91i#200, multipleBirthBoolean#152 AS _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _er2j4z#202, photo#154 AS _hudyxg#203, contact#155</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _mlvlpv#204, communication#156 AS _uxo33f#205, generalPractitioner#157 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208]</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> : : +- SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -938,63 +938,63 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] : : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient : : +- DeserializeToObject cast(value#105 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String : : +- Relation [value#105] text :</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_6krydc#369, _w34pmb#370, _j9c71b#397, _nmjdi7#398, _v9u07l#459,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _63gjq8#460, _t32gcx#491, _txtfql#492, _xir0vj#632, _q14x2u#315, _mrbdg#525,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wkf5pi#185] : +- Join RightOuter, (_xir0vj#632 &lt;=&gt; _wkf5pi#185) : :- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, _6krydc#369,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 8 more fields] : : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 9 more fields] : : +- Filter</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> isnotnull(_txtfql#492) : : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 8 more fields] : : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 6 more fields] : : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 6 more fields] : : +- Generate</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> posexplode(_nmjdi7#398.given), true, [index#427, value#428] : : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 4 more fields] : : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 2 more fields] : : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 2 more fields] : : +- Generate posexplode(CASE WHEN isnull(_wkf5pi#185)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_cqkjg5#369, _bc6g2m#370, _58tnzs#397, _pcoief#398, _svb73s#459,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _guzncw#460, _styo7f#491, _pblo77#492, _5g6p72#632, _fltldf#315, _of6sl#525,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _dy3fhr#185] : +- Join RightOuter, (_5g6p72#632 &lt;=&gt; _dy3fhr#185) : :- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, _cqkjg5#369,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 8 more fields] : : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 9 more fields] : : +- Filter</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> isnotnull(_pblo77#492) : : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 8 more fields] : : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 6 more fields] : : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 6 more fields] : : +- Generate</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> posexplode(_pcoief#398.given), true, [index#427, value#428] : : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 4 more fields] : : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 2 more fields] : : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 2 more fields] : : +- Generate posexplode(CASE WHEN isnull(_dy3fhr#185)</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> THEN cast(null as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> array&lt;struct&lt;id:string,use:string,text:string,family:string,given:array&lt;string&gt;,prefix:array&lt;string&gt;,suffix:array&lt;string&gt;,period:struct&lt;id:string,start:string,end:string&gt;&gt;&gt;)</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ELSE _yjyo0m#193 END), true, [index#341, value#342] : : +- Project [id#136 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wkf5pi#185, id_versioned#137 AS _tbrhgs#186, meta#138 AS _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> implicitRules#139 AS _t0yt9g#188, language#140 AS _744f08#189, text#141 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#190, identifier#142 AS _jle3ln#191, active#143 AS _mmmy9q#192, name#144</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _yjyo0m#193, telecom#145 AS _kh3we1#194, gender#146 AS _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _n9kl8h#196, deceasedBoolean#148 AS _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _nqmadx#198, address#150 AS _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _9rkgwr#200, multipleBirthBoolean#152 AS _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _v2648a#204, communication#156 AS _yvg1uf#205, generalPractitioner#157 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208]</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ELSE _wd7yla#193 END), true, [index#341, value#342] : : +- Project [id#136 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _dy3fhr#185, id_versioned#137 AS _r6n3id#186, meta#138 AS _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> implicitRules#139 AS _3bznu0#188, language#140 AS _5xoqex#189, text#141 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#190, identifier#142 AS _khyn1p#191, active#143 AS _hub6nl#192, name#144</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _wd7yla#193, telecom#145 AS _l2jbh7#194, gender#146 AS _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _ksgwpn#196, deceasedBoolean#148 AS _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _wmxz8u#198, address#150 AS _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _aex91i#200, multipleBirthBoolean#152 AS _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _er2j4z#202, photo#154 AS _hudyxg#203, contact#155</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _mlvlpv#204, communication#156 AS _uxo33f#205, generalPractitioner#157 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208]</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> : : +- SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -1725,36 +1725,36 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] : : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient : : +- DeserializeToObject cast(value#841 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String : : +- Relation [value#841] text :</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_q14x2u#315, _mrbdg#525, _wkf5pi#185] : +- Join RightOuter,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> (_mrbdg#525 &lt;=&gt; _wkf5pi#185) : :- Project [_tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, _q14x2u#315, _mrbdg#525] : : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 2 more fields] : : +- Filter isnotnull(_q14x2u#315) : : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> CASE WHEN isnull(_wkf5pi#185) THEN cast(null as string) ELSE _2v1dqm#195 END AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _q14x2u#315] : : +- Project [id#136 AS _wkf5pi#185, id_versioned#137 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _tbrhgs#186, meta#138 AS _4r396k#187, implicitRules#139 AS _t0yt9g#188,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _744f08#189, text#141 AS _8kiflg#190, identifier#142 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, active#143 AS _mmmy9q#192, name#144 AS _yjyo0m#193, telecom#145 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, gender#146 AS _2v1dqm#195, birthDate#147 AS _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _6y7cg0#197, deceasedDateTime#149 AS _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _pcnsbr#199, maritalStatus#151 AS _9rkgwr#200,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _6fq1s8#201, multipleBirthInteger#153 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155 AS _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _yvg1uf#205, generalPractitioner#157 AS _wjmylw#206,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208] : : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_fltldf#315, _of6sl#525, _dy3fhr#185] : +- Join RightOuter,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (_of6sl#525 &lt;=&gt; _dy3fhr#185) : :- Project [_r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, _fltldf#315, _of6sl#525] : : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 2 more fields] : : +- Filter isnotnull(_fltldf#315) : : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> CASE WHEN isnull(_dy3fhr#185) THEN cast(null as string) ELSE _szc9ma#195 END AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _fltldf#315] : : +- Project [id#136 AS _dy3fhr#185, id_versioned#137 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6n3id#186, meta#138 AS _txtkut#187, implicitRules#139 AS _3bznu0#188,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _5xoqex#189, text#141 AS _2gj9ce#190, identifier#142 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, active#143 AS _hub6nl#192, name#144 AS _wd7yla#193, telecom#145 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, gender#146 AS _szc9ma#195, birthDate#147 AS _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _cewlq2#197, deceasedDateTime#149 AS _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _2blbrj#199, maritalStatus#151 AS _aex91i#200,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _32sduh#201, multipleBirthInteger#153 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, photo#154 AS _hudyxg#203, contact#155 AS _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _uxo33f#205, generalPractitioner#157 AS _7tdbc0#206,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208] : : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -2485,20 +2485,20 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] : : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient : : +- DeserializeToObject cast(value#701 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String : : +- Relation [value#701] text :</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_wkf5pi#185] : +- Project [id#136 AS _wkf5pi#185, id_versioned#137</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _tbrhgs#186, meta#138 AS _4r396k#187, implicitRules#139 AS _t0yt9g#188,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _744f08#189, text#141 AS _8kiflg#190, identifier#142 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, active#143 AS _mmmy9q#192, name#144 AS _yjyo0m#193, telecom#145 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, gender#146 AS _2v1dqm#195, birthDate#147 AS _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _6y7cg0#197, deceasedDateTime#149 AS _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _pcnsbr#199, maritalStatus#151 AS _9rkgwr#200,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _6fq1s8#201, multipleBirthInteger#153 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155 AS _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _yvg1uf#205, generalPractitioner#157 AS _wjmylw#206,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208] : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> +- Project [_dy3fhr#185] : +- Project [id#136 AS _dy3fhr#185, id_versioned#137</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _r6n3id#186, meta#138 AS _txtkut#187, implicitRules#139 AS _3bznu0#188,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _5xoqex#189, text#141 AS _2gj9ce#190, identifier#142 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, active#143 AS _hub6nl#192, name#144 AS _wd7yla#193, telecom#145 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, gender#146 AS _szc9ma#195, birthDate#147 AS _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _cewlq2#197, deceasedDateTime#149 AS _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _2blbrj#199, maritalStatus#151 AS _aex91i#200,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _32sduh#201, multipleBirthInteger#153 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, photo#154 AS _hudyxg#203, contact#155 AS _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _uxo33f#205, generalPractitioner#157 AS _7tdbc0#206,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208] : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -3229,78 +3229,78 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient : +- DeserializeToObject cast(value#578 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String : +- Relation [value#578] text +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_sxnxq3#921, _xyc9ri#922, _9jxtu#1346, _81r7cf#1435L] +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_sxnxq3#921, _xyc9ri#922, _tbrhgs#1266, _4r396k#1268, _t0yt9g#1270,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _744f08#1272, _8kiflg#1274, _jle3ln#1276, _mmmy9q#1278, _yjyo0m#1280,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#1282, _2v1dqm#1284, _n9kl8h#1286, _6y7cg0#1288, _nqmadx#1290,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _pcnsbr#1292, _9rkgwr#1294, _6fq1s8#1296, _bqwo7p#1298, _doo1p2#1300,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _v2648a#1302, _yvg1uf#1304, _wjmylw#1306, _mumucb#1308, ... 20 more fields] +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Aggregate [_sxnxq3#921, _xyc9ri#922], [_sxnxq3#921, _xyc9ri#922,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_tbrhgs#186, true) AS _tbrhgs#1266, first(_4r396k#187, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _4r396k#1268, first(_t0yt9g#188, true) AS _t0yt9g#1270, first(_744f08#189,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _744f08#1272, first(_8kiflg#190, true) AS _8kiflg#1274,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_jle3ln#191, true) AS _jle3ln#1276, first(_mmmy9q#192, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mmmy9q#1278, first(_yjyo0m#193, true) AS _yjyo0m#1280, first(_kh3we1#194,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _kh3we1#1282, first(_2v1dqm#195, true) AS _2v1dqm#1284,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_n9kl8h#196, true) AS _n9kl8h#1286, first(_6y7cg0#197, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#1288, first(_nqmadx#198, true) AS _nqmadx#1290, first(_pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _pcnsbr#1292, first(_9rkgwr#200, true) AS _9rkgwr#1294,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_6fq1s8#201, true) AS _6fq1s8#1296, first(_bqwo7p#202, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#1298, first(_doo1p2#203, true) AS _doo1p2#1300, first(_v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _v2648a#1302, first(_yvg1uf#205, true) AS _yvg1uf#1304,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> first(_wjmylw#206, true) AS _wjmylw#1306, first(_mumucb#207, true) AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mumucb#1308, ... 20 more fields] +- Project [_tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, _u92xqv#233, ... 19 more fields] +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _u92xqv#233, ... 18 more fields] +- Project [_tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, _u92xqv#233, ... 17 more fields] +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Filter _fwx7hx#287: boolean +- Join RightOuter, (_v4iu4h#773 &lt;=&gt; _wkf5pi#185)</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> :- Project [_tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _u92xqv#233, ... 3 more fields] : +- Project [_wkf5pi#185, _tbrhgs#186,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 4 more fields] : +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _x5wpkq#208, ... 3 more fields] : +- Project [_wkf5pi#185, _tbrhgs#186,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 2 more fields] : +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _x5wpkq#208, CASE WHEN isnull(_wkf5pi#185) THEN cast(null as string) ELSE</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _n9kl8h#196 END AS _u92xqv#233] : +- Project [id#136 AS _wkf5pi#185,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> id_versioned#137 AS _tbrhgs#186, meta#138 AS _4r396k#187, implicitRules#139 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, language#140 AS _744f08#189, text#141 AS _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> identifier#142 AS _jle3ln#191, active#143 AS _mmmy9q#192, name#144 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _yjyo0m#193, telecom#145 AS _kh3we1#194, gender#146 AS _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _n9kl8h#196, deceasedBoolean#148 AS _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _nqmadx#198, address#150 AS _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _9rkgwr#200, multipleBirthBoolean#152 AS _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _v2648a#204, communication#156 AS _yvg1uf#205, generalPractitioner#157 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208]</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_b03x48#921, _drqzht#922, _ytq26k#1346, _qe07me#1435L] +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_b03x48#921, _drqzht#922, _r6n3id#1266, _txtkut#1268, _3bznu0#1270,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _5xoqex#1272, _2gj9ce#1274, _khyn1p#1276, _hub6nl#1278, _wd7yla#1280,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#1282, _szc9ma#1284, _ksgwpn#1286, _cewlq2#1288, _wmxz8u#1290,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2blbrj#1292, _aex91i#1294, _32sduh#1296, _er2j4z#1298, _hudyxg#1300,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _mlvlpv#1302, _uxo33f#1304, _7tdbc0#1306, _6kygcx#1308, ... 20 more fields] +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Aggregate [_b03x48#921, _drqzht#922], [_b03x48#921, _drqzht#922,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_r6n3id#186, true) AS _r6n3id#1266, first(_txtkut#187, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _txtkut#1268, first(_3bznu0#188, true) AS _3bznu0#1270, first(_5xoqex#189,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _5xoqex#1272, first(_2gj9ce#190, true) AS _2gj9ce#1274,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_khyn1p#191, true) AS _khyn1p#1276, first(_hub6nl#192, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hub6nl#1278, first(_wd7yla#193, true) AS _wd7yla#1280, first(_l2jbh7#194,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _l2jbh7#1282, first(_szc9ma#195, true) AS _szc9ma#1284,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_ksgwpn#196, true) AS _ksgwpn#1286, first(_cewlq2#197, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#1288, first(_wmxz8u#198, true) AS _wmxz8u#1290, first(_2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _2blbrj#1292, first(_aex91i#200, true) AS _aex91i#1294,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_32sduh#201, true) AS _32sduh#1296, first(_er2j4z#202, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#1298, first(_hudyxg#203, true) AS _hudyxg#1300, first(_mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> true) AS _mlvlpv#1302, first(_uxo33f#205, true) AS _uxo33f#1304,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> first(_7tdbc0#206, true) AS _7tdbc0#1306, first(_6kygcx#207, true) AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _6kygcx#1308, ... 20 more fields] +- Project [_r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, _rjg5iv#233, ... 19 more fields] +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _rjg5iv#233, ... 18 more fields] +- Project [_r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, _rjg5iv#233, ... 17 more fields] +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Filter _sf2601#287: boolean +- Join RightOuter, (_ep6xfg#773 &lt;=&gt; _dy3fhr#185)</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> :- Project [_r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _rjg5iv#233, ... 3 more fields] : +- Project [_dy3fhr#185, _r6n3id#186,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 4 more fields] : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6dwj7#208, ... 3 more fields] : +- Project [_dy3fhr#185, _r6n3id#186,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 2 more fields] : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6dwj7#208, CASE WHEN isnull(_dy3fhr#185) THEN cast(null as string) ELSE</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _ksgwpn#196 END AS _rjg5iv#233] : +- Project [id#136 AS _dy3fhr#185,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> id_versioned#137 AS _r6n3id#186, meta#138 AS _txtkut#187, implicitRules#139 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, language#140 AS _5xoqex#189, text#141 AS _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> identifier#142 AS _khyn1p#191, active#143 AS _hub6nl#192, name#144 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wd7yla#193, telecom#145 AS _l2jbh7#194, gender#146 AS _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _ksgwpn#196, deceasedBoolean#148 AS _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _wmxz8u#198, address#150 AS _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _aex91i#200, multipleBirthBoolean#152 AS _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _er2j4z#202, photo#154 AS _hudyxg#203, contact#155</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _mlvlpv#204, communication#156 AS _uxo33f#205, generalPractitioner#157 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208]</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> : +- SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -4031,63 +4031,63 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient : +- DeserializeToObject cast(value#1618 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String : +- Relation [value#1618] text +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_6krydc#369, _w34pmb#370, _j9c71b#397, _nmjdi7#398, _v9u07l#459,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _63gjq8#460, _t32gcx#491, _txtfql#492, _xir0vj#632, _q14x2u#315, _mrbdg#525,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wkf5pi#185] +- Join RightOuter, (_xir0vj#632 &lt;=&gt; _wkf5pi#185) :- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, _6krydc#369,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 8 more fields] : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 9 more fields] : +- Filter</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> isnotnull(_txtfql#492) : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 8 more fields] : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 6 more fields] : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 6 more fields] : +- Generate</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> posexplode(_nmjdi7#398.given), true, [index#427, value#428] : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 4 more fields] : +- Project [_wkf5pi#185, _tbrhgs#186, _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 2 more fields] : +- Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [_wkf5pi#185, _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ... 2 more fields] : +- Generate posexplode(CASE WHEN isnull(_wkf5pi#185) THEN</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_cqkjg5#369, _bc6g2m#370, _58tnzs#397, _pcoief#398, _svb73s#459,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _guzncw#460, _styo7f#491, _pblo77#492, _5g6p72#632, _fltldf#315, _of6sl#525,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _dy3fhr#185] +- Join RightOuter, (_5g6p72#632 &lt;=&gt; _dy3fhr#185) :- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, _cqkjg5#369,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 8 more fields] : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 9 more fields] : +- Filter</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> isnotnull(_pblo77#492) : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 8 more fields] : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 6 more fields] : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 6 more fields] : +- Generate</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> posexplode(_pcoief#398.given), true, [index#427, value#428] : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 4 more fields] : +- Project [_dy3fhr#185, _r6n3id#186, _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 2 more fields] : +- Project</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [_dy3fhr#185, _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ... 2 more fields] : +- Generate posexplode(CASE WHEN isnull(_dy3fhr#185) THEN</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> cast(null as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> array&lt;struct&lt;id:string,use:string,text:string,family:string,given:array&lt;string&gt;,prefix:array&lt;string&gt;,suffix:array&lt;string&gt;,period:struct&lt;id:string,start:string,end:string&gt;&gt;&gt;)</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ELSE _yjyo0m#193 END), true, [index#341, value#342] : +- Project [id#136 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wkf5pi#185, id_versioned#137 AS _tbrhgs#186, meta#138 AS _4r396k#187,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> implicitRules#139 AS _t0yt9g#188, language#140 AS _744f08#189, text#141 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _8kiflg#190, identifier#142 AS _jle3ln#191, active#143 AS _mmmy9q#192, name#144</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _yjyo0m#193, telecom#145 AS _kh3we1#194, gender#146 AS _2v1dqm#195,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _n9kl8h#196, deceasedBoolean#148 AS _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _nqmadx#198, address#150 AS _pcnsbr#199,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _9rkgwr#200, multipleBirthBoolean#152 AS _6fq1s8#201,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> AS _v2648a#204, communication#156 AS _yvg1uf#205, generalPractitioner#157 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _wjmylw#206, managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208]</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ELSE _wd7yla#193 END), true, [index#341, value#342] : +- Project [id#136 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _dy3fhr#185, id_versioned#137 AS _r6n3id#186, meta#138 AS _txtkut#187,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> implicitRules#139 AS _3bznu0#188, language#140 AS _5xoqex#189, text#141 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _2gj9ce#190, identifier#142 AS _khyn1p#191, active#143 AS _hub6nl#192, name#144</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _wd7yla#193, telecom#145 AS _l2jbh7#194, gender#146 AS _szc9ma#195,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> birthDate#147 AS _ksgwpn#196, deceasedBoolean#148 AS _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedDateTime#149 AS _wmxz8u#198, address#150 AS _2blbrj#199,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> maritalStatus#151 AS _aex91i#200, multipleBirthBoolean#152 AS _32sduh#201,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthInteger#153 AS _er2j4z#202, photo#154 AS _hudyxg#203, contact#155</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> AS _mlvlpv#204, communication#156 AS _uxo33f#205, generalPractitioner#157 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _7tdbc0#206, managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208]</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> : +- SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -4818,36 +4818,36 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient : +- DeserializeToObject cast(value#1619 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String : +- Relation [value#1619] text +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_q14x2u#315, _mrbdg#525, _wkf5pi#185] +- Join RightOuter, (_mrbdg#525</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> &lt;=&gt; _wkf5pi#185) :- Project [_tbrhgs#186, _4r396k#187, _t0yt9g#188,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _744f08#189, _8kiflg#190, _jle3ln#191, _mmmy9q#192, _yjyo0m#193, _kh3we1#194,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _2v1dqm#195, _n9kl8h#196, _6y7cg0#197, _nqmadx#198, _pcnsbr#199, _9rkgwr#200,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _6fq1s8#201, _bqwo7p#202, _doo1p2#203, _v2648a#204, _yvg1uf#205, _wjmylw#206,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mumucb#207, _x5wpkq#208, _q14x2u#315, _mrbdg#525] : +- Project [_wkf5pi#185,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, ... 2 more</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> fields] : +- Filter isnotnull(_q14x2u#315) : +- Project [_wkf5pi#185,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _tbrhgs#186, _4r396k#187, _t0yt9g#188, _744f08#189, _8kiflg#190, _jle3ln#191,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _mmmy9q#192, _yjyo0m#193, _kh3we1#194, _2v1dqm#195, _n9kl8h#196, _6y7cg0#197,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _nqmadx#198, _pcnsbr#199, _9rkgwr#200, _6fq1s8#201, _bqwo7p#202, _doo1p2#203,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _v2648a#204, _yvg1uf#205, _wjmylw#206, _mumucb#207, _x5wpkq#208, CASE WHEN</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> isnull(_wkf5pi#185) THEN cast(null as string) ELSE _2v1dqm#195 END AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _q14x2u#315] : +- Project [id#136 AS _wkf5pi#185, id_versioned#137 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _tbrhgs#186, meta#138 AS _4r396k#187, implicitRules#139 AS _t0yt9g#188,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _744f08#189, text#141 AS _8kiflg#190, identifier#142 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, active#143 AS _mmmy9q#192, name#144 AS _yjyo0m#193, telecom#145 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, gender#146 AS _2v1dqm#195, birthDate#147 AS _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _6y7cg0#197, deceasedDateTime#149 AS _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _pcnsbr#199, maritalStatus#151 AS _9rkgwr#200,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _6fq1s8#201, multipleBirthInteger#153 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155 AS _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _yvg1uf#205, generalPractitioner#157 AS _wjmylw#206,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208] : +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_fltldf#315, _of6sl#525, _dy3fhr#185] +- Join RightOuter, (_of6sl#525</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> &lt;=&gt; _dy3fhr#185) :- Project [_r6n3id#186, _txtkut#187, _3bznu0#188,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _5xoqex#189, _2gj9ce#190, _khyn1p#191, _hub6nl#192, _wd7yla#193, _l2jbh7#194,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _szc9ma#195, _ksgwpn#196, _cewlq2#197, _wmxz8u#198, _2blbrj#199, _aex91i#200,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _32sduh#201, _er2j4z#202, _hudyxg#203, _mlvlpv#204, _uxo33f#205, _7tdbc0#206,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _6kygcx#207, _r6dwj7#208, _fltldf#315, _of6sl#525] : +- Project [_dy3fhr#185,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, ... 2 more</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> fields] : +- Filter isnotnull(_fltldf#315) : +- Project [_dy3fhr#185,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6n3id#186, _txtkut#187, _3bznu0#188, _5xoqex#189, _2gj9ce#190, _khyn1p#191,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _hub6nl#192, _wd7yla#193, _l2jbh7#194, _szc9ma#195, _ksgwpn#196, _cewlq2#197,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _wmxz8u#198, _2blbrj#199, _aex91i#200, _32sduh#201, _er2j4z#202, _hudyxg#203,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _mlvlpv#204, _uxo33f#205, _7tdbc0#206, _6kygcx#207, _r6dwj7#208, CASE WHEN</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> isnull(_dy3fhr#185) THEN cast(null as string) ELSE _szc9ma#195 END AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _fltldf#315] : +- Project [id#136 AS _dy3fhr#185, id_versioned#137 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6n3id#186, meta#138 AS _txtkut#187, implicitRules#139 AS _3bznu0#188,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _5xoqex#189, text#141 AS _2gj9ce#190, identifier#142 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, active#143 AS _hub6nl#192, name#144 AS _wd7yla#193, telecom#145 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, gender#146 AS _szc9ma#195, birthDate#147 AS _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _cewlq2#197, deceasedDateTime#149 AS _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _2blbrj#199, maritalStatus#151 AS _aex91i#200,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _32sduh#201, multipleBirthInteger#153 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, photo#154 AS _hudyxg#203, contact#155 AS _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _uxo33f#205, generalPractitioner#157 AS _7tdbc0#206,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208] : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -5578,20 +5578,20 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] : +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient : +- DeserializeToObject cast(value#1620 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String : +- Relation [value#1620] text +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_wkf5pi#185] +- Project [id#136 AS _wkf5pi#185, id_versioned#137 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _tbrhgs#186, meta#138 AS _4r396k#187, implicitRules#139 AS _t0yt9g#188,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _744f08#189, text#141 AS _8kiflg#190, identifier#142 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _jle3ln#191, active#143 AS _mmmy9q#192, name#144 AS _yjyo0m#193, telecom#145 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _kh3we1#194, gender#146 AS _2v1dqm#195, birthDate#147 AS _n9kl8h#196,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _6y7cg0#197, deceasedDateTime#149 AS _nqmadx#198,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _pcnsbr#199, maritalStatus#151 AS _9rkgwr#200,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _6fq1s8#201, multipleBirthInteger#153 AS</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> _bqwo7p#202, photo#154 AS _doo1p2#203, contact#155 AS _v2648a#204,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _yvg1uf#205, generalPractitioner#157 AS _wjmylw#206,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _mumucb#207, link#159 AS _x5wpkq#208] +-</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> Project [_dy3fhr#185] +- Project [id#136 AS _dy3fhr#185, id_versioned#137 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _r6n3id#186, meta#138 AS _txtkut#187, implicitRules#139 AS _3bznu0#188,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> language#140 AS _5xoqex#189, text#141 AS _2gj9ce#190, identifier#142 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _khyn1p#191, active#143 AS _hub6nl#192, name#144 AS _wd7yla#193, telecom#145 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _l2jbh7#194, gender#146 AS _szc9ma#195, birthDate#147 AS _ksgwpn#196,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> deceasedBoolean#148 AS _cewlq2#197, deceasedDateTime#149 AS _wmxz8u#198,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> address#150 AS _2blbrj#199, maritalStatus#151 AS _aex91i#200,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> multipleBirthBoolean#152 AS _32sduh#201, multipleBirthInteger#153 AS</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> _er2j4z#202, photo#154 AS _hudyxg#203, contact#155 AS _mlvlpv#204,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> communication#156 AS _uxo33f#205, generalPractitioner#157 AS _7tdbc0#206,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> managingOrganization#158 AS _6kygcx#207, link#159 AS _r6dwj7#208] +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> assertnotnull(input[0, org.hl7.fhir.r4.model.Patient,</span>
@@ -6322,7 +6322,7 @@ Boolean value. Multiple filters are combined using logical AND operation.</p></d
 <span class="r-err co"><span class="r-pr">#&gt;</span> 93).getTypeElement.getValueAsString, true, true, true)), assertnotnull(input[0,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient, true]).getLink, None) AS link#159] +-</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1912/0x00000001011d5840@74300109, obj#135:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$1913/0x00000001011d5040@f3b240, obj#135:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Patient +- DeserializeToObject cast(value#1621 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#134: java.lang.String +- Relation [value#1621] text</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> </span>

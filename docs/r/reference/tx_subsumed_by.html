@@ -98,20 +98,20 @@ indicating whether the left Coding is subsumed by the right Coding.</p>
 <span class="r-in"><span>         .keep<span class="op">=</span><span class="st">'none'</span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `Condition_ced899b1_e12b_407e_8878_99681aee4556`.`*` cannot be resolved. Did</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `Condition_762f50f6_3dfd_4f19_bad7_add00401bb96`.`*` cannot be resolved. Did</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> you mean one of the following?</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [`condition_ced899b1_e12b_407e_8878_99681aee4556`.`id`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_ced899b1_e12b_407e_8878_99681aee4556`.`_fid`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_ced899b1_e12b_407e_8878_99681aee4556`.`code`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_ced899b1_e12b_407e_8878_99681aee4556`.`meta`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_ced899b1_e12b_407e_8878_99681aee4556`.`note`].; line 2 pos 2;</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> 'Project ['Condition_ced899b1_e12b_407e_8878_99681aee4556.*,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`condition_762f50f6_3dfd_4f19_bad7_add00401bb96`.`id`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_762f50f6_3dfd_4f19_bad7_add00401bb96`.`_fid`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_762f50f6_3dfd_4f19_bad7_add00401bb96`.`code`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_762f50f6_3dfd_4f19_bad7_add00401bb96`.`meta`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `condition_762f50f6_3dfd_4f19_bad7_add00401bb96`.`note`].; line 2 pos 2;</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> 'Project ['Condition_762f50f6_3dfd_4f19_bad7_add00401bb96.*,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> subsumes(code#25.coding, CASE WHEN NOT isnull(444814009) THEN struct(col1,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> null, col2, cast(http://snomed.info/sct as string), col3, cast(null as string),</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> col4, cast(444814009 as string), col5, null, col6, null) END, true) AS</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> is_subsumed_by#2186] +- SubqueryAlias</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> condition_ced899b1_e12b_407e_8878_99681aee4556 +- View</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_ced899b1_e12b_407e_8878_99681aee4556`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> condition_762f50f6_3dfd_4f19_bad7_add00401bb96 +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_762f50f6_3dfd_4f19_bad7_add00401bb96`,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,abatementString#38,recordedDate#39,recorder#40,asserter#41,stage#42,evidence#43,note#44,_fid#45,_extension#46])</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> +- Relation</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [id#14,id_versioned#15,meta#16,implicitRules#17,language#18,text#19,identifier#20,clinicalStatus#21,verificationStatus#22,category#23,severity#24,code#25,bodySite#26,subject#27,encounter#28,onsetAge#29,onsetDateTime#30,onsetPeriod#31,onsetRange#32,onsetString#33,abatementAge#34,abatementDateTime#35,abatementPeriod#36,abatementRange#37,...</span>

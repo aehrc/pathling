@@ -102,17 +102,17 @@ DataFrame is assumed to have one column of type string.</p></dd>
 <span class="r-in"><span><span class="va">pc</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/pipe.html" class="external-link">%&gt;%</a></span> <span class="fu">pathling_encode</span><span class="op">(</span><span class="va">json_resources_df</span>, <span class="st">'Condition'</span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> org.apache.spark.sql.AnalysisException:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column or function parameter with name</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`*` cannot be resolved. Did</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876`.`*` cannot be resolved. Did</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> you mean one of the following?</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> [`sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`id`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`code`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`meta`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`note`,</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`.`text`].; line 1 pos 7;</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> [`sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876`.`id`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876`.`code`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876`.`meta`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876`.`note`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> `sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876`.`text`].; line 1 pos 7;</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> 'GlobalLimit 11 +- 'LocalLimit 11 +- 'Project</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> ['sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099.*] +- SubqueryAlias</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099 +- View</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> (`sparklyr_tmp_83e41da2_6818_44f1_be42_25cdad78f099`,</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> ['sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876.*] +- SubqueryAlias</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876 +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`sparklyr_tmp_f331164e_dc8c_499d_99dd_643f20452876`,</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [id#133,id_versioned#134,meta#135,implicitRules#136,language#137,text#138,identifier#139,clinicalStatus#140,verificationStatus#141,category#142,severity#143,code#144,bodySite#145,subject#146,encounter#147,onsetAge#148,onsetDateTime#149,onsetPeriod#150,onsetRange#151,onsetString#152,abatementAge#153,abatementDateTime#154,abatementPeriod#155,abatementRange#156,abatementString#157,recordedDate#158,recorder#159,asserter#160,stage#161,evidence#162,note#163])</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> +- SerializeFromObject [staticinvoke(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.unsafe.types.UTF8String, StringType, fromString,</span>
@@ -1213,11 +1213,11 @@ DataFrame is assumed to have one column of type string.</p></dd>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition, true]).getAbatement, ObjectType(class</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Range)) else null.getHigh.getCode, true, true, true),</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> true, true, true))) AS abatementRange#156, ... 7 more fields] +- MapPartitions</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$3814/0x0000000101e46840@33d8074, obj#132:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> org.apache.spark.sql.Dataset$$Lambda$3815/0x0000000101e46840@2aade7fe, obj#132:</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> org.hl7.fhir.r4.model.Condition +- DeserializeToObject cast(line#4 as</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> string).toString, obj#131: java.lang.String +- Project [line#4] +-</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> SubqueryAlias condition_dd3f3bb2_58a4_4265_b14e_e53012b78a4c +- View</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_dd3f3bb2_58a4_4265_b14e_e53012b78a4c`, [line#4]) +- Relation</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> SubqueryAlias condition_f79ac9a3_f918_410e_bb1b_e80d9978c7df +- View</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> (`Condition_f79ac9a3_f918_410e_bb1b_e80d9978c7df`, [line#4]) +- Relation</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> [line#4] text</span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> Run `sparklyr::spark_last_error()` to see the full Spark error (multiple lines)</span>
