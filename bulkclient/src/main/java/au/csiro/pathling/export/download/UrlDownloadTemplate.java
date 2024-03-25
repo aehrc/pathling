@@ -44,25 +44,50 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.util.EntityUtils;
 
-@Value
+/**
+ * A template class for concurrent download of multiple URLs into a file store. The file store can
+ * be any concrete implementation of the {@link au.csiro.pathling.export.fs.FileStore} abstraction.
+ * <p/>
+ * This implementation fails fast: all the downloads are terminated on the first failure in any of
+ * the downloads.
+ * <p/>
+ * No cleanup is performed on failure - partial results may be left for some of the URLs.
+ */
+
 @Slf4j
 public class UrlDownloadTemplate {
 
+  /**
+   * A single entry in the list of URLs to download.
+   */
   @Value
   public static class UrlDownloadEntry {
 
+    /**
+     * The source URL to download from.
+     */
     @Nonnull
     URI source;
 
+    /**
+     * The destination file to write the downloaded content to.
+     */
     @Nonnull
     FileHandle destination;
   }
 
+  /**
+   * The HTTP client to use for downloading. The lifecycle of the client should be managed
+   * externally.
+   */
   @Nonnull
   HttpClient httpClient;
 
+  /**
+   * The executor service to use for concurrent downloads. The lifecycle of the executor should be
+   * managed externally.
+   */
   @Nonnull
   ExecutorService executorService;
 
@@ -80,8 +105,7 @@ public class UrlDownloadTemplate {
       log.debug("Starting download from:  {}  to: {}", source, destination);
       final HttpResponse result = httpClient.execute(new HttpGet(source));
       if (result.getStatusLine().getStatusCode() != 200) {
-        log.error("Failed to download: {}. Status: {}. Body: {}", source,
-            result.getStatusLine(), EntityUtils.toString(result.getEntity()));
+        log.error("Failed to download: {}. Status: {}", source, result.getStatusLine());
         throw new HttpError(
             "Failed to download: " + source, result.getStatusLine().getStatusCode());
       }
@@ -93,12 +117,35 @@ public class UrlDownloadTemplate {
     }
   }
 
-  public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlToDownload,
+  /**
+   * Creates a new instance of the template.
+   *
+   * @param httpClient the HTTP client to use for downloading (its life cycle should be managed
+   * externally).
+   * @param executorService the executor service to use for concurrent downloads (its life cycle
+   * should be managed externally).
+   */
+  public UrlDownloadTemplate(@Nonnull final HttpClient httpClient,
+      @Nonnull final ExecutorService executorService) {
+    this.httpClient = httpClient;
+    this.executorService = executorService;
+  }
+
+  /**
+   * Downloads the given URLs concurrently to provided destinations in a
+   * {@link au.csiro.pathling.export.fs.FileStore}.
+   *
+   * @param urlsToDownload the list of URLs to download together with their desired destinations.
+   * @param timeout the maximum time to wait for the downloads to complete. Zero or negative values
+   * are treated as infinite.
+   * @return a list of the number of bytes downloaded for each URL in the same order as the input
+   */
+  public List<Long> download(@Nonnull final List<UrlDownloadEntry> urlsToDownload,
       @Nonnull final Duration timeout) {
 
     final Instant timeoutAt = toTimeoutAt(timeout);
 
-    final Collection<Callable<Long>> tasks = urlToDownload.stream()
+    final Collection<Callable<Long>> tasks = urlsToDownload.stream()
         .map(e -> new UriDownloadTask(e.getSource(), e.getDestination()))
         .collect(Collectors.toUnmodifiableList());
 
@@ -135,7 +182,7 @@ public class UrlDownloadTemplate {
     }
   }
 
-  static <T> Optional<Exception> asException(@Nonnull final Future<T> f) {
+  private static <T> Optional<Exception> asException(@Nonnull final Future<T> f) {
     try {
       if (f.isDone()) {
         f.get();
@@ -146,7 +193,7 @@ public class UrlDownloadTemplate {
     }
   }
 
-  static <T> T asValue(@Nonnull final Future<T> f) {
+  private static <T> T asValue(@Nonnull final Future<T> f) {
     if (!f.isDone()) {
       throw new IllegalStateException("Future is not done");
     }
@@ -157,7 +204,7 @@ public class UrlDownloadTemplate {
     }
   }
 
-  static Throwable unwrap(@Nonnull final Exception futureEx) {
+  private static Throwable unwrap(@Nonnull final Exception futureEx) {
     if (futureEx instanceof ExecutionException) {
       return futureEx.getCause();
     } else {
