@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 
+from json import dumps, loads
 from py4j.java_collections import SetConverter
 from py4j.java_gateway import JavaObject
 from pyspark.sql import DataFrame
@@ -127,6 +128,8 @@ class DataSource(SparkConversionsMixin):
     ) -> DataFrame:
         if json:
             query_json = json
+            parsed = loads(json)
+            resource = parsed.get("resource")
         else:
             args = locals()
             query = {
@@ -134,7 +137,7 @@ class DataSource(SparkConversionsMixin):
                 for key in ["resource", "select", "constants", "where"]
                 if args[key] is not None
             }
-            query_json = json.dumps(query)
+            query_json = dumps(query)
         jquery = self._jds.view(resource)
         jquery.json(query_json)
         return self._wrap_df(jquery.execute())
