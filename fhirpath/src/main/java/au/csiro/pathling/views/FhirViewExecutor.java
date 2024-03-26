@@ -8,7 +8,6 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.utilities.Lists;
-import au.csiro.pathling.utilities.Strings;
 import au.csiro.pathling.view.ColumnSelection;
 import au.csiro.pathling.view.ExecutionContext;
 import au.csiro.pathling.view.GroupingSelection;
@@ -67,8 +66,8 @@ public class FhirViewExecutor {
   public Dataset<Row> buildQuery(@Nonnull final FhirView view) {
     final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
         dataSource);
-    final Projection extractView = toExtractView(view);
-    return extractView.execute(executionContext);
+    final Projection projection = buildProjection(view);
+    return projection.execute(executionContext);
   }
 
   /**
@@ -79,23 +78,24 @@ public class FhirViewExecutor {
    * @return the converted view
    */
   @Nonnull
-  private Projection toExtractView(@Nonnull final FhirView fhirView) {
-    // Parse the selection and where clauses from the FHIR view into {@link SelectionX} objects.
-    // Convert the select clause into a list of {@link SelectionX} objects.
+  private Projection buildProjection(@Nonnull final FhirView fhirView) {
+    // Convert the select clause into a list of ProjectionClause objects.
     final List<ProjectionClause> selectionComponents = fhirView.getSelect().stream()
         .map(this::parseSelection)
         .collect(toUnmodifiableList());
 
-    // Create a FromSelectionX object that represents the entire selection clause.
+    // Create a GroupingSelection object that represents all the select components.
     final ProjectionClause selection = new GroupingSelection(selectionComponents);
+
+    // Convert the where clause into a {@link ProjectionClause} object, if there is one.
     final Optional<ProjectionClause> where = parseWhere(fhirView);
 
-    // We pass the constants through so that they can be substituted into the FHIRPath expressions
+    // Pass the constants through so that they can be substituted into the FHIRPath expressions
     // during evaluation.
     final List<ConstantDeclaration> constants = Optional.ofNullable(fhirView.getConstant())
         .orElse(Collections.emptyList());
 
-    // Create the ExtractViewX object that represents the view.
+    // Create the Projection object that represents the view.
     return new Projection(ResourceType.fromCode(fhirView.getResource()), constants, selection,
         where);
   }
