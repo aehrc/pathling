@@ -17,33 +17,45 @@
 
 package au.csiro.pathling.view;
 
-import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.fhirpath.column.ArrayOrSingularRepresentation;
+import au.csiro.pathling.fhirpath.FhirPath;
 import javax.annotation.Nonnull;
+import lombok.AllArgsConstructor;
 import lombok.Value;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
+/**
+ * Information about a column that has been requested to be included in a projection.
+ * <p>
+ * Includes the parsed {@link FhirPath}, the name of the column and whether the column has been
+ * asserted to be a collection.
+ */
 @Value
-public class CollectionResult {
+@AllArgsConstructor
+public class RequestedColumn {
 
+  /**
+   * The parsed FHIRPath expression that defines the column.
+   */
   @Nonnull
-  Collection collection;
+  FhirPath path;
 
+  /**
+   * The requested name of the column.
+   */
   @Nonnull
-  PrimitiveSelection selection;
+  String name;
 
-  @Nonnull
-  public Column getTaggedColumn() {
-    return collection.getColumnValue().alias(selection.getTag());
+  /**
+   * Whether the column has been asserted to be a collection.
+   */
+  boolean collection;
+
+  @Override
+  public String toString() {
+    return "RequestedColumn{" +
+        "path=" + path +
+        ", name='" + name + '\'' +
+        ", collection=" + collection +
+        '}';
   }
-
-  @Nonnull
-  public CollectionResult toTagReference() {
-    return new CollectionResult(
-        collection.copyWith(new ArrayOrSingularRepresentation(functions.col(selection.getTag()))),
-        selection);
-
-  }
-
+  
 }

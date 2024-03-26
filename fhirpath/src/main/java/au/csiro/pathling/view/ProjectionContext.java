@@ -63,11 +63,6 @@ public class ProjectionContext {
     return new ProjectionContext(executor, inputContext);
   }
 
-  @Nonnull
-  public DatasetResult<CollectionResult> evaluate(@Nonnull final Selection selection) {
-    return selection.evaluate(this);
-  }
-
   /**
    * Creates a new execution context that is a sub-context of this one, with the given path.
    *

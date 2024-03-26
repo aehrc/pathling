@@ -7,7 +7,7 @@ package au.csiro.pathling.extract;
  *
  * @author John Grimes
  */
-public enum ExtractResultType {
+public enum ProjectionConstraint {
   /**
    * Indicates that the result will be returned in a form that supports the representation of
    * complex types.

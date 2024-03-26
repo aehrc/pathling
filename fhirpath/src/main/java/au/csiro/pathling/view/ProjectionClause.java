@@ -17,24 +17,14 @@
 
 package au.csiro.pathling.view;
 
-
-import lombok.Value;
 import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.stream.Collectors;
 
-@Value
-public class FromSelectionX implements SelectionX {
-  
+/**
+ * Represents a component of an abstract query for projecting FHIR data.
+ */
+public interface ProjectionClause {
+
   @Nonnull
-  List<SelectionX> components;
-  
-  @Override
-  @Nonnull
-  public SelectionResult evaluate(@Nonnull final ProjectionContext context) {
-    // evaluate and cross join the subcomponents
-    final List<SelectionResult> subResults = components.stream().map(c -> c.evaluate(context))
-        .collect(Collectors.toUnmodifiableList());
-    return SelectionResult.combine(subResults);
-  }
+  ProjectionResult evaluate(@Nonnull final ProjectionContext context);
+
 }

@@ -17,21 +17,26 @@
 
 package au.csiro.pathling.view;
 
-import java.util.function.Function;
-import java.util.stream.Stream;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
+import lombok.Value;
 
-public interface Selection {
+/**
+ * The result of evaluating a {@link RequestedColumn} as part of a {@link ProjectionClause}.
+ */
+@Value
+public class ProjectedColumn {
 
-  DatasetResult<CollectionResult> evaluate(@Nonnull final ProjectionContext context);
-
-  default void printTree() {
-    toTreeString().forEach(System.out::println);
-  }
-
-  Stream<String> toTreeString();
-
+  /**
+   * The result of evaluating the column.
+   */
   @Nonnull
-  Selection map(@Nonnull final Function<Selection, Selection> mapFunction);
+  Collection collection;
+
+  /**
+   * The column that was requested to be included in the projection.
+   */
+  @Nonnull
+  RequestedColumn requestedColumn;
 
 }

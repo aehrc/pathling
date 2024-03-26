@@ -43,9 +43,9 @@ import au.csiro.pathling.view.ExecutionContext;
 import au.csiro.pathling.view.ExtractView;
 import au.csiro.pathling.view.ForEachOrNullSelection;
 import au.csiro.pathling.view.FromSelection;
-import au.csiro.pathling.view.PrimitiveSelection;
+import au.csiro.pathling.view.OldSelection;
 import au.csiro.pathling.view.ProjectionContext;
-import au.csiro.pathling.view.Selection;
+import au.csiro.pathling.view.RequestedColumn;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.Streams;
@@ -100,7 +100,7 @@ class ExtractAggregatePOCViewTest {
 
 
   @Nonnull
-  static Selection decompose(@Nonnull final List<FhirPath> paths) {
+  static OldSelection decompose(@Nonnull final List<FhirPath> paths) {
     return new FromSelection(new ExternalConstantPath("%resource"), decomposeInternal(paths));
   }
 
@@ -108,12 +108,12 @@ class ExtractAggregatePOCViewTest {
     return path instanceof Paths.Traversal || path.isNull();
   }
 
-  static Stream<? extends Selection> decomposeSelection(@Nonnull final FhirPath parent,
+  static Stream<? extends OldSelection> decomposeSelection(@Nonnull final FhirPath parent,
       @Nonnull final List<FhirPath> children) {
 
     // TODO: do not create empty selections.
     return parent.isNull()
-           ? Stream.of(new PrimitiveSelection(parent))
+           ? Stream.of(new RequestedColumn(parent))
            : Stream.of(
                new ForEachOrNullSelection(parent, decomposeInternal(
                    children.stream().filter(ExtractAggregatePOCViewTest::isTraversal).collect(
@@ -124,7 +124,7 @@ class ExtractAggregatePOCViewTest {
            ).filter(s -> !s.getComponents().isEmpty());
   }
 
-  static List<Selection> decomposeInternal(@Nonnull final List<FhirPath> paths) {
+  static List<OldSelection> decomposeInternal(@Nonnull final List<FhirPath> paths) {
     final Map<FhirPath, List<FhirPath>> tailsByHeads = paths.stream()
         .collect(
             Collectors.groupingBy(FhirPath::first, LinkedHashMap::new,
@@ -142,7 +142,7 @@ class ExtractAggregatePOCViewTest {
 
 
   @Nonnull
-  static Selection mergePathRule(@Nonnull final Selection selection) {
+  static OldSelection mergePathRule(@Nonnull final OldSelection selection) {
     // optimisation rules
 
     // composite selection with only one component can be joined to a 
@@ -151,10 +151,11 @@ class ExtractAggregatePOCViewTest {
     if (selection instanceof AbstractCompositeSelection) {
       final AbstractCompositeSelection compositeSelection = (AbstractCompositeSelection) selection;
       if (compositeSelection.getComponents().size() == 1) {
-        final Selection component = compositeSelection.getComponents().get(0);
-        if (component instanceof PrimitiveSelection) {
-          return new PrimitiveSelection(
-              compositeSelection.getPath().andThen(((PrimitiveSelection) component).getPath()));
+        final OldSelection component = compositeSelection.getComponents().get(0);
+        if (component instanceof RequestedColumn) {
+          return new RequestedColumn(
+              compositeSelection.getPath()
+                  .andThen(((RequestedColumn) component).getPath()));
         }
       }
     }
@@ -162,7 +163,7 @@ class ExtractAggregatePOCViewTest {
   }
 
   @Nonnull
-  static Selection optimise(@Nonnull final Selection selection) {
+  static OldSelection optimise(@Nonnull final OldSelection selection) {
     // optimisation rules
     return selection.map(ExtractTest::mergePathRule);
   }
@@ -317,7 +318,7 @@ class ExtractAggregatePOCViewTest {
 
     System.out.println("### Paths: ###");
     groupingPaths.forEach(System.out::println);
-    final Selection groupingSelction = decompose(groupingPaths);
+    final OldSelection groupingSelction = decompose(groupingPaths);
     System.out.println("## Raw view ##");
     groupingSelction.printTree();
 
@@ -360,7 +361,7 @@ class ExtractAggregatePOCViewTest {
     System.out.println("### Agg Functions ###");
     aggFunctions.forEach(System.out::println);
 
-    final Selection aggView = decompose(aggFields);
+    final OldSelection aggView = decompose(aggFields);
     final DatasetResult<Column> aggResult = aggView.evaluate(execContext).map(
         cr -> cr.getCollection().getColumn().getValue());
 

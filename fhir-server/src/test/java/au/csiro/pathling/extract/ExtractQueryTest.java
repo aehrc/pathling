@@ -81,7 +81,7 @@ class ExtractQueryTest {
 
   @MockBean
   CacheableDatabase dataSource;
-  
+
   ResourceType subjectResource;
 
 
@@ -110,7 +110,7 @@ class ExtractQueryTest {
         List.of("gender = 'female'"),
         Optional.empty()
     );
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertArrayEquals(new String[]{"id", "gender", "given_name", "condition_count"},
         result.columns());
     assertThat(result)
@@ -129,7 +129,7 @@ class ExtractQueryTest {
         .withColumn("serviceProvider.resolve().address.postalCode")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
 
     assertTrue(Stream.of(result.columns()).allMatch(Strings::looksLikeAlias));
     assertThat(result)
@@ -148,7 +148,7 @@ class ExtractQueryTest {
         .withColumn("reverseResolve(Condition.subject).code.coding.code")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multipleReverseResolves.tsv");
   }
@@ -166,7 +166,7 @@ class ExtractQueryTest {
         .withColumn("subject.resolve().ofType(Patient).name.family")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .debugAllRows()
         .hasRows(spark, "responses/ExtractQueryTest/multiplePolymorphicResolves.tsv");
@@ -182,7 +182,7 @@ class ExtractQueryTest {
         .withColumn("19")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/literalColumn.tsv");
   }
@@ -198,7 +198,7 @@ class ExtractQueryTest {
         .withLimit(10)
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/resolveAndCodingLiteralColumn.tsv");
   }
@@ -213,7 +213,7 @@ class ExtractQueryTest {
         .withColumn("code.coding")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/codingColumn.tsv");
   }
@@ -229,7 +229,7 @@ class ExtractQueryTest {
             "http://snomed.info/sct|'46,2'|http://snomed.info/sct/32506021000036107/version/20201231")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/codingLiteralColumn.tsv");
   }
@@ -248,7 +248,7 @@ class ExtractQueryTest {
         .withFilter("reverseResolve(Condition.subject).count() >= 10")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multipleFilters.tsv");
   }
@@ -265,7 +265,7 @@ class ExtractQueryTest {
         .withLimit(3)
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/limit.tsv");
   }
@@ -280,7 +280,7 @@ class ExtractQueryTest {
         .withColumn("reverseResolve(Condition.subject).code.coding.code.where($this = '72892002')")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/eliminatesTrailingNulls.tsv");
   }
@@ -296,7 +296,7 @@ class ExtractQueryTest {
         .withFilter("(name.given combine name.family).empty().not()")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/combineResultInSecondFilter.tsv");
   }
@@ -312,7 +312,7 @@ class ExtractQueryTest {
         .withColumn("identifier.where(system = 'http://hl7.org/fhir/sid/us-ssn').value")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/whereInMultipleColumns.tsv");
   }
@@ -328,7 +328,7 @@ class ExtractQueryTest {
         .withColumn("type.coding")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark,
             "responses/ExtractQueryTest/multipleNonSingularColumnsWithDifferentTypes.tsv");
@@ -346,7 +346,7 @@ class ExtractQueryTest {
         .withColumn("name.use")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/linkedUnnesting.tsv");
   }
@@ -364,7 +364,7 @@ class ExtractQueryTest {
         .withColumn("maritalStatus.coding.code")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/multipleIndependentUnnestings.tsv");
   }
@@ -380,7 +380,7 @@ class ExtractQueryTest {
         .withColumn("name.given")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/toleranceOfColumnOrdering1.tsv");
 
@@ -461,7 +461,7 @@ class ExtractQueryTest {
         .withColumn("name", "name_struct")
         .build();
 
-    Dataset<Row> result = executor.buildQuery(request, ExtractResultType.UNCONSTRAINED);
+    Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.UNCONSTRAINED);
     result = result.select(
         col("id"),
         explode_outer(col("name_struct").getField("given")).as("given")
@@ -482,7 +482,7 @@ class ExtractQueryTest {
         .withColumn("'foo' combine 'bar'")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/combineWithLiterals.tsv");
   }
@@ -499,7 +499,7 @@ class ExtractQueryTest {
         .withColumn("name.given combine name.family")
         .build();
 
-    final Dataset<Row> result = executor.buildQuery(request, ExtractResultType.FLAT);
+    final Dataset<Row> result = executor.buildQuery(request, ProjectionConstraint.FLAT);
     assertThat(result)
         .hasRows(spark, "responses/ExtractQueryTest/combineWithUnequalCardinalities.tsv");
   }

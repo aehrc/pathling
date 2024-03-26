@@ -22,7 +22,7 @@ public class Column implements SelectionElement {
    * @see <a
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.name">ViewDefinition.select.name</a>
    */
-  @Nullable
+  @NotNull
   @Size(max = 255)
   @Pattern(regexp = "^[^_][A-Za-z][A-Za-z0-9_]+$")
   String name;
@@ -30,7 +30,7 @@ public class Column implements SelectionElement {
   /**
    * A FHIRPath expression that evaluates to the value that will be output in the column for each
    * resource. The input context is the collection of resources of the type specified in the
-   * resource element. Constants defined in {@link FhirView#constants} can be referenced as
+   * resource element. Constants defined in {@link FhirView#constant} can be referenced as
    * {@code %[name]}.
    *
    * @see <a

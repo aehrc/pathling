@@ -19,37 +19,65 @@ package au.csiro.pathling.view;
 
 
 import au.csiro.pathling.encoders.ColumnFunctions;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 
+/**
+ * The result of evaluating a projection, which consists of a list of {@link ProjectedColumn}
+ * objects and an intermediate {@link Column} representation that is used to produce the final
+ * result.
+ * <p>
+ * These objects can also be combined to produce higher-level projections, such as the combination
+ * of sub-selections and unions.
+ */
 @Value(staticConstructor = "of")
-public class SelectionResult {
+public class ProjectionResult {
 
+  /**
+   * A list of results, each of which contains a {@link Collection} and a {@link RequestedColumn}.
+   */
   @Nonnull
-  List<CollectionResult> collections;
+  List<ProjectedColumn> results;
 
+  /**
+   * An array of structs. The struct has a field for each column name in the projection.
+   */
   @Nonnull
-  Column value;
+  Column resultColumn;
 
+  /**
+   * Combine the results of multiple projections into a single result.
+   *
+   * @param results The results to combine
+   * @return The combined result
+   */
   @Nonnull
-  public static SelectionResult combine(@Nonnull final List<SelectionResult> results) {
+  public static ProjectionResult combine(@Nonnull final List<ProjectionResult> results) {
     return combine(results, false);
   }
 
+  /**
+   * Combine the results of multiple projections into a single result, with outer join semantics.
+   *
+   * @param results The results to combine
+   * @param outer Whether to use outer join semantics
+   * @return The combined result
+   */
   @Nonnull
-  public static SelectionResult combine(@Nonnull final List<SelectionResult> results,
+  public static ProjectionResult combine(@Nonnull final List<ProjectionResult> results,
       final boolean outer) {
     if (results.size() == 1 && !outer) {
       return results.get(0);
     } else {
       return of(
-          results.stream().flatMap(r -> r.getCollections().stream())
+          results.stream().flatMap(r -> r.getResults().stream())
               .collect(Collectors.toUnmodifiableList()),
           structProduct(outer,
-              results.stream().map(SelectionResult::getValue).toArray(Column[]::new))
+              results.stream().map(ProjectionResult::getResultColumn).toArray(Column[]::new))
       );
     }
   }
@@ -60,4 +88,5 @@ public class SelectionResult {
            ? ColumnFunctions.structProduct_outer(columns)
            : ColumnFunctions.structProduct(columns);
   }
+
 }

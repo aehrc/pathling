@@ -17,29 +17,35 @@
 
 package au.csiro.pathling.view;
 
-import javax.annotation.Nonnull;
-import au.csiro.pathling.fhirpath.FhirPath;
-import lombok.EqualsAndHashCode;
-import lombok.Value;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toUnmodifiableList;
+
 import java.util.List;
+import javax.annotation.Nonnull;
+import lombok.Value;
 
-@EqualsAndHashCode(callSuper = true)
 @Value
-public class FromSelection extends AbstractCompositeSelection {
-
-  public FromSelection(final FhirPath parent, final List<Selection> components) {
-    super(parent, components);
-  }
+public class GroupingSelection implements ProjectionClause {
 
   @Nonnull
+  List<ProjectionClause> components;
+
   @Override
-  protected String getName() {
-    return "from";
+  @Nonnull
+  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
+    // evaluate and cross join the subcomponents
+    final List<ProjectionResult> subResults = components.stream().map(c -> c.evaluate(context))
+        .collect(toUnmodifiableList());
+    return ProjectionResult.combine(subResults);
   }
 
-  @Nonnull
   @Override
-  protected FromSelection copy(@Nonnull final List<Selection> newComponents) {
-    return new FromSelection(path, newComponents);
+  public String toString() {
+    return "GroupingSelection{" +
+        "components=[" + components.stream()
+        .map(ProjectionClause::toString)
+        .collect(joining(", ")) +
+        "]}";
   }
+
 }

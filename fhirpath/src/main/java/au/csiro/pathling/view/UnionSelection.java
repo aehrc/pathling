@@ -31,21 +31,21 @@ import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
 @Value
-public class UnionAllSelection implements SelectionX {
+public class UnionSelection implements ProjectionClause {
 
   @Nonnull
-  List<SelectionX> components;
+  List<ProjectionClause> components;
 
   @Nonnull
   @Override
-  public SelectionResult evaluate(@Nonnull final ProjectionContext context) {
+  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // Evaluate each component of the union.
-    final List<SelectionResult> results = components.stream().map(c -> c.evaluate(context))
+    final List<ProjectionResult> results = components.stream().map(c -> c.evaluate(context))
         .collect(toUnmodifiableList());
 
     // Process each result to ensure that they are all arrays.
     final Column[] converted = results.stream()
-        .map(SelectionResult::getValue)
+        .map(ProjectionResult::getResultColumn)
         // When the result is a singular null, convert it to an empty array.
         .map(col -> when(isnull(col), array())
             .otherwise(ValueFunctions.ifArray(col,
@@ -59,6 +59,6 @@ public class UnionAllSelection implements SelectionX {
     // Concatenate the converted columns.
     final Column combinedResult = concat(converted);
 
-    return SelectionResult.of(results.get(0).getCollections(), combinedResult);
+    return ProjectionResult.of(results.get(0).getResults(), combinedResult);
   }
 }

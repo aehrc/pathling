@@ -87,7 +87,7 @@ public class ExtractExecutor extends ExtractQueryExecutor {
   public ExtractResponse execute(@Nonnull final ExtractRequest query,
       @Nonnull final String serverBase, @Nonnull final String requestId) {
     log.info("Executing request: {}", query);
-    final Dataset<Row> result = buildQuery(query, ExtractResultType.FLAT);
+    final Dataset<Row> result = buildQuery(query, ProjectionConstraint.FLAT);
 
     // Write the result and get the URL.
     final String resultUrl = resultWriter.write(result, requestId);

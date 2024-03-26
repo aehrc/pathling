@@ -17,42 +17,71 @@
 
 package au.csiro.pathling.view;
 
+import static org.apache.spark.sql.functions.array;
+import static org.apache.spark.sql.functions.struct;
+
+import au.csiro.pathling.fhirpath.collection.Collection;
+import au.csiro.pathling.view.DatasetResult.One;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 
 @Value
-public class ColumnSelection implements SelectionX {
+public class ColumnSelection implements ProjectionClause {
 
   @Nonnull
-  List<PrimitiveSelection> columns;
-  
-  @Nonnull
+  List<RequestedColumn> columns;
+
   @Override
-  public List<CollectionResult> evaluateFlat(@Nonnull final ProjectionContext context) {
-    return columns.stream()
-        .map(c -> c.evaluateCollection(context)).collect(Collectors.toUnmodifiableList());
+  @Nonnull
+  public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
+    // Evaluate each requested column to get the collection it represents.
+    final Stream<Collection> collections = columns.stream()
+        .map(RequestedColumn::getPath)
+        .map(context::evalExpression)
+        .map(One::getPureValue);
+
+    // Zip stream of requested columns with the stream of collections, creating a ProjectedColumn 
+    // for each pair.
+    final Iterator<Collection> collectionsIterator = collections.iterator();
+    final Iterator<RequestedColumn> requestedColumnsIterator = columns.iterator();
+    final List<ProjectedColumn> projectedColumns = new ArrayList<>();
+    while (collectionsIterator.hasNext() && requestedColumnsIterator.hasNext()) {
+      final Collection collection = collectionsIterator.next();
+      final RequestedColumn requestedColumn = requestedColumnsIterator.next();
+      projectedColumns.add(new ProjectedColumn(collection, requestedColumn));
+    }
+
+    // Collect the columns into an array, aliasing them with the requested names.
+    final Column[] collectedColumns = projectedColumns.stream()
+        .map(projectedColumn -> {
+          final Column collectionColumn = projectedColumn.getCollection().getColumn()
+              .getValue();
+          final String requestedName = projectedColumn.getRequestedColumn().getName();
+          return collectionColumn.alias(requestedName);
+        })
+        .toArray(Column[]::new);
+
+    // Create a new column that is an array of structs, where each struct has a field for each
+    // requested column.
+    final Column resultColumn = array(struct(collectedColumns));
+
+    // Create a new ProjectionResult with the projected columns and the result column.
+    return ProjectionResult.of(projectedColumns, resultColumn);
   }
 
   @Override
-  @Nonnull
-  public SelectionResult evaluate(@Nonnull final ProjectionContext context) {
-
-    // run all column selections
-    final List<CollectionResult> resultCollections = evaluateFlat(context);
-
-    // commpose the result to an array struct
-    final Column resultRow = functions.array(
-        functions.struct(resultCollections.stream().map(CollectionResult::getTaggedColumn)
-            .toArray(Column[]::new))
-    );
-    // I now also need to remap the results to be bound to the correct fields
-    return SelectionResult.of(
-        resultCollections.stream().map(CollectionResult::toTagReference).collect(
-            Collectors.toUnmodifiableList()), resultRow);
+  public String toString() {
+    return "ColumnSelection{" +
+        "columns=[" + columns.stream()
+        .map(RequestedColumn::toString)
+        .collect(Collectors.joining(", ")) +
+        "]}";
   }
 
 }

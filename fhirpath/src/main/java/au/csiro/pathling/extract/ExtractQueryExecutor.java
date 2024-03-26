@@ -3,12 +3,8 @@ package au.csiro.pathling.extract;
 import au.csiro.pathling.QueryExecutor;
 import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
-import au.csiro.pathling.fhirpath.parser.Parser;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.query.QueryParser;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.view.ExecutionContext;
-import au.csiro.pathling.view.ExtractView;
 import ca.uhn.fhir.context.FhirContext;
 import java.util.Optional;
 import javax.annotation.Nonnull;
@@ -54,30 +50,7 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
-    return buildQuery(query, ExtractResultType.UNCONSTRAINED);
-  }
-
-  /**
-   * Builds up the query for an extract request.
-   *
-   * @param query an {@link ExtractRequest}
-   * @param resultType the {@link ExtractResultType} that will be required
-   * @return an uncollected {@link Dataset}
-   */
-  @SuppressWarnings("WeakerAccess")
-  @Nonnull
-  public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
-      @Nonnull final ExtractResultType resultType) {
-    log.info("Executing request: {}", query);
-    final QueryParser queryParser = new QueryParser(new Parser());
-    final ExtractView extractView = queryParser.toView(query, resultType);
-    extractView.printTree();
-    final Dataset<Row> resultDataset = extractView.evaluate(newContext());
-    return query.getLimit().map(resultDataset::limit).orElse(resultDataset);
-  }
-
-  protected ExecutionContext newContext() {
-    return new ExecutionContext(sparkSession, fhirContext, dataSource);
+    return sparkSession.emptyDataFrame();
   }
 
 }
