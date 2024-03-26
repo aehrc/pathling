@@ -27,7 +27,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
-public class OperationOutcomeTest {
+public class LevelOutcomeTest {
 
   @Test
   void testParseAValidOperationOutcome() {

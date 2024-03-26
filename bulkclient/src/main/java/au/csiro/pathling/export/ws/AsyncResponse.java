@@ -17,6 +17,11 @@
 
 package au.csiro.pathling.export.ws;
 
+/**
+ * Represents a response in the FHIR asynchronous request pattern.
+ *
+ * @see <a href="https://build.fhir.org/async.html">Async Request Pattern</a>
+ */
 public interface AsyncResponse {
 
 }

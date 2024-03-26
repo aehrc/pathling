@@ -24,11 +24,21 @@ import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.http.client.utils.DateUtils;
 
+/**
+ * Represents a value for the Retry-After header. Either the number of seconds to wait, or an HTTP
+ * date to wait until.
+ */
 public interface RetryValue {
 
+  /**
+   * Represents a value for the Retry-After header that is a specific date.
+   */
   @Value
   class At implements RetryValue {
 
+    /**
+     * The date to wait until.
+     */
     @Nonnull
     Instant value;
 
@@ -45,9 +55,13 @@ public interface RetryValue {
     }
   }
 
+  /**
+   * Represents a value for the Retry-After header that is a number of seconds.
+   */
   @Value
   class After implements RetryValue {
 
+    // The duration to wait
     @Nonnull
     Duration value;
 
@@ -64,19 +78,43 @@ public interface RetryValue {
     }
   }
 
+  /**
+   * Creates a RetryValue that represents a duration to wait.
+   *
+   * @param after the duration to wait
+   * @return a RetryValue
+   */
   @Nonnull
   static RetryValue after(@Nonnull final Duration after) {
     return new After(after);
   }
 
+  /**
+   * Creates a RetryValue that represents a specific date to wait until.
+   *
+   * @param at the date to wait until
+   * @return a RetryValue
+   */
   @Nonnull
   static RetryValue at(@Nonnull final Instant at) {
     return new At(at);
   }
 
+  /**
+   * Returns the duration this value represents until the given time.
+   *
+   * @param time the time to wait until
+   * @return the duration until the given time
+   */
   @Nonnull
   Duration until(@Nonnull final Instant time);
 
+  /**
+   * Parses a Retry-After header value that is either a number of seconds or an HTTP date.
+   *
+   * @param retry the value to parse
+   * @return a RetryValue if the value could be parsed, or empty if it could not
+   */
   @Nonnull
   static Optional<RetryValue> parseHttpValue(@Nonnull final String retry) {
     try {

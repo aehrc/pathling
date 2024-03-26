@@ -41,6 +41,7 @@ import au.csiro.pathling.export.utils.TimeoutUtils;
 import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportRequest.GroupLevel;
+import au.csiro.pathling.export.ws.BulkExportRequest.Level;
 import au.csiro.pathling.export.ws.BulkExportRequest.PatientLevel;
 import au.csiro.pathling.export.ws.BulkExportRequest.SystemLevel;
 import au.csiro.pathling.export.ws.BulkExportResponse;
@@ -93,7 +94,7 @@ public class BulkExportClient {
    */
   @Nonnull
   @Builder.Default
-  BulkExportRequest.Operation operation = new SystemLevel();
+  Level level = new SystemLevel();
 
   /**
    * The format of the output data. The value of the `_outputFormat` parameter in the export
@@ -213,7 +214,7 @@ public class BulkExportClient {
    */
   @Nonnull
   public static BulkExportClientBuilder systemBuilder() {
-    return BulkExportClient.builder().withOperation(new SystemLevel());
+    return BulkExportClient.builder().withLevel(new SystemLevel());
   }
 
   /**
@@ -222,7 +223,7 @@ public class BulkExportClient {
    */
   @Nonnull
   public static BulkExportClientBuilder patientBuilder() {
-    return BulkExportClient.builder().withOperation(new PatientLevel());
+    return BulkExportClient.builder().withLevel(new PatientLevel());
   }
   
   /**
@@ -232,7 +233,7 @@ public class BulkExportClient {
    */
   @Nonnull
   public static BulkExportClientBuilder groupBuilder(@Nonnull final String groupId) {
-    return BulkExportClient.builder().withOperation(new GroupLevel(groupId));
+    return BulkExportClient.builder().withLevel(new GroupLevel(groupId));
   }
 
   /**
@@ -295,7 +296,7 @@ public class BulkExportClient {
 
   private BulkExportRequest buildBulkExportRequest() {
     return BulkExportRequest.builder()
-        .operation(operation)
+        .level(level)
         ._outputFormat(outputFormat)
         ._type(types)
         ._since(since)
@@ -321,8 +322,8 @@ public class BulkExportClient {
   List<UrlDownloadEntry> getUrlDownloadEntries(@Nonnull final BulkExportResponse response,
       @Nonnull final FileHandle destinationDir) {
     final Map<String, List<String>> urlsByType = response.getOutput().stream().collect(
-        Collectors.groupingBy(BulkExportResponse.ResourceElement::getType, LinkedHashMap::new,
-            mapping(BulkExportResponse.ResourceElement::getUrl, toList())));
+        Collectors.groupingBy(BulkExportResponse.FileItem::getType, LinkedHashMap::new,
+            mapping(BulkExportResponse.FileItem::getUrl, toList())));
 
     return urlsByType.entrySet().stream()
         .flatMap(entry -> IntStream.range(0, entry.getValue().size())

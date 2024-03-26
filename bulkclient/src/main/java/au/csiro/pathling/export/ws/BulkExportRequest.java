@@ -33,20 +33,40 @@ import au.csiro.pathling.utilities.Lists;
 import lombok.Builder;
 import lombok.Value;
 
+/**
+ * Represents a request to initiate a bulk export operation.
+ *
+ * @see <a href="https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters>FHIR Bulk Export
+ * Request Query Parameters</a>
+ */
 @Value
 @Builder()
 public class BulkExportRequest {
 
-  public interface Operation {
+  /**
+   * The level of the export operation.
+   */
+  public interface Level {
 
+    /**
+     * The path to the export operation corresponding to this level.
+     * @return the path to the export operation.
+     */
     @Nonnull
     String getPath();
 
+    /**
+     * Whether this level supports patient-specific exports.
+     * @return true if patient-specific exports are supported.
+     */
     boolean isPatientSupported();
   }
 
+  /**
+   * Represents the system level of the export operation.
+   */
   @Value
-  public static class SystemLevel implements Operation {
+  public static class SystemLevel implements Level {
 
     @Nonnull
     @Override
@@ -60,8 +80,11 @@ public class BulkExportRequest {
     }
   }
 
+  /**
+   * Represents the patient level of the export operation.
+   */
   @Value
-  public static class PatientLevel implements Operation {
+  public static class PatientLevel implements Level {
 
 
     @Nonnull
@@ -76,9 +99,15 @@ public class BulkExportRequest {
     }
   }
 
+  /**
+   * Represents the group level of the export operation.
+   */
   @Value
-  public static class GroupLevel implements Operation {
+  public static class GroupLevel implements Level {
 
+    /**
+     * The ID of the group.
+     */
     @Nonnull
     String id;
 
@@ -94,35 +123,63 @@ public class BulkExportRequest {
     }
   }
 
+  /**
+   * The level of the export operation. The default is {@link SystemLevel}.
+   */
   @Nonnull
   @Builder.Default
-  Operation operation = new SystemLevel();
+  Level level = new SystemLevel();
 
+  /**
+   * The format of the output. The default is 'ndjson'. The value of the '_outputFormat' query
+   * parameter.
+   */
   @Nonnull
   @Builder.Default
   String _outputFormat = "ndjson";
 
+  /**
+   * The types of resources to export. The value of the '_type' query parameter.
+   */
   @Nonnull
   @Builder.Default
   List<String> _type = Collections.emptyList();
 
 
+  /**
+   * The elements to include in the export. The value of the '_elements' query parameter.
+   */
   @Nonnull
   @Builder.Default
   List<String> _elements = Collections.emptyList();
 
+  /**
+   * The criteria to filter the resources to include in the export . The value of the '_typeFilter'
+   * query parameter.
+   */
   @Nonnull
   @Builder.Default
   List<String> _typeFilter = Collections.emptyList();
 
+  /**
+   * The date and time to use as the lower bound for the export. The value of the '_since' query
+   */
   @Nullable
   @Builder.Default
   Instant _since = null;
 
+  /**
+   * The patient(s) to include in the export. The value of the 'patient'  parameter.
+   */
   @Nonnull
   @Builder.Default
   List<Reference> patient = Collections.emptyList();
 
+  /**
+   * Converts this request to a {@link Parameters} object.
+   *
+   * @return the parameters.
+   */
   @Nonnull
   public Parameters toParameters() {
 

@@ -47,6 +47,10 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 
 
+/**
+ * A template for the FHIR Bulk Export operation. Orchestrates the FHIR asynchronous request pattern
+ * for the FHIR Bulk Export operation.
+ */
 @Slf4j
 @ToString
 public class BulkExportTemplate {
@@ -66,13 +70,27 @@ public class BulkExportTemplate {
   @Nonnull
   final AsyncConfig config;
 
+  /**
+   * Creates a new instance of the template.
+   *
+   * @param httpClient the http client to use (its lifecycle is managed externally)
+   * @param endpoingUri the FHIR endpoint URI
+   * @param config the async configuration
+   */
   public BulkExportTemplate(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri,
       @Nonnull final AsyncConfig config) {
     this.httpClient = httpClient;
     this.fhirEndpointUri = endpoingUri;
     this.config = config;
   }
-  
+
+  /**
+   * Executes the FHIR async pattern for the bulk export operation.
+   *
+   * @param request the bulk export request
+   * @param timeout the timeout for the operation.
+   * @return the final response for the bulk export operation.
+   */
   @Nonnull
   public BulkExportResponse export(@Nonnull final BulkExportRequest request,
       @Nonnull final Duration timeout) {
@@ -82,13 +100,6 @@ public class BulkExportTemplate {
       throw new BulkExportException.SystemError("System error in bulk export", ex);
     }
   }
-
-  @Nonnull
-  public BulkExportResponse export(@Nonnull final BulkExportRequest request)
-      throws URISyntaxException, IOException, InterruptedException {
-    return export(request, Duration.ZERO);
-  }
-
 
   @Nonnull
   URI kickOff(@Nonnull final BulkExportRequest request)
@@ -200,12 +211,12 @@ public class BulkExportTemplate {
       throws URISyntaxException {
 
     // check if patient is supported for the operation
-    if (!request.getOperation().isPatientSupported() && !request.getPatient().isEmpty()) {
+    if (!request.getLevel().isPatientSupported() && !request.getPatient().isEmpty()) {
       throw new BulkExportException.ProtocolError(
-          "'patient' is not supported for operation: " + request.getOperation());
+          "'patient' is not supported for operation: " + request.getLevel());
     }
     final URI endpointUri = ensurePathEndsWithSlash(fhirEndpointUri).resolve(
-        request.getOperation().getPath());
+        request.getLevel().getPath());
     final HttpUriRequest httpRequest;
 
     if (request.getPatient().isEmpty()) {

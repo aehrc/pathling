@@ -20,7 +20,7 @@ package au.csiro.pathling.export;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.export.ws.BulkExportResponse;
-import au.csiro.pathling.export.ws.BulkExportResponse.ResourceElement;
+import au.csiro.pathling.export.ws.BulkExportResponse.FileItem;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
 import java.net.URI;
 import java.time.Instant;
@@ -43,9 +43,9 @@ public class BulkExportTemplateClientTest {
         .transactionTime(Instant.now())
         .request("fake-request")
         .output(List.of(
-            new ResourceElement("Condition", "http:/foo.bar/1", 10),
-            new ResourceElement("Condition", "http:/foo.bar/2", 10),
-            new ResourceElement("Condition", "http:/foo.bar/3", 10)
+            new FileItem("Condition", "http:/foo.bar/1", 10),
+            new FileItem("Condition", "http:/foo.bar/2", 10),
+            new FileItem("Condition", "http:/foo.bar/3", 10)
         ))
         .deleted(Collections.emptyList())
         .error(Collections.emptyList())
@@ -80,9 +80,9 @@ public class BulkExportTemplateClientTest {
         .transactionTime(Instant.now())
         .request("fake-request")
         .output(List.of(
-            new ResourceElement("Patient", "http:/foo.bar/1", 10),
-            new ResourceElement("Condition", "http:/foo.bar/2", 10),
-            new ResourceElement("Observation", "http:/foo.bar/3", 10)
+            new FileItem("Patient", "http:/foo.bar/1", 10),
+            new FileItem("Condition", "http:/foo.bar/2", 10),
+            new FileItem("Observation", "http:/foo.bar/3", 10)
         ))
         .deleted(Collections.emptyList())
         .error(Collections.emptyList())

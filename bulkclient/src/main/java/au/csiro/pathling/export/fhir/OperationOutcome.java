@@ -42,7 +42,7 @@ public class OperationOutcome {
    */
   @Value
   @Builder
-  static class Issue {
+  public static class Issue {
 
     /**
      * Severity of the issue: fatal | error | warning | information | success.

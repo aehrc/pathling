@@ -78,7 +78,7 @@ class BulkExportTemplateClientWiremockTest {
   public static String bulkExportResponse_3_files(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
     return new JSONObject()
-        .put("transactionTime", "4934344343")
+        .put("transactionTime", 4934344343L)
         .put("request", "http://localhost:8080/$export")
         .put("requiresAccessToken", false)
         .put("output", new JSONArray()
@@ -324,7 +324,7 @@ class BulkExportTemplateClientWiremockTest {
     BulkExportClient.builder()
         .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
         .withOutputDir(exportDir.getPath())
-        .withOperation(new BulkExportRequest.PatientLevel())
+        .withLevel(new BulkExportRequest.PatientLevel())
         .build()
         .export();
 

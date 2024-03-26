@@ -23,18 +23,33 @@ import javax.annotation.Nonnull;
 import lombok.Builder;
 import lombok.Value;
 
+/**
+ * Represents an accepted but incomplete status response for the FHIR asynchronous request pattern.
+ */
 @Value
 @Builder
 public class AcceptedAsyncResponse implements AsyncResponse {
 
+  /**
+   * Optional URL to the content of the response. This should be present in the initial response to
+   * the kick-off request.
+   */
   @Nonnull
   @Builder.Default
   Optional<String> contentLocation = Optional.empty();
 
+  /**
+   * Optional information on the progress of the request. The value of the 'X-Progress' header if
+   * present.
+   */
   @Nonnull
   @Builder.Default
   Optional<String> progress = Optional.empty();
 
+  /**
+   * Optional information on the retry-after value. The value of the 'Retry-After' header if
+   * present.
+   */
   @Nonnull
   @Builder.Default
   Optional<RetryValue> retryAfter = Optional.empty();

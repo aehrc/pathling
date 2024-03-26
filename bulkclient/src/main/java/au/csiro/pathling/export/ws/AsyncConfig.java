@@ -22,25 +22,44 @@ import lombok.Value;
 
 import java.time.Duration;
 
+/**
+ * Configuration relating to the FHIR asynchronous request pattern.
+ *
+ * @see <a href="https://build.fhir.org/async.html">Async Request Pattern</a>
+ */
 @Value
 @Builder
 public class AsyncConfig {
 
   /**
-   * Pooling timeout in seconds
+   * The minimum delay between two consecutive status requests. This may override the value retured
+   * from the server in the 'retry-after' header.
    */
   @Builder.Default
   Duration minPoolingDelay = Duration.ofSeconds(1);
 
+  /**
+   * The minimum delay between two consecutive status requests. This may override the value retured
+   * from the server in the 'retry-after' header.
+   */
   @Builder.Default
   Duration maxPoolingDelay = Duration.ofSeconds(60);
-  
+
+  /**
+   * The delay to retry after a transient error in a status request.
+   */
   @Builder.Default
   Duration transientErrorDelay = Duration.ofSeconds(2);
 
+  /**
+   * The delay to retry after the HTTP 429 'Too many requests' response.
+   */
   @Builder.Default
   Duration tooManyRequestsDelay = Duration.ofSeconds(2);
 
+  /**
+   * The maximum number of consecutive transient errors to retry before giving up.
+   */
   @Builder.Default
   int maxTransientErrors = 3;
 }

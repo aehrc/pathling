@@ -32,6 +32,14 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.util.EntityUtils;
 
+/**
+ * Http Client ResponseHandler for the FHIR async request protocol.
+ * <p>
+ * Depending on the state of the protocol will produce either an intermediate response, final
+ * successful response of specified type or throw an exception with the error details.
+ *
+ * @param <T> type of the expected final successful response.
+ */
 @Slf4j
 class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<AsyncResponse> {
 
@@ -42,10 +50,17 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
   @Nonnull
   private final Class<T> responseClass;
 
-  AsynResponseHandler(@Nonnull final Class<T> responseClass) {
+  private AsynResponseHandler(@Nonnull final Class<T> responseClass) {
     this.responseClass = responseClass;
   }
 
+  /**
+   * Processes the response and returns the appropriate response object.
+   *
+   * @param response The http response to process
+   * @return The appropriate {@link AsyncResponse}  object
+   * @throws HttpError if an error occurs reading the response
+   */
   @Override
   public AsyncResponse handleResponse(final HttpResponse response) {
 
@@ -107,6 +122,13 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
     }
   }
 
+  /**
+   * Creates a new instance of the handler.
+   *
+   * @param responseClass the class of the expected final successful response.
+   * @param <T> type of the expected final successful response.
+   * @return a new instance of the handler.
+   */
   @Nonnull
   public static <T extends AsyncResponse> AsynResponseHandler<T> of(
       @Nonnull final Class<T> responseClass) {
