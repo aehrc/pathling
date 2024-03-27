@@ -18,38 +18,162 @@
 package au.csiro.pathling.export.ws;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
+import au.csiro.pathling.export.BulkExportException;
+import au.csiro.pathling.export.BulkExportException.HttpError;
+import au.csiro.pathling.export.fhir.OperationOutcome;
+import au.csiro.pathling.export.utils.WebUtils;
+import au.csiro.pathling.export.ws.BulkExportTemplate.CompletedState;
+import au.csiro.pathling.export.ws.BulkExportTemplate.KickOffState;
+import au.csiro.pathling.export.ws.BulkExportTemplate.PoolingState;
+import au.csiro.pathling.export.ws.BulkExportTemplate.State;
+import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+@ExtendWith(MockitoExtension.class)
 class BulkExportTemplateTest {
 
-  @Test
-  void testDefaultRequestUri() throws Exception {
-    final URI baseUri = URI.create("http://example.com/fhir");
-    assertEquals(URI.create("http://example.com/fhir?_outputFormat=ndjson"),
-        BulkExportTemplate.toRequestURI(baseUri, BulkExportRequest.builder().build())
-    );
+  final static OperationOutcome TRANSIENT_ERROR = OperationOutcome.builder()
+      .issue(List.of(
+          OperationOutcome.Issue.builder()
+              .severity("error")
+              .code("transient")
+              .diagnostics("Transient error")
+              .build()
+      )).build();
+
+
+  final AsyncConfig asyncConfig = AsyncConfig.builder()
+      .minPoolingDelay(Duration.ofSeconds(1))
+      .maxPoolingDelay(Duration.ofSeconds(60))
+      .transientErrorDelay(Duration.ofSeconds(2))
+      .tooManyRequestsDelay(Duration.ofSeconds(5))
+      .maxTransientErrors(3)
+      .build();
+  @Mock
+  BulkExportAsyncService asyncService;
+
+  BulkExportTemplate template;
+
+
+  @BeforeEach
+  void setUp() {
+    template = new BulkExportTemplate(asyncService, asyncConfig);
   }
 
   @Test
-  void testNonDefaultRequestUri() throws Exception {
-    final URI baseUri = URI.create("http://test.com/fhir");
-    final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
-    assertEquals(URI.create(
-            "http://test.com/fhir?_outputFormat=xml&_type=Patient%2CObservation"
-                + "&_elements=Patient.id%2CCondition.status"
-                + "&_typeFilter=Patient.active%3Dtrue%2CObservation.status%3Dfinal"
-                + "&_since=2023-01-11T00%3A00%3A00.123Z"),
-        BulkExportTemplate.toRequestURI(baseUri, BulkExportRequest.builder()
-            ._outputFormat("xml")
-            ._type(List.of("Patient", "Observation"))
-            ._elements(List.of("Patient.id", "Condition.status"))
-            ._typeFilter(List.of("Patient.active=true", "Observation.status=final"))
-            ._since(testInstant)
-            .build())
-    );
+  void testKickOffTransitionsToPoolingOnAcceptedResponse() throws IOException {
+
+    final BulkExportRequest request = BulkExportRequest.builder()._since(Instant.now()).build();
+
+    when(asyncService.kickOff(eq(request))).thenReturn(
+        AcceptedAsyncResponse
+            .builder().contentLocation(Optional.of("http://foo.bar/fhir/$pool/1"))
+            .build());
+
+    final KickOffState kickOffState = template.new KickOffState(request);
+    final State nextState = kickOffState.handle(asyncService);
+    assertEquals(
+        template.new PoolingState(URI.create("http://foo.bar/fhir/$pool/1"), 0, Duration.ZERO),
+        nextState);
+  }
+
+  @Test
+  void testPoolingTransitionsToPoolingOnAcceptedResponseAndResetsErrorCount() throws IOException {
+
+    final URI statusURI = URI.create("http://foo.bar/fhir/$pool/2");
+    when(asyncService.checkStatus(eq(statusURI))).thenReturn(
+        AcceptedAsyncResponse.builder()
+            .retryAfter(Optional.of(RetryValue.after(Duration.ofSeconds(5))))
+            .build());
+    final PoolingState poolingState = template.new PoolingState(statusURI, 3, Duration.ZERO);
+    final State nextState = poolingState.handle(asyncService);
+    assertEquals(
+        template.new PoolingState(statusURI, 0,
+            Duration.ofSeconds(5)),
+        nextState);
+  }
+
+  @Test
+  void testPoolingTransitionsToFinalOnSuccess() throws IOException {
+    final BulkExportResponse finalResponse = BulkExportResponse.builder()
+        .transactionTime(Instant.now())
+        .request("http://foo.bar/fhir/fhir$export/122323232")
+        .build();
+
+    final URI statusURI = URI.create("http://foo.bar/fhir/$pool/3");
+
+    when(asyncService.checkStatus(statusURI)).thenReturn(finalResponse);
+
+    final PoolingState poolingState = template.new PoolingState(statusURI, 0, Duration.ZERO);
+    final State nextState = poolingState.handle(asyncService);
+    assertEquals(new CompletedState(finalResponse, statusURI), nextState);
+  }
+
+  @Test
+  void testPoolingTransitionsToPoolingWhenRetryingATransientError() throws IOException {
+    when(asyncService.checkStatus(Mockito.any()))
+        .thenThrow(
+            new BulkExportException.HttpError("Internal Server Error", 500,
+                Optional.of(TRANSIENT_ERROR),
+                Optional.of(RetryValue.after(Duration.ofSeconds(7)))));
+
+    final PoolingState poolingState = template.new PoolingState(
+        URI.create("http://foo.bar/fhir/$pool/2"),
+        0, Duration.ZERO);
+    final State nextState = poolingState.handle(asyncService);
+    assertEquals(
+        template.new PoolingState(URI.create("http://foo.bar/fhir/$pool/2"), 1,
+            Duration.ofSeconds(7)),
+        nextState);
+  }
+
+  @Test
+  void testPoolingFailsWhenTooManyTransientErrors() throws IOException {
+    when(asyncService.checkStatus(Mockito.any()))
+        .thenThrow(
+            new BulkExportException.HttpError("Internal Server Error", 500,
+                Optional.of(TRANSIENT_ERROR),
+                Optional.of(RetryValue.after(Duration.ofSeconds(7)))));
+
+    final PoolingState poolingState = template.new PoolingState(
+        URI.create("http://foo.bar/fhir/$pool/2"),
+        3, Duration.ZERO);
+
+    final HttpError ex = assertThrows(HttpError.class, () -> poolingState.handle(asyncService));
+    assertEquals(500, ex.getStatusCode());
+    assertEquals(TRANSIENT_ERROR, ex.getOperationOutcome().orElseThrow());
+  }
+
+
+  @Test
+  void testPoolingTransitionsTooPoolingOnTooManyRequests() throws IOException {
+    when(asyncService.checkStatus(Mockito.any()))
+        .thenThrow(
+            new BulkExportException.HttpError("Too Many Requests", WebUtils.HTTP_TOO_MANY_REQUESTS,
+                Optional.empty(),
+                Optional.empty()));
+
+    final PoolingState poolingState = template.new PoolingState(
+        URI.create("http://foo.bar/fhir/$pool/2"),
+        2, Duration.ZERO);
+    final State nextState = poolingState.handle(asyncService);
+    assertEquals(
+        template.new PoolingState(URI.create("http://foo.bar/fhir/$pool/2"), 2,
+            Duration.ofSeconds(5)), // the default tooManyRequestsDelay
+        nextState);
   }
 }

@@ -17,21 +17,30 @@
 
 package au.csiro.pathling.export.ws;
 
+import au.csiro.pathling.export.fhir.FhirUtils;
 import au.csiro.pathling.export.fhir.Parameters;
 import au.csiro.pathling.export.fhir.Parameters.Parameter;
 import au.csiro.pathling.export.fhir.Reference;
+import au.csiro.pathling.export.utils.WebUtils;
+import au.csiro.pathling.utilities.Lists;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import au.csiro.pathling.utilities.Lists;
 import lombok.Builder;
 import lombok.Value;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.utils.URIBuilder;
 
 /**
  * Represents a request to initiate a bulk export operation.
@@ -203,4 +212,55 @@ public class BulkExportRequest {
         .collect(Collectors.toUnmodifiableList());
     return Parameters.of(params);
   }
+
+  @Nonnull
+  public URI toRequestURI(@Nonnull final URI endpointUri) {
+    final URIBuilder uriBuilder = new URIBuilder(endpointUri);
+    if (get_outputFormat() != null) {
+      uriBuilder.addParameter("_outputFormat",
+          Objects.requireNonNull(get_outputFormat()));
+    }
+    if (get_since() != null) {
+      uriBuilder.addParameter("_since",
+          FhirUtils.formatFhirInstant(Objects.requireNonNull(get_since())));
+    }
+    if (!get_type().isEmpty()) {
+      uriBuilder.addParameter("_type", String.join(",", get_type()));
+    }
+    if (!get_elements().isEmpty()) {
+      uriBuilder.addParameter("_elements", String.join(",", get_elements()));
+    }
+    if (!get_typeFilter().isEmpty()) {
+      uriBuilder.addParameter("_typeFilter", String.join(",", get_typeFilter()));
+    }
+    try {
+      return uriBuilder.build();
+    } catch (final URISyntaxException ex) {
+      throw new IllegalArgumentException("Error building URI", ex);
+    }
+  }
+
+  @Nonnull
+  public HttpUriRequest toHttpRequest(@Nonnull final URI fhirEndpointUri) {
+    // check if patient is supported for the operation
+    if (!this.getLevel().isPatientSupported() && !this.getPatient().isEmpty()) {
+      throw new IllegalStateException(
+          "'patient' is not supported for operation: " + this.getLevel());
+    }
+    final URI endpointUri = WebUtils.ensurePathEndsWithSlash(fhirEndpointUri).resolve(
+        this.getLevel().getPath());
+    final HttpUriRequest httpRequest;
+
+    if (this.getPatient().isEmpty()) {
+      httpRequest = new HttpGet(this.toRequestURI(endpointUri));
+    } else {
+      final HttpPost postRequest = new HttpPost(endpointUri);
+      postRequest.setEntity(WebUtils.toFhirJsonEntity(this.toParameters()));
+      httpRequest = postRequest;
+    }
+    httpRequest.setHeader("accept", WebUtils.APPLICATION_FHIR_JSON.getMimeType());
+    httpRequest.setHeader("prefer", "respond-async");
+    return httpRequest;
+  }
+
 }

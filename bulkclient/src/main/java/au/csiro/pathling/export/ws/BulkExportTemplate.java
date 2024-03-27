@@ -22,29 +22,17 @@ import static au.csiro.pathling.export.utils.TimeoutUtils.toTimeoutAt;
 
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
-import au.csiro.pathling.export.fhir.FhirUtils;
-import au.csiro.pathling.export.fhir.FhirJsonSupport;
+import au.csiro.pathling.export.utils.WebUtils;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import lombok.ToString;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.Consts;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.util.EntityUtils;
 
 
 /**
@@ -55,32 +43,196 @@ import org.apache.http.util.EntityUtils;
 @ToString
 public class BulkExportTemplate {
 
-  private static final int HTTP_TOO_MANY_REQUESTS = 429;
-
-  private static final ContentType APPLICATION_FHIR_JSON = ContentType.create(
-      "application/fhir+json",
-      Consts.UTF_8);
-
   @Nonnull
-  final HttpClient httpClient;
-
-  @Nonnull
-  final URI fhirEndpointUri;
+  final BulkExportAsyncService asyncService;
 
   @Nonnull
   final AsyncConfig config;
 
+
+  /**
+   * Represents the state FHIR Async pattern interaction.
+   */
+  interface State {
+
+    @Nonnull
+    State handle(@Nonnull final BulkExportAsyncService service) throws IOException;
+
+    boolean isFinal();
+
+    @Nonnull
+    Duration getRetryAfter();
+  }
+
+  /**
+   * Represents the initial state of the FHIR Async pattern interaction
+   */
+  @Value
+  class KickOffState implements State {
+
+    @Nonnull
+    BulkExportRequest request;
+
+    @Override
+    @Nonnull
+    public State handle(@Nonnull final BulkExportAsyncService service) throws IOException {
+      final AsyncResponse asyncResponse = service.kickOff(request);
+      if (asyncResponse instanceof AcceptedAsyncResponse) {
+        return handleAcceptedResponse((AcceptedAsyncResponse) asyncResponse);
+      } else {
+        throw new BulkExportException.ProtocolError(
+            "KickOff: Unexpected response: " + asyncResponse);
+      }
+    }
+
+    @Nonnull
+    private PoolingState handleAcceptedResponse(
+        @Nonnull final AcceptedAsyncResponse asyncResponse) {
+      final URI statusURI = asyncResponse.getContentLocation()
+          .map(URI::create).orElseThrow(
+              () -> new BulkExportException.ProtocolError("KickOff: Missing content-location"));
+      log.debug("KickOff: Accepted: " + statusURI);
+      return new PoolingState(statusURI, 0, Duration.ZERO);
+    }
+
+    @Override
+    public boolean isFinal() {
+      return false;
+    }
+
+    @Nonnull
+    @Override
+    public Duration getRetryAfter() {
+      return Duration.ZERO;
+    }
+  }
+
+  /**
+   * Represents the pooling state of the FHIR Async pattern interaction.
+   */
+  @Value
+  class PoolingState implements State {
+
+    @Nonnull
+    URI poolingURI;
+
+    int transientErrorCount;
+
+    @Nonnull
+    Duration retryAfter;
+
+    @Nonnull
+    @Override
+    public State handle(@Nonnull final BulkExportAsyncService service) throws IOException {
+      try {
+        final AsyncResponse asyncResponse = service.checkStatus(poolingURI);
+        // reset transient error counter
+        if (asyncResponse instanceof BulkExportResponse) {
+          return handleFinalResponse((BulkExportResponse) asyncResponse);
+        } else {
+          return handleContinueResponse((AcceptedAsyncResponse) asyncResponse);
+        }
+      } catch (final HttpError ex) {
+        if (ex.isTransient()) {
+          // log retrying a transient error
+          return handleTransientError(ex);
+        } else if (WebUtils.HTTP_TOO_MANY_REQUESTS == ex.getStatusCode()) {
+          // handle too many requests
+          return handleTooManyRequests(ex);
+        } else {
+          log.debug("Pooling: Http error: {}", ex.getMessage());
+          throw ex;
+        }
+      }
+    }
+
+    @Nonnull
+    private PoolingState handleTransientError(@Nonnull final HttpError ex) {
+      if (transientErrorCount < config.getMaxTransientErrors()) {
+        log.debug("Pooling: Retrying transient error {} ouf of {} : '{}'",
+            transientErrorCount, config.getMaxTransientErrors(), ex.getMessage());
+        final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
+            config.getTransientErrorDelay());
+        log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
+        return new PoolingState(poolingURI, transientErrorCount + 1, timeToSleep);
+      } else {
+        log.debug("Pooling: giving up on retrying of transient error: {}", ex.getMessage());
+        throw ex;
+      }
+    }
+
+    @Nonnull
+    private PoolingState handleTooManyRequests(@Nonnull final HttpError ex) {
+      log.debug("Pooling: Got too many requests error with retry-after: '{}'",
+          ex.getRetryAfter().map(RetryValue::toString).orElse("na"));
+      final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
+          config.getTooManyRequestsDelay());
+      log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
+      return new PoolingState(poolingURI, transientErrorCount, timeToSleep);
+    }
+
+    @Nonnull
+    private PoolingState handleContinueResponse(
+        @Nonnull final AcceptedAsyncResponse acceptedResponse) {
+      log.debug("Pooling: progress: '{}', retry-after: {}",
+          acceptedResponse.getProgress().orElse("na"),
+          acceptedResponse.getRetryAfter().map(RetryValue::toString).orElse("na"));
+      final Duration timeToSleep = computeTimeToSleep(acceptedResponse.getRetryAfter(),
+          config.getMinPoolingDelay());
+      log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
+      return new PoolingState(poolingURI, 0, timeToSleep);
+    }
+
+    @Nonnull
+    private CompletedState handleFinalResponse(@Nonnull final BulkExportResponse asyncResponse) {
+      return new CompletedState(asyncResponse, poolingURI);
+    }
+
+    @Override
+    public boolean isFinal() {
+      return false;
+    }
+  }
+
+  /**
+   * Represents the state of successfull completion of  the FHIR Async pattern interaction.
+   */
+  @Value
+  static class CompletedState implements State {
+
+    @Nonnull
+    BulkExportResponse response;
+
+    @Nonnull
+    URI poolingURI;
+
+    @Nonnull
+    @Override
+    public State handle(@Nonnull final BulkExportAsyncService service) {
+      throw new IllegalStateException("Final state cannot handle");
+    }
+
+    @Override
+    public boolean isFinal() {
+      return true;
+    }
+
+    @Nonnull
+    @Override
+    public Duration getRetryAfter() {
+      return Duration.ZERO;
+    }
+  }
+
   /**
    * Creates a new instance of the template.
    *
-   * @param httpClient the http client to use (its lifecycle is managed externally)
-   * @param endpoingUri the FHIR endpoint URI
+   * @param asyncService the async service
    * @param config the async configuration
    */
-  public BulkExportTemplate(@Nonnull final HttpClient httpClient, @Nonnull final URI endpoingUri,
+  public BulkExportTemplate(@Nonnull final BulkExportAsyncService asyncService,
       @Nonnull final AsyncConfig config) {
-    this.httpClient = httpClient;
-    this.fhirEndpointUri = endpoingUri;
+    this.asyncService = asyncService;
     this.config = config;
   }
 
@@ -95,94 +247,28 @@ public class BulkExportTemplate {
   public BulkExportResponse export(@Nonnull final BulkExportRequest request,
       @Nonnull final Duration timeout) {
     try {
-      return pool(kickOff(request), timeout);
-    } catch (final IOException | URISyntaxException | InterruptedException ex) {
+      return run(new KickOffState(request), timeout);
+    } catch (final IOException | InterruptedException ex) {
       throw new BulkExportException.SystemError("System error in bulk export", ex);
     }
   }
 
   @Nonnull
-  URI kickOff(@Nonnull final BulkExportRequest request)
-      throws IOException, URISyntaxException {
-
-    final HttpUriRequest httpRequest = toHttpRequest(fhirEndpointUri, request);
-    log.debug("KickOff: Request: {}", httpRequest);
-    if (httpRequest instanceof HttpPost) {
-      log.debug("KickOff: Request body: {}",
-          EntityUtils.toString(((HttpPost) httpRequest).getEntity()));
-    }
-
-    final AsyncResponse asyncResponse = httpClient.execute(httpRequest,
-        AsynResponseHandler.of(BulkExportResponse.class));
-
-    if (asyncResponse instanceof AcceptedAsyncResponse) {
-      return Optional.of(asyncResponse)
-          .map(AcceptedAsyncResponse.class::cast)
-          .flatMap(AcceptedAsyncResponse::getContentLocation)
-          .map(URI::create).orElseThrow();
-    } else {
-      throw new BulkExportException.ProtocolError("KickOff: Unexpected response");
-    }
-  }
-
-  @Nonnull
-  AsyncResponse checkStatus(@Nonnull final URI statusUri)
-      throws IOException {
-    final HttpUriRequest statusRequest = new HttpGet(statusUri);
-    statusRequest.setHeader("accept", "application/json");
-    return httpClient.execute(statusRequest, AsynResponseHandler.of(BulkExportResponse.class));
-  }
-
-  @Nonnull
-  BulkExportResponse pool(@Nonnull final URI poolingURI, @Nonnull final Duration timeout)
-      throws IOException, InterruptedException {
-
+  BulkExportResponse run(@Nonnull final State initialState,
+      @Nonnull final Duration timeout) throws IOException, InterruptedException {
     final Instant timeoutAt = toTimeoutAt(timeout);
-    int transientErrorCount = 0;
+    State currentState = initialState;
     Instant nextStatusCheck = Instant.now();
     while (!hasExpired(timeoutAt)) {
-      TimeUnit.MILLISECONDS.sleep(config.getMinPoolingDelay().toMillis());
-      if ((Instant.now().isAfter(nextStatusCheck))) {
-        try {
-          log.debug("Pooling: " + poolingURI);
-          final AsyncResponse asyncResponse = checkStatus(poolingURI);
-          // reset transient error counter
-          transientErrorCount = 0;
-          if (asyncResponse instanceof BulkExportResponse) {
-            return (BulkExportResponse) asyncResponse;
-          } else {
-            final AcceptedAsyncResponse acceptedResponse = (AcceptedAsyncResponse) asyncResponse;
-            log.debug("Pooling: progress: '{}', retry-after: {}",
-                acceptedResponse.getProgress().orElse("na"),
-                acceptedResponse.getRetryAfter().map(RetryValue::toString).orElse("na"));
-            final Duration timeToSleep = computeTimeToSleep(acceptedResponse.getRetryAfter(),
-                config.getMinPoolingDelay());
-            log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
-            nextStatusCheck = Instant.now().plus(timeToSleep);
-          }
-        } catch (final HttpError ex) {
-          if (ex.isTransient() && ++transientErrorCount <= config.getMaxTransientErrors()) {
-            // log retrying a transient error
-            log.debug("Pooling: Retrying transient error {} ouf of {} : '{}'",
-                transientErrorCount, config.getMaxTransientErrors(), ex.getMessage());
-            final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
-                config.getTransientErrorDelay());
-            log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
-            nextStatusCheck = Instant.now().plus(timeToSleep);
-          } else if (HTTP_TOO_MANY_REQUESTS == ex.getStatusCode()) {
-            // handle too many requests
-            log.debug("Pooling: Got too many requests error with retry-after: '{}'",
-                ex.getRetryAfter().map(RetryValue::toString).orElse("na"));
-            final Duration timeToSleep = computeTimeToSleep(ex.getRetryAfter(),
-                config.getTooManyRequestsDelay());
-            log.debug("Pooling: Sleeping for {} ms", timeToSleep.toMillis());
-            nextStatusCheck = Instant.now().plus(timeToSleep);
-          } else {
-            log.debug("Pooling: Http error: {}", ex.getMessage());
-            throw ex;
-          }
+      if (Instant.now().isAfter(nextStatusCheck)) {
+        currentState = currentState.handle(asyncService);
+        if (currentState.isFinal()) {
+          return ((CompletedState) currentState).getResponse();
+        } else {
+          nextStatusCheck = Instant.now().plus(currentState.getRetryAfter());
         }
       }
+      TimeUnit.MILLISECONDS.sleep(config.getMinPoolingDelay().toMillis());
     }
     log.error("Cancelling pooling due to time limit {} exceeded at: {}", timeout, timeoutAt);
     throw new BulkExportException.Timeout(
@@ -202,67 +288,6 @@ public class BulkExportTemplate {
       result = config.getMinPoolingDelay();
     }
     return result;
-  }
-
-
-  @Nonnull
-  static HttpUriRequest toHttpRequest(@Nonnull final URI fhirEndpointUri,
-      @Nonnull final BulkExportRequest request)
-      throws URISyntaxException {
-
-    // check if patient is supported for the operation
-    if (!request.getLevel().isPatientSupported() && !request.getPatient().isEmpty()) {
-      throw new BulkExportException.ProtocolError(
-          "'patient' is not supported for operation: " + request.getLevel());
-    }
-    final URI endpointUri = ensurePathEndsWithSlash(fhirEndpointUri).resolve(
-        request.getLevel().getPath());
-    final HttpUriRequest httpRequest;
-
-    if (request.getPatient().isEmpty()) {
-      httpRequest = new HttpGet(toRequestURI(endpointUri, request));
-    } else {
-      final HttpPost postRequest = new HttpPost(endpointUri);
-      postRequest.setEntity(toFhirJsonEntity(request.toParameters()));
-      httpRequest = postRequest;
-    }
-    httpRequest.setHeader("accept", APPLICATION_FHIR_JSON.getMimeType());
-    httpRequest.setHeader("prefer", "respond-async");
-    return httpRequest;
-  }
-
-  @Nonnull
-  static HttpEntity toFhirJsonEntity(@Nonnull final Object fhirResource) {
-    return new StringEntity(FhirJsonSupport.toJson(fhirResource), APPLICATION_FHIR_JSON);
-  }
-
-  @Nonnull
-  static URI ensurePathEndsWithSlash(@Nonnull final URI uri) {
-    return uri.getPath().endsWith("/")
-           ? uri
-           : URI.create(uri + "/");
-  }
-
-  @Nonnull
-  static URI toRequestURI(@Nonnull final URI endpointUri,
-      @Nonnull final BulkExportRequest request)
-      throws URISyntaxException {
-    final URIBuilder uriBuilder = new URIBuilder(endpointUri)
-        .addParameter("_outputFormat", request.get_outputFormat());
-    if (!request.get_type().isEmpty()) {
-      uriBuilder.addParameter("_type", String.join(",", request.get_type()));
-    }
-    if (!request.get_elements().isEmpty()) {
-      uriBuilder.addParameter("_elements", String.join(",", request.get_elements()));
-    }
-    if (!request.get_typeFilter().isEmpty()) {
-      uriBuilder.addParameter("_typeFilter", String.join(",", request.get_typeFilter()));
-    }
-    if (request.get_since() != null) {
-      uriBuilder.addParameter("_since",
-          FhirUtils.formatFhirInstant(Objects.requireNonNull(request.get_since())));
-    }
-    return uriBuilder.build();
   }
 }
 

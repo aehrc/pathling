@@ -55,7 +55,7 @@ public class AsyncConfig {
    * The delay to retry after the HTTP 429 'Too many requests' response.
    */
   @Builder.Default
-  Duration tooManyRequestsDelay = Duration.ofSeconds(2);
+  Duration tooManyRequestsDelay = Duration.ofSeconds(10);
 
   /**
    * The maximum number of consecutive transient errors to retry before giving up.

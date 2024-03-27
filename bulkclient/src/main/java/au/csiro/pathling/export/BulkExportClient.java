@@ -39,6 +39,7 @@ import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.utils.ExecutorServiceResource;
 import au.csiro.pathling.export.utils.TimeoutUtils;
 import au.csiro.pathling.export.ws.AsyncConfig;
+import au.csiro.pathling.export.ws.BulkExportAsyncService;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportRequest.GroupLevel;
 import au.csiro.pathling.export.ws.BulkExportRequest.Level;
@@ -210,6 +211,7 @@ public class BulkExportClient {
 
   /**
    * Create a builder for a system-level export.
+   *
    * @return the builder configured for a system-level export
    */
   @Nonnull
@@ -219,15 +221,17 @@ public class BulkExportClient {
 
   /**
    * Create a builder for a patient-level export.
+   *
    * @return the builder configured for a patient-level export
    */
   @Nonnull
   public static BulkExportClientBuilder patientBuilder() {
     return BulkExportClient.builder().withLevel(new PatientLevel());
   }
-  
+
   /**
    * Create a builder for a group-level export.
+   *
    * @param groupId the group ID to export
    * @return the builder configured for a group-level export
    */
@@ -249,8 +253,8 @@ public class BulkExportClient {
         final CloseableHttpClient httpClient = createHttpClient(tokenProvider);
         final ExecutorServiceResource executorServiceResource = createExecutorServiceResource()
     ) {
-      final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(httpClient,
-          URI.create(fhirEndpointUrl),
+      final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(
+          new BulkExportAsyncService(httpClient, URI.create(fhirEndpointUrl)),
           asyncConfig);
       final UrlDownloadTemplate downloadTemplate = new UrlDownloadTemplate(httpClient,
           executorServiceResource.getExecutorService());
