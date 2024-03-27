@@ -53,4 +53,17 @@ public class ExtractQueryExecutor extends QueryExecutor {
     return sparkSession.emptyDataFrame();
   }
 
+  /**
+   * Builds up the query for an extract request, with a constraint.
+   *
+   * @param query an {@link ExtractRequest}
+   * @param constraint a {@link ProjectionConstraint}
+   * @return an uncollected {@link Dataset}
+   */
+  @Nonnull
+  public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
+      @Nonnull final ProjectionConstraint constraint) {
+    return buildQuery(query);
+  }
+
 }
