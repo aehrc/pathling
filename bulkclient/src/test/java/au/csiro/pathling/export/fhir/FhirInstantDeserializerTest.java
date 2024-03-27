@@ -31,40 +31,42 @@ class FhirInstantDeserializerTest {
 
   final FhirInstantDeserializer fhirInstantDeserializer = new FhirInstantDeserializer();
 
-  final Instant testInstant = Instant.parse("2023-01-02T00:01:02.123Z");
-  final long testInstantEpochMilli = testInstant.toEpochMilli();
+  final static Instant TEST_INSTANT = Instant.parse("2023-01-02T00:01:02.123Z");
+  final static long TEST_INSTANT_EPOCH_MILLI = TEST_INSTANT.toEpochMilli();
 
   @Test
-  void deserializeFromMillsecondsValue() {
-
-    assertEquals(Instant.parse("2023-01-02T00:01:02.123Z"),
-        fhirInstantDeserializer.deserialize(new JsonPrimitive(testInstantEpochMilli), Instant.class,
+  void deserializeFromMillsecondsValueAsNumber() {
+    assertEquals(TEST_INSTANT,
+        fhirInstantDeserializer.deserialize(new JsonPrimitive(TEST_INSTANT_EPOCH_MILLI),
+            Instant.class,
             null));
   }
 
   @Test
+  void deserializeFromMillsecondsValueAsString() {
+    assertEquals(TEST_INSTANT,
+        fhirInstantDeserializer.deserialize(
+            new JsonPrimitive(String.valueOf(TEST_INSTANT_EPOCH_MILLI)), Instant.class,
+            null));
+  }
+
+
+  @Test
   void deserializeFromFHIRStringValueWithZoneZ() {
-    assertEquals(Instant.parse("2023-01-02T00:01:02.123Z"),
-        fhirInstantDeserializer.deserialize(new JsonPrimitive("2023-01-02T00:01:02.123Z"),
+    assertEquals(Instant.parse("1971-10-12T01:02:03.123Z"),
+        fhirInstantDeserializer.deserialize(new JsonPrimitive("1971-10-12T01:02:03.123Z"),
             Instant.class,
             null));
   }
 
   @Test
   void deserializeFromFHIRStringValueWithExplicitOffset() {
-    assertEquals(Instant.parse("2023-01-02T00:01:02.123Z"),
+    assertEquals(TEST_INSTANT,
         fhirInstantDeserializer.deserialize(new JsonPrimitive("2023-01-02T01:31:02.123+01:30"),
             Instant.class,
             null));
   }
-
-  @Test
-  void deserializeFromInvalidStringValue() {
-    final JsonParseException ex = assertThrows(JsonParseException.class,
-        () -> fhirInstantDeserializer.deserialize(new JsonPrimitive("1234"), Instant.class, null));
-    assertEquals("Failed to parse Instant from string: \"1234\"", ex.getMessage());
-  }
-
+  
   @Test
   void deserializeFromInvalidPrimitive() {
     final JsonParseException ex = assertThrows(JsonParseException.class,

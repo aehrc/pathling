@@ -39,8 +39,10 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.base.Charsets;
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -78,7 +80,7 @@ class BulkExportTemplateClientWiremockTest {
   public static String bulkExportResponse_3_files(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
     return new JSONObject()
-        .put("transactionTime", 4934344343L)
+        .put("transactionTime", "4934344343")
         .put("request", "http://localhost:8080/$export")
         .put("requiresAccessToken", false)
         .put("output", new JSONArray()
@@ -276,6 +278,14 @@ class BulkExportTemplateClientWiremockTest {
     assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
         FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
+
+    assertEquals(BulkExportResult.of(Instant.parse("1970-02-27T02:39:04.343Z"), List.of(
+            BulkExportResult.FileResult.of(
+                URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/file/00"),
+                URI.create(exportDir.toURI().toString() + "Patient.0000.ndjson"),
+                5
+            ))),
+        result);
   }
 
 

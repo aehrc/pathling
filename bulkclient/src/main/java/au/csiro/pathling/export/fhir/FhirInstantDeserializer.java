@@ -29,8 +29,11 @@ import java.time.format.DateTimeParseException;
 import static au.csiro.pathling.export.fhir.FhirUtils.parseFhirInstant;
 
 /**
- * Gson deserializer for {@link Instant} objects that can handle FHIR instant strings. It also tries
- * to handle instants in epoch milliseconds.
+ * Gson deserializer for {@link Instant} objects that can handle FHIR instant strings.
+ * <p/>
+ * It also tries to handle instants expressed as numbers (or strings) representing milliseconds
+ * since the epoch. This is necessary for compatibility with some Bulk Export implementations
+ * including the <a href="https://bulk-data.smarthealthit.org">SMART Bulk Data Server</a>.
  */
 class FhirInstantDeserializer implements JsonDeserializer<Instant> {
 
@@ -44,6 +47,12 @@ class FhirInstantDeserializer implements JsonDeserializer<Instant> {
     if (primitive.isNumber()) {
       return Instant.ofEpochMilli(primitive.getAsLong());
     } else if (primitive.isString()) {
+      try {
+        return Instant.ofEpochMilli(Long.parseLong(primitive.getAsString()));
+      } catch (final NumberFormatException __) {
+        // Not a number
+        // Continue to try to parse as a FHIR instan.
+      }
       try {
         return parseFhirInstant(primitive.getAsString());
       } catch (final DateTimeParseException dex) {
