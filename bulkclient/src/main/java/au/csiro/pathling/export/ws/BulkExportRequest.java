@@ -36,7 +36,7 @@ import lombok.Value;
 /**
  * Represents a request to initiate a bulk export operation.
  *
- * @see <a href="https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters>FHIR Bulk Export
+ * @see <a href="https://hl7.org/fhir/uv/bulkdata/export.html#query-parameters">FHIR Bulk Export
  * Request Query Parameters</a>
  */
 @Value
@@ -50,6 +50,7 @@ public class BulkExportRequest {
 
     /**
      * The path to the export operation corresponding to this level.
+     *
      * @return the path to the export operation.
      */
     @Nonnull
@@ -57,6 +58,7 @@ public class BulkExportRequest {
 
     /**
      * Whether this level supports patient-specific exports.
+     *
      * @return true if patient-specific exports are supported.
      */
     boolean isPatientSupported();
@@ -131,12 +133,18 @@ public class BulkExportRequest {
   Level level = new SystemLevel();
 
   /**
-   * The format of the output. The default is 'ndjson'. The value of the '_outputFormat' query
-   * parameter.
+   * The format of the output. The value of the '_outputFormat' query parameter.
    */
-  @Nonnull
+  @Nullable
   @Builder.Default
-  String _outputFormat = "ndjson";
+  String _outputFormat = null;
+
+  /**
+   * The date and time to use as the lower bound for the export. The value of the '_since' query
+   */
+  @Nullable
+  @Builder.Default
+  Instant _since = null;
 
   /**
    * The types of resources to export. The value of the '_type' query parameter.
@@ -161,12 +169,6 @@ public class BulkExportRequest {
   @Builder.Default
   List<String> _typeFilter = Collections.emptyList();
 
-  /**
-   * The date and time to use as the lower bound for the export. The value of the '_since' query
-   */
-  @Nullable
-  @Builder.Default
-  Instant _since = null;
 
   /**
    * The patient(s) to include in the export. The value of the 'patient'  parameter.
@@ -184,13 +186,12 @@ public class BulkExportRequest {
   public Parameters toParameters() {
 
     final List<Parameter> params = Stream.of(
-            Stream.of(
-                Parameter.of("_outputFormat", _outputFormat)
-            ),
+            Optional.ofNullable(_outputFormat)
+                .map(s -> Parameter.of("_outputFormat", s)).stream(),
             Optional.ofNullable(_since)
                 .map(s -> Parameter.of("_since", s)).stream(),
-            _type.stream()
-                .map(t -> Parameter.of("_type", t)),
+            Lists.optionalOf(_type)
+                .map(e -> Parameter.of("_type", String.join(",", e))).stream(),
             Lists.optionalOf(_elements)
                 .map(e -> Parameter.of("_elements", String.join(",", e))).stream(),
             Lists.optionalOf(_typeFilter)
@@ -200,9 +201,6 @@ public class BulkExportRequest {
         )
         .flatMap(Function.identity())
         .collect(Collectors.toUnmodifiableList());
-
-    return Parameters.builder()
-        .parameter(params)
-        .build();
+    return Parameters.of(params);
   }
 }

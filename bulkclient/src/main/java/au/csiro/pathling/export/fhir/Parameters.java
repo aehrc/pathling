@@ -18,7 +18,6 @@
 package au.csiro.pathling.export.fhir;
 
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,8 +30,7 @@ import lombok.Value;
  *
  * @see <a href="https://hl7.org/fhir/r4/parameters.html">Parameters</a>
  */
-@Value
-@Builder
+@Value(staticConstructor = "of")
 public class Parameters {
 
   public static final String RESOURCE_TYPE = "Parameters";
@@ -111,19 +109,20 @@ public class Parameters {
    * The type of the resource. Should be "Parameters".
    */
   @Nonnull
-  @Builder.Default
   String resourceType = RESOURCE_TYPE;
 
   /**
    * A collection of parameters.
    */
   @Nonnull
-  @Builder.Default
-  List<Parameter> parameter = Collections.emptyList();
-
+  List<Parameter> parameter;
 
   @Nonnull
   public String toJson() {
     return FhirJsonSupport.toJson(this);
+  }
+
+  public static Parameters of(@Nonnull  final Parameter... parameters) {
+    return Parameters.of(List.of(parameters));
   }
 }

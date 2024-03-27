@@ -17,14 +17,13 @@
 
 package au.csiro.pathling.export.fhir;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import au.csiro.pathling.export.fhir.Parameters.Parameter;
+import java.time.Instant;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
-import java.time.Instant;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class ParametersTest {
 
@@ -32,12 +31,10 @@ class ParametersTest {
   @Test
   public void testSerializerParametersWithReference() {
 
-    final Parameters parameters = Parameters.builder()
-        .parameter(List.of(
-                Parameter.of("reference", Reference.of("Patient/00")),
-                Parameter.of("reference", Reference.of("Patient/01"))
-            )
-        ).build();
+    final Parameters parameters = Parameters.of(
+        Parameter.of("reference", Reference.of("Patient/00")),
+        Parameter.of("reference", Reference.of("Patient/01"))
+    );
     assertEquals(
         new JSONObject()
             .put("resourceType", "Parameters")
@@ -63,13 +60,11 @@ class ParametersTest {
 
     final String testInstantString = "2023-01-01T00:00:00.123Z";
 
-    final Parameters parameters = Parameters.builder()
-        .parameter(List.of(
-                Parameter.of("reference", Reference.of("Patient/00")),
-                Parameter.of("string", "stringValue"),
-                Parameter.of("instant", Instant.parse(testInstantString))
-            )
-        ).build();
+    final Parameters parameters = Parameters.of(
+        Parameter.of("reference", Reference.of("Patient/00")),
+        Parameter.of("string", "stringValue"),
+        Parameter.of("instant", Instant.parse(testInstantString))
+    );
     assertEquals(
         new JSONObject()
             .put("resourceType", "Parameters")
