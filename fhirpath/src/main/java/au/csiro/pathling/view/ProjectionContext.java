@@ -26,7 +26,6 @@ import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.execution.FhirPathExecutor;
 import au.csiro.pathling.fhirpath.execution.SingleFhirPathExecutor;
 import au.csiro.pathling.fhirpath.function.registry.StaticFunctionRegistry;
-import au.csiro.pathling.view.DatasetResult.One;
 import au.csiro.pathling.views.ConstantDeclaration;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
@@ -64,49 +63,14 @@ public class ProjectionContext {
   }
 
   /**
-   * Creates a new execution context that is a sub-context of this one, with the given path.
-   *
-   * @param parent the path to the sub-context
-   * @param unnest whether to unnest the sub-context
-   * @param withNulls whether to include nulls in the unnested sub-context
-   * @return the new sub-context
-   */
-  @Nonnull
-  public One<ProjectionContext> subContext(
-      @Nonnull final FhirPath parent,
-      final boolean unnest, final boolean withNulls) {
-    final One<Collection> newInputContextResult = evalExpression(parent);
-    if (unnest) {
-      return newInputContextResult
-          .map(Collection::getColumn)
-          .flatMap(cl -> withNulls
-                         ? cl.explodeOuter()
-                         : cl.explode())
-          .map(c -> withInputContext(newInputContextResult.getValue().copyWith(c)));
-    } else {
-      return newInputContextResult.map(this::withInputContext);
-    }
-  }
-
-  @Nonnull
-  One<ProjectionContext> subContext(@Nonnull final FhirPath parent, final boolean unnest) {
-    return subContext(parent, unnest, false);
-  }
-
-  @Nonnull
-  One<ProjectionContext> subContext(@Nonnull final FhirPath parent) {
-    return subContext(parent, false);
-  }
-
-  /**
    * Evaluates the given FHIRPath path and returns the result as a column.
    *
    * @param path the path to evaluate
    * @return the result as a column
    */
   @Nonnull
-  public One<Collection> evalExpression(@Nonnull final FhirPath path) {
-    return DatasetResult.pureOne(executor.evaluate(path, inputContext));
+  public Collection evalExpression(@Nonnull final FhirPath path) {
+    return executor.evaluate(path, inputContext);
   }
 
   @Nonnull

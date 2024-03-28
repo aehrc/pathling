@@ -21,7 +21,6 @@ import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.struct;
 
 import au.csiro.pathling.fhirpath.collection.Collection;
-import au.csiro.pathling.view.DatasetResult.One;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -42,9 +41,12 @@ public class ColumnSelection implements ProjectionClause {
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // Evaluate each requested column to get the collection it represents.
     final Stream<Collection> collections = columns.stream()
-        .map(RequestedColumn::getPath)
-        .map(context::evalExpression)
-        .map(One::getPureValue);
+        .map(col -> {
+          final Collection collection = context.evalExpression(col.getPath());
+          return col.isCollection()
+                 ? collection
+                 : collection.asSingular();
+        });
 
     // Zip stream of requested columns with the stream of collections, creating a ProjectedColumn 
     // for each pair.

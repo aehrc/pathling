@@ -48,7 +48,7 @@ public class UnnestingSelection implements ProjectionClause {
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // Evaluate the path to get the collection that will serve as the basis for unnesting.
-    final Collection unnestingCollection = context.evalExpression(path).getPureValue();
+    final Collection unnestingCollection = context.evalExpression(path);
 
     // Get the column that represents the unnesting collection.
     final Column unnestingColumn = unnestingCollection.getColumn().toArray().getValue();
