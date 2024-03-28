@@ -32,9 +32,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.config.HttpClientCachingStorageType;
-import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyAuthConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
+import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Property;

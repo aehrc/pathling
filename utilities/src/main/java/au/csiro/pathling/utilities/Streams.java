@@ -32,4 +32,5 @@ public abstract class Streams {
     return StreamSupport
         .stream(iterable.spliterator(), false);
   }
+
 }
