@@ -374,20 +374,20 @@ public class BulkExportClient {
   private Optional<? extends Credentials> createCredentials() {
     if (authConfig.isEnabled()) {
       if (nonNull(authConfig.getPrivateKeyJWK())) {
-        return Optional.of(new AsymmetricClientCredentials(
-            requireNonNull(authConfig.getTokenEndpoint()),
-            requireNonNull(authConfig.getClientId()),
-            requireNonNull(authConfig.getPrivateKeyJWK()),
-            authConfig.getScope()
-        ));
+        return Optional.of(AsymmetricClientCredentials.builder()
+            .tokenEndpoint(requireNonNull(authConfig.getTokenEndpoint()))
+            .clientId(requireNonNull(authConfig.getClientId()))
+            .privateKeyJWK(requireNonNull(authConfig.getPrivateKeyJWK()))
+            .scope(authConfig.getScope())
+            .build());
       } else {
-        return Optional.of(new SymmetricClientCredentials(
-            requireNonNull(authConfig.getTokenEndpoint()),
-            requireNonNull(authConfig.getClientId()),
-            requireNonNull(authConfig.getClientSecret()),
-            authConfig.getScope(),
-            authConfig.isUseFormForBasicAuth()
-        ));
+        return Optional.of(SymmetricClientCredentials.builder()
+            .tokenEndpoint(requireNonNull(authConfig.getTokenEndpoint()))
+            .clientId(requireNonNull(authConfig.getClientId()))
+            .clientSecret(requireNonNull(authConfig.getClientSecret()))
+            .scope(authConfig.getScope())
+            .sendClientCredentialsInBody(authConfig.isUseFormForBasicAuth())
+            .build());
       }
     } else {
       return Optional.empty();

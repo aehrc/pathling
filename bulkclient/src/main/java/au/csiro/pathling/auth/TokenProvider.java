@@ -22,11 +22,15 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import org.apache.http.auth.Credentials;
 
+/**
+ * Provides tokens for authentication.
+ */
 public interface TokenProvider extends Closeable {
 
   /**
-   * Get the current token.
+   * Gets access token for the given credentials.
    *
+   * @param credentials the credentials to use
    * @return the current token, if available
    */
   @Nonnull

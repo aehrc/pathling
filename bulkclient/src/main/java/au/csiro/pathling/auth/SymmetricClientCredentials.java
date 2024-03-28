@@ -18,17 +18,28 @@
 package au.csiro.pathling.auth;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Builder;
 import lombok.Value;
 import org.apache.http.Header;
+import org.apache.http.HttpHeaders;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 
+/**
+ * Credentials for the SMART symmetric client authentication profile.
+ *
+ * @see <a
+ * href="https://build.fhir.org/ig/HL7/smart-app-launch/client-confidential-symmetric.html">Client
+ * Authentication: Symmetric</a>
+ */
 @Value
+@Builder
 public class SymmetricClientCredentials implements ClientCredentials {
 
   @Nonnull
@@ -41,9 +52,11 @@ public class SymmetricClientCredentials implements ClientCredentials {
   String clientSecret;
 
   @Nullable
-  String scope;
+  @Builder.Default
+  String scope = null;
 
-  boolean sendClientCredentialsInBody;
+  @Builder.Default
+  boolean sendClientCredentialsInBody = false;
 
   @Nonnull
   String toAuthString() {
@@ -53,20 +66,19 @@ public class SymmetricClientCredentials implements ClientCredentials {
 
   @Override
   @Nonnull
-  public List<BasicNameValuePair> getAssertions() {
-    return !sendClientCredentialsInBody
-           ? List.of(
-        new BasicNameValuePair("client_id", clientId),
-        new BasicNameValuePair("client_secret", clientSecret))
+  public List<BasicNameValuePair> getAuthParams(@Nonnull final Instant __) {
+    return sendClientCredentialsInBody
+           ? List.of(new BasicNameValuePair(AuthConst.PARAM_CLIENT_ID, clientId),
+        new BasicNameValuePair(AuthConst.PARAM_CLIENT_SECRET, clientSecret))
            : Collections.emptyList();
   }
-
 
   @Override
   @Nonnull
   public List<Header> getAuthHeaders() {
     return sendClientCredentialsInBody
            ? Collections.emptyList()
-           : List.of(new BasicHeader("Authorization", "Basic " + toAuthString()));
+           : List.of(new BasicHeader(HttpHeaders.AUTHORIZATION,
+               AuthConst.AUTH_BASIC + " " + toAuthString()));
   }
 }

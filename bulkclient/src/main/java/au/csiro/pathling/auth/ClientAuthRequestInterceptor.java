@@ -22,6 +22,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpException;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
@@ -32,14 +33,23 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpCoreContext;
 
+/**
+ * {@link HttpRequestInterceptor}  that perform preemptive bearer token authentication.
+ * <p>
+ * The {@link CredentialsProvider} configured with the {@link HttpClientContext} should provide
+ * {@link ClientCredentials} for scopes that require authentication.
+ */
 @Slf4j
 public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
-
-  public static final String HTTP_AUTHORIZATION = "Authorization";
 
   @Nonnull
   final TokenProvider tokenProvider;
 
+  /**
+   * Creates a new instance of {@link ClientAuthRequestInterceptor}.
+   *
+   * @param tokenProvider the token provider to use
+   */
   public ClientAuthRequestInterceptor(@Nonnull final TokenProvider tokenProvider) {
     this.tokenProvider = tokenProvider;
   }
@@ -58,7 +68,7 @@ public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
       maybeAccessToken.ifPresent(
           accessToken -> {
             log.debug("Adding access token to request: {}", request.getRequestLine());
-            request.addHeader(HTTP_AUTHORIZATION, "Bearer " + accessToken);
+            request.addHeader(HttpHeaders.AUTHORIZATION, AuthConst.AUTH_BEARER + " " + accessToken);
           });
     }
   }

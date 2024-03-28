@@ -30,7 +30,7 @@ import javax.annotation.Nonnull;
 /**
  * Utility class for working with JWTs.
  */
-public class JWTUtils {
+class JWTUtils {
 
   private JWTUtils() {
   }

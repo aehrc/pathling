@@ -35,12 +35,23 @@ import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Builder;
 import lombok.Value;
 import org.apache.http.message.BasicNameValuePair;
 
 
+/**
+ * Credentials for the SMART symmetric client authentication method.
+ *
+ * @see <a
+ * href="https://www.hl7.org/fhir/smart-app-launch/client-confidential-asymmetric.html">Client
+ * Authentication: Asymmetric</a>
+ */
 @Value
+@Builder
 public class AsymmetricClientCredentials implements ClientCredentials {
+
+  public static int DEFAULT_JWT_EXPIRY_IN_SECONDS = 60;
 
   @Nonnull
   String tokenEndpoint;
@@ -49,35 +60,44 @@ public class AsymmetricClientCredentials implements ClientCredentials {
   String clientId;
 
   @Nonnull
-  String privateKeyJWK;
+  JWK privateKey;
 
   @Nullable
-  String scope;
+  @Builder.Default
+  String scope = null;
+  
+  public static class AsymmetricClientCredentialsBuilder {
+
+    @Nonnull
+    public AsymmetricClientCredentialsBuilder privateKeyJWK(@Nonnull final String privateKeyJWK) {
+      try {
+        this.privateKey = JWK.parse(privateKeyJWK);
+      } catch (final ParseException ex) {
+        throw new IllegalArgumentException("Invalid JWK: " + ex.getMessage(), ex);
+      }
+      return this;
+    }
+  }
 
   @Nonnull
   @Override
-  public List<BasicNameValuePair> getAssertions() {
+  public List<BasicNameValuePair> getAuthParams(@Nonnull final Instant now) {
+    final String kid = privateKey.getKeyID();
+    final Algorithm algo = JWTUtils.getAsymmSigningAlgorithm(privateKey);
+    final String jwt = JWT.create()
+        .withHeader(Map.of(HeaderParams.KEY_ID, kid))
+        .withClaim(ISSUER, clientId)
+        .withClaim(SUBJECT, clientId)
+        .withClaim(AUDIENCE, tokenEndpoint)
+        .withClaim(EXPIRES_AT,
+            now.plus(Duration.ofSeconds(DEFAULT_JWT_EXPIRY_IN_SECONDS)).getEpochSecond())
+        .withClaim(JWT_ID, UUID.randomUUID().toString())
+        .sign(algo);
 
-    try {
-      final JWK privateKey = JWK.parse(privateKeyJWK);
-      final String kid = privateKey.getKeyID();
-      final Algorithm algo = JWTUtils.getAsymmSigningAlgorithm(privateKey);
-      final String jwt = JWT.create()
-          .withHeader(Map.of(HeaderParams.KEY_ID, kid))
-          .withClaim(ISSUER, clientId)
-          .withClaim(SUBJECT, clientId)
-          .withClaim(AUDIENCE, tokenEndpoint)
-          .withClaim(EXPIRES_AT, Instant.now().plus(Duration.ofMinutes(3)).getEpochSecond())
-          .withClaim(JWT_ID, UUID.randomUUID().toString())
-          .sign(algo);
-
-      return List.of(
-          new BasicNameValuePair("client_assertion_type",
-              "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"),
-          new BasicNameValuePair("client_assertion", jwt)
-      );
-    } catch (final ParseException e) {
-      throw new RuntimeException(e);
-    }
+    return List.of(
+        new BasicNameValuePair(AuthConst.PARAM_CLIENT_ASSERTION_TYPE,
+            AuthConst.CLIENT_ASSERTION_TYPE_JWT_BEARER),
+        new BasicNameValuePair(AuthConst.PARAM_CLIENT_ASSERTION, jwt)
+    );
   }
 }

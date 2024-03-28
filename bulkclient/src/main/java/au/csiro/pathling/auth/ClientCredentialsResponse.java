@@ -20,6 +20,9 @@ package au.csiro.pathling.auth;
 import javax.annotation.Nullable;
 import lombok.Value;
 
+/**
+ * Response from the token endpoint when using client credentials grant.
+ */
 @Value
 public class ClientCredentialsResponse {
 
@@ -30,9 +33,6 @@ public class ClientCredentialsResponse {
   String tokenType;
 
   int expiresIn;
-
-  @Nullable
-  String refreshToken;
 
   @Nullable
   String scope;

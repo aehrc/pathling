@@ -21,7 +21,6 @@ import au.csiro.pathling.config.AuthConfiguration;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.io.Closeable;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.NameValuePair;
@@ -47,7 +47,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
 @Slf4j
-public class AuthTokenProvider implements Closeable, TokenProvider {
+public class AuthTokenProvider implements TokenProvider {
 
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
@@ -60,7 +60,7 @@ public class AuthTokenProvider implements Closeable, TokenProvider {
   private final long tokenExpiryTolerance;
 
   @Nonnull
-  private static final Map<AccessScope, AccessContext> accessContexts = new HashMap<>();
+  private static final Map<ClientCredentials.AccessScope, AccessContext> accessContexts = new HashMap<>();
 
 
   public AuthTokenProvider(@Nonnull final AuthConfiguration configuration) {
@@ -76,7 +76,8 @@ public class AuthTokenProvider implements Closeable, TokenProvider {
     if (credentials instanceof ClientCredentials) {
       return doGetToken((ClientCredentials) credentials);
     } else {
-      throw new IllegalArgumentException("Credentials must be of type ClientCredentials but are: " + credentials);
+      throw new IllegalArgumentException(
+          "Credentials must be of type ClientCredentials but are: " + credentials);
     }
   }
 
@@ -99,7 +100,7 @@ public class AuthTokenProvider implements Closeable, TokenProvider {
       final long tokenExpiryTolerance)
       throws IOException {
     synchronized (accessContexts) {
-      final AccessScope accessScope = credentials.getAccessScope();
+      final ClientCredentials.AccessScope accessScope = credentials.getAccessScope();
       AccessContext accessContext = accessContexts.get(accessScope);
       if (accessContext == null || accessContext.getExpiryTime()
           .isBefore(Instant.now().plusSeconds(tokenExpiryTolerance))) {
@@ -139,11 +140,12 @@ public class AuthTokenProvider implements Closeable, TokenProvider {
     authParams.getAuthHeaders().forEach(request::addHeader);
 
     final List<NameValuePair> params = new ArrayList<>();
-    params.add(new BasicNameValuePair("grant_type", "client_credentials"));
+    params.add(new BasicNameValuePair(AuthConst.PARAM_GRANT_TYPE,
+        AuthConst.GRANT_TYPE_CLIENT_CREDENTIALS));
     if (authParams.getScope() != null) {
-      params.add(new BasicNameValuePair("scope", authParams.getScope()));
+      params.add(new BasicNameValuePair(AuthConst.PARAM_SCOPE, authParams.getScope()));
     }
-    params.addAll(authParams.getAssertions());
+    params.addAll(authParams.getAuthParams());
 
     request.setEntity(new UrlEncodedFormEntity(params));
     final String responseString;
@@ -178,7 +180,7 @@ public class AuthTokenProvider implements Closeable, TokenProvider {
     }
     return grant;
   }
-  
+
   @Nonnull
   private static CloseableHttpClient getHttpClient() {
     final RequestConfig requestConfig = RequestConfig.custom()
@@ -205,5 +207,16 @@ public class AuthTokenProvider implements Closeable, TokenProvider {
   @Override
   public void close() throws IOException {
     httpClient.close();
+  }
+
+  @Value
+  static
+  class AccessContext {
+
+    @Nonnull
+    ClientCredentialsResponse clientCredentialsResponse;
+
+    @Nonnull
+    Instant expiryTime;
   }
 }
