@@ -24,7 +24,7 @@ import javax.annotation.Nonnull;
  */
 public abstract class Strings {
 
-  private static final Pattern ALIAS_PATTERN = Pattern.compile("_[a-z0-9]{1,6}");
+  private static final Pattern ALIAS_PATTERN = Pattern.compile("@[a-z0-9]{1,6}");
 
   /**
    * @param value a String value
@@ -50,7 +50,12 @@ public abstract class Strings {
   @Nonnull
   public static String randomAlias() {
     final int randomNumber = Math.abs(new Random().nextInt());
-    return "_" + Integer.toString(randomNumber, Character.MAX_RADIX);
+    return "@" + Integer.toString(randomNumber, Character.MAX_RADIX);
+  }
+
+  @Nonnull
+  public static String hashedAlias(@Nonnull final Object input) {
+    return "@" + Integer.toString(input.hashCode(), Character.MAX_RADIX);
   }
 
   /**

@@ -1,120 +1,162 @@
-/*
- * Copyright 2023 Commonwealth Scientific and Industrial Research
- * Organisation (CSIRO) ABN 41 687 119 230.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package au.csiro.pathling.fhirpath;
 
-import java.util.Optional;
+import au.csiro.pathling.fhirpath.collection.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nonnull;
-import org.apache.spark.sql.Column;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
+import lombok.Value;
 
 /**
- * Represents any FHIRPath expression - all expressions implement this interface.
+ * A description of how to take one {@link Collection} and transform it into another.
  *
  * @author John Grimes
  */
-public interface FhirPath extends Orderable {
+@FunctionalInterface
+public interface FhirPath {
 
-  /**
-   * @return the FHIRPath expression that represents this path
-   */
+  FhirPath NULL = new This();
+
+  Collection apply(@Nonnull final Collection input, @Nonnull final EvaluationContext context);
+
+  default FhirPath first() {
+    return this;
+  }
+
+  default FhirPath suffix() {
+    return nullPath();
+  }
+
+  default FhirPath last() {
+    return this;
+  }
+
+  default FhirPath prefix() {
+    return nullPath();
+  }
+
+  default FhirPath andThen(@Nonnull final FhirPath after) {
+    return nullPath().equals(after)
+           ? this
+           : new Composite(
+               Stream.concat(asStream(), after.asStream())
+                   .collect(Collectors.toUnmodifiableList()));
+  }
+
+  default Stream<FhirPath> asStream() {
+    return Stream.of(this);
+  }
+
+
+  default Stream<FhirPath> children() {
+    return Stream.empty();
+  }
+
+  static FhirPath nullPath() {
+    return NULL;
+  }
+
+  default boolean isNull() {
+    return NULL.equals(this);
+  }
+
+
   @Nonnull
-  String getExpression();
+  default String toExpression() {
+    return toString();
+  }
 
-  /**
-   * @return the {@link Dataset} that can be used to evaluate this path against data
-   */
+
   @Nonnull
-  Dataset<Row> getDataset();
+  default <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
+    return visitor.visitPath(this);
+  }
 
-  /**
-   * @return a {@link Column} within the dataset containing the identity of the subject resource
-   */
-  @Nonnull
-  Column getIdColumn();
+  @Value
+  class This implements FhirPath {
 
-  /**
-   * @return a {@link Column} within the dataset containing the values of the nodes
-   */
-  @Nonnull
-  Column getValueColumn();
+    @Override
+    public Collection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return input;
+    }
 
-  /**
-   * @return an indicator of whether this path represents a single-valued collection
-   */
-  boolean isSingular();
+    @Override
+    public Stream<FhirPath> asStream() {
+      return Stream.empty();
+    }
 
-  /**
-   * @param target the path to test
-   * @return an indicator of whether this path's values can be combined into a single collection
-   * with values from the supplied expression type
-   */
-  boolean canBeCombinedWith(@Nonnull FhirPath target);
+    @Override
+    public FhirPath andThen(@Nonnull final FhirPath after) {
+      return after;
+    }
 
-  /**
-   * Creates a copy of the path with a different expression.
-   *
-   * @param expression the new expression
-   * @return the new FhirPath
-   */
-  @Nonnull
-  FhirPath withExpression(@Nonnull String expression);
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return "$this";
+    }
+  }
 
-  /**
-   * Trims the columns to those common with the target and sorts them, ready for a union operation.
-   * The value column of the path is always included as the last column of the dataset.
-   *
-   * @param target the expression that this path will be combined with
-   * @return a new {@link Dataset} with a subset of columns
-   */
-  @Nonnull
-  Dataset<Row> getUnionableDataset(@Nonnull final FhirPath target);
-
-  /**
-   * Creates a path that can be used to represent a collection which includes elements from both a
-   * source and a target path.
-   *
-   * @param target the path the merge the invoking path with
-   * @param dataset the {@link Dataset} that can be used to evaluate this path against data
-   * @param expression the FHIRPath expression that represents the result
-   * @param idColumn a {@link Column} within the dataset containing the identity of the subject
-   * resource
-   * @param eidColumn a {@link Column} that represents the unique ID for an element within a
-   * collection
-   * @param valueColumn a {@link Column} within the dataset containing the values of the nodes
-   * @param singular an indicator of whether this path represents a single-valued collection
-   * @param thisColumn for paths that traverse from the {@code $this} keyword, this column refers to
-   * the values in the collection
-   * @return the resulting new {@link NonLiteralPath}
-   */
-  @Nonnull
-  NonLiteralPath combineWith(@Nonnull FhirPath target, @Nonnull Dataset<Row> dataset,
-      @Nonnull String expression, @Nonnull Column idColumn, @Nonnull Optional<Column> eidColumn,
-      @Nonnull Column valueColumn, boolean singular, @Nonnull Optional<Column> thisColumn);
+  @Value
+  class Composite implements FhirPath {
 
 
-  /**
-   * Prints out to stdout all the ids and values of all the elements in this path. For debugging
-   * purposes only.
-   */
-  default void dumpAll() {
-    getDataset().select(getIdColumn(), getValueColumn()).collectAsList()
-        .forEach(System.out::println);
+    // TODO: add the precondition - a composite should have at least two elements.
+    // Or otherwise it should not be a composite but either null or a primitive.
+    @Nonnull
+    List<FhirPath> elements;
+
+    @Override
+    public Collection apply(@Nonnull final Collection input,
+        @Nonnull final EvaluationContext context) {
+      return elements.stream()
+          .reduce(input, (acc, element) -> element.apply(acc, context), (a, b) -> b);
+    }
+
+    @Override
+    public Stream<FhirPath> asStream() {
+      return elements.stream();
+    }
+
+    @Override
+    public FhirPath first() {
+      return elements.get(0);
+    }
+
+    @Override
+    public FhirPath suffix() {
+      return elements.size() > 2
+             ? new Composite(elements.subList(1, elements.size()))
+             : elements.get(1);
+    }
+
+    @Override
+    public FhirPath last() {
+      return elements.get(elements.size() - 1);
+    }
+
+    @Override
+    public FhirPath prefix() {
+      return elements.size() > 2
+             ? new Composite(elements.subList(0, elements.size() - 1))
+             : elements.get(0);
+    }
+
+    @Nonnull
+    @Override
+    public String toExpression() {
+      return elements.stream()
+          .map(FhirPath::toExpression)
+          .collect(Collectors.joining("."));
+    }
+
+
+    @Override
+    @Nonnull
+    public <T> T accept(@Nonnull final FhirPathVisitor<T> visitor) {
+      return visitor.visitComposite(this);
+    }
   }
 
 }

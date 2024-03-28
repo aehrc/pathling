@@ -4,6 +4,11 @@ import javax.annotation.Nonnull;
 
 public abstract class StringLiteral {
 
+  @Nonnull
+  public static String stringToFhirPath(@Nonnull final String value) {
+    return "'" + escapeFhirPathString(value) + "'";
+  }
+
   /**
    * Converts a string value to a FHIRPath string literal.
    *

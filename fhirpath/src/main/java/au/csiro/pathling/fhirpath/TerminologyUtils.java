@@ -19,10 +19,9 @@ package au.csiro.pathling.fhirpath;
 
 import static au.csiro.pathling.utilities.Preconditions.check;
 
-import au.csiro.pathling.fhirpath.element.ElementPath;
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
+import au.csiro.pathling.fhirpath.collection.CodingCollection;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import javax.annotation.Nonnull;
-import au.csiro.pathling.utilities.Preconditions;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
@@ -34,39 +33,32 @@ public interface TerminologyUtils {
   /**
    * Checks if a path is a codeable concept element.
    *
-   * @param fhirPath a path to check
+   * @param result a path to check
    * @return true if the path is a codeable concept
    */
-  static boolean isCodeableConcept(@Nonnull final FhirPath fhirPath) {
-    return (fhirPath instanceof ElementPath &&
-        FHIRDefinedType.CODEABLECONCEPT.equals(((ElementPath) fhirPath).getFhirType()));
+  static boolean isCodeableConcept(@Nonnull final Collection result) {
+    return result.getFhirType().map(FHIRDefinedType.CODEABLECONCEPT::equals).orElse(false);
+  }
+
+  /**
+   * Checks if a path is a coding path
+   *
+   * @param result a path to check
+   * @return true if the path is a codeable concept
+   */
+  static boolean isCoding(@Nonnull final Collection result) {
+    return result instanceof CodingCollection ||
+        result.getFhirType().map(FHIRDefinedType.CODING::equals).orElse(false);
   }
 
   /**
    * Checks is a path is a coding or codeable concept path.
    *
-   * @param fhirPath a path to check
+   * @param result a path to check
    * @return true if the path is coding or codeable concept
    */
-  static boolean isCodingOrCodeableConcept(@Nonnull final FhirPath fhirPath) {
-    if (fhirPath instanceof CodingLiteralPath) {
-      return true;
-    } else if (fhirPath instanceof ElementPath) {
-      final FHIRDefinedType elementFhirType = ((ElementPath) fhirPath).getFhirType();
-      return FHIRDefinedType.CODING.equals(elementFhirType)
-          || FHIRDefinedType.CODEABLECONCEPT.equals(elementFhirType);
-    } else {
-      return false;
-    }
+  static boolean isCodingOrCodeableConcept(@Nonnull final Collection result) {
+    return isCoding(result) || isCodeableConcept(result);
   }
-
-  @Nonnull
-  static Column getCodingColumn(@Nonnull final FhirPath fhirPath) {
-    check(isCodingOrCodeableConcept(fhirPath),
-        "Coding or CodeableConcept path expected");
-    final Column conceptColumn = fhirPath.getValueColumn();
-    return isCodeableConcept(fhirPath)
-           ? conceptColumn.getField("coding")
-           : conceptColumn;
-  }
+  
 }

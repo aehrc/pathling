@@ -17,10 +17,7 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
-import au.csiro.pathling.fhirpath.ResourcePath;
-import au.csiro.pathling.fhirpath.element.BooleanPath;
-import au.csiro.pathling.test.builders.ParserContextBuilder;
-import java.util.Collections;
+import au.csiro.pathling.fhirpath.collection.BooleanCollection;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.Test;
 
@@ -28,40 +25,20 @@ public class DateTimeArithmeticParserTest extends AbstractParserTest {
 
   @Test
   void lengthOfEncounter() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
-
-    assertThatResultOf("(period.start + 20 minutes) > period.end")
-        .isElementPath(BooleanPath.class)
+    assertThatResultOf(ResourceType.ENCOUNTER,
+        "(period.start + 20 minutes) > period.end")
+        .isElementPath(BooleanCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/lengthOfEncounter.csv");
+        .hasRows(spark, "responses/ParserTest/lengthOfEncounter.tsv");
   }
 
   @Test
   void ageAtTimeOfEncounter() {
-    final ResourcePath subjectResource = ResourcePath
-        .build(fhirContext, dataSource, ResourceType.ENCOUNTER, ResourceType.ENCOUNTER.toCode(),
-            true);
-    final ParserContext parserContext = new ParserContextBuilder(spark, fhirContext)
-        .terminologyClientFactory(terminologyServiceFactory)
-        .database(dataSource)
-        .inputContext(subjectResource)
-        .groupingColumns(Collections.singletonList(subjectResource.getIdColumn()))
-        .build();
-    parser = new Parser(parserContext);
-
-    assertThatResultOf("period.start > (subject.resolve().ofType(Patient).birthDate + 60 years)")
-        .isElementPath(BooleanPath.class)
+    assertThatResultOf(ResourceType.ENCOUNTER,
+        "period.start > (subject.resolve().ofType(Patient).birthDate + 60 years)")
+        .isElementPath(BooleanCollection.class)
         .selectResult()
-        .hasRows(spark, "responses/ParserTest/ageAtTimeOfEncounter.csv");
+        .hasRows(spark, "responses/ParserTest/ageAtTimeOfEncounter.tsv");
   }
 
 }

@@ -40,7 +40,7 @@ public class ExtractRequest {
   ResourceType subjectResource;
 
   @Nonnull
-  List<ExpressionWithLabel> columnsWithLabels;
+  List<ExpressionWithLabel> columns;
 
   @Nonnull
   List<String> filters;
@@ -48,12 +48,22 @@ public class ExtractRequest {
   @Nonnull
   Optional<Integer> limit;
 
+  public ExtractRequest(@Nonnull final ResourceType subjectResource,
+      @Nonnull final List<ExpressionWithLabel> columns, @Nonnull final List<String> filters,
+      @Nonnull final Optional<Integer> limit) {
+    this.subjectResource = subjectResource;
+    this.columns = columns;
+    this.filters = filters;
+    this.limit = limit;
+    validate(columns, filters, limit);
+  }
+
   /**
    * @return The list of column expressions
    */
   @Nonnull
-  public List<String> getColumns() {
-    return ExpressionWithLabel.expressionsAsList(columnsWithLabels);
+  public List<String> getColumnsAsStrings() {
+    return ExpressionWithLabel.expressionsAsList(columns);
   }
 
   /**
@@ -68,15 +78,19 @@ public class ExtractRequest {
   public static ExtractRequest fromUserInput(@Nonnull final ResourceType subjectResource,
       @Nonnull final Optional<List<String>> columns, @Nonnull final Optional<List<String>> filters,
       @Nonnull final Optional<Integer> limit) {
-    checkUserInput(columns.isPresent() && columns.get().size() > 0,
-        "Query must have at least one column expression");
-    checkUserInput(columns.get().stream().noneMatch(String::isBlank),
-        "Column expression cannot be blank");
-    filters.ifPresent(f -> checkUserInput(f.stream().noneMatch(String::isBlank),
-        "Filter expression cannot be blank"));
-    limit.ifPresent(l -> checkUserInput(l > 0, "Limit must be greater than zero"));
     return new ExtractRequest(subjectResource,
         ExpressionWithLabel.fromUnlabelledExpressions(checkPresent(columns)),
         normalizeEmpty(filters), limit);
+  }
+
+  private static void validate(@Nonnull final List<ExpressionWithLabel> columns,
+      @Nonnull final List<String> filters, @Nonnull final Optional<Integer> limit) {
+    checkUserInput(columns.size() > 0, "Query must have at least one column expression");
+    checkUserInput(
+        columns.stream().map(ExpressionWithLabel::getExpression).noneMatch(String::isBlank),
+        "Column expression cannot be blank");
+    checkUserInput(filters.stream().noneMatch(String::isBlank),
+        "Filter expression cannot be blank");
+    limit.ifPresent(l -> checkUserInput(l > 0, "Limit must be greater than zero"));
   }
 }

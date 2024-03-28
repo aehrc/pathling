@@ -20,8 +20,8 @@ package au.csiro.pathling.fhirpath.comparison;
 import static org.apache.spark.sql.functions.when;
 
 import au.csiro.pathling.fhirpath.Comparable;
+import au.csiro.pathling.fhirpath.Comparable.ColumnComparator;
 import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
-import au.csiro.pathling.fhirpath.Comparable.SqlComparator;
 import au.csiro.pathling.fhirpath.encoding.QuantityEncoding;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import java.util.function.BiFunction;
@@ -35,7 +35,7 @@ import org.apache.spark.sql.Column;
  *
  * @author Piotr Szul
  */
-public class QuantitySqlComparator implements SqlComparator {
+public class QuantitySqlComparator implements ColumnComparator {
 
   private final static QuantitySqlComparator INSTANCE = new QuantitySqlComparator();
 

@@ -18,6 +18,7 @@
 package au.csiro.pathling.test.helpers;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.spark.sql.functions.col;
 
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
@@ -27,7 +28,6 @@ import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
@@ -134,7 +134,7 @@ public abstract class SparkHelpers {
     requireNonNull(coding);
 
     final List<Row> codings = coding.stream().map(SparkHelpers::rowFromCoding)
-        .collect(Collectors.toList());
+        .collect(toList());
     final Buffer<Row> buffer = JavaConverters.asScalaBuffer(codings);
     requireNonNull(buffer);
 
@@ -176,7 +176,7 @@ public abstract class SparkHelpers {
       @Nonnull final String unit) {
     return rowForUcumQuantity(new BigDecimal(value), unit);
   }
-
+  
   @Value
   public static class IdAndValueColumns {
 

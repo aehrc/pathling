@@ -15,7 +15,7 @@
 
 from .coding import Coding
 from .context import PathlingContext, StorageType
-from .core import Expression
+from .core import Expression, VariableExpression
 from .datasource import DataSources, DataSource
 from .fhir import MimeType, Version
 from .functions import to_coding, to_snomed_coding, to_ecl_value_set
@@ -51,6 +51,7 @@ __all__ = [
     "to_snomed_coding",
     "to_ecl_value_set",
     "Expression",
+    "VariableExpression",
     "ExtractQuery",
     "AggregateQuery",
     "DataSources",

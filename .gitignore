@@ -29,6 +29,7 @@ _version.py
 metastore_db
 derby.log
 spark-warehouse
+.*.crc
 
 
 #R
