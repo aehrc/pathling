@@ -62,7 +62,7 @@ class ClientAuthProviderTest {
       credentialsProvider.setCredentials(new AuthScope("aehrc-cdr.cc", -1), credentials);
       final CloseableHttpClient authHttpClient = HttpClients.custom()
           .setDefaultCredentialsProvider(credentialsProvider)
-          .addInterceptorFirst(new ClientAuthRequestInterceptor(clientAuthProvider)).build();
+          .addInterceptorFirst(new TokenAuthRequestInterceptor(clientAuthProvider)).build();
 
       final URI url = URI.create(
           "https://aehrc-cdr.cc/fhir_r4/$export?_type=Patient&_outputFormat=application%2Ffhir%2Bndjson");

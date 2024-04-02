@@ -40,17 +40,17 @@ import org.apache.http.protocol.HttpCoreContext;
  * {@link ClientCredentials} for scopes that require authentication.
  */
 @Slf4j
-public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
+public class TokenAuthRequestInterceptor implements HttpRequestInterceptor {
 
   @Nonnull
   final TokenProvider tokenProvider;
 
   /**
-   * Creates a new instance of {@link ClientAuthRequestInterceptor}.
+   * Creates a new instance of {@link TokenAuthRequestInterceptor}.
    *
    * @param tokenProvider the token provider to use
    */
-  public ClientAuthRequestInterceptor(@Nonnull final TokenProvider tokenProvider) {
+  public TokenAuthRequestInterceptor(@Nonnull final TokenProvider tokenProvider) {
     this.tokenProvider = tokenProvider;
   }
 
@@ -59,9 +59,8 @@ public class ClientAuthRequestInterceptor implements HttpRequestInterceptor {
       throws HttpException, IOException {
     final CredentialsProvider credentialsProvider = (CredentialsProvider) context.getAttribute(
         HttpClientContext.CREDS_PROVIDER);
-    if (credentialsProvider != null) {
-      final HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
-
+    final HttpHost targetHost = (HttpHost) context.getAttribute(HttpCoreContext.HTTP_TARGET_HOST);
+    if (credentialsProvider != null && targetHost != null) {
       final Optional<Credentials> maybeCredentials = Optional.ofNullable(
           credentialsProvider.getCredentials(new AuthScope(targetHost)));
       final Optional<String> maybeAccessToken = maybeCredentials.flatMap(tokenProvider::getToken);

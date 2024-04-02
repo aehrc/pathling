@@ -23,7 +23,7 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.auth.AsymmetricClientCredentials;
-import au.csiro.pathling.auth.ClientAuthRequestInterceptor;
+import au.csiro.pathling.auth.TokenAuthRequestInterceptor;
 import au.csiro.pathling.auth.AuthTokenProvider;
 import au.csiro.pathling.auth.SymmetricClientCredentials;
 import au.csiro.pathling.auth.TokenProvider;
@@ -367,7 +367,7 @@ public class BulkExportClient {
         new AuthScope(endpointURI.getHost(), endpointURI.getPort()), cr));
     return httpClientConfig.clientBuilder()
         .setDefaultCredentialsProvider(credentialsProvider)
-        .addInterceptorFirst(new ClientAuthRequestInterceptor(tokenProvider))
+        .addInterceptorFirst(new TokenAuthRequestInterceptor(tokenProvider))
         .build();
   }
 
