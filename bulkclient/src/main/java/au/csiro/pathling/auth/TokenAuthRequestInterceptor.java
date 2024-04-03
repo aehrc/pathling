@@ -37,21 +37,15 @@ import org.apache.http.protocol.HttpCoreContext;
  * {@link HttpRequestInterceptor}  that perform preemptive bearer token authentication.
  * <p>
  * The {@link CredentialsProvider} configured with the {@link HttpClientContext} should provide
- * {@link ClientCredentials} for scopes that require authentication.
+ * {@link TokenCredentials} for scopes that require authentication.
  */
 @Slf4j
 public class TokenAuthRequestInterceptor implements HttpRequestInterceptor {
 
-  @Nonnull
-  final TokenProvider tokenProvider;
-
   /**
    * Creates a new instance of {@link TokenAuthRequestInterceptor}.
-   *
-   * @param tokenProvider the token provider to use
    */
-  public TokenAuthRequestInterceptor(@Nonnull final TokenProvider tokenProvider) {
-    this.tokenProvider = tokenProvider;
+  public TokenAuthRequestInterceptor() {
   }
 
   @Override
@@ -63,9 +57,11 @@ public class TokenAuthRequestInterceptor implements HttpRequestInterceptor {
     if (credentialsProvider != null && targetHost != null) {
       final Optional<Credentials> maybeCredentials = Optional.ofNullable(
           credentialsProvider.getCredentials(new AuthScope(targetHost)));
-      final Optional<String> maybeAccessToken = maybeCredentials.flatMap(tokenProvider::getToken);
-      maybeAccessToken.ifPresent(
-          accessToken -> {
+
+      maybeCredentials.filter(TokenCredentials.class::isInstance)
+          .map(TokenCredentials.class::cast)
+          .map(TokenCredentials::getToken)
+          .ifPresent(accessToken -> {
             log.debug("Adding access token to request: {}", request.getRequestLine());
             request.addHeader(HttpHeaders.AUTHORIZATION, AuthConst.AUTH_BEARER + " " + accessToken);
           });

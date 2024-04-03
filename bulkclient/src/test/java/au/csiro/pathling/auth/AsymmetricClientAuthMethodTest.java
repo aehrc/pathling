@@ -37,7 +37,7 @@ import java.util.List;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.jupiter.api.Test;
 
-class AsymmetricClientCredentialsTest {
+class AsymmetricClientAuthMethodTest {
 
   @Test
   void createsCorrectAssertionAndHeadersForRS384Key() throws JOSEException, ParseException {
@@ -47,7 +47,7 @@ class AsymmetricClientCredentialsTest {
     final JWK publicKey = rsaKeySetJWKS.getKeys().get(0);
     final JWK privateKey = rsaKeySetJWKS.getKeys().get(1);
 
-    final AsymmetricClientCredentials credentials = AsymmetricClientCredentials.builder()
+    final AsymmetricClientAuthMethod credentials = AsymmetricClientAuthMethod.builder()
         .tokenEndpoint("token_endpoint_1")
         .clientId("client_id_1")
         .scope("scope_1")
@@ -84,7 +84,7 @@ class AsymmetricClientCredentialsTest {
     final JWK publicKey = esKeySetJWKS.getKeys().get(0);
     final JWK privateKey = esKeySetJWKS.getKeys().get(1);
 
-    final AsymmetricClientCredentials credentials = AsymmetricClientCredentials.builder()
+    final AsymmetricClientAuthMethod credentials = AsymmetricClientAuthMethod.builder()
         .tokenEndpoint("token_endpoint_2")
         .clientId("client_id_2")
         .scope("scope_2")

@@ -32,7 +32,7 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicNameValuePair;
 
 /**
- * Credentials for the SMART symmetric client authentication profile.
+ * The implementation of the SMART symmetric client authentication profile.
  *
  * @see <a
  * href="https://build.fhir.org/ig/HL7/smart-app-launch/client-confidential-symmetric.html">Client
@@ -40,7 +40,7 @@ import org.apache.http.message.BasicNameValuePair;
  */
 @Value
 @Builder
-public class SymmetricClientCredentials implements ClientCredentials {
+public class SymmetricClientAuthMethod implements ClientAuthMethod {
 
   @Nonnull
   String tokenEndpoint;

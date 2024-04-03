@@ -23,11 +23,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.Optional;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.Credentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.message.BasicHttpRequest;
@@ -40,51 +38,32 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class TokenAuthRequestInterceptorTest {
 
   @Mock
-  TokenProvider tokenProvider;
-
-  @Mock
   CredentialsProvider credentialsProvider;
 
   @Mock
-  Credentials credentials;
+  TokenCredentials tokenCredentials;
   final HttpClientContext httpContext = HttpClientContext.create();
 
   @Test
   void testAddsAuthHeaderWhenTokenAvailable() throws HttpException, IOException {
 
     final HttpHost host = HttpHost.create("http://foo.bar");
-    final TokenAuthRequestInterceptor tokenAuthRequestInterceptor = new TokenAuthRequestInterceptor(
-        tokenProvider);
+    final TokenAuthRequestInterceptor tokenAuthRequestInterceptor = new TokenAuthRequestInterceptor();
     final BasicHttpRequest request = new BasicHttpRequest("GET", "http://foo.bar/");
     httpContext.setCredentialsProvider(credentialsProvider);
     httpContext.setTargetHost(host);
-    when(credentialsProvider.getCredentials(eq(new AuthScope(host)))).thenReturn(credentials);
-    when(tokenProvider.getToken(eq(credentials))).thenReturn(Optional.of("XYZ"));
+    when(credentialsProvider.getCredentials(eq(new AuthScope(host)))).thenReturn(tokenCredentials);
+    when(tokenCredentials.getToken()).thenReturn("XYZ");
     tokenAuthRequestInterceptor.process(request, httpContext);
     assertEquals("Bearer XYZ", request.getFirstHeader("Authorization").getValue());
   }
-  
-  @Test
-  void testAddsAuthHeaderWhenNoTokenProvided() throws HttpException, IOException {
 
-    final HttpHost host = HttpHost.create("http://some.other:8888");
-    final TokenAuthRequestInterceptor tokenAuthRequestInterceptor = new TokenAuthRequestInterceptor(
-        tokenProvider);
-    final BasicHttpRequest request = new BasicHttpRequest("GET", "http://some.other:8888/test");
-    httpContext.setCredentialsProvider(credentialsProvider);
-    httpContext.setTargetHost(host);
-    when(credentialsProvider.getCredentials(eq(new AuthScope(host)))).thenReturn(credentials);
-    when(tokenProvider.getToken(eq(credentials))).thenReturn(Optional.empty());
-    tokenAuthRequestInterceptor.process(request, httpContext);
-    assertNull(request.getFirstHeader("Authorization"));
-  }
 
   @Test
   void testNoAuthHeaderWhenNoCredentialsForHost() throws HttpException, IOException {
 
     final HttpHost host = HttpHost.create("http://foo.bar");
-    final TokenAuthRequestInterceptor tokenAuthRequestInterceptor = new TokenAuthRequestInterceptor(
-        tokenProvider);
+    final TokenAuthRequestInterceptor tokenAuthRequestInterceptor = new TokenAuthRequestInterceptor();
     final BasicHttpRequest request = new BasicHttpRequest("GET", "http://foo.bar/");
     httpContext.setCredentialsProvider(credentialsProvider);
     httpContext.setTargetHost(host);
@@ -96,8 +75,7 @@ class TokenAuthRequestInterceptorTest {
   @Test
   void testNoAuthHeaderWhenNoCredentialProvider() throws HttpException, IOException {
     final HttpHost host = HttpHost.create("http://foo.bar");
-    final TokenAuthRequestInterceptor tokenAuthRequestInterceptor = new TokenAuthRequestInterceptor(
-        tokenProvider);
+    final TokenAuthRequestInterceptor tokenAuthRequestInterceptor = new TokenAuthRequestInterceptor();
     final BasicHttpRequest request = new BasicHttpRequest("GET", "http://foo.bar/");
     httpContext.setTargetHost(host);
     tokenAuthRequestInterceptor.process(request, httpContext);

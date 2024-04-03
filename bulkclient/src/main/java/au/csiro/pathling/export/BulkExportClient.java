@@ -22,10 +22,11 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import au.csiro.pathling.auth.AsymmetricClientCredentials;
+import au.csiro.pathling.auth.AsymmetricClientAuthMethod;
+import au.csiro.pathling.auth.ClientAuthMethod;
 import au.csiro.pathling.auth.TokenAuthRequestInterceptor;
 import au.csiro.pathling.auth.AuthTokenProvider;
-import au.csiro.pathling.auth.SymmetricClientCredentials;
+import au.csiro.pathling.auth.SymmetricClientAuthMethod;
 import au.csiro.pathling.auth.TokenProvider;
 import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
@@ -67,8 +68,8 @@ import lombok.Builder;
 import lombok.Singular;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.Credentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -364,24 +365,25 @@ public class BulkExportClient {
     final URI endpointURI = URI.create(fhirEndpointUrl);
     final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
     createCredentials().ifPresent(cr -> credentialsProvider.setCredentials(
-        new AuthScope(endpointURI.getHost(), endpointURI.getPort()), cr));
+        new AuthScope(HttpHost.create(endpointURI.toString())),
+        tokenProvider.getTokenCredentials(cr)));
     return httpClientConfig.clientBuilder()
         .setDefaultCredentialsProvider(credentialsProvider)
-        .addInterceptorFirst(new TokenAuthRequestInterceptor(tokenProvider))
+        .addInterceptorFirst(new TokenAuthRequestInterceptor())
         .build();
   }
 
-  private Optional<? extends Credentials> createCredentials() {
+  private Optional<? extends ClientAuthMethod> createCredentials() {
     if (authConfig.isEnabled()) {
       if (nonNull(authConfig.getPrivateKeyJWK())) {
-        return Optional.of(AsymmetricClientCredentials.builder()
+        return Optional.of(AsymmetricClientAuthMethod.builder()
             .tokenEndpoint(requireNonNull(authConfig.getTokenEndpoint()))
             .clientId(requireNonNull(authConfig.getClientId()))
             .privateKeyJWK(requireNonNull(authConfig.getPrivateKeyJWK()))
             .scope(authConfig.getScope())
             .build());
       } else {
-        return Optional.of(SymmetricClientCredentials.builder()
+        return Optional.of(SymmetricClientAuthMethod.builder()
             .tokenEndpoint(requireNonNull(authConfig.getTokenEndpoint()))
             .clientId(requireNonNull(authConfig.getClientId()))
             .clientSecret(requireNonNull(authConfig.getClientSecret()))

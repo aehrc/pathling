@@ -17,26 +17,31 @@
 
 package au.csiro.pathling.auth;
 
-import java.io.Closeable;
-import java.util.Optional;
+import org.apache.http.auth.Credentials;
 import javax.annotation.Nonnull;
+import java.security.Principal;
 
 /**
- * Provides tokens for authentication.
+ * Credentials for a token-based authentication method.
  */
-public interface TokenProvider extends Closeable {
+public interface TokenCredentials extends Credentials {
+
+
+  @Override
+  default Principal getUserPrincipal() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
+  default String getPassword() {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   /**
-   * Gets access token for the given credentials.
+   * Gets the token to be use for authentication.
    *
-   * @param clientAuthMethod the credentials to use
-   * @return the current token, if available
+   * @return the token
    */
   @Nonnull
-  Optional<String> getToken(@Nonnull final ClientAuthMethod clientAuthMethod);
-
-
-  @Nonnull
-  TokenCredentials getTokenCredentials(@Nonnull final ClientAuthMethod clientAuthMethod);
-
+  String getToken();
 }

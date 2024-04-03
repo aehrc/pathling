@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.auth;
 
-import java.security.Principal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -25,24 +24,12 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 import org.apache.http.Header;
-import org.apache.http.auth.Credentials;
 import org.apache.http.message.BasicNameValuePair;
 
 /**
- * Credentials for one of the FHIR SMART client authentication profiles.
+ * Authenticaiton method for one of the FHIR SMART client authentication profiles.
  */
-public interface ClientCredentials extends Credentials {
-
-  @Override
-  default Principal getUserPrincipal() {
-    return null;
-  }
-
-  @Override
-  default String getPassword() {
-    return null;
-  }
-
+public interface ClientAuthMethod {
 
   /**
    * Gets the client ID.

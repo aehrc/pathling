@@ -41,7 +41,7 @@ import org.apache.http.message.BasicNameValuePair;
 
 
 /**
- * Credentials for the SMART symmetric client authentication method.
+ * The implementation of the SMART symmetric client authentication method.
  *
  * @see <a
  * href="https://www.hl7.org/fhir/smart-app-launch/client-confidential-asymmetric.html">Client
@@ -49,7 +49,7 @@ import org.apache.http.message.BasicNameValuePair;
  */
 @Value
 @Builder
-public class AsymmetricClientCredentials implements ClientCredentials {
+public class AsymmetricClientAuthMethod implements ClientAuthMethod {
 
   public static int DEFAULT_JWT_EXPIRY_IN_SECONDS = 60;
 
@@ -65,11 +65,11 @@ public class AsymmetricClientCredentials implements ClientCredentials {
   @Nullable
   @Builder.Default
   String scope = null;
-  
-  public static class AsymmetricClientCredentialsBuilder {
+
+  public static class AsymmetricClientAuthMethodBuilder {
 
     @Nonnull
-    public AsymmetricClientCredentialsBuilder privateKeyJWK(@Nonnull final String privateKeyJWK) {
+    public AsymmetricClientAuthMethodBuilder privateKeyJWK(@Nonnull final String privateKeyJWK) {
       try {
         this.privateKey = JWK.parse(privateKeyJWK);
       } catch (final ParseException ex) {

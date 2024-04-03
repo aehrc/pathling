@@ -25,11 +25,11 @@ import org.apache.http.Header;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.jupiter.api.Test;
 
-class SymmetricClientCredentialsTest {
+class SymmetricClientAuthMethodTest {
 
   @Test
   void testCreatesCorrectAssertionAndHeadersForBasicAuth() {
-    final SymmetricClientCredentials credentials = SymmetricClientCredentials.builder()
+    final SymmetricClientAuthMethod credentials = SymmetricClientAuthMethod.builder()
         .clientId("client_id_1")
         .clientSecret("client_secret_1")
         .scope("scope")
@@ -47,7 +47,7 @@ class SymmetricClientCredentialsTest {
 
   @Test
   void testCreatesCorrectAssertionAndHeadersForFormAuth() {
-    final SymmetricClientCredentials credentials = SymmetricClientCredentials.builder()
+    final SymmetricClientAuthMethod credentials = SymmetricClientAuthMethod.builder()
         .clientId("client_id_2")
         .clientSecret("client_secret_2")
         .scope("scope")

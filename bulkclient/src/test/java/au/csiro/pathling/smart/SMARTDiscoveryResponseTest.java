@@ -15,28 +15,24 @@
  * limitations under the License.
  */
 
-package au.csiro.pathling.auth;
+package au.csiro.pathling.smart;
 
-import java.io.Closeable;
-import java.util.Optional;
-import javax.annotation.Nonnull;
+import au.csiro.pathling.auth.SMARTDiscoveryResponse;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.junit.jupiter.api.Test;
 
-/**
- * Provides tokens for authentication.
- */
-public interface TokenProvider extends Closeable {
+import java.io.IOException;
+import java.net.URI;
 
-  /**
-   * Gets access token for the given credentials.
-   *
-   * @param clientAuthMethod the credentials to use
-   * @return the current token, if available
-   */
-  @Nonnull
-  Optional<String> getToken(@Nonnull final ClientAuthMethod clientAuthMethod);
+class SMARTDiscoveryResponseTest {
 
-
-  @Nonnull
-  TokenCredentials getTokenCredentials(@Nonnull final ClientAuthMethod clientAuthMethod);
-
+  
+  @Test
+  void testSMARTDiscoveryResponse() throws IOException {
+    try(CloseableHttpClient client = HttpClients.createDefault()) {
+      final SMARTDiscoveryResponse response = SMARTDiscoveryResponse.get(URI.create("https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d"), client);
+      System.out.println(response);
+    } 
+  }
 }

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.Credentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -52,17 +51,18 @@ class ClientAuthProviderTest {
     try (final AuthTokenProvider clientAuthProvider = new AuthTokenProvider(
         smartCDR)) {
 
-      final Credentials credentials = new SymmetricClientCredentials(smartCDR.getTokenEndpoint(),
+      final ClientAuthMethod clientAuthMethod = new SymmetricClientAuthMethod(smartCDR.getTokenEndpoint(),
           smartCDR.getClientId(), smartCDR.getClientSecret(), smartCDR.getScope(), false);
 
-      final Optional<String> token = clientAuthProvider.getToken(credentials);
+      final Optional<String> token = clientAuthProvider.getToken(clientAuthMethod);
       System.out.println(token);
 
       final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-      credentialsProvider.setCredentials(new AuthScope("aehrc-cdr.cc", -1), credentials);
+      credentialsProvider.setCredentials(new AuthScope("aehrc-cdr.cc", -1),
+          clientAuthProvider.getTokenCredentials(clientAuthMethod));
       final CloseableHttpClient authHttpClient = HttpClients.custom()
           .setDefaultCredentialsProvider(credentialsProvider)
-          .addInterceptorFirst(new TokenAuthRequestInterceptor(clientAuthProvider)).build();
+          .addInterceptorFirst(new TokenAuthRequestInterceptor()).build();
 
       final URI url = URI.create(
           "https://aehrc-cdr.cc/fhir_r4/$export?_type=Patient&_outputFormat=application%2Ffhir%2Bndjson");

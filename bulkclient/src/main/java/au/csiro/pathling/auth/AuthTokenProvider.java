@@ -34,7 +34,6 @@ import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.NameValuePair;
-import org.apache.http.auth.Credentials;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -60,7 +59,7 @@ public class AuthTokenProvider implements TokenProvider {
   private final long tokenExpiryTolerance;
 
   @Nonnull
-  private static final Map<ClientCredentials.AccessScope, AccessContext> accessContexts = new HashMap<>();
+  private static final Map<ClientAuthMethod.AccessScope, AccessContext> accessContexts = new HashMap<>();
 
 
   public AuthTokenProvider(@Nonnull final AuthConfiguration configuration) {
@@ -69,21 +68,31 @@ public class AuthTokenProvider implements TokenProvider {
   }
 
 
-  @Nonnull
-  @Override
-  public Optional<String> getToken(@Nonnull final Credentials credentials) {
+  @Value
+  class ProviderTokenCredentials implements TokenCredentials {
 
-    if (credentials instanceof ClientCredentials) {
-      return doGetToken((ClientCredentials) credentials);
-    } else {
-      throw new IllegalArgumentException(
-          "Credentials must be of type ClientCredentials but are: " + credentials);
+    @Nonnull
+    ClientAuthMethod clientAuthMethod;
+
+    @Override
+    @Nonnull
+    public String getToken() {
+      return AuthTokenProvider.this.getToken(clientAuthMethod)
+          .orElseThrow(() -> new IllegalStateException("No token"));
     }
   }
 
-
+  @Override
   @Nonnull
-  Optional<String> doGetToken(@Nonnull final ClientCredentials credentials) {
+  public TokenCredentials getTokenCredentials(@Nonnull final ClientAuthMethod clientAuthMethod) {
+    return new ProviderTokenCredentials(clientAuthMethod);
+  }
+
+
+  public
+  @Override
+  @Nonnull
+  Optional<String> getToken(@Nonnull final ClientAuthMethod credentials) {
     final AccessContext accessContext;
     try {
       accessContext = ensureAccessContext(credentials, tokenExpiryTolerance);
@@ -96,11 +105,11 @@ public class AuthTokenProvider implements TokenProvider {
   }
 
   @Nonnull
-  private AccessContext ensureAccessContext(@Nonnull final ClientCredentials credentials,
+  private AccessContext ensureAccessContext(@Nonnull final ClientAuthMethod credentials,
       final long tokenExpiryTolerance)
       throws IOException {
     synchronized (accessContexts) {
-      final ClientCredentials.AccessScope accessScope = credentials.getAccessScope();
+      final ClientAuthMethod.AccessScope accessScope = credentials.getAccessScope();
       AccessContext accessContext = accessContexts.get(accessScope);
       if (accessContext == null || accessContext.getExpiryTime()
           .isBefore(Instant.now().plusSeconds(tokenExpiryTolerance))) {
@@ -118,7 +127,7 @@ public class AuthTokenProvider implements TokenProvider {
   }
 
   @Nonnull
-  private AccessContext getNewAccessContext(@Nonnull final ClientCredentials authParams,
+  private AccessContext getNewAccessContext(@Nonnull final ClientAuthMethod authParams,
       final long tokenExpiryTolerance) throws IOException {
     final ClientCredentialsResponse response = clientCredentialsGrant(authParams,
         tokenExpiryTolerance);
@@ -129,7 +138,7 @@ public class AuthTokenProvider implements TokenProvider {
 
   @Nonnull
   private ClientCredentialsResponse clientCredentialsGrant(
-      @Nonnull final ClientCredentials authParams, final long tokenExpiryTolerance)
+      @Nonnull final ClientAuthMethod authParams, final long tokenExpiryTolerance)
       throws IOException {
     log.debug("Performing client credentials grant using token endpoint: {}",
         authParams.getTokenEndpoint());
