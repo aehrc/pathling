@@ -41,25 +41,29 @@ class ClientAuthProviderTest {
 
     System.out.println("clientSecret: " + System.getProperty("pszul.clientSecret"));
 
-    final AuthConfiguration smartCDR = AuthConfiguration.builder()
+    final AuthConfiguration smartCDRAuthConf = AuthConfiguration.builder()
         .tokenEndpoint("https://aehrc-cdr.cc/smartsec_r4/oauth/token")
         .clientId("pathling-bulk-client")
         .clientSecret(System.getProperty("pszul.clientSecret"))
         .scope("system/*.read")
         .build();
 
-    try (final AuthTokenProvider clientAuthProvider = new AuthTokenProvider(
-        smartCDR)) {
+    try (final AuthTokenAuthFactory clientFactory = new AuthTokenAuthFactory(
+        smartCDRAuthConf)) {
 
-      final ClientAuthMethod clientAuthMethod = new SymmetricClientAuthMethod(smartCDR.getTokenEndpoint(),
-          smartCDR.getClientId(), smartCDR.getClientSecret(), smartCDR.getScope(), false);
+      final ClientAuthMethod clientAuthMethod = new SymmetricClientAuthMethod(
+          smartCDRAuthConf.getTokenEndpoint(),
+          smartCDRAuthConf.getClientId(), smartCDRAuthConf.getClientSecret(), smartCDRAuthConf.getScope(), false);
 
-      final Optional<String> token = clientAuthProvider.getToken(clientAuthMethod);
+      final Optional<String> token = clientFactory.getToken(clientAuthMethod);
       System.out.println(token);
+
+      final URI fhirEndpoint = URI.create(
+          "https://aehrc-cdr.cc/fhir_r4");
 
       final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
       credentialsProvider.setCredentials(new AuthScope("aehrc-cdr.cc", -1),
-          clientAuthProvider.getTokenCredentials(clientAuthMethod));
+          clientFactory.createCredentials(fhirEndpoint, smartCDRAuthConf).orElseThrow());
       final CloseableHttpClient authHttpClient = HttpClients.custom()
           .setDefaultCredentialsProvider(credentialsProvider)
           .addInterceptorFirst(new TokenAuthRequestInterceptor()).build();

@@ -27,7 +27,7 @@ import org.apache.http.Header;
 import org.apache.http.message.BasicNameValuePair;
 
 /**
- * Authenticaiton method for one of the FHIR SMART client authentication profiles.
+ * Authentication method for one of the FHIR SMART client authentication profiles.
  */
 public interface ClientAuthMethod {
 

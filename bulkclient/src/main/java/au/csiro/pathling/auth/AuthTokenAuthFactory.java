@@ -22,6 +22,7 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
+import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,8 +46,11 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
+
 @Slf4j
-public class AuthTokenProvider implements TokenProvider {
+public class AuthTokenAuthFactory implements TokenAuthFactory {
 
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
@@ -62,7 +66,7 @@ public class AuthTokenProvider implements TokenProvider {
   private static final Map<ClientAuthMethod.AccessScope, AccessContext> accessContexts = new HashMap<>();
 
 
-  public AuthTokenProvider(@Nonnull final AuthConfiguration configuration) {
+  public AuthTokenAuthFactory(@Nonnull final AuthConfiguration configuration) {
     this.httpClient = getHttpClient();
     this.tokenExpiryTolerance = configuration.getTokenExpiryTolerance();
   }
@@ -77,17 +81,69 @@ public class AuthTokenProvider implements TokenProvider {
     @Override
     @Nonnull
     public String getToken() {
-      return AuthTokenProvider.this.getToken(clientAuthMethod)
+      return AuthTokenAuthFactory.this.getToken(clientAuthMethod)
           .orElseThrow(() -> new IllegalStateException("No token"));
     }
   }
 
   @Override
   @Nonnull
-  public TokenCredentials getTokenCredentials(@Nonnull final ClientAuthMethod clientAuthMethod) {
-    return new ProviderTokenCredentials(clientAuthMethod);
+  public Optional<TokenCredentials> createCredentials(@Nonnull final URI fhirEndpoint,
+      @Nonnull final AuthConfiguration authConfiguration) {
+    return createAuthMethod(fhirEndpoint, authConfiguration).map(ProviderTokenCredentials::new);
   }
 
+  @Nonnull
+  Optional<? extends ClientAuthMethod> createAuthMethod(@Nonnull final URI fhirEndpoint,
+      @Nonnull final AuthConfiguration authConfig) {
+    if (authConfig.isEnabled()) {
+      if (authConfig.isUseSMART()) {
+        return Optional.of(createSMARTAuthMethod(fhirEndpoint, authConfig));
+      } else {
+        return Optional.of(
+            doCreateAuthMethods(requireNonNull(authConfig.getTokenEndpoint()), authConfig));
+      }
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  @Nonnull
+  ClientAuthMethod createSMARTAuthMethod(@Nonnull final URI fhirEndpoint,
+      @Nonnull final AuthConfiguration authConfig) {
+    try {
+      log.debug("Retrieving SMART configuration for fhirEndpoint: {}", fhirEndpoint);
+      final SMARTDiscoveryResponse discoveryResponse = SMARTDiscoveryResponse.get(fhirEndpoint,
+          httpClient);
+      log.debug("SMART configuration retrieved: {}", discoveryResponse);
+      return doCreateAuthMethods(discoveryResponse.getTokenEndpoint(), authConfig);
+      // TODO: Maybe add validation of the capabilities here
+    } catch (final IOException ex) {
+      log.error("Failed to retrieve SMART configuration for fhirEndpoint: {}, ex: {}", fhirEndpoint,
+          ex);
+      throw new RuntimeException("Failed to retrieve SMART configuration", ex);
+    }
+  }
+
+  ClientAuthMethod doCreateAuthMethods(@Nonnull final String tokenEndpoint,
+      @Nonnull final AuthConfiguration authConfig) {
+    if (nonNull(authConfig.getPrivateKeyJWK())) {
+      return AsymmetricClientAuthMethod.builder()
+          .tokenEndpoint(tokenEndpoint)
+          .clientId(requireNonNull(authConfig.getClientId()))
+          .privateKeyJWK(requireNonNull(authConfig.getPrivateKeyJWK()))
+          .scope(authConfig.getScope())
+          .build();
+    } else {
+      return SymmetricClientAuthMethod.builder()
+          .tokenEndpoint(tokenEndpoint)
+          .clientId(requireNonNull(authConfig.getClientId()))
+          .clientSecret(requireNonNull(authConfig.getClientSecret()))
+          .scope(authConfig.getScope())
+          .sendClientCredentialsInBody(authConfig.isUseFormForBasicAuth())
+          .build();
+    }
+  }
 
   public
   @Override

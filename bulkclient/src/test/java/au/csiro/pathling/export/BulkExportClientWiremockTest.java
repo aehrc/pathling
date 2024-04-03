@@ -19,6 +19,7 @@ package au.csiro.pathling.export;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.ws.BulkExportRequest;
@@ -53,7 +55,7 @@ import org.junit.jupiter.api.Test;
 import wiremock.net.minidev.json.JSONArray;
 
 @WireMockTest
-class BulkExportTemplateClientWiremockTest {
+class BulkExportClientWiremockTest {
 
   public static final String RESOURCE_00 = "{}\n{}";
   public static final String RESOURCE_01 = "{}\n{}\n{}";
@@ -702,4 +704,73 @@ class BulkExportTemplateClientWiremockTest {
     assertTrue(ex.getMessage().startsWith("Download timed out at:"));
     assertNotMarkedSuccess(exportDir);
   }
+
+
+  @Test
+  void testExportWorksWithSMARTSymmetricAuthentication(
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(401)));
+
+    stubFor(get(urlPathEqualTo("/.well-known/smart-configuration"))
+        .willReturn(
+            aResponse().withStatus(200)
+                .withBody(new JSONObject()
+                    .put("token_endpoint", wmRuntimeInfo.getHttpBaseUrl() + "/token")
+                    .put("capabilities",
+                        new JSONArray().appendElement("client-confidential-symmetric"))
+                    .toString())
+        )
+    );
+
+    stubFor(post(urlPathEqualTo("/token"))
+        .withBasicAuth("client_id", "client_secret")
+        .withRequestBody(equalTo("grant_type=client_credentials&scope=*.read"))
+        .willReturn(
+            aResponse().withStatus(200)
+                .withHeader("content-type", "application/json")
+                .withBody(new JSONObject()
+                    .put("access_token", "token-value")
+                    .put("expires_in", 120)
+                    .toString())
+        )
+    );
+
+    stubFor(get(urlPathEqualTo("/$export"))
+        .withHeader("Authorization", equalTo("Bearer token-value"))
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+    );
+    stubFor(get(urlPathEqualTo("/pool"))
+        .withHeader("Authorization", equalTo("Bearer token-value"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("content-type", "application/json")
+            .withBody(BULK_EXPORT_NO_FILES_RESPONSE))
+    );
+
+    System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
+    final File exportDir = getRandomExportLocation();
+    System.out.println("Exporting to: " + exportDir);
+
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+
+    final AuthConfiguration authConfig = AuthConfiguration.builder()
+        .enabled(true)
+        .clientId("client_id")
+        .clientSecret("client_secret")
+        .scope("*.read")
+        .build();
+
+    BulkExportClient.builder()
+        .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+        .withOutputDir(exportDir.getPath())
+        .withAuthConfig(authConfig)
+        .build()
+        .export();
+
+    assertMarkedSuccess(exportDir);
+  }
+
 }

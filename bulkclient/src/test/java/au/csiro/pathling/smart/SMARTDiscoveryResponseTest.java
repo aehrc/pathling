@@ -27,12 +27,13 @@ import java.net.URI;
 
 class SMARTDiscoveryResponseTest {
 
-  
   @Test
   void testSMARTDiscoveryResponse() throws IOException {
-    try(CloseableHttpClient client = HttpClients.createDefault()) {
-      final SMARTDiscoveryResponse response = SMARTDiscoveryResponse.get(URI.create("https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d"), client);
+    try (final CloseableHttpClient client = HttpClients.createDefault()) {
+      final SMARTDiscoveryResponse response = SMARTDiscoveryResponse.get(
+          URI.create("https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d"),
+          client);
       System.out.println(response);
-    } 
+    }
   }
 }

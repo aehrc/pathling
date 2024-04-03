@@ -17,14 +17,16 @@
 
 package au.csiro.pathling.auth;
 
+import au.csiro.pathling.config.AuthConfiguration;
 import java.io.Closeable;
+import java.net.URI;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 
 /**
  * Provides tokens for authentication.
  */
-public interface TokenProvider extends Closeable {
+public interface TokenAuthFactory extends Closeable {
 
   /**
    * Gets access token for the given credentials.
@@ -37,6 +39,7 @@ public interface TokenProvider extends Closeable {
 
 
   @Nonnull
-  TokenCredentials getTokenCredentials(@Nonnull final ClientAuthMethod clientAuthMethod);
+  Optional<TokenCredentials> createCredentials(@Nonnull final URI fhirEndpoint,
+      @Nonnull final AuthConfiguration authConfiguration);
 
 }

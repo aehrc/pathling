@@ -57,9 +57,9 @@ public class SMARTDiscoveryResponse {
   @Nonnull
   List<String> capabilities = Collections.emptyList();
 
-  public static SMARTDiscoveryResponse get(@Nonnull final URI fhirEndpointUri,
+  public static SMARTDiscoveryResponse get(@Nonnull final URI fhirEndpointURI,
       @Nonnull final HttpClient httpClient) throws IOException {
-    final URI wellKnownUri = WebUtils.ensurePathEndsWithSlash(fhirEndpointUri).resolve(
+    final URI wellKnownUri = WebUtils.ensurePathEndsWithSlash(fhirEndpointURI).resolve(
         SMART_WELL_KNOWN_CONFIGURATION_PATH);
     final HttpGet request = new HttpGet(wellKnownUri);
     request.addHeader("Accept", "application/json");

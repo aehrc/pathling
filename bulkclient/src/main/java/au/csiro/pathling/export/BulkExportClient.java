@@ -17,17 +17,13 @@
 
 package au.csiro.pathling.export;
 
-import static java.util.Objects.nonNull;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import au.csiro.pathling.auth.AsymmetricClientAuthMethod;
-import au.csiro.pathling.auth.ClientAuthMethod;
+import au.csiro.pathling.auth.AuthTokenAuthFactory;
+import au.csiro.pathling.auth.TokenAuthFactory;
 import au.csiro.pathling.auth.TokenAuthRequestInterceptor;
-import au.csiro.pathling.auth.AuthTokenProvider;
-import au.csiro.pathling.auth.SymmetricClientAuthMethod;
-import au.csiro.pathling.auth.TokenProvider;
+import au.csiro.pathling.auth.TokenCredentials;
 import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.export.BulkExportResult.FileResult;
@@ -249,9 +245,9 @@ public class BulkExportClient {
    */
   public BulkExportResult export() {
     try (
-        final TokenProvider tokenProvider = createTokenProvider();
+        final TokenAuthFactory tokenAuthFactory = createTokenProvider();
         final FileStore fileStore = createFileStore();
-        final CloseableHttpClient httpClient = createHttpClient(tokenProvider);
+        final CloseableHttpClient httpClient = createHttpClient(tokenAuthFactory);
         final ExecutorServiceResource executorServiceResource = createExecutorServiceResource()
     ) {
       final BulkExportTemplate bulkExportTemplate = new BulkExportTemplate(
@@ -353,47 +349,27 @@ public class BulkExportClient {
   }
 
   @Nonnull
-  private TokenProvider createTokenProvider() {
-    return new AuthTokenProvider(authConfig);
+  private TokenAuthFactory createTokenProvider() {
+    return new AuthTokenAuthFactory(authConfig);
   }
 
 
   @Nonnull
-  private CloseableHttpClient createHttpClient(@Nonnull final TokenProvider tokenProvider) {
+  private CloseableHttpClient createHttpClient(@Nonnull final TokenAuthFactory tokenAuthFactory) {
     log.debug("Creating HttpClient with configuration: {}", httpClientConfig);
 
     final URI endpointURI = URI.create(fhirEndpointUrl);
+    final HttpHost httpHost = new HttpHost(endpointURI.getHost(), endpointURI.getPort(),
+        endpointURI.getScheme());
     final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-    createCredentials().ifPresent(cr -> credentialsProvider.setCredentials(
-        new AuthScope(HttpHost.create(endpointURI.toString())),
-        tokenProvider.getTokenCredentials(cr)));
+    final Optional<TokenCredentials> tokenCredentials = tokenAuthFactory.createCredentials(
+        endpointURI, authConfig);
+    tokenCredentials.ifPresent(
+        cr -> credentialsProvider.setCredentials(new AuthScope(httpHost), cr));
     return httpClientConfig.clientBuilder()
         .setDefaultCredentialsProvider(credentialsProvider)
         .addInterceptorFirst(new TokenAuthRequestInterceptor())
         .build();
-  }
-
-  private Optional<? extends ClientAuthMethod> createCredentials() {
-    if (authConfig.isEnabled()) {
-      if (nonNull(authConfig.getPrivateKeyJWK())) {
-        return Optional.of(AsymmetricClientAuthMethod.builder()
-            .tokenEndpoint(requireNonNull(authConfig.getTokenEndpoint()))
-            .clientId(requireNonNull(authConfig.getClientId()))
-            .privateKeyJWK(requireNonNull(authConfig.getPrivateKeyJWK()))
-            .scope(authConfig.getScope())
-            .build());
-      } else {
-        return Optional.of(SymmetricClientAuthMethod.builder()
-            .tokenEndpoint(requireNonNull(authConfig.getTokenEndpoint()))
-            .clientId(requireNonNull(authConfig.getClientId()))
-            .clientSecret(requireNonNull(authConfig.getClientSecret()))
-            .scope(authConfig.getScope())
-            .sendClientCredentialsInBody(authConfig.isUseFormForBasicAuth())
-            .build());
-      }
-    } else {
-      return Optional.empty();
-    }
   }
 
   @Nonnull

@@ -51,12 +51,16 @@ public class AuthConfiguration implements Serializable {
   /**
    * Enables authentication of requests to the terminology server.
    */
-  @NotNull
+  
   @Builder.Default
   private boolean enabled = false;
+  
+  @Builder.Default
+  private boolean useSMART = true;
 
   /**
-   * An OAuth2 token endpoint for use with the client credentials grant.
+   * An OAuth2 token endpoint for use with the client credentials grant. Only applicable if
+   * {@link #useSMART} is false.
    */
   @Nullable
   @URL
