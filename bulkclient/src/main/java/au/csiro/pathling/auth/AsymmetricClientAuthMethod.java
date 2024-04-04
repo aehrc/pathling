@@ -36,6 +36,7 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.http.message.BasicNameValuePair;
 
@@ -48,8 +49,9 @@ import org.apache.http.message.BasicNameValuePair;
  * Authentication: Asymmetric</a>
  */
 @Value
+@EqualsAndHashCode(callSuper = false)
 @Builder
-public class AsymmetricClientAuthMethod implements ClientAuthMethod {
+public class AsymmetricClientAuthMethod extends SMARTClientAuthMethodBase {
 
   public static int DEFAULT_JWT_EXPIRY_IN_SECONDS = 60;
 
@@ -81,7 +83,7 @@ public class AsymmetricClientAuthMethod implements ClientAuthMethod {
 
   @Nonnull
   @Override
-  public List<BasicNameValuePair> getAuthParams(@Nonnull final Instant now) {
+  protected List<BasicNameValuePair> getAuthParams(@Nonnull final Instant now) {
     final String kid = privateKey.getKeyID();
     final Algorithm algo = JWTUtils.getAsymmSigningAlgorithm(privateKey);
     final String jwt = JWT.create()

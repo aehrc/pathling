@@ -57,7 +57,7 @@ class AuthTokenProviderTest {
   @Test
   void testGetsNewTokenForNewAccessScope() throws IOException {
     
-    when(clientAuthMethod.clientCredentialsGrant(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
+    when(clientAuthMethod.requestClientCredentials(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
         .accessToken("XYZ")
         .expiresIn(3600)
         .scope("scope")
@@ -71,7 +71,7 @@ class AuthTokenProviderTest {
   @Test
   void testReturnsExistingTokenIfNotExpired() throws IOException {
 
-    when(clientAuthMethod.clientCredentialsGrant(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
+    when(clientAuthMethod.requestClientCredentials(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
         .accessToken("XYZ")
         .expiresIn(3600)
         .scope("scope")
@@ -84,13 +84,13 @@ class AuthTokenProviderTest {
     // get a cached token 
     final Token cachedToken = authTokenProvider.getToken(clientAuthMethod);
     assertEquals(Token.of("XYZ"), cachedToken);
-    verify(clientAuthMethod, atMostOnce()).clientCredentialsGrant(eq(httpClient));
+    verify(clientAuthMethod, atMostOnce()).requestClientCredentials(eq(httpClient));
   }
 
   @Test
   void testReturnsTokenWhenExistingOneIsExpired() throws IOException {
 
-    when(clientAuthMethod.clientCredentialsGrant(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
+    when(clientAuthMethod.requestClientCredentials(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
         .accessToken("XYZ")
         .expiresIn(0)
         .scope("scope")
@@ -101,7 +101,7 @@ class AuthTokenProviderTest {
     final Token token = authTokenProvider.getToken(clientAuthMethod);
     assertEquals(Token.of("XYZ"), token);
     // setup next token
-    when(clientAuthMethod.clientCredentialsGrant(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
+    when(clientAuthMethod.requestClientCredentials(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
         .accessToken("abc")
         .expiresIn(60)
         .scope("scope")
@@ -115,7 +115,7 @@ class AuthTokenProviderTest {
   @Test
   void testThrowsExceptionIfTokenExpiryLessThenRequiredTolerance() throws IOException {
 
-    when(clientAuthMethod.clientCredentialsGrant(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
+    when(clientAuthMethod.requestClientCredentials(eq(httpClient))).thenReturn(ClientCredentialsResponse.builder()
         .accessToken("XYZ")
         .expiresIn(30)
         .scope("scope")

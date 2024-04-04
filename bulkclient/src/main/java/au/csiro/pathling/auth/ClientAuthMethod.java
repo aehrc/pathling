@@ -21,32 +21,44 @@ import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.config.AuthConfiguration;
-import com.google.gson.FieldNamingPolicy;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import java.io.IOException;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.util.EntityUtils;
 
 /**
  * Authentication method for one of the FHIR SMART client authentication profiles.
  */
 
 public interface ClientAuthMethod {
+
+  /**
+   * Represents the access scope for this method. Client Credentials for methofs with the same
+   * access scope can be reused.
+   */
+  @Value
+  class AccessScope {
+
+    @Nonnull
+    String tokenEndpoint;
+
+    @Nonnull
+    String clientId;
+
+    @Nullable
+    String scope;
+  }
+
+  /**
+   * Gets the access scope for these credentials.
+   *
+   * @return the access scope
+   */
+  @Nonnull
+  default AccessScope getAccessScope() {
+    return new AccessScope(getTokenEndpoint(), getClientId(), getScope());
+  }
 
   /**
    * Gets the client ID.
@@ -69,112 +81,22 @@ public interface ClientAuthMethod {
   String getScope();
 
   /**
-   * Gets the authentication headers required for these credentials.
+   * Request Client Credentials Grant with this method using the provided HTTP client.
    *
-   * @return the authentication headers
+   * @param httpClient the HTTP client to use
+   * @return the response from the token endpoint
+   * @throws IOException if an error occurs
    */
   @Nonnull
-  default List<Header> getAuthHeaders() {
-    return Collections.emptyList();
-  }
+  ClientCredentialsResponse requestClientCredentials(@Nonnull final HttpClient httpClient)
+      throws IOException;
 
   /**
-   * Gets the authentication parameters to be sent in the POST body form for these credentials.
-   *
-   * @return the authentication parameters
-   */
-  @Nonnull
-  default List<BasicNameValuePair> getAuthParams() {
-    return getAuthParams(Instant.now());
-  }
-
-  /**
-   * Gets the authentication parameters to be sent in the POST body form for these credentials.
-   *
-   * @param now the current time (to be used to calculate expiry if necessary)
-   * @return the authentication parameters
-   */
-  @Nonnull
-  List<BasicNameValuePair> getAuthParams(@Nonnull final Instant now);
-
-  /**
-   * Gets the access scope for these credentials.
-   *
-   * @return the access scope
-   */
-  @Nonnull
-  default AccessScope getAccessScope() {
-    return new AccessScope(getTokenEndpoint(), getClientId(), getScope());
-  }
-
-  /**
-   * Represents the access scope for these credentials. Credentials with the same access scope can
-   * be reused.
-   */
-  @Value
-  class AccessScope {
-
-    @Nonnull
-    String tokenEndpoint;
-
-    @Nonnull
-    String clientId;
-
-    @Nullable
-    String scope;
-  }
-  
-  @Nonnull
-  default ClientCredentialsResponse clientCredentialsGrant(
-      @Nonnull final HttpClient httpClient)
-      throws IOException {
-    // log.debug("Performing client credentials grant using token endpoint: {}",
-    //     authParams.getTokenEndpoint());
-    final HttpPost request = new HttpPost(getTokenEndpoint());
-    request.addHeader("Content-Type", "application/x-www-form-urlencoded");
-    request.addHeader("Accept", "application/json");
-    request.addHeader("Cache-Control", "no-cache");
-    getAuthHeaders().forEach(request::addHeader);
-
-    final List<NameValuePair> params = new ArrayList<>();
-    params.add(new BasicNameValuePair(AuthConst.PARAM_GRANT_TYPE,
-        AuthConst.GRANT_TYPE_CLIENT_CREDENTIALS));
-    if (getScope() != null) {
-      params.add(new BasicNameValuePair(AuthConst.PARAM_SCOPE, getScope()));
-    }
-    params.addAll(getAuthParams());
-
-    request.setEntity(new UrlEncodedFormEntity(params));
-    final String responseString;
-    final HttpResponse response = httpClient.execute(request);
-    @Nullable final Header contentTypeHeader = response.getFirstHeader("Content-Type");
-    if (contentTypeHeader == null) {
-      throw new ClientProtocolException(
-          "Client credentials response contains no Content-Type header");
-    }
-    // log.debug("Content-Type: {}", contentTypeHeader.getValue());
-    final boolean responseIsJson = contentTypeHeader.getValue()
-        .startsWith("application/json");
-    if (!responseIsJson) {
-      throw new ClientProtocolException(
-          "Invalid response from token endpoint: content type is not application/json");
-    }
-    responseString = EntityUtils.toString(response.getEntity());
-
-    final Gson gson = new GsonBuilder()
-        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
-        .create();
-    final ClientCredentialsResponse grant = gson.fromJson(
-        responseString,
-        ClientCredentialsResponse.class);
-    if (grant.getAccessToken() == null) {
-      throw new ClientProtocolException("Client credentials grant does not contain access token");
-    }
-    return grant;
-  }
-
-  /**
-   * Creates a new client authentication method from the given configuration.
+   * Creates a new client authentication method from the given configuration. It assumes
+   * 'client-confidential-asymmetric' if `privateKey` is set in the configuration and
+   * 'client-confidential-symmetric' otherwise.
+   * <p>
+   * It's assumed (but not checked that the authentication is enabled).
    *
    * @param tokenEndpoint the token endpoint URL
    * @param authConfig the authentication configuration

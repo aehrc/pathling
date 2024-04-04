@@ -25,6 +25,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Value;
 import org.apache.http.Header;
 import org.apache.http.HttpHeaders;
@@ -39,8 +40,9 @@ import org.apache.http.message.BasicNameValuePair;
  * Authentication: Symmetric</a>
  */
 @Value
+@EqualsAndHashCode(callSuper = false)
 @Builder
-public class SymmetricClientAuthMethod implements ClientAuthMethod {
+public class SymmetricClientAuthMethod extends SMARTClientAuthMethodBase {
 
   @Nonnull
   String tokenEndpoint;

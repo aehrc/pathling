@@ -100,7 +100,7 @@ public class AuthTokenProvider {
   private ClientCredentialsResponse clientCredentialsGrant(
       @Nonnull final ClientAuthMethod authParams, final long tokenExpiryTolerance)
       throws IOException {
-    final ClientCredentialsResponse grant = authParams.clientCredentialsGrant(httpClient);
+    final ClientCredentialsResponse grant = authParams.requestClientCredentials(httpClient);
     if (grant.getExpiresIn() < tokenExpiryTolerance) {
       throw new ClientProtocolException(
           "Client credentials grant expiry is less than the tolerance: " + grant.getExpiresIn());
