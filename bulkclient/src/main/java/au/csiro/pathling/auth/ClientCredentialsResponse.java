@@ -18,12 +18,14 @@
 package au.csiro.pathling.auth;
 
 import javax.annotation.Nullable;
+import lombok.Builder;
 import lombok.Value;
 
 /**
  * Response from the token endpoint when using client credentials grant.
  */
 @Value
+@Builder
 public class ClientCredentialsResponse {
 
   @Nullable

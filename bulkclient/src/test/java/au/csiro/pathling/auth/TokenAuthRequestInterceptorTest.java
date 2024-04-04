@@ -53,7 +53,7 @@ class TokenAuthRequestInterceptorTest {
     httpContext.setCredentialsProvider(credentialsProvider);
     httpContext.setTargetHost(host);
     when(credentialsProvider.getCredentials(eq(new AuthScope(host)))).thenReturn(tokenCredentials);
-    when(tokenCredentials.getToken()).thenReturn("XYZ");
+    when(tokenCredentials.getToken()).thenReturn(Token.of("XYZ"));
     tokenAuthRequestInterceptor.process(request, httpContext);
     assertEquals("Bearer XYZ", request.getFirstHeader("Authorization").getValue());
   }

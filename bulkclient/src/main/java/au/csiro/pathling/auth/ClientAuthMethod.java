@@ -17,18 +17,35 @@
 
 package au.csiro.pathling.auth;
 
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
+
+import au.csiro.pathling.config.AuthConfiguration;
+import com.google.gson.FieldNamingPolicy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Value;
 import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 
 /**
  * Authentication method for one of the FHIR SMART client authentication profiles.
  */
+
 public interface ClientAuthMethod {
 
   /**
@@ -105,5 +122,82 @@ public interface ClientAuthMethod {
 
     @Nullable
     String scope;
+  }
+  
+  @Nonnull
+  default ClientCredentialsResponse clientCredentialsGrant(
+      @Nonnull final HttpClient httpClient)
+      throws IOException {
+    // log.debug("Performing client credentials grant using token endpoint: {}",
+    //     authParams.getTokenEndpoint());
+    final HttpPost request = new HttpPost(getTokenEndpoint());
+    request.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    request.addHeader("Accept", "application/json");
+    request.addHeader("Cache-Control", "no-cache");
+    getAuthHeaders().forEach(request::addHeader);
+
+    final List<NameValuePair> params = new ArrayList<>();
+    params.add(new BasicNameValuePair(AuthConst.PARAM_GRANT_TYPE,
+        AuthConst.GRANT_TYPE_CLIENT_CREDENTIALS));
+    if (getScope() != null) {
+      params.add(new BasicNameValuePair(AuthConst.PARAM_SCOPE, getScope()));
+    }
+    params.addAll(getAuthParams());
+
+    request.setEntity(new UrlEncodedFormEntity(params));
+    final String responseString;
+    final HttpResponse response = httpClient.execute(request);
+    @Nullable final Header contentTypeHeader = response.getFirstHeader("Content-Type");
+    if (contentTypeHeader == null) {
+      throw new ClientProtocolException(
+          "Client credentials response contains no Content-Type header");
+    }
+    // log.debug("Content-Type: {}", contentTypeHeader.getValue());
+    final boolean responseIsJson = contentTypeHeader.getValue()
+        .startsWith("application/json");
+    if (!responseIsJson) {
+      throw new ClientProtocolException(
+          "Invalid response from token endpoint: content type is not application/json");
+    }
+    responseString = EntityUtils.toString(response.getEntity());
+
+    final Gson gson = new GsonBuilder()
+        .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
+        .create();
+    final ClientCredentialsResponse grant = gson.fromJson(
+        responseString,
+        ClientCredentialsResponse.class);
+    if (grant.getAccessToken() == null) {
+      throw new ClientProtocolException("Client credentials grant does not contain access token");
+    }
+    return grant;
+  }
+
+  /**
+   * Creates a new client authentication method from the given configuration.
+   *
+   * @param tokenEndpoint the token endpoint URL
+   * @param authConfig the authentication configuration
+   * @return the new client authentication method
+   */
+  @Nonnull
+  static ClientAuthMethod create(@Nonnull final String tokenEndpoint,
+      @Nonnull final AuthConfiguration authConfig) {
+    if (nonNull(authConfig.getPrivateKeyJWK())) {
+      return AsymmetricClientAuthMethod.builder()
+          .tokenEndpoint(tokenEndpoint)
+          .clientId(requireNonNull(authConfig.getClientId()))
+          .privateKeyJWK(requireNonNull(authConfig.getPrivateKeyJWK()))
+          .scope(authConfig.getScope())
+          .build();
+    } else {
+      return SymmetricClientAuthMethod.builder()
+          .tokenEndpoint(tokenEndpoint)
+          .clientId(requireNonNull(authConfig.getClientId()))
+          .clientSecret(requireNonNull(authConfig.getClientSecret()))
+          .scope(authConfig.getScope())
+          .sendClientCredentialsInBody(authConfig.isUseFormForBasicAuth())
+          .build();
+    }
   }
 }

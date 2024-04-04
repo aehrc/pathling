@@ -17,19 +17,23 @@
 
 package au.csiro.pathling.auth;
 
-import au.csiro.pathling.config.AuthConfiguration;
-import java.io.Closeable;
-import java.net.URI;
-import java.util.Optional;
+
+import lombok.Value;
 import javax.annotation.Nonnull;
 
-/**
- * Provides tokens for authentication.
- */
-public interface TokenAuthFactory extends Closeable {
-  
-  @Nonnull
-  Optional<TokenCredentials> createCredentials(@Nonnull final URI fhirEndpoint,
-      @Nonnull final AuthConfiguration authConfiguration);
 
+/**
+ * Represents an access token.
+ */
+@Value(staticConstructor = "of")
+public class Token {
+
+  @Nonnull
+  String accessToken;
+
+  @Override
+  public String toString() {
+    return "Token(" +
+        "hash:" + Long.toHexString(accessToken.hashCode()) + ')';
+  }
 }

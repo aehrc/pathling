@@ -61,9 +61,11 @@ public class TokenAuthRequestInterceptor implements HttpRequestInterceptor {
       maybeCredentials.filter(TokenCredentials.class::isInstance)
           .map(TokenCredentials.class::cast)
           .map(TokenCredentials::getToken)
-          .ifPresent(accessToken -> {
-            log.debug("Adding access token to request: {}", request.getRequestLine());
-            request.addHeader(HttpHeaders.AUTHORIZATION, AuthConst.AUTH_BEARER + " " + accessToken);
+          .ifPresent(authToken -> {
+            log.debug("Adding access token: {} to request: {}", authToken,
+                request.getRequestLine());
+            request.addHeader(HttpHeaders.AUTHORIZATION,
+                AuthConst.AUTH_BEARER + " " + authToken.getAccessToken());
           });
     }
   }

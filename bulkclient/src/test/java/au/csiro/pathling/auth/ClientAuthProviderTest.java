@@ -20,7 +20,6 @@ package au.csiro.pathling.auth;
 import au.csiro.pathling.config.AuthConfiguration;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Optional;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -48,14 +47,15 @@ class ClientAuthProviderTest {
         .scope("system/*.read")
         .build();
 
-    try (final AuthTokenAuthFactory clientFactory = new AuthTokenAuthFactory(
+    try (final SMARTTokenAuthFactory clientFactory = new SMARTTokenAuthFactory(
         smartCDRAuthConf)) {
 
       final ClientAuthMethod clientAuthMethod = new SymmetricClientAuthMethod(
           smartCDRAuthConf.getTokenEndpoint(),
-          smartCDRAuthConf.getClientId(), smartCDRAuthConf.getClientSecret(), smartCDRAuthConf.getScope(), false);
+          smartCDRAuthConf.getClientId(), smartCDRAuthConf.getClientSecret(),
+          smartCDRAuthConf.getScope(), false);
 
-      final Optional<String> token = clientFactory.getToken(clientAuthMethod);
+      final String token = clientFactory.getToken(clientAuthMethod);
       System.out.println(token);
 
       final URI fhirEndpoint = URI.create(

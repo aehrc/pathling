@@ -57,6 +57,7 @@ public class SMARTDiscoveryResponse {
   @Nonnull
   List<String> capabilities = Collections.emptyList();
 
+  @Nonnull
   public static SMARTDiscoveryResponse get(@Nonnull final URI fhirEndpointURI,
       @Nonnull final HttpClient httpClient) throws IOException {
     final URI wellKnownUri = WebUtils.ensurePathEndsWithSlash(fhirEndpointURI).resolve(

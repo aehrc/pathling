@@ -20,7 +20,7 @@ package au.csiro.pathling.export;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import au.csiro.pathling.auth.AuthTokenAuthFactory;
+import au.csiro.pathling.auth.SMARTTokenAuthFactory;
 import au.csiro.pathling.auth.TokenAuthFactory;
 import au.csiro.pathling.auth.TokenAuthRequestInterceptor;
 import au.csiro.pathling.auth.TokenCredentials;
@@ -350,7 +350,7 @@ public class BulkExportClient {
 
   @Nonnull
   private TokenAuthFactory createTokenProvider() {
-    return new AuthTokenAuthFactory(authConfig);
+    return new SMARTTokenAuthFactory(authConfig);
   }
 
 

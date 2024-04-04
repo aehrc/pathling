@@ -43,5 +43,5 @@ public interface TokenCredentials extends Credentials {
    * @return the token
    */
   @Nonnull
-  String getToken();
+  Token getToken();
 }

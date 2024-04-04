@@ -24,6 +24,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
@@ -41,6 +42,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.google.common.base.Charsets;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -270,8 +272,6 @@ class BulkExportClientWiremockTest {
         .withType("Condition")
         .build()
         .export();
-
-    // assertEquals(BulkExportResult.of(Instant.EPOCH, Collections.emptyList()), result);
 
     assertMarkedSuccess(exportDir);
     assertEquals(RESOURCE_00,
@@ -705,10 +705,9 @@ class BulkExportClientWiremockTest {
     assertNotMarkedSuccess(exportDir);
   }
 
-
   @Test
-  void testExportWorksWithSMARTSymmetricAuthentication(
-      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) {
+  void testExportWorksWithSMARTSymmetricAuthenticationForKickOffAndDownload(
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws IOException {
 
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(401)));
 
@@ -731,7 +730,7 @@ class BulkExportClientWiremockTest {
                 .withHeader("content-type", "application/json")
                 .withBody(new JSONObject()
                     .put("access_token", "token-value")
-                    .put("expires_in", 120)
+                    .put("expires_in", 300)
                     .toString())
         )
     );
@@ -742,12 +741,20 @@ class BulkExportClientWiremockTest {
             aResponse().withStatus(202)
                 .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
     );
+
     stubFor(get(urlPathEqualTo("/pool"))
         .withHeader("Authorization", equalTo("Bearer token-value"))
         .willReturn(aResponse()
             .withStatus(200)
             .withHeader("content-type", "application/json")
-            .withBody(BULK_EXPORT_NO_FILES_RESPONSE))
+            .withBody(bulkExportResponse_1_file(wmRuntimeInfo)))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/00"))
+        .withHeader("Authorization", equalTo("Bearer token-value"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_00))
     );
 
     System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
@@ -771,6 +778,10 @@ class BulkExportClientWiremockTest {
         .export();
 
     assertMarkedSuccess(exportDir);
-  }
+    assertEquals(RESOURCE_00,
+        FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
 
+    // The token should be requested once and reused for all requests
+    verify(1, postRequestedFor(urlPathEqualTo("/token")));
+  }
 }
