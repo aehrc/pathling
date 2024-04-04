@@ -20,8 +20,8 @@ package au.csiro.pathling.export;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
-import au.csiro.pathling.auth.SMARTTokenAuthFactory;
-import au.csiro.pathling.auth.TokenAuthFactory;
+import au.csiro.pathling.auth.SMARTTokenCredentialFactory;
+import au.csiro.pathling.auth.TokenCredentialFactory;
 import au.csiro.pathling.auth.TokenAuthRequestInterceptor;
 import au.csiro.pathling.auth.TokenCredentials;
 import au.csiro.pathling.config.AuthConfiguration;
@@ -245,7 +245,7 @@ public class BulkExportClient {
    */
   public BulkExportResult export() {
     try (
-        final TokenAuthFactory tokenAuthFactory = createTokenProvider();
+        final TokenCredentialFactory tokenAuthFactory = createTokenProvider();
         final FileStore fileStore = createFileStore();
         final CloseableHttpClient httpClient = createHttpClient(tokenAuthFactory);
         final ExecutorServiceResource executorServiceResource = createExecutorServiceResource()
@@ -349,13 +349,13 @@ public class BulkExportClient {
   }
 
   @Nonnull
-  private TokenAuthFactory createTokenProvider() {
-    return new SMARTTokenAuthFactory(authConfig);
+  private TokenCredentialFactory createTokenProvider() {
+    return SMARTTokenCredentialFactory.create(authConfig);
   }
-
-
+  
   @Nonnull
-  private CloseableHttpClient createHttpClient(@Nonnull final TokenAuthFactory tokenAuthFactory) {
+  private CloseableHttpClient createHttpClient(
+      @Nonnull final TokenCredentialFactory tokenAuthFactory) {
     log.debug("Creating HttpClient with configuration: {}", httpClientConfig);
 
     final URI endpointURI = URI.create(fhirEndpointUrl);

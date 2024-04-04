@@ -23,11 +23,13 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
+import lombok.Builder;
 import lombok.Value;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 
 @Value
+@Builder
 public class SMARTDiscoveryResponse {
 
   public static String SMART_WELL_KNOWN_CONFIGURATION_PATH = ".well-known/smart-configuration";
@@ -36,15 +38,19 @@ public class SMARTDiscoveryResponse {
   String tokenEndpoint;
 
   @Nonnull
+  @Builder.Default
   List<String> grantTypesSupported = Collections.emptyList();
 
   @Nonnull
+  @Builder.Default
   List<String> tokenEndpointAuthMethodsSupported = Collections.emptyList();
 
   @Nonnull
+  @Builder.Default
   List<String> tokenEndpointAuthSigningAlgValuesSupported = Collections.emptyList();
 
   @Nonnull
+  @Builder.Default
   List<String> capabilities = Collections.emptyList();
 
   @Nonnull

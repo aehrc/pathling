@@ -31,8 +31,12 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClients;
 
+/**
+ * Factory for creating token credentials. It tries to use SMART configuration to discover token
+ * endpoint if enabled, otherwise it uses the token endpoint from the configuration.
+ */
 @Slf4j
-public class SMARTTokenAuthFactory implements TokenAuthFactory {
+public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
 
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
@@ -45,13 +49,11 @@ public class SMARTTokenAuthFactory implements TokenAuthFactory {
   @Nonnull
   private final AuthTokenProvider authTokenProvider;
 
-
-  public SMARTTokenAuthFactory(@Nonnull final AuthConfiguration configuration) {
-    this.httpClient = getHttpClient();
-    this.authTokenProvider = new AuthTokenProvider(httpClient,
-        configuration.getTokenExpiryTolerance());
+  SMARTTokenCredentialFactory(@Nonnull final CloseableHttpClient httpClient,
+      @Nonnull final AuthTokenProvider authTokenProvider) {
+    this.httpClient = httpClient;
+    this.authTokenProvider = authTokenProvider;
   }
-
 
   @Value
   static
@@ -99,7 +101,7 @@ public class SMARTTokenAuthFactory implements TokenAuthFactory {
   }
 
   @Nonnull
-  ClientAuthMethod createSMARTAuthMethod(@Nonnull final URI fhirEndpoint,
+  private ClientAuthMethod createSMARTAuthMethod(@Nonnull final URI fhirEndpoint,
       @Nonnull final AuthConfiguration authConfig) {
     try {
       log.debug("Retrieving SMART configuration for fhirEndpoint: {}", fhirEndpoint);
@@ -131,5 +133,12 @@ public class SMARTTokenAuthFactory implements TokenAuthFactory {
   @Override
   public void close() throws IOException {
     httpClient.close();
+  }
+  
+  @Nonnull
+  public static SMARTTokenCredentialFactory create(@Nonnull final AuthConfiguration configuration) {
+    final CloseableHttpClient httpClient = getHttpClient();
+    return new SMARTTokenCredentialFactory(httpClient, new AuthTokenProvider(httpClient,
+        configuration.getTokenExpiryTolerance()));
   }
 }

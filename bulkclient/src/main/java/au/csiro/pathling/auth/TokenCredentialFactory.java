@@ -26,7 +26,7 @@ import javax.annotation.Nonnull;
 /**
  * Provides tokens for authentication.
  */
-public interface TokenAuthFactory extends Closeable {
+public interface TokenCredentialFactory extends Closeable {
   
   @Nonnull
   Optional<TokenCredentials> createCredentials(@Nonnull final URI fhirEndpoint,
