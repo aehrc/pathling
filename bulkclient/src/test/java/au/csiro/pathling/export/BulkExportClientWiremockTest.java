@@ -714,6 +714,7 @@ class BulkExportClientWiremockTest {
     stubFor(get(urlPathEqualTo("/.well-known/smart-configuration"))
         .willReturn(
             aResponse().withStatus(200)
+                .withHeader("content-type", "application/json")
                 .withBody(new JSONObject()
                     .put("token_endpoint", wmRuntimeInfo.getHttpBaseUrl() + "/token")
                     .put("capabilities",
