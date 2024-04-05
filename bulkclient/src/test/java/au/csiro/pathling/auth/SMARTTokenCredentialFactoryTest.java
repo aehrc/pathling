@@ -57,7 +57,6 @@ class SMARTTokenCredentialFactoryTest {
         AuthConfiguration.builder().enabled(false).build()));
   }
 
-
   @Test
   void testUsedSMARTDiscoveryWhenEnabledToCreateAuthMethod() throws IOException {
     final SMARTTokenCredentialFactory factory = new SMARTTokenCredentialFactory(httpClient,

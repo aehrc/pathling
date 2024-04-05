@@ -29,14 +29,10 @@ public class AuthConst {
   public static final String PARAM_CLIENT_SECRET = "client_secret";
   public static final String PARAM_CLIENT_ASSERTION_TYPE = "client_assertion_type";
   public static final String PARAM_CLIENT_ASSERTION = "client_assertion";
-
   public static final String PARAM_SCOPE = "scope";
   public static final String PARAM_GRANT_TYPE = "grant_type";
-
   public static final String GRANT_TYPE_CLIENT_CREDENTIALS = "client_credentials";
-
   public static final String CLIENT_ASSERTION_TYPE_JWT_BEARER = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
-
   public static final String AUTH_BASIC = "Basic";
   public static final String AUTH_BEARER = "Bearer";
 }

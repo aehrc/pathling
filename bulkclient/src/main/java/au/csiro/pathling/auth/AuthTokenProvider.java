@@ -29,6 +29,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 
+/**
+ * Provides cached access to authentication tokens for given authentication method.
+ * <p>
+ * The tokens are cached in memory and are reused if they are still valid for at least the time
+ * defined in the `tokenExpiryTolerance` parameter.
+ */
 @Slf4j
 public class AuthTokenProvider {
 
@@ -40,6 +46,12 @@ public class AuthTokenProvider {
   @Nonnull
   private final Map<ClientAuthMethod.AccessScope, AccessContext> accessContexts = new HashMap<>();
 
+  /**
+   * Creates a new AuthTokenProvider.
+   *
+   * @param httpClient the http client
+   * @param tokenExpiryTolerance the token expiry tolerance
+   */
   public AuthTokenProvider(@Nonnull final HttpClient httpClient, final long tokenExpiryTolerance) {
     this.httpClient = httpClient;
     this.tokenExpiryTolerance = tokenExpiryTolerance;
@@ -56,9 +68,9 @@ public class AuthTokenProvider {
   Token getToken(@Nonnull final ClientAuthMethod authMethod) {
     try {
       final AccessContext accessContext = ensureAccessContext(authMethod, tokenExpiryTolerance);
+      log.debug("Using access context: {}", accessContext);
       // Now we should have a valid token, so we can add it to the request.
-      return Token.of(
-          requireNonNull(accessContext.getClientCredentialsResponse().getAccessToken()));
+      return accessContext.getAccessToken();
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
@@ -92,20 +104,24 @@ public class AuthTokenProvider {
     final ClientCredentialsResponse response = clientCredentialsGrant(authParams,
         tokenExpiryTolerance);
     final Instant expires = getExpiryTime(response);
-    log.debug("New token will expire at {}", expires);
-    return new AccessContext(response, expires);
+    final AccessContext accessContexts = new AccessContext(
+        Token.of(requireNonNull(response.getAccessToken())), expires);
+    log.debug("New access context created: {}", accessContexts);
+    return accessContexts;
   }
 
   @Nonnull
   private ClientCredentialsResponse clientCredentialsGrant(
       @Nonnull final ClientAuthMethod authParams, final long tokenExpiryTolerance)
       throws IOException {
-    final ClientCredentialsResponse grant = authParams.requestClientCredentials(httpClient);
-    if (grant.getExpiresIn() < tokenExpiryTolerance) {
+    final ClientCredentialsResponse grantResponse = authParams.requestClientCredentials(httpClient);
+    log.debug("New token obtained: {}", grantResponse);
+    if (grantResponse.getExpiresIn() < tokenExpiryTolerance) {
       throw new ClientProtocolException(
-          "Client credentials grant expiry is less than the tolerance: " + grant.getExpiresIn());
+          "Client credentials grant expiry is less than the tolerance: "
+              + grantResponse.getExpiresIn());
     }
-    return grant;
+    return grantResponse;
   }
 
   private static Instant getExpiryTime(@Nonnull final ClientCredentialsResponse response) {
@@ -122,7 +138,7 @@ public class AuthTokenProvider {
   static class AccessContext {
 
     @Nonnull
-    ClientCredentialsResponse clientCredentialsResponse;
+    Token accessToken;
 
     @Nonnull
     Instant expiryTime;

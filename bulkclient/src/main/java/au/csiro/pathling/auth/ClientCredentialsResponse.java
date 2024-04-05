@@ -19,6 +19,7 @@ package au.csiro.pathling.auth;
 
 import javax.annotation.Nullable;
 import lombok.Builder;
+import lombok.ToString;
 import lombok.Value;
 
 /**
@@ -29,6 +30,7 @@ import lombok.Value;
 public class ClientCredentialsResponse {
 
   @Nullable
+  @ToString.Exclude
   String accessToken;
 
   @Nullable

@@ -53,8 +53,7 @@ public class JWTUtilsTest {
     assertEquals("RS384", algo.getName());
     assertNotNull(algo.sign("test".getBytes()));
   }
-
-
+  
   @Test
   void getsAlgorithmForECS384Key() throws Exception {
     final String privateKeyJWKJson = getResourceAsString("auth/bulk_es384_priv_jwk.json");

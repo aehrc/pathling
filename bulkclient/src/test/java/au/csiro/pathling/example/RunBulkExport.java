@@ -189,7 +189,6 @@ public class RunBulkExport {
     AuthConfiguration authConfiguration = AuthConfiguration.builder()
         .enabled(true)
         .useSMART(true)
-        //.tokenEndpoint("https://bulk-data.smarthealthit.org/auth/token")
         .clientId(clientId)
         .privateKeyJWK(privateKeyJWK)
         .scope("system/*.read")
