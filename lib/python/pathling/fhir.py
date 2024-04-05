@@ -41,7 +41,6 @@ class Version:
 class Reference(NamedTuple):
     reference: Optional[str] = None
     type: Optional[str] = None
-    identifier: Optional[str] = None
     display: Optional[str] = None
 
     def to_json(self) -> str:
@@ -53,7 +52,6 @@ class Reference(NamedTuple):
             .export.fhir.Reference.builder()
             .reference(self.reference)
             .type(self.type)
-            .identifier(self.identifier)
             .display(self.display)
             .build()
         )

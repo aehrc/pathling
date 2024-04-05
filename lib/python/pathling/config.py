@@ -15,11 +15,12 @@
 from typing import Optional
 
 from pathling.jvm import jvm_pathling
-from py4j.java_gateway import JVMView, JavaObject
+from py4j.java_gateway import JavaObject
 
 
 def auth_config(
     auth_enabled: bool = False,
+    auth_use_SMART: bool = True,
     auth_token_endpoint: Optional[str] = None,
     auth_client_id: Optional[str] = None,
     auth_client_secret: Optional[str] = None,
@@ -32,11 +33,13 @@ def auth_config(
     Creates authentication configuration.
 
     :param auth_enabled: enables authentication of requests to the fhir endpoint server
-    :param auth_token_endpoint: an OAuth2 token endpoint for use with the client credentials grant
+    :param auth_use_SMART: use SMART configuration to discover token endpoint
+    :param auth_token_endpoint: an OAuth2 token endpoint for use with the client credentials grant;
+            only applicable if `auth_use_SMART` is False.
     :param auth_client_id: a client ID for use with the client credentials grant
     :param auth_client_secret: a client secret for use with the symmetric client authentication
     :param auth_private_key_jwk: a private key for use with the asymmetric client authentication
-    :param auth_use_form_for_basic_auth: send the client_id and client_secret in request body form 
+    :param auth_use_form_for_basic_auth: send the client_id and client_secret in request body form
             rather than the 'Authorization' header.
     :param auth_scope: a scope value for use with the client credentials grant
     :param auth_token_expiry_tolerance: the minimum number of seconds that a token should have
@@ -47,6 +50,7 @@ def auth_config(
         jvm_pathling()
         .config.AuthConfiguration.builder()
         .enabled(auth_enabled)
+        .useSMART(auth_use_SMART)
         .tokenEndpoint(auth_token_endpoint)
         .clientId(auth_client_id)
         .clientSecret(auth_client_secret)

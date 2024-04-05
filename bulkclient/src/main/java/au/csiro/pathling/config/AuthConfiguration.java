@@ -54,7 +54,11 @@ public class AuthConfiguration implements Serializable {
   
   @Builder.Default
   private boolean enabled = false;
-  
+
+
+  /**
+   * Use SMART configuration to discover token endpoint.
+   */
   @Builder.Default
   private boolean useSMART = true;
 

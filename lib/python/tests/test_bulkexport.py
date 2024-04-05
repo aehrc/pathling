@@ -46,7 +46,7 @@ def test_builds_default_client(pathling_ctx):
     j_client = client._jclient
     assert j_client.getFhirEndpointUrl() == "http://example.com"
     assert j_client.getOutputDir() == "output"
-    assert j_client.getOperation().getPath() == "$export"  # system level export
+    assert j_client.getLevel().getPath() == "$export"  # system level export
     assert j_client.getOutputFormat() == "application/fhir+ndjson"
     assert j_client.getSince() is None
     assert j_client.getTimeout().isZero()
@@ -73,7 +73,7 @@ def test_builds_system_client_with_options(pathling_ctx):
     j_client = client._jclient
     assert j_client.getFhirEndpointUrl() == "http://system.com"
     assert j_client.getOutputDir() == "output-system"
-    assert j_client.getOperation().getPath() == "$export"  # system level export
+    assert j_client.getLevel().getPath() == "$export"  # system level export
     assert j_client.getOutputFormat() == "fhir+ndjson"
     assert j_client.getSince().getEpochSecond() == 10000
     assert j_client.getTimeout().toSeconds() == 120
@@ -101,7 +101,7 @@ def test_builds_patient_client_with_options(pathling_ctx):
     assert j_client.getFhirEndpointUrl() == "http://patient.com"
     assert j_client.getOutputDir() == "output-patient"
     assert (
-        j_client.getOperation().getPath() == "Patient/$export"
+        j_client.getLevel().getPath() == "Patient/$export"
     )  # patient level export
     assert j_client.getOutputFormat() == "application/fhir+ndjson"
     assert j_client.getSince().getEpochSecond() == 2000
@@ -121,7 +121,7 @@ def test_builds_group_client_with_options(pathling_ctx):
     assert j_client.getFhirEndpointUrl() == "http://group.com"
     assert j_client.getOutputDir() == "output-group"
     assert (
-        j_client.getOperation().getPath() == "Group/123/$export"
+        j_client.getLevel().getPath() == "Group/123/$export"
     )  # group level export
     assert j_client.getOutputFormat() == "application/fhir+ndjson"
     assert j_client.getSince() is None
