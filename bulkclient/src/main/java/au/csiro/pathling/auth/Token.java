@@ -23,7 +23,8 @@ import javax.annotation.Nonnull;
 
 
 /**
- * Represents an access token.
+ * Represents an access token. Used to keep the token credentials private while allowing to identify
+ * the tokens.
  */
 @Value(staticConstructor = "of")
 public class Token {

@@ -134,7 +134,13 @@ public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
   public void close() throws IOException {
     httpClient.close();
   }
-  
+
+  /**
+   * Creates a new instance of {@link SMARTTokenCredentialFactory}.
+   *
+   * @param configuration the configuration to use
+   * @return a new instance of {@link SMARTTokenCredentialFactory}.
+   */
   @Nonnull
   public static SMARTTokenCredentialFactory create(@Nonnull final AuthConfiguration configuration) {
     final CloseableHttpClient httpClient = getHttpClient();

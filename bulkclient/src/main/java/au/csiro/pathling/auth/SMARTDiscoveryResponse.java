@@ -28,6 +28,9 @@ import lombok.Value;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 
+/**
+ * Response from SMART configuration discovery endpoint.
+ */
 @Value
 @Builder
 public class SMARTDiscoveryResponse {

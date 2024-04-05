@@ -17,8 +17,11 @@
 
 package au.csiro.pathling.export;
 
+import static au.csiro.pathling.test.TestResources.getResourceAsString;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.and;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -785,4 +788,91 @@ class BulkExportClientWiremockTest {
     // The token should be requested once and reused for all requests
     verify(1, postRequestedFor(urlPathEqualTo("/token")));
   }
+  
+  @Test
+  void testExportWorksWithSMARTSymmetricAuthenticationForKickOffAndDownloadRefresingExpiredTokens(
+      @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws IOException {
+
+    stubFor(get(anyUrl()).willReturn(aResponse().withStatus(401)));
+
+    stubFor(get(urlPathEqualTo("/.well-known/smart-configuration"))
+        .willReturn(
+            aResponse().withStatus(200)
+                .withHeader("content-type", "application/json")
+                .withBody(new JSONObject()
+                    .put("token_endpoint", wmRuntimeInfo.getHttpBaseUrl() + "/token-asym")
+                    .put("capabilities",
+                        new JSONArray().appendElement("client-confidential-asymmetric "))
+                    .toString())
+        )
+    );
+
+    stubFor(post(urlPathEqualTo("/token-asym"))
+        .withRequestBody(and(
+            containing("grant_type=client_credentials"),
+            containing("scope=*.read"),
+            containing("client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer"),
+            containing("client_assertion=")
+        ))
+        .willReturn(
+            aResponse().withStatus(200)
+                .withHeader("content-type", "application/json")
+                .withBody(new JSONObject()
+                    .put("access_token", "token-value-asym")
+                    .put("expires_in", 0)
+                    .toString())
+        )
+    );
+
+    stubFor(get(urlPathEqualTo("/$export"))
+        .withHeader("Authorization", equalTo("Bearer token-value-asym"))
+        .willReturn(
+            aResponse().withStatus(202)
+                .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+    );
+
+    stubFor(get(urlPathEqualTo("/pool"))
+        .withHeader("Authorization", equalTo("Bearer token-value-asym"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withHeader("content-type", "application/json")
+            .withBody(bulkExportResponse_1_file(wmRuntimeInfo)))
+    );
+
+    stubFor(get(urlPathEqualTo("/file/00"))
+        .withHeader("Authorization", equalTo("Bearer token-value-asym"))
+        .willReturn(aResponse()
+            .withStatus(200)
+            .withBody(RESOURCE_00))
+    );
+
+    System.out.println("Base URL: " + wmRuntimeInfo.getHttpBaseUrl());
+    final File exportDir = getRandomExportLocation();
+    System.out.println("Exporting to: " + exportDir);
+
+    final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
+
+    final AuthConfiguration authConfig = AuthConfiguration.builder()
+        .enabled(true)
+        .clientId("client_id")
+        .privateKeyJWK(getResourceAsString("auth/bulk_rs384_priv_jwk.json"))
+        .scope("*.read")
+        .tokenExpiryTolerance(0)
+        .build();
+
+    BulkExportClient.builder()
+        .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
+        .withOutputDir(exportDir.getPath())
+        .withAuthConfig(authConfig)
+        .build()
+        .export();
+
+    assertMarkedSuccess(exportDir);
+    assertEquals(RESOURCE_00,
+        FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
+
+    // The token should be requested for all three requests (kickoff, status pooling, and download)
+    verify(3, postRequestedFor(urlPathEqualTo("/token-asym")));
+  }
+  
 }

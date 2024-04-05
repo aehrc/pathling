@@ -25,6 +25,7 @@ import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.util.Optional;
 import javax.annotation.Nonnull;
+import com.google.gson.JsonParseException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -34,7 +35,9 @@ import org.apache.http.client.ResponseHandler;
 import org.apache.http.util.EntityUtils;
 
 /**
- * Http Client ResponseHandler for the Json responses using in SMART endpoints.
+ * Http Client ResponseHandler for the Json responses using in SMART endpoints. That include both
+ * the SMART configuration discovery and the authentication endpoints. The JSON response are
+ * deserialized using Gson with the `FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES` policy.
  *
  * @param <T> type of the expected final successful response.
  */
@@ -71,12 +74,16 @@ class JsonResponseHandler<T> implements ResponseHandler<T> {
   }
 
   private T produceResponse(@Nonnull final HttpResponse response) throws IOException {
-    return Optional.ofNullable(response.getEntity())
+    final String jsonBody = Optional.ofNullable(response.getEntity())
         .filter(e -> e.getContentType() != null && e.getContentType().getValue()
             .contains("application/json"))
         .flatMap(this::quietBodyAsString)
-        .map(body -> GSON.fromJson(body, responseClass))
         .orElseThrow(() -> new ClientProtocolException("Response entity is not a JSON"));
+    try {
+      return GSON.fromJson(jsonBody, responseClass);
+    } catch (final JsonParseException ex) {
+      throw new ClientProtocolException("Failed to parse response body as JSON", ex);
+    }
   }
 
   @Nonnull
