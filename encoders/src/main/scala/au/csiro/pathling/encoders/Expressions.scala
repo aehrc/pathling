@@ -383,13 +383,13 @@ case class UnresolvedUnnest(value: Expression)
 object ValueFunctions {
   def ifArray(value: Column, arrayExpressions: Column => Column,
               elseExpression: Column => Column): Column = {
-    val expr = UnresolvedIfArray(value.alias(value.hashCode().toString).expr,
+    val expr = UnresolvedIfArray(value.expr,
       e => arrayExpressions(new Column(e)).expr, e => elseExpression(new Column(e)).expr)
     new Column(expr)
   }
 
   def unnest(value: Column): Column = {
-    val expr = UnresolvedUnnest(value.alias(value.hashCode().toString).expr)
+    val expr = UnresolvedUnnest(value.expr)
     new Column(expr)
   }
 

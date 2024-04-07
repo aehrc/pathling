@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.view;
 
+import static au.csiro.pathling.encoders.ValueFunctions.ifArray;
 import static java.util.stream.Collectors.toUnmodifiableList;
 import static org.apache.spark.sql.functions.array;
 import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.isnull;
 import static org.apache.spark.sql.functions.when;
 
-import au.csiro.pathling.encoders.ValueFunctions;
 import java.util.List;
 import javax.annotation.Nonnull;
 import lombok.Value;
@@ -40,7 +40,8 @@ public class UnionSelection implements ProjectionClause {
   @Override
   public ProjectionResult evaluate(@Nonnull final ProjectionContext context) {
     // Evaluate each component of the union.
-    final List<ProjectionResult> results = components.stream().map(c -> c.evaluate(context))
+    final List<ProjectionResult> results = components.stream()
+        .map(c -> c.evaluate(context))
         .collect(toUnmodifiableList());
 
     // Process each result to ensure that they are all arrays.
@@ -48,7 +49,7 @@ public class UnionSelection implements ProjectionClause {
         .map(ProjectionResult::getResultColumn)
         // When the result is a singular null, convert it to an empty array.
         .map(col -> when(isnull(col), array())
-            .otherwise(ValueFunctions.ifArray(col,
+            .otherwise(ifArray(col,
                 // If the column is an array, return it as is.
                 c -> c,
                 // If the column is a singular value, convert it to an array.
