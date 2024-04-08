@@ -1,0 +1,34 @@
+{
+  "transactionTime" : "1706584411382",
+  "request" : "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjB9/fhir/Patient/$export?_outputFormat=ndjson",
+  "requiresAccessToken" : false,
+  "output" : [
+    {
+      "type" : "AllergyIntolerance",
+      "count" : 38,
+      "url" : "https://raw.githubusercontent.com/aehrc/pathling/main/fhir-server/src/test/resources/test-data/fhir/AllergyIntolerance.ndjson"
+    },
+    {
+      "type" : "CarePlan",
+      "count" : 278,
+      "url" : "https://raw.githubusercontent.com/aehrc/pathling/main/fhir-server/src/test/resources/test-data/fhir/CarePlan.ndjson"
+    },
+    {
+      "type" : "Observation",
+      "count" : 10000,
+      "url" : "https://raw.githubusercontent.com/aehrc/pathling/main/fhir-server/src/test/resources/test-data/fhir/Observation.ndjson"
+    },
+    {
+      "type" : "Observation",
+      "count" : 6315,
+      "url" : "https://raw.githubusercontent.com/aehrc/pathling/main/fhir-server/src/test/resources/test-data/fhir/Observation.ndjson"
+    },
+    {
+      "type" : "Patient",
+      "count" : 100,
+      "url" : "https://raw.githubusercontent.com/aehrc/pathling/main/fhir-server/src/test/resources/test-data/fhir/Patient.ndjson"
+    }
+  ],
+  "deleted" : [],
+  "error" : []
+}

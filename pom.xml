@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>6.4.2</version>
+  <version>6.6.0-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -95,6 +95,7 @@
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
     <pathling.slf4jVersion>1.7.36</pathling.slf4jVersion>
     <pathling.logbackVersion>1.2.11</pathling.logbackVersion>
+    <pathling.httpclientVersion>4.5.14</pathling.httpclientVersion>
     <pathling.surefireVersion>3.1.2</pathling.surefireVersion>
   </properties>
 
@@ -112,6 +113,7 @@
     <module>deployment/helm</module>
     <module>site</module>
     <module>utilities</module>
+    <module>bulkclient</module>
   </modules>
 
   <dependencyManagement>
@@ -153,6 +155,23 @@
       <dependency>
         <groupId>au.csiro.pathling</groupId>
         <artifactId>terminology</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>bulkclient</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>bulkclient</artifactId>
+        <version>${project.version}</version>
+        <classifier>sources</classifier>
+      </dependency>
+      <dependency>
+        <groupId>au.csiro.pathling</groupId>
+        <artifactId>bulkclient</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
       </dependency>
@@ -395,7 +414,7 @@
         <version>${pathling.springBootVersion}</version>
       </dependency>
       <dependency>
-      <groupId>org.springframework.boot</groupId>
+        <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-actuator</artifactId>
         <version>${pathling.springBootVersion}</version>
       </dependency>
@@ -453,6 +472,25 @@
         <groupId>io.sentry</groupId>
         <artifactId>sentry</artifactId>
         <version>6.6.0</version>
+      </dependency>
+
+      <!-- Java Auth -->
+      <dependency>
+        <groupId>com.auth0</groupId>
+        <artifactId>java-jwt</artifactId>
+        <version>4.4.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.auth0</groupId>
+        <artifactId>jwks-rsa</artifactId>
+        <version>0.22.0</version>
+      </dependency>
+
+      <dependency>
+        <groupId>com.nimbusds</groupId>
+        <artifactId>nimbus-jose-jwt</artifactId>
+        <version>9.22</version>
       </dependency>
 
       <!-- JSR-380 Validation RI -->
@@ -608,6 +646,12 @@
         <version>${pathling.logbackVersion}</version>
       </dependency>
 
+      <dependency>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>${pathling.httpclientVersion}</version>
+      </dependency>
+
       <!-- CVE-2022-42889-->
       <dependency>
         <groupId>org.apache.commons</groupId>
@@ -628,7 +672,7 @@
         <artifactId>ivy</artifactId>
         <version>2.5.1</version>
       </dependency>
-      
+
       <!-- CVE-2023-44981 -->
       <dependency>
         <groupId>org.apache.zookeeper</groupId>

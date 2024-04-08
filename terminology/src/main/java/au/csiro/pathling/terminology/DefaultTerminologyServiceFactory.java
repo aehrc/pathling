@@ -19,7 +19,6 @@ package au.csiro.pathling.terminology;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.config.HttpClientCachingStorageType;
-import au.csiro.pathling.config.HttpClientConfiguration;
 import au.csiro.pathling.config.TerminologyConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.fhir.TerminologyClient;
@@ -33,17 +32,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-
-import org.apache.http.message.BasicHeader;
-import org.apache.http.Header;
-import java.util.List;
-import java.util.ArrayList;
-import org.apache.http.HttpHeaders;
 
 /**
  * Default implementation of {@link TerminologyServiceFactory}, providing the appropriate
@@ -92,7 +81,7 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
   private TerminologyService createService() {
 
     final FhirContext fhirContext = FhirEncoders.contextFor(fhirVersion);
-    final CloseableHttpClient httpClient = buildHttpClient(configuration.getClient());
+    final CloseableHttpClient httpClient = configuration.getClient().buildHttpClient();
     final TerminologyClient terminologyClient = TerminologyClient.build(fhirContext, configuration,
         httpClient);
     final HttpClientCachingConfiguration cacheConfig = configuration.getCache();
@@ -120,27 +109,5 @@ public class DefaultTerminologyServiceFactory implements TerminologyServiceFacto
     }
   }
 
-  private static CloseableHttpClient buildHttpClient(
-      @Nonnull final HttpClientConfiguration clientConfig) {
-
-    final PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-    connectionManager.setMaxTotal(clientConfig.getMaxConnectionsTotal());
-    connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxConnectionsPerRoute());
-
-    final RequestConfig defaultRequestConfig = RequestConfig.custom()
-        .setSocketTimeout(clientConfig.getSocketTimeout())
-        .build();
-
-    final HttpClientBuilder clientBuilder = HttpClients.custom()
-        .setDefaultRequestConfig(defaultRequestConfig)
-        .setConnectionManager(connectionManager)
-        .setConnectionManagerShared(false);
-
-    if (clientConfig.isRetryEnabled()) {
-      clientBuilder.setRetryHandler(new RequestRetryHandler(clientConfig.getRetryCount()));
-    }
-
-    return clientBuilder.build();
-  }
 
 }
