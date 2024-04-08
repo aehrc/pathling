@@ -29,6 +29,9 @@ import java.util.List;
 import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for {@link BulkExportClient}.
+ */
 public class BulkExportClientTest {
 
   BulkExportClient client = BulkExportClient.builder()

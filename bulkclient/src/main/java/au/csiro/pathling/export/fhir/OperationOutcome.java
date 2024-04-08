@@ -33,8 +33,14 @@ import lombok.Value;
 @Builder
 public class OperationOutcome {
 
+  /**
+   * The type of the resource. Should be "OperationOutcome".
+   */
   public static final String RESOURCE_TYPE = "OperationOutcome";
 
+  /**
+   * Represents an issue backbone element within the OperationOutcome.
+   */
   public static final String ISSUE_TYPE_CODE_TRANSIENT = "transient";
 
   /**
@@ -96,6 +102,6 @@ public class OperationOutcome {
    */
   public boolean isTransient() {
     return getIssue().stream().map(Issue::getCode)
-    .allMatch(ISSUE_TYPE_CODE_TRANSIENT::equals);
+        .allMatch(ISSUE_TYPE_CODE_TRANSIENT::equals);
   }
 }

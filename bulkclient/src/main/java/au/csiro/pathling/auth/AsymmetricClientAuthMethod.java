@@ -53,6 +53,9 @@ import org.apache.http.message.BasicNameValuePair;
 @Builder
 public class AsymmetricClientAuthMethod extends SMARTClientAuthMethodBase {
 
+  /**
+   * The default expiry time for the JWT in seconds.
+   */
   public static int DEFAULT_JWT_EXPIRY_IN_SECONDS = 60;
 
   @Nonnull
@@ -68,8 +71,15 @@ public class AsymmetricClientAuthMethod extends SMARTClientAuthMethodBase {
   @Builder.Default
   String scope = null;
 
+  /**
+   * The builder for the asymmetric client authentication method.
+   */
   public static class AsymmetricClientAuthMethodBuilder {
 
+    /**
+     * @param privateKeyJWK The private key in JWK format.
+     * @return The builder.
+     */
     @Nonnull
     public AsymmetricClientAuthMethodBuilder privateKeyJWK(@Nonnull final String privateKeyJWK) {
       try {

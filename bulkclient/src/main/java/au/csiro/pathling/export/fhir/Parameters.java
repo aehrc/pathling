@@ -33,6 +33,9 @@ import lombok.Value;
 @Value(staticConstructor = "of")
 public class Parameters {
 
+  /**
+   * The type of the resource.
+   */
   public static final String RESOURCE_TYPE = "Parameters";
 
   /**
@@ -97,6 +100,10 @@ public class Parameters {
 
     /**
      * Creates a new Parameter instance with the given name and instant value.
+     *
+     * @param name the name of the parameter.
+     * @param valueInstant the instant value.
+     * @return a new Parameter instance.
      */
     @Nonnull
     public static Parameter of(@Nonnull final String name, final @Nonnull Instant valueInstant) {
@@ -117,12 +124,19 @@ public class Parameters {
   @Nonnull
   List<Parameter> parameter;
 
+  /**
+   * @return the JSON representation of this Parameters instance.
+   */
   @Nonnull
   public String toJson() {
     return FhirJsonSupport.toJson(this);
   }
 
-  public static Parameters of(@Nonnull  final Parameter... parameters) {
+  /**
+   * @param parameters a list of parameters.
+   * @return a new Parameters instance with the given parameters.
+   */
+  public static Parameters of(@Nonnull final Parameter... parameters) {
     return Parameters.of(List.of(parameters));
   }
 }

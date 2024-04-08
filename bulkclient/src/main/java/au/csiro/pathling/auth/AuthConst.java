@@ -25,14 +25,44 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class AuthConst {
 
+  /**
+   * The client ID parameter.
+   */
   public static final String PARAM_CLIENT_ID = "client_id";
+  /**
+   * The client secret parameter.
+   */
   public static final String PARAM_CLIENT_SECRET = "client_secret";
+  /**
+   * The client assertion type parameter.
+   */
   public static final String PARAM_CLIENT_ASSERTION_TYPE = "client_assertion_type";
+  /**
+   * The client assertion parameter.
+   */
   public static final String PARAM_CLIENT_ASSERTION = "client_assertion";
+  /**
+   * The scope parameter.
+   */
   public static final String PARAM_SCOPE = "scope";
+  /**
+   * The grant type parameter.
+   */
   public static final String PARAM_GRANT_TYPE = "grant_type";
+  /**
+   * The grant type for client credentials.
+   */
   public static final String GRANT_TYPE_CLIENT_CREDENTIALS = "client_credentials";
+  /**
+   * The grant type for refresh token.
+   */
   public static final String CLIENT_ASSERTION_TYPE_JWT_BEARER = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+  /**
+   * The grant type for refresh token.
+   */
   public static final String AUTH_BASIC = "Basic";
+  /**
+   * The grant type for refresh token.
+   */
   public static final String AUTH_BEARER = "Bearer";
 }

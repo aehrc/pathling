@@ -30,7 +30,7 @@ import static au.csiro.pathling.export.fhir.FhirUtils.parseFhirInstant;
 
 /**
  * Gson deserializer for {@link Instant} objects that can handle FHIR instant strings.
- * <p/>
+ * <p>
  * It also tries to handle instants expressed as numbers (or strings) representing milliseconds
  * since the epoch. This is necessary for compatibility with some Bulk Export implementations
  * including the <a href="https://bulk-data.smarthealthit.org">SMART Bulk Data Server</a>.

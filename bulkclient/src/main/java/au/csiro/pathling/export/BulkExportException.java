@@ -70,6 +70,8 @@ public class BulkExportException extends RuntimeException {
 
     /**
      * Constructs a new exception with the specified detail message.
+     *
+     * @param message the detail message.
      */
     public Timeout(@Nonnull final String message) {
       super(message);

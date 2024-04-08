@@ -21,17 +21,20 @@ import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.export.BulkExportClient;
 import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.ws.AsyncConfig;
-import org.apache.commons.io.IOUtils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.apache.commons.io.IOUtils;
 
 /**
  * Example of running the Bulk Export Client
  */
 public class RunBulkExport {
 
+  /**
+   * Run the Bulk Export Client with Cerner.
+   */
   public static void runCerner() {
     final String fhirEndpointUrl = "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d";
     final String clientSecret = System.getProperty("pszul.cerner.clientSecret");
@@ -65,6 +68,11 @@ public class RunBulkExport {
   }
 
 
+  /**
+   * Run the Bulk Export Client with Cerner.
+   *
+   * @throws Exception if an error occurs
+   */
   public static void runCernerAssymetric() throws Exception {
     final String fhirEndpointUrl = "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d";
 
@@ -75,10 +83,11 @@ public class RunBulkExport {
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream(
-        "auth/bulk_rs384_priv_jwk.json"));
+    final String privateKeyJWK = IOUtils.toString(
+        RunBulkExport.class.getClassLoader().getResourceAsStream(
+            "auth/bulk_rs384_priv_jwk.json"));
     System.out.println("privateKeyJWK: " + privateKeyJWK);
-    
+
     final AuthConfiguration smartCDR = AuthConfiguration.builder()
         .enabled(true)
         .tokenEndpoint(
@@ -99,6 +108,9 @@ public class RunBulkExport {
         .export();
   }
 
+  /**
+   * Run the Bulk Export Client with Cerner.
+   */
   public static void runSystemLevelCdr() {
 
     // NO ERRORS
@@ -134,6 +146,9 @@ public class RunBulkExport {
   }
 
 
+  /**
+   * Run the Bulk Export Client with Cerner.
+   */
   public static void runSystemLevel() {
 
     // NO ERRORS
@@ -168,7 +183,12 @@ public class RunBulkExport {
         .export();
   }
 
-  public static void runSystemLevelWithAuthRS384() throws Exception{
+  /**
+   * Run the Bulk Export Client with Cerner.
+   *
+   * @throws Exception if an error occurs
+   */
+  public static void runSystemLevelWithAuthRS384() throws Exception {
 
     // NO ERRORS
     final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjAsInNlY3VyZSI6MX0/fhir";
@@ -176,16 +196,17 @@ public class RunBulkExport {
     // Bulk Export Demo Server
     final String outputDir = "target/export-" + Instant.now().toEpochMilli();
 
-    
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    final String clientId = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_rs384_clientId.txt"));
-    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_rs384_priv_jwk.json"));
+    final String clientId = IOUtils.toString(
+        RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_rs384_clientId.txt"));
+    final String privateKeyJWK = IOUtils.toString(
+        RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_rs384_priv_jwk.json"));
 
     System.out.println("clientId: " + clientId);
     System.out.println("privateKeyJWK: " + privateKeyJWK);
-    
+
     AuthConfiguration authConfiguration = AuthConfiguration.builder()
         .enabled(true)
         .useSMART(true)
@@ -194,7 +215,7 @@ public class RunBulkExport {
         .scope("system/*.read")
         .tokenExpiryTolerance(59)
         .build();
-    
+
     BulkExportClient.systemBuilder()
         .withFhirEndpointUrl(fhirEndpointUrl)
         .withOutputDir(outputDir)
@@ -208,7 +229,12 @@ public class RunBulkExport {
   }
 
 
-  public static void runSystemLevelWithAuthES384() throws Exception{
+  /**
+   * Run the Bulk Export Client with Cerner.
+   *
+   * @throws Exception if an error occurs
+   */
+  public static void runSystemLevelWithAuthES384() throws Exception {
 
     // NO ERRORS
     final String fhirEndpointUrl = "https://bulk-data.smarthealthit.org/eyJlcnIiOiIiLCJwYWdlIjoxMDAwMCwiZHVyIjoxMCwidGx0IjoxNSwibSI6MSwic3R1Ijo0LCJkZWwiOjAsInNlY3VyZSI6MX0/fhir";
@@ -216,13 +242,14 @@ public class RunBulkExport {
     // Bulk Export Demo Server
     final String outputDir = "target/export-" + Instant.now().toEpochMilli();
 
-
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    final String clientId = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_es384_clientId.txt"));
-    final String privateKeyJWK = IOUtils.toString(RunBulkExport.class.getClassLoader().getResourceAsStream(
-        "auth/bulk_es384_priv_jwk.json"));
+    final String clientId = IOUtils.toString(
+        RunBulkExport.class.getClassLoader().getResourceAsStream("auth/bulk_es384_clientId.txt"));
+    final String privateKeyJWK = IOUtils.toString(
+        RunBulkExport.class.getClassLoader().getResourceAsStream(
+            "auth/bulk_es384_priv_jwk.json"));
 
     System.out.println("clientId: " + clientId);
     System.out.println("privateKeyJWK: " + privateKeyJWK);
@@ -246,8 +273,11 @@ public class RunBulkExport {
         .build()
         .export();
   }
-  
 
+
+  /**
+   * Run the Bulk Export Client with Cerner.
+   */
   public static void runPatientLevel() {
 
     // NO ERRORS
@@ -272,6 +302,12 @@ public class RunBulkExport {
         .export();
   }
 
+  /**
+   * Run the Bulk Export Client with Cerner.
+   *
+   * @param args the command line arguments
+   * @throws Exception if an error occurs
+   */
   public static void main(@Nonnull final String[] args) throws Exception {
     runSystemLevelWithAuthRS384();
   }

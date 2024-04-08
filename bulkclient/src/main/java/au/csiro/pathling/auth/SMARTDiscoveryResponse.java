@@ -35,6 +35,9 @@ import org.apache.http.client.methods.HttpGet;
 @Builder
 public class SMARTDiscoveryResponse {
 
+  /**
+   * The path to the SMART configuration discovery endpoint.
+   */
   public static String SMART_WELL_KNOWN_CONFIGURATION_PATH = ".well-known/smart-configuration";
 
   @Nonnull
@@ -56,6 +59,14 @@ public class SMARTDiscoveryResponse {
   @Builder.Default
   List<String> capabilities = Collections.emptyList();
 
+  /**
+   * Gets the token endpoint URI.
+   *
+   * @param fhirEndpointURI the FHIR endpoint URI
+   * @param httpClient the HTTP client
+   * @return the SMART configuration discovery response
+   * @throws IOException if an error occurs
+   */
   @Nonnull
   public static SMARTDiscoveryResponse get(@Nonnull final URI fhirEndpointURI,
       @Nonnull final HttpClient httpClient) throws IOException {

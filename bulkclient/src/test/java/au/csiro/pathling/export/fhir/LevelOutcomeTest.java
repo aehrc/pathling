@@ -27,6 +27,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for {@link OperationOutcome}.
+ */
 public class LevelOutcomeTest {
 
   @Test

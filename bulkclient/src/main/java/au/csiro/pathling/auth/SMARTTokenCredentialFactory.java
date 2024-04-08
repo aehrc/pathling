@@ -38,9 +38,21 @@ import org.apache.http.impl.client.HttpClients;
 @Slf4j
 public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
 
+  /**
+   * Timeout values for the HTTP client.
+   */
   public static final int AUTH_CONNECT_TIMEOUT = 5_000;
+  /**
+   * Timeout values for the HTTP client.
+   */
   public static final int AUTH_CONNECTION_REQUEST_TIMEOUT = 5_000;
+  /**
+   * Timeout values for the HTTP client.
+   */
   public static final int AUTH_SOCKET_TIMEOUT = 5_000;
+  /**
+   * Retry count for the HTTP client.
+   */
   public static final int AUTH_RETRY_COUNT = 3;
 
   @Nonnull

@@ -34,6 +34,9 @@ import javax.annotation.Nonnull;
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests for {@link JWTUtils}.
+ */
 public class JWTUtilsTest {
 
 

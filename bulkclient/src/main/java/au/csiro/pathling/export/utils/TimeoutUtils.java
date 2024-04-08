@@ -40,6 +40,12 @@ public class TimeoutUtils {
   public static final Duration TIMEOUT_INFINITE = Duration.ZERO;
 
 
+  /**
+   * Checks if the given timeout is infinite.
+   * 
+   * @param timeout the timeout to check.
+   * @return true if the timeout is infinite, false otherwise.
+   */
   public static boolean isInfinite(@Nonnull final Duration timeout) {
     return timeout.isZero() || timeout.isNegative();
   }

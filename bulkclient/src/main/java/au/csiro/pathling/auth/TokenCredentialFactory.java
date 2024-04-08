@@ -27,7 +27,14 @@ import javax.annotation.Nonnull;
  * Provides tokens for authentication.
  */
 public interface TokenCredentialFactory extends Closeable {
-  
+
+  /**
+   * Creates a token credential for the given FHIR endpoint and authentication configuration.
+   *
+   * @param fhirEndpoint the FHIR endpoint
+   * @param authConfiguration the authentication configuration
+   * @return the token credential
+   */
   @Nonnull
   Optional<TokenCredentials> createCredentials(@Nonnull final URI fhirEndpoint,
       @Nonnull final AuthConfiguration authConfiguration);

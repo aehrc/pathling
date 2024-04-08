@@ -48,10 +48,10 @@ import org.apache.http.client.methods.HttpGet;
 /**
  * A template class for concurrent download of multiple URLs into a file store. The file store can
  * be any concrete implementation of the {@link au.csiro.pathling.export.fs.FileStore} abstraction.
- * <p/>
+ * <p>
  * This implementation fails fast: all the downloads are terminated on the first failure in any of
  * the downloads.
- * <p/>
+ * <p>
  * No cleanup is performed on failure - partial results may be left for some of the URLs.
  */
 

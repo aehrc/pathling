@@ -34,7 +34,7 @@ import org.apache.http.client.HttpClient;
 public interface ClientAuthMethod {
 
   /**
-   * Represents the access scope for this method. Client Credentials for methofs with the same
+   * Represents the access scope for this method. Client Credentials for methods with the same
    * access scope can be reused.
    */
   @Value
@@ -70,12 +70,16 @@ public interface ClientAuthMethod {
 
   /**
    * Gets the token endpoint URL.
+   *
+   * @return the token endpoint URL
    */
   @Nonnull
   String getTokenEndpoint();
 
   /**
    * Gets the scope.
+   *
+   * @return the scope
    */
   @Nullable
   String getScope();

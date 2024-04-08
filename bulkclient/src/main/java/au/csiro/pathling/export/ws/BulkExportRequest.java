@@ -213,6 +213,12 @@ public class BulkExportRequest {
     return Parameters.of(params);
   }
 
+  /**
+   * Converts this request to a URI.
+   *
+   * @param endpointUri the base URI of the FHIR server.
+   * @return the URI.
+   */
   @Nonnull
   public URI toRequestURI(@Nonnull final URI endpointUri) {
     final URIBuilder uriBuilder = new URIBuilder(endpointUri);
@@ -240,6 +246,12 @@ public class BulkExportRequest {
     }
   }
 
+  /**
+   * Converts this request to an HTTP request.
+   *
+   * @param fhirEndpointUri the base URI of the FHIR server.
+   * @return the HTTP request.
+   */
   @Nonnull
   public HttpUriRequest toHttpRequest(@Nonnull final URI fhirEndpointUri) {
     // check if patient is supported for the operation

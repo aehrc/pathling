@@ -17,11 +17,11 @@
 
 package au.csiro.pathling.export.fs;
 
-import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import javax.annotation.Nonnull;
 
 /**
  * An abstraction of a local or remote file store that can be used to read and write files and
@@ -69,6 +69,8 @@ public interface FileStore extends Closeable {
 
     /**
      * Get the URI of the file.
+     *
+     * @return the URI of the file.
      */
     @Nonnull
     URI toUri();

@@ -51,7 +51,7 @@ public class AuthConfiguration implements Serializable {
   /**
    * Enables authentication of requests to the terminology server.
    */
-  
+
   @Builder.Default
   private boolean enabled = false;
 
@@ -113,21 +113,36 @@ public class AuthConfiguration implements Serializable {
   @Builder.Default
   private long tokenExpiryTolerance = 120;
 
+  /**
+   * The maximum number of seconds that a token should be cached for.
+   */
   @Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
   @Retention(RetentionPolicy.RUNTIME)
   @Constraint(validatedBy = AuthConfigValidator.class)
   @Documented
   public @interface ValidAuthConfiguration {
 
+    /**
+     * @return the error message template
+     */
     String message() default "If terminology authentication is enabled, token endpoint, "
         + "client ID and client secret must be supplied.";
 
+    /**
+     * @return the groups the constraint belongs to
+     */
     Class<?>[] groups() default {};
 
+    /**
+     * @return the payload associated to the constraint
+     */
     Class<? extends Payload>[] payload() default {};
 
   }
 
+  /**
+   * Validates the configuration.
+   */
   public static class AuthConfigValidator implements
       ConstraintValidator<ValidAuthConfiguration, AuthConfiguration> {
 

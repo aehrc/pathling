@@ -128,6 +128,9 @@ public class AuthTokenProvider {
     return Instant.now().plusSeconds(response.getExpiresIn());
   }
 
+  /**
+   * Clears all access contexts.
+   */
   public void clearAccessContexts() {
     synchronized (accessContexts) {
       accessContexts.clear();
