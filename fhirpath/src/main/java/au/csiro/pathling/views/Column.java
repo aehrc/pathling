@@ -55,4 +55,19 @@ public class Column implements SelectionElement {
    * href="https://build.fhir.org/ig/FHIR/sql-on-fhir-v2/StructureDefinition-ViewDefinition-definitions.html#diff_ViewDefinition.select.collection">ViewDefinition.select.collection</a>
    */
   boolean collection;
+
+  /**
+   * A FHIR {@code StructureDefinition} URI for the column's type. Relative URIs are implicitly
+   * given the 'http://hl7.org/fhir/StructureDefinition/' prefix. The URI may also use FHIR element
+   * ID notation to indicate a backbone element within a structure. For instance,
+   * {@code Observation.referenceRange} may be specified to indicate the returned type is that
+   * backbone element.
+   * <p>
+   * This field must be provided if a ViewDefinition returns a non-primitive type. Implementations
+   * should report an error if the returned type does not match the type set here, or if a
+   * non-primitive type is returned but this field is unset.
+   */
+  @Nullable
+  String type;
+
 }

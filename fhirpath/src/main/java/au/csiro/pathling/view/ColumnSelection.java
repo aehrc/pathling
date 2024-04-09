@@ -43,6 +43,16 @@ public class ColumnSelection implements ProjectionClause {
     final Stream<Collection> collections = columns.stream()
         .map(col -> {
           final Collection collection = context.evalExpression(col.getPath());
+
+          // If a type was asserted for the column, check that the collection is of that type.
+          col.getType().ifPresent(type -> {
+            if (collection.getFhirType().isPresent() && !collection.getFhirType().get()
+                .equals(type)) {
+              throw new IllegalArgumentException(
+                  "Collection " + collection + " is not of type " + type);
+            }
+          });
+
           return col.isCollection()
                  ? collection
                  : collection.asSingular();

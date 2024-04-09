@@ -18,9 +18,11 @@
 package au.csiro.pathling.view;
 
 import au.csiro.pathling.fhirpath.FhirPath;
+import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.Value;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
  * Information about a column that has been requested to be included in a projection.
@@ -49,6 +51,12 @@ public class RequestedColumn {
    */
   boolean collection;
 
+  /**
+   * The type that has been asserted for the column.
+   */
+  @Nonnull
+  Optional<FHIRDefinedType> type;
+
   @Override
   public String toString() {
     return "RequestedColumn{" +
@@ -57,5 +65,5 @@ public class RequestedColumn {
         ", collection=" + collection +
         '}';
   }
-  
+
 }

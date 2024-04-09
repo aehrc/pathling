@@ -21,11 +21,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.hl7.fhir.exceptions.FHIRException;
+import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -35,6 +38,8 @@ import org.hl7.fhir.r4.model.Enumerations.ResourceType;
  * @author Piotr Szul
  */
 public class FhirViewExecutor {
+
+  private static final String HL7_FHIR_TYPE_URI_PREFIX = "http://hl7.org/fhir/StructureDefinition/";
 
   @Nonnull
   private final FhirContext fhirContext;
@@ -198,8 +203,21 @@ public class FhirViewExecutor {
     // Parse the FHIRPath expression using the parser.
     final FhirPath path = parser.parse(column.getPath());
 
+    Optional<FHIRDefinedType> type = Optional.empty();
+    if (column.getType() != null) {
+      // Replace the HL7 FHIR type URI prefix with an empty string to get the FHIR type.
+      final String fhirType = column.getType()
+          .replaceFirst("^" + Pattern.quote(HL7_FHIR_TYPE_URI_PREFIX), "");
+
+      // Attempt to retrieve the FHIR type.
+      try {
+        type = Optional.ofNullable(FHIRDefinedType.fromCode(fhirType));
+      } catch (final FHIRException ignored) {
+      }
+    }
+
     // Create a RequestedColumn object that represents the column.
-    return new RequestedColumn(path, column.getName(), column.isCollection());
+    return new RequestedColumn(path, column.getName(), column.isCollection(), type);
   }
 
   /**
@@ -220,7 +238,7 @@ public class FhirViewExecutor {
         // Parse the FHIRPath expression.
         .map(parser::parse)
         // Create a PrimitiveSelection object for each FHIRPath.
-        .map(path -> new RequestedColumn(path, randomAlias(), false))
+        .map(path -> new RequestedColumn(path, randomAlias(), false, Optional.empty()))
         .collect(toUnmodifiableList());
 
     // If there are no where components, return an empty Optional. 
