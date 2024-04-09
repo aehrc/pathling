@@ -51,6 +51,7 @@ import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
+import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -130,8 +131,11 @@ abstract class AbstractFhirViewTestBase {
       // Dynamically create column expressions based on the schema.
       final List<Column> selectColumns = Arrays.stream(expectedResult.schema().fields())
           .map(field -> {
-            // Check if the field's data type is DecimalType.
-            if (field.dataType() instanceof DecimalType) {
+            // All numeric types are cast to decimal to enable consistent comparison.
+            if (field.dataType() instanceof DecimalType
+                || DataTypes.IntegerType.equals(field.dataType())
+                || DataTypes.LongType.equals(field.dataType())
+                || DataTypes.DoubleType.equals(field.dataType())) {
               // Use DecimalCustomCoder.decimalType() for the cast type.
               return col(field.name()).cast(DecimalCustomCoder.decimalType()).alias(field.name());
             } else {
@@ -144,9 +148,11 @@ abstract class AbstractFhirViewTestBase {
       // Select the data with the dynamically created column expressions.
       final Dataset<Row> selectedExpectedResult = expectedResult.select(
           asScalaBuffer(selectColumns).seq());
+      final Dataset<Row> selectedActualResult = rowDataset.select(
+          asScalaBuffer(selectColumns).seq());
 
       // Assert that the rowDataset has rows unordered as in selectedExpectedResult.
-      assertThat(rowDataset).hasRowsAndColumnsUnordered(selectedExpectedResult);
+      assertThat(selectedActualResult).hasRowsAndColumnsUnordered(selectedExpectedResult);
     }
   }
 
