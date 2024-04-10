@@ -30,7 +30,6 @@ import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
 import org.apache.spark.sql.catalyst.expressions.objects.{InitializeJavaBean, Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Cast, Expression, Literal}
-import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types.{DataType, DataTypes, ObjectType}
 import org.hl7.fhir.instance.model.api.{IBase, IBaseDatatype, IPrimitiveType}
 import org.hl7.fhir.r4.model._
@@ -55,36 +54,13 @@ class R4DataTypeMappings extends DataTypeMappings {
 
   override def baseType(): Class[_ <: IBaseDatatype] = classOf[org.hl7.fhir.r4.model.Type]
 
-  override def overrideCompositeExpression(inputObject: Expression,
+  override def overrideCompositeExpression(inputObject: Expression, 
                                            definition: BaseRuntimeElementCompositeDefinition[_]): Option[Seq[ExpressionWithName]] = {
-
-    if (definition.getImplementingClass == classOf[Reference]) {
-      // Reference type, so return only supported fields. We also explicitly use the IIDType for the 
-      // reference element, since that differs from the conventions used to infer other types.
-      val reference = dataTypeToUtf8Expr(
-        Invoke(inputObject,
-          "getReferenceElement",
-          ObjectType(classOf[IdType])))
-
-      val display = dataTypeToUtf8Expr(
-        Invoke(inputObject,
-          "getDisplayElement",
-          ObjectType(classOf[org.hl7.fhir.r4.model.StringType])))
-
-      Some(List(("reference", reference), ("display", display)))
-    } else {
-      None
-    }
+    None
   }
 
   override def skipField(definition: BaseRuntimeElementCompositeDefinition[_],
                          child: BaseRuntimeChildDefinition): Boolean = {
-
-    // References may be recursive, so include only the reference adn display name.
-    val skipRecursiveReference = definition.getImplementingClass == classOf[Reference] &&
-      !(child.getElementName == "reference" ||
-        child.getElementName == "display")
-
     // Contains elements are currently not encoded in our Spark dataset.
     val skipContains = definition
       .getImplementingClass == classOf[ValueSet.ValueSetExpansionContainsComponent] &&
@@ -95,8 +71,7 @@ class R4DataTypeMappings extends DataTypeMappings {
     //       "modifierExtensionExtension", not "extensionExtension".
     //       See: https://github.com/hapifhir/hapi-fhir/issues/3414
     val skipModifierExtension = child.getElementName.equals("modifierExtension")
-
-    skipRecursiveReference || skipContains || skipModifierExtension
+    skipContains || skipModifierExtension
   }
 
   override def primitiveEncoderExpression(inputObject: Expression,

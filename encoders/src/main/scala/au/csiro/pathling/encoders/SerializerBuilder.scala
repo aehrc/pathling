@@ -24,10 +24,8 @@
 package au.csiro.pathling.encoders
 
 import au.csiro.pathling.encoders.ExtensionSupport.{EXTENSIONS_FIELD_NAME, FID_FIELD_NAME}
-import au.csiro.pathling.encoders.QuantitySupport.{CODE_CANONICALIZED_FIELD_NAME, VALUE_CANONICALIZED_FIELD_NAME}
 import au.csiro.pathling.encoders.SerializerBuilderProcessor.{dataTypeToUtf8Expr, getChildExpression, objectTypeFor}
-import au.csiro.pathling.encoders.datatypes.{DataTypeMappings, DecimalCustomCoder}
-import au.csiro.pathling.encoders.terminology.ucum.Ucum
+import au.csiro.pathling.encoders.datatypes.DataTypeMappings
 import au.csiro.pathling.schema.SchemaVisitor.isCollection
 import au.csiro.pathling.schema._
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition.ChildTypeEnum
@@ -36,7 +34,7 @@ import org.apache.spark.sql.catalyst.expressions.objects.{ExternalMapToCatalyst,
 import org.apache.spark.sql.catalyst.expressions.{BoundReference, CreateNamedStruct, Expression, If, IsNull, Literal}
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
-import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseResource}
+import org.hl7.fhir.instance.model.api.{IBaseDatatype, IBaseHasExtensions, IBaseReference, IBaseResource}
 import org.hl7.fhir.r4.model.{Base, Extension, Quantity}
 import org.hl7.fhir.utilities.xhtml.XhtmlNode
 
@@ -226,16 +224,22 @@ private[encoders] object SerializerBuilderProcessor {
     // Primitive single-value types typically use the Element suffix in their
     // accessors, with the exception of the "div" field for reasons that are not clear.
     //noinspection DuplicatedCode
-    if (field.isInstanceOf[RuntimeChildPrimitiveDatatypeDefinition] &&
-      field.getMax == 1 &&
-      field.getElementName != "div")
-      "get" + field.getElementName.capitalize + "Element"
-    else {
-      if (field.getElementName.equals("class")) {
-        "get" + field.getElementName.capitalize + "_"
-      } else {
+    field match {
+      case p: RuntimeChildPrimitiveDatatypeDefinition if p.getMax == 1 && p
+        .getElementName != "div" =>
+        if ("reference" == p.getElementName && classOf[IBaseReference]
+          .isAssignableFrom(p.getField.getDeclaringClass)) {
+          // special case for subclasses of IBaseReference
+          // for some obscure reason the accessor getReferenceElement returns IdType rather than StringType and 
+          // getReferenceElement_ needs to be used instead.
+          "getReferenceElement_"
+        } else {
+          "get" + p.getElementName.capitalize + "Element"
+        }
+      case f if f.getElementName.equals("class") =>
+        "get" + f.getElementName.capitalize + "_"
+      case _ =>
         "get" + field.getElementName.capitalize
-      }
     }
   }
 

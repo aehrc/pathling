@@ -24,6 +24,7 @@ package au.csiro.pathling.encoders
 
 import au.csiro.pathling.schema._
 import ca.uhn.fhir.context._
+import org.hl7.fhir.instance.model.api.IBaseReference
 
 
 /**
@@ -95,8 +96,20 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] with EncoderSettings
     }
   }
 
+  private def includeElement(elementDefinition: BaseRuntimeElementDefinition[_]): Boolean = {
+    val nestingLevel = EncodingContext.currentNestingLevel(elementDefinition)
+    if (classOf[IBaseReference].isAssignableFrom(elementDefinition.getImplementingClass)) {
+      // special provision for references which disallows any nesting
+      // in particular for R4 removes the `assigner` field from the 
+      // Identifier type instances nested inside a Reference (in it's `identifier` fiels)
+      nestingLevel <= 0
+    } else {
+      nestingLevel <= maxNestingLevel
+    }
+  }
+
   override def visitElement(elementCtx: ElementCtx[DT, SF]): Seq[SF] = {
-    if (EncodingContext.currentNestingLevel(elementCtx.elementDefinition) <= maxNestingLevel) {
+    if (includeElement(elementCtx.elementDefinition)) {
       buildValue(elementCtx.childDefinition, elementCtx.elementDefinition, elementCtx.elementName)
     } else {
       Nil

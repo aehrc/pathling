@@ -23,7 +23,9 @@
 
 package au.csiro.pathling.encoders;
 
+import static org.apache.spark.sql.functions.col;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -273,12 +275,56 @@ public class FhirEncodersTest {
 
   @Test
   public void reference() {
+    final Condition conditionWithReferences = TestData.conditionWithReferencesWithIdentifiers();
 
-    assertEquals(condition.getSubject().getReference(),
-        conditionsDataset.select("subject.reference").head().get(0));
-    assertEquals(condition.getSubject().getReference(),
-        decodedCondition.getSubject().getReference());
+    final Dataset<Condition> conditionL3Dataset = spark
+        .createDataset(ImmutableList.of(conditionWithReferences), ENCODERS_L3.of(Condition.class));
+
+    final Condition decodedL3Condition = conditionL3Dataset.head();
+
+    assertEquals(
+        RowFactory.create("withReferencesWithIdentifiers", "Patient/example", "urn:id"),
+        conditionL3Dataset.select("id", "subject.reference", "subject.identifier.value")
+            .head());
+
+    assertEquals("Patient/example",
+        decodedL3Condition.getSubject().getReference());
+
+    assertEquals("urn:id",
+        decodedL3Condition.getSubject().getIdentifier().getValue());
+
+    // the assigner should be pruned from the reference identifier.
+    assertTrue(conditionWithReferences.getSubject().getIdentifier().hasAssigner());
+    assertFalse(decodedL3Condition.getSubject().getIdentifier().hasAssigner());
   }
+
+
+  @Test
+  public void identifier() {
+    final Condition conditionWithIdentifiers = TestData.conditionWithIdentifiersWithReferences();
+
+    final Dataset<Condition> conditionL3Dataset = spark
+        .createDataset(ImmutableList.of(conditionWithIdentifiers), ENCODERS_L3.of(Condition.class));
+
+    final Condition decodedL3Condition = conditionL3Dataset.head();
+
+    assertEquals(
+        RowFactory.create("withIdentifiersWithReferences", "urn:id01", "Organization/001",
+            "urn:id02"),
+        conditionL3Dataset.select(
+            col("id"),
+            col("identifier.value").getItem(0),
+            col("identifier.assigner.reference").getItem(0),
+            col("identifier.assigner.identifier.value").getItem(0)
+        ).head());
+
+    // the assigner should be pruned from the reference identifier.
+    assertTrue(conditionWithIdentifiers.getIdentifier().get(0).getAssigner().getIdentifier()
+        .hasAssigner());
+    assertFalse(
+        decodedL3Condition.getIdentifier().get(0).getAssigner().getIdentifier().hasAssigner());
+  }
+
 
   @Test
   public void integer() {
@@ -325,13 +371,13 @@ public class FhirEncodersTest {
         .getAnswerDecimalType().getValue();
 
     final BigDecimal queriedDecimal = (BigDecimal) questionnaireDataset
-        .select(functions.col("item").getItem(0).getField("enableWhen").getItem(0)
+        .select(col("item").getItem(0).getField("enableWhen").getItem(0)
             .getField("answerDecimal"))
         .head()
         .get(0);
 
     final int queriedDecimal_scale = questionnaireDataset
-        .select(functions.col("item").getItem(0).getField("enableWhen").getItem(0)
+        .select(col("item").getItem(0).getField("enableWhen").getItem(0)
             .getField("answerDecimal_scale"))
         .head()
         .getInt(0);
@@ -360,13 +406,13 @@ public class FhirEncodersTest {
         .getValueDecimalType().getValue();
 
     final BigDecimal queriedDecimal = (BigDecimal) questionnaireResponseDataset
-        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+        .select(col("item").getItem(0).getField("answer").getItem(0)
             .getField("valueDecimal"))
         .head()
         .get(0);
 
     final int queriedDecimal_scale = questionnaireResponseDataset
-        .select(functions.col("item").getItem(0).getField("answer").getItem(0)
+        .select(col("item").getItem(0).getField("answer").getItem(0)
             .getField("valueDecimal_scale"))
         .head()
         .getInt(0);
@@ -516,13 +562,13 @@ public class FhirEncodersTest {
 
     assertEquals(Stream.of("Item/0", "Item/0", "Item/0", "Item/0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
-        questionnaireDataset_L3.select(functions.col("item").getItem(0).getField("linkId"))
+        questionnaireDataset_L3.select(col("item").getItem(0).getField("linkId"))
             .collectAsList());
 
     assertEquals(Stream.of(null, "Item/1.0", "Item/1.0", "Item/1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
-            .select(functions.col("item")
+            .select(col("item")
                 .getItem(1).getField("item")
                 .getItem(0).getField("linkId"))
             .collectAsList());
@@ -530,7 +576,7 @@ public class FhirEncodersTest {
     assertEquals(Stream.of(null, null, "Item/2.1.0", "Item/2.1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
-            .select(functions.col("item")
+            .select(col("item")
                 .getItem(2).getField("item")
                 .getItem(1).getField("item")
                 .getItem(0).getField("linkId"))
@@ -539,7 +585,7 @@ public class FhirEncodersTest {
     assertEquals(Stream.of(null, null, null, "Item/3.2.1.0").map(RowFactory::create)
             .collect(Collectors.toUnmodifiableList()),
         questionnaireDataset_L3
-            .select(functions.col("item")
+            .select(col("item")
                 .getItem(3).getField("item")
                 .getItem(2).getField("item")
                 .getItem(1).getField("item")
