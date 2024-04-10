@@ -283,9 +283,22 @@ public class FhirEncodersTest {
     final Condition decodedL3Condition = conditionL3Dataset.head();
 
     assertEquals(
-        RowFactory.create("withReferencesWithIdentifiers", "Patient/example", "urn:id"),
-        conditionL3Dataset.select("id", "subject.reference", "subject.identifier.value")
-            .head());
+        RowFactory.create(
+            "withReferencesWithIdentifiers",
+            "Patient/example",
+            "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "MR",
+            "https://fhir.example.com/identifiers/mrn",
+            "urn:id"
+        ),
+        conditionL3Dataset.select(
+            col("id"),
+            col("subject.reference"),
+            col("subject.identifier.type.coding.system").getItem(0),
+            col("subject.identifier.type.coding.code").getItem(0),
+            col("subject.identifier.system"),
+            col("subject.identifier.value")
+        ).head());
 
     assertEquals("Patient/example",
         decodedL3Condition.getSubject().getReference());
@@ -309,10 +322,20 @@ public class FhirEncodersTest {
     final Condition decodedL3Condition = conditionL3Dataset.head();
 
     assertEquals(
-        RowFactory.create("withIdentifiersWithReferences", "urn:id01", "Organization/001",
-            "urn:id02"),
+        RowFactory.create(
+            "withIdentifiersWithReferences",
+            "http://terminology.hl7.org/CodeSystem/v2-0203",
+            "MR",
+            "https://fhir.example.com/identifiers/mrn",
+            "urn:id01",
+            "Organization/001",
+            "urn:id02"
+        ),
         conditionL3Dataset.select(
             col("id"),
+            col("identifier.type.coding").getItem(0).getField("system").getItem(0),
+            col("identifier.type.coding").getItem(0).getField("code").getItem(0),
+            col("identifier.system").getItem(0),
             col("identifier.value").getItem(0),
             col("identifier.assigner.reference").getItem(0),
             col("identifier.assigner.identifier.value").getItem(0)

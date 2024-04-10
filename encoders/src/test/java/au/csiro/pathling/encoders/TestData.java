@@ -141,11 +141,19 @@ public class TestData {
   public static Condition conditionWithReferencesWithIdentifiers() {
     final Condition condition = new Condition();
     condition.setId("withReferencesWithIdentifiers");
+    final Coding typeCoding = new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR",
+        null);
+    final CodeableConcept typeConcept = new CodeableConcept(typeCoding);
     condition.setSubject(
         new Reference("Patient/example")
             .setDisplay("Display name")
             .setIdentifier(
-                new Identifier().setValue("urn:id").setAssigner(new Reference("Organization/001")))
+                new Identifier()
+                    .setType(typeConcept)
+                    .setSystem("https://fhir.example.com/identifiers/mrn")
+                    .setValue("urn:id")
+                    .setAssigner(new Reference("Organization/001"))
+            )
     );
     return condition;
   }
@@ -153,8 +161,13 @@ public class TestData {
   public static Condition conditionWithIdentifiersWithReferences() {
     final Condition condition = new Condition();
     condition.setId("withIdentifiersWithReferences");
+    final Coding typeCoding = new Coding("http://terminology.hl7.org/CodeSystem/v2-0203", "MR",
+        null);
+    final CodeableConcept typeConcept = new CodeableConcept(typeCoding);
     condition
         .addIdentifier()
+        .setType(typeConcept)
+        .setSystem("https://fhir.example.com/identifiers/mrn")
         .setValue("urn:id01")
         .setAssigner(new Reference("Organization/001")
             .setIdentifier(new Identifier().setValue("urn:id02")
