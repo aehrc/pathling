@@ -69,16 +69,4 @@ public class ReferencePath extends ElementPath implements Referrer {
       @Nonnull final Column targetCode) {
     return Referrer.resourceEqualityFor(this, targetCode, targetId);
   }
-
-  @Nonnull
-  @Override
-  public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
-    // We only encode the reference and display elements of the Reference type.
-    if (name.equals("reference") || name.equals("display")) {
-      return super.getChildElement(name);
-    } else {
-      return Optional.empty();
-    }
-  }
-
 }

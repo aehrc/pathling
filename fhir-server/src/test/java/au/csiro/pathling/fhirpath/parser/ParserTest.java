@@ -836,15 +836,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
   }
-
-  @Test
-  void testTraversalToUnsupportedReferenceChild() {
-    final String expression = "reverseResolve(MedicationRequest.subject).requester.identifier";
-    final InvalidUserInputError error = assertThrows(InvalidUserInputError.class,
-        expression);
-    assertEquals("No such child: " + expression, error.getMessage());
-  }
-
+  
   @Test
   void testResolutionOfExtensionReference() {
     mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);
