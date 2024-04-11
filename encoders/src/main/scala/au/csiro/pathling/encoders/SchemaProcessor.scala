@@ -99,9 +99,9 @@ trait SchemaProcessor[DT, SF] extends SchemaVisitor[DT, SF] with EncoderSettings
   private def includeElement(elementDefinition: BaseRuntimeElementDefinition[_]): Boolean = {
     val nestingLevel = EncodingContext.currentNestingLevel(elementDefinition)
     if (classOf[IBaseReference].isAssignableFrom(elementDefinition.getImplementingClass)) {
-      // special provision for references which disallows any nesting
-      // in particular for R4 removes the `assigner` field from the 
-      // Identifier type instances nested inside a Reference (in it's `identifier` fiels)
+      // This is a special provision for References which disallows any nesting.
+      // It removes the `assigner` field from the Identifier type instances 
+      // nested inside a Reference (in its `identifier` element).
       nestingLevel <= 0
     } else {
       nestingLevel <= maxNestingLevel
