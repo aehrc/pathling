@@ -337,7 +337,7 @@ abstract class AbstractFhirViewTestBase {
         ensureValid(view, "View is not valid");
       } catch (final Exception e) {
         // If parsing the view definition fails, log the JSON and rethrow the exception.
-        log.info("Exception occurred while parsing test definition:");
+        log.info("Exception occurred while parsing test definition - " + e.getMessage());
         log.info(parameters.getViewJson());
         throw e;
       }
