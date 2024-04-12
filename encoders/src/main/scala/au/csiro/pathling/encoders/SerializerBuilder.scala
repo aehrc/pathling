@@ -229,9 +229,11 @@ private[encoders] object SerializerBuilderProcessor {
         .getElementName != "div" =>
         if ("reference" == p.getElementName && classOf[IBaseReference]
           .isAssignableFrom(p.getField.getDeclaringClass)) {
-          // special case for subclasses of IBaseReference
-          // for some obscure reason the accessor getReferenceElement returns IdType rather than StringType and 
-          // getReferenceElement_ needs to be used instead.
+          // Special case for subclasses of IBaseReference.
+          // The accessor getReferenceElement returns IdType rather than 
+          // StringType and getReferenceElement_ needs to be used instead.
+          // All subclasses of IBaseReference have a getReferenceElement_ 
+          // method.
           "getReferenceElement_"
         } else {
           "get" + p.getElementName.capitalize + "Element"
