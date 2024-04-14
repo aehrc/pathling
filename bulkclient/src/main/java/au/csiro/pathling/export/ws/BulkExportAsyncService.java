@@ -19,6 +19,7 @@ package au.csiro.pathling.export.ws;
 
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.HttpHeaders;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -73,7 +74,7 @@ public class BulkExportAsyncService {
   AsyncResponse checkStatus(@Nonnull final URI statusUri) throws IOException {
     log.debug("Poolin: Get status from: " + statusUri);
     final HttpUriRequest statusRequest = new HttpGet(statusUri);
-    statusRequest.setHeader("accept", "application/json");
+    statusRequest.setHeader(HttpHeaders.ACCEPT, "application/json");
     return httpClient.execute(statusRequest, AsynResponseHandler.of(BulkExportResponse.class));
   }
 }

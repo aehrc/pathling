@@ -51,7 +51,7 @@ import org.apache.http.message.BasicNameValuePair;
 @Value
 @EqualsAndHashCode(callSuper = false)
 @Builder
-public class AsymmetricClientAuthMethod extends SMARTClientAuthMethodBase {
+public class AsymmetricClientAuthMethod extends ClientAuthMethod {
 
   /**
    * The default expiry time for the JWT in seconds.
@@ -74,6 +74,7 @@ public class AsymmetricClientAuthMethod extends SMARTClientAuthMethodBase {
   /**
    * The builder for the asymmetric client authentication method.
    */
+  @SuppressWarnings("unused")
   public static class AsymmetricClientAuthMethodBuilder {
 
     /**

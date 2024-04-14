@@ -42,7 +42,7 @@ import org.apache.http.message.BasicNameValuePair;
 @Value
 @EqualsAndHashCode(callSuper = false)
 @Builder
-public class SymmetricClientAuthMethod extends SMARTClientAuthMethodBase {
+public class SymmetricClientAuthMethod extends ClientAuthMethod {
 
   @Nonnull
   String tokenEndpoint;
