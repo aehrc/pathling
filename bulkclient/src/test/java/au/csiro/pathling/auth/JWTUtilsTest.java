@@ -17,36 +17,24 @@
 
 package au.csiro.pathling.auth;
 
+import static au.csiro.pathling.test.TestUtils.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import au.csiro.pathling.example.RunBulkExport;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.nimbusds.jose.jwk.AsymmetricJWK;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import javax.annotation.Nonnull;
-import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link JWTUtils}.
  */
 public class JWTUtilsTest {
-
-
-  @Nonnull
-  private static String getResourceAsString(@Nonnull final String resourcePath) throws IOException {
-    return IOUtils.toString(
-        RunBulkExport.class.getClassLoader().getResourceAsStream(resourcePath),
-        StandardCharsets.UTF_8);
-  }
-
+  
   @Test
   void getsAlgorithmForRS384Key() throws Exception {
     final String privateKeyJWKJson = getResourceAsString("auth/bulk_rs384_priv_jwk.json");

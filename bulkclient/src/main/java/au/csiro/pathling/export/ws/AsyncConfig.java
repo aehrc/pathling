@@ -32,14 +32,14 @@ import java.time.Duration;
 public class AsyncConfig {
 
   /**
-   * The minimum delay between two consecutive status requests. This may override the value retured
+   * The minimum delay between two consecutive status requests. This may override the value returned
    * from the server in the 'retry-after' header.
    */
   @Builder.Default
   Duration minPoolingDelay = Duration.ofSeconds(1);
 
   /**
-   * The minimum delay between two consecutive status requests. This may override the value retured
+   * The maxium delay between two consecutive status requests. This may override the value returned
    * from the server in the 'retry-after' header.
    */
   @Builder.Default

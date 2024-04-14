@@ -71,6 +71,6 @@ class JWTUtils {
     return jwkAlgorithm
         .replace("RS", "RSA")
         .replace("ES", "ECDSA")
-        .replace("HC", "HMAC");
+        .replace("HS", "HMAC");
   }
 }

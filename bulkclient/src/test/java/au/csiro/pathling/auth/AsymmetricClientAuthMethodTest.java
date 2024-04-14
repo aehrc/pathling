@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.auth;
 
-import static au.csiro.pathling.test.TestResources.getResourceAsString;
+import static au.csiro.pathling.test.TestUtils.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.auth0.jwt.JWT;
