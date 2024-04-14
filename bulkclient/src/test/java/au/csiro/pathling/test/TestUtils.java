@@ -20,7 +20,8 @@ public class TestUtils {
    */
   public static String getResourceAsString(@Nonnull final String resourcePath) {
     try {
-      return IOUtils.resourceToString(resourcePath, StandardCharsets.UTF_8);
+      return IOUtils.resourceToString(resourcePath, StandardCharsets.UTF_8,
+          TestUtils.class.getClassLoader());
     } catch (final IOException ex) {
       throw new RuntimeException("Cannot read resource", ex);
     }
