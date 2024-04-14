@@ -47,7 +47,20 @@ import org.apache.http.protocol.HTTP;
 
 @Slf4j
 public abstract class ClientAuthMethod {
-
+  
+  /**
+   * The scope parameter.
+   */
+  public static final String PARAM_SCOPE = "scope";
+  /**
+   * The grant type parameter.
+   */
+  public static final String PARAM_GRANT_TYPE = "grant_type";
+  /**
+   * The grant type for client credentials.
+   */
+  public static final String GRANT_TYPE_CLIENT_CREDENTIALS = "client_credentials";
+  
   /**
    * Request Client Credentials Grant with this method using the provided HTTP client.
    *
@@ -191,10 +204,10 @@ public abstract class ClientAuthMethod {
     getAuthHeaders().forEach(request::addHeader);
 
     final List<NameValuePair> params = new ArrayList<>();
-    params.add(new BasicNameValuePair(AuthConst.PARAM_GRANT_TYPE,
-        AuthConst.GRANT_TYPE_CLIENT_CREDENTIALS));
+    params.add(new BasicNameValuePair(PARAM_GRANT_TYPE,
+        GRANT_TYPE_CLIENT_CREDENTIALS));
     if (getScope() != null) {
-      params.add(new BasicNameValuePair(AuthConst.PARAM_SCOPE, getScope()));
+      params.add(new BasicNameValuePair(PARAM_SCOPE, getScope()));
     }
     params.addAll(getAuthParams());
     request.setEntity(new UrlEncodedFormEntity(params, HTTP.DEF_CONTENT_CHARSET));

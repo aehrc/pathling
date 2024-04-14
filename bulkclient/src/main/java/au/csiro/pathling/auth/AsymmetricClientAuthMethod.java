@@ -54,6 +54,20 @@ import org.apache.http.message.BasicNameValuePair;
 public class AsymmetricClientAuthMethod extends ClientAuthMethod {
 
   /**
+   * The client assertion type parameter.
+   */
+  static final String PARAM_CLIENT_ASSERTION_TYPE = "client_assertion_type";
+  /**
+   * The client assertion parameter.
+   */
+  static final String PARAM_CLIENT_ASSERTION = "client_assertion";
+
+  /**
+   * The grant type for refresh token.
+   */
+  static final String CLIENT_ASSERTION_TYPE_JWT_BEARER = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+  
+  /**
    * The default expiry time for the JWT in seconds.
    */
   public static int DEFAULT_JWT_EXPIRY_IN_SECONDS = 60;
@@ -108,9 +122,9 @@ public class AsymmetricClientAuthMethod extends ClientAuthMethod {
         .sign(algo);
 
     return List.of(
-        new BasicNameValuePair(AuthConst.PARAM_CLIENT_ASSERTION_TYPE,
-            AuthConst.CLIENT_ASSERTION_TYPE_JWT_BEARER),
-        new BasicNameValuePair(AuthConst.PARAM_CLIENT_ASSERTION, jwt)
+        new BasicNameValuePair(PARAM_CLIENT_ASSERTION_TYPE,
+            CLIENT_ASSERTION_TYPE_JWT_BEARER),
+        new BasicNameValuePair(PARAM_CLIENT_ASSERTION, jwt)
     );
   }
 }

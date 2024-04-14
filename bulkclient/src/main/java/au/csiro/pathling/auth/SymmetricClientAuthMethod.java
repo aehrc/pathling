@@ -44,6 +44,16 @@ import org.apache.http.message.BasicNameValuePair;
 @Builder
 public class SymmetricClientAuthMethod extends ClientAuthMethod {
 
+  /**
+   * The client ID parameter.
+   */
+  static final String PARAM_CLIENT_ID = "client_id";
+  /**
+   * The client secret parameter.
+   */
+  static final String PARAM_CLIENT_SECRET = "client_secret";
+
+
   @Nonnull
   String tokenEndpoint;
 
@@ -70,8 +80,8 @@ public class SymmetricClientAuthMethod extends ClientAuthMethod {
   @Nonnull
   public List<BasicNameValuePair> getAuthParams(@Nonnull final Instant __) {
     return sendClientCredentialsInBody
-           ? List.of(new BasicNameValuePair(AuthConst.PARAM_CLIENT_ID, clientId),
-        new BasicNameValuePair(AuthConst.PARAM_CLIENT_SECRET, clientSecret))
+           ? List.of(new BasicNameValuePair(PARAM_CLIENT_ID, clientId),
+        new BasicNameValuePair(PARAM_CLIENT_SECRET, clientSecret))
            : Collections.emptyList();
   }
 
