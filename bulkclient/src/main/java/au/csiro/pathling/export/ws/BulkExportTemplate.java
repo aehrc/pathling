@@ -22,6 +22,7 @@ import static au.csiro.pathling.export.utils.TimeoutUtils.toTimeoutAt;
 
 import au.csiro.pathling.export.BulkExportException;
 import au.csiro.pathling.export.BulkExportException.HttpError;
+import au.csiro.pathling.export.utils.TimeoutUtils;
 import au.csiro.pathling.export.utils.WebUtils;
 import java.io.IOException;
 import java.net.URI;
@@ -58,10 +59,31 @@ public class BulkExportTemplate {
     @Nonnull
     State handle(@Nonnull final BulkExportAsyncService service) throws IOException;
 
+    void cleanup(@Nonnull final BulkExportAsyncService service);
+
     boolean isFinal();
 
     @Nonnull
     Duration getRetryAfter();
+  }
+
+
+  /**
+   * Represents any state of the FHIR Async pattern interaction after a successful kick-off.
+   */
+  interface ActiveState extends State {
+
+    @Nonnull
+    URI getPoolingURI();
+
+    @Override
+    default void cleanup(@Nonnull final BulkExportAsyncService service) {
+      try {
+        service.cleanup(getPoolingURI());
+      } catch (final IOException ex) {
+        log.warn("Error cancelling pooling: " + getPoolingURI(), ex);
+      }
+    }
   }
 
   /**
@@ -83,6 +105,11 @@ public class BulkExportTemplate {
         throw new BulkExportException.ProtocolError(
             "KickOff: Unexpected response: " + asyncResponse);
       }
+    }
+
+    @Override
+    public void cleanup(@Nonnull final BulkExportAsyncService service) {
+      // nothing to clean up
     }
 
     @Nonnull
@@ -107,11 +134,12 @@ public class BulkExportTemplate {
     }
   }
 
+
   /**
    * Represents the pooling state of the FHIR Async pattern interaction.
    */
   @Value
-  class PoolingState implements State {
+  class PoolingState implements ActiveState {
 
     @Nonnull
     URI poolingURI;
@@ -198,7 +226,7 @@ public class BulkExportTemplate {
    * Represents the state of successfull completion of  the FHIR Async pattern interaction.
    */
   @Value
-  static class CompletedState implements State {
+  static class CompletedState implements ActiveState {
 
     @Nonnull
     BulkExportResponse response;
@@ -244,35 +272,44 @@ public class BulkExportTemplate {
    * @return the final response for the bulk export operation.
    */
   @Nonnull
-  public BulkExportResponse export(@Nonnull final BulkExportRequest request,
+  public <T> T export(@Nonnull final BulkExportRequest request,
+      @Nonnull final AsyncResponseCallback<BulkExportResponse, T> callback,
       @Nonnull final Duration timeout) {
     try {
-      return run(new KickOffState(request), timeout);
+      return run(new KickOffState(request), callback, timeout);
     } catch (final IOException | InterruptedException ex) {
       throw new BulkExportException.SystemError("System error in bulk export", ex);
     }
   }
 
   @Nonnull
-  BulkExportResponse run(@Nonnull final State initialState,
+  private <T> T run(@Nonnull final State initialState,
+      @Nonnull final AsyncResponseCallback<BulkExportResponse, T> callback,
       @Nonnull final Duration timeout) throws IOException, InterruptedException {
     final Instant timeoutAt = toTimeoutAt(timeout);
     State currentState = initialState;
     Instant nextStatusCheck = Instant.now();
-    while (!hasExpired(timeoutAt)) {
-      if (Instant.now().isAfter(nextStatusCheck)) {
-        currentState = currentState.handle(asyncService);
-        if (currentState.isFinal()) {
-          return ((CompletedState) currentState).getResponse();
-        } else {
-          nextStatusCheck = Instant.now().plus(currentState.getRetryAfter());
+    try {
+      while (!hasExpired(timeoutAt)) {
+        if (Instant.now().isAfter(nextStatusCheck)) {
+          currentState = currentState.handle(asyncService);
+          if (currentState.isFinal()) {
+            // process the callback
+            return callback.handleResponse(
+                ((CompletedState) currentState).getResponse(),
+                TimeoutUtils.toTimeoutAfter(timeoutAt));
+          } else {
+            nextStatusCheck = Instant.now().plus(currentState.getRetryAfter());
+          }
         }
+        TimeUnit.MILLISECONDS.sleep(config.getMinPoolingDelay().toMillis());
       }
-      TimeUnit.MILLISECONDS.sleep(config.getMinPoolingDelay().toMillis());
+      log.error("Cancelling pooling due to time limit {} exceeded at: {}", timeout, timeoutAt);
+      throw new BulkExportException.Timeout(
+          "Pooling timeout exceeded: " + timeout + " at: " + timeoutAt);
+    } finally {
+      currentState.cleanup(asyncService);
     }
-    log.error("Cancelling pooling due to time limit {} exceeded at: {}", timeout, timeoutAt);
-    throw new BulkExportException.Timeout(
-        "Pooling timeout exceeded: " + timeout + " at: " + timeoutAt);
   }
 
   @Nonnull

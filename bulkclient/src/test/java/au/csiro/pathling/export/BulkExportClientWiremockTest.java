@@ -22,6 +22,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.and;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
@@ -155,6 +157,10 @@ class BulkExportClientWiremockTest {
         .willSetStateTo("in-progress")
     );
 
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .willReturn(aResponse().withStatus(202))
+    );
+
     stubFor(get(urlPathEqualTo("/pool"))
         .inScenario("bulk-export")
         .whenScenarioStateIs("in-progress")
@@ -209,6 +215,10 @@ class BulkExportClientWiremockTest {
         FileUtils.readFileToString(new File(exportDir, "Condition.0000.ndjson"), Charsets.UTF_8));
     assertEquals(RESOURCE_02,
         FileUtils.readFileToString(new File(exportDir, "Condition.0001.ndjson"), Charsets.UTF_8));
+
+    // check that cleanup was called
+    verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));
+
   }
 
   @Test
@@ -241,6 +251,12 @@ class BulkExportClientWiremockTest {
             aResponse().withStatus(202)
                 .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
         .willSetStateTo("in-progress")
+    );
+
+    // simulates the sever that does not support deletion
+    // it should still be called but the export should not fail
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .willReturn(aResponse().withStatus(404))
     );
 
     stubFor(get(urlPathEqualTo("/pool"))
@@ -290,6 +306,9 @@ class BulkExportClientWiremockTest {
             )
         ),
         result);
+
+    // check that cleanup was called
+    verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));
   }
 
 
@@ -455,6 +474,10 @@ class BulkExportClientWiremockTest {
         .willSetStateTo("transient-error")
     );
 
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .willReturn(aResponse().withStatus(202))
+    );
+
     stubFor(get(urlPathEqualTo("/pool"))
         .willReturn(aResponse().withStatus(500)
             .withHeader("content-type", "application/json")
@@ -473,6 +496,9 @@ class BulkExportClientWiremockTest {
     );
     assertEquals(500, ex.statusCode);
     assertNotMarkedSuccess(exportDir);
+
+    // check that cleanup was called
+    verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));
   }
 
   @Test
@@ -545,6 +571,10 @@ class BulkExportClientWiremockTest {
             aResponse().withStatus(202)
                 .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
         .willSetStateTo("in-progress")
+    );
+
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .willReturn(aResponse().withStatus(202))
     );
 
     stubFor(get(urlPathEqualTo("/pool"))
@@ -620,6 +650,9 @@ class BulkExportClientWiremockTest {
             wmRuntimeInfo.getHttpBaseUrl()),
         ex.getCause().getMessage());
     assertNotMarkedSuccess(exportDir);
+
+    // check that cleanup was called even if download failed
+    verify(1, deleteRequestedFor(urlPathEqualTo("/pool")));
   }
 
 
@@ -757,6 +790,12 @@ class BulkExportClientWiremockTest {
             .withBody(bulkExportResponse_1_file(wmRuntimeInfo)))
     );
 
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .withHeader("Authorization", equalTo("Bearer token-value"))
+        .willReturn(aResponse()
+            .withStatus(200))
+    );
+
     stubFor(get(urlPathEqualTo("/file/00"))
         .withHeader("Authorization", equalTo("Bearer token-value"))
         .willReturn(aResponse()
@@ -793,7 +832,7 @@ class BulkExportClientWiremockTest {
   }
 
   @Test
-  void testExportWorksWithSMARTSymmetricAuthenticationForKickOffAndDownloadRefresingExpiredTokens(
+  void testExportWorksWithSMARTSymmetricAuthenticationForKickOffAndDownloadRefreshingExpiredTokens(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws IOException {
 
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(401)));
@@ -833,6 +872,12 @@ class BulkExportClientWiremockTest {
         .willReturn(
             aResponse().withStatus(202)
                 .withHeader("content-location", wmRuntimeInfo.getHttpBaseUrl() + "/pool"))
+    );
+
+    stubFor(delete(urlPathEqualTo("/pool"))
+        .withHeader("Authorization", equalTo("Bearer token-value-asym"))
+        .willReturn(aResponse()
+            .withStatus(202))
     );
 
     stubFor(get(urlPathEqualTo("/pool"))
@@ -875,8 +920,12 @@ class BulkExportClientWiremockTest {
     assertEquals(RESOURCE_00,
         FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
 
-    // The token should be requested for all three requests (kickoff, status pooling, and download)
-    verify(3, postRequestedFor(urlPathEqualTo("/token-asym")));
+    // Cleanup was called
+    verify(1, deleteRequestedFor(urlPathEqualTo("/pool")).withHeader("Authorization",
+        equalTo("Bearer token-value-asym")));
+
+    // The token should be requested for all three requests (kickoff, status pooling, download, and cancel)
+    verify(4, postRequestedFor(urlPathEqualTo("/token-asym")));
   }
 
 }

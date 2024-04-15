@@ -17,18 +17,21 @@
 
 package au.csiro.pathling.export.ws;
 
+import java.io.IOException;
+import java.net.URI;
+import javax.annotation.Nonnull;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHeaders;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.entity.ContentType;
 import org.apache.http.util.EntityUtils;
-
-import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.net.URI;
 
 
 /**
@@ -72,9 +75,26 @@ public class BulkExportAsyncService {
    */
   @Nonnull
   AsyncResponse checkStatus(@Nonnull final URI statusUri) throws IOException {
-    log.debug("Poolin: Get status from: " + statusUri);
+    log.debug("Pooling: Get status from: " + statusUri);
     final HttpUriRequest statusRequest = new HttpGet(statusUri);
-    statusRequest.setHeader(HttpHeaders.ACCEPT, "application/json");
+    statusRequest.setHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.getMimeType());
     return httpClient.execute(statusRequest, AsynResponseHandler.of(BulkExportResponse.class));
+  }
+
+  /**
+   * Cancels a bulk export request.
+   *
+   * @param statusUri the status URI
+   * @throws IOException if an error occurs during the request
+   */
+  void cleanup(@Nonnull final URI statusUri) throws IOException {
+    log.debug("Cleanup: Deleting: " + statusUri);
+    final HttpUriRequest statusRequest = new HttpDelete(statusUri);
+    statusRequest.setHeader(HttpHeaders.ACCEPT, ContentType.APPLICATION_JSON.getMimeType());
+    final HttpResponse response = httpClient.execute(statusRequest);
+    int statusCode = response.getStatusLine().getStatusCode();
+    if (statusCode != HttpStatus.SC_ACCEPTED) {
+      log.warn("Failed to cleanup: {}. Status code: {}", statusUri, statusCode);
+    }
   }
 }

@@ -27,6 +27,7 @@ import javax.annotation.Nonnull;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.ResponseHandler;
@@ -43,9 +44,7 @@ import org.apache.http.util.EntityUtils;
 @Slf4j
 class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<AsyncResponse> {
 
-  public static final String CONTENT_LOCATION_HEADER = "content-location";
   public static final String X_PROGRESS_HEADER = "x-progress";
-  public static final String RETRY_AFTER_HEADER = "retry-after";
 
   @Nonnull
   private final Class<T> responseClass;
@@ -91,7 +90,7 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
   private AcceptedAsyncResponse produceAcceptedResponse(@Nonnull final HttpResponse response) {
     EntityUtils.consumeQuietly(response.getEntity());
     return AcceptedAsyncResponse.builder()
-        .contentLocation(Optional.ofNullable(response.getFirstHeader(CONTENT_LOCATION_HEADER))
+        .contentLocation(Optional.ofNullable(response.getFirstHeader(HttpHeaders.CONTENT_LOCATION))
             .flatMap(h -> Optional.ofNullable(h.getValue())))
         .progress(Optional.ofNullable(response.getFirstHeader(X_PROGRESS_HEADER))
             .flatMap(h -> Optional.ofNullable(h.getValue())))
@@ -101,7 +100,7 @@ class AsynResponseHandler<T extends AsyncResponse> implements ResponseHandler<As
 
   @Nonnull
   private static Optional<RetryValue> getRetryAfterValue(@Nonnull final HttpResponse response) {
-    return Optional.ofNullable(response.getFirstHeader(RETRY_AFTER_HEADER))
+    return Optional.ofNullable(response.getFirstHeader(HttpHeaders.RETRY_AFTER))
         .flatMap(h -> Optional.ofNullable(h.getValue()))
         .flatMap(RetryValue::parseHttpValue);
   }

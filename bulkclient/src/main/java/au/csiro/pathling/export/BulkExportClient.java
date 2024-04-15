@@ -37,6 +37,7 @@ import au.csiro.pathling.export.utils.ExecutorServiceResource;
 import au.csiro.pathling.export.utils.TimeoutUtils;
 import au.csiro.pathling.export.ws.AssociatedData;
 import au.csiro.pathling.export.ws.AsyncConfig;
+import au.csiro.pathling.export.ws.AsyncResponseCallback;
 import au.csiro.pathling.export.ws.BulkExportAsyncService;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportRequest.GroupLevel;
@@ -297,6 +298,8 @@ public class BulkExportClient {
 
     final FileHandle destinationDir = fileStore.get(outputDir);
 
+    // try to create the destination dir here
+    // to fail early if it already exists of cannot be created
     if (destinationDir.exists()) {
       throw new BulkExportException(
           "Destination directory already exists: " + destinationDir.getLocation());
@@ -304,18 +307,26 @@ public class BulkExportClient {
       log.debug("Creating destination directory: {}", destinationDir.getLocation());
       destinationDir.mkdirs();
     }
-    final BulkExportResponse response = bulkExportTemplate.export(buildBulkExportRequest(),
-        TimeoutUtils.toTimeoutAfter(timeoutAt));
-    log.debug("Export request completed: {}", response);
+    return bulkExportTemplate.export(buildBulkExportRequest(),
+        new AsyncResponseCallback<>() {
+          @Nonnull
+          @Override
+          public BulkExportResult handleResponse(@Nonnull final BulkExportResponse response,
+              @Nonnull final Duration timeoutAfter)
+              throws IOException {
+            log.debug("Export request completed: {}", response);
 
-    final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response, destinationDir);
-    log.debug("Downloading entries: {}", downloadList);
-    final List<Long> fileSizes = downloadTemplate.download(downloadList,
+            final List<UrlDownloadEntry> downloadList = getUrlDownloadEntries(response,
+                destinationDir);
+            log.debug("Downloading entries: {}", downloadList);
+            final List<Long> fileSizes = downloadTemplate.download(downloadList, timeoutAfter);
+            final FileHandle successMarker = destinationDir.child("_SUCCESS");
+            log.debug("Marking download as complete with: {}", successMarker.getLocation());
+            successMarker.writeAll(new ByteArrayInputStream(new byte[0]));
+            return buildResult(response, downloadList, fileSizes);
+          }
+        },
         TimeoutUtils.toTimeoutAfter(timeoutAt));
-    final FileHandle successMarker = destinationDir.child("_SUCCESS");
-    log.debug("Marking download as complete with: {}", successMarker.getLocation());
-    successMarker.writeAll(new ByteArrayInputStream(new byte[0]));
-    return buildResult(response, downloadList, fileSizes);
   }
 
   BulkExportRequest buildBulkExportRequest() {
