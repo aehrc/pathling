@@ -180,6 +180,15 @@ public class BulkExportRequest {
 
 
   /**
+   * When provided, a server with support for the parameter and requested values SHALL return or
+   * omit a pre-defined set of FHIR resources associated with the request. The value of the
+   * 'includeAssociatedData' query parameter.
+   */
+  @Nonnull
+  @Builder.Default
+  List<AssociatedData> includeAssociatedData = Collections.emptyList();
+
+  /**
    * The patient(s) to include in the export. The value of the 'patient'  parameter.
    */
   @Nonnull
@@ -205,6 +214,9 @@ public class BulkExportRequest {
                 .map(e -> Parameter.of("_elements", String.join(",", e))).stream(),
             Lists.optionalOf(_typeFilter)
                 .map(f -> Parameter.of("_typeFilter", String.join(",", f))).stream(),
+            Lists.optionalOf(includeAssociatedData)
+                .map(f -> Parameter.of("includeAssociatedData", includeAssociatedData.stream().map(
+                    AssociatedData::toString).collect(Collectors.joining(",")))).stream(),
             patient.stream()
                 .map(p -> Parameter.of("patient", p))
         )
@@ -238,6 +250,10 @@ public class BulkExportRequest {
     }
     if (!get_typeFilter().isEmpty()) {
       uriBuilder.addParameter("_typeFilter", String.join(",", get_typeFilter()));
+    }
+    if (!getIncludeAssociatedData().isEmpty()) {
+      uriBuilder.addParameter("includeAssociatedData", includeAssociatedData.stream().map(
+          AssociatedData::toString).collect(Collectors.joining(",")));
     }
     try {
       return uriBuilder.build();

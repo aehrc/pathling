@@ -36,7 +36,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 
 class BulkExportRequestTest {
-  
+
   @Test
   void testToParametersWithAllDefaults() {
     final BulkExportRequest request = BulkExportRequest.builder()
@@ -52,6 +52,8 @@ class BulkExportRequestTest {
         ._type(List.of("Patient", "Condition"))
         ._elements(List.of("Patient.name", "Patient.birthDate"))
         ._typeFilter(List.of("Patient?active=true", "Condition?clinicalStatus=active"))
+        .includeAssociatedData(
+            List.of(AssociatedData.LATEST_PROVENANCE_RESOURCES, AssociatedData.custom("customXXX")))
         .patient(List.of(Reference.of("Patient/00"), Reference.of("Patient/01")))
         .build();
     assertEquals(
@@ -61,6 +63,7 @@ class BulkExportRequestTest {
             Parameter.of("_type", "Patient,Condition"),
             Parameter.of("_elements", "Patient.name,Patient.birthDate"),
             Parameter.of("_typeFilter", "Patient?active=true,Condition?clinicalStatus=active"),
+            Parameter.of("includeAssociatedData", "LatestProvenanceResources,_customXXX"),
             Parameter.of("patient", Reference.of("Patient/00")),
             Parameter.of("patient", Reference.of("Patient/01"))
         ),
@@ -84,13 +87,16 @@ class BulkExportRequestTest {
                 + "&_since=2023-01-11T00%3A00%3A00.123Z"
                 + "&_type=Patient%2CObservation"
                 + "&_elements=Patient.id%2CCondition.status"
-                + "&_typeFilter=Patient.active%3Dtrue%2CObservation.status%3Dfinal"),
+                + "&_typeFilter=Patient.active%3Dtrue%2CObservation.status%3Dfinal"
+                + "&includeAssociatedData=RelevantProvenanceResources%2C_customYYY"),
         BulkExportRequest.builder()
             ._outputFormat("xml")
             ._type(List.of("Patient", "Observation"))
             ._elements(List.of("Patient.id", "Condition.status"))
             ._typeFilter(List.of("Patient.active=true", "Observation.status=final"))
             ._since(testInstant)
+            .includeAssociatedData(List.of(AssociatedData.RELEVANT_PROVENANCE_RESOURCES,
+                AssociatedData.custom("customYYY")))
             .build().toRequestURI(baseUri)
     );
   }
@@ -109,7 +115,7 @@ class BulkExportRequestTest {
     assertEquals("respond-async",
         httpRequest.getFirstHeader("prefer").getValue());
   }
-  
+
   @Test
   void testCreatesAllValuesSystemExportRequest() {
     final Instant testInstant = Instant.parse("2023-01-11T00:00:00.1234Z");
@@ -119,6 +125,8 @@ class BulkExportRequestTest {
         ._elements(List.of("Patient.id", "Condition.status"))
         ._typeFilter(List.of("Patient.active=true", "Observation.status=final"))
         ._since(testInstant)
+        .includeAssociatedData(List.of(AssociatedData.LATEST_PROVENANCE_RESOURCES,
+            AssociatedData.custom("customZZZ")))
         .build();
     final HttpUriRequest httpRequest = request.toHttpRequest(URI.create("http://test.com/fhir"));
     assertEquals("GET", httpRequest.getMethod());
@@ -126,14 +134,15 @@ class BulkExportRequestTest {
             + "&_since=2023-01-11T00%3A00%3A00.123Z"
             + "&_type=Patient%2CObservation"
             + "&_elements=Patient.id%2CCondition.status"
-            + "&_typeFilter=Patient.active%3Dtrue%2CObservation.status%3Dfinal",
+            + "&_typeFilter=Patient.active%3Dtrue%2CObservation.status%3Dfinal"
+            + "&includeAssociatedData=LatestProvenanceResources%2C_customZZZ",
         httpRequest.getURI().toString());
     assertEquals("application/fhir+json",
         httpRequest.getFirstHeader("accept").getValue());
     assertEquals("respond-async",
         httpRequest.getFirstHeader("prefer").getValue());
   }
-  
+
   @Test
   void testFailsOnSystemLevelWithPatientReferences() {
     final BulkExportRequest request = BulkExportRequest.builder()
@@ -187,7 +196,7 @@ class BulkExportRequestTest {
         ).toJson(),
         EntityUtils.toString(postEntity));
   }
-  
+
   @Test
   void testCreateGroupLevelExportGetRequest() {
     final BulkExportRequest request = BulkExportRequest.builder()
@@ -213,6 +222,7 @@ class BulkExportRequestTest {
         ._type(List.of("Patient", "Condition"))
         ._elements(List.of("Patient.name", "Patient.birthDate"))
         ._typeFilter(List.of("Patient?active=true", "Condition?clinicalStatus=active"))
+        .includeAssociatedData(List.of(AssociatedData.RELEVANT_PROVENANCE_RESOURCES))
         .patient(List.of(Reference.of("Patient/00"), Reference.of("Patient/01")))
         .build();
 
@@ -234,6 +244,7 @@ class BulkExportRequestTest {
             Parameter.of("_type", "Patient,Condition"),
             Parameter.of("_elements", "Patient.name,Patient.birthDate"),
             Parameter.of("_typeFilter", "Patient?active=true,Condition?clinicalStatus=active"),
+            Parameter.of("includeAssociatedData", "RelevantProvenanceResources"),
             Parameter.of("patient", Reference.of("Patient/00")),
             Parameter.of("patient", Reference.of("Patient/01"))
         ).toJson(),

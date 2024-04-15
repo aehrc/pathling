@@ -21,8 +21,8 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.auth.SMARTTokenCredentialFactory;
-import au.csiro.pathling.auth.TokenCredentialFactory;
 import au.csiro.pathling.auth.TokenAuthRequestInterceptor;
+import au.csiro.pathling.auth.TokenCredentialFactory;
 import au.csiro.pathling.auth.TokenCredentials;
 import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.config.HttpClientConfiguration;
@@ -35,6 +35,7 @@ import au.csiro.pathling.export.fs.FileStore.FileHandle;
 import au.csiro.pathling.export.fs.FileStoreFactory;
 import au.csiro.pathling.export.utils.ExecutorServiceResource;
 import au.csiro.pathling.export.utils.TimeoutUtils;
+import au.csiro.pathling.export.ws.AssociatedData;
 import au.csiro.pathling.export.ws.AsyncConfig;
 import au.csiro.pathling.export.ws.BulkExportAsyncService;
 import au.csiro.pathling.export.ws.BulkExportRequest;
@@ -141,6 +142,16 @@ public class BulkExportClient {
   @Singular("typeFilter")
   List<String> typeFilters;
 
+
+  /**
+   * When provided, a server with support for the parameter and requested values SHALL return or
+   * omit a pre-defined set of FHIR resources associated with the request. The value of the
+   * 'includeAssociatedData' query parameter.
+   */
+  @Nonnull
+  @Singular("includeAssociatedDatum")
+  List<AssociatedData> includeAssociatedData;
+
   /**
    * The directory to write the output files to. This describes the location in the format expected
    * by the {@link FileStoreFactory} configured in this client.
@@ -203,7 +214,19 @@ public class BulkExportClient {
    * A builder for the {@link BulkExportClient}.
    */
   public static class BulkExportClientBuilder {
-    // empty placeholder to for javadoc to recognize the builder
+
+    /**
+     * Sets the list of the associated data to include in form their string codes.
+     *
+     * @param associatedDataCodes the list of associated data codes
+     * @return the builder
+     */
+    public BulkExportClientBuilder withIncludeAssociatedData(
+        @Nonnull final List<String> associatedDataCodes) {
+      return withIncludeAssociatedData(associatedDataCodes.stream()
+          .map(AssociatedData::fromCode)
+          .collect(Collectors.toUnmodifiableList()));
+    }
   }
 
   /**
@@ -295,7 +318,7 @@ public class BulkExportClient {
     return buildResult(response, downloadList, fileSizes);
   }
 
-  private BulkExportRequest buildBulkExportRequest() {
+  BulkExportRequest buildBulkExportRequest() {
     return BulkExportRequest.builder()
         .level(level)
         ._outputFormat(outputFormat)
@@ -303,6 +326,7 @@ public class BulkExportClient {
         ._since(since)
         ._elements(elements)
         ._typeFilter(typeFilters)
+        .includeAssociatedData(includeAssociatedData)
         .patient(patients)
         .build();
   }
@@ -352,7 +376,7 @@ public class BulkExportClient {
   private TokenCredentialFactory createTokenProvider() {
     return SMARTTokenCredentialFactory.create(authConfig);
   }
-  
+
   @Nonnull
   private CloseableHttpClient createHttpClient(
       @Nonnull final TokenCredentialFactory tokenAuthFactory) {

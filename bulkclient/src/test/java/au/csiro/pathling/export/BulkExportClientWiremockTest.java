@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import au.csiro.pathling.config.AuthConfiguration;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.fhir.Reference;
+import au.csiro.pathling.export.ws.AssociatedData;
 import au.csiro.pathling.export.ws.BulkExportRequest;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -144,7 +145,8 @@ class BulkExportClientWiremockTest {
     stubFor(get(anyUrl()).willReturn(aResponse().withStatus(500)));
 
     stubFor(get(urlEqualTo(
-        "/$export?_outputFormat=application%2Ffhir%2Bndjson&_type=Patient%2CCondition"))
+        "/$export?_outputFormat=application%2Ffhir%2Bndjson&_type=Patient%2CCondition"
+            + "&includeAssociatedData=LatestProvenanceResources"))
         .inScenario("bulk-export")
         .whenScenarioStateIs(STARTED)
         .willReturn(
@@ -196,6 +198,7 @@ class BulkExportClientWiremockTest {
         .withFhirEndpointUrl(bulkExportDemoServerEndpoint)
         .withOutputDir(exportDir.getPath())
         .withTypes(List.of("Patient", "Condition"))
+        .withIncludeAssociatedData(List.of(AssociatedData.LATEST_PROVENANCE_RESOURCES))
         .build()
         .export();
 
@@ -281,11 +284,11 @@ class BulkExportClientWiremockTest {
         FileUtils.readFileToString(new File(exportDir, "Patient.0000.ndjson"), Charsets.UTF_8));
 
     assertEquals(BulkExportResult.of(Instant.parse("1970-02-27T02:39:04.343Z"), List.of(
-            BulkExportResult.FileResult.of(
-                URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/file/00"),
-                URI.create(exportDir.toURI().toString() + "Patient.0000.ndjson"),
-                5
-            ))),
+                BulkExportResult.FileResult.of(
+                    URI.create(wmRuntimeInfo.getHttpBaseUrl() + "/file/00"),
+                    URI.create(exportDir.toURI() + "Patient.0000.ndjson"), 5)
+            )
+        ),
         result);
   }
 
@@ -788,7 +791,7 @@ class BulkExportClientWiremockTest {
     // The token should be requested once and reused for all requests
     verify(1, postRequestedFor(urlPathEqualTo("/token")));
   }
-  
+
   @Test
   void testExportWorksWithSMARTSymmetricAuthenticationForKickOffAndDownloadRefresingExpiredTokens(
       @Nonnull final WireMockRuntimeInfo wmRuntimeInfo) throws IOException {
@@ -811,7 +814,8 @@ class BulkExportClientWiremockTest {
         .withRequestBody(and(
             containing("grant_type=client_credentials"),
             containing("scope=*.read"),
-            containing("client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer"),
+            containing(
+                "client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer"),
             containing("client_assertion=")
         ))
         .willReturn(
@@ -874,5 +878,5 @@ class BulkExportClientWiremockTest {
     // The token should be requested for all three requests (kickoff, status pooling, and download)
     verify(3, postRequestedFor(urlPathEqualTo("/token-asym")));
   }
-  
+
 }

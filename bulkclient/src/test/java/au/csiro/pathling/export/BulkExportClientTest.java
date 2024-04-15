@@ -19,6 +19,8 @@ package au.csiro.pathling.export;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import au.csiro.pathling.export.ws.AssociatedData;
+import au.csiro.pathling.export.ws.BulkExportRequest;
 import au.csiro.pathling.export.ws.BulkExportResponse;
 import au.csiro.pathling.export.ws.BulkExportResponse.FileItem;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
@@ -106,4 +108,24 @@ public class BulkExportClientTest {
         downloadUrls
     );
   }
+  
+  @Test
+  void testBuildsRequestWithRequestedAssociatedData() {
+
+    final BulkExportClient client = BulkExportClient.builder()
+        .withFhirEndpointUrl("http://example.com")
+        .withOutputDir("output-dir")
+        .withOutputExtension("xjson")
+        .withIncludeAssociatedData(List.of("RelevantProvenanceResources", "_customXXX"))
+        .withIncludeAssociatedDatum(AssociatedData.custom("customYYY"))
+        .build();
+
+    assertEquals(BulkExportRequest.builder()
+            ._outputFormat("application/fhir+ndjson")
+            .includeAssociatedData(List.of(AssociatedData.RELEVANT_PROVENANCE_RESOURCES,
+                AssociatedData.custom("customXXX"), AssociatedData.custom("customYYY")))
+            .build(),
+        client.buildBulkExportRequest());
+  }
+
 }
