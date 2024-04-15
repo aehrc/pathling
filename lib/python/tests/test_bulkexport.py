@@ -34,7 +34,7 @@ import pytest
 from py4j.java_gateway import JVMView
 from pyspark import SparkContext
 
-from pathling.bulkexport import BulkExportClient, BulkExportResult
+from pathling.bulkexport import BulkExportClient, BulkExportResult, AssociatedData
 from pathling.bulkexport import ExportLevel
 from pathling.fhir import Reference
 
@@ -53,6 +53,7 @@ def test_builds_default_client(pathling_ctx):
     assert list(j_client.getTypes()) == []
     assert list(j_client.getElements()) == []
     assert list(j_client.getTypeFilters()) == []
+    assert list(j_client.getIncludeAssociatedData()) == []
     assert list(j_client.getPatients()) == []
     assert j_client.getMaxConcurrentDownloads() == 10
 
@@ -66,6 +67,8 @@ def test_builds_system_client_with_options(pathling_ctx):
         types=["Patient", "Condition"],
         elements=["id", "status"],
         type_filters=["Patient?active=true", "Condition?status=active"],
+        include_associated_data=[AssociatedData.LATEST_PROVENANCE_RESOURCES,
+                                 AssociatedData.RELEVANT_PROVENANCE_RESOURCES, '_customXXX'],
         since=datetime.fromtimestamp(10000, tz=timezone.utc),
         timeout=timedelta(minutes=2),
         max_concurrent_downloads=3,
@@ -82,6 +85,11 @@ def test_builds_system_client_with_options(pathling_ctx):
     assert list(j_client.getTypeFilters()) == [
         "Patient?active=true",
         "Condition?status=active",
+    ]
+    assert [j_ad.toString() for j_ad in j_client.getIncludeAssociatedData()] == [
+        "LatestProvenanceResources",
+        "RelevantProvenanceResources",
+        "_customXXX"
     ]
     assert list(j_client.getPatients()) == []
     assert j_client.getMaxConcurrentDownloads() == 3

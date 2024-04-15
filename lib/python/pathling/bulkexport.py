@@ -13,24 +13,21 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Sequence, Optional, NamedTuple
 
-from py4j.java_gateway import JavaObject, JVMView
+from py4j.java_gateway import JavaObject
 
-from datetime import datetime, timedelta, timezone
-
+from pathling.config import auth_config
 from pathling.fhir import Reference
-
 from pathling.jvm import (
     jvm_pathling,
-    jvm,
     get_active_java_spark_context,
     datetime_to_instant,
     timedelta_to_duration,
     instant_to_datetime,
 )
-from pathling.config import auth_config
 
 
 class ExportLevel(Enum):
@@ -41,6 +38,14 @@ class ExportLevel(Enum):
     SYSTEM = "SYSTEM"
     PATIENT = "PATIENT"
     GROUP = "GROUP"
+
+
+class AssociatedData:
+    """
+    The predefined values for the `includeAssociatedData` parameter.
+    """
+    LATEST_PROVENANCE_RESOURCES = "LatestProvenanceResources"
+    RELEVANT_PROVENANCE_RESOURCES = "RelevantProvenanceResources"
 
 
 class BulkExportResult(NamedTuple):
@@ -85,6 +90,7 @@ class BulkExportClient:
         types: Optional[Sequence[str]] = None,
         elements: Optional[Sequence[str]] = None,
         type_filters: Optional[Sequence[str]] = None,
+        include_associated_data: Optional[Sequence[str]] = None,
         since: Optional[datetime] = None,
         patients: Optional[Sequence[Reference]] = None,
         timeout: Optional[timedelta] = None,
@@ -101,6 +107,8 @@ class BulkExportClient:
         :param types: the value of the `_type` parameter for Bulk Export kick-off request
         :param elements: the value of the `_elements` parameter for Bulk Export kick-off request
         :param type_filters: the value of the `_typeFilter` parameter for Bulk Export kick-off request
+        :param include_associated_data: the value of the `includeAssociatedData` parameter for Bulk 
+                Export kick-off request
         :param since: the value of the `_since` parameter for Bulk Data kick-off request
         :param patients: the value of the `patient` parameter for Bulk Export kick-off request
         :param timeout: the maximum time to wait for the export to complete. If the export does not
@@ -137,6 +145,8 @@ class BulkExportClient:
             elements or []
         ).withTypeFilters(
             type_filters or []
+        ).withIncludeAssociatedData(
+            include_associated_data or []
         ).withSince(
             datetime_to_instant(since) if since else None
         ).withMaxConcurrentDownloads(
