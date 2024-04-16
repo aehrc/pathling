@@ -19,7 +19,7 @@ package au.csiro.pathling.auth;
 
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.AuthConfig;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
@@ -87,8 +87,8 @@ public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
   @Override
   @Nonnull
   public Optional<TokenCredentials> createCredentials(@Nonnull final URI fhirEndpoint,
-      @Nonnull final AuthConfiguration authConfiguration) {
-    return createAuthMethod(fhirEndpoint, authConfiguration).map(
+      @Nonnull final AuthConfig authConfig) {
+    return createAuthMethod(fhirEndpoint, authConfig).map(
         authMethod -> new ProviderTokenCredentials(authTokenProvider, authMethod));
   }
 
@@ -99,7 +99,7 @@ public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
 
   @Nonnull
   Optional<? extends ClientAuthMethod> createAuthMethod(@Nonnull final URI fhirEndpoint,
-      @Nonnull final AuthConfiguration authConfig) {
+      @Nonnull final AuthConfig authConfig) {
     if (authConfig.isEnabled()) {
       if (authConfig.isUseSMART()) {
         return Optional.of(createSMARTAuthMethod(fhirEndpoint, authConfig));
@@ -114,7 +114,7 @@ public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
 
   @Nonnull
   private ClientAuthMethod createSMARTAuthMethod(@Nonnull final URI fhirEndpoint,
-      @Nonnull final AuthConfiguration authConfig) {
+      @Nonnull final AuthConfig authConfig) {
     try {
       log.debug("Retrieving SMART configuration for fhirEndpoint: {}", fhirEndpoint);
       final SMARTDiscoveryResponse discoveryResponse = SMARTDiscoveryResponse.get(fhirEndpoint,
@@ -154,7 +154,7 @@ public class SMARTTokenCredentialFactory implements TokenCredentialFactory {
    * @return a new instance of {@link SMARTTokenCredentialFactory}.
    */
   @Nonnull
-  public static SMARTTokenCredentialFactory create(@Nonnull final AuthConfiguration configuration) {
+  public static SMARTTokenCredentialFactory create(@Nonnull final AuthConfig configuration) {
     final CloseableHttpClient httpClient = getHttpClient();
     return new SMARTTokenCredentialFactory(httpClient, new AuthTokenProvider(httpClient,
         configuration.getTokenExpiryTolerance()));

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.auth;
 
-import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.AuthConfig;
 import java.io.Closeable;
 import java.net.URI;
 import java.util.Optional;
@@ -32,11 +32,11 @@ public interface TokenCredentialFactory extends Closeable {
    * Creates a token credential for the given FHIR endpoint and authentication configuration.
    *
    * @param fhirEndpoint the FHIR endpoint
-   * @param authConfiguration the authentication configuration
+   * @param authConfig the authentication configuration
    * @return the token credential
    */
   @Nonnull
   Optional<TokenCredentials> createCredentials(@Nonnull final URI fhirEndpoint,
-      @Nonnull final AuthConfiguration authConfiguration);
+      @Nonnull final AuthConfig authConfig);
 
 }

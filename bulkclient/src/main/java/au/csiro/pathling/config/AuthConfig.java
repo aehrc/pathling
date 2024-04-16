@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.config;
 
-import au.csiro.pathling.config.AuthConfiguration.ValidAuthConfiguration;
+import au.csiro.pathling.config.AuthConfig.ValidAuthConfiguration;
 import java.io.Serializable;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -44,7 +44,7 @@ import org.hibernate.validator.constraints.URL;
 @Data
 @Builder
 @ValidAuthConfiguration
-public class AuthConfiguration implements Serializable {
+public class AuthConfig implements Serializable {
 
   private static final long serialVersionUID = 6321330066417583745L;
 
@@ -144,10 +144,10 @@ public class AuthConfiguration implements Serializable {
    * Validates the configuration.
    */
   public static class AuthConfigValidator implements
-      ConstraintValidator<ValidAuthConfiguration, AuthConfiguration> {
+      ConstraintValidator<ValidAuthConfiguration, AuthConfig> {
 
     @Override
-    public boolean isValid(final AuthConfiguration value,
+    public boolean isValid(final AuthConfig value,
         final ConstraintValidatorContext context) {
       if (value.isEnabled()) {
         return value.getTokenEndpoint() != null && value.getClientId() != null

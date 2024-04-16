@@ -22,7 +22,6 @@ import au.csiro.pathling.export.fhir.Parameters;
 import au.csiro.pathling.export.fhir.Parameters.Parameter;
 import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.utils.WebUtils;
-import au.csiro.pathling.utilities.Lists;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Instant;
@@ -208,13 +207,13 @@ public class BulkExportRequest {
                 .map(s -> Parameter.of("_outputFormat", s)).stream(),
             Optional.ofNullable(_since)
                 .map(s -> Parameter.of("_since", s)).stream(),
-            Lists.optionalOf(_type)
+            optionalOfList(_type)
                 .map(e -> Parameter.of("_type", String.join(",", e))).stream(),
-            Lists.optionalOf(_elements)
+            optionalOfList(_elements)
                 .map(e -> Parameter.of("_elements", String.join(",", e))).stream(),
-            Lists.optionalOf(_typeFilter)
+            optionalOfList(_typeFilter)
                 .map(f -> Parameter.of("_typeFilter", String.join(",", f))).stream(),
-            Lists.optionalOf(includeAssociatedData)
+            optionalOfList(includeAssociatedData)
                 .map(f -> Parameter.of("includeAssociatedData", includeAssociatedData.stream().map(
                     AssociatedData::toString).collect(Collectors.joining(",")))).stream(),
             patient.stream()
@@ -289,6 +288,22 @@ public class BulkExportRequest {
     httpRequest.setHeader("accept", WebUtils.APPLICATION_FHIR_JSON.getMimeType());
     httpRequest.setHeader("prefer", "respond-async");
     return httpRequest;
+  }
+
+
+  /**
+   * Returns an empty optional if the input list is empty; otherwise, returns the optional of the
+   * input list.
+   *
+   * @param list the list to convert to an optional
+   * @param <T> the type of elements in the list
+   * @return an empty optional if the input list is empty; otherwise, the optional of the input list
+   */
+  @Nonnull
+  static <T> Optional<List<T>> optionalOfList(@Nonnull final List<T> list) {
+    return list.isEmpty()
+           ? Optional.empty()
+           : Optional.of(list);
   }
 
 }

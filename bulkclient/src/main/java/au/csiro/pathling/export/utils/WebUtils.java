@@ -19,9 +19,9 @@ package au.csiro.pathling.export.utils;
 
 import au.csiro.pathling.export.fhir.FhirJsonSupport;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import javax.annotation.Nonnull;
 import lombok.experimental.UtilityClass;
-import org.apache.http.Consts;
 import org.apache.http.HttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -37,7 +37,7 @@ public class WebUtils {
    */
   public static final ContentType APPLICATION_FHIR_JSON = ContentType.create(
       "application/fhir+json",
-      Consts.UTF_8);
+      StandardCharsets.UTF_8);
   /**
    * HTTP status code for too many requests.
    */

@@ -48,7 +48,7 @@ def auth_config(
     """
     return (
         jvm_pathling()
-        .config.AuthConfiguration.builder()
+        .config.AuthConfig.builder()
         .enabled(auth_enabled)
         .useSMART(auth_use_SMART)
         .tokenEndpoint(auth_token_endpoint)

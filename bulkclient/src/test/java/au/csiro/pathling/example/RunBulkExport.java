@@ -19,7 +19,7 @@ package au.csiro.pathling.example;
 
 import static au.csiro.pathling.test.TestUtils.getResourceAsString;
 
-import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.AuthConfig;
 import au.csiro.pathling.export.BulkExportClient;
 import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.ws.AsyncConfig;
@@ -49,7 +49,7 @@ public class RunBulkExport {
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    final AuthConfiguration smartCDR = AuthConfiguration.builder()
+    final AuthConfig smartCDR = AuthConfig.builder()
         .enabled(true)
         .tokenEndpoint(
             "https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token")
@@ -86,7 +86,7 @@ public class RunBulkExport {
     final String privateKeyJWK = getResourceAsString("auth/bulk_rs384_priv_jwk.json");
     System.out.println("privateKeyJWK: " + privateKeyJWK);
 
-    final AuthConfiguration smartCDR = AuthConfiguration.builder()
+    final AuthConfig smartCDR = AuthConfig.builder()
         .enabled(true)
         .tokenEndpoint(
             "https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token")
@@ -123,7 +123,7 @@ public class RunBulkExport {
     System.out.println(
         "Exporting" + "\n from: " + fhirEndpointUrl + "\n to: " + outputDir + "\n since: " + from);
 
-    final AuthConfiguration smartCDR = AuthConfiguration.builder()
+    final AuthConfig smartCDR = AuthConfig.builder()
         .enabled(true)
         .tokenEndpoint("https://aehrc-cdr.cc/smartsec_r4/oauth/token")
         .clientId("pathling-bulk-client")
@@ -202,7 +202,7 @@ public class RunBulkExport {
     System.out.println("clientId: " + clientId);
     System.out.println("privateKeyJWK: " + privateKeyJWK);
 
-    AuthConfiguration authConfiguration = AuthConfiguration.builder()
+    AuthConfig authConfig = AuthConfig.builder()
         .enabled(true)
         .useSMART(true)
         .clientId(clientId)
@@ -218,7 +218,7 @@ public class RunBulkExport {
         //.withSince(from)
         .withAsyncConfig(AsyncConfig.builder().maxPoolingDelay(Duration.ofSeconds(10)).build())
         .withTimeout(Duration.ofMinutes(60))
-        .withAuthConfig(authConfiguration)
+        .withAuthConfig(authConfig)
         .build()
         .export();
   }
@@ -245,7 +245,7 @@ public class RunBulkExport {
     System.out.println("clientId: " + clientId);
     System.out.println("privateKeyJWK: " + privateKeyJWK);
 
-    AuthConfiguration authConfiguration = AuthConfiguration.builder()
+    AuthConfig authConfig = AuthConfig.builder()
         .enabled(true)
         .tokenEndpoint("https://bulk-data.smarthealthit.org/auth/token")
         .clientId(clientId)
@@ -260,7 +260,7 @@ public class RunBulkExport {
         //.withSince(from)
         .withAsyncConfig(AsyncConfig.builder().maxPoolingDelay(Duration.ofSeconds(10)).build())
         .withTimeout(Duration.ofMinutes(60))
-        .withAuthConfig(authConfiguration)
+        .withAuthConfig(authConfig)
         .build()
         .export();
   }

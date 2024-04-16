@@ -17,13 +17,13 @@
 
 package au.csiro.pathling.auth;
 
-import static au.csiro.pathling.test.TestResources.getResourceAsString;
+import static au.csiro.pathling.test.TestUtils.getResourceAsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.AuthConfig;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
@@ -72,7 +72,7 @@ class ClientAuthMethodTest {
         .thenReturn(SYNC_RESPONSE);
 
     final ClientAuthMethod authMethod = ClientAuthMethod.create("http://token.endpoint",
-        AuthConfiguration.builder()
+        AuthConfig.builder()
             .clientId("client_id")
             .clientSecret("client_secret")
             .scope("scope_value1")
@@ -102,7 +102,7 @@ class ClientAuthMethodTest {
         .thenReturn(ASYNC_RESPONSE);
 
     final ClientAuthMethod authMethod = ClientAuthMethod.create("http://token.endpoint/async",
-        AuthConfiguration.builder()
+        AuthConfig.builder()
             .clientId("client_id")
             .privateKeyJWK(getResourceAsString("auth/bulk_rs384_priv_jwk.json"))
             .scope("scope_value1")

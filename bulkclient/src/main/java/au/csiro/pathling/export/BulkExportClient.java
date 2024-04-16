@@ -24,8 +24,8 @@ import au.csiro.pathling.auth.SMARTTokenCredentialFactory;
 import au.csiro.pathling.auth.TokenAuthRequestInterceptor;
 import au.csiro.pathling.auth.TokenCredentialFactory;
 import au.csiro.pathling.auth.TokenCredentials;
-import au.csiro.pathling.config.AuthConfiguration;
-import au.csiro.pathling.config.HttpClientConfiguration;
+import au.csiro.pathling.config.AuthConfig;
+import au.csiro.pathling.config.HttpClientConfig;
 import au.csiro.pathling.export.BulkExportResult.FileResult;
 import au.csiro.pathling.export.download.UrlDownloadTemplate;
 import au.csiro.pathling.export.download.UrlDownloadTemplate.UrlDownloadEntry;
@@ -194,7 +194,7 @@ public class BulkExportClient {
    */
   @Nonnull
   @Builder.Default
-  HttpClientConfiguration httpClientConfig = HttpClientConfiguration.builder().build();
+  HttpClientConfig httpClientConfig = HttpClientConfig.builder().build();
 
   /**
    * The configuration for the async operations.
@@ -209,7 +209,7 @@ public class BulkExportClient {
    */
   @Nonnull
   @Builder.Default
-  AuthConfiguration authConfig = AuthConfiguration.builder().build();
+  AuthConfig authConfig = AuthConfig.builder().build();
 
   /**
    * A builder for the {@link BulkExportClient}.

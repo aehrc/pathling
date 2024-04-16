@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.export;
 
-import static au.csiro.pathling.test.TestResources.getResourceAsString;
+import static au.csiro.pathling.test.TestUtils.getResourceAsString;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.and;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.AuthConfig;
 import au.csiro.pathling.export.BulkExportException.HttpError;
 import au.csiro.pathling.export.fhir.Reference;
 import au.csiro.pathling.export.ws.AssociatedData;
@@ -809,7 +809,7 @@ class BulkExportClientWiremockTest {
 
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
 
-    final AuthConfiguration authConfig = AuthConfiguration.builder()
+    final AuthConfig authConfig = AuthConfig.builder()
         .enabled(true)
         .clientId("client_id")
         .clientSecret("client_secret")
@@ -901,7 +901,7 @@ class BulkExportClientWiremockTest {
 
     final String bulkExportDemoServerEndpoint = wmRuntimeInfo.getHttpBaseUrl();
 
-    final AuthConfiguration authConfig = AuthConfiguration.builder()
+    final AuthConfig authConfig = AuthConfig.builder()
         .enabled(true)
         .clientId("client_id")
         .privateKeyJWK(getResourceAsString("auth/bulk_rs384_priv_jwk.json"))

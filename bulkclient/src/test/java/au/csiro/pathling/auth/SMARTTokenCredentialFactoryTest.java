@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.Mockito.when;
 
-import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.AuthConfig;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
@@ -54,7 +54,7 @@ class SMARTTokenCredentialFactoryTest {
     final SMARTTokenCredentialFactory factory = new SMARTTokenCredentialFactory(httpClient,
         authTokenProvider);
     assertEquals(Optional.empty(), factory.createAuthMethod(URI.create("http://example.com"),
-        AuthConfiguration.builder().enabled(false).build()));
+        AuthConfig.builder().enabled(false).build()));
   }
 
   @Test
@@ -72,7 +72,7 @@ class SMARTTokenCredentialFactoryTest {
             SymmetricClientAuthMethod.builder().clientId("client_id").clientSecret("client_secret")
                 .tokenEndpoint("http://example.com/token").scope("scope").build()),
         factory.createAuthMethod(URI.create("http://example.com/fhir"),
-            AuthConfiguration.builder()
+            AuthConfig.builder()
                 .enabled(true)
                 .useSMART(true)
                 .clientId("client_id")

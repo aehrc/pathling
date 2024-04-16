@@ -20,7 +20,7 @@ package au.csiro.pathling.auth;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
-import au.csiro.pathling.config.AuthConfiguration;
+import au.csiro.pathling.config.AuthConfig;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -91,7 +91,7 @@ public abstract class ClientAuthMethod {
    */
   @Nonnull
   static ClientAuthMethod create(@Nonnull final String tokenEndpoint,
-      @Nonnull final AuthConfiguration authConfig) {
+      @Nonnull final AuthConfig authConfig) {
     if (nonNull(authConfig.getPrivateKeyJWK())) {
       return AsymmetricClientAuthMethod.builder()
           .tokenEndpoint(tokenEndpoint)
