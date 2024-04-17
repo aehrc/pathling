@@ -88,7 +88,7 @@
     <!-- we do not use recent version 1.18.24 as it (wrongly) copies the JSR-380 NonNull
          annotations from fields to getters resulting in duplicate constraint violations.
          This has been fixed in the main branch but not released yet -->
-    <pathling.lombokVersion>1.18.28</pathling.lombokVersion>
+    <pathling.lombokVersion>1.18.32</pathling.lombokVersion>
     <pathling.guavaVersion>32.1.3-jre</pathling.guavaVersion>
     <pathling.infinispanVersion>14.0.21.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.15.3</pathling.jacksonVersion>
