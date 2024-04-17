@@ -72,7 +72,7 @@
     <project.majorVersion>6</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <pathling.sparkVersion>3.4.2</pathling.sparkVersion>
+    <pathling.sparkVersion>3.5.1</pathling.sparkVersion>
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
     <pathling.deltaVersion>2.4.0</pathling.deltaVersion>
