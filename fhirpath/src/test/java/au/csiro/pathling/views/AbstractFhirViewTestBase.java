@@ -6,6 +6,7 @@ import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.col;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -98,6 +99,18 @@ abstract class AbstractFhirViewTestBase {
     void expect(@Nonnull final Supplier<Dataset<Row>> result);
   }
 
+  @Value
+  static class CompositeExpectation implements Expectation {
+
+    List<Expectation> expectations;
+
+    @Override
+    public void expect(@Nonnull final Supplier<Dataset<Row>> result) {
+      expectations.forEach(expectation -> expectation.expect(result));
+    }
+
+  }
+
   interface ResultExpectation extends Expectation {
 
     @Override
@@ -106,6 +119,7 @@ abstract class AbstractFhirViewTestBase {
     }
 
     void expectResult(@Nonnull final Dataset<Row> rowDataset);
+
   }
 
   static class ExpectError implements Expectation {
@@ -115,6 +129,7 @@ abstract class AbstractFhirViewTestBase {
       // TODO: expect a specialized FHIRView exception
       assertThrows(Exception.class, () -> result.get().collectAsList());
     }
+
   }
 
   @Value
@@ -154,6 +169,7 @@ abstract class AbstractFhirViewTestBase {
       // Assert that the rowDataset has rows unordered as in selectedExpectedResult.
       assertThat(selectedActualResult).hasRowsAndColumnsUnordered(selectedExpectedResult);
     }
+
   }
 
   @Value
@@ -165,6 +181,18 @@ abstract class AbstractFhirViewTestBase {
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       assertEquals(count, rowDataset.count());
     }
+  }
+
+  @Value
+  static class ExpectColumns implements ResultExpectation {
+
+    List<String> columns;
+
+    @Override
+    public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
+      assertArrayEquals(rowDataset.columns(), columns.toArray());
+    }
+
   }
 
 
@@ -287,29 +315,47 @@ abstract class AbstractFhirViewTestBase {
       return new ExpectError();
     } else if (nonNull(expectation = testDefinition.get("expectCount"))) {
       return new ExpectCount(expectation.asLong());
-    } else if (nonNull(expectation = testDefinition.get("expect"))) {
-      List<String> expectedColumns = null;
-      Files.createFile(expectedPath);
-      for (final Iterator<JsonNode> rowIt = expectation.elements(); rowIt.hasNext(); ) {
-        final JsonNode row = rowIt.next();
-        // Get the columns from the first row.
-        if (expectedColumns == null) {
-          final List<String> columns = new ArrayList<>();
-          row.fields().forEachRemaining(field -> columns.add(field.getKey()));
-          expectedColumns = columns;
-        }
-        // Append the row to the file.
-        Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
-            StandardOpenOption.APPEND);
+    } else if (testDefinition.has("expect") || testDefinition.has("expectColumns")) {
+      final JsonNode expect = testDefinition.get("expect");
+      final JsonNode expectColumns = testDefinition.get("expectColumns");
+      final List<Expectation> expectations = new ArrayList<>();
+      if (expect != null) {
+        expectations.add(buildResultExpectation(expectedPath, expect));
       }
-      return new Expect(expectedPath, expectedColumns != null
-                                      ? expectedColumns
-                                      : Collections.emptyList());
+      if (expectColumns != null) {
+        final List<String> columns = new ArrayList<>();
+        expectColumns.elements().forEachRemaining(column -> columns.add(column.asText()));
+        expectations.add(new ExpectColumns(columns));
+      }
+      return new CompositeExpectation(expectations);
     } else {
       log.info("No expectation found for test:");
       log.info(testDefinition.toPrettyString());
       throw new RuntimeException("No expectation found");
     }
+  }
+
+  @Nonnull
+  private Expect buildResultExpectation(final @Nonnull Path expectedPath,
+      final @Nonnull JsonNode expectation)
+      throws IOException {
+    List<String> expectedColumns = null;
+    Files.createFile(expectedPath);
+    for (final Iterator<JsonNode> rowIt = expectation.elements(); rowIt.hasNext(); ) {
+      final JsonNode row = rowIt.next();
+      // Get the columns from the first row.
+      if (expectedColumns == null) {
+        final List<String> columns = new ArrayList<>();
+        row.fields().forEachRemaining(field -> columns.add(field.getKey()));
+        expectedColumns = columns;
+      }
+      // Append the row to the file.
+      Files.write(expectedPath, (row + "\n").getBytes(StandardCharsets.UTF_8),
+          StandardOpenOption.APPEND);
+    }
+    return new Expect(expectedPath, expectedColumns != null
+                                    ? expectedColumns
+                                    : Collections.emptyList());
   }
 
   @Nonnull
