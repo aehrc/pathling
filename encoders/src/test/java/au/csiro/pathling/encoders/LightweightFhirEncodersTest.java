@@ -41,7 +41,6 @@ import java.util.function.Consumer;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.catalyst.InternalRow;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
-import org.apache.spark.sql.catalyst.encoders.RowEncoder;
 import org.hl7.fhir.r4.model.BaseResource;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
@@ -256,7 +255,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
 
     // Deserialize the InternalRow to a Row with explicit schema.
     final ExpressionEncoder<Row> rowEncoder = EncoderUtils
-        .defaultResolveAndBind(RowEncoder.apply(encoder.schema()));
+        .defaultResolveAndBind(ExpressionEncoder.apply(encoder.schema()));
     final Row conditionRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     // Get the extensionContainer.
@@ -306,7 +305,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(observation);
 
     final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
-        RowEncoder.apply(encoder.schema()));
+        ExpressionEncoder.apply(encoder.schema()));
     final Row observationRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     final Row quantityRow = observationRow.getStruct(observationRow.fieldIndex("valueQuantity"));
@@ -323,7 +322,7 @@ public class LightweightFhirEncodersTest implements JsonMethods {
     final InternalRow serializedRow = resolvedEncoder.createSerializer().apply(device);
 
     final ExpressionEncoder<Row> rowEncoder = EncoderUtils.defaultResolveAndBind(
-        RowEncoder.apply(encoder.schema()));
+        ExpressionEncoder.apply(encoder.schema()));
     final Row deviceRow = rowEncoder.createDeserializer().apply(serializedRow);
 
     final List<Row> properties = deviceRow.getList(deviceRow.fieldIndex("property"));
