@@ -65,7 +65,7 @@
     </dependency>
     <dependency>
       <groupId>io.delta</groupId>
-      <artifactId>delta-core_${pathling.scalaVersion}</artifactId>
+      <artifactId>delta-spark_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>

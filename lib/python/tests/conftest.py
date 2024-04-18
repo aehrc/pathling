@@ -74,7 +74,7 @@ def pathling_ctx(request, temp_warehouse_dir):
         .config(
             "spark.jars.packages",
             f"au.csiro.pathling:library-runtime:{__java_version__},"
-            f"io.delta:delta-core_{__scala_version__}:{__delta_version__},"
+            f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},"
             f"org.apache.hadoop:hadoop-aws:{__hadoop_version__}",
         )
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")

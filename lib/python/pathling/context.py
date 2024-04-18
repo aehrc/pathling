@@ -184,7 +184,7 @@ class PathlingContext:
                 SparkSession.builder.config(
                     "spark.jars.packages",
                     f"au.csiro.pathling:library-runtime:{__java_version__},"
-                    f"io.delta:delta-core_{__scala_version__}:{__delta_version__},"
+                    f"io.delta:delta-spark_{__scala_version__}:{__delta_version__},"
                     f"org.apache.hadoop:hadoop-aws:{__hadoop_version__}",
                 )
                 .config(

@@ -225,7 +225,7 @@
                     <argument>--jars</argument>
                     <argument>${project.build.directory}/dependency/*</argument>
                     <argument>--packages</argument>
-                    <argument>au.csiro.pathling:library-runtime:${project.version},io.delta:delta-core_${pathling.scalaVersion}:${pathling.deltaVersion}</argument>
+                    <argument>au.csiro.pathling:library-runtime:${project.version},io.delta:delta-spark_${pathling.scalaVersion}:${pathling.deltaVersion}</argument>
                     <argument>--conf</argument>
                     <argument>spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension</argument>
                     <argument>--conf</argument>

@@ -18,7 +18,7 @@ spark_dependencies <- function(spark_version, scala_version, ...) {
   sparklyr::spark_dependency(
       packages = c(
           paste0("au.csiro.pathling:library-runtime:", pathling_version()),
-          paste0("io.delta:delta-core_", spark_info$scala_version, ":", spark_info$delta_version),
+          paste0("io.delta:delta-spark_", spark_info$scala_version, ":", spark_info$delta_version),
           paste0("org.apache.hadoop:hadoop-aws:", spark_info$hadoop_version)
       )
   )

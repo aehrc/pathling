@@ -202,7 +202,7 @@ separate files distributed with the Software.
 * (Apache License, Version 2.0) Apache Commons BeanUtils (commons-beanutils:commons-beanutils:1.9.4 - https://commons.apache.org/proper/commons-beanutils/)
 * (Apache License, Version 2.0) Apache Commons IO (commons-io:commons-io:2.13.0 - https://commons.apache.org/proper/commons-io/)
 * (Apache License, Version 2.0) Commons Lang (commons-lang:commons-lang:2.6 - http://commons.apache.org/lang/)
-* (Apache License, Version 2.0) delta-core (io.delta:delta-core_2.12:2.4.0 - https://delta.io/)
+* (Apache License, Version 2.0) delta-spark (io.delta:delta-spark_2.12:3.1.0 - https://delta.io/)
 * (Apache License, Version 2.0) micrometer-registry-prometheus (io.micrometer:micrometer-registry-prometheus:1.11.3 - https://github.com/micrometer-metrics/micrometer)
 * (MIT License) Sentry SDK (io.sentry:sentry:6.6.0 - https://github.com/getsentry/sentry-java)
 * (Apache License, Version 2.0) Jakarta Bean Validation API (jakarta.validation:jakarta.validation-api:2.0.2 - https://beanvalidation.org)

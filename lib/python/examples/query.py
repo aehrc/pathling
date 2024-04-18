@@ -36,7 +36,7 @@ NDJSON_DIR_2 = os.path.join(TEMP_DIR, "ndjson")
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        f"au.csiro.pathling:library-runtime:{__java_version__},io.delta:delta-core_2.12:2.2.0",
+        f"au.csiro.pathling:library-runtime:{__java_version__},io.delta:delta-spark_2.12:3.1.0",
     )
     .config(
         "spark.sql.extensions",
