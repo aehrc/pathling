@@ -1,5 +1,7 @@
 package au.csiro.pathling.extract;
 
+import static au.csiro.pathling.utilities.Strings.randomAlias;
+import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.toList;
 
 import au.csiro.pathling.QueryExecutor;
@@ -7,11 +9,9 @@ import au.csiro.pathling.config.QueryConfiguration;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.annotations.NotImplemented;
 import au.csiro.pathling.fhirpath.parser.Parser;
-import au.csiro.pathling.fhirpath.path.Paths.This;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.query.ExpressionWithLabel;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
-import au.csiro.pathling.utilities.Strings;
 import au.csiro.pathling.view.ColumnSelection;
 import au.csiro.pathling.view.ExecutionContext;
 import au.csiro.pathling.view.GroupingSelection;
@@ -20,8 +20,11 @@ import au.csiro.pathling.view.ProjectionClause;
 import au.csiro.pathling.view.RequestedColumn;
 import au.csiro.pathling.view.UnnestingSelection;
 import ca.uhn.fhir.context.FhirContext;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
@@ -72,62 +75,25 @@ public class ExtractQueryExecutor extends QueryExecutor {
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
     final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
         dataSource);
+
+    // Build a Projection from the ExtractRequest.
     final Projection projection = buildProjection(query);
-    return projection.execute(executionContext);
-  }
 
-  @Nonnull
-  private Projection buildProjection(@Nonnull final ExtractRequest query) {
-    // Parse each column in the query into a RequestedColumn object, each containing a FhirPath and 
-    // other information such as the requested column name and type assertions.
-    final List<RequestedColumn> columns = query.getColumns().stream()
-        .map(this::parseColumn)
+    // Execute the Projection to get the result dataset.
+    Dataset<Row> result = projection.execute(executionContext);
+
+    // Rename each column in the result to match the requested column names.
+    final List<String> requestedColumnNames = query.getColumns().stream()
+        .map(ExpressionWithLabel::getLabel)
         .collect(toList());
-
-    // Build a ProjectionClause for each of the columns.
-    final List<ProjectionClause> selectionComponents = columns.stream()
-        .map((col) -> buildSelection(List.of(col)))
-        .collect(toList());
-
-    // Group the ProjectionClauses into a select.
-    final ProjectionClause selection = new GroupingSelection(selectionComponents);
-
-    // Return the final Projection object.
-    // TODO: Implement filtering.
-    return new Projection(query.getSubjectResource(), Collections.emptyList(), selection,
-        Optional.empty());
-  }
-
-  @Nonnull
-  private RequestedColumn parseColumn(@Nonnull final ExpressionWithLabel expression) {
-    final FhirPath path = parser.parse(expression.getExpression());
-
-    // If no label is provided, generate a random one.
-    final String columnName = Optional.ofNullable(expression.getLabel())
-        .orElse(Strings.randomAlias());
-
-    return new RequestedColumn(path, columnName, true, Optional.empty());
-  }
-
-  @Nonnull
-  private ProjectionClause buildSelection(@Nonnull final List<RequestedColumn> columns) {
-    if (columns.isEmpty()) {
-      throw new IllegalArgumentException("Empty column list");
-    }
-    final RequestedColumn head = columns.get(0);
-
-    // If there is only one column, we unnest it, terminating the recursion with a $this selection.
-    if (columns.size() == 1) {
-      final ColumnSelection thisSelection = new ColumnSelection(
-          List.of(new RequestedColumn(new This(), head.getName(), true,
-              Optional.empty())));
-      return new UnnestingSelection(head.getPath(), List.of(thisSelection), true);
+    final List<String> resultColumnNames = Arrays.asList(result.columns());
+    for (int i = 0; i < requestedColumnNames.size(); i++) {
+      final String requestedName = requestedColumnNames.get(i);
+      final String resultName = resultColumnNames.get(i);
+      result = result.withColumnRenamed(resultName, requestedName);
     }
 
-    // If there is more than one column, we recurse on the tail and wrap it in an unnesting.
-    final List<RequestedColumn> tail = columns.subList(1, columns.size());
-    final ProjectionClause tailProjection = buildSelection(tail);
-    return new UnnestingSelection(head.getPath(), List.of(tailProjection), true);
+    return result;
   }
 
   /**
@@ -140,7 +106,82 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
       @Nonnull final ProjectionConstraint constraint) {
+    // TODO: Implement constraint handling.
     return buildQuery(query);
+  }
+
+  @Nonnull
+  private Projection buildProjection(@Nonnull final ExtractRequest query) {
+    // Parse each column in the query into a FhirPath object.
+    final List<FhirPath> columns = query.getColumns().stream()
+        .map(expression -> parser.parse(expression.getExpression()))
+        .collect(toList());
+
+    // Build the column selection.
+    final ProjectionClause selection = buildSelectClause(columns);
+
+    // Build the filters.
+    final Optional<ProjectionClause> filters = buildFilterClause(query.getFilters());
+
+    // Return the final Projection object.
+    return new Projection(query.getSubjectResource(), Collections.emptyList(), selection, filters);
+  }
+
+  @Nonnull
+  private ProjectionClause buildSelectClause(@Nonnull final List<FhirPath> paths) {
+    if (paths.isEmpty()) {
+      throw new IllegalArgumentException("Empty column list");
+    }
+
+    // If there is only one path, and it is a reference to $this, return a simple column selection.
+    // This is the terminal state of the recursion.
+    if (paths.size() == 1 && paths.get(0).isNull()) {
+      final RequestedColumn requestedColumn = new RequestedColumn(paths.get(0),
+          randomAlias(), false, Optional.empty());
+      return new ColumnSelection(List.of(requestedColumn));
+    }
+
+    // Group the paths by their first element. We use a LinkedHashMap to preserve the order.
+    final Map<FhirPath, List<FhirPath>> groupedPaths = paths.stream()
+        .collect(groupingBy(FhirPath::first, LinkedHashMap::new, toList()));
+
+    final List<ProjectionClause> selects = groupedPaths.entrySet().stream()
+        .map(entry -> {
+          // Take the suffix of each path and build a new ProjectionClause from it. The suffix
+          // is all the components of the traversal except the first one.
+          final List<ProjectionClause> tail = entry.getValue().stream()
+              .map(FhirPath::suffix)
+              .map(path -> buildSelectClause(List.of(path)))
+              .collect(toList());
+          // Create an UnnestingSelection with a base corresponding to the group, and the 
+          // projections representing the suffixes as the components.
+          return new UnnestingSelection(entry.getKey(), tail, true);
+        })
+        .collect(toList());
+
+    // If there is more than one select, return a GroupingSelection.
+    // Otherwise, return the single select by itself.
+    return selects.size() > 1
+           ? new GroupingSelection(selects)
+           : selects.get(0);
+  }
+
+  @Nonnull
+  private Optional<ProjectionClause> buildFilterClause(@Nonnull final List<String> filters) {
+    // If there are no filters, return an empty result.
+    if (filters.isEmpty()) {
+      return Optional.empty();
+    }
+
+    // Parse each filter into a FhirPath object.
+    final List<RequestedColumn> selections = filters.stream()
+        .map(parser::parse)
+        .map(expression ->
+            new RequestedColumn(expression, randomAlias(), false, Optional.empty()))
+        .collect(toList());
+
+    // Return a ColumnSelection object containing all the filters.
+    return Optional.of(new ColumnSelection(selections));
   }
 
 }
