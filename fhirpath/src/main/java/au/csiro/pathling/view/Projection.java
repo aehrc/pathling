@@ -85,7 +85,7 @@ public class Projection {
   public Projection(@Nonnull final ResourceType subjectResource,
       @Nonnull final List<ConstantDeclaration> constants,
       @Nonnull final ProjectionClause selection,
-      final Optional<ProjectionClause> where) {
+      @Nonnull final Optional<ProjectionClause> where) {
     this(subjectResource, constants, selection, where, ProjectionConstraint.UNCONSTRAINED);
   }
 

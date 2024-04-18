@@ -73,11 +73,24 @@ public class ExtractQueryExecutor extends QueryExecutor {
   @SuppressWarnings("WeakerAccess")
   @Nonnull
   public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query) {
+    return buildQuery(query, ProjectionConstraint.UNCONSTRAINED);
+  }
+
+  /**
+   * Builds up the query for an extract request, with a constraint.
+   *
+   * @param query an {@link ExtractRequest}
+   * @param constraint a {@link ProjectionConstraint}
+   * @return an uncollected {@link Dataset}
+   */
+  @Nonnull
+  public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
+      @Nonnull final ProjectionConstraint constraint) {
     final ExecutionContext executionContext = new ExecutionContext(sparkSession, fhirContext,
         dataSource);
 
     // Build a Projection from the ExtractRequest.
-    final Projection projection = buildProjection(query);
+    final Projection projection = buildProjection(query, constraint);
 
     // Execute the Projection to get the result dataset.
     Dataset<Row> result = projection.execute(executionContext);
@@ -96,22 +109,9 @@ public class ExtractQueryExecutor extends QueryExecutor {
     return result;
   }
 
-  /**
-   * Builds up the query for an extract request, with a constraint.
-   *
-   * @param query an {@link ExtractRequest}
-   * @param constraint a {@link ProjectionConstraint}
-   * @return an uncollected {@link Dataset}
-   */
   @Nonnull
-  public Dataset<Row> buildQuery(@Nonnull final ExtractRequest query,
-      @Nonnull final ProjectionConstraint constraint) {
-    // TODO: Implement constraint handling.
-    return buildQuery(query);
-  }
-
-  @Nonnull
-  private Projection buildProjection(@Nonnull final ExtractRequest query) {
+  private Projection buildProjection(@Nonnull final ExtractRequest query,
+      final ProjectionConstraint constraint) {
     // Parse each column in the query into a FhirPath object.
     final List<FhirPath> columns = query.getColumns().stream()
         .map(expression -> parser.parse(expression.getExpression()))
@@ -124,7 +124,8 @@ public class ExtractQueryExecutor extends QueryExecutor {
     final Optional<ProjectionClause> filters = buildFilterClause(query.getFilters());
 
     // Return the final Projection object.
-    return new Projection(query.getSubjectResource(), Collections.emptyList(), selection, filters);
+    return new Projection(query.getSubjectResource(), Collections.emptyList(), selection, filters,
+        constraint);
   }
 
   @Nonnull
