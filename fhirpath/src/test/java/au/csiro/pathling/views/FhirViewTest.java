@@ -70,7 +70,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @SpringBootUnitTest
 @TestInstance(Lifecycle.PER_CLASS)
 @Slf4j
-abstract class AbstractFhirViewTestBase {
+abstract class FhirViewTest {
 
   static Path tempDir;
 
@@ -196,7 +196,7 @@ abstract class AbstractFhirViewTestBase {
   }
 
 
-  protected AbstractFhirViewTestBase(final String testLocationGlob) {
+  protected FhirViewTest(final String testLocationGlob) {
     this.testLocationGlob = testLocationGlob;
   }
 

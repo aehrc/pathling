@@ -160,11 +160,11 @@ public class FhirViewExecutor {
 
     final Stream<ProjectionClause> columnSelection;
     if (columnsPresent) {
-      // If there are columns present, parse them into a list of {@link RequestedColumn} objects.
-      final List<RequestedColumn> columnSelections = selectClause.getColumn().stream()
-          .map(this::parseColumnSelection)
+      // If there are columns present, convert them into a list of {@link RequestedColumn} objects.
+      final List<RequestedColumn> requestedColumns = selectClause.getColumn().stream()
+          .map(this::buildRequestedColumn)
           .collect(toUnmodifiableList());
-      columnSelection = Stream.of(new ColumnSelection(columnSelections));
+      columnSelection = Stream.of(new ColumnSelection(requestedColumns));
     } else {
       columnSelection = Stream.empty();
     }
@@ -199,7 +199,7 @@ public class FhirViewExecutor {
    * @return the parsed column
    */
   @Nonnull
-  private RequestedColumn parseColumnSelection(@Nonnull final Column column) {
+  private RequestedColumn buildRequestedColumn(@Nonnull final Column column) {
     // Parse the FHIRPath expression using the parser.
     final FhirPath path = parser.parse(column.getPath());
 

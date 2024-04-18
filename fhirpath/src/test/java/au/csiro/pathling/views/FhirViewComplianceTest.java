@@ -20,7 +20,7 @@ package au.csiro.pathling.views;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class FhirViewComplianceTest extends AbstractFhirViewTestBase {
+public class FhirViewComplianceTest extends FhirViewTest {
 
   @RegisterExtension
   static final Extension JSON_REPORTING_EXTENSION = new JsonReportingExtension(

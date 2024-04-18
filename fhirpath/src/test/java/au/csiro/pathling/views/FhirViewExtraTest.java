@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.views;
 
-public class FhirViewExtraTest extends AbstractFhirViewTestBase {
+public class FhirViewExtraTest extends FhirViewTest {
 
   public FhirViewExtraTest() {
     super("classpath:viewTests/*.json");

@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.views;
 
-import au.csiro.pathling.views.AbstractFhirViewTestBase.TestParameters;
+import au.csiro.pathling.views.FhirViewTest.TestParameters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -78,7 +78,7 @@ class JsonReportingExtension implements Extension, TestWatcher, AfterAllCallback
   private void addResult(final ExtensionContext context, final String result) {
     allResults.add(new TestResult(context.getDisplayName(),
         context.getStore(PARAMS_NAMESPACE)
-            .get(context.getUniqueId(), AbstractFhirViewTestBase.TestParameters.class), result));
+            .get(context.getUniqueId(), FhirViewTest.TestParameters.class), result));
   }
 
   @Override
