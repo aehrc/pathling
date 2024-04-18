@@ -17,42 +17,43 @@
 
 package au.csiro.pathling.test.assertions;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
-import au.csiro.pathling.fhirpath.literal.LiteralPath;
-import java.util.function.Function;
+import au.csiro.pathling.fhirpath.annotations.NotImplemented;
+import au.csiro.pathling.fhirpath.execution.CollectionDataset;
+import org.apache.spark.sql.catalyst.expressions.Expression;
+import org.apache.spark.sql.catalyst.expressions.Literal;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.hl7.fhir.r4.model.Coding;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author John Grimes
  */
 @SuppressWarnings("UnusedReturnValue")
+@NotImplemented
 public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAssertion> {
 
-  @Nonnull
-  private final LiteralPath fhirPath;
-
-  LiteralPathAssertion(@Nonnull final LiteralPath fhirPath) {
-    super(fhirPath);
-    this.fhirPath = fhirPath;
+  LiteralPathAssertion(@Nonnull final CollectionDataset datasetResult) {
+    super(datasetResult);
   }
 
+  //TODO: LiteralPathAssertion
+
   @Nonnull
-  public LiteralPathAssertion has(@Nullable final Object expected,
-      @Nonnull final Function<LiteralPath, Object> function) {
-    assertEquals(expected, function.apply(fhirPath));
+  public LiteralPathAssertion has(@Nullable final Object expected) {
+    // TODO: consider this implementation - we may want to evaluate the expression instead
+    final Expression maybeLiteral = result.getColumn().getValue().expr();
+    assertTrue(maybeLiteral instanceof Literal);
+    assertEquals(expected, ((Literal) maybeLiteral).value());
     return this;
   }
-
-  @Nonnull
-  public LiteralPathAssertion hasCodingValue(@Nonnull final Coding expectedCoding) {
-    assertTrue(fhirPath instanceof CodingLiteralPath);
-    final Coding actualCoding = ((CodingLiteralPath) fhirPath).getValue();
-    assertTrue(expectedCoding.equalsDeep(actualCoding));
-    return this;
-  }
+  //
+  // @Nonnull
+  // public LiteralPathAssertion hasCodingValue(@Nonnull final Coding expectedCoding) {
+  //   assertTrue(fhirPath instanceof CodingLiteralPath);
+  //   final Coding actualCoding = ((CodingLiteralPath) fhirPath).getValue();
+  //   assertTrue(expectedCoding.equalsDeep(actualCoding));
+  //   return this;
+  // }
 }

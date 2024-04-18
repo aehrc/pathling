@@ -1,0 +1,93 @@
+{
+  "title": "resourceKey and referenceKey functions",
+  "resources": [
+    {
+      "resourceType": "Observation",
+      "id": "o1",
+      "basedOn": [
+        {
+          "reference": "ServiceRequest/123"
+        },
+        {
+          "reference": "https://example.org/fhir/ServiceRequest/456"
+        },
+        {
+          "reference": "CarePlan/123"
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "title": "get resource key",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "column": [
+              {
+                "name": "id",
+                "path": "getResourceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "id": "Observation/o1"
+        }
+      ]
+    },
+    {
+      "title": "get reference key",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "forEach": "basedOn",
+            "column": [
+              {
+                "name": "rid",
+                "path": "getReferenceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "rid": "ServiceRequest/123"
+        },
+        {
+          "rid": "https://example.org/fhir/ServiceRequest/456"
+        },
+        {
+          "rid": "CarePlan/123"
+        }
+      ]
+    },
+    {
+      "title": "get reference key with resource param",
+      "view": {
+        "resource": "Observation",
+        "select": [
+          {
+            "forEach": "basedOn.where(getReferenceKey(CarePlan).exists())",
+            "column": [
+              {
+                "name": "rid",
+                "path": "getReferenceKey()"
+              }
+            ]
+          }
+        ]
+      },
+      "expect": [
+        {
+          "rid": "CarePlan/123"
+        }
+      ]
+    }
+  ]
+}

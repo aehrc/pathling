@@ -17,6 +17,14 @@
 
 package au.csiro.pathling.utilities;
 
+import static java.util.Objects.requireNonNull;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Arrays;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -24,15 +32,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Arrays;
-
-import static java.util.Objects.requireNonNull;
 
 @Slf4j
 public abstract class Datasets {
@@ -48,7 +47,7 @@ public abstract class Datasets {
   public static String writeCsv(@Nonnull final Dataset<?> result, @Nonnull final String fileUrl,
       @Nonnull final SaveMode saveMode) {
 
-    Preconditions.check(fileUrl.endsWith(".csv"), "fileUrl must have .cvs extension");
+    Preconditions.check(fileUrl.endsWith(".csv"), "fileUrl must have .csv extension");
 
     final SparkSession spark = result.sparkSession();
 

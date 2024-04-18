@@ -17,7 +17,9 @@
 
 package au.csiro.pathling.fhirpath.parser;
 
+import au.csiro.pathling.fhirpath.LegacyEvaluationContext;
 import au.csiro.pathling.fhirpath.FhirPath;
+import au.csiro.pathling.fhirpath.collection.Collection;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathLexer;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser;
 import javax.annotation.Nonnull;
@@ -35,24 +37,37 @@ import org.antlr.v4.runtime.CommonTokenStream;
 @Getter
 public class Parser {
 
-  @Nonnull
-  private final ParserContext context;
-
   /**
-   * @param context The {@link ParserContext} that this parser should use when parsing expressions
+   * Evaluates a FHIRPath expression.
+   *
+   * @param expression The String representation of the FHIRPath expression
+   * @param context An {@link LegacyEvaluationContext} that provides dependencies and context for the *
+   * evaluation of the expression
+   * @return a new {@link Collection} object
    */
-  public Parser(@Nonnull final ParserContext context) {
-    this.context = context;
+  @Nonnull
+  public Collection evaluate(@Nonnull final String expression,
+      @Nonnull final LegacyEvaluationContext context) {
+    final FhirPath fhirPath = parse(expression);
+    return fhirPath.apply(context.getInputContext(), context);
   }
+
 
   /**
    * Parses a FHIRPath expression.
    *
    * @param expression The String representation of the FHIRPath expression
-   * @return a new {@link FhirPath} object
+   * @return a new {@link Collection} object
    */
   @Nonnull
   public FhirPath parse(@Nonnull final String expression) {
+    final FhirPathParser parser = buildParser(expression);
+
+    return new Visitor().visit(parser.expression());
+  }
+
+  @Nonnull
+  static FhirPathParser buildParser(final @Nonnull String expression) {
     final FhirPathLexer lexer = new FhirPathLexer(CharStreams.fromString(expression));
     final CommonTokenStream tokens = new CommonTokenStream(lexer);
     final FhirPathParser parser = new FhirPathParser(tokens);
@@ -64,9 +79,7 @@ public class Parser {
     // an invalid request exception.
     parser.removeErrorListeners();
     parser.addErrorListener(new ParserErrorListener());
-
-    final Visitor visitor = new Visitor(context);
-    return visitor.visit(parser.expression());
+    return parser;
   }
 
 }

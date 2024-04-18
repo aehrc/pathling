@@ -24,6 +24,7 @@ import javax.validation.constraints.NotNull;
 
 /**
  * Represents configuration that controls the behaviour of query executors.
+ *
  * @author Piotr Szul
  */
 @Data
@@ -37,11 +38,10 @@ public class QueryConfiguration {
   @NotNull
   @Builder.Default
   private Boolean explainQueries = false;
-  
+
   /**
-   * This controls whether the built-in caching within Spark is used for search results. 
-   * It may be useful to turn this off for large datasets in memory-constrained
-   * environments.
+   * This controls whether the built-in caching within Spark is used for search results. It may be
+   * useful to turn this off for large datasets in memory-constrained environments.
    */
   @NotNull
   @Builder.Default

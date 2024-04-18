@@ -90,6 +90,48 @@
       "part": [
         {
           "name": "label",
+          "valueString": "Moyna"
+        },
+        {
+          "name": "label",
+          "valueString": "Mr."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Moyna') and ((name.prefix) contains 'Mr.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Arianne"
+        },
+        {
+          "name": "label",
+          "valueString": "Ms."
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Arianne') and ((name.prefix) contains 'Ms.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
           "valueString": "Karina848"
         },
         {
@@ -132,26 +174,6 @@
       "part": [
         {
           "name": "label",
-          "valueString": "Gilberto712"
-        },
-        {
-          "name": "label"
-        },
-        {
-          "name": "result",
-          "valueUnsignedInt": 1
-        },
-        {
-          "name": "drillDown",
-          "valueString": "((name.given) contains 'Gilberto712') and ((name.prefix).empty())"
-        }
-      ]
-    },
-    {
-      "name": "grouping",
-      "part": [
-        {
-          "name": "label",
           "valueString": "Guy979"
         },
         {
@@ -186,6 +208,26 @@
         {
           "name": "drillDown",
           "valueString": "((name.given) contains 'Su690') and ((name.prefix) contains 'Ms.')"
+        }
+      ]
+    },
+    {
+      "name": "grouping",
+      "part": [
+        {
+          "name": "label",
+          "valueString": "Gilberto712"
+        },
+        {
+          "name": "label"
+        },
+        {
+          "name": "result",
+          "valueUnsignedInt": 1
+        },
+        {
+          "name": "drillDown",
+          "valueString": "((name.given) contains 'Gilberto712') and ((name.prefix).empty())"
         }
       ]
     }

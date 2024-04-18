@@ -21,8 +21,9 @@ import static au.csiro.pathling.fhir.FhirServer.resourceTypeFromClass;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.encoders.FhirEncoders;
-import au.csiro.pathling.fhirpath.ResourceDefinition;
+import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
 import au.csiro.pathling.io.Database;
+import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.security.OperationAccess;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
@@ -74,7 +75,7 @@ public class SearchProvider implements IResourceProvider {
   private final SparkSession sparkSession;
 
   @Nonnull
-  private final Database database;
+  private final DataSource database;
 
   @Nonnull
   private final Optional<TerminologyServiceFactory> terminologyServiceFactory;
@@ -103,7 +104,7 @@ public class SearchProvider implements IResourceProvider {
    */
   public SearchProvider(@Nonnull final ServerConfiguration configuration,
       @Nonnull final FhirContext fhirContext, @Nonnull final SparkSession sparkSession,
-      @Nonnull final Database database,
+      @Nonnull final DataSource database,
       @Nonnull final Optional<TerminologyServiceFactory> terminologyServiceFactory,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final Class<? extends IBaseResource> resourceClass) {

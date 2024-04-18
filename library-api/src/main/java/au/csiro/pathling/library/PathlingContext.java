@@ -34,10 +34,15 @@ import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.validation.ValidationUtils;
+import au.csiro.pathling.views.ConstantDeclarationTypeAdapterFactory;
+import au.csiro.pathling.views.SelectClauseTypeAdapterFactory;
+import au.csiro.pathling.views.StrictStringTypeAdapterFactory;
 import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.Getter;
@@ -82,6 +87,10 @@ public class PathlingContext {
   @Nonnull
   private final TerminologyFunctions terminologyFunctions;
 
+  @Nonnull
+  @Getter
+  private final Gson gson;
+
   private PathlingContext(@Nonnull final SparkSession spark,
       @Nonnull final FhirEncoders fhirEncoders,
       @Nonnull final TerminologyServiceFactory terminologyServiceFactory) {
@@ -92,8 +101,17 @@ public class PathlingContext {
     this.terminologyFunctions = TerminologyFunctions.build();
     TerminologyUdfRegistrar.registerUdfs(spark, terminologyServiceFactory);
     FhirpathUDFRegistrar.registerUDFs(spark);
+    gson = buildGson();
   }
 
+  @Nonnull
+  private static Gson buildGson() {
+    final GsonBuilder builder = new GsonBuilder();
+    builder.registerTypeAdapterFactory(new SelectClauseTypeAdapterFactory());
+    builder.registerTypeAdapterFactory(new ConstantDeclarationTypeAdapterFactory());
+    builder.registerTypeAdapterFactory(new StrictStringTypeAdapterFactory());
+    return builder.create();
+  }
 
   /**
    * Gets the FhirContext for this instance.
