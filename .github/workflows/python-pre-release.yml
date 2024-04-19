@@ -9,6 +9,9 @@ on:
         description: "Pre-release identifier"
         required: true
         default: ".dev0"
+        
+env:
+  MAVEN_OPTS: --add-exports java.base/sun.nio.ch=ALL-UNNAMED
 
 jobs:
   deploy-python-pre-release:

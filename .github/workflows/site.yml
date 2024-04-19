@@ -8,6 +8,9 @@ on:
   push:
     branches:
       - main
+        
+env:
+  MAVEN_OPTS: --add-exports java.base/sun.nio.ch=ALL-UNNAMED
 
 jobs:
   deploy:
