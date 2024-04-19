@@ -20,12 +20,15 @@ package au.csiro.pathling.security;
 import au.csiro.pathling.config.ServerConfiguration;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -48,39 +51,53 @@ public class SecurityConfiguration {
 
   private final ServerConfiguration configuration;
 
+  @Autowired
+  private PathlingAuthenticationConverter authenticationConverter;
+
+  @Autowired
+  private JwtDecoder jwtDecoder;
+
   @Value("${pathling.auth.enabled}")
   private boolean authEnabled;
 
+  /**
+   * Constructs a new {@link SecurityConfiguration} object.
+   *
+   * @param configuration a {@link ServerConfiguration} object
+   */
   public SecurityConfiguration(@Nonnull final ServerConfiguration configuration) {
     this.configuration = configuration;
   }
 
+  /**
+   * Configures the security filter chain.
+   *
+   * @param http the {@link HttpSecurity} object
+   * @return the security filter chain
+   * @throws Exception if an error occurs
+   */
   @Bean
   public SecurityFilterChain securityFilterChain(@Nonnull final HttpSecurity http)
       throws Exception {
-    // Will use the bean of class CorsConfigurationSource as configuration provider.
-    http.cors();
-
     if (authEnabled) {
-      http.authorizeRequests()
-          // The following requests do not require authentication.
-          .mvcMatchers(HttpMethod.GET,
-              "/metadata",   // Server capabilities operation
-              "/OperationDefinition/**",  // GET on OperationDefinition resources
-              "/.well-known/**")          // SMART configuration endpoint
-          .permitAll()
-          // Anything else needs to be authenticated.
-          .anyRequest()
-          .authenticated()
-          .and()
-          .oauth2ResourceServer()
-          .jwt();
+      http.authorizeHttpRequests(authz -> authz
+              // The following requests do not require authentication.
+              .requestMatchers(HttpMethod.GET, "/metadata").permitAll()
+              .requestMatchers(HttpMethod.GET, "/OperationDefinition/**").permitAll()
+              .requestMatchers(HttpMethod.GET, "/.well-known/**").permitAll()
+              // Anything else needs to be authenticated.
+              .anyRequest().authenticated())
+          .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
+          .oauth2ResourceServer(oauth2 -> oauth2
+              .jwt((jwt) -> jwt
+                  .jwtAuthenticationConverter(authenticationConverter)
+                  .decoder(jwtDecoder)
+              ));
 
     } else {
-      http
+      http.authorizeHttpRequests(authz -> authz.anyRequest().permitAll())
           // Without this POST requests fail with 403 Forbidden.
-          .csrf().disable()
-          .authorizeRequests().anyRequest().permitAll();
+          .csrf(AbstractHttpConfigurer::disable);
     }
 
     return http.build();
@@ -91,7 +108,6 @@ public class SecurityConfiguration {
    *
    * @return CORS configuration source
    */
-  @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     final CorsConfiguration cors = new CorsConfiguration();
     cors.setAllowedOrigins(configuration.getCors().getAllowedOrigins());
