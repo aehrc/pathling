@@ -341,6 +341,14 @@
         <artifactId>scala-library</artifactId>
         <version>${pathling.scalaFullVersion}</version>
       </dependency>
+      <!-- This is required for Spark UI, which still has some expectations that a legacy 
+      javax.servlet API is present -->
+      <dependency>
+        <groupId>org.apache.tomcat</groupId>
+        <artifactId>tomcat-servlet-api</artifactId>
+        <version>8.5.76</version>
+        <scope>runtime</scope>
+      </dependency>
 
       <!-- HAPI FHIR -->
       <dependency>

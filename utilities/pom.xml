@@ -30,6 +30,11 @@
       <artifactId>spark-catalyst_${pathling.scalaVersion}</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-servlet-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>ca.uhn.hapi.fhir</groupId>
       <artifactId>hapi-fhir-structures-r4</artifactId>
     </dependency>

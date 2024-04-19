@@ -84,6 +84,11 @@
       <artifactId>spark-unsafe_${pathling.scalaVersion}</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.tomcat</groupId>
+      <artifactId>tomcat-servlet-api</artifactId>
+      <scope>test</scope>
+    </dependency>
 
     <!-- HAPI FHIR -->
     <dependency>
