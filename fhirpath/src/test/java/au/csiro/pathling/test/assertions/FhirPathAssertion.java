@@ -18,7 +18,7 @@
 package au.csiro.pathling.test.assertions;
 
 import au.csiro.pathling.fhirpath.FhirPath;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * @author John Grimes

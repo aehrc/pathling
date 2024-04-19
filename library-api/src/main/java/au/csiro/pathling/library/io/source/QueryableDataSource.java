@@ -20,8 +20,8 @@ import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.io.sink.DataSinkBuilder;
 import au.csiro.pathling.library.query.AggregateQuery;
 import au.csiro.pathling.library.query.ExtractQuery;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**

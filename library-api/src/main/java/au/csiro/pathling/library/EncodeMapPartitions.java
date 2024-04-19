@@ -18,11 +18,10 @@
 package au.csiro.pathling.library;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
-import ca.uhn.fhir.parser.IParser;
+import jakarta.annotation.Nonnull;
 import java.util.Iterator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import javax.annotation.Nonnull;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 

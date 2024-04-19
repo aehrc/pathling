@@ -28,9 +28,9 @@ import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import au.csiro.pathling.sql.misc.CodingToLiteral;
 import com.google.common.collect.ImmutableSet;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -98,7 +98,7 @@ public class CodingPath extends ElementPath implements Materializable<Coding>, C
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;
   }
-  
+
   @Override
   @Nonnull
   public Function<Comparable, Column> getComparison(@Nonnull final ComparisonOperation operation) {

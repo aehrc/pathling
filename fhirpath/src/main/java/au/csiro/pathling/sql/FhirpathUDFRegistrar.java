@@ -22,8 +22,8 @@ import au.csiro.pathling.sql.dates.date.DateUDFRegistrar;
 import au.csiro.pathling.sql.dates.datetime.DateTimeUDFRegistrar;
 import au.csiro.pathling.sql.dates.time.TimeUdfRegistrar;
 import au.csiro.pathling.sql.misc.MiscUDFRegistrar;
+import jakarta.annotation.Nonnull;
 import java.util.List;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 
 /**

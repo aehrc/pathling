@@ -23,6 +23,8 @@ import static org.hl7.fhir.r4.model.codesystems.ConceptMapEquivalence.RELATEDTO;
 
 import au.csiro.pathling.terminology.TerminologyService;
 import com.google.common.collect.ImmutableMap;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,8 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.AllArgsConstructor;
 import lombok.Value;
 import org.apache.commons.lang3.tuple.Pair;

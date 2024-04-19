@@ -51,8 +51,8 @@ import au.csiro.pathling.test.builders.DatasetBuilder;
 import au.csiro.pathling.test.builders.ParserContextBuilder;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -91,8 +91,9 @@ public class ParserTest extends AbstractParserTest {
 
   private void setupMockPropertiesFor_195662009_444814009() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CD_SNOMED_195662009, "child", (String)null, CD_SNOMED_40055000, CD_SNOMED_403190006)
-        .withProperty(CD_SNOMED_444814009, "child", (String)null, CD_SNOMED_284551006)
+        .withProperty(CD_SNOMED_195662009, "child", (String) null, CD_SNOMED_40055000,
+            CD_SNOMED_403190006)
+        .withProperty(CD_SNOMED_444814009, "child", (String) null, CD_SNOMED_284551006)
         .withDesignation(CD_SNOMED_195662009, CD_SNOMED_900000000000003001, "en",
             "Acute viral pharyngitis : disorder")
         .withDesignation(CD_SNOMED_444814009, CD_SNOMED_900000000000003001, "en",
@@ -836,7 +837,7 @@ public class ParserTest extends AbstractParserTest {
         .selectResult()
         .hasRows(spark, "responses/ParserTest/testQuantityAdditionWithOverflow_code.csv");
   }
-  
+
   @Test
   void testResolutionOfExtensionReference() {
     mockResource(ResourceType.PATIENT, ResourceType.ENCOUNTER, ResourceType.GOAL);

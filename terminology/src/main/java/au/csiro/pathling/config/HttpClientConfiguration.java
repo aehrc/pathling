@@ -20,7 +20,6 @@ package au.csiro.pathling.config;
 import java.io.Serializable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
-import javax.annotation.Nullable;
 import lombok.Builder;
 import lombok.Data;
 

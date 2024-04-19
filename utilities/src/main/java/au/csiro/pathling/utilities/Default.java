@@ -19,8 +19,8 @@ package au.csiro.pathling.utilities;
 
 import static java.util.Objects.isNull;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 
 /**
  * Represents a default value of type T. Simplifies resolution of values where null represents the

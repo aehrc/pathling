@@ -17,8 +17,8 @@
 
 package au.csiro.pathling.terminology;
 
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.protocol.HttpContext;

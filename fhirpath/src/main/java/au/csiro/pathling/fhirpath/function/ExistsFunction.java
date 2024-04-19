@@ -24,8 +24,8 @@ import static org.apache.spark.sql.functions.not;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.BooleanPath;
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**
@@ -58,7 +58,7 @@ public class ExistsFunction implements NamedFunction {
       final FhirPath argument = input.getArguments().get(0);
       checkUserInput(argument.isSingular() && argument instanceof BooleanPath,
           "Argument to exists function must be a singular Boolean: " + argument.getExpression());
-      
+
       // If there is an argument, first invoke the `where` function.
       final NonLiteralPath whereResult = (NonLiteralPath) new WhereFunction().invoke(input);
       // Then invoke the `exists` function on the result, with no arguments.

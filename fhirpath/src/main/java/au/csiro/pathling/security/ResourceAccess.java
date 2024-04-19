@@ -18,14 +18,14 @@
 package au.csiro.pathling.security;
 
 
-import lombok.Getter;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import lombok.Getter;
 
 /**
  * Identifies methods that implement access to underlying Resources.

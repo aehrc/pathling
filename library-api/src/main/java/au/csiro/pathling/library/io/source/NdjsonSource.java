@@ -19,12 +19,12 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.FhirMimeTypes;
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 
 /**

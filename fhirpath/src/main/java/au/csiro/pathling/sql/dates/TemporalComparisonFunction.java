@@ -18,8 +18,8 @@
 package au.csiro.pathling.sql.dates;
 
 import au.csiro.pathling.sql.udf.SqlFunction2;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 

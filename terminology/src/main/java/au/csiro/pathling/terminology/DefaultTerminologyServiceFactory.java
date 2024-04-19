@@ -28,7 +28,7 @@ import au.csiro.pathling.terminology.caching.PersistentCachingTerminologyService
 import au.csiro.pathling.utilities.ObjectHolder;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;

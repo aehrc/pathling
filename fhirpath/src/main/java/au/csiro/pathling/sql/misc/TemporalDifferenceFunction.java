@@ -20,6 +20,8 @@ package au.csiro.pathling.sql.misc;
 import au.csiro.pathling.errors.InvalidUserInputError;
 import au.csiro.pathling.sql.udf.SqlFunction3;
 import com.google.common.collect.ImmutableMap;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -27,8 +29,6 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalUnit;
 import java.util.Map;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;
 

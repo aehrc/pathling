@@ -19,9 +19,9 @@ package au.csiro.pathling.io;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import au.csiro.pathling.errors.SecurityError;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.annotation.Profile;

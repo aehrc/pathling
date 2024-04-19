@@ -19,7 +19,7 @@ package au.csiro.pathling.async;
 
 import ca.uhn.fhir.rest.api.Constants;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseOperationOutcome;
 
 /**

@@ -25,12 +25,12 @@ import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.NonLiteralPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import com.google.common.collect.ImmutableMap;
+import jakarta.annotation.Nonnull;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -104,7 +104,7 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
 
   @Nonnull
   protected final Optional<String> expression;
-  
+
   private LiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
       @Nonnull final ValueType value, @Nonnull final Optional<String> expression) {
     this.idColumn = idColumn;

@@ -18,8 +18,8 @@
 package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
-import javax.annotation.Nonnull;
 
 /**
  * A class for making FHIR data in Parquet format available for query. It is assumed that the schema

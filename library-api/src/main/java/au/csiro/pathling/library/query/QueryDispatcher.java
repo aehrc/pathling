@@ -21,7 +21,7 @@ import au.csiro.pathling.aggregate.AggregateQueryExecutor;
 import au.csiro.pathling.aggregate.AggregateRequest;
 import au.csiro.pathling.extract.ExtractQueryExecutor;
 import au.csiro.pathling.extract.ExtractRequest;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 

@@ -28,7 +28,7 @@ import au.csiro.pathling.test.SharedMocks;
 import au.csiro.pathling.test.stubs.TestTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;
@@ -72,12 +72,12 @@ public class UnitTestDependencies {
         .master("local[1]")
         .appName("pathling-unittest")
         .config("spark.default.parallelism", 1)
-        .config("spark.driver.bindAddress","localhost")
-        .config("spark.driver.host","localhost")
+        .config("spark.driver.bindAddress", "localhost")
+        .config("spark.driver.host", "localhost")
         .config("spark.sql.shuffle.partitions", 1)
         .config("spark.sql.debug.maxToStringFields", 100)
         .config("spark.network.timeout", "600s")
-        .config("spark.ui.enabled",false)
+        .config("spark.ui.enabled", false)
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
         .config("spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog")

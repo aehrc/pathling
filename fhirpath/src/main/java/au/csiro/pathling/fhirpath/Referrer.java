@@ -20,7 +20,7 @@ package au.csiro.pathling.fhirpath;
 import static org.apache.spark.sql.functions.concat;
 import static org.apache.spark.sql.functions.lit;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

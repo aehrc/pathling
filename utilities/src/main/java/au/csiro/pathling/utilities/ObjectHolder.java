@@ -21,11 +21,11 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.io.IOUtils.closeQuietly;
 
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.Closeable;
 import java.io.Serializable;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.hadoop.util.ShutdownHookManager;
 
 /**

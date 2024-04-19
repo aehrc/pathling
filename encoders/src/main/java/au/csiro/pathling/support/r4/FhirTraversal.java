@@ -23,9 +23,9 @@
 
 package au.csiro.pathling.support.r4;
 
+import jakarta.annotation.Nonnull;
 import java.util.Objects;
 import java.util.function.Consumer;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Base;
 
 /**

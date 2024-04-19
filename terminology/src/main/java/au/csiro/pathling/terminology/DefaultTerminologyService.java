@@ -34,8 +34,8 @@ import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 
@@ -52,7 +52,7 @@ public class DefaultTerminologyService extends BaseTerminologyService {
       @Nonnull final Closeable... resourcesToClose) {
     super(terminologyClient, resourcesToClose);
   }
-  
+
   @Override
   public boolean validateCode(@Nonnull final String valueSetUrl, @Nonnull final Coding coding) {
     final ValidateCodeParameters parameters = new ValidateCodeParameters(valueSetUrl,

@@ -26,8 +26,8 @@ import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.operator.BooleanOperator.BooleanOperatorType;
 import au.csiro.pathling.fhirpath.operator.MembershipOperator.MembershipOperatorType;
 import com.google.common.collect.ImmutableMap;
+import jakarta.annotation.Nonnull;
 import java.util.Map;
-import javax.annotation.Nonnull;
 
 /**
  * Represents a binary operator in FHIRPath.

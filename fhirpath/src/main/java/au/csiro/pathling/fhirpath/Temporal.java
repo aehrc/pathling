@@ -20,9 +20,9 @@ package au.csiro.pathling.fhirpath;
 import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -40,8 +40,8 @@ public interface Temporal {
   /**
    * Gets a function that can take the {@link QuantityLiteralPath} representing a time duration and
    * return a {@link FhirPath} that contains the result of date arithmetic operation for this path
-   * and the provided duration. The type of operation is controlled by supplying a {@link
-   * MathOperation}.
+   * and the provided duration. The type of operation is controlled by supplying a
+   * {@link MathOperation}.
    *
    * @param operation The {@link MathOperation} type to retrieve a result for
    * @param dataset The {@link Dataset} to use within the result

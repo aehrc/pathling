@@ -17,14 +17,16 @@
 
 package au.csiro.pathling.config;
 
+import static java.util.Objects.nonNull;
+
 import au.csiro.pathling.config.HttpClientCachingConfiguration.ValidHttpCacheConfiguration;
+import jakarta.annotation.Nullable;
 import java.io.Serializable;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import javax.annotation.Nullable;
 import javax.validation.Constraint;
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
@@ -33,8 +35,6 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
-
-import static java.util.Objects.nonNull;
 
 /**
  * Configuration relating to the caching of terminology requests.

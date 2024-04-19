@@ -30,9 +30,9 @@ import au.csiro.pathling.fhirpath.function.NamedFunctionInput;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
 import au.csiro.pathling.sql.udf.PropertyUdf;
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -70,7 +70,7 @@ public class PropertyFunction implements NamedFunction {
     final Dataset<Row> dataset = inputPath.getDataset();
     final Column propertyValues = property_of(inputPath.getValueColumn(), propertyCode,
         propertyType, preferredLanguage.map(StringType::getValue).orElse(null));
-    
+
     // // The result is an array of property values per each input element, which we now
     // // need to explode in the same way as for path traversal, creating unique element ids.
     final MutablePair<Column, Column> valueAndEidColumns = new MutablePair<>();

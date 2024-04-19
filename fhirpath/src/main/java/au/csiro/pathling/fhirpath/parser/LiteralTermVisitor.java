@@ -42,10 +42,9 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.NumberLiteralC
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.QuantityLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.StringLiteralContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TimeLiteralContext;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.text.ParseException;
-import java.util.Objects;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.fhir.ucum.UcumException;
 

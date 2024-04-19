@@ -30,8 +30,8 @@ import au.csiro.pathling.fhirpath.operator.OperatorInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalInput;
 import au.csiro.pathling.fhirpath.operator.PathTraversalOperator;
 import au.csiro.pathling.fhirpath.parser.ParserContext;
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
-import javax.annotation.Nonnull;
 
 /**
  * A function that returns the extensions of the current element that match a given url.

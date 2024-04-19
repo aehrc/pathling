@@ -17,7 +17,7 @@
 
 package au.csiro.pathling.config;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;

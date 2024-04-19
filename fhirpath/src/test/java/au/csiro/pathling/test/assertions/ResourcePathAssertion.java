@@ -20,7 +20,7 @@ package au.csiro.pathling.test.assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.fhirpath.ResourcePath;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**

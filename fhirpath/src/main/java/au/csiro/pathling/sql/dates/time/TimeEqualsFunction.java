@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.sql.dates.time;
 
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.time.LocalTime;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Determines the equality of two times.

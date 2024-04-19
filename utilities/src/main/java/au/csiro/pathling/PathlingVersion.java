@@ -6,11 +6,11 @@
 
 package au.csiro.pathling;
 
+import jakarta.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.Properties;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 
 /**

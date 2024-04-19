@@ -20,10 +20,10 @@ package au.csiro.pathling.sql.dates.datetime;
 import au.csiro.pathling.sql.dates.TemporalComparisonFunction;
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum;
 import ca.uhn.fhir.parser.DataFormatException;
+import jakarta.annotation.Nullable;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Date;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.DateTimeType;
 
 /**

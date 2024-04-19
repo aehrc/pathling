@@ -17,10 +17,9 @@
 
 package au.csiro.pathling.async;
 
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.Future;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 import lombok.ToString;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -41,7 +40,7 @@ public class Job {
   public interface JobTag {
 
   }
-  
+
   @Nonnull
   final String id;
 

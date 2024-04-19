@@ -1,6 +1,6 @@
 package au.csiro.pathling.fhirpath.literal;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 public abstract class StringLiteral {
 

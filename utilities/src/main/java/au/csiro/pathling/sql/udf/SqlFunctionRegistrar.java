@@ -1,9 +1,9 @@
 package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.spark.SparkConfigurer;
-import org.apache.spark.sql.SparkSession;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.util.List;
+import org.apache.spark.sql.SparkSession;
 
 /**
  * A spark configurer that registers user defined functions in the sessions.

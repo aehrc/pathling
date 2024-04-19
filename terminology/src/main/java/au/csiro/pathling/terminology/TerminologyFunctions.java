@@ -20,8 +20,8 @@ package au.csiro.pathling.terminology;
 import static au.csiro.pathling.sql.TerminologySupport.parseCsvEquivalences;
 
 import au.csiro.pathling.sql.Terminology;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

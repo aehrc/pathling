@@ -20,7 +20,7 @@ package au.csiro.pathling.test.stubs;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SharedMocks;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 public class TestTerminologyServiceFactory implements TerminologyServiceFactory {
 

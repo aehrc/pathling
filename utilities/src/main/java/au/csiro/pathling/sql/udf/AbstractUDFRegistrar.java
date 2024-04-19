@@ -18,7 +18,7 @@
 package au.csiro.pathling.sql.udf;
 
 import au.csiro.pathling.spark.SparkConfigurer;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.UDFRegistration;
 

@@ -28,9 +28,9 @@ import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import com.google.common.collect.ImmutableSet;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -151,8 +151,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
    * @param operation The type of {@link au.csiro.pathling.fhirpath.Numeric.MathOperation}
    * @param expression The FHIRPath expression to use in the result
    * @param dataset The {@link Dataset} to use in the result
-   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a {@link
-   * NonLiteralPath}
+   * @return A {@link Function} that takes a {@link Numeric} as a parameter, and returns a
+   * {@link NonLiteralPath}
    */
   @Nonnull
   public static Function<Numeric, NonLiteralPath> buildMathOperation(@Nonnull final Numeric source,

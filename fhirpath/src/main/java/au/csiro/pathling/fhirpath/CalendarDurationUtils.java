@@ -20,12 +20,12 @@ package au.csiro.pathling.fhirpath;
 import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 
 import com.google.common.collect.ImmutableMap;
+import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Quantity;
 
 /**

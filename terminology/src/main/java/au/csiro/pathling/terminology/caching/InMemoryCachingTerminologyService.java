@@ -19,8 +19,8 @@ package au.csiro.pathling.terminology.caching;
 
 import au.csiro.pathling.config.HttpClientCachingConfiguration;
 import au.csiro.pathling.fhir.TerminologyClient;
+import jakarta.annotation.Nonnull;
 import java.io.Closeable;
-import javax.annotation.Nonnull;
 import org.infinispan.Cache;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.configuration.cache.ConfigurationBuilder;

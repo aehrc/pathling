@@ -22,7 +22,7 @@ import static au.csiro.pathling.utilities.Preconditions.checkUserInput;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.ResourcePath;
 import au.csiro.pathling.fhirpath.UntypedResourcePath;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * A function filters items in the input collection to only those that are of the given type.
@@ -52,7 +52,8 @@ public class OfTypeFunction implements NamedFunction {
         "Argument to ofType function must be a resource type: " + argumentPath.getExpression());
     final ResourcePath resourcePath = (ResourcePath) argumentPath;
 
-    return ResolveFunction.resolveMonomorphicReference(inputPath, input.getContext().getDataSource(),
+    return ResolveFunction.resolveMonomorphicReference(inputPath,
+        input.getContext().getDataSource(),
         input.getContext().getFhirContext(), resourcePath.getResourceType(), expression,
         input.getContext());
   }

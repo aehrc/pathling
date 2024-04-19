@@ -17,7 +17,6 @@
 
 package au.csiro.pathling.fhirpath.literal;
 
-import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathString;
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.toLiteral;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 import static org.apache.spark.sql.functions.lit;
@@ -26,9 +25,9 @@ import au.csiro.pathling.fhirpath.Comparable;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.element.StringPath;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;

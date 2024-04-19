@@ -22,7 +22,7 @@ import static au.csiro.pathling.io.FileSystemPersistence.departitionResult;
 import static au.csiro.pathling.io.FileSystemPersistence.getFileSystem;
 
 import au.csiro.pathling.config.ServerConfiguration;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.sql.Dataset;

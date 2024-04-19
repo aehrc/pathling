@@ -21,13 +21,13 @@ import static au.csiro.pathling.fhirpath.literal.StringLiteral.escapeFhirPathStr
 import static au.csiro.pathling.fhirpath.literal.StringLiteral.unescapeFhirPathString;
 import static au.csiro.pathling.utilities.Strings.unSingleQuote;
 
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Coding;
 
 /**

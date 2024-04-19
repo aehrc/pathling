@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.jmh;
 
-import org.springframework.test.context.TestContextManager;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.test.context.TestContextManager;
 
 /**
  * This class hijacks the mechanism that SpringBoot uses for auto wiring of SpringBootTests.

@@ -21,12 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import au.csiro.pathling.async.SparkListener;
 import au.csiro.pathling.config.ServerConfiguration;
+import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
-import javax.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

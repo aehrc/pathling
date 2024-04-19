@@ -17,10 +17,10 @@
 
 package au.csiro.pathling.utilities;
 
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 /**
  * Utility class containing some List helper functions.
@@ -54,5 +54,5 @@ public abstract class Lists {
   public static List<String> normalizeEmpty(@Nonnull final Optional<List<String>> maybeList) {
     return maybeList.orElse(Collections.emptyList());
   }
-  
+
 }

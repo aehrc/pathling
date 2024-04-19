@@ -18,8 +18,8 @@
 package au.csiro.pathling.library;
 
 import ca.uhn.fhir.context.FhirVersionEnum;
+import jakarta.annotation.Nonnull;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 
 class EncodeResourceMapPartitions<T extends IBaseResource> extends

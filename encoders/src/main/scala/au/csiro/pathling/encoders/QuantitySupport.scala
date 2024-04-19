@@ -26,11 +26,9 @@ package au.csiro.pathling.encoders
 import au.csiro.pathling.encoders.terminology.ucum.Ucum
 import au.csiro.pathling.sql.types.FlexiDecimal
 import au.csiro.pathling.sql.types.FlexiDecimalSupport.createFlexiDecimalSerializer
-import org.apache.spark.sql.Column
+import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
-import org.apache.spark.sql.catalyst.expressions.{CreateNamedStruct, Expression, If, IsNull, Literal}
-import org.apache.spark.sql.functions.{lit, struct}
-import org.apache.spark.sql.types.{DataTypes, Decimal, DecimalType, ObjectType, StructField}
+import org.apache.spark.sql.types.{DataTypes, ObjectType, StructField}
 import org.apache.spark.unsafe.types.UTF8String
 
 /**

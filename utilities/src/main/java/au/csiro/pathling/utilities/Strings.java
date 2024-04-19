@@ -8,6 +8,7 @@ package au.csiro.pathling.utilities;
 
 import static java.util.function.Predicate.not;
 
+import jakarta.annotation.Nonnull;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
@@ -15,7 +16,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 
 /**
  * Utility class containing some methods for string wrangling.

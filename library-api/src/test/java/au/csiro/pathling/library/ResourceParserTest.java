@@ -17,9 +17,12 @@
 
 package au.csiro.pathling.library;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import ca.uhn.fhir.context.FhirVersionEnum;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import java.io.IOException;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Claim;
 import org.hl7.fhir.r4.model.Condition;
@@ -27,9 +30,6 @@ import org.hl7.fhir.r4.model.Patient;
 import org.hl7.fhir.r4.model.Reference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ResourceParserTest {
 

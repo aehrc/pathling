@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.security;
 
+import au.csiro.pathling.security.ResourceAccess.AccessType;
+import jakarta.annotation.Nonnull;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -24,8 +26,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
-import au.csiro.pathling.security.ResourceAccess.AccessType;
 import lombok.Getter;
 import lombok.Value;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;

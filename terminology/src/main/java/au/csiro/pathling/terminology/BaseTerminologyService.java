@@ -20,9 +20,9 @@ package au.csiro.pathling.terminology;
 import au.csiro.pathling.fhir.TerminologyClient;
 import au.csiro.pathling.utilities.ResourceCloser;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.Closeable;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Common functionality for all implementations of {@link TerminologyService}.

@@ -39,9 +39,8 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.PolarityExpres
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TermExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TypeExpressionContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.UnionExpressionContext;
-import java.util.Objects;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 /**

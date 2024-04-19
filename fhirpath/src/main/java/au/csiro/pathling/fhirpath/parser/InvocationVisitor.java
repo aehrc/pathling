@@ -35,11 +35,11 @@ import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.MemberInvocati
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ParamListContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.ThisInvocationContext;
 import au.csiro.pathling.fhirpath.parser.generated.FhirPathParser.TotalInvocationContext;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.apache.spark.sql.Column;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;

@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.config;
 
+import java.util.List;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
-import java.util.List;
 
 /**
  * Represents configuration relating to asynchronous processing.

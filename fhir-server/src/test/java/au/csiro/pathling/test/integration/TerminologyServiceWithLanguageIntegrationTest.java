@@ -19,13 +19,11 @@ package au.csiro.pathling.test.integration;
 
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_29463_7;
 import static au.csiro.pathling.test.helpers.TerminologyHelpers.LC_55915_3;
-import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.proxyAllTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import au.csiro.pathling.io.CacheableDatabase;
-import au.csiro.pathling.terminology.DefaultTerminologyService;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyService;
 import au.csiro.pathling.terminology.TerminologyService.Property;
@@ -42,7 +40,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;

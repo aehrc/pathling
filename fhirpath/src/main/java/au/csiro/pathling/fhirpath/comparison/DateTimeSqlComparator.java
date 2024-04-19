@@ -27,8 +27,8 @@ import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeGreaterThanOrEqualToFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanFunction;
 import au.csiro.pathling.sql.dates.datetime.DateTimeLessThanOrEqualToFunction;
+import jakarta.annotation.Nonnull;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 
 /**

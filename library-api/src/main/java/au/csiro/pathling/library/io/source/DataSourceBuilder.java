@@ -21,10 +21,10 @@ import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toSet;
 
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Set;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**

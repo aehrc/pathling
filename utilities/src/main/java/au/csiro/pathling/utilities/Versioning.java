@@ -6,7 +6,7 @@
 
 package au.csiro.pathling.utilities;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * @author John Grimes

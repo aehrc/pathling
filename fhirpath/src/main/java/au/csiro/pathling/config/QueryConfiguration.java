@@ -17,10 +17,9 @@
 
 package au.csiro.pathling.config;
 
+import javax.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
-
-import javax.validation.constraints.NotNull;
 
 /**
  * Represents configuration that controls the behaviour of query executors.

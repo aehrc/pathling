@@ -19,7 +19,7 @@ package au.csiro.pathling.library.io.source;
 
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.library.PathlingContext;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * A class for making FHIR data in a Delta database available for query.

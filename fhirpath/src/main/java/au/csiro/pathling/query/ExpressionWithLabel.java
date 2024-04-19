@@ -20,12 +20,12 @@ package au.csiro.pathling.query;
 import static au.csiro.pathling.utilities.Preconditions.requireNonBlank;
 import static java.util.Objects.nonNull;
 
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import lombok.Value;
 
 @Value
@@ -84,7 +84,7 @@ public class ExpressionWithLabel {
     return expressionWithLabels.stream().map(ExpressionWithLabel::getLabel)
         .map(Optional::ofNullable);
   }
-  
+
   /**
    * Returns a list of {@link ExpressionWithLabel} objects, where each expression has no label.
    *
@@ -92,7 +92,8 @@ public class ExpressionWithLabel {
    * @return a list of {@link ExpressionWithLabel} objects
    */
   @Nonnull
-  public static List<ExpressionWithLabel> fromUnlabelledExpressions(@Nonnull final List<String> expressions) {
+  public static List<ExpressionWithLabel> fromUnlabelledExpressions(
+      @Nonnull final List<String> expressions) {
     return expressions.stream().map(ExpressionWithLabel::withNoLabel)
         .collect(Collectors.toUnmodifiableList());
   }

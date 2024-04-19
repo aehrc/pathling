@@ -38,7 +38,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 
@@ -72,7 +72,7 @@ class SentryTest extends WireMockTest {
         null);
     final ResponseEntity<String> response = restTemplate
         .exchange(uri, HttpMethod.GET, RequestEntity.get(uri).build(), String.class);
-    final HttpStatus statusCode = response.getStatusCode();
+    final HttpStatusCode statusCode = response.getStatusCode();
     assertTrue(statusCode.is5xxServerError());
 
     // Give the asynchronous request sender within Sentry time to actually send the error report.

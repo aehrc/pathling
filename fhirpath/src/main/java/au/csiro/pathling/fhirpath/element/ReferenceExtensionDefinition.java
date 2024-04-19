@@ -18,8 +18,8 @@
 package au.csiro.pathling.fhirpath.element;
 
 import ca.uhn.fhir.context.BaseRuntimeChildDefinition;
+import jakarta.annotation.Nonnull;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**

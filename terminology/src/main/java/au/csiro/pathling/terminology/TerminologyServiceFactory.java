@@ -18,7 +18,7 @@
 package au.csiro.pathling.terminology;
 
 import java.io.Serializable;
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /**
  * Represents something that creates a {@link TerminologyService}.

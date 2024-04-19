@@ -20,7 +20,7 @@ package au.csiro.pathling.sql.misc;
 import au.csiro.pathling.fhirpath.encoding.CodingEncoding;
 import au.csiro.pathling.fhirpath.literal.CodingLiteral;
 import au.csiro.pathling.sql.udf.SqlFunction1;
-import javax.annotation.Nullable;
+import jakarta.annotation.Nullable;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.types.DataType;
 import org.apache.spark.sql.types.DataTypes;

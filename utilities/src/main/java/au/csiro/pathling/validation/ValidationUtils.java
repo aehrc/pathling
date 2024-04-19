@@ -1,18 +1,17 @@
 package au.csiro.pathling.validation;
 
-import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
-
 import static java.util.Objects.nonNull;
 
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
+import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 
 /**
  * Utility classes to facilitate JRS-380 based validation

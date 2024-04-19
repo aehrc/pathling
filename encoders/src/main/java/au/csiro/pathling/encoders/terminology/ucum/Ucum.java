@@ -23,19 +23,15 @@
 
 package au.csiro.pathling.encoders.terminology.ucum;
 
-import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import au.csiro.pathling.sql.types.FlexiDecimal;
 import org.fhir.ucum.Decimal;
 import org.fhir.ucum.Pair;
 import org.fhir.ucum.UcumEssenceService;
 import org.fhir.ucum.UcumException;
 import org.fhir.ucum.UcumService;
-import org.hl7.fhir.r4.model.DecimalType;
 
 /**
  * Makes UCUM services available to the rest of the application.

@@ -17,8 +17,8 @@
 
 package org.springframework.security.oauth2.jwt;
 
+import jakarta.annotation.Nonnull;
 import java.util.Map;
-import javax.annotation.Nonnull;
 
 /**
  * Provides access to functionality within the package-private

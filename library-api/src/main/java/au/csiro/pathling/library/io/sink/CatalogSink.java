@@ -20,8 +20,8 @@ package au.csiro.pathling.library.io.sink;
 import au.csiro.pathling.io.Database;
 import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.library.PathlingContext;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
-import javax.annotation.Nonnull;
 
 public class CatalogSink extends DatabaseSink {
 

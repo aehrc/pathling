@@ -19,10 +19,10 @@ package au.csiro.pathling.fhirpath.element;
 
 import au.csiro.pathling.fhirpath.Referrer;
 import au.csiro.pathling.fhirpath.ResourcePath;
+import jakarta.annotation.Nonnull;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
-import javax.annotation.Nonnull;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;

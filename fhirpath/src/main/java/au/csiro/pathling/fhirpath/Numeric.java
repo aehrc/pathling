@@ -17,9 +17,9 @@
 
 package au.csiro.pathling.fhirpath;
 
+import jakarta.annotation.Nonnull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import javax.annotation.Nonnull;
 import lombok.Getter;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;

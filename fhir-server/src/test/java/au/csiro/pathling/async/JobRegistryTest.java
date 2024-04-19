@@ -17,17 +17,16 @@
 
 package au.csiro.pathling.async;
 
-import au.csiro.pathling.async.Job.JobTag;
-import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.mockito.Mockito.mock;
 
-import javax.annotation.Nonnull;
+import au.csiro.pathling.async.Job.JobTag;
+import jakarta.annotation.Nonnull;
 import java.util.Optional;
 import java.util.concurrent.Future;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.junit.jupiter.api.Test;
 
 class JobRegistryTest {
 
