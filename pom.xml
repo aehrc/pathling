@@ -90,8 +90,6 @@
     <pathling.infinispanVersion>14.0.21.Final</pathling.infinispanVersion>
     <pathling.jacksonVersion>2.15.3</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.39.1</pathling.jerseyVersion>
-    <pathling.slf4jVersion>1.7.36</pathling.slf4jVersion>
-    <pathling.logbackVersion>1.2.11</pathling.logbackVersion>
     <pathling.surefireVersion>3.1.2</pathling.surefireVersion>
   </properties>
 
@@ -379,6 +377,10 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>*</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>*</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -573,36 +575,6 @@
         <version>${pathling.infinispanVersion}</version>
         <type>pom</type>
         <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-api</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>log4j-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jcl-over-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.slf4j</groupId>
-        <artifactId>jul-to-slf4j</artifactId>
-        <version>${pathling.slf4jVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>${pathling.logbackVersion}</version>
-      </dependency>
-      <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-core</artifactId>
-        <version>${pathling.logbackVersion}</version>
       </dependency>
 
       <!-- CVE-2022-42889-->
