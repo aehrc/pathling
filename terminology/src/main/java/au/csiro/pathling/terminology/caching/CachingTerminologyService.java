@@ -39,6 +39,7 @@ import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.gclient.IOperationUntypedWithInput;
 import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
+import jakarta.ws.rs.core.CacheControl;
 import java.io.Closeable;
 import java.io.Serializable;
 import java.time.Instant;
@@ -49,7 +50,6 @@ import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.ws.rs.core.CacheControl;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.codesystems.ConceptSubsumptionOutcome;
 import org.infinispan.Cache;
@@ -141,7 +141,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   public List<PropertyOrDesignation> lookup(@Nonnull final Coding coding,
       @Nullable final String property, @Nullable final String acceptLanguage) {
     final LookupParameters parameters = new LookupParameters(ImmutableCoding.of(coding), property,
-            acceptLanguage);
+        acceptLanguage);
     final LookupExecutor executor = new LookupExecutor(terminologyClient, parameters);
     return getFromCache(lookupCache, parameters, executor);
   }

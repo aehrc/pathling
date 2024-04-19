@@ -79,7 +79,7 @@
     <!-- Hadoop is currently pinned to 3.3.4 because of this vulnerability: CVE-2022-26612 -->
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
-    <pathling.hapiFhirVersion>6.10.0</pathling.hapiFhirVersion>
+    <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
     <pathling.springBootVersion>2.7.18</pathling.springBootVersion>
     <pathling.springSecurityVersion>5.7.10</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
@@ -685,8 +685,8 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.11.0</version>
           <configuration>
-            <source>11</source>
-            <target>11</target>
+            <source>17</source>
+            <target>17</target>
             <compilerArgs>
               <arg>-Xlint:all</arg>
             </compilerArgs>
@@ -714,8 +714,8 @@
             </execution>
           </executions>
           <configuration>
-            <source>11</source>
-            <target>11</target>
+            <source>17</source>
+            <target>17</target>
             <args>
               <arg>-feature</arg>
             </args>
@@ -837,7 +837,7 @@
             <dependencySourceExcludes>
               <exclude>au.csiro.pathling:encoders</exclude>
             </dependencySourceExcludes>
-            <source>11</source>
+            <source>17</source>
             <links>
               <link>https://spark.apache.org/docs/latest/api/java/</link>
               <link>https://hapifhir.io/hapi-fhir/apidocs/hapi-fhir-base/</link>

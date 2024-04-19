@@ -6,7 +6,7 @@ description: Instructions for installing the Pathling library on a Databricks cl
 # Databricks installation
 
 Pathling has been tested
-on [Databricks Runtime 13.3 LTS](https://docs.databricks.com/en/release-notes/runtime/13.3lts.html).
+on [Databricks Runtime 14.3 LTS](https://docs.databricks.com/en/release-notes/runtime/14.3lts.html).
 
 To install the Pathling library on a [Databricks](https://www.databricks.com/)
 cluster, navigate to the "Compute" section and click on the cluster. Click on
@@ -30,9 +30,9 @@ information.
 ## Environment variables
 
 By default, Databricks uses Java 8 within its clusters, while Pathling requires
-Java 11. To enable Java 11 support within your cluster, navigate to __Advanced
+Java 17. To enable Java 17 support within your cluster, navigate to __Advanced
 Options > Spark > Environment Variables__ and add the following:
 
 ```bash
-JNAME=zulu11-ca-amd64
+JNAME=zulu17-ca-amd64
 ```

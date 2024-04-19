@@ -30,7 +30,7 @@ Your branch should be named `issue/[GitHub issue #]`.
 
 You will need the following software to build the solution:
 
-* Java 11
+* Java 17
 * Maven 3+
 * Node.js 19.x
 * Python 3.7+
