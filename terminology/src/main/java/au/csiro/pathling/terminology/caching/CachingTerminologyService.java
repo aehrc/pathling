@@ -42,6 +42,8 @@ import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.ws.rs.core.CacheControl;
+import jakarta.ws.rs.ext.RuntimeDelegate;
+import jakarta.ws.rs.ext.RuntimeDelegate.HeaderDelegate;
 import java.io.Closeable;
 import java.io.Serializable;
 import java.time.Instant;
@@ -63,13 +65,13 @@ import org.infinispan.manager.EmbeddedCacheManager;
  */
 public abstract class CachingTerminologyService extends BaseTerminologyService {
 
-  public static final String VALIDATE_CODE_CACHE_NAME = "validate-code";
-  public static final String SUBSUMES_CACHE_NAME = "subsumes";
-  public static final String TRANSLATE_CACHE_NAME = "translate";
-  public static final String LOOKUP_CACHE_NAME = "lookup";
-  public static final String ETAG_HEADER_NAME = "etag";
-  public static final String IF_NONE_MATCH_HEADER_NAME = "if-none-match";
-  public static final String CACHE_CONTROL_HEADER_NAME = "cache-control";
+  private static final String VALIDATE_CODE_CACHE_NAME = "validate-code";
+  private static final String SUBSUMES_CACHE_NAME = "subsumes";
+  private static final String TRANSLATE_CACHE_NAME = "translate";
+  private static final String LOOKUP_CACHE_NAME = "lookup";
+  private static final String ETAG_HEADER_NAME = "etag";
+  private static final String IF_NONE_MATCH_HEADER_NAME = "if-none-match";
+  private static final String CACHE_CONTROL_HEADER_NAME = "cache-control";
 
   @Nonnull
   protected final HttpClientCachingConfiguration configuration;
@@ -89,6 +91,11 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
   @Nonnull
   protected final Cache<Integer, TerminologyResult<ArrayList<PropertyOrDesignation>>> lookupCache;
 
+  /**
+   * @param terminologyClient The terminology client to cache results from
+   * @param configuration The caching configuration for the HTTP client
+   * @param resourcesToClose Any resources that should be closed when this service is closed
+   */
   @SuppressWarnings("unchecked")
   public CachingTerminologyService(@Nonnull final TerminologyClient terminologyClient,
       @Nonnull final HttpClientCachingConfiguration configuration,
@@ -299,8 +306,10 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
 
   @Nonnull
   private static Optional<Long> getExpires(@Nullable final Map<String, List<String>> headers) {
+    final HeaderDelegate<CacheControl> headerDelegate = RuntimeDelegate.getInstance()
+        .createHeaderDelegate(CacheControl.class);
     final Optional<Integer> maxAge = getSingularHeader(headers, CACHE_CONTROL_HEADER_NAME)
-        .map(CacheControl::valueOf)
+        .map(headerDelegate::fromString)
         .map(CacheControl::getMaxAge);
     return maxAge.map(CachingTerminologyService::secondsFromNow);
   }
