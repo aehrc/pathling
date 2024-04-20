@@ -740,7 +740,7 @@
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/java.net=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
@@ -751,7 +751,7 @@
           <version>${pathling.surefireVersion}</version>
           <configuration>
             <!-- The add-exports and add-opens flags are required for Java 17 -->
-            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED</argLine>
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/java.net=ALL-UNNAMED</argLine>
           </configuration>
         </plugin>
         <plugin>
