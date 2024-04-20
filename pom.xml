@@ -706,7 +706,7 @@
           <configuration>
             <useSystemClassLoader>true</useSystemClassLoader>
             <useManifestOnlyJar>false</useManifestOnlyJar>
-            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC</argLine>
+            <argLine>@{argLine} -Xmx4g -ea -Duser.timezone=UTC --add-exports java.base/sun.nio.ch=ALL-UNNAMED</argLine>
             <forkCount>1C</forkCount>
             <failIfNoTests>false</failIfNoTests>
           </configuration>
@@ -716,7 +716,7 @@
           <artifactId>maven-failsafe-plugin</artifactId>
           <version>${pathling.surefireVersion}</version>
           <configuration>
-            <argLine>-Xmx4g -ea -Duser.timezone=UTC</argLine>
+            <argLine>-Xmx4g -ea -Duser.timezone=UTC --add-exports java.base/sun.nio.ch=ALL-UNNAMED</argLine>
           </configuration>
         </plugin>
         <plugin>
