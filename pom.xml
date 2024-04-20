@@ -91,6 +91,8 @@
     <pathling.jacksonVersion>2.16.1</pathling.jacksonVersion>
     <pathling.jerseyVersion>2.40</pathling.jerseyVersion>
     <pathling.surefireVersion>3.1.2</pathling.surefireVersion>
+    <pathling.logbackVersion>1.4.14</pathling.logbackVersion>
+    <pathling.slf4jVersion>2.0.9</pathling.slf4jVersion>
   </properties>
 
   <modules>
@@ -276,7 +278,7 @@
         <exclusions>
           <exclusion>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -383,10 +385,6 @@
         <exclusions>
           <exclusion>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>*</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>ch.qos.logback</groupId>
             <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
@@ -583,6 +581,31 @@
         <version>${pathling.infinispanVersion}</version>
         <type>pom</type>
         <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${pathling.slf4jVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>log4j-over-slf4j</artifactId>
+        <version>${pathling.slf4jVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jcl-over-slf4j</artifactId>
+        <version>${pathling.slf4jVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>jul-to-slf4j</artifactId>
+        <version>${pathling.slf4jVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>ch.qos.logback</groupId>
+        <artifactId>logback-classic</artifactId>
+        <version>${pathling.logbackVersion}</version>
       </dependency>
 
       <!-- CVE-2022-42889-->

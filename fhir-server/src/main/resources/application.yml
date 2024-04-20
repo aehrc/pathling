@@ -6,15 +6,6 @@ spring:
   banner:
     location: classpath:banner.txt
 
-logging:
-  level:
-    root: WARN
-    au.csiro: INFO
-    org.apache.hadoop.metrics2: ERROR
-    requestLogger: WARN
-  pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] [%X{requestId}] %-5level %logger{36} - %msg%n"
-
 # Actuator endpoints let you monitor and interact with your application.
 # <https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints>
 management:
