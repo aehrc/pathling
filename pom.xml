@@ -76,7 +76,6 @@
     <pathling.scalaVersion>2.12</pathling.scalaVersion>
     <pathling.scalaFullVersion>2.12.17</pathling.scalaFullVersion>
     <pathling.deltaVersion>3.1.0</pathling.deltaVersion>
-    <!-- Hadoop is currently pinned to 3.3.4 because of this vulnerability: CVE-2022-26612 -->
     <pathling.hadoopVersion>3.3.4</pathling.hadoopVersion>
     <pathling.hadoopMajorVersion>3</pathling.hadoopMajorVersion>
     <pathling.hapiFhirVersion>7.0.2</pathling.hapiFhirVersion>
@@ -93,6 +92,7 @@
     <pathling.surefireVersion>3.1.2</pathling.surefireVersion>
     <pathling.logbackVersion>1.4.14</pathling.logbackVersion>
     <pathling.slf4jVersion>2.0.9</pathling.slf4jVersion>
+    <pathling.derbyVersion>10.14.2.0</pathling.derbyVersion>
   </properties>
 
   <modules>
@@ -342,6 +342,16 @@
         <groupId>org.scala-lang</groupId>
         <artifactId>scala-library</artifactId>
         <version>${pathling.scalaFullVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derby</artifactId>
+        <version>${pathling.derbyVersion}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.derby</groupId>
+        <artifactId>derbytools</artifactId>
+        <version>${pathling.derbyVersion}</version>
       </dependency>
       <!-- This is required for Spark UI, which still has some expectations that a legacy 
       javax.servlet API is present -->
