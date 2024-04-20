@@ -41,9 +41,6 @@ import ca.uhn.fhir.rest.server.exceptions.BaseServerResponseException;
 import ca.uhn.fhir.rest.server.exceptions.NotModifiedException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import jakarta.ws.rs.core.CacheControl;
-import jakarta.ws.rs.ext.RuntimeDelegate;
-import jakarta.ws.rs.ext.RuntimeDelegate.HeaderDelegate;
 import java.io.Closeable;
 import java.io.Serializable;
 import java.time.Instant;
@@ -306,12 +303,25 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
 
   @Nonnull
   private static Optional<Long> getExpires(@Nullable final Map<String, List<String>> headers) {
-    final HeaderDelegate<CacheControl> headerDelegate = RuntimeDelegate.getInstance()
-        .createHeaderDelegate(CacheControl.class);
-    final Optional<Integer> maxAge = getSingularHeader(headers, CACHE_CONTROL_HEADER_NAME)
-        .map(headerDelegate::fromString)
-        .map(CacheControl::getMaxAge);
-    return maxAge.map(CachingTerminologyService::secondsFromNow);
+    return getSingularHeader(headers, CACHE_CONTROL_HEADER_NAME)
+        .flatMap(CachingTerminologyService::parseMaxAgeFromCacheControl)
+        .map(CachingTerminologyService::secondsFromNow);
+  }
+
+  @Nonnull
+  private static Optional<Integer> parseMaxAgeFromCacheControl(@Nonnull final String cacheControl) {
+    final String[] parts = cacheControl.split(",\\s*");
+    for (final String part : parts) {
+      if (part.startsWith("max-age")) {
+        final String argument = part.split("=")[1];
+        try {
+          return Optional.of(Integer.parseInt(argument));
+        } catch (final NumberFormatException e) {
+          return Optional.empty();
+        }
+      }
+    }
+    return Optional.empty();
   }
 
   private static long secondsFromNow(final int seconds) {
