@@ -76,7 +76,7 @@ public class TestDataImporter implements CommandLineRunner {
     final String sourcePath = args[0];
 
     final File srcNdJsonDir = new File(sourcePath);
-    final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
+    final FileFilter fileFilter = WildcardFileFilter.builder().setWildcards("*.ndjson").get();
     final File[] srcNdJsonFiles = srcNdJsonDir.listFiles(fileFilter);
 
     final List<ParametersParameterComponent> sources = Stream.of(requireNonNull(srcNdJsonFiles))
