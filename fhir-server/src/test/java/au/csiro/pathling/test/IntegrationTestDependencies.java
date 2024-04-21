@@ -24,7 +24,9 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import jakarta.annotation.Nonnull;
+import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -56,4 +58,10 @@ public class IntegrationTestDependencies {
     return new DefaultTerminologyServiceFactory(fhirContext.getVersion().getVersion(),
         configuration.getTerminology());
   }
+
+  @Bean
+  public RestTemplateBuilder restTemplateBuilder() {
+    return new RestTemplateBuilder().setReadTimeout(Duration.ofSeconds(60));
+  }
+
 }
