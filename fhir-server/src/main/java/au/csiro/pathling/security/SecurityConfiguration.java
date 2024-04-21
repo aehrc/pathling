@@ -17,12 +17,15 @@
 
 package au.csiro.pathling.security;
 
+import static au.csiro.pathling.utilities.Preconditions.check;
+
 import au.csiro.pathling.config.ServerConfiguration;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -44,6 +47,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * href="https://stackoverflow.com/questions/51079564/spring-security-antmatchers-not-being-applied-on-post-requests-and-only-works-wi/51088555">Spring
  * security antMatchers not being applied on POST requests and only works with GET</a>
  */
+@Configuration
 @EnableWebSecurity
 @Profile("server")
 @Slf4j
@@ -51,10 +55,10 @@ public class SecurityConfiguration {
 
   private final ServerConfiguration configuration;
 
-  @Autowired
+  @Autowired(required = false)
   private PathlingAuthenticationConverter authenticationConverter;
 
-  @Autowired
+  @Autowired(required = false)
   private JwtDecoder jwtDecoder;
 
   @Value("${pathling.auth.enabled}")
@@ -80,6 +84,9 @@ public class SecurityConfiguration {
   public SecurityFilterChain securityFilterChain(@Nonnull final HttpSecurity http)
       throws Exception {
     if (authEnabled) {
+      check(authenticationConverter != null,
+          "Authentication converter must be provided when authentication is enabled");
+      check(jwtDecoder != null, "JWT decoder must be provided when authentication is enabled");
       http.authorizeHttpRequests(authz -> authz
               // The following requests do not require authentication.
               .requestMatchers(HttpMethod.GET, "/metadata").permitAll()
