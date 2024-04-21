@@ -1,0 +1,3 @@
+spark:
+  ui:
+    enabled: false

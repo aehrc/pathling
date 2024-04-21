@@ -356,9 +356,9 @@
       <!-- This is required for Spark UI, which still has some expectations that a legacy 
       javax.servlet API is present -->
       <dependency>
-        <groupId>org.apache.tomcat</groupId>
-        <artifactId>tomcat-servlet-api</artifactId>
-        <version>8.5.76</version>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <version>4.0.1</version>
         <scope>runtime</scope>
       </dependency>
 
