@@ -118,8 +118,7 @@ public class AggregateExecutor extends AggregateQueryExecutor {
       }
 
       for (int i = 0; i < aggregations.size(); i++) {
-        //noinspection rawtypes
-        final Materializable aggregation = (Materializable<Type>) aggregations.get(i);
+        final Materializable<Type> aggregation = (Materializable<Type>) aggregations.get(i);
         // Delegate to the `getValueFromRow` method within each Materializable path class to extract 
         // the Type value from the Row in the appropriate way.
         final Optional<Type> result = aggregation.getValueFromRow(row, i + groupings.size());
