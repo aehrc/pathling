@@ -106,8 +106,8 @@ public abstract class AbstractTerminologyTestBase {
       final Function<T, ? extends Type> constructor,
       final List<T> propertyAValues, final List<T> propertyBValues) {
     return arguments(fhirType, sqlType,
-        propertyAValues.toArray(),
-        propertyBValues.toArray(),
+        propertyAValues.stream().map(constructor).toList(),
+        propertyBValues.stream().map(constructor).toList(),
         propertyAValues,
         propertyBValues);
   }

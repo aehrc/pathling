@@ -113,18 +113,31 @@ public interface CodingEncoding {
   }
 
   /**
-   * Encodes a  list of Codings to a Row[] (spark SQL compatible type)
+   * Encodes a list of Codings to a list of {@link Row} objects
    *
-   * @param codings a  list of codings to encode
-   * @return the Row[] representation of the coding
+   * @param codings a list of codings to encode
+   * @return a list of the Row representations of the coding
    */
   @Nullable
-  static Row[] encodeList(@Nullable final List<Coding> codings) {
+  static List<Row> encodeList(@Nullable final List<Coding> codings) {
     return codings == null
            ? null
-           : codings.stream().map(CodingEncoding::encode).toArray(Row[]::new);
+           : codings.stream().map(CodingEncoding::encode).toList();
   }
 
+  /**
+   * Encodes a list of Codings to an array of {@link Row} objects
+   *
+   * @param codings a list of codings to encode
+   * @return an array of the Row representations of the coding
+   */
+  @Nullable
+  static Row[] encodeListToArray(@Nullable final List<Coding> codings) {
+    final List<Row> encoded = encodeList(codings);
+    return encoded == null
+           ? null
+           : encoded.toArray(new Row[0]);
+  }
 
   @Nonnull
   static Column toStruct(@Nonnull final Column id, @Nonnull final Column system,
