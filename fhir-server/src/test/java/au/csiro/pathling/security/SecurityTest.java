@@ -25,9 +25,10 @@ import jakarta.annotation.Nonnull;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.function.Executable;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 
 @Tag("UnitTest")
-@SpringBootTest
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 abstract class SecurityTest {
 
   static void assertThrowsAccessDenied(@Nonnull final Executable executable,
