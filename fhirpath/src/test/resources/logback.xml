@@ -31,7 +31,7 @@
   <logger level="INFO" name="au.csiro.pathling.test.TimingExtension">
     <appender-ref ref="TIMING"/>
   </logger>
-  <logger level="DEBUG" name="au.csiro"/>
+  <logger level="WARN" name="au.csiro"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>

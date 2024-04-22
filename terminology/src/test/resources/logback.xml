@@ -22,7 +22,7 @@
       <pattern>[%level] %logger{36} - %msg%n</pattern>
     </encoder>
   </appender>
-  <logger level="INFO" name="au.csiro"/>
+  <logger level="WARN" name="au.csiro"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
