@@ -709,7 +709,7 @@
             <source>17</source>
             <target>17</target>
             <compilerArgs>
-              <arg>-Xlint:all</arg>
+              <arg>-Xlint:all,-processing</arg>
             </compilerArgs>
           </configuration>
         </plugin>
