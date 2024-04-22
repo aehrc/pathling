@@ -45,7 +45,6 @@ import java.io.Closeable;
 import java.io.Serializable;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -235,7 +234,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
           // 1. The override expiry, if present;
           // 2. The expiry provided by the server, if present, then;
           // 3. The default expiry.
-          resolveExpires(overrideExpires, serverExpires, defaultExpires),
+          resolveExpires(List.of(overrideExpires, serverExpires, defaultExpires)),
           false);
 
     } catch (final NotModifiedException e) {
@@ -252,7 +251,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
           // 2. The expiry from the 304 response, if present;
           // 3. The expiry from the cached response, if present, then;
           // 4. The default expiry.
-          resolveExpires(overrideExpires, serverExpires, previousExpiry, defaultExpires),
+          resolveExpires(List.of(overrideExpires, serverExpires, previousExpiry, defaultExpires)),
           false);
 
     } catch (final BaseServerResponseException e) {
@@ -260,7 +259,7 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
       // amount of time instructed by the server. If there is no such instruction, cache it for the 
       // configured default expiry.
       final Optional<Long> serverExpires = getExpires(e.getResponseHeaders());
-      final long expires = resolveExpires(serverExpires, defaultExpires);
+      final long expires = resolveExpires(List.of(serverExpires, defaultExpires));
       final TerminologyResult<ResultType> fallback = new TerminologyResult<>(
           operation.invalidRequestFallback(), null, expires, false);
       return handleError(e, fallback);
@@ -328,13 +327,13 @@ public abstract class CachingTerminologyService extends BaseTerminologyService {
     return Instant.now().plusSeconds(seconds).toEpochMilli();
   }
 
-  @SafeVarargs
-  private static Long resolveExpires(final Optional<Long>... orderedExpiryValues) {
+  private static Long resolveExpires(@Nonnull final List<Optional<Long>> orderedExpiryValues) {
     // Go through each of the expiry values and combine them using OR logic. If the final value is 
     // not present, throw an error.
-    return Arrays.stream(orderedExpiryValues)
+    return orderedExpiryValues.stream()
         .reduce((acc, v) -> acc.or(() -> v))
         .orElseThrow()
         .orElseThrow();
   }
+
 }

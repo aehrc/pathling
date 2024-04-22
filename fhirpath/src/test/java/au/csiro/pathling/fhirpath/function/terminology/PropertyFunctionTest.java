@@ -96,7 +96,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   private void checkPropertyOfCoding(final String propertyCode,
       final Optional<String> maybePropertyType,
       final Optional<String> maybeLanguage,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
+      final List<Type> propertyAFhirValues, final List<Type> propertyBFhirValues,
       final FHIRDefinedType expectedResultType,
       final Dataset<Row> expectedResult) {
 
@@ -139,7 +139,7 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     final List<String> parameterLiterals = Stream.of(Optional.of(propertyCode),
             maybePropertyType,
             maybeLanguage).flatMap(Optional::stream)
-        .map(StringLiteral::toLiteral).collect(Collectors.toUnmodifiableList());
+        .map(StringLiteral::toLiteral).toList();
 
     final List<FhirPath> arguments = parameterLiterals.stream()
         .map(lit -> StringLiteralPath.fromString(lit, inputExpression))
@@ -173,14 +173,14 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   @ParameterizedTest
   @MethodSource("propertyParameters")
   public void propertyAOfCoding(final String propertyType, final DataType resultDataType,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+      final List<Type> propertyAFhirValues, final List<Type> propertyBFhirValues,
+      final List<Object> propertyASqlValues, final List<Object> propertyBSqlValues) {
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
         .withEidColumn()
         .withColumn(resultDataType)
-        .withRow("encounter-1", makeEid(0, 0), propertyASqlValues[0])
+        .withRow("encounter-1", makeEid(0, 0), propertyASqlValues.get(0))
         .withRow("encounter-1", makeEid(1, 0), null)
         .withRow("encounter-2", makeEid(0, 0), null)
         .withRow("encounter-3", null, null)
@@ -197,8 +197,8 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   @ParameterizedTest
   @MethodSource("propertyParameters")
   public void propertyBOfCoding(final String propertyType, final DataType resultDataType,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+      final List<Type> propertyAFhirValues, final List<Type> propertyBFhirValues,
+      final List<Object> propertyASqlValues, final List<Object> propertyBSqlValues) {
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
@@ -206,8 +206,8 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
         .withColumn(resultDataType)
         .withRow("encounter-1", makeEid(0, 0), null)
         .withRow("encounter-1", makeEid(1, 0), null)
-        .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues[0])
-        .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues[1])
+        .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues.get(0))
+        .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues.get(1))
         .withRow("encounter-3", null, null)
         .build();
 
@@ -236,7 +236,8 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
     checkPropertyOfCoding("propertyA",
         Optional.empty(),
         Optional.empty(),
-        new Type[]{new StringType("value_1"), new StringType("value_2")}, new Type[]{},
+        List.of(new StringType("value_1"), new StringType("value_2")),
+        Collections.emptyList(),
         FHIRDefinedType.STRING,
         expectedResult);
   }
@@ -246,8 +247,8 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
   @ParameterizedTest
   @MethodSource("propertyParameters")
   public void propertyBOfCodingLanguage(final String propertyType, final DataType resultDataType,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+      final List<Type> propertyAFhirValues, final List<Type> propertyBFhirValues,
+      final List<Object> propertyASqlValues, final List<Object> propertyBSqlValues) {
 
     final Dataset<Row> expectedResult = new DatasetBuilder(spark)
         .withIdColumn()
@@ -255,8 +256,8 @@ class PropertyFunctionTest extends AbstractTerminologyTestBase {
         .withColumn(resultDataType)
         .withRow("encounter-1", makeEid(0, 0), null)
         .withRow("encounter-1", makeEid(1, 0), null)
-        .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues[0])
-        .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues[1])
+        .withRow("encounter-2", makeEid(0, 0), propertyBSqlValues.get(0))
+        .withRow("encounter-2", makeEid(0, 1), propertyBSqlValues.get(1))
         .withRow("encounter-3", null, null)
         .build();
 

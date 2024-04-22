@@ -226,25 +226,12 @@ public class TerminologyServiceHelpers {
       return this;
     }
 
-    @SafeVarargs
-    @Nonnull
-    public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
-        @Nonnull final String propertyCode, final T... values) {
-      when(mockService.lookup(deepEq(coding), eq(propertyCode))).thenReturn(
-          Stream.of(values)
-              .map(v -> Property.of(propertyCode, v))
-              .collect(Collectors.toUnmodifiableList())
-      );
-      return this;
-    }
-
-    @SafeVarargs
     @Nonnull
     public final <T extends Type> LookupExpectations withProperty(@Nonnull final Coding coding,
         @Nonnull final String propertyCode, @Nullable final String displayLanguage,
-        final T... values) {
+        final List<T> values) {
       when(mockService.lookup(deepEq(coding), eq(propertyCode), eq(displayLanguage))).thenReturn(
-          Stream.of(values)
+          values.stream()
               .map(v -> Property.of(propertyCode, v))
               .collect(Collectors.toUnmodifiableList())
       );

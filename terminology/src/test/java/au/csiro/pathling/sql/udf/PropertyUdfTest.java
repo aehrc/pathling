@@ -34,7 +34,8 @@ import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import com.google.common.collect.ImmutableMap;
 import java.math.BigDecimal;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -62,38 +63,37 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
   @Value(staticConstructor = "of")
   static class Values<T> {
 
-    Type[] fhirValues;
-    T[] objectValues;
+    List<Type> fhirValues;
+    List<T> objectValues;
 
     Type fhirValueAt(final int i) {
-      return fhirValues[i];
+      return fhirValues.get(i);
     }
 
-    Object[] objectValueAt(final int i) {
-      return Arrays.copyOfRange(objectValues, i, i + 1);
+    List<Object> objectValueAt(final int i) {
+      return Collections.singletonList(objectValues.get(i));
     }
 
     Stream<Type> fhirRangeOne() {
-      return Stream.of(Arrays.copyOfRange(fhirValues, RANGE_ONE_FROM, RANGE_ONE_TO));
+      return fhirValues.subList(RANGE_ONE_FROM, RANGE_ONE_TO).stream();
     }
 
     Stream<Type> fhirRangeTwo() {
-      return Stream.of(Arrays.copyOfRange(fhirValues, RANGE_TWO_FROM, RANGE_TWO_TO));
+      return fhirValues.subList(RANGE_TWO_FROM, RANGE_TWO_TO).stream();
     }
 
-    Object[] objectRangeOne() {
-      return Arrays.copyOfRange(objectValues, RANGE_ONE_FROM, RANGE_ONE_TO);
+    List<T> objectRangeOne() {
+      return objectValues.subList(RANGE_ONE_FROM, RANGE_ONE_TO);
     }
 
-    Object[] objectRangeTwo() {
-      return Arrays.copyOfRange(objectValues, RANGE_TWO_FROM, RANGE_TWO_TO);
+    List<T> objectRangeTwo() {
+      return objectValues.subList(RANGE_TWO_FROM, RANGE_TWO_TO);
     }
 
-    @SafeVarargs
-    public static <T, FT extends Type> Values<T> ofPrimitive(
-        final Function<T, FT> constructor,
-        final T... values) {
-      return of(Stream.of(values).map(constructor).toArray(Type[]::new), values);
+    public static <T> Values<T> ofPrimitive(
+        final Function<T, Type> constructor,
+        final List<T> values) {
+      return of(values.stream().map(constructor).toList(), values);
     }
   }
 
@@ -101,17 +101,19 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
       // The last value is repeated for purpose for testing that
       // duplicate values are allowed in the result
       StringType.class, ofPrimitive(StringType::new,
-          "value_0", "value_1", "value_2", "value_2"),
-      CodeType.class, ofPrimitive(CodeType::new, "value_0", "value_1", "value_2", "value_2"),
-      BooleanType.class, ofPrimitive(BooleanType::new, true, false, true, true),
-      IntegerType.class, ofPrimitive(IntegerType::new, 1, 2, 3, 3),
-      DecimalType.class, ofPrimitive(DecimalType::new, new BigDecimal("1.1"),
-          new BigDecimal("2.2"), new BigDecimal("3.3"), new BigDecimal("3.3")),
-      DateTimeType.class, ofPrimitive(DateTimeType::new, "2001-01-01",
-          "2002-02-02", "2003-03-03", "2003-03-03"),
-      Coding.class, Values.of(new Coding[]{CODING_A, CODING_BB_VERSION1, CODING_C, CODING_C},
-          asArray(CODING_A, CODING_BB_VERSION1, CODING_C, CODING_C))
-  );
+          List.of("value_0", "value_1", "value_2", "value_2")),
+      CodeType.class,
+      ofPrimitive(CodeType::new, List.of("value_0", "value_1", "value_2", "value_2")),
+      BooleanType.class, ofPrimitive(BooleanType::new, List.of(true, false, true, true)),
+      IntegerType.class, ofPrimitive(IntegerType::new, List.of(1, 2, 3, 3)),
+      DecimalType.class, ofPrimitive(DecimalType::new, List.of(new BigDecimal("1.1"),
+          new BigDecimal("2.2"), new BigDecimal("3.3"), new BigDecimal("3.3"))),
+      DateTimeType.class, ofPrimitive(DateTimeType::new, List.of("2001-01-01",
+          "2002-02-02", "2003-03-03", "2003-03-03")),
+      Coding.class, Values.of(List.of(CODING_A, CODING_BB_VERSION1, CODING_C, CODING_C),
+          List.of(asArray(
+              List.of(CODING_A, CODING_BB_VERSION1, CODING_C, CODING_C).toArray(new Coding[]{})))
+      ));
 
   private static Stream<Values<?>> allTestValues() {
     return TEST_VALUES.values().stream();
@@ -183,18 +185,18 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
     setupUdf(udfClass);
     setupLookup(terminologyService)
         .withProperty(CODING_A, "property_0", null,
-            allTestValues().map(v -> v.fhirValueAt(0)).toArray(Type[]::new))
+            allTestValues().map(v -> v.fhirValueAt(0)).toList())
         .withProperty(CODING_BB_VERSION1, "property_1", null,
-            allTestValues().map(v -> v.fhirValueAt(1)).toArray(Type[]::new))
+            allTestValues().map(v -> v.fhirValueAt(1)).toList())
         .withProperty(CODING_A, "property_1", null,
-            allTestValues().map(v -> v.fhirValueAt(2)).toArray(Type[]::new));
+            allTestValues().map(v -> v.fhirValueAt(2)).toList());
 
-    final Object[] expectedSingletonOne = TEST_VALUES.get(udfClass).objectValueAt(0);
-    final Object[] expectedSingletonTwo = TEST_VALUES.get(udfClass).objectValueAt(1);
+    final List<Object> expectedSingletonOne = TEST_VALUES.get(udfClass).objectValueAt(0);
+    final List<Object> expectedSingletonTwo = TEST_VALUES.get(udfClass).objectValueAt(1);
 
-    assertArrayEquals(expectedSingletonOne,
+    assertArrayEquals(expectedSingletonOne.toArray(),
         propertyUdf.call(encode(CODING_A), "property_0", null));
-    assertArrayEquals(expectedSingletonTwo,
+    assertArrayEquals(expectedSingletonTwo.toArray(),
         propertyUdf.call(encode(CODING_BB_VERSION1), "property_1", null));
   }
 
@@ -204,16 +206,16 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
     setupUdf(udfClass);
     setupLookup(terminologyService)
         .withProperty(CODING_AA_VERSION1, "property_a", null,
-            allTestValues().flatMap(Values::fhirRangeOne).toArray(Type[]::new))
+            allTestValues().flatMap(Values::fhirRangeOne).toList())
         .withProperty(CODING_B, "property_b", null,
-            allTestValues().flatMap(Values::fhirRangeTwo).toArray(Type[]::new));
+            allTestValues().flatMap(Values::fhirRangeTwo).toList());
 
-    final Object[] expectedArrayOne = TEST_VALUES.get(udfClass).objectRangeOne();
-    final Object[] expectedArrayTwo = TEST_VALUES.get(udfClass).objectRangeTwo();
+    final List<?> expectedArrayOne = TEST_VALUES.get(udfClass).objectRangeOne();
+    final List<?> expectedArrayTwo = TEST_VALUES.get(udfClass).objectRangeTwo();
 
-    assertArrayEquals(expectedArrayOne,
+    assertArrayEquals(expectedArrayOne.toArray(),
         propertyUdf.call(encode(CODING_AA_VERSION1), "property_a", null));
-    assertArrayEquals(expectedArrayTwo,
+    assertArrayEquals(expectedArrayTwo.toArray(),
         propertyUdf.call(encode(CODING_B), "property_b", null));
   }
 
@@ -225,16 +227,16 @@ public class PropertyUdfTest extends AbstractTerminologyTestBase {
     setupUdf(udfClass);
     setupLookup(terminologyService)
         .withProperty(CODING_AA_VERSION1, "property_a", "de",
-            allTestValues().flatMap(Values::fhirRangeOne).toArray(Type[]::new))
+            allTestValues().flatMap(Values::fhirRangeOne).toList())
         .withProperty(CODING_B, "property_b", "fr",
-            allTestValues().flatMap(Values::fhirRangeTwo).toArray(Type[]::new));
-    
-    final Object[] expectedArrayOne = TEST_VALUES.get(udfClass).objectRangeOne();
-    final Object[] expectedArrayTwo = TEST_VALUES.get(udfClass).objectRangeTwo();
+            allTestValues().flatMap(Values::fhirRangeTwo).toList());
 
-    assertArrayEquals(expectedArrayOne,
+    final List<?> expectedArrayOne = TEST_VALUES.get(udfClass).objectRangeOne();
+    final List<?> expectedArrayTwo = TEST_VALUES.get(udfClass).objectRangeTwo();
+
+    assertArrayEquals(expectedArrayOne.toArray(),
         propertyUdf.call(encode(CODING_AA_VERSION1), "property_a", "de"));
-    assertArrayEquals(expectedArrayTwo,
+    assertArrayEquals(expectedArrayTwo.toArray(),
         propertyUdf.call(encode(CODING_B), "property_b", "fr"));
   }
 }

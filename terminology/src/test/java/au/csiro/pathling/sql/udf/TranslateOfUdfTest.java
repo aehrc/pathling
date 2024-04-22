@@ -35,6 +35,10 @@ import au.csiro.pathling.terminology.TerminologyService.Translation;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.AbstractTerminologyTestBase;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
+import jakarta.annotation.Nonnull;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import org.apache.spark.sql.Row;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,9 +54,8 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   private TranslateUdf translateUdf;
   private TerminologyService terminologyService;
 
-  @SafeVarargs
-  private static <T> WrappedArray<T> newWrappedArray(final T... args) {
-    return WrappedArray.make(args);
+  private static <T> WrappedArray<T> newWrappedArray(@Nonnull final List<T> args) {
+    return WrappedArray.make(args.toArray());
   }
 
   @BeforeEach
@@ -99,7 +102,7 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
     assertArrayEquals(asArray(CODING_BB, CODING_AB, CODING_BA),
         translateUdf.call(encodeMany(null, INVALID_CODING_1, INVALID_CODING_0, INVALID_CODING_2,
                 CODING_AA_VERSION1, CODING_AB_VERSION1), CONCEPT_MAP_B, true,
-            newWrappedArray("narrower", "relatedto"), SYSTEM_B));
+            newWrappedArray(List.of("narrower", "relatedto")), SYSTEM_B));
   }
 
   @Test
@@ -114,7 +117,7 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
   void testThrowsInputErrorWhenInvalidEquivalence() {
     final InvalidUserInputError ex = assertThrows(InvalidUserInputError.class,
         () -> translateUdf.call(encode(CODING_AA), CONCEPT_MAP_B, true,
-            newWrappedArray("invalid"),
+            newWrappedArray(List.of("invalid")),
             null));
     assertEquals("Unknown ConceptMapEquivalence code 'invalid'", ex.getMessage());
     verifyNoMoreInteractions(terminologyService);
@@ -128,12 +131,17 @@ public class TranslateOfUdfTest extends AbstractTerminologyTestBase {
             Translation.of(EQUIVALENT, CODING_BB),
             Translation.of(RELATEDTO, CODING_AB));
 
+    final List<String> args = new ArrayList<>();
+    args.add("");
+    args.add(null);
     assertArrayEquals(NO_TRANSLATIONS,
-        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, newWrappedArray("", null),
+        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false,
+            newWrappedArray(args),
             null));
 
     assertArrayEquals(NO_TRANSLATIONS,
-        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false, newWrappedArray(),
+        translateUdf.call(encode(CODING_AA), CONCEPT_MAP_A, false,
+            newWrappedArray(Collections.emptyList()),
             null));
     verifyNoMoreInteractions(terminologyService);
   }

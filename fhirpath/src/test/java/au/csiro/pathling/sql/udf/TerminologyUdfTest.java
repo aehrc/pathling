@@ -514,8 +514,8 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   @ParameterizedTest
   @MethodSource("propertyParameters")
   public void testProperty(final String propertyType, final DataType resultDataType,
-      final Type[] propertyAFhirValues, final Type[] propertyBFhirValues,
-      final Object[] propertyASqlValues, final Object[] propertyBSqlValues) {
+      final List<Type> propertyAFhirValues, final List<Type> propertyBFhirValues,
+      final List<Object> propertyASqlValues, final List<Object> propertyBSqlValues) {
     TerminologyServiceHelpers.setupLookup(terminologyService)
         .withProperty(CODING_1, "property_a", null, propertyAFhirValues)
         .withProperty(CODING_2, "property_b", null, propertyBFhirValues);
@@ -536,7 +536,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
         .withColumn("result", DataTypes.createArrayType(resultDataType))
         .withRow("uc-null", null)
         .withRow("uc-invalid", null)
-        .withRow("uc-codingA", Arrays.asList(propertyASqlValues))
+        .withRow("uc-codingA", Collections.singletonList(propertyASqlValues))
         .withRow("uc-codingB", Collections.emptyList())
         .build();
 
@@ -553,7 +553,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
         .withRow("uc-null", null)
         .withRow("uc-invalid", null)
         .withRow("uc-codingA", Collections.emptyList())
-        .withRow("uc-codingB", Arrays.asList(propertyBSqlValues))
+        .withRow("uc-codingB", Collections.singletonList(propertyBSqlValues))
         .build();
 
     DatasetAssert.of(resultB)
@@ -563,7 +563,7 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   @Test
   public void testPropertyWithDefaultType() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_1, "property_a", (String) null, new StringType("value_a"));
+        .withProperty(CODING_1, "property_a", null, List.of(new StringType("value_a")));
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")
@@ -590,8 +590,8 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
   @Test
   public void testPropertyWithLanguage() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CODING_1, "property_a", "de", new StringType("value_a_de"))
-        .withProperty(CODING_2, "property_b", "fr", new StringType("value_b_fr"));
+        .withProperty(CODING_1, "property_a", "de", List.of(new StringType("value_a_de")))
+        .withProperty(CODING_2, "property_b", "fr", List.of(new StringType("value_b_fr")));
 
     final Dataset<Row> ds = DatasetBuilder.of(spark)
         .withIdColumn("id")
