@@ -222,8 +222,6 @@
                 <configuration>
                   <executable>spark-submit</executable>
                   <arguments>
-                    <argument>--jars</argument>
-                    <argument>${project.build.directory}/dependency/*</argument>
                     <argument>--packages</argument>
                     <argument>au.csiro.pathling:library-runtime:${project.version},io.delta:delta-spark_${pathling.scalaVersion}:${pathling.deltaVersion}</argument>
                     <argument>--conf</argument>
