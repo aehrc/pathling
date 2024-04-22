@@ -18,6 +18,8 @@
 package au.csiro.pathling.test;
 
 import au.csiro.pathling.config.ServerConfiguration;
+import au.csiro.pathling.security.OidcConfiguration;
+import au.csiro.pathling.security.OidcConfiguration.ConfigItem;
 import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import ca.uhn.fhir.context.FhirContext;
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -25,9 +27,12 @@ import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import jakarta.annotation.Nonnull;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 

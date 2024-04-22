@@ -70,6 +70,15 @@ public class OidcConfiguration {
   }
 
   /**
+   * This constructor is used for testing purposes only.
+   *
+   * @param oidcConfiguration a map of OIDC {@link ConfigItem} values
+   */
+  public OidcConfiguration(@Nonnull final Map<String, Object> oidcConfiguration) {
+    this.oidcConfiguration = oidcConfiguration;
+  }
+
+  /**
    * @param item the {@link ConfigItem} to retrieve
    * @return the value, if present
    */

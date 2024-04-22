@@ -53,6 +53,7 @@ import au.csiro.pathling.test.helpers.TerminologyServiceHelpers;
 import au.csiro.pathling.test.helpers.TerminologyServiceHelpers.TranslateExpectations;
 import jakarta.annotation.Nonnull;
 import java.util.Collections;
+import java.util.List;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
@@ -91,9 +92,9 @@ public class ParserTest extends AbstractParserTest {
 
   private void setupMockPropertiesFor_195662009_444814009() {
     TerminologyServiceHelpers.setupLookup(terminologyService)
-        .withProperty(CD_SNOMED_195662009, "child", (String) null, CD_SNOMED_40055000,
-            CD_SNOMED_403190006)
-        .withProperty(CD_SNOMED_444814009, "child", (String) null, CD_SNOMED_284551006)
+        .withProperty(CD_SNOMED_195662009, "child", null, List.of(CD_SNOMED_40055000,
+            CD_SNOMED_403190006))
+        .withProperty(CD_SNOMED_444814009, "child", null, List.of(CD_SNOMED_284551006))
         .withDesignation(CD_SNOMED_195662009, CD_SNOMED_900000000000003001, "en",
             "Acute viral pharyngitis : disorder")
         .withDesignation(CD_SNOMED_444814009, CD_SNOMED_900000000000003001, "en",
