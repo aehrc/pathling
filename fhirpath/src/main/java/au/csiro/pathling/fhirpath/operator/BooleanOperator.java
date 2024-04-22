@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.element.BooleanPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.BooleanLiteralPath;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -108,7 +109,7 @@ public class BooleanOperator implements Operator {
     final Dataset<Row> dataset = join(input.getContext(), left, right, JoinType.LEFT_OUTER);
     final Column idColumn = left.getIdColumn();
     final Optional<Column> eidColumn = findEidColumn(left, right);
-    final Optional<Column> thisColumn = findThisColumn(left, right);
+    final Optional<Column> thisColumn = findThisColumn(List.of(left, right));
 
     return ElementPath
         .build(expression, dataset, idColumn, eidColumn, valueColumn, true, Optional.empty(),

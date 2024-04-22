@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.literal.DecimalLiteralPath;
 import jakarta.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
@@ -152,7 +153,7 @@ public class DecimalPath extends ElementPath implements Materializable<DecimalTy
           .apply(source.getNumericValueColumn(), target.getNumericValueColumn());
       final Column idColumn = source.getIdColumn();
       final Optional<Column> eidColumn = findEidColumn(source, target);
-      final Optional<Column> thisColumn = findThisColumn(source, target);
+      final Optional<Column> thisColumn = findThisColumn(List.of(source, target));
 
       switch (operation) {
         case ADDITION:

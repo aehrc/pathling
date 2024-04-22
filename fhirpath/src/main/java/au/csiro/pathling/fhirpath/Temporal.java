@@ -21,6 +21,7 @@ import au.csiro.pathling.fhirpath.Numeric.MathOperation;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
@@ -78,7 +79,7 @@ public interface Temporal {
     return target -> {
       final String functionName;
       final Optional<Column> eidColumn = NonLiteralPath.findEidColumn(source, target);
-      final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(source, target);
+      final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(List.of(source, target));
 
       switch (operation) {
         case ADDITION:

@@ -155,8 +155,7 @@ public abstract class AggregateFunction {
     // TODO: This is very error prone as a collection can be passed here instead of an array.
     //  How can we make it more stringent?
     @SuppressWarnings("ConfusingArgumentToVarargsMethod")
-    final Optional<Column> thisColumn = NonLiteralPath
-        .findThisColumn(inputs.toArray(new FhirPath[0]));
+    final Optional<Column> thisColumn = NonLiteralPath.findThisColumn(inputs);
 
     final Dataset<Row> finalDataset = dataset
         .groupBy(groupBy)

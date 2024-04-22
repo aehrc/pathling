@@ -32,6 +32,7 @@ import au.csiro.pathling.fhirpath.literal.QuantityLiteralPath;
 import au.csiro.pathling.sql.types.FlexiDecimal;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -193,7 +194,7 @@ public class QuantityPath extends ElementPath implements Comparable, Numeric {
 
       final Column idColumn = source.getIdColumn();
       final Optional<Column> eidColumn = findEidColumn(source, target);
-      final Optional<Column> thisColumn = findThisColumn(source, target);
+      final Optional<Column> thisColumn = findThisColumn(List.of(source, target));
       return
           elementDefinition.map(definition -> ElementPath
               .build(expression, dataset, idColumn, eidColumn, resultQuantityColumn, true,

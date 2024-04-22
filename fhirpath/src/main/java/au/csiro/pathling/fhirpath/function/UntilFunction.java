@@ -34,6 +34,7 @@ import au.csiro.pathling.fhirpath.literal.DateTimeLiteralPath;
 import au.csiro.pathling.fhirpath.literal.StringLiteralPath;
 import au.csiro.pathling.sql.misc.TemporalDifferenceFunction;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -86,7 +87,7 @@ public class UntilFunction implements NamedFunction {
     final String expression = NamedFunction.expressionFromInput(input, NAME);
 
     final Optional<Column> eidColumn = findEidColumn(fromArgument, toArgument);
-    final Optional<Column> thisColumn = findThisColumn(fromArgument, toArgument);
+    final Optional<Column> thisColumn = findThisColumn(List.of(fromArgument, toArgument));
 
     return ElementPath.build(expression, dataset, fromArgument.getIdColumn(),
         eidColumn, valueColumn, true,

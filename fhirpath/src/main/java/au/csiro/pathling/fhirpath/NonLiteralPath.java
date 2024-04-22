@@ -34,6 +34,7 @@ import au.csiro.pathling.fhirpath.function.NamedFunction;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import jakarta.annotation.Nonnull;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -124,8 +125,8 @@ public abstract class NonLiteralPath implements FhirPath {
    * @return a {@link Column}, if one was found
    */
   @Nonnull
-  public static Optional<Column> findThisColumn(@Nonnull final Object... inputs) {
-    return Stream.of(inputs)
+  public static Optional<Column> findThisColumn(@Nonnull final Collection<?> inputs) {
+    return inputs.stream()
         .filter(input -> input instanceof NonLiteralPath)
         .map(path -> (NonLiteralPath) path)
         .filter(path -> path.getThisColumn().isPresent())

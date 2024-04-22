@@ -29,6 +29,7 @@ import au.csiro.pathling.fhirpath.literal.IntegerLiteralPath;
 import au.csiro.pathling.fhirpath.literal.NullLiteralPath;
 import com.google.common.collect.ImmutableSet;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import org.apache.spark.sql.Column;
@@ -165,7 +166,7 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
           .apply(source.getNumericValueColumn(), targetValueColumn);
       final Column idColumn = source.getIdColumn();
       final Optional<Column> eidColumn = findEidColumn(source, target);
-      final Optional<Column> thisColumn = findThisColumn(source, target);
+      final Optional<Column> thisColumn = findThisColumn(List.of(source, target));
 
       switch (operation) {
         case ADDITION:

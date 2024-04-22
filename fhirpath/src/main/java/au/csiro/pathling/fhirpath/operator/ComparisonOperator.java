@@ -32,6 +32,7 @@ import au.csiro.pathling.fhirpath.Comparable.ComparisonOperation;
 import au.csiro.pathling.fhirpath.FhirPath;
 import au.csiro.pathling.fhirpath.element.ElementPath;
 import jakarta.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -76,7 +77,7 @@ public class ComparisonOperator implements Operator {
     final Column valueColumn = leftComparable.getComparison(type).apply(rightComparable);
     final Column idColumn = left.getIdColumn();
     final Optional<Column> eidColumn = findEidColumn(left, right);
-    final Optional<Column> thisColumn = findThisColumn(left, right);
+    final Optional<Column> thisColumn = findThisColumn(List.of(left, right));
     final DatasetWithColumn datasetWithColumn = createColumn(dataset, valueColumn);
 
     return ElementPath.build(expression, datasetWithColumn.getDataset(), idColumn, eidColumn,
