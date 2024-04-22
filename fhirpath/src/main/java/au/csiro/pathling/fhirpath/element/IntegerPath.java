@@ -47,8 +47,8 @@ import org.hl7.fhir.r4.model.UnsignedIntType;
  *
  * @author John Grimes
  */
-public class IntegerPath extends ElementPath implements Materializable<PrimitiveType>, Comparable,
-    Numeric {
+public class IntegerPath extends ElementPath implements Materializable<PrimitiveType<?>>,
+    Comparable, Numeric {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(IntegerPath.class, IntegerLiteralPath.class, DecimalPath.class, DecimalLiteralPath.class,
@@ -65,7 +65,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<PrimitiveType<?>> getValueFromRow(@Nonnull final Row row,
+      final int columnNumber) {
     return valueFromRow(row, columnNumber, getFhirType());
   }
 
@@ -78,8 +79,8 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
    * @return A {@link PrimitiveType}, or the absence of a value
    */
   @Nonnull
-  public static Optional<PrimitiveType> valueFromRow(@Nonnull final Row row, final int columnNumber,
-      @Nonnull final FHIRDefinedType fhirType) {
+  public static Optional<PrimitiveType<?>> valueFromRow(@Nonnull final Row row,
+      final int columnNumber, @Nonnull final FHIRDefinedType fhirType) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
@@ -99,16 +100,16 @@ public class IntegerPath extends ElementPath implements Materializable<Primitive
     } else {
       value = row.getInt(columnNumber);
     }
-    switch (fhirType) {
-      case UNSIGNEDINT:
-        return Optional.of(new UnsignedIntType(value));
-      case POSITIVEINT:
-        return Optional.of(new PositiveIntType(value));
-      default:
-        return Optional.of(new IntegerType(value));
-    }
+    return switch (fhirType) {
+      case UNSIGNEDINT -> Optional.of(new UnsignedIntType(value));
+      case POSITIVEINT -> Optional.of(new PositiveIntType(value));
+      default -> Optional.of(new IntegerType(value));
+    };
   }
 
+  /**
+   * @return A set of types that can be compared to this type
+   */
   @Nonnull
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;

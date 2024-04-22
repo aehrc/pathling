@@ -45,6 +45,7 @@ import org.apache.spark.sql.RowFactory;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.types.DataTypes;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
+import org.hl7.fhir.r4.model.Type;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -104,36 +105,28 @@ class ComparisonOperatorTest {
   }
 
   TestParameters buildTestParameters(@Nonnull final String name) {
-    switch (name) {
-      case "String":
-        return buildStringExpressions(name);
-      case "Integer":
-        return buildIntegerExpressions(name);
-      case "Decimal":
-        return buildDecimalExpressions(name);
-      case "DateTime":
-        return buildDateTimeExpressions(name,
-            "2015-02-07T13:28:17-05:00",
-            "2015-02-08T13:28:17-05:00",
-            FHIRDefinedType.DATETIME);
-      case "Date":
-        return buildDateTimeExpressions(name,
-            "2015-02-07",
-            "2015-02-08",
-            FHIRDefinedType.DATE);
-      case "Date (YYYY-MM)":
-        return buildDateTimeExpressions(name,
-            "2015-02",
-            "2015-03",
-            FHIRDefinedType.DATE);
-      case "Date (YYYY)":
-        return buildDateTimeExpressions(name,
-            "2015",
-            "2016",
-            FHIRDefinedType.DATE);
-      default:
-        throw new RuntimeException("Invalid data type");
-    }
+    return switch (name) {
+      case "String" -> buildStringExpressions(name);
+      case "Integer" -> buildIntegerExpressions(name);
+      case "Decimal" -> buildDecimalExpressions(name);
+      case "DateTime" -> buildDateTimeExpressions(name,
+          "2015-02-07T13:28:17-05:00",
+          "2015-02-08T13:28:17-05:00",
+          FHIRDefinedType.DATETIME);
+      case "Date" -> buildDateTimeExpressions(name,
+          "2015-02-07",
+          "2015-02-08",
+          FHIRDefinedType.DATE);
+      case "Date (YYYY-MM)" -> buildDateTimeExpressions(name,
+          "2015-02",
+          "2015-03",
+          FHIRDefinedType.DATE);
+      case "Date (YYYY)" -> buildDateTimeExpressions(name,
+          "2015",
+          "2016",
+          FHIRDefinedType.DATE);
+      default -> throw new RuntimeException("Invalid data type");
+    };
   }
 
   TestParameters buildStringExpressions(final String name) {
@@ -290,7 +283,7 @@ class ComparisonOperatorTest {
         .idAndValueColumns()
         .singular(true)
         .build();
-    final LiteralPath literal;
+    final LiteralPath<? extends Type> literal;
     try {
       literal = (fhirType == FHIRDefinedType.DATETIME)
                 ? DateTimeLiteralPath.fromString(lesserDate, left)

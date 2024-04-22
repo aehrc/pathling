@@ -46,8 +46,8 @@ import org.hl7.fhir.r4.model.Type;
 public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
 
   // See https://hl7.org/fhir/fhirpath.html#types.
-  private static final Map<FHIRDefinedType, Class<? extends LiteralPath>> FHIR_TYPE_TO_FHIRPATH_TYPE =
-      new ImmutableMap.Builder<FHIRDefinedType, Class<? extends LiteralPath>>()
+  private static final Map<FHIRDefinedType, Class<? extends LiteralPath<? extends Type>>> FHIR_TYPE_TO_FHIRPATH_TYPE =
+      new ImmutableMap.Builder<FHIRDefinedType, Class<? extends LiteralPath<? extends Type>>>()
           .put(FHIRDefinedType.BOOLEAN, BooleanLiteralPath.class)
           .put(FHIRDefinedType.STRING, StringLiteralPath.class)
           .put(FHIRDefinedType.URI, StringLiteralPath.class)
@@ -71,8 +71,8 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
           .put(FHIRDefinedType.QUANTITY, QuantityLiteralPath.class)
           .build();
 
-  private static final Map<Class<? extends LiteralPath>, FHIRDefinedType> FHIRPATH_TYPE_TO_FHIR_TYPE =
-      new ImmutableMap.Builder<Class<? extends LiteralPath>, FHIRDefinedType>()
+  private static final Map<Class<? extends LiteralPath<? extends Type>>, FHIRDefinedType> FHIRPATH_TYPE_TO_FHIR_TYPE =
+      new ImmutableMap.Builder<Class<? extends LiteralPath<? extends Type>>, FHIRDefinedType>()
           .put(BooleanLiteralPath.class, FHIRDefinedType.BOOLEAN)
           .put(StringLiteralPath.class, FHIRDefinedType.STRING)
           .put(IntegerLiteralPath.class, FHIRDefinedType.INTEGER)
@@ -135,11 +135,11 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
   @Nonnull
   public static String expressionFor(@Nonnull final Dataset<Row> dataset,
       @Nonnull final Column idColumn, @Nonnull final Type literalValue) {
-    final Class<? extends LiteralPath> literalPathClass = FHIR_TYPE_TO_FHIRPATH_TYPE
+    final Class<? extends LiteralPath<? extends Type>> literalPathClass = FHIR_TYPE_TO_FHIRPATH_TYPE
         .get(FHIRDefinedType.fromCode(literalValue.fhirType()));
     try {
       @SuppressWarnings("unchecked")
-      final Constructor<? extends LiteralPath> constructor = (Constructor<? extends LiteralPath>) Arrays.stream(
+      final Constructor<? extends LiteralPath<? extends Type>> constructor = (Constructor<? extends LiteralPath<? extends Type>>) Arrays.stream(
               literalPathClass.getDeclaredConstructors())
           .filter(c -> c.getParameterCount() == 3)
           .filter(c -> c.getParameterTypes()[0] == Dataset.class)
@@ -148,7 +148,8 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
           .findFirst()
           .orElseThrow(() -> new AssertionError(
               "No suitable constructor found for " + literalPathClass));
-      final LiteralPath literalPath = constructor.newInstance(dataset, idColumn, literalValue);
+      final LiteralPath<? extends Type> literalPath = constructor.newInstance(dataset, idColumn,
+          literalValue);
       return literalPath.getExpression();
     } catch (final InstantiationException | IllegalAccessException | InvocationTargetException e) {
       throw new RuntimeException("Problem building a LiteralPath class", e);
@@ -198,7 +199,7 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
    */
   @Nonnull
   private static FHIRDefinedType fhirPathToFhirType(
-      @Nonnull final Class<? extends LiteralPath> fhirPathClass) {
+      @Nonnull final Class<? extends LiteralPath<? extends Type>> fhirPathClass) {
     return FHIRPATH_TYPE_TO_FHIR_TYPE.get(fhirPathClass);
   }
 
@@ -218,7 +219,8 @@ public abstract class LiteralPath<ValueType extends Type> implements FhirPath {
     if (target instanceof LiteralPath && getClass().equals(target.getClass())) {
       // If the target is another LiteralPath, we can merge it if they have the same FHIR type, as
       // decided by our mapping of literal FHIRPath types to FHIR types.
-      final FHIRDefinedType fhirType = fhirPathToFhirType(getClass());
+      @SuppressWarnings("unchecked") final FHIRDefinedType fhirType = fhirPathToFhirType(
+          (Class<? extends LiteralPath<? extends Type>>) getClass());
       return ElementPath
           .build(expression, dataset, idColumn, eidColumn, valueColumn, singular, Optional.empty(),
               thisColumn, fhirType);

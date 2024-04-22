@@ -18,6 +18,7 @@
 package au.csiro.pathling.test.assertions;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import au.csiro.pathling.fhirpath.literal.CodingLiteralPath;
@@ -26,6 +27,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.function.Function;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Type;
 
 /**
  * @author John Grimes
@@ -34,23 +36,23 @@ import org.hl7.fhir.r4.model.Coding;
 public class LiteralPathAssertion extends BaseFhirPathAssertion<LiteralPathAssertion> {
 
   @Nonnull
-  private final LiteralPath fhirPath;
+  private final LiteralPath<? extends Type> fhirPath;
 
-  LiteralPathAssertion(@Nonnull final LiteralPath fhirPath) {
+  LiteralPathAssertion(@Nonnull final LiteralPath<? extends Type> fhirPath) {
     super(fhirPath);
     this.fhirPath = fhirPath;
   }
 
   @Nonnull
   public LiteralPathAssertion has(@Nullable final Object expected,
-      @Nonnull final Function<LiteralPath, Object> function) {
+      @Nonnull final Function<LiteralPath<? extends Type>, Object> function) {
     assertEquals(expected, function.apply(fhirPath));
     return this;
   }
 
   @Nonnull
   public LiteralPathAssertion hasCodingValue(@Nonnull final Coding expectedCoding) {
-    assertTrue(fhirPath instanceof CodingLiteralPath);
+    assertInstanceOf(CodingLiteralPath.class, fhirPath);
     final Coding actualCoding = ((CodingLiteralPath) fhirPath).getValue();
     assertTrue(expectedCoding.equalsDeep(actualCoding));
     return this;

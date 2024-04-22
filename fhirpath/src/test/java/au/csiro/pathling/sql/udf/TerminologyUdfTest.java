@@ -319,8 +319,8 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
-        .withRow("uc-coding_1", CodingEncoding.encodeList(Arrays.asList(CODING_5, CODING_4)))
-        .withRow("uc-coding_2", Collections.emptyList())
+        .withRow("uc-coding_1", CodingEncoding.encodeListToArray(List.of(CODING_5, CODING_4)))
+        .withRow("uc-coding_2", new Row[]{})
         .build();
     DatasetAssert.of(result).hasRows(expectedResult);
   }
@@ -334,11 +334,11 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
         .withIdColumn("id")
         .withColumn("codings", DataTypes.createArrayType(CodingEncoding.DATA_TYPE))
         .withRow("uc-null", null)
-        .withRow("uc-empty", Collections.emptyList())
-        .withRow("uc-coding_1", Collections.singletonList(CodingEncoding.encode(CODING_1)))
-        .withRow("uc-coding_2", Collections.singletonList(CodingEncoding.encode(CODING_2)))
-        .withRow("uc-coding_1+coding_1", Arrays.asList(CodingEncoding.encode(CODING_1),
-            CodingEncoding.encode(CODING_1)))
+        .withRow("uc-empty", new Row[]{})
+        .withRow("uc-coding_1", new Row[]{CodingEncoding.encode(CODING_1)})
+        .withRow("uc-coding_2", new Row[]{CodingEncoding.encode(CODING_2)})
+        .withRow("uc-coding_1+coding_1",
+            CodingEncoding.encodeListToArray(List.of(CODING_1, CODING_1)))
         .build();
 
     final Dataset<Row> result = ds.select(ds.col("id"),
@@ -350,11 +350,11 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
     final Dataset<Row> expectedResult = DatasetBuilder.of(spark).withIdColumn("id")
         .withColumn("result", TranslateUdf.RETURN_TYPE)
         .withRow("uc-null", null)
-        .withRow("uc-empty", Collections.emptyList())
-        .withRow("uc-coding_1", CodingEncoding.encodeList(Arrays.asList(CODING_5, CODING_4)))
-        .withRow("uc-coding_2", Collections.emptyList())
+        .withRow("uc-empty", new Row[]{})
+        .withRow("uc-coding_1", CodingEncoding.encodeListToArray(List.of(CODING_5, CODING_4)))
+        .withRow("uc-coding_2", new Row[]{})
         .withRow("uc-coding_1+coding_1",
-            CodingEncoding.encodeList(Arrays.asList(CODING_5, CODING_4)))
+            CodingEncoding.encodeListToArray(List.of(CODING_5, CODING_4)))
         .build();
     DatasetAssert.of(result).hasRows(expectedResult);
   }
@@ -536,8 +536,8 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
         .withColumn("result", DataTypes.createArrayType(resultDataType))
         .withRow("uc-null", null)
         .withRow("uc-invalid", null)
-        .withRow("uc-codingA", Collections.singletonList(propertyASqlValues))
-        .withRow("uc-codingB", Collections.emptyList())
+        .withRow("uc-codingA", propertyASqlValues.toArray())
+        .withRow("uc-codingB", new Object[]{})
         .build();
 
     DatasetAssert.of(resultA)
@@ -552,8 +552,8 @@ public class TerminologyUdfTest extends AbstractTerminologyTestBase {
         .withColumn("result", DataTypes.createArrayType(resultDataType))
         .withRow("uc-null", null)
         .withRow("uc-invalid", null)
-        .withRow("uc-codingA", Collections.emptyList())
-        .withRow("uc-codingB", Collections.singletonList(propertyBSqlValues))
+        .withRow("uc-codingA", new Object[]{})
+        .withRow("uc-codingB", propertyBSqlValues.toArray())
         .build();
 
     DatasetAssert.of(resultB)

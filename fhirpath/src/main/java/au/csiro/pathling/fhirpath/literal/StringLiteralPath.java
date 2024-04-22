@@ -43,11 +43,11 @@ import org.hl7.fhir.r4.model.StringType;
  */
 @SuppressWarnings("rawtypes")
 @Getter
-public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
-    Materializable<PrimitiveType>, Comparable {
+public class StringLiteralPath extends LiteralPath<PrimitiveType<?>> implements
+    Materializable<PrimitiveType<?>>, Comparable {
 
   protected StringLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final PrimitiveType literalValue) {
+      @Nonnull final PrimitiveType<?> literalValue) {
     super(dataset, idColumn, literalValue);
   }
 
@@ -115,7 +115,8 @@ public class StringLiteralPath extends LiteralPath<PrimitiveType> implements
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<PrimitiveType<?>> getValueFromRow(@Nonnull final Row row,
+      final int columnNumber) {
     return StringPath.valueFromRow(row, columnNumber, FHIRDefinedType.STRING);
   }
 

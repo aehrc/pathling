@@ -76,7 +76,7 @@ public class ElementDefinition {
   private final BaseRuntimeChildDefinition childDefinition;
 
   @Nonnull
-  private final Optional<BaseRuntimeElementDefinition> elementDefinition;
+  private final Optional<BaseRuntimeElementDefinition<? extends IBase>> elementDefinition;
 
   protected ElementDefinition(@Nonnull final BaseRuntimeChildDefinition childDefinition,
       @Nonnull final String elementName) {
@@ -110,9 +110,7 @@ public class ElementDefinition {
   @Nonnull
   public Optional<ElementDefinition> getChildElement(@Nonnull final String name) {
     if (elementDefinition.isPresent()
-        && elementDefinition.get() instanceof BaseRuntimeElementCompositeDefinition) {
-      final BaseRuntimeElementCompositeDefinition compositeDefinition =
-          (BaseRuntimeElementCompositeDefinition) elementDefinition.get();
+        && elementDefinition.get() instanceof final BaseRuntimeElementCompositeDefinition<? extends IBase> compositeDefinition) {
       final BaseRuntimeChildDefinition newChild = compositeDefinition.getChildByName(name);
       if (newChild == null) {
         return Optional.empty();
@@ -151,7 +149,7 @@ public class ElementDefinition {
     }
 
     @Nullable final IBase exampleObject = elementDefinition.get().newInstance();
-    if (exampleObject == null || exampleObject.getClass() == null) {
+    if (exampleObject == null) {
       return Optional.empty();
     }
 

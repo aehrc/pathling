@@ -41,12 +41,12 @@ import org.hl7.fhir.r4.model.PrimitiveType;
  *
  * @author John Grimes
  */
-public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
-    Materializable<PrimitiveType>, Comparable, Numeric {
+public class IntegerLiteralPath extends LiteralPath<PrimitiveType<?>> implements
+    Materializable<PrimitiveType<?>>, Comparable, Numeric {
 
   @SuppressWarnings("WeakerAccess")
   protected IntegerLiteralPath(@Nonnull final Dataset<Row> dataset, @Nonnull final Column idColumn,
-      @Nonnull final PrimitiveType literalValue) {
+      @Nonnull final PrimitiveType<?> literalValue) {
     super(dataset, idColumn, literalValue);
   }
 
@@ -117,7 +117,8 @@ public class IntegerLiteralPath extends LiteralPath<PrimitiveType> implements
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row, final int columnNumber) {
+  public Optional<PrimitiveType<?>> getValueFromRow(@Nonnull final Row row,
+      final int columnNumber) {
     return IntegerPath.valueFromRow(row, columnNumber, FHIRDefinedType.INTEGER);
   }
 

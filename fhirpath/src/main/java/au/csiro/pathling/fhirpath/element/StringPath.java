@@ -46,7 +46,8 @@ import org.hl7.fhir.r4.model.UuidType;
  *
  * @author John Grimes
  */
-public class StringPath extends ElementPath implements Materializable<PrimitiveType>, Comparable {
+public class StringPath extends ElementPath implements Materializable<PrimitiveType<?>>,
+    Comparable {
 
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(StringPath.class, StringLiteralPath.class, NullLiteralPath.class);
@@ -62,7 +63,7 @@ public class StringPath extends ElementPath implements Materializable<PrimitiveT
 
   @Nonnull
   @Override
-  public Optional<PrimitiveType> getValueFromRow(@Nonnull final Row row,
+  public Optional<PrimitiveType<?>> getValueFromRow(@Nonnull final Row row,
       final int columnNumber) {
     return valueFromRow(row, columnNumber, getFhirType());
   }
@@ -76,31 +77,26 @@ public class StringPath extends ElementPath implements Materializable<PrimitiveT
    * @return A {@link PrimitiveType}, or the absence of a value
    */
   @Nonnull
-  public static Optional<PrimitiveType> valueFromRow(@Nonnull final Row row, final int columnNumber,
-      final FHIRDefinedType fhirType) {
+  public static Optional<PrimitiveType<?>> valueFromRow(@Nonnull final Row row,
+      final int columnNumber, final FHIRDefinedType fhirType) {
     if (row.isNullAt(columnNumber)) {
       return Optional.empty();
     }
-    switch (fhirType) {
-      case URI:
-        return Optional.of(new UriType(row.getString(columnNumber)));
-      case CODE:
-        return Optional.of(new CodeType(row.getString(columnNumber)));
-      case OID:
-        return Optional.of(new OidType(row.getString(columnNumber)));
-      case ID:
-        return Optional.of(new IdType(row.getString(columnNumber)));
-      case UUID:
-        return Optional.of(new UuidType(row.getString(columnNumber)));
-      case MARKDOWN:
-        return Optional.of(new MarkdownType(row.getString(columnNumber)));
-      case BASE64BINARY:
-        return Optional.of(new Base64BinaryType(row.getString(columnNumber)));
-      default:
-        return Optional.of(new StringType(row.getString(columnNumber)));
-    }
+    return switch (fhirType) {
+      case URI -> Optional.of(new UriType(row.getString(columnNumber)));
+      case CODE -> Optional.of(new CodeType(row.getString(columnNumber)));
+      case OID -> Optional.of(new OidType(row.getString(columnNumber)));
+      case ID -> Optional.of(new IdType(row.getString(columnNumber)));
+      case UUID -> Optional.of(new UuidType(row.getString(columnNumber)));
+      case MARKDOWN -> Optional.of(new MarkdownType(row.getString(columnNumber)));
+      case BASE64BINARY -> Optional.of(new Base64BinaryType(row.getString(columnNumber)));
+      default -> Optional.of(new StringType(row.getString(columnNumber)));
+    };
   }
 
+  /**
+   * @return A set of types that can be compared to this type
+   */
   @Nonnull
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;
