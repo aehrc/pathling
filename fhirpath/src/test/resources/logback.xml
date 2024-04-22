@@ -34,6 +34,7 @@
   <logger level="WARN" name="au.csiro"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.analysis.SimpleFunctionRegistry"/>
+  <logger level="ERROR" name="org.apache.hadoop.util.NativeCodeLoader"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
   </root>

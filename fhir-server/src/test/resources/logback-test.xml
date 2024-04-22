@@ -27,6 +27,7 @@
   <logger level="ERROR" name="org.apache.spark.sql.execution.CacheManager"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.util.SparkStringUtils"/>
   <logger level="ERROR" name="org.apache.spark.sql.catalyst.analysis.SimpleFunctionRegistry"/>
+  <logger level="ERROR" name="org.apache.hadoop.util.NativeCodeLoader"/>
   <logger level="WARN" name="requestLogger"/>
   <root level="WARN">
     <appender-ref ref="STDOUT"/>
