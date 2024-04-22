@@ -134,10 +134,7 @@ public class PathlingJwtDecoderBuilder implements JWTClaimsSetAwareJWSKeySelecto
   @Nonnull
   protected NimbusJwtDecoder buildDecoderWithValidators(
       @Nonnull final List<OAuth2TokenValidator<Jwt>> validators) {
-    final OAuth2TokenValidator[] validatorsArray = validators.toArray(new OAuth2TokenValidator[0]);
-    @SuppressWarnings("unchecked")
-    final OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
-        validatorsArray);
+    final OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(validators);
 
     final NimbusJwtDecoder jwtDecoder = new NimbusJwtDecoder(processor());
     jwtDecoder.setJwtValidator(validator);
