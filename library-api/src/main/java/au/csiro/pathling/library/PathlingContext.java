@@ -34,7 +34,6 @@ import au.csiro.pathling.terminology.DefaultTerminologyServiceFactory;
 import au.csiro.pathling.terminology.TerminologyFunctions;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.validation.ValidationUtils;
-import ca.uhn.fhir.context.BaseRuntimeElementDefinition;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.FhirVersionEnum;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
@@ -153,8 +152,7 @@ public class PathlingContext {
   @Nonnull
   public static PathlingContext create(@Nonnull final SparkSession sparkSession) {
     final EncodingConfiguration encodingConfig = EncodingConfiguration.builder().build();
-    final TerminologyConfiguration terminologyConfig = TerminologyConfiguration.builder().build();
-    return create(sparkSession, encodingConfig, terminologyConfig);
+    return create(sparkSession, encodingConfig);
   }
 
   /**
@@ -232,10 +230,20 @@ public class PathlingContext {
     return encode(stringResources, definition.getImplementingClass(), inputMimeType).toDF();
   }
 
+  /**
+   * Takes a dataframe of encoded resources of the specified type and decodes them into a dataset of
+   * string representations, based on the requested output MIME type.
+   *
+   * @param resources the dataframe of encoded resources
+   * @param resourceName the name of the resources to decode
+   * @param outputMimeType the MIME type of the output strings
+   * @param <T> the type of the resource
+   * @return a dataset of string representations of the resources
+   */
   @Nonnull
   public <T extends IBaseResource> Dataset<String> decode(@Nonnull final Dataset<Row> resources,
       @Nonnull final String resourceName, @Nonnull final String outputMimeType) {
-    final BaseRuntimeElementDefinition definition = FhirEncoders.contextFor(fhirVersion)
+    final RuntimeResourceDefinition definition = FhirEncoders.contextFor(fhirVersion)
         .getResourceDefinition(resourceName);
 
     @SuppressWarnings("unchecked")
@@ -243,7 +251,7 @@ public class PathlingContext {
 
     final ExpressionEncoder<T> encoder = fhirEncoders.of(resourceClass);
     final Dataset<T> typedResources = resources.as(encoder);
-    final DecodeResourceMapPartitions<T> mapper = new DecodeResourceMapPartitions<T>(fhirVersion,
+    final DecodeResourceMapPartitions<T> mapper = new DecodeResourceMapPartitions<>(fhirVersion,
         outputMimeType, resourceClass);
 
     return typedResources.mapPartitions(mapper, Encoders.STRING());
