@@ -21,8 +21,8 @@ import static au.csiro.pathling.utilities.Preconditions.check;
 
 import au.csiro.pathling.config.ServerConfiguration;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,6 +32,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -53,13 +54,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Slf4j
 public class SecurityConfiguration {
 
+  @Nonnull
   private final ServerConfiguration configuration;
 
-  @Autowired(required = false)
-  private PathlingAuthenticationConverter authenticationConverter;
+  @Nullable
+  private final JwtAuthenticationConverter authenticationConverter;
 
-  @Autowired(required = false)
-  private JwtDecoder jwtDecoder;
+  @Nullable
+  private final JwtDecoder jwtDecoder;
 
   @Value("${pathling.auth.enabled}")
   private boolean authEnabled;
@@ -69,8 +71,12 @@ public class SecurityConfiguration {
    *
    * @param configuration a {@link ServerConfiguration} object
    */
-  public SecurityConfiguration(@Nonnull final ServerConfiguration configuration) {
+  public SecurityConfiguration(@Nonnull final ServerConfiguration configuration,
+      @Nullable final JwtAuthenticationConverter authenticationConverter,
+      @Nullable final JwtDecoder jwtDecoder) {
     this.configuration = configuration;
+    this.authenticationConverter = authenticationConverter;
+    this.jwtDecoder = jwtDecoder;
   }
 
   /**
@@ -89,9 +95,9 @@ public class SecurityConfiguration {
       check(jwtDecoder != null, "JWT decoder must be provided when authentication is enabled");
       http.authorizeHttpRequests(authz -> authz
               // The following requests do not require authentication.
-              .requestMatchers(HttpMethod.GET, "/metadata").permitAll()
-              .requestMatchers(HttpMethod.GET, "/OperationDefinition/**").permitAll()
-              .requestMatchers(HttpMethod.GET, "/.well-known/**").permitAll()
+              .requestMatchers(HttpMethod.GET, "/fhir/metadata").permitAll()
+              .requestMatchers(HttpMethod.GET, "/fhir/OperationDefinition/**").permitAll()
+              .requestMatchers(HttpMethod.GET, "/fhir/.well-known/**").permitAll()
               // Anything else needs to be authenticated.
               .anyRequest().authenticated())
           .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
