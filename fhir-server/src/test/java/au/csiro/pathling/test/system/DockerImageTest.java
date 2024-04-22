@@ -153,7 +153,7 @@ class DockerImageTest {
     final URL url = loader.getResource(folder);
     assertThat(url).isNotNull();
     final String path = url.getPath();
-    final FileFilter fileFilter = new WildcardFileFilter("*.ndjson");
+    final FileFilter fileFilter = WildcardFileFilter.builder().setWildcards("*.ndjson").get();
     @Nullable final File[] files = new File(path).listFiles(fileFilter);
     assertNotNull(files);
     return files;
