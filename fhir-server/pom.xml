@@ -36,7 +36,7 @@
     <pathling.fhirServerDockerRepo>aehrc/pathling</pathling.fhirServerDockerRepo>
     <pathling.fhirServerDockerTag>latest</pathling.fhirServerDockerTag>
     <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
-    <jmh.version>1.36</jmh.version>
+    <jmh.version>1.37</jmh.version>
     <pathling.dockerBaseImage>amazoncorretto:17</pathling.dockerBaseImage>
   </properties>
 
