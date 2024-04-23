@@ -2,7 +2,7 @@ R API for Pathling
 ==================
 
 ``pathling`` package is the R API for [Pathling](https://pathling.csiro.au),
-based on [sparklyr](https://spark.rstudio.com/). It provides a set of functions
+based on [sparklyr](https://spark.posit.co/). It provides a set of functions
 that aid the use of FHIR terminology services and FHIR data within R code.
 
 ## Local installation
