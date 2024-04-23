@@ -443,7 +443,7 @@ jobs:
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
           -DskipSurefireTests
-        timeout-minutes: 40
+        timeout-minutes: 80
       - name: Upload benchmark artifact
         uses: actions/upload-artifact@v3
         with:
