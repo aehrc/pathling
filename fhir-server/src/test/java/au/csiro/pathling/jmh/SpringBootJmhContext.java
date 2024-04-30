@@ -20,6 +20,7 @@ package au.csiro.pathling.jmh;
 import jakarta.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.test.annotation.DirtiesContext.HierarchyMode;
 import org.springframework.test.context.TestContextManager;
 
 /**
@@ -51,5 +52,18 @@ public class SpringBootJmhContext {
   public static void autowireWithTestContext(@Nonnull final Object testLikeObject)
       throws Exception {
     getOrCreate(testLikeObject.getClass()).prepareTestInstance(testLikeObject);
+  }
+
+
+  /**
+   * Cleans up the contexts of all the classes that have been autowired using this class.
+   * This also destroys and clean up all the test application contexts created thus far.
+   */
+  public static void cleanUpAll() {
+    synchronized (contextManagers) {
+      contextManagers.forEach((k, v) -> v.getTestContext().markApplicationContextDirty(
+          HierarchyMode.EXHAUSTIVE));
+      contextManagers.clear();
+    }
   }
 }
