@@ -21,6 +21,7 @@ import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.ActiveProfiles;
 
 
@@ -36,7 +37,7 @@ import org.springframework.test.context.ActiveProfiles;
  * #wireUp()} comes up first which is now achieved by placing this class in 'au.csiro.pathling.jmh'
  * package and all the classes that use it in 'au.csiro.pathling.test.benchmark'.
  */
-@SpringBootTest
+@SpringBootTest(webEnvironment = WebEnvironment.NONE)
 public abstract class AbstractJmhSpringBootState {
 
   @Setup(Level.Trial)
