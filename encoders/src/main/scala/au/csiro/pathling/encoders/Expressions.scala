@@ -113,6 +113,54 @@ case class InstanceOf(value: Expression,
 
 }
 
+
+/**
+ * Gets value of an element of a HAPI object. This is could be composed from `If` and `Invoke`
+ * expression but having it as a dedicated expression makes the serializer expression more readable 
+ * and also avoids the problems with 'If' optimisations.
+ *
+ * @param value     the expression with the reference to the HAPI object
+ * @param dataType  the data type of the element to get          
+ * @param hasMethod the name of method to check if the element is present, e.g. hasNameElement()
+ * @param getMethod the name of method to get the value of the element, e.g. getNameElement()                  
+ * @return the value of the element or null if the element is not present or the object is null
+ */
+case class GetHapiValue(value: Expression,
+                        dataType: DataType,
+                        hasMethod: String, getMethod: String)
+  extends Expression with NonSQLExpression {
+
+  override def nullable: Boolean = true
+
+  override def children: Seq[Expression] = value :: Nil
+
+  override def eval(input: InternalRow): Any =
+    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
+
+  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+
+    val obj = value.genCode(ctx)
+    val javaType = CodeGenerator.javaType(dataType)
+    val code =
+      code"""
+            |// BEGIN: GetHapiValue
+            |${obj.code}
+            |boolean ${ev.isNull} = true;
+            |$javaType ${ev.value} = ${CodeGenerator.defaultValue(dataType)};
+            |if (!${obj.isNull} && ${obj.value}.$hasMethod()) {
+            | ${ev.isNull} = false;
+            | ${ev.value} = ${obj.value}.$getMethod();
+            |} 
+            |// END: GetHapiValue        
+       """.stripMargin
+    ev.copy(code = code)
+  }
+
+  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
+    GetHapiValue(newChildren.head, dataType, hasMethod, getMethod)
+  }
+}
+
 /**
  * Casts the result of an expression to another type.
  *

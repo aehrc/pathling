@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import ca.uhn.fhir.parser.IParser;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -624,4 +625,43 @@ public class FhirEncodersTest {
 
     assertEquals(originalComparator.toCode(), queriedComparator);
   }
+
+  @Test
+  public void nullEncoding() {
+    // empty elements of all types should be encoded as nulls
+    final Observation emptyObservation = new Observation();
+    assertFalse(emptyObservation.hasSubject());
+    final Dataset<Observation> observationsDataset = spark.createDataset(
+        ImmutableList.of(emptyObservation),
+        ENCODERS_L0.of(Observation.class));
+    // 'subject' is a struct 
+    // 'identifier' is an array of struct
+    //  'status' is a primitive type
+    final Row subjectRow = observationsDataset.toDF().select("subject", "identifier", "status")
+        .first();
+    assertTrue(subjectRow.isNullAt(0));
+    assertTrue(subjectRow.isNullAt(1));
+    assertTrue(subjectRow.isNullAt(2));
+  }
+
+
+  @Test
+  public void nullEncodingFromJson() {
+    final IParser parser = ENCODERS_L0.getContext().newJsonParser();
+    final Observation emptyObservationFromJson = parser.parseResource(Observation.class,
+        "{ \"resourceType\": \"Observation\"}");
+    assertFalse(emptyObservationFromJson.hasSubject());
+    final Dataset<Observation> observationsDataset = spark.createDataset(
+        ImmutableList.of(emptyObservationFromJson),
+        ENCODERS_L0.of(Observation.class));
+    // 'subject' is a struct 
+    // 'identifier' is an array of struct
+    //  'status' is a primitive type
+    final Row subjectRow = observationsDataset.toDF().select("subject", "identifier", "status")
+        .first();
+    assertTrue(subjectRow.isNullAt(0));
+    assertTrue(subjectRow.isNullAt(1));
+    assertTrue(subjectRow.isNullAt(2));
+  }
+
 }

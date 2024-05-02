@@ -188,10 +188,11 @@ private[encoders] object SerializerBuilderProcessor {
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition,
                                  dataType: DataType): Expression = {
-    Invoke(parentObject,
-      accessorFor(childDefinition),
-      dataType)
+
+    val (hasMethod, getMethod) = accessorsFor(childDefinition)
+    GetHapiValue(parentObject, dataType, hasMethod, getMethod)
   }
+
 
   private def getChildExpression(parentObject: Expression,
                                  childDefinition: BaseRuntimeChildDefinition): Expression = {
@@ -217,9 +218,17 @@ private[encoders] object SerializerBuilderProcessor {
   }
 
   /**
-   * Returns the accessor method for the given child field.
+   * Returns the accessor methods for the given child field.
+   * These are the 'has' and 'get' methods that test for the presence of the field an retrieve its value.
+   *
+   * @param field the runtime child definition of the field
+   * @return a tuple containing the names of  'has' and 'get' methods
    */
-  private def accessorFor(field: BaseRuntimeChildDefinition): String = {
+  private def accessorsFor(field: BaseRuntimeChildDefinition): (String, String) = {
+
+    def defaultAccessors(suffix: String): (String, String) = {
+      ("has" + suffix, "get" + suffix)
+    }
 
     // Primitive single-value types typically use the Element suffix in their
     // accessors, with the exception of the "div" field for reasons that are not clear.
@@ -234,14 +243,14 @@ private[encoders] object SerializerBuilderProcessor {
           // StringType and getReferenceElement_ needs to be used instead.
           // All subclasses of IBaseReference have a getReferenceElement_ 
           // method.
-          "getReferenceElement_"
+          ("hasReferenceElement", "getReferenceElement_")
         } else {
-          "get" + p.getElementName.capitalize + "Element"
+          defaultAccessors(p.getElementName.capitalize + "Element")
         }
       case f if f.getElementName.equals("class") =>
-        "get" + f.getElementName.capitalize + "_"
+        defaultAccessors(f.getElementName.capitalize + "_")
       case _ =>
-        "get" + field.getElementName.capitalize
+        defaultAccessors(field.getElementName.capitalize)
     }
   }
 
