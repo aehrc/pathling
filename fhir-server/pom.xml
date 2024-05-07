@@ -40,6 +40,8 @@
     <pathling.dockerBaseImage>amazoncorretto:17</pathling.dockerBaseImage>
     <pathling.benchmark.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.benchmark.warehouseUrl>
     <pathling.benchmark.databaseName>parquet</pathling.benchmark.databaseName>
+    <pathling.benchmark.warmupIterations>1</pathling.benchmark.warmupIterations>
+    <pathling.benchmark.testIterations>5</pathling.benchmark.testIterations>
   </properties>
 
   <dependencies>
@@ -457,6 +459,8 @@
                     <argument>-Dspring.profiles.active=unit-test</argument>
                     <argument>-Dpathling.storage.warehouseUrl=${pathling.benchmark.warehouseUrl}</argument>
                     <argument>-Dpathling.storage.databaseName=${pathling.benchmark.databaseName}</argument>
+                    <argument>-Dbenchmark.test.iterations=${pathling.benchmark.testIterations}</argument>
+                    <argument>-Dbenchmark.warmup.iterations=${pathling.benchmark.warmupIterations}</argument>
                     <argument>au.csiro.pathling.test.benchmark.PathlingBenchmarkRunner</argument>
                     <argument>${project.build.directory}/benchmark</argument>
                   </arguments>

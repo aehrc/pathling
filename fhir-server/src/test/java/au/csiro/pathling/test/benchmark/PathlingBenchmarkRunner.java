@@ -43,7 +43,7 @@ public class PathlingBenchmarkRunner {
                              ? argc[0]
                              : "target/benchmark";
 
-    final Properties properties = PropertiesLoaderUtils.loadAllProperties("benchmark.properties");
+    final Properties properties = System.getProperties();
 
     final int warmup = Integer
         .parseInt(properties.getProperty("benchmark.warmup.iterations", "1"));
