@@ -444,6 +444,7 @@ jobs:
           -P${{ env.PATHLING_PROFILES }}
           -DskipSurefireTests
           -Dpathling.benchmark.testIterations=100
+          -Dpathling.benchmark.warmupIterations=10
         timeout-minutes: 720
       - name: Upload benchmark artifact
         uses: actions/upload-artifact@v3
