@@ -38,6 +38,8 @@
     <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
     <jmh.version>1.37</jmh.version>
     <pathling.dockerBaseImage>amazoncorretto:17</pathling.dockerBaseImage>
+    <pathling.benchmark.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.benchmark.warehouseUrl>
+    <pathling.benchmark.databaseName>parquet</pathling.benchmark.databaseName>
   </properties>
 
   <dependencies>
@@ -453,8 +455,8 @@
                     <argument>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</argument>
                     <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
                     <argument>-Dspring.profiles.active=unit-test</argument>
-                    <argument>-Dpathling.storage.warehouseUrl=file://${project.basedir}/src/test/resources/test-data</argument>
-                    <argument>-Dpathling.storage.databaseName=parquet</argument>
+                    <argument>-Dpathling.storage.warehouseUrl=${pathling.benchmark.warehouseUrl}</argument>
+                    <argument>-Dpathling.storage.databaseName=${pathling.benchmark.databaseName}</argument>
                     <argument>au.csiro.pathling.test.benchmark.PathlingBenchmarkRunner</argument>
                     <argument>${project.build.directory}/benchmark</argument>
                   </arguments>

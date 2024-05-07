@@ -98,7 +98,7 @@ public class AggregateBenchmark {
       SharedMocks.resetAll();
       mockResource(ResourceType.PATIENT, ResourceType.CONDITION, ResourceType.ENCOUNTER,
           ResourceType.PROCEDURE, ResourceType.MEDICATIONREQUEST, ResourceType.OBSERVATION,
-          ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION, ResourceType.QUESTIONNAIRE,
+          ResourceType.DIAGNOSTICREPORT, ResourceType.ORGANIZATION,
           ResourceType.CAREPLAN);
 
       executor = new AggregateExecutor(configuration, fhirContext, spark, database,
