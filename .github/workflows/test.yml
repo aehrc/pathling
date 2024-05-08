@@ -401,11 +401,6 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
-          aws-region: ap-southeast-2
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -451,6 +446,11 @@ jobs:
         with:
           name: benchmark-results
           path: "**/jmh-*.json"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
+          aws-region: ap-southeast-2
       - name: Upload benchmark file to S3
         run: aws s3 sync fhir-server/target/benchmark s3://pathling-benchmark/${{ github.ref }}/${{ github.run_id }}/${{ steps.timestamp.outputs.timestamp }}/
 
