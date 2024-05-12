@@ -24,7 +24,7 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders.datatypes.R4DataTypeMappings.{fhirPrimitiveToSparkTypes, isValidOpenElementType}
-import au.csiro.pathling.encoders.{ExpressionWithName, StaticField}
+import au.csiro.pathling.encoders.{Catalyst, ExpressionWithName, StaticField}
 import ca.uhn.fhir.context._
 import ca.uhn.fhir.model.api.TemporalPrecisionEnum
 import org.apache.spark.sql.catalyst.analysis.GetColumnByOrdinal
@@ -150,13 +150,13 @@ class R4DataTypeMappings extends DataTypeMappings {
           ObjectType(classOf[TemporalPrecisionEnum]),
           "MILLI")
 
-        val UTCZone = StaticInvoke(classOf[TimeZone],
+        val UTCZone = Catalyst.staticInvoke(classOf[TimeZone],
           ObjectType(classOf[TimeZone]),
           "getTimeZone",
           Literal("UTC", ObjectType(classOf[String])) :: Nil)
 
         NewInstance(primitiveClass,
-          List(StaticInvoke(org.apache.spark.sql.catalyst.util.DateTimeUtils.getClass,
+          List(Catalyst.staticInvoke(org.apache.spark.sql.catalyst.util.DateTimeUtils.getClass,
             ObjectType(classOf[java.sql.Timestamp]),
             "toJavaTimestamp",
             getPath :: Nil),

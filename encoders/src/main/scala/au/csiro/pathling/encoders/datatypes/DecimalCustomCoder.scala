@@ -24,7 +24,7 @@
 package au.csiro.pathling.encoders.datatypes
 
 import au.csiro.pathling.encoders.EncoderUtils.arrayExpression
-import au.csiro.pathling.encoders.ExpressionWithName
+import au.csiro.pathling.encoders.{Catalyst, ExpressionWithName}
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder.decimalType
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, NewInstance, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{Expression, Literal}
@@ -54,7 +54,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
       decimalExpression(addToPath)
     } else {
       // Let's to this manually as we need to zip two independent arrays into into one
-      val array = StaticInvoke(
+      val array = Catalyst.staticInvoke(
         classOf[DecimalCustomCoder],
         ObjectType(classOf[Array[Any]]),
         "zipToDecimal",
@@ -66,7 +66,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
   }
 
   override def customSerializer(evaluator: (Expression => Expression) => Expression): Seq[ExpressionWithName] = {
-    val valueExpression = evaluator(exp => StaticInvoke(classOf[Decimal],
+    val valueExpression = evaluator(exp => Catalyst.staticInvoke(classOf[Decimal],
       decimalType,
       "apply",
       Invoke(exp, "getValue", ObjectType(classOf[java.math.BigDecimal])) :: Nil))
@@ -95,7 +95,7 @@ case class DecimalCustomCoder(elementName: String) extends CustomCoder {
   }
 
   private def scaleExpression(inputObject: Expression) = {
-    StaticInvoke(classOf[Math],
+    Catalyst.staticInvoke(classOf[Math],
       IntegerType,
       "min", Literal(decimalType.scale) ::
         Invoke(Invoke(inputObject, "getValue", ObjectType(classOf[java.math.BigDecimal])),

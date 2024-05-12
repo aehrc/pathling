@@ -52,15 +52,15 @@ object QuantitySupport {
 
     val canonicalizedValue =
       createFlexiDecimalSerializer(
-        StaticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]),
+        Catalyst.staticInvoke(classOf[Ucum], ObjectType(classOf[java.math.BigDecimal]),
           "getCanonicalValue", Seq(valueExp, codeExp)))
 
     val canonicalizedCode =
-      StaticInvoke(
+      Catalyst.staticInvoke(
         classOf[UTF8String],
         DataTypes.StringType,
         "fromString",
-        StaticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode",
+        Catalyst.staticInvoke(classOf[Ucum], ObjectType(classOf[java.lang.String]), "getCanonicalCode",
           Seq(valueExp, codeExp)) :: Nil)
     Seq(
       (VALUE_CANONICALIZED_FIELD_NAME, canonicalizedValue),
