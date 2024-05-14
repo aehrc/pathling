@@ -84,7 +84,7 @@
     <pathling.springSecurityVersion>5.7.10</pathling.springSecurityVersion>
     <pathling.antlrVersion>4.9.3</pathling.antlrVersion>
     <pathling.dockerJavaVersion>3.3.4</pathling.dockerJavaVersion>
-    <pathling.awsSdkVersion>1.12.603</pathling.awsSdkVersion>
+    <pathling.awsSdkVersion>1.12.721</pathling.awsSdkVersion>
     <!-- we do not use recent version 1.18.24 as it (wrongly) copies the JSR-380 NonNull
          annotations from fields to getters resulting in duplicate constraint violations.
          This has been fixed in the main branch but not released yet -->
