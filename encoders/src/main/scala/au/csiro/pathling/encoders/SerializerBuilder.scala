@@ -95,7 +95,7 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression,
   private def createExtensionsFields(definition: BaseRuntimeElementCompositeDefinition[_]): Seq[(String, Expression)] = {
     val maybeExtensionValueField = definition match {
       case _: RuntimeResourceDefinition =>
-        val collectExtensionsExpression = StaticInvoke(
+        val collectExtensionsExpression = Catalyst.staticInvoke(
           classOf[SerializerBuilderProcessor],
           ObjectType(classOf[Map[Int, java.util.List[Extension]]]),
           "flattenExtensions",
@@ -111,7 +111,7 @@ private[encoders] class SerializerBuilderProcessor(expression: Expression,
       case _ => Nil
     }
     // append _fid serializer
-    (FID_FIELD_NAME, StaticInvoke(
+    (FID_FIELD_NAME, Catalyst.staticInvoke(
       classOf[System], IntegerType, "identityHashCode",
       expression :: Nil)) :: maybeExtensionValueField
   }
@@ -208,7 +208,7 @@ private[encoders] object SerializerBuilderProcessor {
   }
 
   private def dataTypeToUtf8Expr(inputObject: Expression): Expression = {
-    StaticInvoke(
+    Catalyst.staticInvoke(
       classOf[UTF8String],
       DataTypes.StringType,
       "fromString",

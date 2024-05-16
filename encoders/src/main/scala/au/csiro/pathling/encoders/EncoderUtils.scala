@@ -37,7 +37,7 @@ object EncoderUtils {
   }
 
   def arrayExpression(array: Expression): StaticInvoke = {
-    StaticInvoke(
+    Catalyst.staticInvoke(
       classOf[util.Arrays],
       ObjectType(classOf[util.List[_]]),
       "asList",

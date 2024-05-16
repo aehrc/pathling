@@ -23,6 +23,7 @@
 
 package au.csiro.pathling.sql.types
 
+import au.csiro.pathling.encoders.Catalyst
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
 import org.apache.spark.sql.catalyst.expressions.{CreateNamedStruct, Expression, If, IsNull, Literal}
@@ -57,12 +58,12 @@ object FlexiDecimalSupport {
 
     // TODO: Performance: consider if the normalized value could be cached in
     //   a variable
-    val normalizedExpression: Expression = StaticInvoke(classOf[FlexiDecimal],
+    val normalizedExpression: Expression = Catalyst.staticInvoke(classOf[FlexiDecimal],
       ObjectType(classOf[java.math.BigDecimal]),
       "normalize",
       expression :: Nil)
 
-    val valueExpression: Expression = StaticInvoke(classOf[Decimal],
+    val valueExpression: Expression = Catalyst.staticInvoke(classOf[Decimal],
       FlexiDecimal.DECIMAL_TYPE,
       "apply",
       Invoke(normalizedExpression, "unscaledValue",

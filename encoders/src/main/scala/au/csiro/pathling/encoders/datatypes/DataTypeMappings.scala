@@ -23,7 +23,7 @@
 
 package au.csiro.pathling.encoders.datatypes
 
-import au.csiro.pathling.encoders.ExpressionWithName
+import au.csiro.pathling.encoders.{Catalyst, ExpressionWithName}
 import ca.uhn.fhir.context._
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.expressions.objects.{Invoke, StaticInvoke}
@@ -60,7 +60,7 @@ trait DataTypeMappings {
    */
   def dataTypeToUtf8Expr(inputObject: Expression): Expression = {
 
-    StaticInvoke(
+    Catalyst.staticInvoke(
       classOf[UTF8String],
       DataTypes.StringType,
       "fromString",
