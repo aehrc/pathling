@@ -38,6 +38,10 @@
     <pathling.dockerArchitecture>arm64</pathling.dockerArchitecture>
     <jmh.version>1.37</jmh.version>
     <pathling.dockerBaseImage>amazoncorretto:17</pathling.dockerBaseImage>
+    <pathling.benchmark.warehouseUrl>file://${project.basedir}/src/test/resources/test-data</pathling.benchmark.warehouseUrl>
+    <pathling.benchmark.databaseName>parquet</pathling.benchmark.databaseName>
+    <pathling.benchmark.warmupIterations>1</pathling.benchmark.warmupIterations>
+    <pathling.benchmark.testIterations>5</pathling.benchmark.testIterations>
   </properties>
 
   <dependencies>
@@ -438,29 +442,29 @@
                 <id>run-benchmark</id>
                 <phase>test</phase>
                 <goals>
-                  <goal>java</goal>
+                  <goal>exec</goal>
                 </goals>
                 <configuration>
-                  <mainClass>au.csiro.pathling.test.benchmark.PathlingBenchmarkRunner</mainClass>
-                  <classpathScope>test</classpathScope>
-                  <cleanupDaemonThreads>false</cleanupDaemonThreads>
-                  <systemProperties>
-                    <property>
-                      <key>spring.profiles.active</key>
-                      <value>unit-test</value>
-                    </property>
-                    <property>
-                      <key>pathling.storage.warehouseUrl</key>
-                      <value>file://${project.basedir}/src/test/resources/test-data</value>
-                    </property>
-                    <property>
-                      <key>pathling.storage.databaseName</key>
-                      <value>parquet</value>
-                    </property>
-                  </systemProperties>
+                  <executable>java</executable>
                   <arguments>
+                    <argument>-classpath</argument>
+                    <classpath/>
+                    <argument>-Xmx6g</argument>
+                    <argument>-XX:MaxMetaspaceSize=400m</argument>
+                    <argument>-XX:ReservedCodeCacheSize=240m</argument>
+                    <argument>-Xss1m</argument>
+                    <argument>-Duser.timezone=UTC</argument>
+                    <argument>--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</argument>
+                    <argument>--add-opens=java.base/java.net=ALL-UNNAMED</argument>
+                    <argument>-Dspring.profiles.active=unit-test</argument>
+                    <argument>-Dpathling.storage.warehouseUrl=${pathling.benchmark.warehouseUrl}</argument>
+                    <argument>-Dpathling.storage.databaseName=${pathling.benchmark.databaseName}</argument>
+                    <argument>-Dbenchmark.test.iterations=${pathling.benchmark.testIterations}</argument>
+                    <argument>-Dbenchmark.warmup.iterations=${pathling.benchmark.warmupIterations}</argument>
+                    <argument>au.csiro.pathling.test.benchmark.PathlingBenchmarkRunner</argument>
                     <argument>${project.build.directory}/benchmark</argument>
                   </arguments>
+                  <classpathScope>test</classpathScope>
                 </configuration>
               </execution>
             </executions>

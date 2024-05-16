@@ -401,11 +401,6 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
-          aws-region: ap-southeast-2
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -443,12 +438,19 @@ jobs:
           -pl fhir-server -am
           -P${{ env.PATHLING_PROFILES }}
           -DskipSurefireTests
-        timeout-minutes: 80
+          -Dpathling.benchmark.testIterations=100
+          -Dpathling.benchmark.warmupIterations=10
+        timeout-minutes: 720
       - name: Upload benchmark artifact
         uses: actions/upload-artifact@v3
         with:
           name: benchmark-results
           path: "**/jmh-*.json"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::865780493209:role/PathlingBenchmarkUpload
+          aws-region: ap-southeast-2
       - name: Upload benchmark file to S3
         run: aws s3 sync fhir-server/target/benchmark s3://pathling-benchmark/${{ github.ref }}/${{ github.run_id }}/${{ steps.timestamp.outputs.timestamp }}/
 
