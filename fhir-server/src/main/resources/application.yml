@@ -160,7 +160,7 @@ spark:
     delta:
       schema:
         autoMerge:
-          enabled: true
+          enabled: false
   scheduler:
     mode: FAIR
 
