@@ -561,7 +561,7 @@ jobs:
         run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Extract Hadoop version
         working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopVersion -q -DforceStdout)" >> $GITHUB_ENV
+        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
@@ -641,7 +641,7 @@ jobs:
         run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Extract Hadoop version
         working-directory: lib/R
-        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopVersion -q -DforceStdout)" >> $GITHUB_ENV
+        run: echo "HADOOP_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.hadoopMajorVersion -q -DforceStdout)" >> $GITHUB_ENV
       - name: Cache Spark
         id: cache-spark
         uses: actions/cache@v2
