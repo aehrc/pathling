@@ -590,6 +590,15 @@ jobs:
           -pl lib/R -am -Pdocs
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 60
+      - name: Upload check logs
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: r-check-logs
+          path: |
+            lib/R/target/pathling.Rcheck/*.log
+            lib/R/target/pathling.Rcheck/*.out
+            lib/R/target/pathling.Rcheck/*.fail
       - name: Upload package as artifact
         uses: actions/upload-artifact@v2
         with:
