@@ -575,6 +575,8 @@ jobs:
         with:
           r-version: "4.1.3"
           use-public-rspm: true
+      - name: Set R user library location
+        run: Rscript -e "Sys.setenv(R_LIBS_USER = '$R_LIBS_USER')"
       - name: Install texlive and libcurl
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
       - name: Run the install goal with Maven
@@ -655,6 +657,8 @@ jobs:
         with:
           r-version: "4.1.3"
           use-public-rspm: true
+      - name: Set R user library location
+        run: Rscript -e "Sys.setenv(R_LIBS_USER = '$R_LIBS_USER')"
       - name: Install texlive and libcurl
         run: sudo apt-get install -y texlive-latex-base texlive-fonts-extra libcurl4-openssl-dev
       - name: Run the verify goal with Maven
