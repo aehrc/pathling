@@ -28,7 +28,7 @@ Depends:
 Imports:
     rlang(>= 1.0.0), sparklyr(>= 1.8.6)
 Suggests:
-    testthat(>= 3.0.0)
+    testthat(>= 3.2.1.1)
 Config/testthat/edition: 3
 RoxygenNote: 7.2.3
 SystemRequirements: Spark: 3.5.x
