@@ -528,7 +528,11 @@ jobs:
   R-api:
     name: R API
     runs-on: ubuntu-latest
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/lib/R
     steps:
+      - name: Create R package installation location
+        run: mkdir -p $R_LIBS_USER
       - name: Checkout code
         uses: actions/checkout@v3
         with:
@@ -546,12 +550,10 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
-      - name: Get R package installation location
-        run: echo "R_PACKAGES=$(Rscript -e 'cat(.libPaths(), sep="\n")' | head -n 1)" >> $GITHUB_ENV
       - name: Cache R packages
         uses: actions/cache@v2
         with:
-          path: ${{ env.R_PACKAGES }}
+          path: ${{ env.R_LIBS_USER }}
           key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
           restore-keys: r-packages-${{ runner.os }}-
       - name: Extract Spark version
@@ -601,6 +603,8 @@ jobs:
   site:
     name: Site
     runs-on: ubuntu-latest
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/lib/R
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -626,6 +630,12 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |-
             ${{ runner.os }}-maven-
+      - name: Cache R packages
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: r-packages-${{ runner.os }}-${{ hashFiles('lib/R/DESCRIPTION.src') }}
+          restore-keys: r-packages-${{ runner.os }}-
       - name: Extract Spark version
         working-directory: lib/R
         run: echo "SPARK_VERSION=$(mvn help:evaluate -Dexpression=pathling.Rapi.sparkVersion -q -DforceStdout)" >> $GITHUB_ENV
