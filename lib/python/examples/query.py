@@ -14,9 +14,8 @@
 #  limitations under the License.
 
 import os
-from tempfile import mkdtemp
-
 from pyspark.sql import DataFrame, SparkSession
+from tempfile import mkdtemp
 
 from pathling import PathlingContext, DataSource, Expression as exp
 from pathling._version import __java_version__
@@ -36,7 +35,7 @@ NDJSON_DIR_2 = os.path.join(TEMP_DIR, "ndjson")
 spark = (
     SparkSession.builder.config(
         "spark.jars.packages",
-        f"au.csiro.pathling:library-runtime:{__java_version__},io.delta:delta-spark_2.12:3.1.0",
+        f"au.csiro.pathling:library-runtime:{__java_version__},io.delta:delta-spark_2.12:3.2.0",
     )
     .config(
         "spark.sql.extensions",
