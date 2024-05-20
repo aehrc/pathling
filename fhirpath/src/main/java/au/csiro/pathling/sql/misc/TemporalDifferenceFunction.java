@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
@@ -105,8 +106,12 @@ public class TemporalDifferenceFunction implements SqlFunction3<String, String, 
       try {
         return LocalDate.parse(encodedFrom).atStartOfDay(ZoneId.of("UTC"));
       } catch (final DateTimeParseException ex) {
-        // If we can't parse the value as a date or datetime, return null.
-        return null;
+        try {
+          return Year.parse(encodedFrom).atDay(1).atStartOfDay(ZoneId.of("UTC"));
+        } catch (final DateTimeParseException exc) {
+          // If we can't parse the value as a date or datetime, return null.
+          return null;
+        }
       }
     }
   }

@@ -314,6 +314,39 @@ class UntilFunctionTest {
   }
 
   @Test
+  void yearOnlyDateInput() throws ParseException {
+    final Dataset<Row> leftDataset = new DatasetBuilder(spark)
+        .withIdColumn(ID_ALIAS)
+        .withColumn(DataTypes.StringType)
+        .withRow("patient-1", "2020")
+        .build();
+    final ElementPath input = new ElementPathBuilder(spark)
+        .fhirType(FHIRDefinedType.DATE)
+        .dataset(leftDataset)
+        .idAndValueColumns()
+        .singular(true)
+        .build();
+    final DateTimeLiteralPath argument = DateTimeLiteralPath.fromString("2020-01-02T00:00:00Z",
+        input);
+    final ParserContext context = new ParserContextBuilder(spark, fhirContext)
+        .groupingColumns(Collections.singletonList(input.getIdColumn()))
+        .build();
+    final Dataset<Row> expectedResult = new DatasetBuilder(spark)
+        .withIdColumn(ID_ALIAS)
+        .withColumn(DataTypes.IntegerType)
+        .withRow("patient-1", 86400000)
+        .build();
+    final List<FhirPath> arguments = List.of(argument,
+        StringLiteralPath.fromString("millisecond", input));
+    final NamedFunctionInput functionInput = new NamedFunctionInput(context, input, arguments);
+    final FhirPath result = NamedFunction.getInstance("until").invoke(functionInput);
+    assertThat(result)
+        .isElementPath(IntegerPath.class)
+        .selectResult()
+        .hasRows(expectedResult);
+  }
+
+  @Test
   void invalidCalendarDuration() {
     final Dataset<Row> leftDataset = new DatasetBuilder(spark)
         .withIdColumn(ID_ALIAS)
