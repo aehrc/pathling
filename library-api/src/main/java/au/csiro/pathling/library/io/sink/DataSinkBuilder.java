@@ -22,8 +22,10 @@ import static java.util.Objects.requireNonNull;
 import au.csiro.pathling.io.ImportMode;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.library.PathlingContext;
+import com.google.common.collect.ImmutableMap;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import java.util.Map;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.SaveMode;
 
@@ -34,6 +36,15 @@ import org.apache.spark.sql.SaveMode;
  * @author John Grimes
  */
 public class DataSinkBuilder {
+
+  @Nonnull
+  private static final Map<String, SaveMode> SAVE_MODES = new ImmutableMap.Builder<String, SaveMode>()
+      .put("error", SaveMode.ErrorIfExists)
+      .put("errorifexists", SaveMode.ErrorIfExists)
+      .put("overwrite", SaveMode.Overwrite)
+      .put("append", SaveMode.Append)
+      .put("ignore", SaveMode.Ignore)
+      .build();
 
   @Nonnull
   private final PathlingContext context;
@@ -161,7 +172,7 @@ public class DataSinkBuilder {
   private static SaveMode resolveSaveMode(final @Nullable String saveMode) {
     return saveMode == null
            ? SaveMode.ErrorIfExists
-           : SaveMode.valueOf(saveMode);
+           : SAVE_MODES.get(saveMode);
   }
 
 }
