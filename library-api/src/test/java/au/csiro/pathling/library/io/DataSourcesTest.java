@@ -107,7 +107,7 @@ class DataSourcesTest {
     queryNdjsonData(data);
 
     // Write the data back out to a temporary location.
-    data.write().ndjson(temporaryDirectory.resolve("ndjson").toString());
+    data.write().ndjson(temporaryDirectory.resolve("ndjson").toString(), "error");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()
@@ -151,7 +151,7 @@ class DataSourcesTest {
     queryNdjsonData(data);
 
     // Write the data back out to a temporary location.
-    data.write().ndjson(temporaryDirectory.resolve("ndjson-custom").toString(),
+    data.write().ndjson(temporaryDirectory.resolve("ndjson-custom").toString(), "error",
         (baseName) -> baseName.replaceFirst("Custom", ""));
 
     // Read the data back in.
@@ -211,7 +211,7 @@ class DataSourcesTest {
     queryParquetData(data);
 
     // Write the data back out to a temporary location.
-    data.write().parquet(temporaryDirectory.resolve("parquet").toString());
+    data.write().parquet(temporaryDirectory.resolve("parquet").toString(), "error");
 
     // Read the data back in.
     final QueryableDataSource newData = pathlingContext.read()

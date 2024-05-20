@@ -26,6 +26,7 @@ import au.csiro.pathling.library.PathlingContext;
 import jakarta.annotation.Nonnull;
 import java.util.function.UnaryOperator;
 import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.SaveMode;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -43,25 +44,32 @@ public class NdjsonSink implements DataSink {
   private final String path;
 
   @Nonnull
+  private final SaveMode saveMode;
+
+  @Nonnull
   private final UnaryOperator<String> fileNameMapper;
 
   /**
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
+   * @param saveMode the {@link SaveMode} to use
    */
-  public NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path) {
-    this(context, path, UnaryOperator.identity());
+  public NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
+      @Nonnull final SaveMode saveMode) {
+    this(context, path, saveMode, UnaryOperator.identity());
   }
 
   /**
    * @param context the {@link PathlingContext} to use
    * @param path the path to write the NDJSON files to
+   * @param saveMode the {@link SaveMode} to use
    * @param fileNameMapper a function that maps resource type to file name
    */
   public NdjsonSink(@Nonnull final PathlingContext context, @Nonnull final String path,
-      @Nonnull final UnaryOperator<String> fileNameMapper) {
+      @Nonnull final SaveMode saveMode, @Nonnull final UnaryOperator<String> fileNameMapper) {
     this.context = context;
     this.path = path;
+    this.saveMode = saveMode;
     this.fileNameMapper = fileNameMapper;
   }
 
@@ -77,7 +85,7 @@ public class NdjsonSink implements DataSink {
           "ndjson");
       final String resultUrl = safelyJoinPaths(path, fileName);
       final String resultUrlPartitioned = resultUrl + ".partitioned";
-      jsonStrings.coalesce(1).write().text(resultUrlPartitioned);
+      jsonStrings.coalesce(1).write().mode(saveMode).text(resultUrlPartitioned);
 
       // Remove the partitioned directory and replace it with a single file.
       departitionResult(context.getSpark(), resultUrlPartitioned, resultUrl, "txt");

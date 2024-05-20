@@ -23,6 +23,7 @@ import au.csiro.pathling.io.source.DataSource;
 import jakarta.annotation.Nonnull;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 
 /**
@@ -36,11 +37,16 @@ public class ParquetSink implements DataSink {
   @Nonnull
   private final String path;
 
+  @Nonnull
+  private final SaveMode saveMode;
+
   /**
    * @param path the path to write the Parquet files to
+   * @param saveMode the {@link SaveMode} to use
    */
-  public ParquetSink(@Nonnull final String path) {
+  public ParquetSink(@Nonnull final String path, @Nonnull final SaveMode saveMode) {
     this.path = path;
+    this.saveMode = saveMode;
   }
 
   @Override
@@ -48,7 +54,7 @@ public class ParquetSink implements DataSink {
     for (final ResourceType resourceType : source.getResourceTypes()) {
       final Dataset<Row> dataset = source.read(resourceType);
       final String resultUrl = safelyJoinPaths(path, resourceType.toCode() + ".parquet");
-      dataset.write().parquet(resultUrl);
+      dataset.write().mode(saveMode).parquet(resultUrl);
     }
   }
 
