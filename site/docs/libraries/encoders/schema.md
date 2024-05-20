@@ -147,7 +147,12 @@ querying.
 ### Reference type
 
 If a complex element is of
-type [Reference](https://hl7.org/fhir/R4/references.html#Reference), an
+type [Reference](https://hl7.org/fhir/R4/references.html#Reference), it is 
+represented as described in [Complex and backbone elements](#complex-and-backbone-elements) 
+with the following exception:
+
+* The `assigner` field within the `identifier` field within a `Reference` SHALL 
+  NOT be included in the schema.
 
 ### Extensions
 
@@ -259,7 +264,40 @@ message spark_schema {
           optional int32 _fid;
         }
         optional group assigner {
+          optional binary id (STRING);
           optional binary reference (STRING);
+          optional binary type (STRING);
+          optional group identifier {
+            optional binary id (STRING);
+            optional binary use (STRING);
+            optional group type {
+              optional binary id (STRING);
+              optional group coding (LIST) {
+                repeated group list {
+                  optional group element {
+                    optional binary id (STRING);
+                    optional binary system (STRING);
+                    optional binary version (STRING);
+                    optional binary code (STRING);
+                    optional binary display (STRING);
+                    optional boolean userSelected;
+                    optional int32 _fid;
+                  }
+                }
+              }
+              optional binary text (STRING);
+              optional int32 _fid;
+            }
+            optional binary system (STRING);
+            optional binary value (STRING);
+            optional group period {
+              optional binary id (STRING);
+              optional binary start (STRING);
+              optional binary end (STRING);
+              optional int32 _fid;
+            }
+            optional int32 _fid;
+          }
           optional binary display (STRING);
           optional int32 _fid;
         }
@@ -482,7 +520,40 @@ message spark_schema {
         }
         optional binary gender (STRING);
         optional group organization {
+          optional binary id (STRING);
           optional binary reference (STRING);
+          optional binary type (STRING);
+          optional group identifier {
+            optional binary id (STRING);
+            optional binary use (STRING);
+            optional group type {
+              optional binary id (STRING);
+              optional group coding (LIST) {
+                repeated group list {
+                  optional group element {
+                    optional binary id (STRING);
+                    optional binary system (STRING);
+                    optional binary version (STRING);
+                    optional binary code (STRING);
+                    optional binary display (STRING);
+                    optional boolean userSelected;
+                    optional int32 _fid;
+                  }
+                }
+              }
+              optional binary text (STRING);
+              optional int32 _fid;
+            }
+            optional binary system (STRING);
+            optional binary value (STRING);
+            optional group period {
+              optional binary id (STRING);
+              optional binary start (STRING);
+              optional binary end (STRING);
+              optional int32 _fid;
+            }
+            optional int32 _fid;
+          }
           optional binary display (STRING);
           optional int32 _fid;
         }
@@ -526,14 +597,80 @@ message spark_schema {
   optional group generalPractitioner (LIST) {
     repeated group list {
       optional group element {
+        optional binary id (STRING);
         optional binary reference (STRING);
+        optional binary type (STRING);
+        optional group identifier {
+          optional binary id (STRING);
+          optional binary use (STRING);
+          optional group type {
+            optional binary id (STRING);
+            optional group coding (LIST) {
+              repeated group list {
+                optional group element {
+                  optional binary id (STRING);
+                  optional binary system (STRING);
+                  optional binary version (STRING);
+                  optional binary code (STRING);
+                  optional binary display (STRING);
+                  optional boolean userSelected;
+                  optional int32 _fid;
+                }
+              }
+            }
+            optional binary text (STRING);
+            optional int32 _fid;
+          }
+          optional binary system (STRING);
+          optional binary value (STRING);
+          optional group period {
+            optional binary id (STRING);
+            optional binary start (STRING);
+            optional binary end (STRING);
+            optional int32 _fid;
+          }
+          optional int32 _fid;
+        }
         optional binary display (STRING);
         optional int32 _fid;
       }
     }
   }
   optional group managingOrganization {
+    optional binary id (STRING);
     optional binary reference (STRING);
+    optional binary type (STRING);
+    optional group identifier {
+      optional binary id (STRING);
+      optional binary use (STRING);
+      optional group type {
+        optional binary id (STRING);
+        optional group coding (LIST) {
+          repeated group list {
+            optional group element {
+              optional binary id (STRING);
+              optional binary system (STRING);
+              optional binary version (STRING);
+              optional binary code (STRING);
+              optional binary display (STRING);
+              optional boolean userSelected;
+              optional int32 _fid;
+            }
+          }
+        }
+        optional binary text (STRING);
+        optional int32 _fid;
+      }
+      optional binary system (STRING);
+      optional binary value (STRING);
+      optional group period {
+        optional binary id (STRING);
+        optional binary start (STRING);
+        optional binary end (STRING);
+        optional int32 _fid;
+      }
+      optional int32 _fid;
+    }
     optional binary display (STRING);
     optional int32 _fid;
   }
@@ -542,7 +679,40 @@ message spark_schema {
       optional group element {
         optional binary id (STRING);
         optional group other {
+          optional binary id (STRING);
           optional binary reference (STRING);
+          optional binary type (STRING);
+          optional group identifier {
+            optional binary id (STRING);
+            optional binary use (STRING);
+            optional group type {
+              optional binary id (STRING);
+              optional group coding (LIST) {
+                repeated group list {
+                  optional group element {
+                    optional binary id (STRING);
+                    optional binary system (STRING);
+                    optional binary version (STRING);
+                    optional binary code (STRING);
+                    optional binary display (STRING);
+                    optional boolean userSelected;
+                    optional int32 _fid;
+                  }
+                }
+              }
+              optional binary text (STRING);
+              optional int32 _fid;
+            }
+            optional binary system (STRING);
+            optional binary value (STRING);
+            optional group period {
+              optional binary id (STRING);
+              optional binary start (STRING);
+              optional binary end (STRING);
+              optional int32 _fid;
+            }
+            optional int32 _fid;
+          }
           optional binary display (STRING);
           optional int32 _fid;
         }
@@ -646,7 +816,40 @@ message spark_schema {
                 optional int32 _fid;
               }
               optional group assigner {
+                optional binary id (STRING);
                 optional binary reference (STRING);
+                optional binary type (STRING);
+                optional group identifier {
+                  optional binary id (STRING);
+                  optional binary use (STRING);
+                  optional group type {
+                    optional binary id (STRING);
+                    optional group coding (LIST) {
+                      repeated group list {
+                        optional group element {
+                          optional binary id (STRING);
+                          optional binary system (STRING);
+                          optional binary version (STRING);
+                          optional binary code (STRING);
+                          optional binary display (STRING);
+                          optional boolean userSelected;
+                          optional int32 _fid;
+                        }
+                      }
+                    }
+                    optional binary text (STRING);
+                    optional int32 _fid;
+                  }
+                  optional binary system (STRING);
+                  optional binary value (STRING);
+                  optional group period {
+                    optional binary id (STRING);
+                    optional binary start (STRING);
+                    optional binary end (STRING);
+                    optional int32 _fid;
+                  }
+                  optional int32 _fid;
+                }
                 optional binary display (STRING);
                 optional int32 _fid;
               }
@@ -654,7 +857,40 @@ message spark_schema {
             }
             optional int32 valueInteger;
             optional group valueReference {
+              optional binary id (STRING);
               optional binary reference (STRING);
+              optional binary type (STRING);
+              optional group identifier {
+                optional binary id (STRING);
+                optional binary use (STRING);
+                optional group type {
+                  optional binary id (STRING);
+                  optional group coding (LIST) {
+                    repeated group list {
+                      optional group element {
+                        optional binary id (STRING);
+                        optional binary system (STRING);
+                        optional binary version (STRING);
+                        optional binary code (STRING);
+                        optional binary display (STRING);
+                        optional boolean userSelected;
+                        optional int32 _fid;
+                      }
+                    }
+                  }
+                  optional binary text (STRING);
+                  optional int32 _fid;
+                }
+                optional binary system (STRING);
+                optional binary value (STRING);
+                optional group period {
+                  optional binary id (STRING);
+                  optional binary start (STRING);
+                  optional binary end (STRING);
+                  optional int32 _fid;
+                }
+                optional int32 _fid;
+              }
               optional binary display (STRING);
               optional int32 _fid;
             }
