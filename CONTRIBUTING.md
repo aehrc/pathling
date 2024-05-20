@@ -53,8 +53,9 @@ follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 The "public API" of Pathling is defined as:
 
 1. the FHIR API;
-2. the public API of the encoders module;
+2. the public API of the library API;
 3. the public API of the Python library;
+3. the public API of the R library;
 4. the Parquet schema, and;
 5. the configuration schema (see
    [Configuration](https://pathling.csiro.au/docs/configuration.html)).
