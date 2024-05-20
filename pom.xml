@@ -22,7 +22,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>au.csiro.pathling</groupId>
   <artifactId>pathling</artifactId>
-  <version>7.0.0-SNAPSHOT</version>
+  <version>7.0.0</version>
   <packaging>pom</packaging>
 
   <name>Pathling</name>
@@ -69,7 +69,7 @@
   </ciManagement>
 
   <properties>
-    <project.majorVersion>6</project.majorVersion>
+    <project.majorVersion>7</project.majorVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <pathling.sparkVersion>3.5.0</pathling.sparkVersion>
