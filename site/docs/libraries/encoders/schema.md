@@ -144,6 +144,11 @@ These fields MAY be used to store canonicalized versions of the `value`
 and `code` fields from the original FHIR data, for easier comparison and
 querying.
 
+### Reference type
+
+If a complex element is of
+type [Reference](https://hl7.org/fhir/R4/references.html#Reference), an
+
 ### Extensions
 
 If the "extensions enabled" option is true, an additional field SHALL be
