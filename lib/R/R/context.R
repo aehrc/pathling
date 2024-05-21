@@ -146,12 +146,6 @@ pathling_connect <- function(
     new_spark_connection()
   }
 
-  spark_runtime_version <- sparklyr::spark_version(spark)
-  if (package_version(spark_runtime_version) < spark_info$spark_version) {
-    warning(sprintf("Incompatible version of spark: %s, while Pathling requires at least: %s",
-                    spark_runtime_version, spark_info$spark_version))
-  }
-
   encoders_config <- spark %>%
       j_invoke_static(
           "au.csiro.pathling.config.EncodingConfiguration", "builder") %>%
