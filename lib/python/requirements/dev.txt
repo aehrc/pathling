@@ -1,7 +1,7 @@
 -r package.txt
 Sphinx>=1.6,<8
 sphinx-rtd-theme==1.2.2
-pytest==8.2.0
+pytest==8.2.1
 ipython==8.10.0
 wheel==0.43.0
 twine==5.0.0
