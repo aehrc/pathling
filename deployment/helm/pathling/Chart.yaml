@@ -3,7 +3,7 @@ name: pathling
 description: A Helm chart for Pathling Server
 icon: https://raw.githubusercontent.com/aehrc/pathling/main/media/logo-icon-colour-detail.svg
 type: application
-version: 1.0.1
+version: 1.0.2
 maintainers:
   - name: John Grimes
     email: John.Grimes@csiro.au
