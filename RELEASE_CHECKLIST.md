@@ -8,6 +8,7 @@
   triggered)
 - [ ] Test snapshot library API, dev Python library release and R package on
   target Databricks release
+- [ ] Deploy pre-release Docker image to demo cluster and test
 - [ ] Update the supported Databricks Runtime versions in the
   documentation (`site/docs/libraries/installation/databricks.md`)
 - [ ] Update licenses (`mvn install -DskipTests -Plicenses`)
