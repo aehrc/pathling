@@ -112,6 +112,13 @@
 <li class="toctree-l4"><a class="reference internal" href="#pathling.datasink.ImportMode.OVERWRITE"><code class="docutils literal notranslate"><span class="pre">ImportMode.OVERWRITE</span></code></a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#pathling.datasink.SaveMode"><code class="docutils literal notranslate"><span class="pre">SaveMode</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.datasink.SaveMode.APPEND"><code class="docutils literal notranslate"><span class="pre">SaveMode.APPEND</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.datasink.SaveMode.ERROR"><code class="docutils literal notranslate"><span class="pre">SaveMode.ERROR</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.datasink.SaveMode.IGNORE"><code class="docutils literal notranslate"><span class="pre">SaveMode.IGNORE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#pathling.datasink.SaveMode.OVERWRITE"><code class="docutils literal notranslate"><span class="pre">SaveMode.OVERWRITE</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#module-pathling.datasource">pathling.datasource module</a><ul>
@@ -836,13 +843,18 @@ on resource ID.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.datasink.DataSinks.ndjson">
-<span class="sig-name descname"><span class="pre">ndjson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/datasink.html#DataSinks.ndjson"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.datasink.DataSinks.ndjson" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">ndjson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'error'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_name_mapper</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/datasink.html#DataSinks.ndjson"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.datasink.DataSinks.ndjson" title="Permalink to this definition"></a></dt>
 <dd><p>Writes the data to a directory of NDJSON files. The files will be named using the resource
 type and the “.ndjson” extension.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>path</strong> – The URI of the directory to write the files to.</p></li>
+<li><p><strong>save_mode</strong> – The save mode to use when writing the data:
+- “overwrite” will overwrite any existing data.
+- “append” will append the new data to the existing data.
+- “ignore” will only save the data if the file does not already exist.
+- “error” will raise an error if the file already exists.</p></li>
 <li><p><strong>file_name_mapper</strong> – An optional function that can be used to customise the mapping of</p></li>
 </ul>
 </dd>
@@ -852,11 +864,18 @@ type and the “.ndjson” extension.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="pathling.datasink.DataSinks.parquet">
-<span class="sig-name descname"><span class="pre">parquet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/datasink.html#DataSinks.parquet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.datasink.DataSinks.parquet" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">parquet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_mode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'error'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/pathling/datasink.html#DataSinks.parquet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.datasink.DataSinks.parquet" title="Permalink to this definition"></a></dt>
 <dd><p>Writes the data to a directory of Parquet files.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>path</strong> – The URI of the directory to write the files to.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The URI of the directory to write the files to.</p></li>
+<li><p><strong>save_mode</strong> – The save mode to use when writing the data:
+- “overwrite” will overwrite any existing data.
+- “append” will append the new data to the existing data.
+- “ignore” will only save the data if the file does not already exist.
+- “error” will raise an error if the file already exists.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -892,6 +911,37 @@ on resource ID.</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="pathling.datasink.ImportMode.OVERWRITE">
 <span class="sig-name descname"><span class="pre">OVERWRITE</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'overwrite'</span></em><a class="headerlink" href="#pathling.datasink.ImportMode.OVERWRITE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pathling.datasink.SaveMode">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pathling.datasink.</span></span><span class="sig-name descname"><span class="pre">SaveMode</span></span><a class="reference internal" href="_modules/pathling/datasink.html#SaveMode"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#pathling.datasink.SaveMode" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Constants that represent the different save modes.</p>
+<p>OVERWRITE: Overwrite any existing data.
+APPEND: Append the new data to the existing data.
+IGNORE: Only save the data if the file does not already exist.
+ERROR: Raise an error if the file already exists.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.datasink.SaveMode.APPEND">
+<span class="sig-name descname"><span class="pre">APPEND</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'append'</span></em><a class="headerlink" href="#pathling.datasink.SaveMode.APPEND" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.datasink.SaveMode.ERROR">
+<span class="sig-name descname"><span class="pre">ERROR</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'error'</span></em><a class="headerlink" href="#pathling.datasink.SaveMode.ERROR" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.datasink.SaveMode.IGNORE">
+<span class="sig-name descname"><span class="pre">IGNORE</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'ignore'</span></em><a class="headerlink" href="#pathling.datasink.SaveMode.IGNORE" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="pathling.datasink.SaveMode.OVERWRITE">
+<span class="sig-name descname"><span class="pre">OVERWRITE</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'overwrite'</span></em><a class="headerlink" href="#pathling.datasink.SaveMode.OVERWRITE" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>

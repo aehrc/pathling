@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">pathling</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">6.4.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">7.0.0</span>
       </span>
     </div>
 
@@ -86,12 +86,29 @@ Currently the following resources are available: 'Patient' and 'Condition'.</p>
     <div id="ref-examples">
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="fu"><a href="pathling_connect.html">pathling_connect</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>problem writing to connection</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in writeBin(as.integer(value), con, endian = "big"):</span> ignoring SIGPIPE signal</span>
 <span class="r-in"><span><span class="fu">pathling_example_resource</span><span class="op">(</span><span class="va">pc</span>, <span class="st">'Condition'</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Source:   table&lt;`Condition_0b7756d5_f036_4d86_baa6_aeabefefd951`&gt; [?? x 33]</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># Database: spark_connection</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    id              id_versioned meta         implicitRules language text        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>           <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span> c879c300-7fdf-… Condition/c… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span> bb9c4fc1-795a-… Condition/b… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span> e620d7ee-6cfe-… Condition/e… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span> 0447de38-1f2a-… Condition/0… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span> 4025ceb3-04a6-… Condition/4… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span> 7ed34fb1-0bbf-… Condition/7… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span> 5ef84858-0480-… Condition/5… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span> 5378726d-7f2b-… Condition/5… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span> 31393667-dd7f-… Condition/3… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span> 6464e20b-55ec-… Condition/6… <span style="color: #949494;">&lt;named list&gt;</span> <span style="color: #BB0000;">NA</span>            <span style="color: #BB0000;">NA</span>       <span style="color: #949494;">&lt;named list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ more rows</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 27 more variables: identifier &lt;list&gt;, clinicalStatus &lt;list&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   verificationStatus &lt;list&gt;, category &lt;list&gt;, severity &lt;list&gt;, code &lt;list&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   bodySite &lt;list&gt;, subject &lt;list&gt;, encounter &lt;list&gt;, onsetAge &lt;list&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   onsetDateTime &lt;chr&gt;, onsetPeriod &lt;list&gt;, onsetRange &lt;list&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   onsetString &lt;chr&gt;, abatementAge &lt;list&gt;, abatementDateTime &lt;chr&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   abatementPeriod &lt;list&gt;, abatementRange &lt;list&gt;, abatementString &lt;chr&gt;, …</span></span>
 <span class="r-in"><span><span class="fu"><a href="pathling_disconnect.html">pathling_disconnect</a></span><span class="op">(</span><span class="va">pc</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in sparklyr::spark_connection(pc):</span> object 'pc' not found</span>
 </code></pre></div>
     </div>
   </div>
@@ -106,7 +123,7 @@ Currently the following resources are available: 'Patient' and 'Condition'.</p>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.8.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.9.</p>
 </div>
 
       </footer></div>

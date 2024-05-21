@@ -3,9 +3,9 @@
         <head>
           <meta http-equiv="X-UA-Compatible" content="IE=edge" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-          <title>Pathling Encoders 6.4.2 API  - au.csiro.pathling.encoders</title>
-          <meta name="description" content="Pathling Encoders 6.4.2 API - au.csiro.pathling.encoders" />
-          <meta name="keywords" content="Pathling Encoders 6.4.2 API au.csiro.pathling.encoders" />
+          <title>Pathling Encoders 7.0.0 API  - au.csiro.pathling.encoders</title>
+          <meta name="description" content="Pathling Encoders 7.0.0 API - au.csiro.pathling.encoders" />
+          <meta name="keywords" content="Pathling Encoders 7.0.0 API au.csiro.pathling.encoders" />
           <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
           
       
@@ -28,7 +28,7 @@
         </head>
         <body>
       <div id="search">
-        <span id="doc-title">Pathling Encoders 6.4.2 API<span id="doc-version"></span></span>
+        <span id="doc-title">Pathling Encoders 7.0.0 API<span id="doc-version"></span></span>
         <span class="close-results"><span class="left">&lt;</span> Back</span>
         <div id="textfilter">
           <span class="input">
@@ -187,6 +187,10 @@
                         <a href="AttachExtensions.html" title="Attaches the Extensions from the provided fid-&gt;Extension map to objects registered in the _fid_mapping with RegisterFid.">AttachExtensions</a>
                       </li><li class="current-entities indented4">
                         <span class="separator"></span>
+                        <a class="object" href="Catalyst$.html" title="This class provides a compatibility layer for Spark Catalyst."></a>
+                        <a href="Catalyst$.html" title="This class provides a compatibility layer for Spark Catalyst.">Catalyst</a>
+                      </li><li class="current-entities indented4">
+                        <span class="separator"></span>
                         <a class="trait" href="Deserializer.html" title=""></a>
                         <a href="Deserializer.html" title="">Deserializer</a>
                       </li><li class="current-entities indented4">
@@ -229,6 +233,10 @@
                         <span class="separator"></span>
                         <a class="class" href="GetClassFromContained.html" title="An Expression extracting an object having the given class definition from a List of FHIR Resources."></a>
                         <a href="GetClassFromContained.html" title="An Expression extracting an object having the given class definition from a List of FHIR Resources.">GetClassFromContained</a>
+                      </li><li class="current-entities indented4">
+                        <span class="separator"></span>
+                        <a class="class" href="GetHapiValue.html" title="Gets value of an element of a HAPI object."></a>
+                        <a href="GetHapiValue.html" title="Gets value of an element of a HAPI object.">GetHapiValue</a>
                       </li><li class="current-entities indented4">
                         <span class="separator"></span>
                         <a class="class" href="InstanceOf.html" title="Determines if the given value is an instanceof a given class"></a>
@@ -548,6 +556,25 @@ registered in the <code>_fid_mapping</code> with <a href="RegisterFid.html" clas
       
       <p class="shortcomment cmt">An Expression extracting an object having the given class definition from a List of FHIR
 Resources.</p>
+    </li><li name="au.csiro.pathling.encoders.GetHapiValue" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="GetHapiValueextendsExpressionwithNonSQLExpressionwithProductwithSerializable"></a><a id="GetHapiValue:GetHapiValue"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/encoders/GetHapiValue.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a title="Gets value of an element of a HAPI object." href="GetHapiValue.html"><span class="name">GetHapiValue</span></a><span class="params">(<span name="value">value: <span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span></span>, <span name="dataType">dataType: <span class="extype" name="org.apache.spark.sql.types.DataType">DataType</span></span>, <span name="hasMethod">hasMethod: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="getMethod">getMethod: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <span class="extype" name="org.apache.spark.sql.catalyst.expressions.Expression">Expression</span> with <span class="extype" name="org.apache.spark.sql.catalyst.expressions.NonSQLExpression">NonSQLExpression</span> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      
+      <p class="shortcomment cmt">Gets value of an element of a HAPI object.</p><div class="fullcomment"><div class="comment cmt"><p>Gets value of an element of a HAPI object. This is could be composed from <code>If</code> and <code>Invoke</code>
+expression but having it as a dedicated expression makes the serializer expression more readable
+and also avoids the problems with 'If' optimisations.
+</p></div><dl class="paramcmts block"><dt class="param">value</dt><dd class="cmt"><p>the expression with the reference to the HAPI object</p></dd><dt class="param">dataType</dt><dd class="cmt"><p>the data type of the element to get</p></dd><dt class="param">hasMethod</dt><dd class="cmt"><p>the name of method to check if the element is present, e.g. hasNameElement()</p></dd><dt class="param">getMethod</dt><dd class="cmt"><p>the name of method to get the value of the element, e.g. getNameElement()</p></dd><dt>returns</dt><dd class="cmt"><p>the value of the element or null if the element is not present or the object is null</p></dd></dl></div>
     </li><li name="au.csiro.pathling.encoders.InstanceOf" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="InstanceOfextendsExpressionwithNonSQLExpressionwithProductwithSerializable"></a><a id="InstanceOf:InstanceOf"></a>
       <span class="permalink">
@@ -728,7 +755,29 @@ will result in returning null instead of calling the function.
         <div class="values members">
               <h3>Value Members</h3>
               <ol>
-                <li name="au.csiro.pathling.encoders.DeserializerBuilder" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
+                <li name="au.csiro.pathling.encoders.Catalyst" visbl="pub" class="indented0 " data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="Catalyst"></a><a id="Catalyst:Catalyst"></a>
+      <span class="permalink">
+      <a href="../../../../au/csiro/pathling/encoders/Catalyst$.html" title="Permalink">
+        <i class="material-icons"></i>
+      </a>
+    </span>
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a title="This class provides a compatibility layer for Spark Catalyst." href="Catalyst$.html"><span class="name">Catalyst</span></a>
+      </span>
+      
+      <p class="shortcomment cmt">This class provides a compatibility layer for Spark Catalyst.</p><div class="fullcomment"><div class="comment cmt"><p>This class provides a compatibility layer for Spark Catalyst.
+It is used to createnew Expressions using constructors compatible with the runtime
+version of Spark Catalyst.
+This is necessary to address running Pathling in Databricks environments,
+which habitually use different (newer) version of Catalyst that one used by
+the corresponding Spark public release.
+</p></div></div>
+    </li><li name="au.csiro.pathling.encoders.DeserializerBuilder" visbl="pub" class="indented0 " data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="DeserializerBuilder"></a><a id="DeserializerBuilder:DeserializerBuilder"></a>
       <span class="permalink">
       <a href="../../../../au/csiro/pathling/encoders/DeserializerBuilder$.html" title="Permalink">

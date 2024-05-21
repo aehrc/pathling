@@ -99,6 +99,22 @@
     <span class="n">MERGE</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;merge&quot;</span></div>
 
 
+<div class="viewcode-block" id="SaveMode"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.SaveMode">[docs]</a><span class="k">class</span> <span class="nc">SaveMode</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constants that represent the different save modes.</span>
+
+<span class="sd">    OVERWRITE: Overwrite any existing data.</span>
+<span class="sd">    APPEND: Append the new data to the existing data.</span>
+<span class="sd">    IGNORE: Only save the data if the file does not already exist.</span>
+<span class="sd">    ERROR: Raise an error if the file already exists.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">OVERWRITE</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;overwrite&quot;</span>
+    <span class="n">APPEND</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;append&quot;</span>
+    <span class="n">IGNORE</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ignore&quot;</span>
+    <span class="n">ERROR</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span></div>
+
+
 <div class="viewcode-block" id="DataSinks"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks">[docs]</a><span class="k">class</span> <span class="nc">DataSinks</span><span class="p">(</span><span class="n">SparkConversionsMixin</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A class for writing FHIR data to a variety of different targets.</span>
@@ -112,12 +128,22 @@
             <span class="p">)</span>
         <span class="p">)</span>
 
-<div class="viewcode-block" id="DataSinks.ndjson"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.ndjson">[docs]</a>    <span class="k">def</span> <span class="nf">ndjson</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file_name_mapper</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="DataSinks.ndjson"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.ndjson">[docs]</a>    <span class="k">def</span> <span class="nf">ndjson</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span>
+        <span class="n">file_name_mapper</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Writes the data to a directory of NDJSON files. The files will be named using the resource</span>
 <span class="sd">        type and the &quot;.ndjson&quot; extension.</span>
 
 <span class="sd">        :param path: The URI of the directory to write the files to.</span>
+<span class="sd">        :param save_mode: The save mode to use when writing the data:</span>
+<span class="sd">            - &quot;overwrite&quot; will overwrite any existing data.</span>
+<span class="sd">            - &quot;append&quot; will append the new data to the existing data.</span>
+<span class="sd">            - &quot;ignore&quot; will only save the data if the file does not already exist.</span>
+<span class="sd">            - &quot;error&quot; will raise an error if the file already exists.</span>
 <span class="sd">        :param file_name_mapper: An optional function that can be used to customise the mapping of</span>
 <span class="sd">        the resource type to the file name.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -125,17 +151,22 @@
             <span class="n">wrapped_mapper</span> <span class="o">=</span> <span class="n">StringMapper</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">_jvm</span><span class="o">.</span><span class="n">_gateway_client</span><span class="p">,</span> <span class="n">file_name_mapper</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">wrapped_mapper</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">,</span> <span class="n">wrapped_mapper</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">ndjson</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="DataSinks.parquet"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.parquet">[docs]</a>    <span class="k">def</span> <span class="nf">parquet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="DataSinks.parquet"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.parquet">[docs]</a>    <span class="k">def</span> <span class="nf">parquet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveMode</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Writes the data to a directory of Parquet files.</span>
 
 <span class="sd">        :param path: The URI of the directory to write the files to.</span>
+<span class="sd">        :param save_mode: The save mode to use when writing the data:</span>
+<span class="sd">            - &quot;overwrite&quot; will overwrite any existing data.</span>
+<span class="sd">            - &quot;append&quot; will append the new data to the existing data.</span>
+<span class="sd">            - &quot;ignore&quot; will only save the data if the file does not already exist.</span>
+<span class="sd">            - &quot;error&quot; will raise an error if the file already exists.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_datasinks</span><span class="o">.</span><span class="n">parquet</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">save_mode</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="DataSinks.delta"><a class="viewcode-back" href="../../pathling.html#pathling.datasink.DataSinks.delta">[docs]</a>    <span class="k">def</span> <span class="nf">delta</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">import_mode</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">ImportMode</span><span class="o">.</span><span class="n">OVERWRITE</span>
