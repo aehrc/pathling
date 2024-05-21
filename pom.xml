@@ -92,7 +92,7 @@
     <pathling.surefireVersion>3.2.5</pathling.surefireVersion>
     <pathling.logbackVersion>1.4.14</pathling.logbackVersion>
     <pathling.slf4jVersion>2.0.9</pathling.slf4jVersion>
-    <pathling.derbyVersion>10.14.2.0</pathling.derbyVersion>
+    <pathling.derbyVersion>10.17.1.0</pathling.derbyVersion>
   </properties>
 
   <modules>
