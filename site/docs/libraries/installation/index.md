@@ -19,7 +19,7 @@ pip install pathling
 
 ### R
 
-Prerequisites: 
+Prerequisites:
 
 - R >= 3.5.0 (tested with 4.3.1)
 
@@ -48,6 +48,7 @@ To add the Pathling library to your project, add the following to
 your `pom.xml`:
 
 ```xml
+
 <dependency>
     <groupId>au.csiro.pathling</groupId>
     <artifactId>library-runtime</artifactId>
@@ -57,11 +58,11 @@ your `pom.xml`:
 
 ### Java Virtual Machine
 
-All variants of the Pathling library require version 11 of a Java Virtual
-Machine (JVM) to be installed. We recommend
-using Azul OpenJDK, you can download installers for all major operating systems
-at the [Azul OpenJDK](https://www.azul.com/downloads/?version=java-11-lts) web
-site.
+All variants of the Pathling library require version 17 of a Java Virtual
+Machine (JVM) to be installed. We recommend using Azul OpenJDK, you can download
+installers for all major operating systems at
+the [Azul OpenJDK](https://www.azul.com/downloads/?version=java-17-lts#zulu)
+website.
 
 Ensure that the `JAVA_HOME` environment variable is set to the location of the
-installation of Java 11.
+installation of Java 17.
