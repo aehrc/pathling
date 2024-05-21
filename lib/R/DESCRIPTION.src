@@ -26,7 +26,7 @@ Encoding: UTF-8
 Depends:
     R (>= 3.5.0)
 Imports:
-    rlang(>= 1.0.0), sparklyr(>= 1.8.6)
+    rlang(>= 1.0.0), sparklyr(>= 1.8.1)
 Suggests:
     testthat(>= 3.2.1.1)
 Config/testthat/edition: 3
