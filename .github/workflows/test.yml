@@ -39,7 +39,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -96,7 +96,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -104,7 +104,7 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
@@ -173,7 +173,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -181,7 +181,7 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
@@ -251,7 +251,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -259,7 +259,7 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Cache test data
         id: cache-test-data
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: fhir-server/src/test/resources/test-data/parquet
           key: ${{ runner.os }}-test-data-${{ hashFiles('fhir-server/src/test/resources/test-data/fhir/*.ndjson', 'encoders/src/main/**/*.java', 'encoders/src/main/**/*.scala', 'fhir-server/src/main/java/au/csiro/pathling/io/Database.java') }}
@@ -341,7 +341,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -413,7 +413,7 @@ jobs:
         with:
           node-version: "16"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -443,7 +443,7 @@ jobs:
         with:
           node-version: "16"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -475,7 +475,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -487,7 +487,7 @@ jobs:
         with:
           python-version: 3.8
       - name: Cache Python packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: pythoncache
         with:
           path: /home/runner/.cache/pip
@@ -540,7 +540,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -627,7 +627,7 @@ jobs:
         with:
           node-version: "16"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -729,7 +729,7 @@ jobs:
           java-version: 17
           distribution: "zulu"
       - name: Cache local Maven repository
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
