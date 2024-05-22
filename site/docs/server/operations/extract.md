@@ -5,7 +5,7 @@ description: The extract operation allows a user to create arbitrary tabular ext
 
 # Extract
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/extract-6)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/extract-7)
 
 This operation allows a user to create arbitrary tabular extracts from FHIR
 data, by specifying columns in terms of set of FHIRPath expressions that are

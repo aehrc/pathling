@@ -5,7 +5,7 @@ description: The import operation allows FHIR data to be imported into the serve
 
 # Import
 
-[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-6)
+[FHIR OperationDefinition](https://pathling.csiro.au/fhir/OperationDefinition/import-7)
 
 This operation allows FHIR R4 data to be imported into the server, making it
 available for query via other operations such
