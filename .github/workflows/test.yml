@@ -56,17 +56,17 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 20
       - name: Upload encoders test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: encoders-surefire-reports
           path: encoders/target/surefire-reports
       - name: Upload test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: encoders-coverage
           path: "**/jacoco.xml"
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: encoders-dump-files
           path: |-
@@ -128,22 +128,22 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload fhir-server test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-surefire-reports
           path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-coverage
           path: "**/jacoco.xml"
       - name: Upload timing log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-timing-log
           path: fhir-server/target/timing.log
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-1-dump-files
           path: |-
@@ -205,22 +205,22 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload fhir-server test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-surefire-reports
           path: fhir-server/target/surefire-reports
       - name: Upload test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-coverage
           path: "**/jacoco.xml"
       - name: Upload timing log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-timing-log
           path: fhir-server/target/timing.log
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-2-dump-files
           path: |-
@@ -280,37 +280,37 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload utilities test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: utilities-surefire-reports
           path: utilities/target/surefire-reports
       - name: Upload terminology test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: terminology-surefire-reports
           path: terminology/target/surefire-reports
       - name: Upload FHIRPath test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhirpath-surefire-reports
           path: fhirpath/target/surefire-reports
       - name: Upload FHIR server test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-surefire-reports
           path: fhir-server/target/surefire-reports
       - name: Upload FHIR server test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-coverage
           path: "**/jacoco.xml"
       - name: Upload timing log
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-timing-log
           path: fhir-server/target/timing.log
       - name: Upload dump files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: fhir-server-3-dump-files
           path: |-
@@ -455,7 +455,7 @@ jobs:
           -pl lib/import -am
         timeout-minutes: 5
       - name: Upload import lambda
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: import-lambda
           path: lib/import/target/pathling-import-lambda.zip
@@ -510,17 +510,17 @@ jobs:
           ${{ env.PATHLING_OPTS }}
         timeout-minutes: 30
       - name: Upload library API test reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: library-api-surefire-reports
           path: library-api/target/surefire-reports
       - name: Upload library API test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: library-api-coverage
           path: "**/jacoco.xml"
       - name: Upload Python API test coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: python-api-coverage
           path: lib/python/**/coverage.xml
