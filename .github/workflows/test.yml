@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -163,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -241,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -331,7 +331,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -400,7 +400,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -430,7 +430,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -465,7 +465,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -530,7 +530,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -610,7 +610,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
@@ -677,7 +677,7 @@ jobs:
     if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download encoders coverage report
         uses: actions/download-artifact@v3
         with:
@@ -719,7 +719,7 @@ jobs:
     if: startsWith(github.ref, 'refs/heads/release/')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
