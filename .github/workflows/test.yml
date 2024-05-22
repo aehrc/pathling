@@ -679,32 +679,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Download encoders coverage report
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: encoders-coverage
           path: encoders-coverage
       - name: Download library API coverage report
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: library-api-coverage
           path: library-api-coverage
       - name: Download Python API coverage report
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: python-api-coverage
           path: python-api-coverage
       - name: Download FHIR server coverage report 1
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: fhir-server-1-coverage
           path: fhir-server-1-coverage
       - name: Download FHIR server coverage report 2
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: fhir-server-2-coverage
           path: fhir-server-2-coverage
       - name: Download FHIR server coverage report 3
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: fhir-server-3-coverage
           path: fhir-server-3-coverage
