@@ -34,7 +34,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -91,7 +91,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -168,7 +168,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -246,7 +246,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -336,7 +336,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -405,11 +405,11 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "16"
       - name: Cache local Maven repository
@@ -435,11 +435,11 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "16"
       - name: Cache local Maven repository
@@ -470,7 +470,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -535,7 +535,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -615,7 +615,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"
@@ -623,7 +623,7 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 3.13.2
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: "16"
       - name: Cache local Maven repository
@@ -724,7 +724,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: "zulu"

@@ -24,7 +24,7 @@ jobs:
           # This is required so that git-commit-id-plugin can find the latest tag.
           fetch-depth: 0
       - name: Set up JDK
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: 17
           distribution: 'zulu'
