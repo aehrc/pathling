@@ -383,7 +383,7 @@ jobs:
           image-ref: "aehrc/pathling:${{ github.sha }}"
           exit-code: "1"
           ignore-unfixed: true
-          security-checks: "vuln"
+          scanners: "vuln"
           severity: CRITICAL
           timeout: 20m
       - name: Publish test results
