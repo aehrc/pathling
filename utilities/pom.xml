@@ -8,7 +8,7 @@
   <parent>
     <artifactId>pathling</artifactId>
     <groupId>au.csiro.pathling</groupId>
-    <version>6.5.0-SNAPSHOT</version>
+    <version>7.1.0-SNAPSHOT</version>
   </parent>
   <artifactId>utilities</artifactId>
   <packaging>jar</packaging>
