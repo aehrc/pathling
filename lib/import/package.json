@@ -23,7 +23,7 @@
     "client-oauth2": "^4.3.3",
     "p-retry": "^5.0.0",
     "temp-dir": "^3.0.0",
-    "uuid": "^9.0.0"
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "prettier": "^2.4.1",
