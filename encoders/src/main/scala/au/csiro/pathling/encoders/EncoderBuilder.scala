@@ -34,8 +34,8 @@ import scala.reflect.ClassTag
  */
 object EncoderBuilder {
 
-  val UNSUPPORTED_RESOURCES: Set[String] = Set("Parameters",
-    "Task", "StructureDefinition", "StructureMap", "Bundle")
+  val UNSUPPORTED_RESOURCES: Set[String] = Set("Parameters", "StructureDefinition", "StructureMap",
+    "Bundle")
 
   /**
    * Returns an encoder for the FHIR resource implemented by the given class
