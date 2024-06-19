@@ -33,6 +33,7 @@ public class DateTimeUDFRegistrar extends AbstractUDFRegistrar {
         .register(new DateTimeGreaterThanFunction())
         .register(new DateTimeGreaterThanOrEqualToFunction())
         .register(new DateTimeLessThanFunction())
-        .register(new DateTimeLessThanOrEqualToFunction());
+        .register(new DateTimeLessThanOrEqualToFunction())
+        .register(new NormalizeDateTimeFunction());
   }
 }

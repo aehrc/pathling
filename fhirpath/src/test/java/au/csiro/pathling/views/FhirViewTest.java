@@ -5,7 +5,9 @@ import static au.csiro.pathling.UnitTestDependencies.jsonParser;
 import static au.csiro.pathling.test.assertions.Assertions.assertThat;
 import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
+import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.when;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,6 +17,7 @@ import static scala.collection.JavaConversions.asScalaBuffer;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
+import au.csiro.pathling.sql.dates.datetime.NormalizeDateTimeFunction;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
@@ -54,6 +57,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder;
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.DecimalType;
+import org.apache.spark.sql.types.StringType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Enumerations.ResourceType;
 import org.junit.jupiter.api.BeforeAll;
@@ -135,13 +139,17 @@ abstract class FhirViewTest {
   @Value
   class Expect implements ResultExpectation {
 
+    public static final String FHIR_DATE_TIME_PATTERN = "^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|"
+        + "[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:"
+        + "([0-5][0-9]|60)(\\.[0-9]{1,9})?)?)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)?)?)?$";
     Path expectedJson;
     List<String> expectedColumns;
 
     @Override
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       // Read the expected JSON with prefersDecimal option set to true.
-      final Dataset<Row> expectedResult = spark.read().json(expectedJson.toString());
+      final Dataset<Row> expectedResult = spark.read().option("prefersDecimal", "true")
+          .json(expectedJson.toString());
 
       // Dynamically create column expressions based on the schema.
       final List<Column> selectColumns = Arrays.stream(expectedResult.schema().fields())
@@ -153,6 +161,12 @@ abstract class FhirViewTest {
                 || DataTypes.DoubleType.equals(field.dataType())) {
               // Use DecimalCustomCoder.decimalType() for the cast type.
               return col(field.name()).cast(DecimalCustomCoder.decimalType()).alias(field.name());
+            } else if (field.dataType() instanceof StringType) {
+              // Normalize anything that looks like a date time, otherwise pass it through unaltered.
+              return when(
+                  col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
+                  callUDF(NormalizeDateTimeFunction.FUNCTION_NAME, col(field.name()))
+              ).otherwise(col(field.name())).alias(field.name());
             } else {
               // Add the field to the selection without alteration.
               return col(field.name());

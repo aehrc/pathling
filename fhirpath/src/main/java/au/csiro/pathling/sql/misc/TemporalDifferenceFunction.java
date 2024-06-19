@@ -98,7 +98,7 @@ public class TemporalDifferenceFunction implements SqlFunction3<String, String, 
   }
 
   @Nullable
-  private ZonedDateTime parse(final @Nonnull String encodedFrom) {
+  public static ZonedDateTime parse(final @Nonnull String encodedFrom) {
     try {
       return ZonedDateTime.parse(encodedFrom);
     } catch (final DateTimeParseException e) {
