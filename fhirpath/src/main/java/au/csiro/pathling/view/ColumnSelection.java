@@ -49,7 +49,8 @@ public class ColumnSelection implements ProjectionClause {
             if (collection.getFhirType().isPresent() && !collection.getFhirType().get()
                 .equals(type)) {
               throw new IllegalArgumentException(
-                  "Collection " + collection + " is not of type " + type);
+                  "Collection " + collection + " has type " + collection.getFhirType().get()
+                      + ", expected " + type);
             }
           });
 
