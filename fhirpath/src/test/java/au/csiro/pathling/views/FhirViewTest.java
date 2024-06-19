@@ -7,6 +7,7 @@ import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.unix_timestamp;
 import static org.apache.spark.sql.functions.when;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -168,7 +169,11 @@ abstract class FhirViewTest {
               // Normalize anything that looks like a date time, otherwise pass it through unaltered.
               return when(
                   col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
-                  callUDF(NormalizeDateTimeFunction.FUNCTION_NAME, col(field.name()))
+                  // Convert the timestamp to milliseconds, so that it is the same type as a 
+                  // normalized time.
+                  unix_timestamp(
+                      callUDF(NormalizeDateTimeFunction.FUNCTION_NAME, col(field.name())))
+                      .multiply(1000)
               ).when(
                   col(field.name()).rlike(FHIR_TIME_PATTERN),
                   callUDF(NormalizeTimeFunction.FUNCTION_NAME, col(field.name()))
