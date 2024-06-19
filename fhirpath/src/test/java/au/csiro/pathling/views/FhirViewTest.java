@@ -18,6 +18,7 @@ import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
 import au.csiro.pathling.sql.dates.datetime.NormalizeDateTimeFunction;
+import au.csiro.pathling.sql.dates.time.NormalizeTimeFunction;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
@@ -142,6 +143,8 @@ abstract class FhirViewTest {
     public static final String FHIR_DATE_TIME_PATTERN = "^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|"
         + "[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:"
         + "([0-5][0-9]|60)(\\.[0-9]{1,9})?)?)?(Z|(\\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)?)?)?$";
+    public static final String FHIR_TIME_PATTERN = "^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)"
+        + "(\\.[0-9]+)?$";
     Path expectedJson;
     List<String> expectedColumns;
 
@@ -166,6 +169,9 @@ abstract class FhirViewTest {
               return when(
                   col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
                   callUDF(NormalizeDateTimeFunction.FUNCTION_NAME, col(field.name()))
+              ).when(
+                  col(field.name()).rlike(FHIR_TIME_PATTERN),
+                  callUDF(NormalizeTimeFunction.FUNCTION_NAME, col(field.name()))
               ).otherwise(col(field.name())).alias(field.name());
             } else {
               // Add the field to the selection without alteration.

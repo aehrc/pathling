@@ -16,6 +16,8 @@
  */
 package au.csiro.pathling.sql.misc;
 
+import au.csiro.pathling.sql.dates.datetime.NormalizeDateTimeFunction;
+import au.csiro.pathling.sql.dates.time.NormalizeTimeFunction;
 import au.csiro.pathling.sql.udf.AbstractUDFRegistrar;
 
 /**
@@ -27,6 +29,8 @@ public class MiscUDFRegistrar extends AbstractUDFRegistrar {
   protected void registerUDFs(final UDFRegistrar udfRegistrar) {
     udfRegistrar
         .register(new CodingToLiteral())
-        .register(new TemporalDifferenceFunction());
+        .register(new TemporalDifferenceFunction())
+        .register(new NormalizeDateTimeFunction())
+        .register(new NormalizeTimeFunction());
   }
 }
