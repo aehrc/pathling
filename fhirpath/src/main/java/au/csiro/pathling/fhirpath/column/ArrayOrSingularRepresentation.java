@@ -92,6 +92,8 @@ public class ArrayOrSingularRepresentation extends ColumnRepresentation {
     @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
     if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
       return DecimalRepresentation.fromTraversal(this, fieldName);
+    } else if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
+      return new BinaryRepresentation(traverseColumn(fieldName));
     } else {
       return traverse(fieldName);
     }

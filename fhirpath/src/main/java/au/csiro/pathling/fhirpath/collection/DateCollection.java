@@ -88,6 +88,17 @@ public class DateCollection extends Collection implements Materializable<DateTyp
     return DateCollection.build(ArrayOrSingularRepresentation.literal(dateString));
   }
 
+  /**
+   * Returns a new instance based upon a {@link DateType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link DateCollection}
+   */
+  @Nonnull
+  public static DateCollection fromValue(@Nonnull final DateType value) {
+    return DateCollection.build(ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+  }
+
   @Nonnull
   @Override
   public Optional<DateType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {

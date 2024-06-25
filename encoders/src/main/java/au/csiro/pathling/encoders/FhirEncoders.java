@@ -332,8 +332,20 @@ public class FhirEncoders {
      *
      * @return this builder
      */
-    public Builder withStandardOenTypes() {
+    public Builder withStandardOpenTypes() {
       return withOpenTypes(STANDARD_OPEN_TYPES);
+    }
+
+    /**
+     * Sets the list of all types to be encoded for open types, such as extensions.
+     *
+     * @return this builder
+     */
+    public Builder withAllOpenTypes() {
+      return withOpenTypes(
+          Set.of("base64Binary", "boolean", "canonical", "code", "date", "dateTime", "decimal",
+              "id", "instant", "integer", "markdown", "oid", "positiveInt", "string", "time",
+              "unsignedInt", "uri", "url", "uuid"));
     }
 
     /**

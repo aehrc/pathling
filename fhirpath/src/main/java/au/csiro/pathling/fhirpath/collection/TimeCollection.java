@@ -83,6 +83,17 @@ public class TimeCollection extends Collection implements Materializable<TimeTyp
     return TimeCollection.build(ArrayOrSingularRepresentation.literal(timeString));
   }
 
+  /**
+   * Returns a new instance based upon a {@link TimeType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link TimeCollection}
+   */
+  @Nonnull
+  public static TimeCollection fromValue(@Nonnull final TimeType value) {
+    return TimeCollection.build(ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+  }
+
   @Nonnull
   @Override
   public Optional<TimeType> getFhirValueFromRow(@Nonnull final Row row, final int columnNumber) {

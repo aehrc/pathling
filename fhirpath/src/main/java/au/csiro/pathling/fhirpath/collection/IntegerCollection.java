@@ -106,6 +106,27 @@ public class IntegerCollection extends Collection implements
     return IntegerCollection.build(ArrayOrSingularRepresentation.literal(value));
   }
 
+  /**
+   * Returns a new instance based upon a {@link PositiveIntType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link IntegerCollection}
+   */
+  @Nonnull
+  public static IntegerCollection fromValue(@Nonnull final PositiveIntType value) {
+    return IntegerCollection.fromValue(value.getValue());
+  }
+
+  /**
+   * Returns a new instance based upon a {@link UnsignedIntType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link IntegerCollection}
+   */
+  @Nonnull
+  public static IntegerCollection fromValue(@Nonnull final UnsignedIntType value) {
+    return IntegerCollection.fromValue(value.getValue());
+  }
 
   /**
    * Returns a new instance, parsed from a FHIRPath literal.

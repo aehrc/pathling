@@ -112,7 +112,7 @@ public class UnitTestDependencies {
   static FhirEncoders fhirEncoders() {
     return FhirEncoders.forR4()
         .withExtensionsEnabled(true)
-        .withStandardOenTypes()
+        .withAllOpenTypes()
         .getOrCreate();
   }
 

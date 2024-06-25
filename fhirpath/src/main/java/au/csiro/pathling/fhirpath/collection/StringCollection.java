@@ -114,6 +114,82 @@ public class StringCollection extends Collection implements Materializable<Primi
     return StringCollection.build(ArrayOrSingularRepresentation.literal(value));
   }
 
+  /**
+   * Returns a new instance based upon a {@link Base64BinaryType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final Base64BinaryType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+
+  /**
+   * Returns a new instance based upon a {@link CodeType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final CodeType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+
+  /**
+   * Returns a new instance based upon a {@link IdType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final IdType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+
+  /**
+   * Returns a new instance based upon a {@link OidType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final OidType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+
+  /**
+   * Returns a new instance based upon a {@link UriType).
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final UriType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+
+  /**
+   * Returns a new instance based upon a {@link org.hl7.fhir.r4.model.UrlType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final org.hl7.fhir.r4.model.UrlType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
+
+  /**
+   * Returns a new instance based upon a {@link UuidType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link StringCollection}
+   */
+  @Nonnull
+  public static StringCollection fromValue(@Nonnull final UuidType value) {
+    return StringCollection.fromValue(value.getValueAsString());
+  }
 
   @Nonnull
   public static String parseStringLiteral(final @Nonnull String fhirPath) {

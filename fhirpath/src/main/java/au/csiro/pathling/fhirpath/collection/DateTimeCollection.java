@@ -95,6 +95,30 @@ public class DateTimeCollection extends Collection implements
     return DateTimeCollection.build(ArrayOrSingularRepresentation.literal(dateString));
   }
 
+  /**
+   * Returns a new instance based upon a {@link DateTimeType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link DateTimeCollection}
+   */
+  @Nonnull
+  public static DateTimeCollection fromValue(@Nonnull final DateTimeType value) {
+    return DateTimeCollection.build(
+        ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+  }
+
+  /**
+   * Returns a new instance based upon a {@link InstantType}.
+   *
+   * @param value The value to use
+   * @return A new instance of {@link DateTimeCollection}
+   */
+  @Nonnull
+  public static DateTimeCollection fromValue(@Nonnull final InstantType value) {
+    return DateTimeCollection.build(
+        ArrayOrSingularRepresentation.literal(value.getValueAsString()));
+  }
+
   @Nonnull
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;

@@ -99,6 +99,17 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         (DecimalRepresentation) ArrayOrSingularRepresentation.literal(value));
   }
 
+  /**
+   * Returns a new instance based upon a {@link DecimalType}.
+   * 
+   * @param value The value to use
+   * @return A new instance of {@link DecimalCollection}
+   */
+  @Nonnull
+  public static DecimalCollection fromValue(@Nonnull final DecimalType value) {
+    return DecimalCollection.build((DecimalRepresentation) ArrayOrSingularRepresentation.literal(value.getValue()));
+  }
+
   @Nonnull
   public static BigDecimal parseLiteral(final @Nonnull String literal) {
     final BigDecimal value = new BigDecimal(literal);
