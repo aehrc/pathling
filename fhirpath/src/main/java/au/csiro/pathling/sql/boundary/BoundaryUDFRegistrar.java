@@ -10,11 +10,11 @@ public class BoundaryUDFRegistrar extends AbstractUDFRegistrar {
     udfRegistrar.register(new HighBoundaryForDateTimeFunction())
         .register(new HighBoundaryForDateFunction())
         .register(new HighBoundaryForDecimal())
-        .register(new HighBoundaryForTime())
+        .register(new HighBoundaryForTimeFunction())
         .register(new LowBoundaryForDateTimeFunction())
         .register(new LowBoundaryForDateFunction())
         .register(new LowBoundaryForDecimal())
-        .register(new LowBoundaryForTime());
+        .register(new LowBoundaryForTimeFunction());
   }
 
 }
