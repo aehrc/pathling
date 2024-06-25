@@ -5,7 +5,6 @@ import au.csiro.pathling.sql.udf.SqlFunction2;
 import java.math.BigDecimal;
 import javax.annotation.Nullable;
 import org.apache.spark.sql.types.DataType;
-import org.hl7.fhir.utilities.Utilities;
 
 /**
  * UDF to calculate the low boundary for a decimal.
@@ -30,9 +29,9 @@ public class LowBoundaryForDecimal extends DecimalBoundaryFunction implements
 
   @Override
   @Nullable
-  public BigDecimal call(@Nullable final BigDecimal d, @Nullable final Integer scale)
+  public BigDecimal call(@Nullable final BigDecimal d, @Nullable final Integer precision)
       throws Exception {
-    return getDecimalBoundary(d, scale, Utilities::lowBoundaryForDecimal);
+    return lowBoundaryForDecimal(d, precision);
   }
 
 }
