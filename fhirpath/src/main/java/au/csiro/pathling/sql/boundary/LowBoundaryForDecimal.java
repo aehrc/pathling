@@ -10,7 +10,8 @@ import org.apache.spark.sql.types.DataType;
  * UDF to calculate the low boundary for a decimal.
  *
  * @author John Grimes
- * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIRPath - Additional functions</a>
+ * @see <a
+ * href="https://build.fhir.org/ig/HL7/FHIRPath/#lowboundaryprecision-integer-decimal--date--datetime--time">lowBoundary</a>
  */
 public class LowBoundaryForDecimal extends DecimalBoundaryFunction implements
     SqlFunction2<BigDecimal, Integer, BigDecimal> {

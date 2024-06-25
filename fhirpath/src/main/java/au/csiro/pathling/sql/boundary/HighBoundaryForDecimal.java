@@ -10,7 +10,8 @@ import org.apache.spark.sql.types.DataType;
  * UDF to calculate the high boundary for a decimal.
  *
  * @author John Grimes
- * @see <a href="https://build.fhir.org/fhirpath.html#functions">FHIRPath - Additional functions</a>
+ * @see <a
+ * href="https://build.fhir.org/ig/HL7/FHIRPath/#highboundaryprecision-integer-decimal--date--datetime--time">highBoundary</a>
  */
 public class HighBoundaryForDecimal extends DecimalBoundaryFunction implements
     SqlFunction2<BigDecimal, Integer, BigDecimal> {
@@ -29,9 +30,9 @@ public class HighBoundaryForDecimal extends DecimalBoundaryFunction implements
 
   @Override
   @Nullable
-  public BigDecimal call(@Nullable final BigDecimal d, @Nullable final Integer scale)
+  public BigDecimal call(@Nullable final BigDecimal d, @Nullable final Integer precision)
       throws Exception {
-    return highBoundaryForDecimal(d, scale);
+    return highBoundaryForDecimal(d, precision);
   }
 
 }
