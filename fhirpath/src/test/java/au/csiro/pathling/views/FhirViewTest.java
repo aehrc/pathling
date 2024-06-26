@@ -416,9 +416,7 @@ abstract class FhirViewTest {
       // Create a new executor and build the query.
       final FhirViewExecutor executor = new FhirViewExecutor(fhirContext, spark,
           parameters.getSourceData());
-      final Dataset<Row> dataset = executor.buildQuery(view);
-      dataset.explain();
-      return dataset;
+      return executor.buildQuery(view);
     });
   }
 
