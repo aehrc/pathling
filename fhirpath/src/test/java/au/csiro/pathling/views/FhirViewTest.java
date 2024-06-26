@@ -7,7 +7,7 @@ import static au.csiro.pathling.validation.ValidationUtils.ensureValid;
 import static java.util.Objects.nonNull;
 import static org.apache.spark.sql.functions.callUDF;
 import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.unix_timestamp;
+import static org.apache.spark.sql.functions.lit;
 import static org.apache.spark.sql.functions.when;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,8 +18,8 @@ import static scala.collection.JavaConversions.asScalaBuffer;
 import au.csiro.pathling.encoders.FhirEncoders;
 import au.csiro.pathling.encoders.datatypes.DecimalCustomCoder;
 import au.csiro.pathling.io.source.DataSource;
-import au.csiro.pathling.sql.dates.datetime.NormalizeDateTimeFunction;
-import au.csiro.pathling.sql.dates.time.NormalizeTimeFunction;
+import au.csiro.pathling.sql.boundary.LowBoundaryForDateTimeFunction;
+import au.csiro.pathling.sql.boundary.LowBoundaryForTimeFunction;
 import au.csiro.pathling.terminology.TerminologyServiceFactory;
 import au.csiro.pathling.test.SpringBootUnitTest;
 import ca.uhn.fhir.context.FhirContext;
@@ -152,7 +152,9 @@ abstract class FhirViewTest {
     @Override
     public void expectResult(@Nonnull final Dataset<Row> rowDataset) {
       // Read the expected JSON with prefersDecimal option set to true.
-      final Dataset<Row> expectedResult = spark.read().option("prefersDecimal", "true")
+      final Dataset<Row> expectedResult = spark.read()
+          .schema(rowDataset.schema())
+          .option("prefersDecimal", "true")
           .json(expectedJson.toString());
 
       // Dynamically create column expressions based on the schema.
@@ -166,17 +168,15 @@ abstract class FhirViewTest {
               // Use DecimalCustomCoder.decimalType() for the cast type.
               return col(field.name()).cast(DecimalCustomCoder.decimalType()).alias(field.name());
             } else if (field.dataType() instanceof StringType) {
-              // Normalize anything that looks like a date time, otherwise pass it through unaltered.
+              // Normalize anything that looks like a datetime or time, otherwise pass it through 
+              // unaltered.
               return when(
                   col(field.name()).rlike(FHIR_DATE_TIME_PATTERN),
-                  // Convert the timestamp to milliseconds, so that it is the same type as a 
-                  // normalized time.
-                  unix_timestamp(
-                      callUDF(NormalizeDateTimeFunction.FUNCTION_NAME, col(field.name())))
-                      .multiply(1000)
+                  callUDF(LowBoundaryForDateTimeFunction.FUNCTION_NAME, col(field.name()),
+                      lit(null))
               ).when(
                   col(field.name()).rlike(FHIR_TIME_PATTERN),
-                  callUDF(NormalizeTimeFunction.FUNCTION_NAME, col(field.name()))
+                  callUDF(LowBoundaryForTimeFunction.FUNCTION_NAME, col(field.name()), lit(null))
               ).otherwise(col(field.name())).alias(field.name());
             } else {
               // Add the field to the selection without alteration.

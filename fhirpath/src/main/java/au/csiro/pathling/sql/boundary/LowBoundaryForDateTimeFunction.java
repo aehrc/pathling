@@ -18,10 +18,11 @@ public class LowBoundaryForDateTimeFunction extends DateTimeBoundaryFunction imp
     SqlFunction2<String, Integer, String> {
 
   private static final long serialVersionUID = 6447986507343189426L;
+  public static final String FUNCTION_NAME = "low_boundary_for_date_time";
 
   @Override
   public String getName() {
-    return "low_boundary_for_date_time";
+    return FUNCTION_NAME;
   }
 
   @Override
