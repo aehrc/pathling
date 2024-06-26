@@ -59,6 +59,18 @@ public class FhirEncoders {
       "Reference"
   );
 
+  /**
+   * All possible open types in FHIR R4.
+   */
+  public static final Set<String> ALL_OPEN_TYPES = Set.of("base64Binary", "boolean", "canonical",
+      "code", "date", "dateTime", "decimal", "id", "instant", "integer", "markdown", "oid",
+      "positiveInt", "string", "time", "unsignedInt", "uri", "url", "uuid", "Address", "Age",
+      "Annotation", "Attachment", "CodeableConcept", "Coding", "ContactPoint", "Count", "Distance",
+      "Duration", "HumanName", "Identifier", "Money", "Period", "Quantity", "Range", "Ratio",
+      "Reference", "SampledData", "Signature", "Timing", "ContactDetail", "Contributor",
+      "DataRequirement", "Expression", "ParameterDefinition", "RelatedArtifact",
+      "TriggerDefinition", "UsageContext", "Dosage", "Meta");
+
 
   /**
    * Cache of Encoders instances.
@@ -342,15 +354,7 @@ public class FhirEncoders {
      * @return this builder
      */
     public Builder withAllOpenTypes() {
-      return withOpenTypes(
-          Set.of("base64Binary", "boolean", "canonical", "code", "date", "dateTime", "decimal",
-              "id", "instant", "integer", "markdown", "oid", "positiveInt", "string", "time",
-              "unsignedInt", "uri", "url", "uuid", "Address", "Age", "Annotation", "Attachment",
-              "CodeableConcept", "Coding", "ContactPoint", "Count", "Distance", "Duration",
-              "HumanName", "Identifier", "Money", "Period", "Quantity", "Range", "Ratio",
-              "Reference", "SampledData", "Signature", "Timing", "ContactDetail", "Contributor",
-              "DataRequirement", "Expression", "ParameterDefinition", "RelatedArtifact",
-              "TriggerDefinition", "UsageContext", "Dosage", "Meta"));
+      return withOpenTypes(ALL_OPEN_TYPES);
     }
 
     /**
