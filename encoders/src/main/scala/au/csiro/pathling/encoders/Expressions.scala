@@ -56,7 +56,7 @@ case class StaticField(staticObject: Class[_],
                        dataType: DataType,
                        fieldName: String) extends Expression with NonSQLExpression {
 
-  val objectName: String = staticObject.getName.stripSuffix("$")
+  private val objectName: String = staticObject.getName.stripSuffix("$")
 
   override def nullable: Boolean = false
 
@@ -155,52 +155,6 @@ case class ObjectCast(value: Expression, resultType: DataType)
   }
 
 }
-
-
-/**
- * An Expression extracting an object having the given class definition from a List of FHIR
- * Resources.
- */
-case class GetClassFromContained(targetObject: Expression,
-                                 containedClass: Class[_])
-  extends Expression with NonSQLExpression {
-
-  override def nullable: Boolean = targetObject.nullable
-
-  override def children: Seq[Expression] = targetObject :: Nil
-
-  override def dataType: DataType = ObjectType(containedClass)
-
-  override def eval(input: InternalRow): Any =
-    throw new UnsupportedOperationException("Only code-generated evaluation is supported.")
-
-  override def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-
-    val javaType = containedClass.getName
-    val obj = targetObject.genCode(ctx)
-
-    ev.copy(code =
-      code"""
-            |${obj.code}
-            |$javaType ${ev.value} = null;
-            |boolean ${ev.isNull} = true;
-            |java.util.List<Object> contained = ${obj.value}.getContained();
-            |
-            |for (int containedIndex = 0; containedIndex < contained.size(); containedIndex++) {
-            |  if (contained.get(containedIndex) instanceof $javaType) {
-            |    ${ev.value} = ($javaType) contained.get(containedIndex);
-            |    ${ev.isNull} = false;
-            |  }
-            |}
-       """.stripMargin)
-  }
-
-  override protected def withNewChildrenInternal(newChildren: IndexedSeq[Expression]): Expression = {
-    GetClassFromContained(newChildren.head, containedClass)
-  }
-
-}
-
 
 /**
  * Registers the mapping of a deserialized object to its _fid value. The mapping is saved in '_fid_mapping' immutable state variable.
@@ -432,7 +386,7 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
   @transient private lazy val sizeOfOutput = arritiesOfChildren.sum
   @transient private lazy val offsetsScala = arritiesOfChildren.scanLeft(0)(_ + _).init
 
-  def emptyInputGenCode(ev: ExprCode): ExprCode = {
+  private def emptyInputGenCode(ev: ExprCode): ExprCode = {
     ev.copy(
       code"""
             |${CodeGenerator.javaType(dataType)} ${ev.value} = new $genericArrayData(new Object[0]);
@@ -440,18 +394,15 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     """.stripMargin)
   }
 
-  def nonEmptyInputGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
+  private def nonEmptyInputGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
 
     // the number of fields for each child
-    val arritiesOfChildrenScala = children
+    val aritiesOfChildrenScala = children
       .map(_.dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.length)
-      .toArray
+      .toArray;
+    val sizeOfOutput = aritiesOfChildrenScala.sum
 
-    val arritiesOfChildren = ctx
-      .addReferenceObj("arritiesOfChildren", arritiesOfChildrenScala, "int[]");
-    val sizeOfOutput = arritiesOfChildrenScala.sum
-
-    val offsetsScala = arritiesOfChildrenScala.scanLeft(0)(_ + _).init.toArray
+    val offsetsScala = aritiesOfChildrenScala.scanLeft(0)(_ + _).init
     val offsets = ctx.addReferenceObj("offsets", offsetsScala, "int[]");
 
     val genericInternalRow = classOf[GenericInternalRow].getName
@@ -459,7 +410,6 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
     val productSize = ctx.freshName("productSize")
 
     val currentRow = ctx.freshName("currentRow")
-    val j = ctx.freshName("j")
     val i = ctx.freshName("i")
     val args = ctx.freshName("args")
     val prodIdxs = ctx.freshName("prodIdxs")
@@ -480,7 +430,7 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
       """.stripMargin
     }
 
-    val splittedGetValuesAndProductSize = ctx.splitExpressionsWithCurrentInputs(
+    val splitGetValuesAndProductSize = ctx.splitExpressionsWithCurrentInputs(
       expressions = getValuesAndProductSize,
       funcName = "getValuesAndProductSize",
       returnType = "int",
@@ -530,7 +480,7 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
       code"""
             |// BEGIN: PS_CODE
             |$initVariables
-            |$splittedGetValuesAndProductSize
+            |$splitGetValuesAndProductSize
             |//System.out.println("DEBUG: ${this.prettyName}[${this.hashCode()}]" + " productSize: " + $productSize);
             |//boolean ${ev.isNull} = $productSize == 0;
             | boolean ${ev.isNull} = false;
@@ -576,17 +526,17 @@ case class StructProduct(children: Seq[Expression], outer: Boolean = false)
 
     if (productSize > 0 || !outer) {
       val result = new Array[InternalRow](productSize)
-      val zippedArrs: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
+      val zippedArrays: Seq[(ArrayData, Int)] = inputArrays.zipWithIndex
       for (i <- 0 until productSize) {
         val productIndexes: Array[Int] = new Array[Int](children.length);
         var productBase = i;
         for (childIndex <- children.indices) {
-          val childArrity = inputArrays(childIndex).numElements();
-          productIndexes(childIndex) = productBase % childArrity;
-          productBase = productBase / childArrity;
+          val childArity = inputArrays(childIndex).numElements();
+          productIndexes(childIndex) = productBase % childArity;
+          productBase = productBase / childArity;
         }
         val currentRowData = new Array[Any](sizeOfOutput)
-        zippedArrs.foreach { case (arr, index) =>
+        zippedArrays.foreach { case (arr, index) =>
           if (!arr.isNullAt(productIndexes(index))) {
             val structData = arr.get(productIndexes(index), arrayElementTypes(index))
               .asInstanceOf[InternalRow]
