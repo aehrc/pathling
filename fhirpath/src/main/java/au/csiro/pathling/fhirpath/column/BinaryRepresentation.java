@@ -18,6 +18,9 @@ import org.apache.spark.sql.Column;
 @EqualsAndHashCode(callSuper = true)
 public class BinaryRepresentation extends DefaultRepresentation {
 
+  /**
+   * @param value The value to represent
+   */
   public BinaryRepresentation(final Column value) {
     super(value);
   }
