@@ -18,10 +18,7 @@
 package au.csiro.pathling.fhirpath.column;
 
 import static au.csiro.pathling.utilities.Functions.maybeCast;
-import static au.csiro.pathling.utilities.Strings.randomAlias;
 
-import au.csiro.pathling.view.DatasetResult;
-import au.csiro.pathling.view.DatasetResult.One;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -478,37 +475,6 @@ public abstract class ColumnRepresentation {
   @Nonnull
   public ColumnRepresentation asString() {
     return cast(DataTypes.StringType);
-  }
-
-  /**
-   * Explodes the current {@link ColumnRepresentation}.
-   *
-   * @return A new {@link ColumnRepresentation} that is exploded
-   */
-  @Nonnull
-  public One<ColumnRepresentation> explode() {
-    //  TODO: this actually cannot should return DatasetResult as filtering is required here
-    final ColumnRepresentation exploded = vectorize(functions::explode, Function.identity());
-    final String materializedColumnName = randomAlias();
-    return DatasetResult.one(copyOf(functions.col(materializedColumnName)),
-        ds -> ds.withColumn(
-                materializedColumnName, exploded.getValue())
-            .filter(functions.col(materializedColumnName).isNotNull()));
-  }
-
-  /**
-   * Explodes the current {@link ColumnRepresentation} with outer join.
-   *
-   * @return A new {@link ColumnRepresentation} that is exploded with outer join
-   */
-  @Nonnull
-  public One<ColumnRepresentation> explodeOuter() {
-    //  TODO: this actually cannot should return DatasetResult as filtering is required here
-    final ColumnRepresentation exploded = vectorize(functions::explode_outer, Function.identity());
-    final String materializedColumnName = randomAlias();
-    return DatasetResult.one(copyOf(functions.col(materializedColumnName)),
-        ds -> ds.withColumn(
-            materializedColumnName, exploded.getValue()));
   }
 
 }
