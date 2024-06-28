@@ -53,6 +53,11 @@ public class FhirViewExecutor {
   @Nonnull
   private final Parser parser;
 
+  /**
+   * @param fhirContext The FHIR context to use for the execution context
+   * @param sparkSession The Spark session to use for the execution context
+   * @param dataset The data source to use for the execution context
+   */
   public FhirViewExecutor(@Nonnull final FhirContext fhirContext,
       @Nonnull final SparkSession sparkSession, @Nonnull final DataSource dataset) {
     this.fhirContext = fhirContext;
