@@ -25,8 +25,8 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.StringCoercible;
 import au.csiro.pathling.fhirpath.Temporal;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.comparison.DateTimeSqlComparator;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.sql.dates.datetime.DateTimeAddDurationFunction;
@@ -51,7 +51,7 @@ import org.hl7.fhir.r4.model.InstantType;
 public class DateTimeCollection extends Collection implements
     Materializable<BaseDateTimeType>, Comparable, Temporal, StringCoercible {
 
-  public static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
+  private static final String SPARK_FHIRPATH_DATETIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
   private static final ImmutableSet<Class<? extends Comparable>> COMPARABLE_TYPES = ImmutableSet
       .of(DateCollection.class, DateTimeCollection.class);
 
@@ -63,9 +63,9 @@ public class DateTimeCollection extends Collection implements
   }
 
   /**
-   * Returns a new instance with the specified columnCtx and definition.
+   * Returns a new instance with the specified column representation and definition.
    *
-   * @param columnRepresentation The columnCtx to use
+   * @param columnRepresentation The column representation to use
    * @param definition The definition to use
    * @return A new instance of {@link DateTimeCollection}
    */
@@ -76,6 +76,12 @@ public class DateTimeCollection extends Collection implements
         Optional.of(FHIRDefinedType.DATETIME), definition);
   }
 
+  /**
+   * Returns a new instance with the specified column representation and no definition.
+   *
+   * @param columnRepresentation The column representation to use
+   * @return A new instance of {@link DateTimeCollection}
+   */
   @Nonnull
   public static DateTimeCollection build(@Nonnull final ColumnRepresentation columnRepresentation) {
     return DateTimeCollection.build(columnRepresentation, Optional.empty());
@@ -119,6 +125,11 @@ public class DateTimeCollection extends Collection implements
         DefaultRepresentation.literal(value.getValueAsString()));
   }
 
+  /**
+   * Returns a set of classes that this collection can be compared to.
+   *
+   * @return A set of classes that this collection can be compared to
+   */
   @Nonnull
   public static ImmutableSet<Class<? extends Comparable>> getComparableTypes() {
     return COMPARABLE_TYPES;
