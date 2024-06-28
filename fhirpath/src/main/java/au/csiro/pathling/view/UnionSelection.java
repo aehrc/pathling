@@ -30,6 +30,12 @@ import lombok.Value;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.functions;
 
+/**
+ * Groups multiple selections together using a union.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 @Value
 public class UnionSelection implements ProjectionClause {
 
@@ -62,4 +68,5 @@ public class UnionSelection implements ProjectionClause {
 
     return ProjectionResult.of(results.get(0).getResults(), combinedResult);
   }
+  
 }
