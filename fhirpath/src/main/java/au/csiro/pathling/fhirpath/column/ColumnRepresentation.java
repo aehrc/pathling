@@ -102,18 +102,6 @@ public abstract class ColumnRepresentation {
   protected abstract ColumnRepresentation copyOf(@Nonnull final Column newValue);
 
   /**
-   * Create a new {@link ColumnRepresentation} from the result of a function that takes an array
-   * {@link Column} and returns a new array {@link Column}.
-   */
-  @Nonnull
-  public ColumnRepresentation vectorize(
-      @Nonnull final Function<Column, Column> arrayExpression) {
-    // The default implementation wraps a singular value in an array if it is not null.
-    return vectorize(arrayExpression,
-        c -> arrayExpression.apply(functions.when(c.isNotNull(), functions.array(c))));
-  }
-
-  /**
    * Create a new {@link ColumnRepresentation} by providing two functions: one that takes an array
    * and one that takes a singular value. The array function is applied to the column if it is an
    * array, and the singular function is applied to the column if it is not an array.
