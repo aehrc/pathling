@@ -25,9 +25,9 @@ import au.csiro.pathling.fhirpath.FhirPathType;
 import au.csiro.pathling.fhirpath.Materializable;
 import au.csiro.pathling.fhirpath.Numeric;
 import au.csiro.pathling.fhirpath.StringCoercible;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
 import au.csiro.pathling.fhirpath.column.DecimalRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -111,6 +111,12 @@ public class DecimalCollection extends Collection implements Materializable<Deci
         (DecimalRepresentation) DefaultRepresentation.literal(value.getValue()));
   }
 
+  /**
+   * Parses a FHIRPath decimal literal into a {@link BigDecimal}.
+   *
+   * @param literal The FHIRPath representation of the literal
+   * @return The parsed {@link BigDecimal}
+   */
   @Nonnull
   public static BigDecimal parseLiteral(final @Nonnull String literal) {
     final BigDecimal value = new BigDecimal(literal);
