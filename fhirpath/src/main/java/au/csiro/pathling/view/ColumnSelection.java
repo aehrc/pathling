@@ -30,6 +30,12 @@ import javax.annotation.Nonnull;
 import lombok.Value;
 import org.apache.spark.sql.Column;
 
+/**
+ * Creates a projection from the requested columns.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 @Value
 public class ColumnSelection implements ProjectionClause {
 
