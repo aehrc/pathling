@@ -17,6 +17,8 @@
 
 package au.csiro.pathling.fhirpath.column;
 
+import static org.apache.spark.sql.functions.lit;
+
 import au.csiro.pathling.encoders.ValueFunctions;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -28,7 +30,6 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 import org.apache.spark.sql.Column;
-import org.apache.spark.sql.functions;
 import org.hl7.fhir.r4.model.Enumerations.FHIRDefinedType;
 
 /**
@@ -54,9 +55,11 @@ public class ArrayOrSingularRepresentation extends ColumnRepresentation {
   @Nonnull
   public static ColumnRepresentation literal(@Nonnull final Object value) {
     if (value instanceof BigDecimal) {
-      return new DecimalRepresentation(functions.lit(value));
+      // If the literal is a BigDecimal, represent it as a DecimalRepresentation.
+      return new DecimalRepresentation(lit(value));
     }
-    return new ArrayOrSingularRepresentation(functions.lit(value));
+    // Otherwise use the default representation.
+    return new ArrayOrSingularRepresentation(lit(value));
   }
 
   @Override
@@ -91,10 +94,13 @@ public class ArrayOrSingularRepresentation extends ColumnRepresentation {
       @Nonnull final Optional<FHIRDefinedType> fhirType) {
     @Nullable final FHIRDefinedType resolvedFhirType = fhirType.orElse(null);
     if (FHIRDefinedType.DECIMAL.equals(resolvedFhirType)) {
+      // If the field is a decimal, represent it using a DecimalRepresentation.
       return DecimalRepresentation.fromTraversal(this, fieldName);
     } else if (FHIRDefinedType.BASE64BINARY.equals(resolvedFhirType)) {
+      // If the field is a base64Binary, represent it using a BinaryRepresentation.
       return new BinaryRepresentation(traverseColumn(fieldName));
     } else {
+      // Otherwise, use the default representation.
       return traverse(fieldName);
     }
   }
