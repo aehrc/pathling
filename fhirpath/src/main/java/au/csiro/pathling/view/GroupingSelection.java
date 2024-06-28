@@ -24,6 +24,12 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import lombok.Value;
 
+/**
+ * Groups multiple selections together using a cross join.
+ *
+ * @author John Grimes
+ * @author Piotr Szul
+ */
 @Value
 public class GroupingSelection implements ProjectionClause {
 
