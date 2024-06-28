@@ -20,11 +20,10 @@ package au.csiro.pathling.fhirpath.collection;
 import au.csiro.pathling.encoders.EncoderBuilder;
 import au.csiro.pathling.encoders.ExtensionSupport;
 import au.csiro.pathling.fhirpath.FhirPathType;
-import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.column.ColumnRepresentation;
+import au.csiro.pathling.fhirpath.column.DefaultRepresentation;
 import au.csiro.pathling.fhirpath.definition.NodeDefinition;
 import au.csiro.pathling.fhirpath.definition.ResourceDefinition;
-import au.csiro.pathling.io.source.DataSource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.context.RuntimeResourceDefinition;
 import java.util.EnumSet;
@@ -73,7 +72,7 @@ public class ResourceCollection extends Collection {
   }
 
   /**
-   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link DataSource}.
+   * Build a new ResourcePath using the supplied {@link FhirContext} and {@link ResourceType}.
    *
    * @param fhirContext the {@link FhirContext} to use for sourcing the resource definition
    * @param resourceType the type of the resource
@@ -96,12 +95,19 @@ public class ResourceCollection extends Collection {
         getFhirType(resourceType), Optional.of(definition), definition);
   }
 
-
+  /**
+   * Build a new ResourcePath using the supplied {@link ColumnRepresentation}, {@link FhirContext},
+   * and {@link ResourceType}.
+   *
+   * @param columnRepresentation A column representation to use for the resource
+   * @param fhirContext The {@link FhirContext} to use for sourcing the resource definition
+   * @param resourceType The type of the resource
+   * @return A shiny new ResourcePath
+   */
   @Nonnull
   public static ResourceCollection build(@Nonnull final ColumnRepresentation columnRepresentation,
       @Nonnull final FhirContext fhirContext,
       @Nonnull final ResourceType resourceType) {
-
     // Get the resource definition from HAPI.
     final String resourceCode = resourceType.toCode();
     final RuntimeResourceDefinition hapiDefinition = fhirContext.getResourceDefinition(
@@ -157,20 +163,6 @@ public class ResourceCollection extends Collection {
     return resourceDefinition.getResourceType();
   }
 
-  //
-  // @Nonnull
-  // @Override
-  // protected Collection traverseElement(@Nonnull final ElementDefinition childDef) {
-  //   // TODO: what does mean if an element is present in the definition but not in 
-  //   // the schema?
-  //   return getElementColumn(childDef.getElementName()).map(
-  //       value -> Collection.build(
-  //           // TODO: simplify this
-  //           StdColumnCtx.of(functions.when(getCtx().getValue().isNotNull(), value)),
-  //           childDef)).get();
-  // }
-
-
   @Nonnull
   @Override
   public Collection copyWith(@Nonnull final ColumnRepresentation newValue) {
@@ -178,6 +170,9 @@ public class ResourceCollection extends Collection {
         resourceDefinition);
   }
 
+  /**
+   * @return A column that can be used as a key for joining to this resource type
+   */
   @Nonnull
   public ColumnRepresentation getKeyColumn() {
     return getColumn().traverse("id_versioned", Optional.of(FHIRDefinedType.STRING));
